@@ -2,7 +2,7 @@ import { useContext } from "react";
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import {
-  type PaneObject,
+  type AnyPane,
   PaneBasePathContext,
   PaneMatchContext,
   usePaneRoute,
@@ -23,7 +23,7 @@ import {
 export function PaneLayoutHost({
   full,
 }: {
-  full: PaneObject<any, any, any>[];
+  full: AnyPane[];
 }) {
   const basePath = useContext(PaneBasePathContext);
   const match = usePaneRoute(basePath);

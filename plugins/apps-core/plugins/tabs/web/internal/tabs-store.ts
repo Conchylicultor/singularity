@@ -1,7 +1,7 @@
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import {
   stripBasePath,
-  type PaneInput,
+  type PaneOptions,
   type PaneSlot,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
@@ -30,16 +30,19 @@ export interface Tab {
 
 /**
  * Serialized slot shape persisted in sessionStorage. Mirrors the shape pane.ts
- * writes into `history.state.route` (paneId/params/input/uuid) so a restored
+ * writes into `history.state.route` (paneId/params/options/uuid) so a restored
  * tab rebuilds an identical route via `store.restoreRoute(...)`.
+ *
+ * A pane's `hint` is NOT persisted — it is an optimistic mirror of server-owned
+ * state that must not outlive the navigation that created it (see `Hint`).
  */
 export interface PersistedSlot {
   paneId: string;
   params: Record<string, string>;
-  // Mirrors PaneSlot.input. Persisted via JSON (sessionStorage), which
-  // round-trips booleans/numbers/nested objects — so input is the structured
-  // PaneInput bag, not a string map.
-  input: PaneInput;
+  // Mirrors PaneSlot.options (the opener-supplied partial). Persisted via JSON
+  // (sessionStorage), which round-trips booleans/numbers/nested objects — so it
+  // is the structured PaneOptions bag, not a string map.
+  options: PaneOptions;
   uuid: string;
 }
 
@@ -83,7 +86,7 @@ export function serializeRoute(store: PaneStore): PersistedSlot[] {
   return store.getRoute().map((s: PaneSlot) => ({
     paneId: s.paneId,
     params: s.params,
-    input: s.input,
+    options: s.options,
     uuid: s.uuid,
   }));
 }

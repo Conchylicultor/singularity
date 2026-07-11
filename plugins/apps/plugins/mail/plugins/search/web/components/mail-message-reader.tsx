@@ -22,7 +22,7 @@ function formatAddress(a: MailAddress): string {
 
 /**
  * The reader pane for one message. The envelope (subject / from / date) comes
- * from the opener's `input` so the header paints instantly; the full body +
+ * from the opener's `hint` so the header paints instantly; the full body +
  * attachments are hydrated on mount via `POST /api/mail/hydrate` (idempotent and
  * server cache-first, so re-opening is a pure Postgres hit).
  *
@@ -32,7 +32,7 @@ function formatAddress(a: MailAddress): string {
  */
 export function MailMessageBody(): ReactElement {
   const { messageId } = mailMessagePane.useParams();
-  const envelope = mailMessagePane.useInput();
+  const envelope = mailMessagePane.useHint();
 
   const hydrate = useEndpointMutation(mailHydrateMessageEndpoint, {
     meta: { suppressError: true },
@@ -52,16 +52,17 @@ export function MailMessageBody(): ReactElement {
   const isErrorForThis =
     hydrate.isError && hydrate.variables?.body?.messageId === messageId;
 
-  const subject = hydrated?.message.subject ?? envelope.subject ?? null;
-  const from = hydrated?.message.from ?? envelope.from;
-  const to = hydrated?.message.to ?? envelope.to;
-  // The endpoint response coerces dates (`z.coerce.date()`), so a hydrated
-  // `internalDate` is a real Date. The envelope comes from `useInput()`, which
-  // after a reload/back-navigation deserializes from `history.state` JSON — so
-  // its date may be a string. Only trust it when it's an actual Date.
-  const internalDate =
-    hydrated?.message.internalDate ??
-    (envelope.internalDate instanceof Date ? envelope.internalDate : null);
+  // Each field: the hydrated (canonical) value when it has arrived, else the
+  // opener's optimistic envelope. `pick` demands the canonical expression, so
+  // the hint is never readable on its own — and a hydrated `null` wins over a
+  // stale envelope rather than falling through to it.
+  const subject = envelope.pick("subject", hydrated?.message.subject) ?? null;
+  const from = envelope.pick("from", hydrated?.message.from);
+  const to = envelope.pick("to", hydrated?.message.to);
+  // Both sides are real Dates: the endpoint response coerces (`z.coerce.date()`),
+  // and a hint never survives a JSON round-trip (it is not persisted at all), so
+  // the old `instanceof Date` string-guard is unreachable and gone.
+  const internalDate = envelope.pick("internalDate", hydrated?.message.internalDate) ?? null;
 
   let body: ReactNode;
   if (hydrated) {

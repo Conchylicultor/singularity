@@ -63,35 +63,110 @@ type ResolveField<Path extends string> =
 let nextInstanceId = 0;
 
 /**
- * Caller-provided, non-URL pane input. Unlike `params` (which serialize into
- * the URL and so must be strings), `input` lives ONLY in `history.state` and is
+ * Caller-provided, non-URL pane OPTIONS. Unlike `params` (which serialize into
+ * the URL and so must be strings), options live in `history.state` and are
  * persisted via the structured-clone algorithm — booleans, numbers, and nested
  * objects round-trip faithfully. The storage type is therefore an arbitrary
- * structured-cloneable bag, NOT `Record<string, string>`. Each pane narrows the
- * write/read surface to its own declared shape via the `input: type<T>()`
- * marker; this is only the erased runtime storage type.
+ * structured-cloneable bag, NOT `Record<string, string>`.
+ *
+ * A slot stores only the PARTIAL the opener supplied; `useOptions()` merges it
+ * under the pane's declared `options: {…}` defaults. So the deep-link value of
+ * every option is stated once, at the pane definition, and changing a default
+ * later applies to routes already sitting in `history.state`.
  */
-export type PaneInput = Record<string, unknown>;
+export type PaneOptions = Record<string, unknown>;
+
+/**
+ * The erased runtime storage for a pane's optimistic {@link Hint}. In-memory
+ * ONLY — deliberately absent from every serialized form (see `setRoute`).
+ */
+type PaneHintBag = Record<string, unknown>;
 
 export interface PaneSlot {
   instanceId: number;
   uuid: string;
   paneId: string;
   params: Record<string, string>;
-  input: PaneInput;
+  /** The opener-supplied PARTIAL. Merged under the pane's defaults on read. */
+  options: PaneOptions;
+  /** Ephemeral. Never serialized; `{}` on every rebuilt route. */
+  hint: PaneHintBag;
 }
 
 function createSlot(
   paneId: string,
   params: Record<string, string>,
-  input: PaneInput = {},
+  options: PaneOptions = {},
+  hint: PaneHintBag = {},
   uuid?: string,
 ): PaneSlot {
-  return { instanceId: nextInstanceId++, uuid: uuid ?? crypto.randomUUID(), paneId, params, input };
+  return {
+    instanceId: nextInstanceId++,
+    uuid: uuid ?? crypto.randomUUID(),
+    paneId,
+    params,
+    options,
+    hint,
+  };
 }
 
 // ---------------------------------------------------------------------------
-// `type<T>()` — a phantom marker used to declare the `input` shape at the
+// `Hint<T>` — an optimistic mirror of server-owned state, supplied by whoever
+// opened the pane so the surface can pre-paint before the canonical resource
+// settles.
+// ---------------------------------------------------------------------------
+
+/**
+ * A hint is NOT pane data. It is absent on any route the browser rebuilt (deep
+ * link, reload, back/forward), and possibly stale when present. It must never
+ * become a source of truth.
+ *
+ * Two properties make that structural rather than aspirational:
+ *
+ *  1. `Hint` carries **no enumerable data** — it is a closure. `pick` is the
+ *     only accessor, and it REQUIRES the canonical value as an argument. You
+ *     cannot obtain a hinted value "bare": you must already hold the truth to
+ *     see the hint at all — and if you hold the truth, you have no reason to
+ *     write the hint.
+ *  2. The hint is ephemeral (never serialized), so it cannot outlive the
+ *     navigation that created it.
+ *
+ * The residual `?? "<fabricated default>"` on `pick`'s `T[K] | undefined` result
+ * is banned by the `pane/no-hint-fabrication` lint rule: a hint's fallback must
+ * be `null`, `undefined`, or a ReactNode — never a value that could be written
+ * back. See `research/2026-07-10-global-pane-input-hint-vs-options.md`.
+ */
+export interface Hint<T extends object> {
+  /**
+   * Read one hinted field. `canonical` is the authoritative value, or
+   * `undefined` while it is still loading. Returns `canonical` when it is
+   * defined (a canonical `null` wins — that is a real value), otherwise the
+   * opener's optimistic hint, itself `undefined` on a rebuilt route.
+   */
+  pick<K extends keyof T>(key: K, canonical: T[K] | undefined): T[K] | undefined;
+}
+
+function makeHint(bag: PaneHintBag): Hint<Record<string, unknown>> {
+  return {
+    pick: (key, canonical) =>
+      canonical !== undefined ? canonical : bag[key as string],
+  };
+}
+
+const EMPTY_HINT: Hint<Record<string, unknown>> = makeHint({});
+
+/**
+ * The generic default for a pane that declares no `options` / no `hint`. Not
+ * `{}` — TypeScript treats `{}` as "any non-nullish value", so an object literal
+ * would sail through the excess-property check and a caller could pass options
+ * to a pane that declares none (which is how a dead `input: { convId }` survived
+ * on `attemptPane` for months). `Record<string, never>` rejects every key.
+ */
+type NoOptions = Record<string, never>;
+type NoHint = Record<string, never>;
+
+// ---------------------------------------------------------------------------
+// `type<T>()` — a phantom marker used to declare the `hint` shape at the
 // type level. The runtime value is irrelevant; only the generic parameter
 // matters.
 // ---------------------------------------------------------------------------
@@ -178,16 +253,27 @@ export interface PaneInternal {
   /**
    * Self-contained title resolver for tab labels and the browser document
    * title. A React hook that runs OUTSIDE the owning app's providers (at the
-   * tab-surface level), so it may read only params, the pane's `input`, and
-   * GLOBAL hooks (live-state resources) — never app-local context. Returns
+   * tab-surface level), so it may read only params, the pane's `hint`/`options`,
+   * and GLOBAL hooks (live-state resources) — never app-local context. Returns
    * undefined to fall back to `chrome.title`. Normalized to always-present (a
    * no-op default) so callers can invoke it unconditionally; see
    * {@link usePaneTitle}.
+   *
+   * `hint` and `options` arrive as VALUES, not hooks: this runs above the pane
+   * match context, so `useHint()`/`useOptions()` are unavailable here.
    */
   useTitle: (
     params: Record<string, string>,
-    input: PaneInput,
+    hint: Hint<Record<string, unknown>>,
+    options: PaneOptions,
   ) => string | undefined;
+  /**
+   * The literal defaults record from `Pane.define({ options })`. Merged under
+   * each slot's opener-supplied partial to produce a TOTAL option set — so a
+   * pane's deep-link behavior is declared once, here, and never re-invented at a
+   * read site with a `??`.
+   */
+  optionDefaults: PaneOptions;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -199,10 +285,10 @@ const registry = new Map<string, PaneInternal>();
 // Populated by makePaneObject at define time. Lets callers that only hold a
 // PaneInternal (e.g. the resolve guard, which receives MatchEntry.pane) reach
 // the object's hooks (useClose/usePromote) to reuse the standard chrome.
-const paneObjectByInternal = new WeakMap<PaneInternal, PaneObject<any, any, any>>();
+const paneObjectByInternal = new WeakMap<PaneInternal, AnyPane>();
 
 /** Resolve the public PaneObject for an internal pane record. */
-export function paneObjectFor(internal: PaneInternal): PaneObject<any, any, any> {
+export function paneObjectFor(internal: PaneInternal): AnyPane {
   const obj = paneObjectByInternal.get(internal);
   if (!obj) {
     throw new Error(`No PaneObject registered for pane "${internal.id}".`);
@@ -258,8 +344,10 @@ export interface MatchEntry {
   params: Record<string, string>;
   /** All params accumulated from the route root up to and including this pane. */
   fullParams: Record<string, string>;
-  /** Caller-provided input data, persisted in the slot (not in the URL). */
-  input: PaneInput;
+  /** The pane's declared option defaults, merged under the opener's partial. Total. */
+  options: PaneOptions;
+  /** Ephemeral optimistic hint bag. `{}` on any rebuilt route. See {@link Hint}. */
+  hint: PaneHintBag;
 }
 
 export interface PaneMatch {
@@ -457,7 +545,7 @@ export interface PaneStore {
   handleLocationChange(): void;
   reorderRoute(fromIndex: number, toIndex: number): void;
   restoreRoute(
-    slots: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput }>,
+    slots: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions }>,
   ): void;
   clearRoute(): void;
   /** Resolve the current route to a `PaneMatch` (memo-friendly, per-store). */
@@ -468,7 +556,7 @@ export interface PaneStore {
   openPaneImpl(
     internal: PaneInternal,
     params: Record<string, string>,
-    opts?: { root?: boolean; input?: PaneInput },
+    opts?: { root?: boolean; options?: PaneOptions; hint?: PaneHintBag },
   ): void;
   close(internal: PaneInternal, instanceId: number): void;
   unwrap(instanceId: number): void;
@@ -508,7 +596,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // only; they never touch the browser URL/history.
     if (!store.live) return;
     const url = buildRouteUrl(route);
-    const serialized = route.map(s => ({ paneId: s.paneId, params: s.params, input: s.input, uuid: s.uuid }));
+    // `hint` is deliberately NOT serialized: an optimistic mirror of server-owned
+    // state must not outlive the navigation that created it, or it comes back as
+    // stale data on the very paths (reload, back/forward) that have no opener to
+    // vouch for it. Rebuilt routes carry `hint = {}` and read canonical instead.
+    const serialized = route.map(s => ({ paneId: s.paneId, params: s.params, options: s.options, uuid: s.uuid }));
     const fullUrl = applyBasePath(url);
     if (fullUrl === window.location.pathname && replace) return;
     const method = replace ? "replaceState" : "pushState";
@@ -529,10 +621,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   }
 
   function restoreRoute(
-    slots: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput }>,
+    slots: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions }>,
   ): void {
     if (typeof window === "undefined") return;
-    const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
+    const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.options ?? {}));
     if (route.length === 0) return;
     setRoute(route);
   }
@@ -619,7 +711,8 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
           pane,
           params: { ...slot.params },
           fullParams: { ...accumulated },
-          input: { ...slot.input },
+          options: { ...pane.optionDefaults, ...slot.options },
+          hint: slot.hint,
         });
       }
     }
@@ -646,11 +739,15 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // navigated while focused (held in memory).
     if (!store.live) return;
     const state = window.history.state as {
-      route?: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput; uuid?: string }>;
+      route?: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions; uuid?: string }>;
       pending?: string;
     } | null;
     if (state?.route) {
-      const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
+      // No `hint`: history.state never carries one (see `setRoute`). `routesEqual`
+      // compares options only, so the synthetic popstate `setRoute` dispatches
+      // right after a hint-carrying open bails out here and leaves the in-memory
+      // hint intact — only a genuine back/forward rebuilds the slot without it.
+      const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid));
       if (currentState.kind === "resolved" && routesEqual(currentState.slots, newRoute)) return;
       currentState = { kind: "resolved", slots: newRoute };
       notifyRouteListeners();
@@ -670,12 +767,13 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   function openPaneImpl(
     internal: PaneInternal,
     params: Record<string, string>,
-    implOpts?: { root?: boolean; input?: PaneInput },
+    implOpts?: { root?: boolean; options?: PaneOptions; hint?: PaneHintBag },
   ): void {
     const replace = !internal.chrome.history;
     const route = currentSlots();
     const ownParams = extractOwnParams(internal, params);
-    const input = implOpts?.input ?? {};
+    const options = implOpts?.options ?? {};
+    const hint = implOpts?.hint ?? {};
 
     if (!implOpts?.root) {
       const existingIdx = route.findIndex((s) => s.paneId === internal.id);
@@ -684,12 +782,12 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         const sameParams =
           Object.keys(ownParams).length === Object.keys(existing.params).length &&
           Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
-        const sameInput =
-          Object.keys(input).length === Object.keys(existing.input).length &&
-          Object.keys(input).every((k) => input[k] === existing.input[k]);
-        if (sameParams && sameInput) return;
+        // Identity is (paneId, params, options). A hint is not identity: two
+        // opens that differ only by their optimistic hint must dedupe to the
+        // same slot, or the pane remounts (or stacks) for a display-only value.
+        if (sameParams && sameOptions(options, existing.options)) return;
         const newRoute = route.slice(0, existingIdx + 1);
-        newRoute[existingIdx] = createSlot(internal.id, ownParams, input);
+        newRoute[existingIdx] = createSlot(internal.id, ownParams, options, hint);
         setRoute(newRoute, replace);
         return;
       }
@@ -707,7 +805,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         : extractOwnParams(ancestorInternal, params);
       ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
     }
-    setRoute([...ancestorSlots, createSlot(internal.id, ownParams, input)], replace);
+    setRoute([...ancestorSlots, createSlot(internal.id, ownParams, options, hint)], replace);
   }
 
   function close(internal: PaneInternal, instanceId: number): void {
@@ -738,7 +836,9 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     for (let i = 0; i <= idx; i++) {
       Object.assign(fullParams, route[i]!.params);
     }
-    openPaneImpl(internal, fullParams, { root: true, input: route[idx]!.input });
+    // Options carry forward (they are the pane's configuration); the hint does
+    // not — promoting is a navigation, and the promoted pane re-reads canonical.
+    openPaneImpl(internal, fullParams, { root: true, options: route[idx]!.options });
   }
 
   const store: PaneStore = {
@@ -912,7 +1012,7 @@ export function reorderRoute(fromIndex: number, toIndex: number): void {
 }
 
 export function restoreRoute(
-  slots: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput }>,
+  slots: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions }>,
 ): void {
   liveStore.restoreRoute(slots);
 }
@@ -957,6 +1057,21 @@ export function useRouteState(): RouteState {
   );
 }
 
+/** Shallow equality over two opener-supplied option partials. */
+function sameOptions(a: PaneOptions, b: PaneOptions): boolean {
+  const ak = Object.keys(a);
+  if (ak.length !== Object.keys(b).length) return false;
+  return ak.every((k) => a[k] === b[k]);
+}
+
+/**
+ * Slot identity for the popstate bail-out: `(paneId, params, options)`.
+ *
+ * `hint` is excluded, and that is load-bearing. `setRoute` writes a hint-less
+ * `history.state` and then dispatches a synthetic `popstate`; if the hint counted
+ * here, `handleLocationChange` would rebuild the route from that hint-less state
+ * and wipe the very hint the open just painted with.
+ */
 function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -967,12 +1082,7 @@ function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
     for (const k of ak) {
       if (a[i]!.params[k] !== b[i]!.params[k]) return false;
     }
-    const ai = Object.keys(a[i]!.input);
-    const bi = Object.keys(b[i]!.input);
-    if (ai.length !== bi.length) return false;
-    for (const k of ai) {
-      if (a[i]!.input[k] !== b[i]!.input[k]) return false;
-    }
+    if (!sameOptions(a[i]!.options, b[i]!.options)) return false;
   }
   return true;
 }
@@ -1069,11 +1179,17 @@ export function usePathname(): string {
  * `segment` — what `useParams()` returns. Keeping them separate matches
  * design decision 6 ("params are own-only").
  */
-export interface PaneToggleOpts<Input = PaneInput> {
+export interface PaneToggleOpts<
+  Options extends object = NoOptions,
+  HintT extends object = NoHint,
+> {
   action?: "close" | "unwrap";
   side?: "left" | "right";
   mode?: PaneOpenMode;
-  input?: Input;
+  /** Opener-supplied subset of the pane's declared `options` defaults. */
+  options?: Partial<Options>;
+  /** Optimistic display mirror. Ephemeral — see {@link Hint}. */
+  hint?: HintT;
 }
 
 export interface PaneRouteEntry<OwnParams = Record<string, string>> {
@@ -1081,24 +1197,33 @@ export interface PaneRouteEntry<OwnParams = Record<string, string>> {
   uuid: string;
   params: OwnParams;
   fullParams: Record<string, string>;
-  input: PaneInput;
+  /** The pane's option defaults merged under the opener's partial. Total. */
+  options: PaneOptions;
 }
 
 export interface PaneObject<
   FullParams = {},
   OwnParams = FullParams,
-  Input = PaneInput,
+  Options extends object = NoOptions,
+  HintT extends object = NoHint,
 > {
   id: string;
   useParams(): OwnParams;
   /**
-   * Read the caller-provided input data for this pane (persisted in the slot,
-   * not in the URL). Returns `Partial<Input>`: input is absent on a cold
-   * deep-link (the route was rebuilt from the URL, which carries no input), so
-   * every declared key is potentially `undefined` and the caller must handle
-   * the missing case.
+   * Read this pane's options: the opener-supplied partial merged under the
+   * defaults declared in `Pane.define({ options })`. TOTAL — never `Partial`.
+   * A rebuilt route (deep link, reload) simply yields the defaults, so the
+   * deep-link value lives at the pane definition and no read site needs a `??`.
    */
-  useInput(): Partial<Input>;
+  useOptions(): Options;
+  /**
+   * Read this pane's optimistic {@link Hint} — an opener-supplied mirror of
+   * server-owned state, absent on any rebuilt route. The returned object holds
+   * no data: `pick(key, canonical)` is the only accessor, and it requires the
+   * canonical value, so a hint can never be observed apart from its source of
+   * truth and can never become one.
+   */
+  useHint(): Hint<HintT>;
   /** Find this pane in the current route. Returns its params or null if absent. */
   useRouteEntry(): PaneRouteEntry<OwnParams> | null;
   /** Find all instances of this pane in the current route (for panes that can appear multiple times). */
@@ -1115,7 +1240,7 @@ export interface PaneObject<
   /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
   useToggle(
     params: FullParams,
-    opts?: PaneToggleOpts<Input>,
+    opts?: PaneToggleOpts<Options, HintT>,
   ): { isOpen: boolean; toggle: () => void };
   back(): void;
   forward(): void;
@@ -1131,10 +1256,19 @@ export interface PaneObject<
   _internal: PaneInternal;
 }
 
+/**
+ * "Some pane, whichever" — the type for positions that hold a pane without
+ * caring about its params / options / hint (the `Pane.Register` slot, chrome
+ * props, layout hosts). Spelled once so that adding a generic to `PaneObject`
+ * never silently narrows a consumer through the strict `NoOptions`/`NoHint`
+ * defaults.
+ */
+export type AnyPane = PaneObject<any, any, any, any>;
+
 function makePaneObject(
   internal: PaneInternal,
   route?: RouteDef<any>,
-): PaneObject<any, any, any> {
+): AnyPane {
   const { actionsSlot } = internal;
 
   function useParams(): Record<string, string> {
@@ -1158,16 +1292,28 @@ function makePaneObject(
     return entry.params;
   }
 
-  function useInput(): PaneInput {
+  /** This pane's own MatchEntry, or null when it is not in the current match. */
+  function useOwnEntry(): MatchEntry | null {
     const match = useContext(PaneMatchContext);
     const instanceId = useContext(PaneInstanceContext);
-    if (!match) return {};
+    if (!match) return null;
     if (instanceId !== undefined) {
-      const entry = match.panes.find(e => e.instanceId === instanceId);
-      if (entry?.pane === internal) return entry.input;
+      const entry = match.panes.find((e) => e.instanceId === instanceId);
+      if (entry?.pane === internal) return entry;
     }
-    const entry = match.panes.find(e => e.pane === internal);
-    return entry?.input ?? {};
+    return match.panes.find((e) => e.pane === internal) ?? null;
+  }
+
+  function useOptions(): PaneOptions {
+    const entry = useOwnEntry();
+    // Outside the match (a pane rendered off-route), the defaults ARE the answer
+    // — the same total set a deep link would produce.
+    return entry?.options ?? internal.optionDefaults;
+  }
+
+  function useHint(): Hint<Record<string, unknown>> {
+    const bag = useOwnEntry()?.hint;
+    return useMemo(() => (bag ? makeHint(bag) : EMPTY_HINT), [bag]);
   }
 
   function useRouteEntry(): PaneRouteEntry | null {
@@ -1175,7 +1321,7 @@ function makePaneObject(
     if (!match) return null;
     const entry = match.panes.find((e) => e.pane === internal);
     if (!entry) return null;
-    return { instanceId: entry.instanceId, uuid: entry.uuid, params: entry.params, fullParams: entry.fullParams, input: entry.input };
+    return { instanceId: entry.instanceId, uuid: entry.uuid, params: entry.params, fullParams: entry.fullParams, options: entry.options };
   }
 
   function useRouteEntries(): PaneRouteEntry[] {
@@ -1183,7 +1329,7 @@ function makePaneObject(
     if (!match) return [];
     return match.panes
       .filter((e) => e.pane === internal)
-      .map((e) => ({ instanceId: e.instanceId, uuid: e.uuid, params: e.params, fullParams: e.fullParams, input: e.input }));
+      .map((e) => ({ instanceId: e.instanceId, uuid: e.uuid, params: e.params, fullParams: e.fullParams, options: e.options }));
   }
 
   // Imperative methods on the PaneObject target the live store (the focused
@@ -1237,7 +1383,7 @@ function makePaneObject(
 
   function useToggle(
     params: Record<string, string>,
-    opts?: PaneToggleOpts,
+    opts?: PaneToggleOpts<PaneOptions, PaneHintBag>,
   ): { isOpen: boolean; toggle: () => void } {
     const store = usePaneStore();
     const callerInstanceId = useContext(PaneInstanceContext);
@@ -1248,8 +1394,8 @@ function makePaneObject(
     const action = opts?.action ?? "close";
     const mode = opts?.mode ?? "push";
     const side = opts?.side;
-    const input = opts?.input;
-    const inputRef = useLatestRef(input);
+    const optionsRef = useLatestRef(opts?.options);
+    const hintRef = useLatestRef(opts?.hint);
 
     const callerIndex =
       callerInstanceId !== undefined
@@ -1278,17 +1424,23 @@ function makePaneObject(
           store.close(internal, targetSlot.instanceId);
         }
       } else {
-        openPaneFn(paneObject, paramsRef.current, { mode, side, input: inputRef.current });
+        openPaneFn(paneObject, paramsRef.current, {
+          mode,
+          side,
+          options: optionsRef.current,
+          hint: hintRef.current,
+        });
       }
     }, [store, targetSlot, action, openPaneFn, mode, side]);
 
     return { isOpen, toggle };
   }
 
-  const paneObject: PaneObject<any, any, any> = {
+  const paneObject: AnyPane = {
     id: internal.id,
     useParams,
-    useInput,
+    useOptions,
+    useHint,
     useRouteEntry,
     useRouteEntries,
     close,
@@ -1329,10 +1481,15 @@ function normalizeChrome<Params>(
 // ParentParams defaults to `{}` so that top-level panes (no parent) end up
 // with `{} & InferParams<Path>` = `InferParams<Path>`. Using
 // `Record<string, never>` as the default would clash with any own params.
-type DefineArgs<Path extends string, ParentParams, Input> = {
+type DefineArgs<
+  Path extends string,
+  ParentParams,
+  Options extends object,
+  HintT extends object,
+> = {
   id: string;
   /** Optional default ancestors to prepend when opening this pane from scratch (no caller context). */
-  defaultAncestors?: Array<PaneObject<any, any, any>>;
+  defaultAncestors?: Array<AnyPane>;
   /** Own URL segment (no leading slash). */
   segment?: Path;
   /**
@@ -1342,21 +1499,37 @@ type DefineArgs<Path extends string, ParentParams, Input> = {
    */
   appPath?: string;
   component: ComponentType;
-  /** Declares the typed shape of caller-provided input data (runtime no-op, type-level only). */
-  input?: TypeMarker<Input>;
+  /**
+   * Literal DEFAULTS for this pane's opener-supplied UI options. Read via
+   * `useOptions()`, which merges the opener's partial over these — so the value
+   * a deep link sees is declared here, once, and never re-invented at a read
+   * site. Options have no canonical owner: absence genuinely means "the default".
+   *
+   * If a key's default would be a LIE about server-owned state
+   * (`{ title: "Untitled" }`), it is a {@link hint}, not an option.
+   */
+  options?: Options;
+  /**
+   * Declares the typed shape of this pane's optimistic {@link Hint} — a mirror
+   * of server-owned state, supplied by the opener to pre-paint before the
+   * canonical resource settles (runtime no-op, type-level only). Absent on any
+   * rebuilt route; never a write source.
+   */
+  hint?: TypeMarker<HintT>;
   chrome?: PaneChromeConfig<ParentParams & InferParams<Path>>;
   /**
    * Self-contained title resolver for tab labels and the browser document
    * title (see {@link PaneInternal.useTitle}). A React hook: it may call global
    * live-state hooks but must NOT depend on the owning app's context — it runs
    * at the tab surface, above the app's component tree. Read data the pane
-   * already self-fetches (a global resource keyed by `params`) or the optimistic
-   * `input` passed at open time. Falls back to `chrome.title` when it returns
-   * undefined.
+   * already self-fetches (a global resource keyed by `params`), falling back to
+   * the optimistic `hint` while it loads. Falls back to `chrome.title` when it
+   * returns undefined.
    */
   useTitle?: (
     params: ParentParams & InferParams<Path>,
-    input: Input,
+    hint: Hint<HintT>,
+    options: Options,
   ) => string | undefined;
   /**
    * Default column width in pixels. Read by layout renderers (e.g. Miller
@@ -1378,7 +1551,11 @@ type RouteResolveField<Params extends Record<string, string>> =
 // is derived from the `RouteDef`, so the only authored fields are the behavior
 // (`component`, `chrome`, `useTitle`, `input`, `width`, `resolve`). Params flow
 // from `RouteDef<Params>`, so `useParams()` returns the full flat `Params`.
-type RouteDefineArgs<Params extends Record<string, string>, Input> = {
+type RouteDefineArgs<
+  Params extends Record<string, string>,
+  Options extends object,
+  HintT extends object,
+> = {
   route: RouteDef<Params>;
   /**
    * Marks this pane as the index/landing pane for the app whose `Apps.App`
@@ -1386,38 +1563,56 @@ type RouteDefineArgs<Params extends Record<string, string>, Input> = {
    */
   appPath?: string;
   component: ComponentType;
-  /** Declares the typed shape of caller-provided input data (runtime no-op, type-level only). */
-  input?: TypeMarker<Input>;
+  /** Literal defaults for the pane's opener-supplied UI options. See {@link DefineArgs.options}. */
+  options?: Options;
+  /** Typed shape of the pane's optimistic {@link Hint}. See {@link DefineArgs.hint}. */
+  hint?: TypeMarker<HintT>;
   chrome?: PaneChromeConfig<Params>;
-  useTitle?: (params: Params, input: Input) => string | undefined;
+  useTitle?: (
+    params: Params,
+    hint: Hint<HintT>,
+    options: Options,
+  ) => string | undefined;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
 } & RouteResolveField<Params>;
 
 // A route-backed pane always carries a (non-optional) `.link`.
-type RoutePaneObject<Params extends Record<string, string>, Input> = PaneObject<
-  Params,
-  Params,
-  Input
-> & { link: (app: AppRef, params: Params) => string };
+type RoutePaneObject<
+  Params extends Record<string, string>,
+  Options extends object,
+  HintT extends object,
+> = PaneObject<Params, Params, Options, HintT> & {
+  link: (app: AppRef, params: Params) => string;
+};
 
 // Route form — derive id/segment/defaultAncestors from the RouteDef.
-function define<Params extends Record<string, string>, Input = PaneInput>(
-  args: RouteDefineArgs<Params, Input>,
-): RoutePaneObject<Params, Input>;
+function define<
+  Params extends Record<string, string>,
+  Options extends object = NoOptions,
+  HintT extends object = NoHint,
+>(
+  args: RouteDefineArgs<Params, Options, HintT>,
+): RoutePaneObject<Params, Options, HintT>;
 // Legacy segment form — kept byte-for-byte for every unconverted pane.
 function define<
   Path extends string = "",
   ParentParams = {},
-  Input = PaneInput,
+  Options extends object = NoOptions,
+  HintT extends object = NoHint,
 >(
-  args: DefineArgs<Path, ParentParams, Input>,
-): PaneObject<ParentParams & InferParams<Path>, InferParams<Path>, Input>;
+  args: DefineArgs<Path, ParentParams, Options, HintT>,
+): PaneObject<
+  ParentParams & InferParams<Path>,
+  InferParams<Path>,
+  Options,
+  HintT
+>;
 function define(
   args:
-    | RouteDefineArgs<Record<string, string>, unknown>
-    | DefineArgs<string, unknown, unknown>,
-): PaneObject<any, any, any> {
+    | RouteDefineArgs<Record<string, string>, PaneOptions, PaneHintBag>
+    | DefineArgs<string, unknown, PaneOptions, PaneHintBag>,
+): AnyPane {
   // Discriminate the two arg shapes on `route`: the route form derives
   // id/segment/defaultAncestors from the RouteDef; the legacy form reads them
   // directly. Narrowing on `args` (not a derived const) lets TS see which
@@ -1468,6 +1663,7 @@ function define(
     useTitle:
       (args.useTitle as PaneInternal["useTitle"] | undefined) ??
       (() => undefined),
+    optionDefaults: args.options ?? {},
   };
 
   return makePaneObject(internal, route);
@@ -1555,9 +1751,11 @@ export function useRoute(): PaneMatch | null {
 export function usePaneTitle(
   pane: PaneInternal,
   params: Record<string, string>,
-  input: PaneInput,
+  hint: PaneHintBag,
+  options: PaneOptions,
 ): string | undefined {
-  const dynamic = pane.useTitle(params, input);
+  const hintApi = useMemo(() => makeHint(hint), [hint]);
+  const dynamic = pane.useTitle(params, hintApi, options);
   if (dynamic) return dynamic;
   const fallback = pane.chrome.title;
   return typeof fallback === "function" ? fallback(params) : fallback;
@@ -1602,7 +1800,8 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
         pane,
         params: {},
         fullParams: {},
-        input: {},
+        options: { ...pane.optionDefaults },
+        hint: {},
       };
       return { panes: [entry] };
     }
@@ -1649,13 +1848,21 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
 
 export type PaneOpenMode = "root" | "push" | "swap";
 
-export function openPane<Params = Record<string, string>, Input = PaneInput>(
-  target: PaneObject<Params, any, Input>,
+export function openPane<
+  Params = Record<string, string>,
+  Options extends object = NoOptions,
+  HintT extends object = NoHint,
+>(
+  target: PaneObject<Params, any, Options, HintT>,
   params: NoInfer<Params>,
-  opts: { mode: "root"; input?: Input },
+  opts: { mode: "root"; options?: Partial<Options>; hint?: HintT },
 ): void {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-  liveStore.openPaneImpl(target._internal, params as Record<string, string>, { root: opts.mode === "root", input: opts.input as PaneInput });
+  liveStore.openPaneImpl(target._internal, params as Record<string, string>, {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
+    root: opts.mode === "root",
+    options: opts.options as PaneOptions | undefined,
+    hint: opts.hint as PaneHintBag | undefined,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1665,17 +1872,27 @@ export function openPane<Params = Record<string, string>, Input = PaneInput>(
 
 /**
  * The caller-aware open function returned by {@link useOpenPane}. Generic on the
- * target pane's declared `Params` and `Input` so both `params` and `opts.input`
- * are type-checked against the pane that owns them at the call site. `params` is
+ * target pane's declared `Params`, `Options`, and `Hint`, so all three are
+ * type-checked against the pane that owns them at the call site. `params` is
  * checked against the target pane's full param set (not coerced to
- * `Record<string, string>`), mirroring `Input`: a paramless pane rejects stray
- * keys and a paramful pane requires its declared params.
+ * `Record<string, string>`): a paramless pane rejects stray keys and a paramful
+ * pane requires its declared params. Likewise a pane declaring no `options` /
+ * no `hint` rejects them outright.
  */
 export interface OpenPaneFn {
-  <Params = Record<string, string>, Input = PaneInput>(
-    target: PaneObject<Params, any, Input>,
+  <
+    Params = Record<string, string>,
+    Options extends object = NoOptions,
+    HintT extends object = NoHint,
+  >(
+    target: PaneObject<Params, any, Options, HintT>,
     params: NoInfer<Params>,
-    opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Input },
+    opts: {
+      mode: PaneOpenMode;
+      side?: "left" | "right";
+      options?: Partial<Options>;
+      hint?: HintT;
+    },
   ): void;
 }
 
@@ -1685,15 +1902,21 @@ export function useOpenPane(): OpenPaneFn {
 
   return useCallback(
     (
-      target: PaneObject<any, any, any>,
+      target: AnyPane,
       params: Record<string, string>,
-      opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: PaneInput },
+      opts: {
+        mode: PaneOpenMode;
+        side?: "left" | "right";
+        options?: PaneOptions;
+        hint?: PaneHintBag;
+      },
     ) => {
       const targetInternal = target._internal;
-      const input = opts.input ?? {};
+      const options = opts.options ?? {};
+      const hint = opts.hint ?? {};
 
       if (opts.mode === "root" || callerInstanceId === undefined) {
-        store.openPaneImpl(targetInternal, params, { root: opts.mode === "root", input });
+        store.openPaneImpl(targetInternal, params, { root: opts.mode === "root", options, hint });
         return;
       }
 
@@ -1702,7 +1925,7 @@ export function useOpenPane(): OpenPaneFn {
         (s) => s.instanceId === callerInstanceId,
       );
       if (callerIndex < 0) {
-        store.openPaneImpl(targetInternal, params, { input });
+        store.openPaneImpl(targetInternal, params, { options, hint });
         return;
       }
 
@@ -1719,12 +1942,9 @@ export function useOpenPane(): OpenPaneFn {
         const sameParams =
           Object.keys(ownParams).length === Object.keys(existing.params).length &&
           Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
-        const sameInput =
-          Object.keys(input).length === Object.keys(existing.input).length &&
-          Object.keys(input).every((k) => input[k] === existing.input[k]);
-        if (sameParams && sameInput) return;
+        if (sameParams && sameOptions(options, existing.options)) return;
         const newRoute = currentRoute.slice(0, callerIndex + 1);
-        newRoute[callerIndex] = createSlot(targetInternal.id, ownParams, input);
+        newRoute[callerIndex] = createSlot(targetInternal.id, ownParams, options, hint);
         store.setRoute(newRoute, replace);
         return;
       }
@@ -1736,7 +1956,7 @@ export function useOpenPane(): OpenPaneFn {
         if (!alreadyAncestor) {
           const newRoute = [
             ...currentRoute.slice(0, callerIndex),
-            createSlot(targetInternal.id, ownParams, input),
+            createSlot(targetInternal.id, ownParams, options, hint),
             ...currentRoute.slice(callerIndex),
           ];
           store.setRoute(newRoute, replace);
@@ -1747,7 +1967,7 @@ export function useOpenPane(): OpenPaneFn {
       // push right (default): truncate after caller, append target
       const newRoute = [
         ...currentRoute.slice(0, callerIndex + 1),
-        createSlot(targetInternal.id, ownParams, input),
+        createSlot(targetInternal.id, ownParams, options, hint),
       ];
       store.setRoute(newRoute, replace);
     },

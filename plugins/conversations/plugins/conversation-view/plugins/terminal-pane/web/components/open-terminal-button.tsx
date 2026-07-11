@@ -1,5 +1,4 @@
 import { MdTerminal } from "react-icons/md";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { convTerminalPane } from "../panes";
 
@@ -11,8 +10,7 @@ import { convTerminalPane } from "../panes";
  * import it without a cycle.
  */
 export function OpenTerminalButton() {
-  const { convId } = conversationPane.useParams();
-  const { isOpen, toggle } = convTerminalPane.useToggle({}, { input: { convId } });
+  const { isOpen, toggle } = convTerminalPane.useToggle({});
 
   if (isOpen) return null;
 

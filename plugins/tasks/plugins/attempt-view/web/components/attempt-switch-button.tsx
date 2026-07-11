@@ -14,7 +14,7 @@ export function AttemptSwitchButton() {
 
   const { isOpen, toggle } = attemptPane.useToggle(
     { attemptId: conversation?.attemptId ?? "" },
-    { action: "unwrap", side: "left", input: { convId } },
+    { action: "unwrap", side: "left" },
   );
 
   // Render a neutral button (no count chip) while the resource is still loading —

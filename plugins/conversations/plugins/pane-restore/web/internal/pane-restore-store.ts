@@ -1,13 +1,15 @@
-import { getRoute, type PaneInput } from "@plugins/primitives/plugins/pane/web";
+import { getRoute, type PaneOptions } from "@plugins/primitives/plugins/pane/web";
 import { report } from "@plugins/reports/web";
 
 const LS_PREFIX = "route.restore.";
 const TTL = 30 * 24 * 60 * 60 * 1000;
 
-// `input` mirrors PaneSlot.input. Persisted via JSON (localStorage), which
-// round-trips booleans/numbers/nested objects — so it is the structured
-// PaneInput bag, not a string map.
-type SavedSlot = { paneId: string; params: Record<string, string>; input?: PaneInput };
+// `options` mirrors PaneSlot.options (the opener-supplied partial). Persisted via
+// JSON (localStorage), which round-trips booleans/numbers/nested objects — so it
+// is the structured PaneOptions bag, not a string map. A pane's `hint` is
+// deliberately absent: an optimistic mirror of server-owned state must not
+// outlive the navigation that created it (see `Hint`).
+type SavedSlot = { paneId: string; params: Record<string, string>; options?: PaneOptions };
 type Envelope = { v: SavedSlot[]; ts: number };
 
 // Tri-state so a genuine storage-read failure can never be mistaken for a
@@ -110,7 +112,7 @@ function handleNavigation(): void {
     if (route.length === 0 || route[0]?.paneId !== "conversation") return;
     const convId = route[0]?.params.convId;
     if (!convId) return;
-    const slots: SavedSlot[] = route.map((s) => ({ paneId: s.paneId, params: s.params, input: s.input }));
+    const slots: SavedSlot[] = route.map((s) => ({ paneId: s.paneId, params: s.params, options: s.options }));
     saveRouteForConversation(convId, slots);
   }, 50);
 }

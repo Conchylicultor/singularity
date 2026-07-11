@@ -16,6 +16,6 @@ export function openSongImperative(song: { id: string; title: string }): void {
   openPane(
     sonataPlayerPane,
     { songId: song.id },
-    { mode: "root", input: { title: song.title } },
+    { mode: "root", hint: { title: song.title } },
   );
 }

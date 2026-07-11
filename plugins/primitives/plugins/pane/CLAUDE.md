@@ -7,8 +7,8 @@ navigation the route is persisted in `history.state` so back/forward
 works without re-parsing. A layout renderer maps the route to a visible
 arrangement — Miller columns paints each pane as a column; Full-pane
 paints only the current pane. The route itself is layout-agnostic. Each
-pane is self-contained: it receives `input` from its opener and
-self-fetches any data it needs.
+pane is self-contained: it receives `options` / an optimistic `hint` from
+its opener and self-fetches any data it needs.
 
 Design rationale lives in:
 
@@ -17,7 +17,10 @@ Design rationale lives in:
   (`.open()` takes full params; `useParams()` is own-only; prefix matching).
 - `research/2026-04-30-plugins-miller-columns.md` — layout renderer.
 - `research/2026-05-15-global-remove-after-pane-state.md` — route-first
-  architecture, `after:` removal, `input`/`useInput()`, `defaultAncestors`.
+  architecture, `after:` removal, `input`/`useInput()` (since split into
+  `options`/`hint` — see below), `defaultAncestors`.
+- `research/2026-07-10-global-pane-input-hint-vs-options.md` — why `input`
+  became `options` + `hint`, and why a hint cannot be a write source.
 
 ## Define a pane
 
@@ -80,8 +83,10 @@ Rules:
 - `width` (optional) — default column width in pixels for layout
   renderers that arrange panes as columns (Miller). Last column flex-grows
   regardless. Defaults to 400.
-- `input` (optional) — `type<T>()` marker declaring the shape of
-  non-URL state this pane accepts at creation time. See **Input** below.
+- `options` (optional) — literal DEFAULTS record for opener-supplied UI
+  configuration. See **Non-URL state** below.
+- `hint` (optional) — `type<T>()` marker declaring the shape of an
+  optimistic, ephemeral mirror of server-owned state. See **Non-URL state**.
 
 ## Read params
 
@@ -119,35 +124,98 @@ Each entry exposes `{ instanceId, params, fullParams }`. Use
 `instanceId` with `pane.close(instanceId)` when you need to close the
 specific instance you found.
 
-## Input
+## Non-URL state: `options` and `hint`
 
-Panes can receive non-URL state at creation time via `input`. Input is
-persisted in `history.state` alongside the route, so it survives
-back/forward navigation and doesn't depend on the opener pane remaining
-in the route.
+A pane can receive state at creation time that doesn't belong in the URL.
+There are exactly **two kinds**, and which one you have is decided by a
+single question: **does this value have a canonical server-side owner?**
+
+|  | `options` | `hint` |
+|---|---|---|
+| Canonical owner | none — the pane owns it | a live-state resource owns it |
+| Absence means | the declared default | wait for canonical |
+| Persisted | yes (`history.state`, tabs, pane-restore) | **never** |
+| Read as | `useOptions()` → **total** `Options` | `useHint()` → `Hint<T>` |
+| Safe to write back | it's UI config; nothing writes it | **never** |
+
+There is no third kind. If a value is already in the URL — including an
+ancestor pane's params — read it from the route (`ancestorPane.useRouteEntry()`),
+not from either of these.
+
+### `options` — opener-supplied UI configuration
+
+Declare the **defaults**, not a type. The default *is* the deep-link value,
+stated once:
 
 ```ts
-export const myPane = Pane.define({
-  id: "my-pane",
-  segment: "my/:id",
-  component: MyPaneBody,
-  input: type<{ preloadedTitle: string }>(),
+export const taskDetailPane = Pane.define({
+  id: "task-detail",
+  segment: "t/:taskId",
+  component: TaskDetailBody,
+  options: { focused: false },
 });
 
-// Opening with input:
-openPane(myPane, { id: "123" }, { input: { preloadedTitle: "Hello" } });
+// Opening with a partial override:
+openPane(taskDetailPane, { taskId }, { mode: "push", options: { focused: true } });
 
-// Reading input inside the pane:
-function MyPaneBody() {
-  const { preloadedTitle } = myPane.useInput();
-  // preloadedTitle is available even if the opener pane is closed
+// Reading — TOTAL, never Partial, so there is nothing to `??`:
+function TaskDetailBody() {
+  const { focused } = taskDetailPane.useOptions();   // boolean
 }
 ```
 
-Use `input` for data the pane needs but that doesn't belong in the URL
-(too long, not meaningful as a deep link, or ephemeral context from the
-opener). The canonical data should still be fetched by the pane itself
-— `input` provides optimistic/preloaded values, not the source of truth.
+A pane that declares no `options` **rejects** them at the call site.
+
+### `hint` — an optimistic mirror, structurally unwritable
+
+A hint pre-paints server-owned state before the canonical resource settles.
+It is absent on every route the browser rebuilt (deep link, reload,
+back/forward) and may be stale when present. **It is never a source of truth.**
+
+```ts
+export const sonataPlayerPane = Pane.define({
+  id: "sonata-player",
+  segment: "song/:songId",
+  component: SonataPlayerSurface,
+  hint: type<{ title: string }>(),
+  useTitle: useSongTitle,
+});
+
+openPane(sonataPlayerPane, { songId }, { mode: "root", hint: { title: song.title } });
+
+function useSongTitle({ songId }: { songId: string }, hint: Hint<{ title: string }>) {
+  const songs = useResource(songsResource);
+  let canonical: string | undefined;
+  if (!songs.pending) canonical = songs.data.find((s) => s.id === songId)?.title;
+  return hint.pick("title", canonical);   // canonical wins; hint fills the gap
+}
+```
+
+`Hint` holds **no data**. `pick(key, canonical)` is the only accessor and it
+*requires* the canonical value — so you cannot read a hint apart from its
+source of truth, and if you already hold the truth you have no reason to write
+the hint. The hint is also never serialized, so it cannot outlive the
+navigation that created it.
+
+`pick` returns `T[K] | undefined`. Defaulting that to a fabricated value is
+banned by `lint/no-hint-fabrication`:
+
+```ts
+hint.pick("title", canonical) ?? "Untitled"                    // ✗ fabrication
+hint.pick("title", undefined)                                  // ✗ recovers the bare hint
+hint.pick("title", canonical) ?? null                          // ✓ honest absence
+hint.pick("title", canonical) ?? <Placeholder>Untitled</…>     // ✓ a ReactNode is never a DB value
+```
+
+> **Why this shape.** A deep-linked `/sonata/song/:id` once seeded an app-context
+> mirror with `input.title ?? "Untitled"`, and a chord-grid autosave wrote
+> `"Untitled"` over the real song name. `useInput()` made a possibly-absent
+> display hint look like ordinary pane data. See
+> `research/2026-07-10-global-pane-input-hint-vs-options.md` and
+> `research/2026-07-10-sonata-song-title-single-owner.md`.
+>
+> If an option's default would be a **lie about server state**
+> (`options: { title: "Untitled" }`), it is a hint, not an option.
 
 ## Navigate
 
@@ -401,7 +469,8 @@ directly. Each mutation:
 1. Updates `currentRoute` (the in-memory `PaneSlot[]`).
 2. Derives the URL via `buildRouteUrl()`.
 3. Pushes (or replaces) a `history.state` entry containing the
-   serialized route (paneId, params, input per slot).
+   serialized route (paneId, params, options per slot — never the `hint`,
+   which is in-memory only).
 
 On `popstate` (back/forward), the route is restored from
 `history.state` — no URL re-parsing needed. URL parsing (`parseUrl`)
@@ -435,7 +504,7 @@ See "Open questions" in the design doc.
 - Web:
   - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.mail.inbox`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.thread-list`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.studio.release`, `apps.website.blog.site`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.push`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
   - Uses: `primitives/bar.Bar`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/scroll.ScrollProps`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/element-size.useResizeObserver`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/surface-id.SurfaceIdContext`, `primitives/tooltip.WithTooltip`
-  - Exports: Types: `InferParams`, `MatchEntry`, `OpenPaneFn`, `PaneChromeConfig`, `PaneHeaderZones`, `PaneInput`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneScrollProps`, `PaneSlot`, `PaneStore`, `PaneToggleOpts`, `PaneToolbarItem`, `ParsedRoute`, `ResolveHook`, `RouteState`, `SurfaceChrome`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `createPaneStore`, `defaultStore`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneLoadScopeContext`, `PaneMatchContext`, `PaneResolveGuard`, `PaneScroll`, `PaneStoreContext`, `PaneSurfaceAppContext`, `PaneSurfaceProvider`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `setLiveStore`, `stripBasePath`, `SurfaceChromeContext`, `ToolbarItem`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePaneStore`, `usePaneTitle`, `usePathname`, `useRenderSync`, `useRoute`, `useRouteState`, `useSurfaceAppId`, `useSyncPaneRegistry`
+  - Exports: Types: `AnyPane`, `Hint`, `InferParams`, `MatchEntry`, `OpenPaneFn`, `PaneChromeConfig`, `PaneHeaderZones`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneOptions`, `PaneRouteEntry`, `PaneScrollProps`, `PaneSlot`, `PaneStore`, `PaneToggleOpts`, `PaneToolbarItem`, `ParsedRoute`, `ResolveHook`, `RouteState`, `SurfaceChrome`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `createPaneStore`, `defaultStore`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneLoadScopeContext`, `PaneMatchContext`, `PaneResolveGuard`, `PaneScroll`, `PaneStoreContext`, `PaneSurfaceAppContext`, `PaneSurfaceProvider`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `setLiveStore`, `stripBasePath`, `SurfaceChromeContext`, `ToolbarItem`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePaneStore`, `usePaneTitle`, `usePathname`, `useRenderSync`, `useRoute`, `useRouteState`, `useSurfaceAppId`, `useSyncPaneRegistry`
 - Cross-plugin:
   - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps-core`, `apps-core/layout`, `apps-core/tab-surface`, `apps-core/tabs`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/servers`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/mail/inbox`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/shell`, `apps/mail/thread-list`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/prototypes/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/shell`, `apps/website/blog/site`, `apps/website/demos/plugin-pyramid`, `apps/website/demos/release-switcher`, `apps/website/downloads`, `apps/website/landing/cta`, `apps/website/landing/pillars`, `apps/website/pillars/agents`, `apps/website/pillars/apps`, `apps/website/pillars/platform`, `apps/website/shell`, `apps/workflows/definitions`, `apps/workflows/executions`, `apps/workflows/shell`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-churn/emit`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/timeline`, `debug/trace/engine`, `debug/trace/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `layouts/route-fallback`, `plugin-meta/contributions-table`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `primitives/pane-toolbar`, `reports`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
 - Core:

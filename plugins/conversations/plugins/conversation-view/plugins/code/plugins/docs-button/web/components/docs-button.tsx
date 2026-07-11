@@ -14,7 +14,7 @@ export function DocsButton() {
   const conversation = useConversationById(convId);
   const filesResult = useEditedFiles(convId);
   const pushedDocs = usePushedDocFiles(conversation?.attemptId ?? "");
-  const { isOpen, toggle } = convDocsPane.useToggle({}, { input: { convId } });
+  const { isOpen, toggle } = convDocsPane.useToggle({});
 
   // While edited files are still loading — or the worktree is unresolved (a
   // determinate unknown, not an empty diff) — render a neutral disabled button

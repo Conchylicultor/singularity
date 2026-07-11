@@ -1,12 +1,12 @@
-import { Pane, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DocsPane } from "./components/docs-pane";
 
 export const convDocsPane = Pane.define({
   id: "conv-docs",
   segment: "docs",
-  input: type<{ convId: string }>(),
   component: DocsPane,
-  chrome: { history: false },
+  // Conversation-scoped satellite: promote() would strip convId from the URL.
+  chrome: { history: false, promote: false },
 });
 
 const MD_RE = /\.mdx?$/i;

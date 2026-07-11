@@ -12,12 +12,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneScroll } from "./pane-scroll";
 import { ToolbarItem, type PaneHeaderZones } from "./pane-header-item";
-import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
+import { PaneMatchContext, type PaneMatch, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
 
 interface PaneChromeProps {
-  pane: PaneObject<any, any>;
+  pane: AnyPane;
   /**
    * Header title. When omitted, falls back to the pane's `chrome.title`
    * config (string or `(params) => string`). Pass a node when the title
@@ -195,7 +195,7 @@ function CustomHeader({ header }: { header: PaneHeaderZones }) {
   );
 }
 
-function chromeTitle(pane: PaneObject<any, any>, match: PaneMatch | null): ReactNode {
+function chromeTitle(pane: AnyPane, match: PaneMatch | null): ReactNode {
   const chrome = pane._internal.chrome;
   if (chrome.title === undefined) return null;
   if (typeof chrome.title === "string") return chrome.title;
@@ -208,7 +208,7 @@ export function PaneActionsSlot({
   pane,
   position = "right",
 }: {
-  pane: PaneObject<any, any>;
+  pane: AnyPane;
   position?: "left" | "right";
 }) {
   const actions = pane.Actions.useContributions().filter(
@@ -239,7 +239,7 @@ function OverflowActionsBar({
   pane,
   extraActions,
 }: {
-  pane: PaneObject<any, any>;
+  pane: AnyPane;
   extraActions?: ReactNode;
 }) {
   const slotActions = pane.Actions.useContributions().filter(

@@ -9,7 +9,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { commitsGraphResource } from "../../shared/resources";
-import { convCommitDiffPane, convCommitsGraphPane } from "../panes";
+import { convCommitDiffPane } from "../panes";
 
 const BRANCH_COLOR = "var(--primary)";
 const LANDED_COLOR = "#10b981"; // emerald-500 — commits pushed to main
@@ -18,9 +18,7 @@ const BEHIND_COLOR = "color-mix(in srgb, var(--muted-foreground) 50%, transparen
 
 export function CommitsGraphBody() {
   const openPane = useOpenPane();
-  const { convId: inputConvId } = convCommitsGraphPane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const result = useResource(commitsGraphResource, {
     attemptId: conversation?.attemptId ?? "",
@@ -91,7 +89,7 @@ export function CommitsGraphBody() {
             isFirst={idx === 0}
             isLast={idx === commits.length - 1}
             color={BRANCH_COLOR}
-            onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push", input: convId ? { convId } : undefined })}
+            onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push" })}
           />
         ))}
         {hasAgentWork && (
@@ -110,7 +108,7 @@ export function CommitsGraphBody() {
             isLast={idx === landedCommits.length - 1}
             color={LANDED_COLOR}
             pushed
-            onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push", input: convId ? { convId } : undefined })}
+            onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push" })}
           />
         ))}
         {behindCommits.length > 0 && (
@@ -123,7 +121,7 @@ export function CommitsGraphBody() {
                 isFirst={false}
                 isLast={idx === behindCommits.length - 1}
                 color={BEHIND_COLOR}
-                onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push", input: convId ? { convId } : undefined })}
+                onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push" })}
               />
             ))}
           </>

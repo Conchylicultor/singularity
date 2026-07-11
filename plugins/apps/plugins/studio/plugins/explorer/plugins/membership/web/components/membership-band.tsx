@@ -89,7 +89,7 @@ export function MembershipPin({ node }: { node: PluginNode }) {
             label="Open in graph"
             onClick={(e) => {
               e.stopPropagation();
-              openPane(graphCanvasPane, {}, { mode: "root", input: { focusId: node.id } });
+              openPane(graphCanvasPane, {}, { mode: "root", options: { focusId: node.id } });
             }}
           />
         </Cluster>

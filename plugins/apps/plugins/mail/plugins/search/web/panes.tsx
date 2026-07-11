@@ -36,7 +36,11 @@ export const mailMessagePane = Pane.define({
   defaultAncestors: [mailSearchPane],
   segment: "m/:messageId",
   width: 640,
-  input: type<MailMessage>(),
+  // The envelope the search row already holds, as an optimistic DISPLAY hint so
+  // the header paints before `POST /api/mail/hydrate` returns. Absent on a deep
+  // link / reload, where hydration fills the header instead. Never a write
+  // source: `Hint.pick` only ever yields it beside the hydrated value.
+  hint: type<MailMessage>(),
   resolve: false,
   component: MailMessageBody,
 });

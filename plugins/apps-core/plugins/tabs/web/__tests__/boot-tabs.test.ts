@@ -90,7 +90,7 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
         {
           tabId: "t1",
           appId: "pages",
-          route: [{ paneId: "page", params: { id: "abc" }, input: {}, uuid: "u1" }],
+          route: [{ paneId: "page", params: { id: "abc" }, options: {}, uuid: "u1" }],
           rawPath: "page/abc",
         },
       ],
@@ -113,7 +113,7 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
         {
           tabId: "t1",
           appId: "pages",
-          route: [{ paneId: "page", params: { id: "other" }, input: {}, uuid: "u1" }],
+          route: [{ paneId: "page", params: { id: "other" }, options: {}, uuid: "u1" }],
           rawPath: "page/other",
         },
       ],

@@ -1,5 +1,5 @@
 import { type ReactElement, useEffect, useState } from "react";
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type, type Hint } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -46,7 +46,7 @@ function SonataLibraryBody(): ReactElement {
  * The player pane at `/sonata/song/:songId` — a real URL that survives reload
  * and back/forward. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
- * optimistic `title` rides in `input` purely as a DISPLAY hint for `useTitle`
+ * optimistic `title` rides in `hint` purely as a DISPLAY value for `useTitle`
  * (the browser-tab / tab-strip label before `songsResource` settles) — it is
  * NOT a data source: the toolbar title and every consumer read the canonical
  * row from `songsResource`. `resolve` hydrates every source for the song on
@@ -57,26 +57,31 @@ export const sonataPlayerPane = Pane.define({
   segment: "song/:songId",
   chrome: { header: SonataToolbar },
   // Display-only optimistic label for `useTitle` (tab/document title) before the
-  // songs resource settles. Never promote this into a write source — the title
-  // is library-owned (`songsResource`); the shell keeps no mirror.
-  input: type<{ title: string }>(),
+  // songs resource settles. Structurally unwritable: `Hint.pick` hands it back
+  // only alongside the canonical value, and it is never persisted. The title is
+  // library-owned (`songsResource`); the shell keeps no mirror.
+  hint: type<{ title: string }>(),
   resolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
   // Tab/document title: the canonical song name from the global songs resource
-  // (reflects renames), falling back to the optimistic `input.title` carried at
-  // open time while the resource loads. Self-contained — `useSonata()` context
-  // is unavailable at the tab-surface level where this runs.
+  // (reflects renames), falling back to the optimistic hint carried at open time
+  // while the resource loads. Self-contained — `useSonata()` context is
+  // unavailable at the tab-surface level where this runs.
   useTitle: useSongTitle,
 });
 
-/** Canonical song title from the global resource, or the optimistic open title. */
+/** Canonical song title from the global resource, or the optimistic open hint. */
 function useSongTitle(
   { songId }: { songId: string },
-  input: { title?: string },
+  hint: Hint<{ title: string }>,
 ): string | undefined {
   const songs = useResource(songsResource);
-  if (songs.pending) return input.title;
-  return songs.data.find((s) => s.id === songId)?.title ?? input.title;
+  // `canonical` stays `undefined` until the resource settles — precisely what
+  // `pick` reads as "not known yet", so the hint shows through in the meantime
+  // and is superseded the instant the real row (and any rename) arrives.
+  let canonical: string | undefined;
+  if (!songs.pending) canonical = songs.data.find((s) => s.id === songId)?.title;
+  return hint.pick("title", canonical);
 }
 
 /**

@@ -9,7 +9,6 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   parseWorkflowMeta,
   parseWorkflowResult,
@@ -95,12 +94,11 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const { graph, status } = useWorkflowTrace(script, input.args);
 
   const openPane = useOpenPane();
-  const convId = conversationPane.useRouteEntry()?.params.convId;
   const openNode = (nodeId: string) => {
     openPane(
       workflowNodePane,
       { toolUseId: event.toolUseId, nodeId },
-      { mode: "push", input: convId ? { convId } : undefined },
+      { mode: "push" },
     );
   };
 

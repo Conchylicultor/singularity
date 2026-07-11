@@ -1,4 +1,4 @@
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource } from "@plugins/page/plugins/editor/core";
 import { StoryGallery } from "./components/story-gallery";
@@ -29,15 +29,14 @@ function StoryGalleryBody() {
 /**
  * The editor pane at `/story/s/:pageId` — a real URL that survives reload and
  * back/forward. Opened with `mode:"root"` so each open replaces the route with a
- * single full-surface pane. The optimistic `title` rides in `input` so the
- * header shows immediately, before the page resource confirms. `resolve` gates
- * the pane on the page existing on direct navigation / reload.
+ * single full-surface pane. `resolve` gates the pane on the page existing on
+ * direct navigation / reload. The toolbar reads the title from `pagesResource`,
+ * which is its only owner — the pane carries no optimistic copy.
  */
 export const storyDetailPane = Pane.define({
   id: "story-detail",
   segment: "s/:pageId",
   chrome: { header: StoryToolbar },
-  input: type<{ title: string }>(),
   resolve: useStoryDetailResolve,
   component: StoryEditor,
 });

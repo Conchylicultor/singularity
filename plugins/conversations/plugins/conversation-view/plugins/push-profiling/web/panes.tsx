@@ -1,10 +1,11 @@
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { PushProfilingPaneBody } from "./components/push-profiling-pane";
 
 export const convPushProfilingPane = Pane.define({
   id: "conv-push-profiling",
   segment: "pp",
-  input: type<{ convId: string }>(),
+  // Conversation-scoped satellite: promote() would strip convId from the URL.
+  chrome: { promote: false },
   component: ConvPushProfilingBody,
   width: 600,
 });

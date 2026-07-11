@@ -1,4 +1,4 @@
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { ConvFileTreeBody } from "./components/conv-file-tree-body";
 import { GlobalFileTreeBody } from "./components/global-file-tree-body";
 
@@ -12,7 +12,8 @@ export const globalFileTreePane = Pane.define({
 export const convFileTreePane = Pane.define({
   id: "conv-file-tree",
   segment: "files",
-  input: type<{ convId: string }>(),
+  // Conversation-scoped satellite: promote() would strip convId from the URL.
+  chrome: { promote: false },
   component: ConvFileTreeChromedBody,
   width: 280,
 });

@@ -8,12 +8,9 @@ import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { convPushProfilingPane } from "../panes";
 
 export function PushProfilingPaneBody() {
-  const { convId: inputConvId } = convPushProfilingPane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const attemptId = conversation?.attemptId;
 

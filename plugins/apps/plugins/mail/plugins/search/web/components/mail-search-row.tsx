@@ -38,7 +38,7 @@ export function MailSearchRow({ result }: { result: MailSearchResult }): ReactEl
         openPane(
           mailMessagePane,
           { messageId: message.id },
-          { mode: "push", side: "right", input: message },
+          { mode: "push", side: "right", hint: message },
         )
       }
       // Transparent when read, so the leading column stays aligned across rows.

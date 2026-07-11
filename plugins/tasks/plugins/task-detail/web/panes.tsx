@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TasksListView } from "@plugins/tasks/plugins/task-list/web";
 import { tasksResource, tasksRootRoute, taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
@@ -31,9 +31,11 @@ export const taskDetailPane = Pane.define({
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,
-  // `focused: true` → focused/detail-only mode (no inline tree). Input lives in
-  // history.state (structured-clone), so a real boolean round-trips faithfully.
-  input: type<{ focused?: boolean }>(),
+  // `focused: true` → focused/detail-only mode (no inline tree). A pane OPTION,
+  // not a hint: it mirrors no server state, and its deep-link value is simply
+  // the default declared here. Options live in history.state (structured-clone),
+  // so a real boolean round-trips faithfully.
+  options: { focused: false },
 });
 
 function TasksRoot(): ReactElement {
@@ -53,11 +55,11 @@ function TasksRoot(): ReactElement {
 }
 
 // The pane body dispatches between two modes:
-//   showTree = (tasksRootPane absent) AND (input.focused !== true)
+//   showTree = (tasksRootPane absent) AND (options.focused !== true)
 // showTree → conversation-panel mode (inline tree + detail), else focused/detail.
 function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
-  const { focused } = taskDetailPane.useInput();
+  const { focused } = taskDetailPane.useOptions();
   const inTasksApp = tasksRootPane.useRouteEntry() !== null;
   if (!inTasksApp && !focused) return <ConversationTasksBody key={taskId} rootTaskId={taskId} />;
   return <FocusedTaskBody key={taskId} taskId={taskId} />;

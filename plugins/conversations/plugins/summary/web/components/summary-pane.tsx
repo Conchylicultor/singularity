@@ -15,7 +15,6 @@ import {
 } from "../../core";
 import { generateConversationSummary } from "../../shared/endpoints";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
-import { convSummaryPane } from "../panes";
 
 // Bound the spinner so a wedged Sonnet conversation eventually surfaces
 // rather than hanging the chip forever. Matches the server-side reaper
@@ -23,9 +22,7 @@ import { convSummaryPane } from "../panes";
 const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function SummaryPane() {
-  const { convId: inputConvId } = convSummaryPane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const summariesResult = useResource(conversationSummariesResource);
 
   return (

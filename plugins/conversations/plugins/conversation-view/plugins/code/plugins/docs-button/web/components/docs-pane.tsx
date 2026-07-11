@@ -22,9 +22,7 @@ const MAX_LIST_ROWS = 5;
 type DocFile = EditedFile & { worktree: string };
 
 export function DocsPane() {
-  const { convId: inputConvId } = convDocsPane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   if (!conversation) return null;
   return <DocsPaneInner convId={conversation.id} attemptId={conversation.attemptId} />;

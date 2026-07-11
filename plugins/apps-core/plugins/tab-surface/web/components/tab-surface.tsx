@@ -73,7 +73,8 @@ function TabTitleReporter({ tabId }: { tabId: string }) {
         tabId={tabId}
         pane={leaf.pane}
         params={leaf.fullParams}
-        input={leaf.input}
+        hint={leaf.hint}
+        options={leaf.options}
       />
     );
   }
@@ -106,7 +107,8 @@ function IndexTitleReporter({ tabId }: { tabId: string }) {
       tabId={tabId}
       pane={entry.pane}
       params={entry.fullParams}
-      input={entry.input}
+      hint={entry.hint}
+      options={entry.options}
     />
   ) : (
     <TitleClear tabId={tabId} />
@@ -123,15 +125,17 @@ function LeafTitleReporter({
   tabId,
   pane,
   params,
-  input,
+  hint,
+  options,
 }: {
   tabId: string;
   pane: Parameters<typeof usePaneTitle>[0];
   params: Record<string, string>;
-  input: Parameters<typeof usePaneTitle>[2];
+  hint: Parameters<typeof usePaneTitle>[2];
+  options: Parameters<typeof usePaneTitle>[3];
 }) {
   const { setTabTitle } = useTabs();
-  const title = usePaneTitle(pane, params, input);
+  const title = usePaneTitle(pane, params, hint, options);
   useEffect(() => {
     setTabTitle(tabId, title);
   }, [tabId, title, setTabTitle]);

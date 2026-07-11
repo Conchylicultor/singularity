@@ -19,9 +19,7 @@ interface WorkflowInput {
 }
 
 export function WorkflowNodePaneBody() {
-  const { convId: inputConvId } = workflowNodePane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
 
   const eventsResult = useResource(jsonlEventsResource, { id: convId ?? "" });
 

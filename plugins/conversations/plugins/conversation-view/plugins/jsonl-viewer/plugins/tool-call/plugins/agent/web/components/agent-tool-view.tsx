@@ -8,7 +8,6 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -49,15 +48,10 @@ export function AgentToolView({ event }: ToolRendererProps) {
   const result = event.result;
 
   const openPane = useOpenPane();
-  const convId = conversationPane.useRouteEntry()?.params.convId;
 
   const openReport = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    openPane(
-      agentReportPane,
-      { toolUseId: event.toolUseId },
-      { mode: "push", input: convId ? { convId } : undefined },
-    );
+    openPane(agentReportPane, { toolUseId: event.toolUseId }, { mode: "push" });
   };
 
   const summary = (

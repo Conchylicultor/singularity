@@ -3,14 +3,11 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { terminalPane } from "@plugins/primitives/plugins/terminal/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { convTerminalPane } from "../panes";
 
 const TMUX = "tmux";
 
 export function TerminalPaneBody() {
-  const { convId: inputConvId } = convTerminalPane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   if (!conversation) return null;
   return <TerminalPaneInner convId={conversation.id} status={conversation.status} />;

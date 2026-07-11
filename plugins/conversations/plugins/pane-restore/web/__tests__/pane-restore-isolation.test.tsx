@@ -88,7 +88,7 @@ describe("pane-restore save listener", () => {
 
     expect(loadRouteForConversation("X")).toEqual({
       kind: "restored",
-      slots: [{ paneId: "conversation", params: { convId: "X" }, input: {} }],
+      slots: [{ paneId: "conversation", params: { convId: "X" }, options: {} }],
     });
     expect(loadRouteForConversation("Y")).toEqual({ kind: "none" });
 
@@ -105,14 +105,14 @@ describe("pane-restore save listener", () => {
     expect(loadRouteForConversation("Y")).toEqual({
       kind: "restored",
       slots: [
-        { paneId: "conversation", params: { convId: "Y" }, input: {} },
-        { paneId: "file-pane", params: { path: "a.ts" }, input: {} },
+        { paneId: "conversation", params: { convId: "Y" }, options: {} },
+        { paneId: "file-pane", params: { path: "a.ts" }, options: {} },
       ],
     });
     // X's persisted route is untouched by Tab B's navigation.
     expect(loadRouteForConversation("X")).toEqual({
       kind: "restored",
-      slots: [{ paneId: "conversation", params: { convId: "X" }, input: {} }],
+      slots: [{ paneId: "conversation", params: { convId: "X" }, options: {} }],
     });
   });
 });

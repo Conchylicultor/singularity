@@ -36,16 +36,12 @@ export function StoryGallery() {
   const openPane = useOpenPane();
 
   const openStory = (page: Block) => {
-    openPane(
-      storyDetailPane,
-      { pageId: page.id },
-      { mode: "root", input: { title: pageData(page).title || "Untitled" } },
-    );
+    openPane(storyDetailPane, { pageId: page.id }, { mode: "root" });
   };
 
   const newStory = async () => {
     const pageId = await createStory();
-    openPane(storyDetailPane, { pageId }, { mode: "root", input: { title: "" } });
+    openPane(storyDetailPane, { pageId }, { mode: "root" });
   };
 
   let cards: Block[] = [];

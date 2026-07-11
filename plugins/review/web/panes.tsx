@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -12,15 +12,14 @@ import { type Source, SourceTabs, groupPushes } from "./source";
 export const convReviewPane = Pane.define({
   id: "conv-review",
   segment: "review",
-  input: type<{ convId: string }>(),
+  // Conversation-scoped satellite: promote() would strip convId from the URL.
+  chrome: { promote: false },
   component: ConvReviewBody,
   width: 720,
 });
 
 function ConvReviewBody() {
-  const { convId: inputConvId } = convReviewPane.useInput();
-  const routeEntry = conversationPane.useRouteEntry();
-  const convId = inputConvId ?? routeEntry?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const [source, setSource] = useState<Source>({ kind: "working" });
 

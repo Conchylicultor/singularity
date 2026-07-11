@@ -27,7 +27,7 @@ contributions: [
 - Web:
   - Slots: `ReviewSlots.Section` ← `review.code-review`, `review.config-defaults`, `review.plugin-changes`, `convReviewPane.Actions`
   - Contributes: `Pane.Register` "conv-review", `Conversation.ActionBar` → `ReviewButton`
-  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`
+  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Types: `ReviewProps`, `Source`; Values: `convReviewPane`, `ReviewSlots`
 - Cross-plugin:
   - Imported by: `review/code-review`, `review/config-defaults`, `review/plugin-changes`
