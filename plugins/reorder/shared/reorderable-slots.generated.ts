@@ -87,6 +87,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "studio.sidebar", pluginId: "apps.studio.shell" },
   { slotId: "studio.toolbar", pluginId: "apps.studio.shell" },
   { slotId: "table-detail.section", pluginId: "apps.studio.contributions.tables" },
+  { slotId: "task-deps-tree.actions", pluginId: "tasks.task-deps-tree" },
   { slotId: "task-detail.section", pluginId: "tasks.task-detail" },
   { slotId: "task-draft-form.action", pluginId: "tasks.task-draft-form" },
   { slotId: "tasks.list-actions", pluginId: "tasks.task-list" },

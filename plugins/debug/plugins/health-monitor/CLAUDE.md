@@ -16,17 +16,6 @@ the Health pane's "Monitoring self-cost" chart. The fields are optional in
 
 ## Stall stacks → the trace store
 
-<<<<<<< .merge_file_oEOG3T
-The sampler arms a background-thread JSC sampling profiler and drains it every
-tick. When a tick's `eventLoopMaxMs > 3 s` (a frozen backend), it aggregates the
-drained stacks into a `topLeaves`/`topStacks` histogram and fires
-`captureTrace({ kind: "stall", critical: true, … })` — so the "what code froze the
-loop" evidence lands in the durable trace store and shows up in **Debug → Slow
-Events**, rendered by the `trace/plugins/stall` event class. (It used to be dumped
-to a dead-end `stall-profiles.jsonl` that nothing read.) The Health pane still
-shows *that* a stall happened via the `eventLoopMaxMs` spike line; the trace
-answers *why*. See `server/internal/stall-profiler.ts`.
-=======
 On **main**, the sampler also arms a background-thread JSC sampling profiler and
 drains it every tick. When a tick's `eventLoopMaxMs > 3 s` (a frozen backend), it
 aggregates the drained stacks into a `topLeaves`/`topStacks` histogram and hands
@@ -39,7 +28,6 @@ class) *and* the stall reaches the bell + **Debug → Reports** as a deduped
 dead-end `stall-profiles.jsonl` that nothing read.) The Health pane still shows
 *that* a stall happened via the `eventLoopMaxMs` spike line; the trace + report
 answer *why*. See `server/internal/stall-profiler.ts`.
->>>>>>> .merge_file_hNb1gY
 
 **Arming policy** (congestion-observability plan, Phase B): **main** arms at
 boot — always-on for the UX-critical backend. **Worktree backends**

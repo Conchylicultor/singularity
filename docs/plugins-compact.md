@@ -518,6 +518,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports meta-folder and registers the task-creating handler into reports' investigation sink.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
+    - **`task-deps-tree`** — Dependency tree section for the task detail: renders task_dependencies as a nesting = runs-after tree (with a switch to the read-only creation tree), atomic drag-to-reorder, per-row detach, and 'also after' fan-in chips.
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
