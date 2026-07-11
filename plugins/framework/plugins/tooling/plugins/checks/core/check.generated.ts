@@ -66,6 +66,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
+  { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["plugin-meta/plugins/facets"] },
   { pluginPath: "plugin-meta/plugins/facets", id: "plugin-meta.facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/data-view", id: "primitives.data-view", loader: () => import("@plugins/primitives/plugins/data-view/check"), dependsOn: [] },

@@ -4127,57 +4127,67 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `page/audio`, `page/cover`, `page/file`, `page/image`, `page/video`
       - Core:
         - Exports: Values: `collectBlockAttachmentIds`
-    - **`audio`** — Audio block type: upload an audio file and play it inline.
+    - **`audio`** — Audio block type: upload an audio file and play it inline. Audio block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "audio" → `AudioBlock`
         - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `AUDIO_TYPE`, `audioBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `AUDIO_TYPE`, `audioBlock`
-    - **`bookmark`** — Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments.
+    - **`bookmark`** — Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also registers the bookmark `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
         - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/loading.Loading`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `BOOKMARK_TYPE`, `bookmarkBlock`
       - Server:
-        - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/safe-fetch.parsePublicUrl`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
+        - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/safe-fetch.parsePublicUrl`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`, `page/editor.Editor`
         - Routes: `GET /api/link-preview`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`, `page/editor.defineBlock`
         - Exports: Types: `LinkPreview`; Values: `BOOKMARK_TYPE`, `bookmarkBlock`, `linkPreviewEndpoint`, `LinkPreviewSchema`
-    - **`bulleted-list`** — Bulleted-list block type for the page editor.
+    - **`bulleted-list`** — Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bulleted-list" → `BlockTextRenderer`
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `bulletedListBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
         - Exports: Values: `bulletedListBlock`
-    - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.
+    - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "callout" → `CalloutBlock`
         - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.BlockTextEditor`, `page/editor.Editor`, `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-picker.IconPicker`
         - Exports: Values: `calloutBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.SvgNodeSchema`, `page/editor.textBlockSchema`
         - Exports: Types: `CalloutColor`; Values: `CALLOUT_COLORS`, `calloutBlock`, `calloutDataSchema`
-    - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
+    - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button. Code block type: registers its `data` schema (code + language) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "code-block" → `CodeBlock`
         - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectSeparator`, `primitives/css/ui-kit.SelectTrigger`, `primitives/editable-field.useEditableField`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/latest-ref.useLatestRef`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.useDarkMode`, `primitives/syntax-highlight.useHighlightedHtml`
         - Exports: Values: `codeBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `codeBlock`
     - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
       - Server:
         - Uses: `page/attachment-block.AttachmentBlock`
-    - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
+    - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut. Divider block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like injected text.
       - Web:
         - Contributes: `Editor.Block` "divider" → `DividerBlock`
         - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `primitives/css/spacing.Inset`, `primitives/css/ui-kit.cn`
         - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
@@ -4191,12 +4201,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
-        - Exports: Types: `Block`, `BlockDeleteHook`, `BlocksChangedPayload`, `PageContentSnapshot`, `PageData`, `StoredBlock`; Values: `_blocks`, `BlockLifecycle`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesLiveResource`, `replacePageContent`, `serializePageContent`
+        - Exports: Types: `Block`, `BlockDeleteHook`, `BlocksChangedPayload`, `PageContentSnapshot`, `PageData`, `StoredBlock`; Values: `_blocks`, `BlockLifecycle`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `Editor`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesLiveResource`, `replacePageContent`, `serializePageContent`
         - Register: `defineTriggerEvent('page.blocksChanged')`
         - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/turn-into-page`, `POST /api/pages/:pageId/blocks/op`, `POST /api/pages/:pageId/blocks/patch`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/collab-doc.readYDoc`, `primitives/collab-doc.yDocContent`, `primitives/collab-doc.yDocFromLexical`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.subtreeIds`
-        - Exports: Types: `Block`, `BlockDiff`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLeaf`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
+        - Exports: Types: `Block`, `BlockData`, `BlockDiff`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `pageBlockHandle`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLeaf`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
       - Cross-plugin:
         - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/website/demos/editor-toy`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/sub-page`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
         - Extended by: `apps/website/blog/publish` (table `page_blocks_ext_blog_post`), `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)
@@ -4211,19 +4221,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `infra/endpoints.blob`, `infra/endpoints.defineEndpoint`, `primitives/live-state.keyedResourceDescriptor`
         - Exports: Types: `BlockDocRow`; Values: `blockContentResource`, `blockDocInit`, `BlockDocRowSchema`, `blockDocUpdate`
-    - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
+    - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "embed" → `EmbedBlock`
         - Uses: `page/editor.Editor`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`
         - Exports: Values: `EMBED_TYPE`, `embedBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `EMBED_TYPE`, `embedBlock`, `toEmbedUrl`
-    - **`file`** — File block type: attach any file as a downloadable card; served via attachments.
+    - **`file`** — File block type: attach any file as a downloadable card; served via attachments. File block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "file" → `FileBlock`
         - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `FILE_TYPE`, `fileBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `FILE_TYPE`, `fileBlock`
@@ -4259,35 +4273,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `page/editor.Editor`, `page/editor.MarkButton`, `primitives/tooltip.Kbd`
     - **`heading`** — Heading block types (H1/H2/H3) for the page editor.
       - Plugins:
-        - **`heading-1`** — Heading 1 block type for the page editor.
+        - **`heading-1`** — Heading 1 block type for the page editor. Heading 1 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-1" → `BlockTextRenderer`
             - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
             - Exports: Values: `heading1Block`
+          - Server:
+            - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
             - Exports: Values: `heading1Block`
-        - **`heading-2`** — Heading 2 block type for the page editor.
+        - **`heading-2`** — Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-2" → `BlockTextRenderer`
             - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
             - Exports: Values: `heading2Block`
+          - Server:
+            - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
             - Exports: Values: `heading2Block`
-        - **`heading-3`** — Heading 3 block type for the page editor.
+        - **`heading-3`** — Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-3" → `BlockTextRenderer`
             - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
             - Exports: Values: `heading3Block`
+          - Server:
+            - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
             - Exports: Values: `heading3Block`
-    - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
+    - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Image block type: registers its `data` schema (attachment + width) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "image" → `ImageBlock`
         - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
         - Exports: Values: `imageBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `imageBlock`
@@ -4323,11 +4345,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/page-tree`, `page/inline-page-link`, `page/page-link`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
       - Plugins:
-        - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render.
+        - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "equation" → `EquationBlock`
             - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `page/math/render.KatexMath`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/editable-field.useEditableField`
             - Exports: Values: `EQUATION_TYPE`, `equationBlock`
+          - Server:
+            - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/editor.defineBlock`
             - Exports: Values: `EQUATION_TYPE`, `equationBlock`
@@ -4343,29 +4367,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `KatexMath`
           - Cross-plugin:
             - Imported by: `page/math/equation`, `page/math/inline`, `page/read-only-view`
-    - **`numbered-list`** — Numbered-list block type for the page editor.
+    - **`numbered-list`** — Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "numbered-list" → `BlockTextRenderer`
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `numberedListBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
         - Exports: Values: `numberedListBlock`
-    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
+    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
         - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/css/center.Center`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`
         - Exports: Values: `pageLinkBlock`
       - Server:
-        - Uses: `page/links.PageLinks`
+        - Uses: `page/editor.Editor`, `page/links.PageLinks`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `pageLinkBlock`
-    - **`quote`** — Quote / blockquote block type for the page editor.
+    - **`quote`** — Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "quote" → `QuoteBlock`
         - Uses: `page/editor.BlockRendererProps`, `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `quoteBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
         - Exports: Values: `quoteBlock`
@@ -4383,27 +4411,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.PAGE_BLOCK_TYPE`, `page/editor.PageDataSchema`
         - Exports: Values: `subPageBlock`
-    - **`text`** — Plain-text block type for the page editor.
+    - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `textBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
         - Exports: Values: `textBlock`
-    - **`to-do`** — To-do / checkbox block type for the page editor.
+    - **`to-do`** — To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "to-do" → `BlockTextRenderer`
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `toDoBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`
         - Exports: Values: `toDoBlock`, `toDoDataSchema`
-    - **`toggle`** — Toggle (collapsible) block type for the page editor.
+    - **`toggle`** — Toggle (collapsible) block type for the page editor. Toggle (collapsible) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "toggle" → `BlockTextRenderer`
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `toggleBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`
         - Exports: Values: `toggleBlock`, `toggleDataSchema`
@@ -4414,11 +4448,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`url-paste`** — Paste a URL into an empty text block to turn it into a bookmark or embed.
       - Web:
         - Uses: `page/editor.BlockTextPluginProps`, `page/editor.registerBlockTextExtension`, `primitives/css/row.Row`, `primitives/floating-surface.FloatingSurface`, `primitives/text-editor/caret-trigger.caretAnchor`
-    - **`video`** — Video block type: upload a video file and play it inline.
+    - **`video`** — Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "video" → `VideoBlock`
         - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `VIDEO_TYPE`, `videoBlock`
+      - Server:
+        - Uses: `page/editor.Editor`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `VIDEO_TYPE`, `videoBlock`
