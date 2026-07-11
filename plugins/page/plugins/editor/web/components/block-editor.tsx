@@ -636,6 +636,14 @@ function SelectionLayer({
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
       const el = e.target as HTMLElement;
+      // Reject any press that did not originate inside this editor's own DOM
+      // subtree. A caret menu (and any future overlay a block mounts) renders
+      // through a portal to document.body, so its row sits OUTSIDE containerRef
+      // in the DOM even though React still bubbles the synthetic event here.
+      // The DOM-based guard below reasons over the real tree, so without this a
+      // portaled menu press masquerades as an empty-background click and arms a
+      // stray trailing-paragraph insert that races the menu's own conversion.
+      if (!containerRef.current?.contains(el)) return;
       // Only start on empty background — never over a block, gutter button, or
       // editable text (those have their own pointer behavior). A row's gutter
       // rail is its own padding, so a hit on the row element ITSELF is the rail
@@ -684,7 +692,7 @@ function SelectionLayer({
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
-    [applyRange, focusContainer, onEmptyClick],
+    [applyRange, focusContainer, onEmptyClick, containerRef],
   );
 
   // ---- Drag-and-drop (single block, or the whole selection) ----------------
