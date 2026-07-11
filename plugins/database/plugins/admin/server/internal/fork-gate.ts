@@ -1,5 +1,6 @@
-import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
-import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
+import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
+import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for the DB fork's `pg_dump | pg_restore` pipeline —
 // until this gate, the fork was the ONLY heavy launch step with zero admission
@@ -19,36 +20,19 @@ import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-pr
 // recorder, never as anonymous slowness.
 // See research/2026-07-07-global-background-work-priority-isolation.md.
 //
-// NO env override: `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it
-// MUST be identical in every process — a process sized to 2 only sweeps `slot-0..1`
-// and is blind to one holding `slot-3`, silently exceeding the bound. A constant (or
-// a pure function of stable host facts) is what prevents that; the primitive's size
-// sentinel only makes a residual mismatch loud.
-function forkSize(): number {
-  return 2;
-}
+// Size + CPU cost are declared ONCE in host-admission/core's reserved-pool table
+// (size 2), so this pool and the `host-budget` check read the same numbers. NO
+// env override: `size` names the flock SLOT FILES, so it MUST be identical in
+// every process — a constant (or a pure function of stable host facts) is what
+// prevents a mis-sized process from silently exceeding the bound.
+const { size: forkSize, cost } = RESERVED_POOLS["db-fork"];
 
-const gate = createHostSemaphore({ name: "db-fork", size: forkSize() });
-
-// Held-by-this-process count; host-wide occupancy across other processes is not
-// cheaply readable (same documented limitation as host-read-pool's gauge).
-let held = 0;
-registerGateGauge("db-fork-acquire", () => ({
-  active: held,
-  queued: gate.depth(),
-  max: forkSize(),
-}));
+// The `db-fork-acquire` occupancy gauge is auto-registered by `defineHostPool`
+// with TRUE host-wide occupancy.
+const gate = defineHostPool({ id: "db-fork", size: forkSize, cost });
 
 export function withDbForkSlot<T>(fn: () => Promise<T>): Promise<T> {
-  return gate.run(
-    async () => {
-      held++;
-      try {
-        return await fn();
-      } finally {
-        held--;
-      }
-    },
-    { onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs) },
-  );
+  return gate.run(() => fn(), {
+    onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs),
+  });
 }

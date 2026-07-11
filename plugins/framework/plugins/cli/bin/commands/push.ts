@@ -1,13 +1,11 @@
 import type { Command } from "commander";
-import { dlopen } from "bun:ffi";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
 import { basename, join } from "path";
-import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
 import { createPushProfiler, type PushProfiler } from "../push-profiler";
-import { withHostSlot } from "../host-semaphore";
-import { LANE_ENV, laneFor } from "../lane";
-import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder, PUSH_LOCK_PATH } from "@plugins/infra/plugins/worktree/server";
+import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
+import { cpuBudget, type Grant } from "@plugins/infra/plugins/host-admission/core";
+import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder } from "@plugins/infra/plugins/worktree/server";
 
 // Throws-by-default spawn: a non-zero exit prints the command + captured
 // stderr and exits(1) like `exec`, so a caller can never read a failed git
@@ -62,56 +60,41 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
   }
 }
 
-// Spawns a fresh process so checks see the post-rebase code on disk,
-// not the stale module cache from process start. The eslint check always
-// considers the full lintable set; its per-file closure cache decides what
-// actually re-lints, so there is no scope env to thread through.
-async function runChecksSubprocess(root: string): Promise<boolean> {
-  const env: Record<string, string> = {
-    ...process.env,
-    // The parent push process already holds the reserved push slot (see
-    // runChecksUnderPushSlot). Tell the child to run its checks WITHOUT
-    // acquiring a host slot — a second acquire of the single push slot would
-    // deadlock, since this parent holds it and is awaiting the child here.
-    SINGULARITY_HOST_SLOT_HELD: "1",
-    // A push is human-blocking, so its checks run in the interactive lane —
-    // even though they execute on the REBASED AGENT BRANCH, where a branch-based
-    // gate would wrongly demote them to background. The child's own publishLane
-    // not-clobbers this inherited value. See ../lane.ts.
-    [LANE_ENV]: laneFor(true),
-  };
+// Spawns a fresh process so checks see the post-rebase code on disk, not the
+// stale module cache from process start. The eslint check always considers the
+// full lintable set; its per-file closure cache decides what actually re-lints,
+// so there is no scope env to thread through. The child INHERITS this push's
+// host CPU grant via `grant.env()` (SINGULARITY_HOST_GRANT + SINGULARITY_LANE):
+// its own `inheritedGrant()` reconstructs the grant and SPENDS those units for
+// its type-check fleet without re-acquiring host-wide — no double-acquire, no
+// deadlock (the parent already holds the slots).
+async function runChecksSubprocess(root: string, grant: Grant): Promise<boolean> {
   const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,
-    env,
+    // `process.env` values are `string | undefined`; the inferred spread type is
+    // exactly what Bun.spawn's `env` accepts (same pattern as build.ts's exec()).
+    env: { ...process.env, ...grant.env() },
     stdout: "inherit",
     stderr: "inherit",
   });
   return (await proc.exited) === 0;
 }
 
-// Run the rebased-tree checks while holding the reserved host-wide push slot in
-// THIS process, so the slot wait is its own visible "slot-wait" bar in the push
-// Gantt (it was previously absorbed into the spawned check's "checks" step).
-// stepStart fires immediately before the acquire; stepEnd fires in onAcquired
-// (which runs on both immediate-acquire and post-wait), so the step always
-// appears (~0ms when uncontended). The "checks" step still wraps the actual
-// subprocess run. The child runs exempt — see runChecksSubprocess.
-async function runChecksUnderPushSlot(
-  root: string,
-  profiler: PushProfiler,
-): Promise<boolean> {
-  profiler.stepStart("slot-wait");
-  return withHostSlot(
-    "push",
-    async () => {
-      profiler.stepStart("checks");
-      console.log("Running checks...");
-      const ok = await runChecksSubprocess(root);
-      profiler.stepEnd("checks");
-      return ok;
-    },
-    { onAcquired: () => profiler.stepEnd("slot-wait") },
+// Run the rebased-tree checks. A push is human-blocking, so it takes an
+// INTERACTIVE host CPU grant (its reserved floor is unreachable by agent work,
+// so it never queues behind agent builds) — even though the checks execute on
+// the rebased AGENT branch, where a branch-based gate would wrongly demote them.
+// The grant is acquired here (inside the already-held push mutex — acyclic: the
+// mutex holder waits for CPU units, a unit holder never waits for the push
+// mutex) and handed to the child via `grant.env()`.
+async function runRebasedChecks(root: string, profiler: PushProfiler): Promise<boolean> {
+  profiler.stepStart("checks");
+  console.log("Running checks...");
+  const ok = await withHostGrant({ lane: "interactive", max: cpuBudget().B }, (grant) =>
+    runChecksSubprocess(root, grant),
   );
+  profiler.stepEnd("checks");
+  return ok;
 }
 
 async function getWorktreeRoot(): Promise<string> {
@@ -265,38 +248,28 @@ async function getCurrentBranch(): Promise<string> {
   return stdout;
 }
 
-// PUSH_LOCK_PATH is owned by the worktree primitive (imported above) so the
-// CLI flock and the server-side `pushLockHeld` probe can never target different
-// files — that shared truth is what the op-status derivation depends on.
-
-const { symbols: ffi } = dlopen(
-  process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
-  { flock: { args: ["i32", "i32"], returns: "i32" } },
-);
-const LOCK_EX = 2;
-const LOCK_NB = 4;
-
+// The push mutex is the `push` host-pool (host-admission): `pushPool.run(fn)`
+// holds its single slot file — `~/.singularity/push-slots/slot-0.lock`, the same
+// file the server-side `pushLockHeld` probe reads — for the whole critical
+// section, so at most one push runs host-wide. This folds the last hand-rolled
+// FFI flock onto the shared primitive: the size-1 fan-out is a single
+// `flock-wait` child (off the event loop), and the "waiting for lock" line moves
+// to the pool's `onWaitStart` hook. `markLockRequested` fires before the acquire
+// (so a blocked push shows as waiting); `onLockAcquired` fires once the slot is
+// held, as the first thing inside the run body.
 async function withPushLock<T>(
   fn: () => Promise<T>,
-  onLockRequested?: () => void,
-  onLockAcquired?: () => void,
+  onLockRequested: () => void,
+  onLockAcquired: () => void,
 ): Promise<T> {
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
-  const fd = openSync(PUSH_LOCK_PATH, "w");
-  try {
-    onLockRequested?.();
-    // Try non-blocking first to detect contention
-    const nb = ffi.flock(fd, LOCK_EX | LOCK_NB);
-    if (nb !== 0) {
-      console.log("Another push is in progress — waiting for lock...");
-      ffi.flock(fd, LOCK_EX);
-      console.log("Lock acquired, proceeding.");
-    }
-    onLockAcquired?.();
-    return await fn();
-  } finally {
-    closeSync(fd);
-  }
+  onLockRequested();
+  return pushPool.run(
+    async () => {
+      onLockAcquired();
+      return await fn();
+    },
+    { onWaitStart: () => console.log("Another push is in progress — waiting for lock...") },
+  );
 }
 
 export function registerPush(program: Command) {
@@ -429,7 +402,7 @@ export function registerPush(program: Command) {
             await postRebaseNormalize(fromMainRoot, pushId);
             profiler.stepEnd("normalize");
 
-            const ok = await runChecksUnderPushSlot(fromMainRoot, profiler);
+            const ok = await runRebasedChecks(fromMainRoot, profiler);
             if (!ok) {
               console.error(
                 "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
@@ -540,7 +513,7 @@ export function registerPush(program: Command) {
           //    Spawned as a subprocess so the check code comes from the rebased
           //    tree, not the (potentially stale) module cache of this process.
           const root = await getWorktreeRoot();
-          const ok = await runChecksUnderPushSlot(root, profiler);
+          const ok = await runRebasedChecks(root, profiler);
           if (!ok) {
             console.error(
               `Checks failed after rebasing ${branch} onto main. ` +

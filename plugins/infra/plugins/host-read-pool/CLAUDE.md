@@ -9,9 +9,10 @@ core and starve cheap interactive queries (and the shared embedded Postgres).
 
 It is a thin composition over two existing pieces:
 
-- the cross-process `createHostSemaphore({ name, size })` primitive
-  (`@plugins/packages/plugins/host-semaphore/server`) — the flock slot-broker
-  that makes the bound span processes;
+- the host pool declared through `defineHostPool`
+  (`@plugins/infra/plugins/host-admission/server`) — the registry that owns the
+  cross-process `createHostSemaphore` flock slot-broker and auto-registers the
+  `heavy-read-acquire` occupancy gauge (with true host-wide occupancy);
 - the `runtime-profiler` — each acquire **charges** its lock-wait to the
   enclosing entry (loader/http) via `chargeWait("heavy-read-acquire", ms)`, so a
   heavy git/fs loader's span reads as wait-vs-work directly (e.g. edited-files
@@ -26,12 +27,13 @@ The pool *instance* (fixed name `heavy-read` + size) lives here rather than in
 the bare primitive because its name/size and the wait charging are policy, not
 mechanism.
 
-**Size:** `floor(cpus/4)`, with **no env override**. The size names the flock slot
-*files* (`slot-0 … slot-(N-1)`), so it must be identical in every backend — a
-process sized to 4 sweeps only `slot-0..3` and is blind to one holding `slot-7`,
-silently exceeding the bound. Keeping it a pure function of `os.cpus()` is what
-prevents that (`type-check`'s `hostWorkerBudget()` forbids an override for the same
-reason). Conservative start; can rise toward `floor(cpus/2)` if profiling shows the
+**Size:** `floor(cpus/4)`, with **no env override**, declared in
+`host-admission/core`'s `RESERVED_POOLS` table (the single source the pool and the
+`host-budget` check both read). The size names the flock slot *files*
+(`slot-0 … slot-(N-1)`), so it must be identical in every backend — a process sized
+to 4 sweeps only `slot-0..3` and is blind to one holding `slot-7`, silently
+exceeding the bound. Keeping it a pure function of `os.cpus()` is what prevents
+that. Conservative start; can rise toward `floor(cpus/2)` if profiling shows the
 gate is the bottleneck while CPU is unsaturated — by editing the constant, in one
 place.
 
@@ -49,13 +51,13 @@ queue-wait is charged as a `heavy-read-local` span sitting beside the host-wide
 separately attributable. See
 research/2026-06-19-global-incremental-git-loaders.md (Stage 1).
 
-**Occupancy gauges.** Both tiers register a `registerGateGauge` under their
-`chargeWait` layer names (`heavy-read-local`, `heavy-read-acquire`) so the
-flight recorder's gate snapshot joins occupancy to span waits. Limitation:
-host-*wide* occupancy across other worktree processes is not cheaply readable
-from the flock slot files, so the `heavy-read-acquire` gauge reports **this
-process's** held slots plus this process's parked depth, against the host-wide
-`max`.
+**Occupancy gauges.** Both tiers surface a `registerGateGauge` under their
+`chargeWait` layer names (`heavy-read-local`, `heavy-read-acquire`) so the flight
+recorder's gate snapshot joins occupancy to span waits. The local tier registers
+its own gauge here; the host-wide `heavy-read-acquire` gauge is auto-registered by
+`defineHostPool` and reports **true host-wide occupancy** — every backend's held
+slots, probed from the flock files — retiring the old "not cheaply readable"
+limitation (`host-admission`'s `hostOccupancy()` uses the same probe).
 
 Gate at the **operation level** — one slot per logical job. The gate never lives
 inside `runGit` (the canonical thin spawn stays ungated so cheap interactive git
@@ -80,7 +82,7 @@ froze). Pinned by `server/internal/pool.test.ts`. See
 
 - Description: Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
 - Server:
-  - Uses: `packages/host-semaphore.createHostSemaphore`
+  - Uses: `infra/host-admission.defineHostPool`
   - Exports: Values: `heavyReadQueueDepth`, `heavyReadSlotCount`, `withHeavyReadSlot`
 - Cross-plugin:
   - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `debug/health-monitor`, `debug/profiling/boot-bench`, `infra/corpus-index`, `infra/warmup`, `plugin-meta/plugin-tree`, `review/plugin-changes`

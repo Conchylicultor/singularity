@@ -1,7 +1,8 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type { Check, CheckContext, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type { Grant } from "@plugins/infra/plugins/host-admission/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
 import { withScanTree } from "./scan-context";
@@ -38,6 +39,15 @@ export async function listAllChecks(): Promise<Check[]> {
 }
 
 export interface RunChecksOptions {
+  /**
+   * The host CPU grant the invoking build/check/push already holds, passed to
+   * every `check.run(ctx)`. REQUIRED because the runner lives in the `core`
+   * runtime and so cannot itself import the server-side `withHostGrant` to
+   * acquire one — the caller (which sits at the CLI/server boundary) owns the
+   * acquire and threads the grant in. `type-check` / `layout-geometry` spend it
+   * per heavy child; every other check ignores it.
+   */
+  grant: Grant;
   onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
   log: (line: string, stream: "stdout" | "stderr") => void;
   /** Bypass the tree-hash result cache entirely (lookup + record). */
@@ -94,8 +104,10 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       }
 
       // Scan the SAME tree the cache key (treeHash) is computed from, so a
-      // recorded PASS always reflects content the check actually inspected.
-      const result = await withScanTree(treeHash, () => check.run());
+      // recorded PASS always reflects content the check actually inspected. The
+      // grant is the caller's held host CPU admission; heavy checks spend it.
+      const ctx: CheckContext = { grant: options.grant };
+      const result = await withScanTree(treeHash, () => check.run(ctx));
       const durationMs = Math.round(performance.now() - wallStart);
       // Cache PASSES only — failures must always re-run with full output.
       if (cache !== null && treeHash !== null && sig !== null && result.ok) {

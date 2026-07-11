@@ -1,17 +1,16 @@
-import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
+import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { cpus } from "node:os";
 
-// Host-wide slot count. NO env override: `size` names the flock SLOT FILES
-// (`slot-0 … slot-(N-1)`), so it MUST be identical in every process — a backend
-// sized to 4 only sweeps `slot-0..3` and is blind to one holding `slot-7`, silently
-// exceeding the bound. A pure function of stable host facts (`os.cpus()`) is what
-// prevents that; the primitive's size sentinel only makes a residual mismatch loud.
-function heavyReadSize(): number {
-  return Math.max(1, Math.floor(cpus().length / 4));
-}
+// Host-wide slot count + CPU cost are declared ONCE in host-admission/core's
+// reserved-pool table, so this pool and the `host-budget` check read the SAME
+// numbers. `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it MUST
+// be identical in every backend — a process sized to 4 only sweeps `slot-0..3`
+// and is blind to one holding `slot-7`, silently exceeding the bound. Keeping it
+// a pure function of stable host facts in one place is what prevents that.
+const { size: heavyReadSize, cost } = RESERVED_POOLS["heavy-read"];
 
 // Per-process (= per-worktree) local cap on heavy reads. Sits in front of the
 // host-wide flock gate so this one backend can only ever present a bounded slice
@@ -21,7 +20,7 @@ function heavyReadSize(): number {
 // over-serializes a legitimate burst and never exceeds (and thus never reorders
 // vs.) the host size. Env-overridable for tuning.
 function localSize(): number {
-  const host = heavyReadSize();
+  const host = heavyReadSize;
   const env = process.env.SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY;
   let local = Math.max(1, Math.ceil(host / 2));
   if (env) {
@@ -32,23 +31,13 @@ function localSize(): number {
 }
 
 const perWorktreeGate = createSemaphore(localSize());
-const pool = createHostSemaphore({ name: "heavy-read", size: heavyReadSize() });
+const pool = defineHostPool({ id: "heavy-read", size: heavyReadSize, cost });
 
-// Host-tier slots currently held BY THIS PROCESS. The flock gate is host-wide,
-// but host-WIDE occupancy across other worktree processes is not cheaply
-// readable from the flock slot files — so the `heavy-read-acquire` gauge below
-// reports this process's held slots + this process's parked depth, against the
-// host-wide `max`.
-let heldByThisProcess = 0;
-
-// Occupancy gauges for the flight recorder's gate snapshot: layer names join to
-// the same-named `chargeWait` layers in span `waits` (see withHeavyReadSlot).
+// The host-gate occupancy gauge (`heavy-read-acquire`) is auto-registered by
+// `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree
+// semaphore's gauge is ours to register — its layer name joins to the
+// same-named `chargeWait` layer below.
 registerGateGauge("heavy-read-local", () => perWorktreeGate.stats());
-registerGateGauge("heavy-read-acquire", () => ({
-  active: heldByThisProcess,
-  queued: pool.depth(),
-  max: heavyReadSize(),
-}));
 
 // Ambient "this async context already holds a slot" flag, making the gate
 // REENTRANT. Neither tier's semaphore is reentrant on its own, so without this a
@@ -84,19 +73,13 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
   // back to a standalone span inside chargeWait.
   return perWorktreeGate.run(
     () =>
-      pool.run(
-        async () => {
-          // The callback runs only once the host slot is held — the counter
-          // brackets exactly the held window for the occupancy gauge above.
-          heldByThisProcess++;
-          try {
-            return await holdingSlot.run(true, fn);
-          } finally {
-            heldByThisProcess--;
-          }
-        },
-        { onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs) },
-      ),
+      // The callback runs only once the host slot is held. `defineHostPool`
+      // auto-registers the true host-wide occupancy gauge, so there is no local
+      // held-count to bracket here; we only mark this async context as holding a
+      // slot so a reentrant acquire runs its body directly (the fast path above).
+      pool.run(() => holdingSlot.run(true, fn), {
+        onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs),
+      }),
     (waitMs) => chargeWait("heavy-read-local", waitMs),
   );
 }
@@ -105,7 +88,7 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
 // can size a same-named occupant pool to exactly saturate the gate without
 // re-deriving the formula.
 export function heavyReadSlotCount(): number {
-  return heavyReadSize();
+  return heavyReadSize;
 }
 
 // The local (per-worktree) tier's slot count (`localSize()`). Exposed so the

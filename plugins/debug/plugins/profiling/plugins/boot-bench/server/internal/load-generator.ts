@@ -1,4 +1,5 @@
-import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
+import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
 import { heavyReadSlotCount } from "@plugins/infra/plugins/host-read-pool/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
 
@@ -23,10 +24,11 @@ export interface HostGateLoad {
  * boot burst is forced onto the real broker wait path — reproducing the
  * cross-worktree storm that serializes loaders on `withHeavyReadSlot`.
  *
- * Occupants run on a private `createHostSemaphore` keyed by the SAME name the
- * live pool uses (`"heavy-read"`), so they contend for the IDENTICAL physical
- * flock slot files (`~/.singularity/heavy-read-slots/slot-N.lock`) — not a
- * separate gate. Each occupant CYCLES: acquire a slot, hold it for
+ * Occupants run on the LIVE `heavy-read` pool handle — `defineHostPool` is a
+ * per-id registry, so occupying `"heavy-read"` returns the very pool
+ * `host-read-pool` defined, contending for the IDENTICAL physical flock slot
+ * files (`~/.singularity/heavy-read-slots/slot-N.lock`), not a separate gate.
+ * Each occupant CYCLES: acquire a slot, hold it for
  * `OCCUPANT_HOLD_MS`, release, immediately re-acquire — looping until stopped.
  * Cycling (rather than holding continuously until stop) is essential: the
  * measured burst's own heavy reads need a slot too, so a permanent hold would
@@ -49,7 +51,10 @@ export interface HostGateLoad {
  */
 export async function startHostGateLoad(concurrency: number): Promise<HostGateLoad> {
   const slots = heavyReadSlotCount();
-  const sem = createHostSemaphore({ name: "heavy-read", size: slots });
+  // Per-id registry ⇒ this returns the live `heavy-read` handle (defined by
+  // host-read-pool at load): the same physical slots, no second semaphore, no
+  // duplicate gauge.
+  const sem = defineHostPool({ id: "heavy-read", size: slots, cost: RESERVED_POOLS["heavy-read"].cost });
 
   // Barrier: resolve once the gate is first fully held (saturated). Capped at the
   // slot count because no more than that many occupants can hold a slot at once.

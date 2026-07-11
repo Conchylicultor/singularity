@@ -2271,6 +2271,14 @@
       "name": "@singularity/plugin-framework-tooling-checks-fields-eager-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/host-budget": {
+      "name": "@singularity/plugin-framework-tooling-checks-host-budget",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/host-pools-declared": {
+      "name": "@singularity/plugin-framework-tooling-checks-host-pools-declared",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped": {
       "name": "@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped",
       "version": "0.0.1",
@@ -2588,6 +2596,10 @@
     },
     "plugins/infra/plugins/health": {
       "name": "@singularity/plugin-infra-health",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/host-admission": {
+      "name": "@singularity/plugin-infra-host-admission",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/host-read-pool": {
@@ -5972,6 +5984,10 @@
 
     "@singularity/plugin-framework-tooling-checks-fields-eager-in-sync": ["@singularity/plugin-framework-tooling-checks-fields-eager-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/fields-eager-in-sync"],
 
+    "@singularity/plugin-framework-tooling-checks-host-budget": ["@singularity/plugin-framework-tooling-checks-host-budget@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-budget"],
+
+    "@singularity/plugin-framework-tooling-checks-host-pools-declared": ["@singularity/plugin-framework-tooling-checks-host-pools-declared@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-pools-declared"],
+
     "@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped": ["@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped"],
 
     "@singularity/plugin-framework-tooling-checks-keyed-resource-scope": ["@singularity/plugin-framework-tooling-checks-keyed-resource-scope@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-scope"],
@@ -6121,6 +6137,8 @@
     "@singularity/plugin-infra-git-watcher": ["@singularity/plugin-infra-git-watcher@workspace:plugins/infra/plugins/git-watcher"],
 
     "@singularity/plugin-infra-health": ["@singularity/plugin-infra-health@workspace:plugins/infra/plugins/health"],
+
+    "@singularity/plugin-infra-host-admission": ["@singularity/plugin-infra-host-admission@workspace:plugins/infra/plugins/host-admission"],
 
     "@singularity/plugin-infra-host-read-pool": ["@singularity/plugin-infra-host-read-pool@workspace:plugins/infra/plugins/host-read-pool"],
 

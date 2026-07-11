@@ -1,10 +1,11 @@
 import { basename, join } from "path";
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
-import { withHostSlot, type HostSlotKind } from "../host-semaphore";
+import { withHostGrant, inheritedGrant } from "@plugins/infra/plugins/host-admission/server";
+import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
 import { publishLane } from "../lane";
-import { listAllChecks, runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { listAllChecks, runChecks, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 // The op-marker slug for this worktree — its directory basename, matching what
@@ -37,13 +38,6 @@ export function registerCheck(program: Command) {
         return;
       }
       await checkBroadcasts("check");
-      // Push runs its checks via this command in a subprocess (see push.ts).
-      // The PARENT push process already holds the reserved push slot before
-      // spawning us, so we must NOT acquire one ourselves — a second acquire of
-      // the single push slot would deadlock (parent holds it, parent awaits us).
-      // It signals this via SINGULARITY_HOST_SLOT_HELD; we run exempt (no gate).
-      // A direct `./singularity check` is a build-pool job.
-      const kind: HostSlotKind = process.env.SINGULARITY_HOST_SLOT_HELD ? "exempt" : "build";
 
       // Resolve the worktree slug once: it names both the op marker and the
       // full-output log file. The full check transcript is always written here
@@ -52,37 +46,54 @@ export function registerCheck(program: Command) {
       const slug = await getWorktreeSlug();
       const logFile = join(worktreeDataDir(slug), "check.log");
 
-      // Publish the lane for the type-check fleet's host-wide worker budget: a
-      // direct check on the main worktree is human-blocking (interactive), any
-      // other direct check is background. publishLane not-clobbers, so a
-      // push-nested check keeps the interactive value push.ts already set in its
-      // env even though it runs on an agent branch. See ../lane.ts.
+      // Publish the lane: a direct check on the main worktree is human-blocking
+      // (interactive), any other direct check is background. publishLane
+      // not-clobbers, so a push-nested check keeps the interactive value push.ts
+      // set in its env even though it runs on an agent branch. See ../lane.ts.
+      const lane: Lane = slug === MAIN_WORKTREE_NAME ? "interactive" : "background";
       publishLane(slug === MAIN_WORKTREE_NAME);
+
+      // Push runs its checks via this command in a subprocess (see push.ts). The
+      // parent push already holds a host CPU grant and hands us its unit count in
+      // the environment, so `inheritedGrant()` reconstructs it and we spend those
+      // units WITHOUT acquiring host-wide again — no double-acquire, no deadlock.
+      // A direct `./singularity check` inherits nothing and acquires its own
+      // grant via `withHostGrant`.
+      const inherited = inheritedGrant();
 
       // Mark this worktree as having a check in flight so the conversation status
       // poller keeps the agent's pane reading as "working" while the CLI "shell"
       // status persists (see worktree-op.ts), and the op-status banner/chip
       // surface "Check in progress". Written up-front as "waiting-for-lock" and
-      // flipped to "running" once the host build slot is granted, so a check
-      // queued for the slot reads as queued rather than running. Only for a
-      // DIRECT `./singularity check` (kind === "build"); a push-nested check
-      // (exempt) is already covered by the push marker, so writing a second
-      // marker would just churn the status.
-      const marker = kind === "build";
+      // flipped to "running" once the host CPU grant is acquired, so a check
+      // queued for its grant reads as queued rather than running. Only for a
+      // DIRECT `./singularity check` (no inherited grant); a push-nested check
+      // (inherited grant, no wait) is already covered by the push marker, so a
+      // second marker would just churn the status.
+      const marker = inherited === undefined;
       if (marker) {
         markWorktreeOpStart(slug, "check", "waiting-for-lock");
         process.on("exit", () => clearWorktreeOp(slug, "check"));
       }
       try {
-        const ok = await withHostSlot(kind, () => {
+        const runUnder = (grant: Grant): Promise<boolean> => {
+          // The grant is now held — on the direct path `runUnder` is the
+          // `withHostGrant` callback, so this runs only after acquisition; flip
+          // the marker to "running" (a no-op on the inherited path, where
+          // `marker` is false and the parent push owns the status).
           if (marker) setWorktreeOpPhase(slug, "check", "running");
-          return runChecks(checks.length > 0 ? checks : undefined, {
+          const runOpts: RunChecksOptions = {
+            grant,
             noCache: opts.cache === false,
             logFile,
             log: (line, stream) =>
               stream === "stderr" ? console.error(line) : console.log(line),
-          });
-        });
+          };
+          return runChecks(checks.length > 0 ? checks : undefined, runOpts);
+        };
+        const ok = inherited
+          ? await runUnder(inherited)
+          : await withHostGrant({ lane, max: cpuBudget().B }, runUnder);
         if (!ok) {
           // Last line, so it survives `./singularity check | tail`.
           console.error(`\nFull check output: ${logFile}`);

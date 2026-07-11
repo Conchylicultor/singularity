@@ -1,7 +1,21 @@
+import type { Grant } from "@plugins/infra/plugins/host-admission/core";
+
+/**
+ * What every check is handed when run. `grant` is the host CPU admission the
+ * invoking build/check/push already holds — a check that fans out heavy children
+ * (type-check's per-target workers, layout-geometry's Chromium suite) spends
+ * `grant.run(...)` per child instead of acquiring host-wide again, so the whole
+ * check pass is accountable to the one grant. Checks that spawn nothing heavy
+ * ignore the argument.
+ */
+export interface CheckContext {
+  grant: Grant;
+}
+
 export interface Check {
   id: string;
   description: string;
-  run(): Promise<CheckResult>;
+  run(ctx: CheckContext): Promise<CheckResult>;
   /**
    * Run even when `./singularity build --skip-checks` is passed (and, as always,
    * during a normal build and `push`). For cheap, structural, codegen-coupled

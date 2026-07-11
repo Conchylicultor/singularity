@@ -23,7 +23,7 @@ type-aware lint off it, via typescript-eslint's `parserOptions.programs`.
   `Linter.verify` with the program injected. One process per target so each
   single-threaded program build runs on its own core.
 
-## Host-wide worker budget (two lanes)
+## Host-wide worker budget — the grant
 
 Each worker builds a full multi-GB TS program. The fleet is bounded **host-wide**,
 not per build: before this gate, N overlapping agent builds each spawned
@@ -31,39 +31,34 @@ not per build: before this gate, N overlapping agent builds each spawned
 a 64 GB box and the machine thrashed (see
 `research/2026-07-09-global-type-check-worker-host-budget.md`).
 
-The bound is a lane-keyed `packages/host-semaphore` pool of `B` flock slot files
-(`~/.singularity/type-check-worker-{interactive,background}-slots/slot-0 … slot-(B-1)`).
-The check acquires its whole share once, up front (`pool.acquireShare(max)` — at
-most one wait per build, never one child per worker), then fans out at exactly
-`share.slots` concurrency.
+This check **acquires nothing host-wide.** It spends the CPU grant its invoking
+build/check/push already holds — `ctx.grant` (see
+`@plugins/infra/plugins/host-admission`). It fans out one worker per target at
+`ctx.grant.units` concurrency, spending a unit per worker via `ctx.grant.run`, so
+the whole host runs at most `B` type-check-class workers total (the single laned
+`cpu` pool's size), subdivided across every concurrent build's fan-out — not
+`targets.length` per build.
 
-- **Two lanes, by who is waiting.** `interactive` = main build + push (a human is
-  blocked); `background` = agent build + direct agent check. The CLI classifies
-  the origin and publishes `SINGULARITY_LANE`; this check reads it (unset ⇒
-  `background`, the safe default — bounded, never exempt). The lane is **not** the
-  branch: push runs its checks on the rebased *agent* branch yet must stay
-  interactive, so a `branch === "main"` gate would have wrongly demoted it. Each
-  lane has its own pool of `B`, so the stated host ceiling is **`2·B` workers**;
-  the common case (no main build, no push in flight) runs at most `B`.
-- **`B = max(1, min(floor(cpus/2), floor(0.5·totalmem / 2.7 GB)))`.** On an
-  18-cpu / 64 GB host: `min(9, 12) = 9`. `cpus/2` (not `cpus−1`) leaves headroom
-  for the ~16 worktree backends, postgres, and concurrent vite builds.
-- **`targets.length` is NOT a term in `B`.** It bounds this build's *request*
-  (`max = min(targets.length, B)`), not the host's slot-file set. `B` names the
-  slot files, so it **must be identical in every process** — a mismatch (one
-  process sizing 8 slots while another locks `slot-8`) silently overcommits. That
-  is also why there is **no env override for `B`**: `os.cpus()` / `os.totalmem()`
-  are stable per host, and an override reintroduces the mismatch risk.
+- **The grant carries the lane and the budget.** `interactive` = main build +
+  push (a human is blocked); `background` = agent build + direct agent check. The
+  CLI classifies the origin and passes the lane to `withHostGrant`; the resulting
+  `units` are drawn from the interactive lane's reserved floor or the background
+  window accordingly. A push runs its checks on the rebased *agent* branch yet
+  stays interactive because it INHERITS the grant (its env), not because of any
+  branch gate.
+- **`B` is the residual of the summed host budget**, declared once in
+  `host-admission/core` (not recomputed here). On this host `B = 11`,
+  `backgroundLimit = 8`.
+- **`targets.length` is NOT a term in `B`.** It only bounds this build's request
+  (`max`, capped inside the CLI at `cpuBudget().B`); a reduced grant just runs the
+  fleet at lower concurrency.
 - **Demotion is a separate axis, unchanged.** `workerDemotion()` still keys on
   `branch === "main"`, so push's workers stay darwinbg-demoted exactly as before.
-  Admission (this budget) and scheduling priority (demotion) are orthogonal.
-- **Contention is legible.** When the share is reduced (`share.slots < max`) or
-  genuinely waited for, the check writes one plain stderr line
-  (`type-check: 3/8 worker slots in the background lane (waited 12.4s)`). Checks
-  run under `Promise.all`, so it must never be a blocking log or a progress bar.
-  The wait term is thresholded (`WAIT_NOTE_MS`), not `waitMs > 0`: `onAcquired` also
-  times the in-process fast-path sweep, which costs ~0.25 ms on a fully idle pool,
-  so a bare `> 0` would print the note on every run and train the eye to ignore it.
+  Admission (the grant) and scheduling priority (demotion) are orthogonal.
+- **Contention is legible.** When the grant holds fewer units than there are
+  targets, the check writes one plain stderr line
+  (`type-check: 3 of 8 targets run concurrently (host CPU grant)`). Checks run
+  under `Promise.all`, so it must never be a blocking log or a progress bar.
 
 ## Invariants / caveats
 

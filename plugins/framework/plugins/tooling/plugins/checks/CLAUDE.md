@@ -41,6 +41,8 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
   - **`data-views-in-sync`**
   - **`eager-tier-in-sync`**
   - **`fields-eager-in-sync`**
+  - **`host-budget`**
+  - **`host-pools-declared`**
   - **`inherited-theme-defaults-scoped`**
   - **`keyed-resource-scope`**
   - **`migration-hashes-unique`**

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
-import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
+import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type { Check, CheckContext, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import { classifyFailure } from "./classify";
 
 // The contributed `layout-geometry` check. It gates the layout-primitive geometry
@@ -26,14 +26,18 @@ const SUITE_REL =
 const MARKER_DIR = join(SINGULARITY_DIR, "layout-lab-cache");
 
 // Host-wide single-holder gate for the browser-based suite. The suite spawns a
-// Vite build + a headless Chromium; concurrent worktree builds (the build pool
-// admits floor(cpus/4) at once) would otherwise each launch Chromium at the same
-// moment, thrashing CPU until Playwright's launch budget is exhausted — the
-// headless-launch-timeout flake. size 1 ⇒ at most one suite runs across ALL
-// worktrees; combined with the post-acquire marker re-check it also collapses the
-// same-sig thundering herd (the first build runs + writes the marker, the rest
-// skip the launch). flock-backed, so it auto-releases on crash.
-const browserSlot = createHostSemaphore({ name: "layout-geometry", size: 1 });
+// Vite build + a headless Chromium; concurrent worktree builds would otherwise
+// each launch Chromium at the same moment, thrashing CPU until Playwright's
+// launch budget is exhausted — the headless-launch-timeout flake. size 1 ⇒ at
+// most one suite runs across ALL worktrees; combined with the post-acquire
+// marker re-check it also collapses the same-sig thundering herd (the first
+// build runs + writes the marker, the rest skip the launch). flock-backed, so it
+// auto-releases on crash. Declared through `defineHostPool` (cost cpu 1 — a Vite
+// build + Chromium) so it takes budget from the same host ceiling as every other
+// pool; the caller ALSO spends a `ctx.grant` unit around the launch (below), so
+// the run is both mutually-exclusive AND accounted against the invoking build's
+// CPU grant — two different guarantees.
+const browserPool = defineHostPool({ id: "layout-geometry", size: 1, cost: { cpu: 1 } });
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -106,7 +110,7 @@ const check: Check = {
   cacheSignature(): string {
     return computeSig(rootSync());
   },
-  async run(): Promise<CheckResult> {
+  async run(ctx: CheckContext): Promise<CheckResult> {
     const root = await getRoot();
     const sig = computeSig(root);
 
@@ -116,12 +120,12 @@ const check: Check = {
     mkdirSync(MARKER_DIR, { recursive: true });
     if (existsSync(markerFile(sig))) return { ok: true };
 
-    // Marker absent ⇒ the suite must actually launch Chromium. Serialize that
-    // host-wide (see `browserSlot`) so concurrent worktree builds don't all launch
-    // at once and exhaust the launch budget. Re-check the marker after acquiring:
-    // a peer build with the same sig may have just run the suite and written it,
-    // in which case we skip the launch entirely (double-checked locking).
-    return browserSlot.run(async () => {
+    // Marker absent ⇒ the suite must actually launch Chromium. Spend a grant unit
+    // (a cpu-holder that then waits on the size-1 pool — acyclic, the pool holder
+    // waits for nothing) around the host-wide-serialized launch. Re-check the
+    // marker after acquiring: a peer build with the same sig may have just run the
+    // suite and written it, in which case we skip the launch (double-checked).
+    return ctx.grant.run(() => browserPool.run(async () => {
       if (existsSync(markerFile(sig))) return { ok: true };
 
       // Chromium must be provisioned (the e2e postinstall owns that). Fail loudly
@@ -199,7 +203,7 @@ const check: Check = {
         message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
         hint: `A layout primitive geometry invariant regressed — run \`bun test --timeout 120000 ${SUITE_REL}\` to see which fixture/slot collided.`,
       };
-    });
+    }));
   },
 };
 

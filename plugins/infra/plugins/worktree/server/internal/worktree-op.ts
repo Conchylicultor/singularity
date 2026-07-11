@@ -272,8 +272,13 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
 // The holder file is written by whoever holds the flock (in the CLI's
 // onLockAcquired) and removed on release; the server only reads it.
 
-// MUST match `PUSH_LOCK_PATH` in the CLI push command — both flock the same file.
-export const PUSH_LOCK_PATH = join(SINGULARITY_DIR, "push.lock");
+// The push mutex is now the `push` host-pool's single slot file (declared via
+// `defineHostPool({ id: "push", size: 1 })` in host-admission). Its slot-0 lock
+// IS the push mutex, so this probe path MUST equal the pool's slot-0 path
+// (`~/.singularity/push-slots/slot-0.lock`, mirrored as `PUSH_SLOT_PATH` in
+// host-admission/server). The CLI push acquires the pool; this probes the same
+// kernel flock it holds, keeping the op-status derivation authoritative.
+export const PUSH_LOCK_PATH = join(SINGULARITY_DIR, "push-slots", "slot-0.lock");
 const PUSH_HOLDER_PATH = join(SINGULARITY_DIR, "push-holder.json");
 
 export interface PushHolder {

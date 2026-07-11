@@ -28,7 +28,8 @@ import {
   SINGULARITY_DIR,
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
-import { withHostSlot, type HostSlotKind } from "../host-semaphore";
+import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
+import { cpuBudget, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { publishLane } from "../lane";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
@@ -971,15 +972,16 @@ export function registerBuild(program: Command) {
 
       console.log("Running checks, type-checking, and building frontend in parallel...");
 
-      // Gate this heavy section (eslint + tsc + vite) behind the host-wide
-      // concurrency limit so concurrent builds across worktrees don't thrash the
-      // machine. Main-branch builds are exempt (never queued); agent builds share
-      // the bounded build pool. See host-semaphore.ts.
-      const slotKind: HostSlotKind = branch === "main" ? "exempt" : "build";
-      // Publish the lane from the same fact, BEFORE runChecks runs in-process
-      // below: a main build is human-blocking (interactive lane), an agent build
-      // is background. The type-check fleet keys its host-wide worker budget on
-      // this. See ../lane.ts.
+      // Gate this heavy section (eslint + tsc + vite) behind a host CPU GRANT so
+      // concurrent builds across worktrees don't thrash the machine. A main build
+      // takes the interactive lane (its reserved floor is unreachable by agent
+      // work, so it's never blocked by agent builds); an agent build takes the
+      // background lane. The grant's `units` are subdivided across everything the
+      // build fans out into (type-check workers, tsc, vite) — nothing re-acquires
+      // host-wide. See @plugins/infra/plugins/host-admission.
+      const lane: Lane = branch === "main" ? "interactive" : "background";
+      // Publish the lane from the same fact (so any inheriting subprocess sees
+      // it) BEFORE runChecks runs in-process below. See ../lane.ts.
       publishLane(branch === "main");
       // Agent-branch builds additionally run their heavy children (tsc, vite)
       // darwinbg-demoted so even a single build can't starve the interactive
@@ -992,15 +994,14 @@ export function registerBuild(program: Command) {
       // branch rule at their own spawn site (type-check/check/index.ts), so
       // they are covered on every path (build, standalone check, push) without
       // relying on session inheritance.
-      const demote = slotKind === "build" ? backgroundArgv : (argv: string[]) => argv;
-      let endSlotWaitSpan: (() => void) | undefined;
+      const demote = branch === "main" ? (argv: string[]) => argv : backgroundArgv;
 
       // buildId (computed up-front, before the "started" build-log record) is
       // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id
       // below — bundle and server agree by construction (no chicken-and-egg).
-      const stepResults = await withHostSlot(
-        slotKind,
-        async () => {
+      const stepResults = await withHostGrant(
+        { lane, max: cpuBudget().B },
+        async (grant) => {
           const parallel: Array<Promise<StepResult>> = [];
 
           if (!opts.skipChecks) {
@@ -1009,6 +1010,8 @@ export function registerBuild(program: Command) {
                 const lines: StepResult["lines"] = [];
                 const start = performance.now();
                 const ok = await runChecks(undefined, {
+                  // The build's host CPU grant — type-check spends it per worker.
+                  grant,
                   // Full, untruncated check output lands here; the buffered
                   // `lines` (console + build.log) stay summarized.
                   logFile: join(worktreeDataDir(name), "check.log"),
@@ -1046,6 +1049,7 @@ export function registerBuild(program: Command) {
                   const lines: StepResult["lines"] = [];
                   const start = performance.now();
                   const ok = await runChecks(alwaysRunIds, {
+                    grant,
                     logFile: join(worktreeDataDir(name), "check.log"),
                     onCheckDone: (id, durationMs, wallStartMs) => {
                       pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
@@ -1074,9 +1078,14 @@ export function registerBuild(program: Command) {
                   // Identical flags to the `typescript` check so both share one
                   // `.tsbuildinfo` per target without options-hash churn.
                   const buildInfo = tsBuildInfoPath(root, target.name);
-                  const output = await execBuffered(
-                    demote([process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo]),
-                    target.dir,
+                  // Spend a grant unit per runtime tsc — a heavy child like a
+                  // type-check worker — so the fast-path (--skip-checks) fan-out
+                  // is bounded by the same grant as everything else.
+                  const output = await grant.run(() =>
+                    execBuffered(
+                      demote([process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo]),
+                      target.dir,
+                    ),
                   );
                   end();
                   return {
@@ -1095,7 +1104,12 @@ export function registerBuild(program: Command) {
             (async (): Promise<StepResult> => {
               const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
               const start = performance.now();
-              const output = await execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) });
+              // Vite is one of the heavy children the grant covers: spend a unit
+              // for it so it shares the build's CPU budget with the type-check
+              // workers rather than running on top of it.
+              const output = await grant.run(() =>
+                execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
+              );
               end();
               return {
                 id: "viteBuild",
@@ -1108,13 +1122,6 @@ export function registerBuild(program: Command) {
           );
 
           return await Promise.all(parallel);
-        },
-        {
-          onWaitStart: () => {
-            console.log("Waiting for a build slot (machine busy)...");
-            endSlotWaitSpan = buildProfilerStart("buildSlotWait", "build:queue", "waiting for build slot");
-          },
-          onAcquired: () => endSlotWaitSpan?.(),
         },
       );
 

@@ -1,8 +1,34 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, rmSync } from "node:fs";
+import { dlopen } from "bun:ffi";
+import { closeSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import { createHostSemaphore, type HostShare } from "./host-semaphore";
+
+// Raw flock, the same way the module dials it — used by `isSlotHeld` below to probe
+// which specific slot file a share is holding (flock conflicts across fds even within
+// one process, so an in-process probe sees an in-process holder).
+const { symbols: rawFfi } = dlopen(
+  process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
+  { flock: { args: ["i32", "i32"], returns: "i32" } },
+);
+const RAW_LOCK_EX = 2;
+const RAW_LOCK_NB = 4;
+
+/**
+ * True iff `slot-<i>.lock` in `slotsDir` is currently flock-held by someone. Probes
+ * non-blockingly: if we can take the lock it was free (we drop it immediately); if we
+ * can't, it is held. Only call while the pool is otherwise quiescent — the probe
+ * momentarily holds a free slot, which could race a concurrent acquirer.
+ */
+function isSlotHeld(slotsDir: string, i: number): boolean {
+  const fd = openSync(join(slotsDir, `slot-${i}.lock`), "w");
+  try {
+    return rawFfi.flock(fd, RAW_LOCK_EX | RAW_LOCK_NB) !== 0;
+  } finally {
+    closeSync(fd);
+  }
+}
 
 // The `flock-wait.ts` child script, resolved the same way the module resolves it.
 // Tests spawn it directly to stand in for an out-of-process slot holder.
@@ -271,6 +297,127 @@ describe("acquireShare", () => {
   });
 });
 
+// The reserved-floor lane split. A size-4 pool with backgroundLimit-2 confines
+// `background` to slot-0..1 and reserves slot-2..3 for `interactive`, which sweeps
+// high-first. These four tests pin the window, the reverse order, the fast-path floor
+// grant, and the split's presence in the pool identity.
+describe("reserved floor (lanes)", () => {
+  test("background never takes a slot at or above backgroundLimit", async () => {
+    const name = uniqueName("bg-floor");
+    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+
+    // Two background handles take the whole background window — deterministically
+    // slot-0 then slot-1 (forward sweep, one slot each).
+    const h1 = await sem.acquireShare(1, { lane: "background" });
+    const h2 = await sem.acquireShare(1, { lane: "background" });
+    expect(h1.slots).toBe(1);
+    expect(h2.slots).toBe(1);
+    expect(isSlotHeld(slotsDir, 0)).toBe(true);
+    expect(isSlotHeld(slotsDir, 1)).toBe(true);
+    expect(isSlotHeld(slotsDir, 2)).toBe(false); // reserved floor, untouched
+    expect(isSlotHeld(slotsDir, 3)).toBe(false);
+
+    // A 3rd background acquire must BLOCK — its window (slot-0..1) is full — even
+    // though slot-2 and slot-3 sit free (reserved for interactive).
+    let resolved = false;
+    const third = sem.acquireShare(1, { lane: "background" }).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await sleep(150);
+    expect(resolved).toBe(false); // never encroaches on the reserved floor
+
+    // Releasing a background slot wakes it; it lands back in the window, never above.
+    await h1.release();
+    const outcome = await Promise.race([third, sleep(2000).then(() => "TIMEOUT" as const)]);
+    expect(outcome).not.toBe("TIMEOUT");
+    const share = outcome as HostShare;
+    expect(share.slots).toBe(1);
+    expect(isSlotHeld(slotsDir, 2)).toBe(false);
+    expect(isSlotHeld(slotsDir, 3)).toBe(false);
+
+    await share.release();
+    await h2.release();
+  });
+
+  test("an interactive acquire is granted immediately from the floor while background is saturated", async () => {
+    const name = uniqueName("floor-fast");
+    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+
+    const h1 = await sem.acquireShare(1, { lane: "background" });
+    const h2 = await sem.acquireShare(1, { lane: "background" });
+    expect(h1.slots + h2.slots).toBe(2); // background window full
+
+    // Spy on Bun.spawn: the interactive acquire must take the fast path — the reserved
+    // floor is free, so no turnstile, no fan-out child, no blocking wait.
+    const origSpawn = Bun.spawn;
+    let spawnCount = 0;
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((...args: unknown[]) => {
+      spawnCount++;
+      return (origSpawn as (...a: unknown[]) => unknown)(...args);
+    }) as typeof Bun.spawn;
+
+    try {
+      let waitMs = -1;
+      const share = await sem.acquireShare(1, {
+        lane: "interactive",
+        onAcquired: (ms) => {
+          waitMs = ms;
+        },
+      });
+      expect(share.slots).toBe(1);
+      expect(spawnCount).toBe(0); // no broker: pure fast path from the floor
+      expect(waitMs).toBeLessThan(50); // ~0, never blocked
+      expect(isSlotHeld(slotsDir, 3)).toBe(true); // took the top of the reserved floor
+      await share.release();
+    } finally {
+      (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
+    }
+
+    await h1.release();
+    await h2.release();
+  });
+
+  test("interactive sweeps high-first: an idle acquire holds the top slot", async () => {
+    const name = uniqueName("hi-first");
+    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+
+    const share = await sem.acquireShare(1, { lane: "interactive" });
+    expect(share.slots).toBe(1);
+    // High-index-first: slot-(size-1) is taken, the low slots left for background.
+    expect(isSlotHeld(slotsDir, 3)).toBe(true);
+    expect(isSlotHeld(slotsDir, 2)).toBe(false);
+    expect(isSlotHeld(slotsDir, 1)).toBe(false);
+    expect(isSlotHeld(slotsDir, 0)).toBe(false);
+    await share.release();
+  });
+
+  test("backgroundLimit is part of pool identity: a live split mismatch throws, an idle one resizes", async () => {
+    const name = uniqueName("bg-identity");
+
+    // Establish the pool at size 4 / backgroundLimit 2 and HOLD a slot so it is live.
+    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+    const held = await sem.acquireShare(1, { lane: "background" });
+    expect(held.slots).toBe(1);
+
+    // Same size, DIFFERENT split on the same live pool: the two processes would carve
+    // the reserved floor at different indices — a silent floor break — so it must crash.
+    const other = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
+    const err = await rejection(other.acquireShare(1, { lane: "background" }));
+    expect(err.message).toContain("live at size");
+
+    // Once idle, a fresh pool with a different split resizes the sentinel silently.
+    await held.release();
+    const resized = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
+    const share = await resized.acquireShare(1, { lane: "background" });
+    expect(share.slots).toBe(1);
+    await share.release();
+  });
+});
+
 /** Read `stream` until the literal `"granted\n"` token; throw if it closes first. */
 async function awaitGrantedRaw(stream: ReadableStream<Uint8Array>): Promise<void> {
   const reader = stream.getReader();
@@ -464,6 +611,23 @@ test("size is part of pool identity: a live size mismatch throws, an idle one re
   const sem8b = createHostSemaphore({ name, size: 8 });
   const share = await sem8b.acquireShare(8);
   expect(share.slots).toBe(8);
+  await share.release();
+});
+
+test("a legacy bare-integer sentinel migrates to size:size instead of crashing", async () => {
+  const name = uniqueName("legacy-sentinel");
+
+  // Simulate the pre-reserved-floor on-disk state: a slot dir whose `size` sentinel
+  // holds a bare "4" (the historical non-laned pools have exactly this today).
+  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+  mkdirSync(slotsDir, { recursive: true });
+  writeFileSync(join(slotsDir, "size"), "4");
+
+  // A size-4 (backgroundLimit defaults to 4) process must read "4" as 4:4 and proceed,
+  // not throw corruption. This is the hot-path migration guarantee.
+  const sem = createHostSemaphore({ name, size: 4 });
+  const share = await sem.acquireShare(4);
+  expect(share.slots).toBe(4);
   await share.release();
 });
 

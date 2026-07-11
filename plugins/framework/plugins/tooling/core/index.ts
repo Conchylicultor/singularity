@@ -1,1 +1,1 @@
-export type { Check, CheckResult } from "./types";
+export type { Check, CheckContext, CheckResult } from "./types";

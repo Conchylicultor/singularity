@@ -17,7 +17,7 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 // files under `~/.singularity/<name>-slots/`: at most one holder per fd, so at
 // most `size` holders host-wide. flock auto-releases when the fd closes OR the
 // holding process dies, so a SIGKILLed server never leaks a slot — the same
-// crash-safety the build pool relies on (`cli/bin/host-semaphore.ts`).
+// crash-safety every host pool relies on (declared via `infra/host-admission`).
 //
 // Hybrid acquire:
 //  - Fast path: an in-process *non-blocking* `flock(LOCK_NB)` sweep — microsecond
@@ -41,6 +41,15 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 // Barging is unchanged: the fast-path sweep does not consult the turnstile, so a
 // fresh caller can still take a slot a queued waiter was about to win. The turnstile
 // buys serialized *wakeup*, not FIFO *fairness*.
+//
+// Reserved floor: with `backgroundLimit < size`, slot *capacity* is partitioned by
+// lane. `background` may only sweep/fan-out over `slot-0 … slot-(backgroundLimit-1)`;
+// `interactive` may use every slot but sweeps them HIGH-index-first, so the reserved
+// high slots fill before the shared low slots and a saturated background lane can
+// never starve interactive work. The turnstile stays PER-POOL (shared across lanes) —
+// only slot capacity is partitioned, not the wakeup serialization — so an interactive
+// waiter may briefly queue behind a background waiter's fan-out for the wakeup (a few
+// ms), never for a slot.
 
 const FLOCK_WAIT_PATH = join(import.meta.dir, "..", "..", "scripts", "flock-wait.ts");
 
@@ -80,15 +89,39 @@ export interface HostShare {
 }
 
 /**
- * Observability hooks for an acquire. Both are optional and neither gates behavior;
- * they let callers make the gate visible (profiler spans, log lines) without coupling
- * this primitive to any of that.
+ * Reserved-floor lane. A pool with `backgroundLimit < size` partitions its slots by
+ * lane so background work can never starve interactive work of the whole pool:
+ *  - `background` may use only the low `backgroundLimit` slots (`slot-0 …
+ *    slot-(backgroundLimit-1)`), swept low-index-first.
+ *  - `interactive` may use ALL `size` slots, but sweeps them **high-index-first**
+ *    (`slot-(size-1) … slot-0`). Without that reversal, interactive holders would take
+ *    the low slots in file order and the reserved floor (the high slots background can
+ *    never reach) would sit empty while background starves — the whole trick.
+ *
+ * Default `background`: the safe choice, since it can never encroach on the reserved
+ * floor. When `backgroundLimit === size` (the un-partitioned default), both lanes
+ * collapse to the full slot set — `interactive` in reverse order, `background` in
+ * forward order — and lane windowing is behaviourally inert.
+ */
+export type Lane = "interactive" | "background";
+
+/**
+ * Per-acquire options: the reserved-floor `lane` plus two observability hooks. The
+ * hooks are optional and neither gates behavior; they let callers make the gate
+ * visible (profiler spans, log lines) without coupling this primitive to any of that.
+ * `lane` DOES gate behavior — it selects the slot window and sweep order (see `Lane`).
  */
 export interface AcquireHooks {
   /**
-   * The slow path was entered (every slot busy), BEFORE any child is spawned. Never
-   * fires on the fast path. Lets a caller *open* a "waiting for a slot" span, which
-   * `onAcquired` (fired once, at acquisition) can never express.
+   * Which reserved-floor lane this acquire draws from. Default `background`. On an
+   * un-partitioned pool (`backgroundLimit === size`) it only affects sweep *order*,
+   * not which slots are reachable.
+   */
+  lane?: Lane;
+  /**
+   * The slow path was entered (every slot in the lane's window busy), BEFORE any child
+   * is spawned. Never fires on the fast path. Lets a caller *open* a "waiting for a
+   * slot" span, which `onAcquired` (fired once, at acquisition) can never express.
    */
   onWaitStart?(): void;
   /**
@@ -126,10 +159,12 @@ export interface HostSemaphore {
    * fan out one blocking child per slot to wait for the FIRST free slot; a second
    * non-blocking sweep then picks up whatever else freed while we waited.
    *
-   * `max` is clamped to `size` (asking for more slots than exist is a no-op past
-   * the ceiling, not an error). Never returns fewer than 1 slot — it blocks or
-   * throws instead, so a caller never has to distinguish "got a share" from "got
-   * nothing".
+   * `max` is clamped to the acquiring lane's window size (`backgroundLimit` for the
+   * `background` lane, `size` for `interactive`) — asking for more slots than the
+   * window holds is a no-op past the ceiling, not an error. Never returns fewer than
+   * 1 slot — it blocks or throws instead, so a caller never has to distinguish "got a
+   * share" from "got nothing". The `lane` field of `hooks` selects the reserved-floor
+   * window and sweep order (default `background`; see `Lane`).
    */
   acquireShare(max: number, hooks?: AcquireHooks): Promise<HostShare>;
 
@@ -146,17 +181,43 @@ export interface HostSemaphore {
  * Cross-process bounded-concurrency gate: at most `size` `run` bodies execute at
  * once across every process sharing the same `name`. `name` keys the slot
  * directory (`~/.singularity/<name>-slots/`) and must be a safe filename segment.
+ *
+ * `backgroundLimit` (default `size`, i.e. no reserved floor) caps how many slots the
+ * `background` lane may take, reserving the remaining `size - backgroundLimit` slots
+ * for the `interactive` lane (see `Lane`). It must be an integer in `1 … size`. When
+ * left at the default, lane windowing is inert and behavior is identical to an
+ * un-laned pool.
  */
-export function createHostSemaphore(opts: { name: string; size: number }): HostSemaphore {
-  const { name, size } = opts;
+export function createHostSemaphore(opts: {
+  name: string;
+  size: number;
+  backgroundLimit?: number;
+}): HostSemaphore {
+  const { name, size, backgroundLimit = size } = opts;
   if (!Number.isInteger(size) || size < 1) {
     throw new Error(`createHostSemaphore: size must be a positive integer, got ${size}`);
+  }
+  if (!Number.isInteger(backgroundLimit) || backgroundLimit < 1 || backgroundLimit > size) {
+    throw new Error(
+      `createHostSemaphore: backgroundLimit must be an integer in 1..${size}, got ${backgroundLimit}`,
+    );
   }
   if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
     throw new Error(
       `createHostSemaphore: name must match /^[a-z0-9][a-z0-9-]*$/, got ${JSON.stringify(name)}`,
     );
   }
+
+  // The ordered slot-index window a lane may sweep. `background` is confined to the
+  // low `backgroundLimit` slots in forward order; `interactive` may use every slot but
+  // sweeps them high-index-first so the reserved floor (the high slots) fills before
+  // the shared low slots, leaving the low slots for background. This is the whole
+  // reserved-floor trick and it costs one reversal. When `backgroundLimit === size`
+  // the two windows cover the same set — `interactive` reversed, `background` forward.
+  const laneOrder = (lane: Lane): number[] =>
+    lane === "background"
+      ? Array.from({ length: backgroundLimit }, (_, i) => i)
+      : Array.from({ length: size }, (_, i) => size - 1 - i);
 
   const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
   const slotFile = (i: number) => join(slotsDir, `slot-${i}.lock`);
@@ -170,17 +231,21 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
   // otherwise permanently inflate the gauge.
   let waiting = 0;
 
-  // Size is part of the pool's identity. `size` names the slot-file *set*, so an
-  // old-size process holding `slot-7.lock` is invisible to a new-size process that
-  // only sweeps `slot-0..3` — the bound would be silently exceeded. The sentinel
-  // makes any residual mismatch loud. Checked once per instance, lazily on first
-  // acquire — memoized as the in-flight *promise* (not a boolean) so concurrent
-  // in-process `acquireShare` calls await one check instead of racing, and cleared
-  // on failure so a pool whose mismatch was since resolved isn't wedged by a cached
-  // rejection.
+  // Size AND the lane split are part of the pool's identity. `size` names the
+  // slot-file *set*, so an old-size process holding `slot-7.lock` is invisible to a
+  // new-size process that only sweeps `slot-0..3` — the bound would be silently
+  // exceeded. `backgroundLimit` names where the reserved floor begins, so two
+  // processes that disagree on it partition the same slots differently — one's
+  // background slot is another's reserved-interactive slot, and the floor guarantee
+  // silently breaks. The sentinel encodes BOTH as `"<size>:<backgroundLimit>"`, so a
+  // process built for a different split is as loud as one built for a different size.
+  // Checked once per instance, lazily on first acquire — memoized as the in-flight
+  // *promise* (not a boolean) so concurrent in-process `acquireShare` calls await one
+  // check instead of racing, and cleared on failure so a pool whose mismatch was since
+  // resolved isn't wedged by a cached rejection.
   let sizeCheck: Promise<void> | undefined;
 
-  function readSentinel(): number | undefined {
+  function readSentinel(): { size: number; backgroundLimit: number } | undefined {
     let raw: string;
     try {
       raw = readFileSync(sizeFile, "utf8");
@@ -188,18 +253,36 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
       throw err;
     }
-    const n = parseInt(raw.trim(), 10);
-    if (!Number.isInteger(n) || n < 1) {
+    // Identity is "<size>:<backgroundLimit>". A bare "<size>" is the LEGACY format
+    // (pre-reserved-floor) and means "no floor" — i.e. backgroundLimit === size — so
+    // it parses cleanly rather than throwing: the four historical non-laned pools keep
+    // their slot dirs, and their on-disk "4"/"3"/"2" sentinels must migrate silently,
+    // not crash the first acquire on a hot server path. Anything else — a number
+    // missing/invalid, backgroundLimit > size, or a stray third field — is genuine
+    // corruption, and loud.
+    const parts = raw.trim().split(":");
+    const s = parseInt(parts[0] ?? "", 10);
+    const bg = parts.length === 1 ? s : parseInt(parts[1] ?? "", 10);
+    if (
+      parts.length > 2 ||
+      !Number.isInteger(s) ||
+      s < 1 ||
+      !Number.isInteger(bg) ||
+      bg < 1 ||
+      bg > s
+    ) {
       throw new Error(
         `createHostSemaphore(${name}): corrupt size sentinel ${JSON.stringify(raw)}`,
       );
     }
-    return n;
+    return { size: s, backgroundLimit: bg };
   }
 
-  function writeSentinelAtomic(n: number): void {
+  // Always writes *this* pool's identity — the closure's `size`/`backgroundLimit` are
+  // the only values it can legitimately record.
+  function writeSentinelAtomic(): void {
     const tmp = `${sizeFile}.${process.pid}.tmp`;
-    writeFileSync(tmp, String(n));
+    writeFileSync(tmp, `${size}:${backgroundLimit}`);
     renameSync(tmp, sizeFile);
   }
 
@@ -245,13 +328,14 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
       // queued behind may have just written it.
       const sentinel = readSentinel();
       if (sentinel === undefined) {
-        // First process to touch this pool — record its size.
-        writeSentinelAtomic(size);
-      } else if (sentinel !== size) {
-        // Mismatch. Safe to resize ONLY if the pool is idle: LOCK_NB-sweep every
-        // slot across both sizes. If any is held, an out-of-size process is live and
-        // a silent overcommit would follow — crash instead (the ONE genuine throw).
-        const hi = Math.max(sentinel, size);
+        // First process to touch this pool — record its size:split identity.
+        writeSentinelAtomic();
+      } else if (sentinel.size !== size || sentinel.backgroundLimit !== backgroundLimit) {
+        // Mismatch on EITHER axis. Safe to resize ONLY if the pool is idle: LOCK_NB-
+        // sweep every slot across both sizes. If any is held, an out-of-identity
+        // process is live — a silent overcommit (size) or a broken reserved floor
+        // (split) would follow — so crash instead (the ONE genuine throw).
+        const hi = Math.max(sentinel.size, size);
         const probeFds: number[] = [];
         let allFree = true;
         for (let i = 0; i < hi; i++) {
@@ -265,14 +349,15 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
         if (!allFree) {
           for (const fd of probeFds) closeSync(fd);
           throw new Error(
-            `createHostSemaphore(${name}): pool is live at size ${sentinel}, but this ` +
-              `process was built for ${size}`,
+            `createHostSemaphore(${name}): pool is live at size ` +
+              `${sentinel.size}:${sentinel.backgroundLimit}, but this process was built ` +
+              `for ${size}:${backgroundLimit}`,
           );
         }
-        // Pool idle → rewrite the sentinel, drop the now-extra slot files, release
-        // every probe fd.
-        writeSentinelAtomic(size);
-        for (let i = size; i < sentinel; i++) rmSync(slotFile(i), { force: true });
+        // Pool idle → rewrite the sentinel, drop the now-extra slot files (only when
+        // shrinking `size`), release every probe fd.
+        writeSentinelAtomic();
+        for (let i = size; i < sentinel.size; i++) rmSync(slotFile(i), { force: true });
         for (const fd of probeFds) closeSync(fd);
       }
     } finally {
@@ -280,16 +365,18 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
     }
   }
 
-  // Non-blocking sweep: open all `size` fds, `flock(LOCK_NB)` each, and KEEP the
-  // first `limit` fds that lock (the caller owns and must close them to release).
-  // Every other fd — past the limit, or one that failed to lock — is closed
-  // immediately. All in-process microsecond syscalls; never freezes the loop the
-  // way LOCK_EX would. `limit === 0` opens nothing worth keeping and returns [].
-  function sweepKeep(limit: number): number[] {
+  // Non-blocking sweep over the lane's `order` window: open each slot fd in order,
+  // `flock(LOCK_NB)` it, and KEEP the first `limit` fds that lock (the caller owns and
+  // must close them to release). Every other fd — past the limit, or one that failed
+  // to lock — is closed immediately. All in-process microsecond syscalls; never
+  // freezes the loop the way LOCK_EX would. Slots OUTSIDE `order` (e.g. the reserved
+  // floor for a background caller) are never opened, so they are structurally
+  // unreachable. `limit === 0` locks nothing and returns [].
+  function sweepKeep(limit: number, order: number[]): number[] {
     mkdirSync(slotsDir, { recursive: true });
-    const fds = Array.from({ length: size }, (_, i) => openSync(slotFile(i), "w"));
     const kept: number[] = [];
-    for (const fd of fds) {
+    for (const i of order) {
+      const fd = openSync(slotFile(i), "w");
       if (kept.length < limit && ffi.flock(fd, LOCK_EX | LOCK_NB) === 0) {
         kept.push(fd);
       } else {
@@ -299,13 +386,16 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
     return kept;
   }
 
-  // Fan out: spawn one child per slot, take the FIRST to grant (any freed slot wakes
-  // us), then SIGKILL and reap the losers. SIGKILL cannot be caught; process death
-  // cancels a blocked flock, and a loser that had already grabbed a *different* slot
-  // releases it by dying. Awaiting `exited` is mandatory — it reaps the zombies AND
-  // guarantees their slots are back before the caller re-sweeps for extras.
-  async function fanOut(): Promise<WaitChild> {
-    const children = Array.from({ length: size }, (_, i) => spawnWait(slotFile(i)));
+  // Fan out over the lane's `order` window: spawn one child per slot in that window,
+  // take the FIRST to grant (any freed slot in the window wakes us), then SIGKILL and
+  // reap the losers. Confining the children to `order` is what keeps a background
+  // waiter off the reserved floor even on the slow path. SIGKILL cannot be caught;
+  // process death cancels a blocked flock, and a loser that had already grabbed a
+  // *different* slot releases it by dying. Awaiting `exited` is mandatory — it reaps
+  // the zombies AND guarantees their slots are back before the caller re-sweeps for
+  // extras.
+  async function fanOut(order: number[]): Promise<WaitChild> {
+    const children = order.map((i) => spawnWait(slotFile(i)));
 
     // Attach ALL readers BEFORE awaiting — a sequential read would deadlock on the
     // wrong (still-blocked) child. `Promise.any` settles on the first SUCCESS and
@@ -320,7 +410,7 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
     } catch (err) {
       // Every fan-out child died before granting — loud, never a silent bound drop.
       throw new Error(
-        `createHostSemaphore(${name}): all ${size} fan-out children exited before granting a slot`,
+        `createHostSemaphore(${name}): all ${order.length} fan-out children exited before granting a slot`,
         { cause: err },
       );
     }
@@ -336,15 +426,19 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
     if (!Number.isInteger(max) || max < 1) {
       throw new Error(`acquireShare: max must be a positive integer, got ${max}`);
     }
+    const lane: Lane = hooks?.lane ?? "background";
+    const order = laneOrder(lane);
     const t0 = performance.now();
     await ensureSizeIdentity();
-    // Asking for more slots than exist can't beat the ceiling — clamp so the
-    // fast-path sweep and the extras re-sweep agree on the true upper bound.
-    const effectiveMax = Math.min(max, size);
+    // Asking for more slots than the lane's window holds can't beat its ceiling —
+    // clamp to the window size (`backgroundLimit` for background, `size` for
+    // interactive) so the fast-path sweep and the extras re-sweep agree on the bound.
+    const effectiveMax = Math.min(max, order.length);
 
-    // Fast path: non-blocking sweep for up to `effectiveMax` slots. On a pool with
-    // any free slot this is the whole story — no turnstile, no subprocess.
-    let fds = sweepKeep(effectiveMax);
+    // Fast path: non-blocking sweep over the lane window for up to `effectiveMax`
+    // slots. On a window with any free slot this is the whole story — no turnstile,
+    // no subprocess.
+    let fds = sweepKeep(effectiveMax, order);
     let winner: WaitChild | undefined;
 
     if (fds.length === 0) {
@@ -377,18 +471,19 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
         };
 
         try {
-          // (b) Re-sweep: a slot may have freed while we queued for the turnstile.
-          fds = sweepKeep(effectiveMax);
+          // (b) Re-sweep the lane window: a slot may have freed while we queued for
+          // the turnstile.
+          fds = sweepKeep(effectiveMax, order);
           if (fds.length === 0) {
-            // (c) Fan out over all `size` slots and take the first grant; (d) reap
+            // (c) Fan out over the lane's window and take the first grant; (d) reap
             // the losers so their slots are back.
-            winner = await fanOut();
+            winner = await fanOut(order);
             // (d') Release the turnstile so the next waiter can fan out, BEFORE we
             // (e) re-sweep for up to `effectiveMax - 1` EXTRA slots. The winner's own
             // slot is held by the winner child, so it fails to lock here and is never
             // double-counted.
             await releaseTurnstile();
-            fds = sweepKeep(effectiveMax - 1);
+            fds = sweepKeep(effectiveMax - 1, order);
           }
         } finally {
           // Covers the (b)-success path and any throw from fanOut — never strand it.

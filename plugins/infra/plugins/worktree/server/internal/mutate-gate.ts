@@ -1,6 +1,6 @@
-import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
-import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
-import { cpus } from "node:os";
+import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
+import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for heavy `git worktree add`/`remove` — deliberately
 // SEPARATE from `heavy-read` (infra/host-read-pool), not a reuse of it:
@@ -22,40 +22,24 @@ import { cpus } from "node:os";
 // deeper lever (sparse-checkout). See
 // research/perfs/2026-07-02-worktree-mutation-host-gate-DESIGN.md.
 //
-// NO env override: `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it
-// MUST be identical in every process — a backend sized to 3 only sweeps `slot-0..2`
-// and is blind to one holding `slot-5`, silently exceeding the bound. A pure function
-// of stable host facts (`os.cpus()`) is what prevents that; the primitive's size
-// sentinel only makes a residual mismatch loud.
-function mutateSize(): number {
-  return Math.max(2, Math.floor(cpus().length / 6)); // 18 CPUs -> 3; conservative
-}
+// Size + CPU cost are declared ONCE in host-admission/core's reserved-pool table
+// (`max(2, floor(cpus/6))` = 3 on an 18-CPU box), so this pool and the
+// `host-budget` check read the same numbers. NO env override: `size` names the
+// flock SLOT FILES, so it MUST be identical in every process — a pure function of
+// stable host facts is what prevents a mis-sized backend from silently exceeding
+// the bound.
+const { size: mutateSize, cost } = RESERVED_POOLS["worktree-mutate"];
 
-const gate = createHostSemaphore({ name: "worktree-mutate", size: mutateSize() });
-
-// Held-by-this-process count; host-wide occupancy across other processes is not
-// cheaply readable (same documented limitation as host-read-pool's gauge).
-let held = 0;
-registerGateGauge("worktree-mutate-acquire", () => ({
-  active: held,
-  queued: gate.depth(),
-  max: mutateSize(),
-}));
+// The `worktree-mutate-acquire` occupancy gauge is auto-registered by
+// `defineHostPool` with TRUE host-wide occupancy.
+const gate = defineHostPool({ id: "worktree-mutate", size: mutateSize, cost });
 
 // Wrap the heavy `git worktree add`/`remove` subprocess. The acquire-wait is charged
 // to the enclosing profiler entry (job/http) so a saturated gate stays attributable
 // in get_runtime_profile / slow-ops, mirroring host-read-pool. Context-less callers
 // (graphile jobs) fall back to a standalone span inside chargeWait.
 export function withWorktreeMutateSlot<T>(fn: () => Promise<T>): Promise<T> {
-  return gate.run(
-    async () => {
-      held++;
-      try {
-        return await fn();
-      } finally {
-        held--;
-      }
-    },
-    { onAcquired: (waitMs) => chargeWait("worktree-mutate-acquire", waitMs) },
-  );
+  return gate.run(() => fn(), {
+    onAcquired: (waitMs) => chargeWait("worktree-mutate-acquire", waitMs),
+  });
 }

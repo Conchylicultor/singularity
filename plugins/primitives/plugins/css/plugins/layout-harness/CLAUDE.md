@@ -46,11 +46,14 @@ through the generic `loadFixtures()`:
      failing. The check spawns `bun test --timeout 120000`, raising the budget for
      every hook AND test (the dominant fix). `measure-page.ts` likewise raises
      Playwright's own 30s `launch` timeout to 120s.
-   - **host-wide serialization.** The run is gated behind
-     `createHostSemaphore({ name: "layout-geometry", size: 1 })`
-     (`packages/host-semaphore`): the build pool admits `floor(cpus/4)` concurrent
-     worktree builds, and ungated they all started Chromium at the same instant and
-     thrashed CPU. size 1 ⇒ at most one suite runs across all worktrees.
+   - **host-wide serialization + grant.** The run is gated behind
+     `defineHostPool({ id: "layout-geometry", size: 1, cost: { cpu: 1 } })`
+     (`@plugins/infra/plugins/host-admission`): size 1 ⇒ at most one suite (Vite
+     build + Chromium) runs across all worktrees, so concurrent builds don't all
+     launch Chromium at the same instant and thrash CPU. The check ALSO spends a
+     `ctx.grant` unit around the launch, so the run is both mutually-exclusive AND
+     accounted against the invoking build's CPU grant — two different guarantees
+     (mutual exclusion vs. budget), so it keeps both.
    - **double-checked marker.** The marker is re-checked after acquiring the slot,
      so same-sig peers that queued behind the first runner collapse to a single
      launch instead of re-running the suite.
