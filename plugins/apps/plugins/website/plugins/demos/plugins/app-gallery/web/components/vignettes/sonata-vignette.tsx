@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
-  Sonata,
+  SonataAudio,
   type InstrumentVoices,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -41,7 +41,7 @@ export function SonataVignette() {
   const [litPitches, setLitPitches] = useState<number[]>([]);
   const [soundState, setSoundState] = useState<SoundState>("idle");
 
-  const instruments = Sonata.Instrument.useContributions();
+  const instruments = SonataAudio.Instrument.useContributions();
   // Default instrument, resolved generically via the collection API — never by
   // naming the piano plugin. Mirrored through latest-ref so the stable
   // interaction reads it live once the deferred tier loads.

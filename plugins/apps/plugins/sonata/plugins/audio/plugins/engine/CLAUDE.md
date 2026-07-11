@@ -39,7 +39,7 @@ per-track and lives in the Tracks panel (`track-mixer`). The panel:
 - reads `useTrackInstrumentMap()` (trackId → resolved instrument id) and the
   audible score to compute the **distinct in-use instrument id set**;
 - maintains one `InstrumentVoices` per in-use id (created via the generic
-  `Sonata.Instrument` contribution's `createVoices`), **shared** by every track
+  `SonataAudio.Instrument` contribution's `createVoices`), **shared** by every track
   resolving to that instrument — muted tracks are already filtered upstream, so
   sharing never sounds a muted track;
 - reconciles that manager map in an effect keyed on a stable fingerprint of the
@@ -62,7 +62,7 @@ mid-session updates the live-state map, loads the new timbre, and re-schedules.
 - Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.
 - Web:
   - Contributes: `Sonata.SurfaceProvider` → `AudioProvider`, `Sonata.Effect` "audio-engine" → `AudioEngine`, `SonataToolbar.End` "volume" → `VolumeControl`
-  - Uses: `apps/sonata/shell.InstrumentVoices`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackInstrumentMap`, `primitives/css/spacing.Stack`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/scoped-store.defineScopedStore`
+  - Uses: `apps/sonata/audio/instruments.InstrumentVoices`, `apps/sonata/audio/instruments.SonataAudio`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackInstrumentMap`, `primitives/css/spacing.Stack`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/scoped-store.defineScopedStore`
   - Exports: Types: `AudioGraph`, `LoopWindowBeats`, `ScheduleHandle`; Values: `startScheduling`, `useAudioGraph`
 - Cross-plugin:
   - Imported by: `apps/sonata/audio/live-play`, `apps/sonata/audio/metronome`

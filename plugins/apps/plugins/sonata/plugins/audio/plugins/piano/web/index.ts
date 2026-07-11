@@ -1,13 +1,13 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdPiano } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { createVoices } from "./voices";
 
 export default {
   description:
     "Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback.",
   contributions: [
-    Sonata.Instrument({
+    SonataAudio.Instrument({
       id: "piano",
       label: "Acoustic Piano",
       icon: MdPiano,

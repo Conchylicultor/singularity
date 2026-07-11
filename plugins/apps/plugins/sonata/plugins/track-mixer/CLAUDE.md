@@ -18,7 +18,7 @@ plus a per-song reset.
   (`TrackMeta.gmProgram`), else the default instrument. `muted`/`hidden` default
   to false so an absent row reads as audible + visible.
 - **Instrument resolution.** `useTrackMixerEntries` reads the registered timbres
-  generically via `Sonata.Instrument.useContributions()` (never names a
+  generically via `SonataAudio.Instrument.useContributions()` (never names a
   contributor) and resolves each track's effective instrument id with the
   precedence: a non-null override that still matches a registered id → the
   contribution whose `gmProgram` equals the track's program → the `default`
@@ -55,7 +55,7 @@ plus a per-song reset.
 - Description: Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
 - Web:
   - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/color-picker.SwatchGrid`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`
+  - Uses: `apps/sonata/audio/instruments.SonataAudio`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/color-picker.SwatchGrid`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`
   - Exports: Types: `TrackMixerEntry`; Values: `blackKeyColor`, `useHiddenTrackIds`, `useMutedTrackIds`, `useTrackColorMap`, `useTrackInstrumentMap`, `useTrackMixerEntries`
 - Server:
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`

@@ -2,7 +2,7 @@ import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
 import type {
   InstrumentVoices,
   ScheduledNote,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { PIANO_MIRROR_ID } from "../shared/mirror";
 
 /**

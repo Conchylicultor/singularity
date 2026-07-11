@@ -4,7 +4,7 @@ import {
   type Note,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 
 /**
  * An A–B practice-loop window in **beats** (already validated `start < end`).

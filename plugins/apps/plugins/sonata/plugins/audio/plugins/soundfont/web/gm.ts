@@ -1,7 +1,7 @@
 /**
  * The canonical General MIDI melodic instrument table — this plugin's private
  * source of all GM knowledge (the engine and track-mixer only ever see it via
- * the generic `Sonata.Instrument` collection API, never by importing it).
+ * the generic `SonataAudio.Instrument` collection API, never by importing it).
  *
  * Each entry pairs a GM program (0-127) with its display `name`, its `gleitz`
  * soundfont file slug, and its GM `family`. The `gleitz` slug is the file name

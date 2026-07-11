@@ -6,7 +6,7 @@
 
 - Description: Sonata — extensible piano and music app.
 - Sub-plugins:
-  - **`audio`** [5 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
+  - **`audio`** [6 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
   - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ↑/↓ speed up / slow down tempo, and ←/→ seek the playhead — tap to snap to the previous/next note, hold to scrub.
   - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
   - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
@@ -24,7 +24,7 @@
   - **`rhythm`** — Rhythm-necklace data model for Sonata: preset onset patterns (Tresillo, Son, Bossa Nova, …) plus pure rotate/resample/toggle operations. A framework-free leaf shared by the rhythm circle and the per-hand chord-grid grooves.
   - **`rich`** [11 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
   - **`score`**
-  - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
+  - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Transport,Section} slots.
   - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
   - **`sources`** [4 sub-plugins] — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
   - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.

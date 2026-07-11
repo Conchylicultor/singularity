@@ -1,4 +1,4 @@
-// @hash a867ead2167e
+// @hash 7bc10c30c45c
 {
   "manifests": [
     {
@@ -179,6 +179,33 @@
         "served-baseline"
       ],
       "excludes": []
+    },
+    {
+      "id": "website",
+      "rank": "aB5",
+      "name": "website",
+      "category": "app",
+      "entryPoints": [
+        "apps.website.shell",
+        "apps.website.landing",
+        "apps.website.pillars",
+        "apps.website.downloads",
+        "apps.website.demos.agent-run",
+        "apps.website.demos.app-gallery",
+        "apps.website.demos.plugin-pyramid",
+        "apps.website.demos.release-switcher",
+        "apps.website.demos.theme-toy"
+      ],
+      "selectedContributors": [
+        "apps.sonata.audio.piano"
+      ],
+      "extends": [
+        "served-baseline"
+      ],
+      "excludes": [
+        "agent-runtime",
+        "auth"
+      ]
     },
     {
       "id": "data",

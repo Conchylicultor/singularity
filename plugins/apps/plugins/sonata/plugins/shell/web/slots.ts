@@ -19,26 +19,6 @@ import { NoDisplay } from "./components/no-display";
 /** Icon component convention used across the platform (react-icons/md style). */
 type IconType = ComponentType<{ className?: string }>;
 
-/** One note to sound, timed against the AudioContext clock (absolute seconds). */
-export interface ScheduledNote {
-  pitch: number;     // MIDI 0-127
-  velocity: number;  // MIDI 0-127
-  when: number;      // absolute AudioContext.currentTime-based start
-  duration: number;  // seconds
-}
-
-/** A live, audio-context-bound voice manager produced by an Instrument. */
-export interface InstrumentVoices {
-  loaded: Promise<void>;          // resolves when samples are ready to sound
-  schedule(note: ScheduledNote): void;
-  allOff(): void;                 // cancel everything scheduled/sounding (stop/seek)
-  dispose(): void;                // release audio resources
-  /** Live, interactive note-on for hand-played keys: starts a sustaining voice
-   *  immediately (no scheduled when/duration) and returns a note-off fn that
-   *  releases it. Optional — instruments that cannot sustain on demand omit it. */
-  play?(pitch: number, velocity: number): () => void;
-}
-
 /**
  * One panel in the player's right-hand section column. The HOST owns the chrome:
  * every contribution is wrapped in the same collapsible `SectionCard` (collapsed
@@ -82,10 +62,13 @@ export interface SonataSection {
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
  *  - TransportOverlay (state visual) — capability-filtered, scroll-synced overlays driven by transport state (loop region).
  *  - TransportEdge (state visual) — capability-filtered, screen-anchored edge-clamped overlays for off-screen transport boundaries (loop A/B edge indicator).
- *  - Instrument            — audio voice manager bound to a Web Audio context.
  *  - Toolbar               — action widgets on the right of the top toolbar (play/pause, speed, …).
  *  - Transport             — full-width horizontal strip below the toolbar (progress bar, …).
  *  - Section               — pre-existing free-floating panels (current-chord readout, …).
+ *
+ * The audio Instrument axis lives in its own leaf (`audio/instruments`,
+ * `SonataAudio.Instrument`) — it is an audio contract consumable without the app
+ * shell, not an app-surface extension point.
  */
 export const Sonata = {
   // INPUT — data registry. LoaderComponent is the UI to provide input
@@ -191,25 +174,6 @@ export const Sonata = {
     requires: Capability[];
     component: ComponentType<{ projection: Projection }>;
   }>("sonata.pitch-axis", { docLabel: (p) => p.id }),
-
-  // INSTRUMENTS — contribute a voice manager bound to a Web Audio AudioContext.
-  // The optional fields below are generic metadata consumed only through the
-  // collection API (`useContributions`) — never by naming a contributor: they
-  // let a per-track resolver auto-map a track's MIDI program to a timbre, group
-  // the picker, and pick a fallback. A timbre that opts out simply omits them.
-  Instrument: defineSlot<{
-    id: string;
-    label: string;
-    icon?: IconType;
-    /** GM program (0-127) this timbre represents — the auto-map key. */
-    gmProgram?: number;
-    /** Picker grouping label (e.g. the GM family). */
-    group?: string;
-    /** Fallback timbre for tracks with no program/override (exactly one). */
-    default?: boolean;
-    /** Create a voice manager bound to `ctx`, routed into `destination`. */
-    createVoices: (ctx: AudioContext, destination: AudioNode) => InstrumentVoices;
-  }>("sonata.instrument", { docLabel: (p) => p.label }),
 
   // HOME — the app landing surface (song library). Single render slot; the
   // library plugin contributes its gallery here. Shell shows it when view==="library".

@@ -6,7 +6,7 @@ import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
 
 export { Sonata, SonataToolbar } from "./slots";
-export type { InstrumentVoices, ScheduledNote, SonataSection } from "./slots";
+export type { SonataSection } from "./slots";
 export {
   useSonata,
   SonataProvider,
@@ -49,7 +49,7 @@ export { useHasChords, useHasAuthoredChord } from "./score-gates";
 
 export default {
   description:
-    "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.",
+    "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Transport,Section} slots.",
   contributions: [
     Apps.App({
       id: sonataApp.id,

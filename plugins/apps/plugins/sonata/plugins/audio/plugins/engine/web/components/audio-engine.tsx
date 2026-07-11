@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
-  Sonata,
   useCursorApi,
   useSonata,
-  type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  SonataAudio,
+  type InstrumentVoices,
+} from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import {
   useMutedTrackIds,
   useTrackInstrumentMap,
@@ -101,7 +103,7 @@ export function AudioEngine() {
 
   // Instruments are read generically — never names a contributor (collection
   // clean). A by-id map lets us look up a contribution's `createVoices`.
-  const instruments = Sonata.Instrument.useContributions();
+  const instruments = SonataAudio.Instrument.useContributions();
   const instrumentById = useMemo(
     () => new Map(instruments.map((inst) => [inst.id, inst] as const)),
     [instruments],

@@ -3,8 +3,8 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   useCursorApi,
   useSonata,
-  type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import {
   beatToSeconds,
   scoreEndBeat,

@@ -79,6 +79,23 @@ test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () =
   expect([...ar.extends].sort()).toEqual(["conversations", "tasks-domain"]);
 });
 
+test("the website app seed maps to a valid manifest and never entries the blog / pages", () => {
+  const site = byName("website");
+  expect(site.category).toBe("app");
+  const m = manifestItemToManifest(site);
+  expect(typeof m.name).toBe("string");
+  expect(m.name.length).toBeGreaterThan(0);
+  expect(m.entryPoints.length).toBeGreaterThan(0);
+  // The regression guard, stated as a test: entry-seeding ships a whole subtree,
+  // so entrying `apps.website` (or anything under `apps.website.blog`) would drag
+  // the Pages app + block editor (via blog/pages-integration) into the public
+  // bundle. Keep the site's entries strictly the non-blog sub-umbrellas.
+  for (const id of m.entryPoints) {
+    expect(id).not.toBe("apps.website");
+    expect(String(id).startsWith("apps.website.blog")).toBe(false);
+  }
+});
+
 test("served-baseline forces the toast host alongside health", () => {
   // The toast host must ship with every gateway-served app: health's Core.Root
   // watchers dispatch toasts, and with no `<ToasterHost/>` mounted those toasts

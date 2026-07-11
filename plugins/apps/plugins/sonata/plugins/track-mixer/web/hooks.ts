@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { trackViewResource, type TrackViewRow } from "../shared/resources";
 import { defaultTrackColor } from "./palette";
 
@@ -14,7 +15,7 @@ export interface TrackMixerEntry {
   /** Parsed instrument hint, or null when the source carried none. */
   instrument: string | null;
   /**
-   * Resolved instrument id — the registered `Sonata.Instrument` this track
+   * Resolved instrument id — the registered `SonataAudio.Instrument` this track
    * sounds with: the persisted override (if still a valid id), else the timbre
    * matching the track's GM program, else the default instrument. This is the
    * functional value the audio engine routes on (`instrument` above is just the
@@ -63,7 +64,7 @@ export function useTrackMixerEntries(): TrackMixerEntry[] {
   // Registered timbres, read generically — never names a contributor. The
   // metadata fields (`id`, `label`, `gmProgram`, `default`) drive per-track
   // instrument resolution; `createVoices` is consumed only by the audio engine.
-  const instruments = Sonata.Instrument.useContributions();
+  const instruments = SonataAudio.Instrument.useContributions();
   const instrumentIndex = useMemo(() => {
     const byId = new Map<string, { id: string; label: string }>();
     const byProgram = new Map<number, string>();

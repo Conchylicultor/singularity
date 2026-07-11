@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
-  Sonata,
+  SonataAudio,
   type InstrumentVoices,
-} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+} from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { useAudioGraph } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web";
 import { useLivePlayControls, type LivePlayApi } from "../live-store";
 
@@ -19,7 +19,7 @@ const DEFAULT_VELOCITY = 90;
  * through the published `master` gain (so the master-volume slider governs
  * hand-played notes too) on the same `AudioContext` playback is anchored against
  * — never a second context. The timbre is the DEFAULT instrument, resolved
- * generically via the `Sonata.Instrument` collection API (never naming a
+ * generically via the `SonataAudio.Instrument` collection API (never naming a
  * contributor).
  *
  * The published `LivePlayApi` is a STABLE object whose methods read refs, so the
@@ -32,7 +32,7 @@ export function LivePlayEngine() {
 
   // Default instrument, resolved generically (collection-clean: never names the
   // piano plugin). Mirrored via latest-ref so the stable api reads it live.
-  const instruments = Sonata.Instrument.useContributions();
+  const instruments = SonataAudio.Instrument.useContributions();
   const defaultInstrument = useMemo(
     () => instruments.find((i) => i.default) ?? instruments[0],
     [instruments],

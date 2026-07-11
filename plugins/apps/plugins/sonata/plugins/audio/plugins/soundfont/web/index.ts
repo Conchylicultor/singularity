@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { GM_INSTRUMENTS, familyIcon } from "./gm";
 import { createSoundfontVoices } from "./voices";
 
@@ -11,7 +11,7 @@ export default {
   // Each timbre is a smplr Soundfont bound to one gleitz patch slug. No entry
   // sets `default` — the piano stays the fallback.
   contributions: GM_INSTRUMENTS.filter((gm) => gm.program >= 1).map((gm) =>
-    Sonata.Instrument({
+    SonataAudio.Instrument({
       id: `sf:${gm.program}`,
       label: gm.name,
       icon: familyIcon[gm.family],

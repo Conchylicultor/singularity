@@ -1,4 +1,4 @@
-import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { ACCENT_PITCH, SUB_PITCH } from "./constants";
 
 // Click timbre constants, one triplet per accent tier. An accent (bar downbeat)

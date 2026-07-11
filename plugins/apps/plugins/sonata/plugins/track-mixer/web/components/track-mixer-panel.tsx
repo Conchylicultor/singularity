@@ -9,7 +9,8 @@ import {
   MdVolumeOff,
   MdVolumeUp,
 } from "react-icons/md";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -293,7 +294,7 @@ export function TrackMixerPanel() {
 
   // Registered timbres, read generically (never names a contributor). Mapped to
   // the plain metadata the picker renders; `createVoices` stays in the engine.
-  const instruments = Sonata.Instrument.useContributions();
+  const instruments = SonataAudio.Instrument.useContributions();
   const options = useMemo<InstrumentOption[]>(
     () =>
       instruments.map((c) => ({
