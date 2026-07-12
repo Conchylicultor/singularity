@@ -18,7 +18,6 @@ import {
   bars,
   buildTempoIndex,
   makeKeySpeller,
-  scoreEndBeat,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
@@ -164,8 +163,16 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // scroll gestures drive.
   const { showNoteNames, spread: persistedSpread } = useConfig(pianoRollConfig);
   const setConfig = useSetConfig(pianoRollConfig);
-  const { spread, setSpread, setSpreadFloor, seekTo, isPlaying, play, stop } =
-    useSonata();
+  const {
+    spread,
+    setSpread,
+    setSpreadFloor,
+    seekTo,
+    timelineBeats,
+    isPlaying,
+    play,
+    stop,
+  } = useSonata();
 
   // Seed the live zoom from the persisted global on load (and reflect a
   // Settings-pane edit live). No loop: only an explicit commit (wheel settle /
@@ -217,7 +224,15 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // `play`/`stop` come from the single `useSonata()` destructure above.)
   const hasNotes = score.notes.length > 0;
   const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
-  const endSeconds = tempo.beatToSeconds(scoreEndBeat(score));
+  // The lane's own seconds-space view of the transport's seekable span. Both ends
+  // come from `timelineBeats` — the roll never invents a bound of its own, so the
+  // drag bottoms out on the empty lead-in bar exactly where a keyboard rewind
+  // does. `startSeconds` is NEGATIVE for a non-empty score (the pre-roll); the
+  // tempo index extrapolates it linearly, and the cursor already parks there on
+  // load, so the renderer needs no special case for it.
+  const [startBeat, endBeat] = timelineBeats;
+  const startSeconds = tempo.beatToSeconds(startBeat);
+  const endSeconds = tempo.beatToSeconds(endBeat);
   const wasPlaying = useRef(false);
 
   // Let the user zoom OUT until the whole song fits the lane. The song's on-screen
@@ -239,7 +254,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const { handlers, phase } = useInertialDrag({
     axis: "y",
     unitsPerPixel: 1 / pxPerSecond,
-    bounds: [0, endSeconds],
+    bounds: [startSeconds, endSeconds],
     origin: () => tempo.beatToSeconds(cursor.getBeat()),
     onScrub: (sec) => seekTo(tempo.secondsToBeat(sec)),
     onGrab: () => {
@@ -435,14 +450,17 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       } else {
         // Plain scroll → seek. Map wheel pixels to authored-seconds with the
         // SAME px/sec the drag uses (down/forward), then drive shared `seekTo`.
+        // Deliberately UNCLAMPED: `seekTo` owns the timeline bound, so an
+        // overscrolling wheel simply parks on the lead-in origin / the end — the
+        // same stops the keyboard rewind reaches. (A local clamp here is what used
+        // to floor the wheel on beat 0, i.e. the first note.)
         if (isPlayingRef.current && !pausedByWheel) {
           pausedByWheel = true;
           stop();
         }
         const perPx = 1 / (PX_PER_SECOND * tempoScale * spreadRef.current);
         const cur = tempo.beatToSeconds(cursor.getBeat());
-        const next = Math.max(0, Math.min(endSeconds, cur + e.deltaY * perPx));
-        seekTo(tempo.secondsToBeat(next));
+        seekTo(tempo.secondsToBeat(cur + e.deltaY * perPx));
       }
       bumpIdle();
     };
@@ -457,7 +475,6 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     hasNotes,
     cursor,
     tempo,
-    endSeconds,
     tempoScale,
     seekTo,
     setSpread,

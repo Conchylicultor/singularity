@@ -148,6 +148,20 @@ export interface SonataContextValue {
    * transport cursor all share one consistent timeline.
    */
   score: Score;
+  /**
+   * The seekable span `[startBeat, endBeat]` of {@link score}, in beats — THE
+   * bound every navigation surface shares. `startBeat` is the timeline origin
+   * (the one-bar lead-in pre-roll at NEGATIVE beats for a non-empty score; see
+   * `scoreStartBeat`), NOT the first note at beat 0.
+   *
+   * Exposed because the transport is the only owner of this invariant:
+   * `seekTo` already clamps to it, so a consumer driving `seekTo` must NOT
+   * re-derive its own bound — that is exactly how the piano roll's wheel/drag
+   * gestures once floored on beat 0 while the keyboard rewind reached the
+   * lead-in. Read this when a gesture genuinely needs the span itself (e.g. a
+   * drag's rubber-band physics); otherwise just call `seekTo` and let it clamp.
+   */
+  timelineBeats: readonly [start: number, end: number];
   /** Id of the song currently open in the player (null on the library). Lets
    *  player-scoped effects attribute a play to a specific song. */
   currentSongId: string | null;
@@ -267,9 +281,12 @@ export interface SonataContextValue {
   togglePlay: () => void;
   /** Nudge the playback tempo scale by `delta` (e.g. +0.1 = 10% faster). */
   nudgeTempo: (delta: number) => void;
-  /** Nudge the playhead by `deltaBeat` beats, clamped to [0, end]; re-anchors playback. */
+  /** Nudge the playhead by `deltaBeat` beats, clamped to {@link timelineBeats};
+   *  re-anchors playback. */
   seekBy: (deltaBeat: number) => void;
-  /** Seek the playhead to an absolute `beat`, clamped to [0, end]; re-anchors playback. */
+  /** Seek the playhead to an absolute `beat`, clamped to {@link timelineBeats}
+   *  (so a caller may pass an out-of-range beat and MUST NOT pre-clamp);
+   *  re-anchors playback. */
   seekTo: (beat: number) => void;
   /**
    * Single-press jump along the tempo-adaptive seek grid (`-1` back / `+1`
@@ -581,6 +598,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // move it. Read through a ref by the score-reset effect below.
   const startBeat = useMemo(() => scoreStartBeat(score), [score]);
   const startBeatRef = useLatestRef(startBeat);
+
+  // The seekable span, published so navigation surfaces consume the bound instead
+  // of reconstructing it. `seekTo` owns the clamp; a consumer reads this only when
+  // it needs the span as a *value* (e.g. the piano-roll drag's rubber-band bounds).
+  const timelineBeats = useMemo(
+    () => [startBeat, scoreEndBeat(score)] as const,
+    [startBeat, score],
+  );
 
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
   // We anchor at the playback clock's time + beat where playback started, then
@@ -1134,6 +1159,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
+      timelineBeats,
       currentSongId,
       songOpenEpoch,
       isPlaying,
@@ -1178,6 +1204,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }),
     [
       score,
+      timelineBeats,
       currentSongId,
       songOpenEpoch,
       isPlaying,
