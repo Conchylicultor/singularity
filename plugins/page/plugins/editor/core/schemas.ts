@@ -47,6 +47,13 @@ export type Block = z.infer<typeof BlockSchema>;
 // The reserved block type for a page node.
 export const PAGE_BLOCK_TYPE = "page";
 
+// The `infra/trash` source id this plugin registers (`defineTrashSource` in
+// server/index.ts). It lives in `core/` — NOT privately on the server — because
+// both sides name it: the server chokepoint stamps it onto every ledger row, and
+// the web (the Pages Trash dialog, the undoable-delete seam) addresses
+// `/api/trash/:sourceId/…` with it. One name per concept.
+export const PAGES_TRASH_SOURCE = "pages";
+
 // A page cover: either an uploaded image (stored as an attachment id + a
 // vertical reposition offset, applied as object-position Y%) or a preset
 // gradient (stored as a frozen preset id, resolved to CSS client-side). The

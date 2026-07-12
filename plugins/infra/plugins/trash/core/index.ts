@@ -1,5 +1,5 @@
-export { TrashEntrySchema } from "./schemas";
-export type { TrashEntry } from "./schemas";
+export { TrashEntrySchema, TrashOutcomeSchema } from "./schemas";
+export type { TrashEntry, TrashOutcome } from "./schemas";
 
 export { listTrash, restoreTrash, purgeTrash } from "./endpoints";
 

@@ -1,10 +1,11 @@
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState } from "react";
 import { MdDelete } from "react-icons/md";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useOpenPane, usePaneStore } from "@plugins/primitives/plugins/pane/web";
+import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
+import { useUndoableTrash } from "@plugins/infra/plugins/trash/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   pagesResource,
@@ -12,103 +13,93 @@ import {
   pageData,
   type Block,
 } from "@plugins/page/plugins/editor/core";
+import { pageDetailPane } from "../panes";
 
 /**
- * Subtree delete is destructive: deleting a page FK-cascades its blocks AND
- * every descendant page. Gate it behind a confirm dialog that names the
- * descendant count.
+ * Delete a page from the sidebar — instant, silent, and reversible (Notion's
+ * model). There is no confirm dialog because the delete is NOT destructive: the
+ * server chokepoint TRASHES any subtree containing a page (soft delete — content,
+ * sub-pages, CRDT docs, and version history all survive), so the honest
+ * affordance is an Undo, not a "cannot be undone" warning.
  *
- * The Delete button and confirm dialog are disabled while pages data is still
- * loading: showing "0 sub-pages" when the count is unknown would mislead the
- * user into believing there are no children when there may be many.
+ * The undo entry is recorded by the `infra/trash` seam onto the TAB's history, so
+ * Cmd+Z restores the page from anywhere in the tab — and the toast's Undo button
+ * is just that same `undo()`.
  */
 export function DeletePageAction({ row }: ItemActionProps<Block>) {
   const pageId = row.id;
   const title = pageData(row).title;
-  const [open, setOpen] = useState(false);
-  const result = useResource(pagesResource);
-  const { mutateAsync } = useEndpointMutation(deleteBlock);
+  const trashWithUndo = useUndoableTrash();
+  const { undo } = useUndoRedo();
+  const openPane = useOpenPane();
+  const paneStore = usePaneStore();
+  const pages = useResource(pagesResource);
+  const openPageId = pageDetailPane.useRouteEntry()?.params.pageId;
 
-  const onConfirm = async () => {
-    await mutateAsync({ params: { id: pageId } });
-    setOpen(false);
+  const onDelete = async () => {
+    // Deleting the page the detail pane is showing (or one of its page
+    // ancestors) would leave the pane rendering a page that is no longer in the
+    // tree — so fall back to the Pages landing surface (the empty route
+    // re-resolves to the app's index pane). The `onUndo` hook re-opens it, so
+    // Cmd+Z puts the user back exactly where they were.
+    const reopenId =
+      openPageId !== undefined &&
+      !pages.pending &&
+      isSelfOrPageAncestor(pages.data, pageId, openPageId)
+        ? openPageId
+        : undefined;
+
+    await trashWithUndo({
+      label: `Delete ${title || "Untitled"}`,
+      trash: () => fetchEndpoint(deleteBlock, { id: pageId }),
+      onUndo:
+        reopenId === undefined
+          ? undefined
+          : () => openPane(pageDetailPane, { pageId: reopenId }, { mode: "push" }),
+    });
+
+    if (reopenId !== undefined) paneStore.clearRoute();
+
+    showToast({
+      description: "Page moved to trash",
+      action: { label: "Undo", onClick: () => undo() },
+    });
   };
 
-  // Never open the dialog while the page tree is still loading — we cannot know
-  // the descendant count yet, and showing "0 sub-pages" would be dangerously wrong.
-  const handleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!result.pending) setOpen(true);
-  };
-
+  // `IconButton` (as the sibling star row-action already does): it auto-pends
+  // while the returned promise is in flight, so the delete cannot be
+  // double-fired, and it derives its size from the row's ambient control density.
   return (
-    <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        disabled={result.pending}
-        title="Delete page"
-        aria-label="Delete page"
-        // eslint-disable-next-line layout/no-adhoc-layout -- rigid edge button in the data-view row-actions flex cluster (externally owned)
-        className="hover:bg-background/60 size-6 shrink-0 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <Center className="size-full">
-          <MdDelete className="size-4" />
-        </Center>
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogTitle>Delete page</DialogTitle>
-          {!result.pending && (
-            <DialogDescription>
-              Delete <span className="font-medium">{title || "Untitled"}</span>
-              {(() => {
-                const count = countDescendants(result.data, pageId);
-                return count > 0
-                  ? ` and ${count} sub-page${count === 1 ? "" : "s"}`
-                  : "";
-              })()}
-              ? This also removes all of their content and cannot be undone.
-            </DialogDescription>
-          )}
-          <Stack
-            direction="row"
-            justify="end"
-            gap="sm"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing
-            className="mt-4"
-          >
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={() => onConfirm()}>
-              Delete
-            </Button>
-          </Stack>
-        </DialogContent>
-      </Dialog>
-    </>
+    <IconButton
+      icon={MdDelete}
+      label="Delete page"
+      onClick={(e) => {
+        e.stopPropagation();
+        return onDelete();
+      }}
+    />
   );
 }
 
-function countDescendants(
-  docs: { id: string; parentId: string | null }[],
-  rootId: string,
-): number {
-  const childrenOf = new Map<string, string[]>();
-  for (const d of docs) {
-    if (d.parentId) {
-      const arr = childrenOf.get(d.parentId) ?? [];
-      arr.push(d.id);
-      childrenOf.set(d.parentId, arr);
-    }
+/**
+ * Is `candidateId` the open page itself, or one of its PAGE ancestors? Walks the
+ * denormalized `pageId` chain (each page's nearest page ancestor), which is the
+ * true page hierarchy — `parentId` may point at a content block (a sub-page
+ * nested inside a toggle), so it is not the chain to walk here.
+ */
+function isSelfOrPageAncestor(
+  pages: Block[],
+  candidateId: string,
+  openPageId: string,
+): boolean {
+  if (candidateId === openPageId) return true;
+  const byId = new Map(pages.map((p) => [p.id, p]));
+  let cursor = byId.get(openPageId)?.pageId ?? null;
+  const seen = new Set<string>();
+  while (cursor !== null && !seen.has(cursor)) {
+    if (cursor === candidateId) return true;
+    seen.add(cursor);
+    cursor = byId.get(cursor)?.pageId ?? null;
   }
-  let count = 0;
-  const stack = [...(childrenOf.get(rootId) ?? [])];
-  while (stack.length) {
-    const id = stack.pop()!;
-    count++;
-    stack.push(...(childrenOf.get(id) ?? []));
-  }
-  return count;
+  return false;
 }

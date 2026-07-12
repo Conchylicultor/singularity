@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
+import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { computeDrop, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -550,7 +550,12 @@ function BlockEditorProviderInner({
   // chokepoints below: snapshot the current rows, compute the resulting rows,
   // diff into a minimal patch pair, and `record` undo/redo thunks that
   // dispatch those patches.
-  const { record, undo, redo, canUndo, canRedo } = useUndoRedo();
+  // SCOPED: the stack itself is the tab's (mounted in `TabSurface`), but these
+  // thunks close over THIS editor's mount — the per-`pageId` optimistic store and
+  // per-block `Y.UndoManager`s, which die with the doc. So the editor's entries
+  // are dropped when it unmounts (a Miller `swap` remounts the column on page
+  // navigation), leaving other plugins' mount-free entries on the stack.
+  const { record, undo, redo, canUndo, canRedo } = useScopedUndoRedo();
 
   // Dispatch a minimal patch through the store's overlay pipeline (instant
   // overlay + server reconcile on the persistent path; a synchronous state write

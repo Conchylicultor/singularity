@@ -15,14 +15,10 @@ import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
 import { handlePasteBlock } from "./internal/handle-paste-block";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
-import {
-  untrashBlocks,
-  purgeTrashedPages,
-  PAGES_TRASH_SOURCE,
-} from "./internal/trash-blocks";
+import { untrashBlocks, purgeTrashedPages } from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
-import { pageBlockHandle } from "../core/schemas";
+import { pageBlockHandle, PAGES_TRASH_SOURCE } from "../core/schemas";
 import {
   listPages,
   listBlocks,

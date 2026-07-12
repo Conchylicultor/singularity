@@ -190,9 +190,9 @@ export function KeyboardPlugin({
 
   // Undo/redo (Cmd+Z / Cmd+Shift+Z / Cmd+Y) is NOT handled per-block. With no
   // Lexical `HistoryPlugin`, nothing here consumes those keystrokes, so the native
-  // keydown bubbles out to the surface-level `useUndoRedoShortcuts` binding (in
-  // `block-editor.tsx`) — which is tab-scoped and focus-independent, so it fires
-  // even after a structural undo leaves DOM focus on <body>.
+  // keydown bubbles out to the surface-level `useUndoRedoShortcuts` binding (the
+  // tab's, in `apps-core/tab-surface`) — which is tab-scoped and focus-independent,
+  // so it fires even after a structural undo leaves DOM focus on <body>.
 
   return null;
 }

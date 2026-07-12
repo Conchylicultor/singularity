@@ -13,6 +13,10 @@ import {
   SyncStatusProvider,
   SyncStatusIndicator,
 } from "@plugins/primitives/plugins/sync-status/web";
+import {
+  UndoRedoProvider,
+  useUndoRedoShortcuts,
+} from "@plugins/primitives/plugins/undo-redo/web";
 import { Apps } from "@plugins/apps-core/web";
 import {
   appPathFor,
@@ -27,6 +31,14 @@ import {
  * the tabs store, and renders the app surface. Identical for the tabs and desktop
  * arrangements, so both reuse this — keeping the `PaneSurfaceProvider` mounting
  * byte-identical regardless of how the tab is laid out on screen.
+ *
+ * It is also where the tab's surface-scoped primitives are mounted — one
+ * `<SyncStatusProvider>` and one `<UndoRedoProvider>` per tab. The undo history
+ * is a platform capability every plugin in the tab records into (a sidebar row's
+ * delete and an edit in the page body land on ONE chronological stack), so it
+ * cannot belong to any one pane or editor; and the `mod+z` bindings must be
+ * registered exactly once per surface, or two same-id registrations would race
+ * in the page-global `ShortcutManager`.
  */
 export function TabSurface({ tab }: { tab: Tab }) {
   const apps = Apps.App.useContributions();
@@ -42,15 +54,30 @@ export function TabSurface({ tab }: { tab: Tab }) {
     >
       <TabTitleReporter tabId={tab.tabId} />
       <SyncStatusProvider>
-        {/* `relative` so the indicator's Pin anchors to this surface's corner;
-            `size-full` so the app render still fills the surface. */}
-        <div className="relative size-full">
-          {renderIsolated(Apps.App.id, app as unknown as Contribution)}
-          <SyncStatusIndicator />
-        </div>
+        <UndoRedoProvider>
+          <UndoRedoKeys />
+          {/* `relative` so the indicator's Pin anchors to this surface's corner;
+              `size-full` so the app render still fills the surface. */}
+          <div className="relative size-full">
+            {renderIsolated(Apps.App.id, app as unknown as Contribution)}
+            <SyncStatusIndicator />
+          </div>
+        </UndoRedoProvider>
       </SyncStatusProvider>
     </PaneSurfaceProvider>
   );
+}
+
+/**
+ * The tab's `mod+z` / `mod+shift+z` / `mod+y` bindings. Its own component only
+ * because the hook must run INSIDE the `<UndoRedoProvider>` mounted in the same
+ * JSX above. An app that records nothing keeps an empty stack, so `canUndo` is
+ * false, the shortcut's `when` guard rejects, and the keys are never claimed —
+ * native input undo is untouched there.
+ */
+function UndoRedoKeys() {
+  useUndoRedoShortcuts();
+  return null;
 }
 
 /**

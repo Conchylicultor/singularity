@@ -38,7 +38,7 @@ function ClickToDismiss({ holder, children }: { holder: ToastIdHolder; children:
  * anywhere; if no `<ToasterHost/>` is mounted the enqueue simply has no renderer
  * (a silent no-op, never a throw). Deprecates the former `shell.toast` command.
  */
-export function showToast({ title, description, variant }: ToastArgs): void {
+export function showToast({ title, description, variant, action }: ToastArgs): void {
   const rawMessage = title ?? description;
   const rawDescription = title ? description : undefined;
   const fn = variant && variant !== "default" ? sonnerToast[variant] : sonnerToast;
@@ -49,6 +49,9 @@ export function showToast({ title, description, variant }: ToastArgs): void {
     </ClickToDismiss>,
     {
       description: rawDescription ? <ContentScope fill={false}>{rawDescription}</ContentScope> : undefined,
+      // sonner renders + dismisses the action button itself; the caller only
+      // supplies the intent (e.g. Undo).
+      action: action ? { label: action.label, onClick: () => action.onClick() } : undefined,
     },
   );
 }

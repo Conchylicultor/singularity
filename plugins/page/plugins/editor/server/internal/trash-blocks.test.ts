@@ -11,6 +11,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { z } from "zod";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   createTestDb,
@@ -20,9 +21,21 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
+import { defineBlock } from "../../core";
+import { pageBlockHandle } from "../../core/schemas";
 import { _blocks } from "./tables";
+import { Editor } from "./block-registry";
 import { parseBlockData } from "./parse-block-data";
 import { BlockLifecycle } from "./document-hooks";
+
+// Stand-in for the `page/text` block type the seeds use (see the note in
+// `beforeAll`). Text content is irrelevant to the trash chokepoint — it only ever
+// moves whole rows — so an empty payload is the honest fixture.
+const textBlockStub = defineBlock({
+  type: "text",
+  schema: z.object({}),
+  empty: () => ({}),
+});
 import {
   deleteBlocksSubtree,
   untrashBlocks,
@@ -43,10 +56,17 @@ beforeAll(async () => {
   // `entity_versions` for any page ids in the (purge/hard-delete) set — the only
   // place versions are destroyed. Trash NEVER runs BeforeDelete, so this fake is
   // exactly what proves "versions survive trash, die at purge".
+  //
+  // The block-data handles the seeds need are registered here too: `page` is this
+  // plugin's own handle (the real one), while `text` is a throwaway stub — the
+  // concrete text block lives in `page/text`, which imports this plugin, so
+  // importing it back would be a cycle. `seedBlock` only needs the type to resolve.
   collectContributions([
     {
       id: "trash-blocks-test",
       contributions: [
+        Editor.BlockData(pageBlockHandle),
+        Editor.BlockData(textBlockStub),
         BlockLifecycle.OnTrash({
           onTrash: (ids) => {
             trashCalls.push(ids);
@@ -170,7 +190,7 @@ describe("deleteBlocksSubtree — trash path (incident shape)", () => {
     await seedIncident();
 
     const result = await deleteBlocksSubtree(["A", "B"], t.db);
-    expect(result).toEqual({ trashed: true });
+    expect(result.trashed).toBe(true);
 
     // Two independently-restorable entries, one per page ROOT.
     const entries = await t.db.select().from(_trashEntries);
@@ -179,6 +199,10 @@ describe("deleteBlocksSubtree — trash path (incident shape)", () => {
     expect(entries.every((e) => e.sourceId === "pages")).toBe(true);
     const entryA = entries.find((e) => e.rootEntityId === "A")!;
     const entryB = entries.find((e) => e.rootEntityId === "B")!;
+
+    // The chokepoint RETURNS the ids it minted, in creation order (root order) —
+    // they are the ledger handles an undoable delete restores with.
+    expect(result.trashed ? result.entryIds : []).toEqual([entryA.id, entryB.id]);
 
     // Every descendant row — INCLUDING cross-`page_id` content — is flagged, under
     // the correct entry.

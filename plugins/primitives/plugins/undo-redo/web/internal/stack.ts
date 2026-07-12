@@ -23,6 +23,14 @@ export interface HistoryEntry {
   coalesceKey?: string;
   /** Coalesce window in ms (default {@link DEFAULT_COALESCE_WINDOW_MS}). */
   coalesceWindowMs?: number;
+  /**
+   * Lifetime tag. An entry whose thunks depend on a live mount (a component's
+   * store, a doc that dies with its editor) MUST declare one: every entry
+   * carrying this scope is dropped from `past`/`future` when that mount
+   * unmounts ({@link dropScope}). Unset = the entry is valid for the whole
+   * history (its thunks are self-contained, e.g. pure server calls).
+   */
+  scope?: string;
 }
 
 /** A recorded entry plus the wall-clock time it was recorded (for coalescing). */
@@ -95,6 +103,21 @@ export function recordEntry(
   if (past.length > maxDepth) past = past.slice(past.length - maxDepth);
 
   return { past, future: [] };
+}
+
+/**
+ * Drop every entry tagged with `scope` from BOTH stacks — the mount those
+ * entries' thunks close over is gone, so replaying one would be a no-op at best
+ * and a patch dispatched into the wrong host at worst. Returns the same state
+ * object when nothing matched (so a scope-less unmount can't churn subscribers).
+ */
+export function dropScope(state: HistoryState, scope: string): HistoryState {
+  const past = state.past.filter((s) => s.entry.scope !== scope);
+  const future = state.future.filter((s) => s.entry.scope !== scope);
+  if (past.length === state.past.length && future.length === state.future.length) {
+    return state;
+  }
+  return { past, future };
 }
 
 /**

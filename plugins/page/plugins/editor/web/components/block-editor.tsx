@@ -44,7 +44,6 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { UndoRedoProvider, useUndoRedoShortcuts } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   canIndent,
   canOutdent,
@@ -212,19 +211,18 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
     );
   }
   return (
-    // One independent structural-undo history per editor surface (per tab). The
-    // provider sits ABOVE BlockEditorProvider because the latter calls
-    // `useUndoRedo()` to record at the mutation chokepoints.
-    <UndoRedoProvider>
-      <BlockEditorProvider
-        pageId={props.pageId}
-        onOpenPage={props.onOpenPage}
-        caretBefore={props.caretBefore}
-        caretAfter={props.caretAfter}
-      >
-        <BlockEditorInner contentClassName={props.contentClassName} handleRef={ref} />
-      </BlockEditorProvider>
-    </UndoRedoProvider>
+    // No undo provider here: the command history belongs to the TAB (mounted in
+    // `TabSurface`), and the editor is one participant recording into it. Its
+    // entries are mount-scoped (`useScopedUndoRedo` in `BlockEditorProvider`), so
+    // they drop when this editor unmounts.
+    <BlockEditorProvider
+      pageId={props.pageId}
+      onOpenPage={props.onOpenPage}
+      caretBefore={props.caretBefore}
+      caretAfter={props.caretAfter}
+    >
+      <BlockEditorInner contentClassName={props.contentClassName} handleRef={ref} />
+    </BlockEditorProvider>
   );
 }
 
@@ -267,19 +265,17 @@ function MemoryBlockEditor({
   }, [pageId, initialContent]);
 
   return (
-    <UndoRedoProvider>
-      <BlockEditorProvider
-        persist={false}
-        pageId={pageId}
-        initialBlocks={initialBlocks}
-        enabledBlockTypes={enabledBlockTypes}
-        onOpenPage={onOpenPage}
-        caretBefore={caretBefore}
-        caretAfter={caretAfter}
-      >
-        <BlockEditorInner contentClassName={contentClassName} handleRef={handleRef} />
-      </BlockEditorProvider>
-    </UndoRedoProvider>
+    <BlockEditorProvider
+      persist={false}
+      pageId={pageId}
+      initialBlocks={initialBlocks}
+      enabledBlockTypes={enabledBlockTypes}
+      onOpenPage={onOpenPage}
+      caretBefore={caretBefore}
+      caretAfter={caretAfter}
+    >
+      <BlockEditorInner contentClassName={contentClassName} handleRef={handleRef} />
+    </BlockEditorProvider>
   );
 }
 
@@ -296,15 +292,13 @@ function BlockEditorInner({
   const { setFlatOrder, setRows, blocks, pending, insertFirst, focusBlock, focusBlockBoundary } =
     useBlockEditor();
 
-  // Surface-level (focus-independent) undo/redo. Bindings are scoped to THIS
-  // surface tab — eligible whenever this tab is focused, regardless of which DOM
-  // element (a Lexical contenteditable, the selection-mode container, or even
-  // <body> after a structural undo deletes the focused block) holds the caret.
-  // `enableInInputs` lets them fire inside the block contenteditables; the native
-  // keydown bubbles to the window-level ShortcutManager untouched (no Lexical
-  // HistoryPlugin consumes Cmd+Z anymore). This replaces the old per-block /
-  // container routing that broke whenever focus landed on <body>.
-  useUndoRedoShortcuts();
+  // The Cmd+Z / Cmd+Shift+Z / Cmd+Y bindings are NOT registered here — they are
+  // the tab's (`TabSurface` mounts `useUndoRedoShortcuts()` once per surface, so
+  // the sidebar's deletes and the body's edits answer to the same keys and cannot
+  // double-register). Nothing in the editor consumes those keys either (no Lexical
+  // HistoryPlugin), so the native keydown bubbles to the window-level
+  // ShortcutManager untouched, regardless of which DOM element (a contenteditable,
+  // the selection container, or <body> after a structural undo) holds the caret.
 
   const { rows, flat } = useMemo(() => {
     if (pending) {

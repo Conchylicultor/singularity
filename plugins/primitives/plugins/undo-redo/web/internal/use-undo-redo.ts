@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { ScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
 import {
+  dropScope as dropScopeEntries,
   canRedo as selectCanRedo,
   canUndo as selectCanUndo,
   popRedo,
@@ -22,6 +23,12 @@ export interface UndoRedoApi {
   canRedo: boolean;
   /** Drop both stacks. */
   clear(): void;
+  /**
+   * Drop every entry tagged with `scope` (see {@link HistoryEntry.scope}).
+   * Called when the mount those entries' thunks close over goes away — see
+   * `useScopedUndoRedo`, which owns the scope + the unmount cleanup.
+   */
+  dropScope(scope: string): void;
 }
 
 /**
@@ -78,11 +85,18 @@ export function useUndoRedo(): UndoRedoApi {
     store.setState((prev) => ({ past: [], future: [], replaying: false, maxDepth: prev.maxDepth }));
   }, [store]);
 
+  const dropScope = useCallback(
+    (scope: string) => {
+      store.setState((prev) => ({ ...prev, ...dropScopeEntries(prev, scope) }));
+    },
+    [store],
+  );
+
   const canUndo = UndoRedoStore.useSelector((s) => selectCanUndo(s), []);
   const canRedo = UndoRedoStore.useSelector((s) => selectCanRedo(s), []);
 
   return useMemo(
-    () => ({ record, undo, redo, canUndo, canRedo, clear }),
-    [record, undo, redo, canUndo, canRedo, clear],
+    () => ({ record, undo, redo, canUndo, canRedo, clear, dropScope }),
+    [record, undo, redo, canUndo, canRedo, clear, dropScope],
   );
 }

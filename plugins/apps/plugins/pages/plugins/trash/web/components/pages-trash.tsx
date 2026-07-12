@@ -29,8 +29,9 @@ import {
   purgeTrash,
   type TrashEntry,
 } from "@plugins/infra/plugins/trash/core";
-
-const SOURCE_ID = "pages";
+// The pages trash source id — owned by the plugin that registers the source, so
+// the server chokepoint and this dialog can never drift apart.
+import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
 
 /**
  * Sidebar "Trash" trigger: a Row that opens a dialog listing the pages that have
@@ -42,18 +43,18 @@ const SOURCE_ID = "pages";
 export function PagesTrash() {
   const [open, setOpen] = useState(false);
   const [confirmEntry, setConfirmEntry] = useState<TrashEntry | null>(null);
-  const result = useResource(trashEntriesResource, { sourceId: SOURCE_ID });
+  const result = useResource(trashEntriesResource, { sourceId: PAGES_TRASH_SOURCE });
   const restore = useEndpointMutation(restoreTrash);
   const purge = useEndpointMutation(purgeTrash);
 
   const onRestore = (entry: TrashEntry) => {
-    restore.mutate({ params: { sourceId: SOURCE_ID, entryId: entry.id } });
+    restore.mutate({ params: { sourceId: PAGES_TRASH_SOURCE, entryId: entry.id } });
   };
 
   const onConfirmPurge = () => {
     if (!confirmEntry) return;
     purge.mutate(
-      { params: { sourceId: SOURCE_ID, entryId: confirmEntry.id } },
+      { params: { sourceId: PAGES_TRASH_SOURCE, entryId: confirmEntry.id } },
       { onSuccess: () => setConfirmEntry(null) },
     );
   };

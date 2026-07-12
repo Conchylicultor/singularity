@@ -5,17 +5,16 @@ the **command-pattern** tier (record minimal forward/reverse thunks; undo applie
 the reverse onto the *current* state), not snapshots. One independent history per
 surface tab, backed by `scoped-store`.
 
+The provider is mounted **once per tab**, by `apps-core/tab-surface` — not by any
+app or editor. The history is a platform capability: a sidebar row's delete and an
+edit in the page body land on ONE chronological stack, and the `mod+z` bindings are
+registered exactly once per surface (two same-id registrations would race in the
+page-global `ShortcutManager`). Consumers only `record`.
+
 ```tsx
-import {
-  UndoRedoProvider,
-  useUndoRedo,
-  useUndoRedoShortcuts,
-} from "@plugins/primitives/plugins/undo-redo/web";
+import { useScopedUndoRedo, useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 
-// At the surface root (one history per mount):
-<UndoRedoProvider maxDepth={200}>{children}</UndoRedoProvider>;
-
-// Recording a reversible command:
+// Recording a reversible command into the tab's history:
 const { record, undo, redo, canUndo, canRedo, clear } = useUndoRedo();
 record({
   label: "Move block",
@@ -24,8 +23,8 @@ record({
   coalesceKey: "drag:block-7", // optional: merge rapid same-key edits
 });
 
-// Non-Lexical consumers can bind the standard keys in one line:
-useUndoRedoShortcuts({ when: () => editMode });
+// Same api, but every entry dies with this mount (see "Entry lifetime" below):
+const scoped = useScopedUndoRedo();
 ```
 
 ## Behavior
@@ -50,14 +49,38 @@ useUndoRedoShortcuts({ when: () => editMode });
   `UndoRedoThunkError` (the guard runs the thunk fire-and-forget; a rejection
   becomes an unhandled rejection, never silently swallowed).
 
+## Entry lifetime (scopes)
+
+The stack outlives every pane and editor in the tab, so an entry must be honest
+about what it needs to replay:
+
+> **An entry whose thunks depend on a live mount MUST declare a `scope`; a
+> scope's entries are dropped from `past` AND `future` when that mount unmounts.
+> Entries whose thunks are self-contained (pure server calls) stay unscoped and
+> live for the tab.**
+
+`useScopedUndoRedo()` is the whole mechanism: same `UndoRedoApi`, but `record`
+stamps a `useId()`-derived scope onto every entry and the unmount cleanup calls
+`dropScope(scope)`. Use it whenever the thunks close over a per-mount store, doc,
+or editor (the page editor's optimistic overlay and per-block `Y.UndoManager`s die
+with its mount — replaying one after would be a no-op at best, and a patch
+dispatched into the wrong page's overlay at worst). Use plain `useUndoRedo()` when
+`undo`/`redo` are just server calls valid anywhere in the tab (a trash restore),
+so the entry rightly survives navigating away.
+
+`dropScope` is a pure filter over both stacks (`internal/stack.ts`), so a scope's
+removal never disturbs surrounding entries.
+
 ## Shortcuts
 
 `useUndoRedoShortcuts({ when? })` registers three surface-scoped bindings via
 `useSurfaceShortcuts`: `mod+z` (undo), `mod+shift+z` and `mod+y` (redo). All have
 `enableInInputs: true` so they fire inside editable surfaces; undo is gated on
-`canUndo && when?.()`, redo on `canRedo && when?.()`. Lexical-driven editors that
-need two-tier (per-block text vs structural) delegation should NOT use this — they
-route Cmd+Z through their own keyboard plugin and call `undo()` / `redo()` directly.
+`canUndo && when?.()`, redo on `canRedo && when?.()`. **`tab-surface` already calls
+it once per tab — a consumer never calls it again**, or two same-id registrations
+race in the page-global `ShortcutManager`. A tab whose app records nothing keeps an
+empty stack, so the `when` guard rejects and the keys are never claimed (native
+input undo is untouched there).
 
 ## Invariants
 
@@ -70,11 +93,11 @@ route Cmd+Z through their own keyboard plugin and call `undo()` / `redo()` direc
 
 ## Plugin reference
 
-- Description: Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
+- Description: Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
 - Web:
   - Uses: `primitives/latest-ref.useLatestRef`, `primitives/scoped-store.defineScopedStore`, `primitives/shortcuts.useSurfaceShortcuts`
-  - Exports: Types: `HistoryEntry`, `UndoRedoApi`, `UndoRedoProviderProps`, `UndoRedoShortcutsOptions`; Values: `UndoRedoProvider`, `useUndoRedo`, `useUndoRedoShortcuts`
+  - Exports: Types: `HistoryEntry`, `UndoRedoApi`, `UndoRedoProviderProps`, `UndoRedoShortcutsOptions`; Values: `UndoRedoProvider`, `useScopedUndoRedo`, `useUndoRedo`, `useUndoRedoShortcuts`
 - Cross-plugin:
-  - Imported by: `page/editor`
+  - Imported by: `apps-core/tab-surface`, `apps/pages/page-tree`, `infra/trash`, `page/editor`
 
 <!-- AUTOGENERATED:END -->

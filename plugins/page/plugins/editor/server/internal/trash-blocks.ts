@@ -7,16 +7,26 @@ import {
   _trashEntries,
 } from "@plugins/infra/plugins/trash/server";
 import type { TrashEntry } from "@plugins/infra/plugins/trash/core";
-import { PAGE_BLOCK_TYPE, pageData } from "../../core/schemas";
+import {
+  PAGE_BLOCK_TYPE,
+  PAGES_TRASH_SOURCE,
+  pageData,
+} from "../../core/schemas";
 import { _blocks } from "./tables";
 import type { BlockRow } from "./forest";
 import { collectBlockSubtrees } from "./collect-subtree";
 import { BlockLifecycle } from "./document-hooks";
 import { blocksChanged } from "./tables-events";
 
-// The trash source id this plugin registers (see server/index.ts). Kept local so
-// the chokepoint and the source registration name it once.
-export const PAGES_TRASH_SOURCE = "pages";
+/**
+ * What the chokepoint did. A discriminated union, not `{trashed, entryIds?}`: an
+ * optional id list would let a caller silently skip the restore path for a delete
+ * that really was trashed (an absorbable failure). `trashed: false` = a genuine
+ * hard delete — there is nothing to restore, and that is the honest answer.
+ */
+export type DeleteBlocksOutcome =
+  | { trashed: true; entryIds: string[] }
+  | { trashed: false };
 
 // Any drizzle executor the chokepoint can ride on: the global handle (production)
 // or a db-test-fixture's throwaway DB (tests). It must support `.transaction`, so
@@ -66,11 +76,15 @@ async function runOnRestore(blockIds: string[]): Promise<void> {
  * `trash_entries` row (a bulk delete of two sub-pages ⇒ two entries); non-page
  * roots (and any subtree not under a page root) fold into the first entry so a
  * single operation restores together.
+ *
+ * The minted entry ids are RETURNED (creation order), not discarded: they are the
+ * ledger handles a caller needs to offer "Undo" (restore). A single page-root
+ * delete — the sidebar's delete — therefore yields exactly one id.
  */
 export async function deleteBlocksSubtree(
   rootIds: string[],
   executor: BlockExecutor = db,
-): Promise<{ trashed: boolean }> {
+): Promise<DeleteBlocksOutcome> {
   if (rootIds.length === 0) return { trashed: false };
   const subtreeIds = await collectBlockSubtrees(rootIds, executor);
   if (subtreeIds.length === 0) return { trashed: false };
@@ -136,6 +150,11 @@ export async function deleteBlocksSubtree(
       .where(and(inArray(_blocks.id, ids), isNull(_blocks.deletedAt)));
   };
 
+  // Every ledger id this call mints, in creation order (page roots first, then the
+  // leftover-anchor entry if one was needed). Returned to the caller as the
+  // restore handles.
+  const entryIds: string[] = [];
+
   await executor.transaction(async (tx) => {
     const claimed = new Set<string>();
     let firstEntryId: string | null = null;
@@ -147,6 +166,7 @@ export async function deleteBlocksSubtree(
         rootEntityId: pageRootId,
         label,
       });
+      entryIds.push(entryId);
       if (firstEntryId === null) firstEntryId = entryId;
       const ids = subtreeOf(pageRootId).filter((id) => !claimed.has(id));
       for (const id of ids) claimed.add(id);
@@ -169,13 +189,14 @@ export async function deleteBlocksSubtree(
           rootEntityId: anchorId,
           label,
         });
+        entryIds.push(firstEntryId);
       }
       await flagTrashed(tx, leftover, firstEntryId);
     }
   });
 
   await runOnTrash(subtreeIds);
-  return { trashed: true };
+  return { trashed: true, entryIds };
 }
 
 /**

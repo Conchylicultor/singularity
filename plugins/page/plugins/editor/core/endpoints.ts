@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { TrashOutcomeSchema } from "@plugins/infra/plugins/trash/core";
 import { BlockSchema } from "./schemas";
 import { BlockOpSchema } from "./block-ops";
 import { BlockPatchSchema } from "./block-diff";
@@ -107,8 +108,14 @@ export const updateBlock = defineEndpoint({
   response: BlockSchema,
 });
 
+// Delete a block subtree. The server's chokepoint decides whether that is a
+// TRASH (any `type="page"` block in the cascade set — soft delete, restorable)
+// or a genuine hard delete (a page-free subtree), and says which: a `trashed`
+// outcome carries the ledger handle (`sourceId` + `entryId`) the caller needs to
+// restore it, which is what makes the sidebar's delete undoable.
 export const deleteBlock = defineEndpoint({
   route: "DELETE /api/blocks/:id",
+  response: TrashOutcomeSchema,
 });
 
 export const moveBlock = defineEndpoint({

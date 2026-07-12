@@ -25,6 +25,11 @@ export const handleBulkDeleteBlock = implement(
     // cross-page content, page_block_docs, and history survive and Cmd+Z restores
     // the full subtree; a page-free selection is hard-deleted as before. It runs
     // the BeforeDelete / OnTrash lifecycle hooks over the full set.
+    //
+    // The minted trash-entry ids are deliberately ignored here: an in-editor
+    // bulk delete is undone through the patch pipeline (`handle-patch-blocks`
+    // un-trashes on upsert), not through the trash ledger's restore endpoint.
+    // Only the sidebar's single-page delete needs the ledger handle.
     await deleteBlocksSubtree(roots.map((r) => r.id));
 
     // Fan out `blocksChanged` for this page, plus one per removed sub-page in the

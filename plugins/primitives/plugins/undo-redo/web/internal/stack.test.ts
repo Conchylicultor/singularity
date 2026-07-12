@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   canRedo,
   canUndo,
+  dropScope,
   emptyHistory,
   popRedo,
   popUndo,
@@ -101,6 +102,44 @@ describe("coalescing", () => {
     // Re-record on the (now empty) past — first record after undo can't coalesce.
     s = recordEntry(s, entry({ coalesceKey: "x" }), 10, 200);
     expect(s.future.length).toBe(0);
+  });
+});
+
+describe("dropScope", () => {
+  it("drops the scope's entries from past", () => {
+    let s = recordEntry(emptyHistory(), entry({ label: "a", scope: "editor" }), 0, 200);
+    s = recordEntry(s, entry({ label: "b", scope: "editor" }), 1, 200);
+    s = dropScope(s, "editor");
+    expect(s.past).toEqual([]);
+    expect(canUndo(s)).toBe(false);
+  });
+
+  it("drops the scope's entries from future too", () => {
+    let s = recordEntry(emptyHistory(), entry({ label: "a", scope: "editor" }), 0, 200);
+    s = popUndo(s)!.state;
+    expect(canRedo(s)).toBe(true);
+    s = dropScope(s, "editor");
+    expect(s.future).toEqual([]);
+    expect(canRedo(s)).toBe(false);
+  });
+
+  it("leaves other scopes and unscoped entries alone", () => {
+    let s = recordEntry(emptyHistory(), entry({ label: "sidebar" }), 0, 200);
+    s = recordEntry(s, entry({ label: "other", scope: "other" }), 1, 200);
+    s = recordEntry(s, entry({ label: "gone", scope: "editor" }), 2, 200);
+    // One of each also parked in `future`.
+    s = popUndo(s)!.state;
+    s = { past: s.past, future: [...s.future, ...s.past.slice(0, 1)] };
+
+    const next = dropScope(s, "editor");
+    expect(next.past.map((e) => e.entry.label)).toEqual(["sidebar", "other"]);
+    expect(next.future.map((e) => e.entry.label)).toEqual(["sidebar"]);
+  });
+
+  it("is a no-op (same state object) when nothing matches", () => {
+    const s = recordEntry(emptyHistory(), entry({ label: "a", scope: "editor" }), 0, 200);
+    expect(dropScope(s, "unknown")).toBe(s);
+    expect(dropScope(emptyHistory(), "editor").past).toEqual([]);
   });
 });
 
