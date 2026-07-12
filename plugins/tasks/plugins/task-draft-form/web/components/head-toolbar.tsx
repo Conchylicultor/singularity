@@ -3,9 +3,10 @@ import { TaskDraftFormSlots } from "../slots";
 
 /**
  * Action toolbar under the head card editor. Hosts the `TaskDraftForm.Action`
- * slot, handing each contribution an `insertText` (append) so e.g. several
- * `<ui-context/>` chips can be attached in a row. Renders nothing when no
- * plugin contributes an action.
+ * slot, handing each contribution an `insertText` that drops its snippet at the
+ * editor's caret (end of document if the editor was never focused), so e.g.
+ * several `<ui-context/>` chips can be attached mid-sentence, in a row. Renders
+ * nothing when no plugin contributes an action.
  */
 export function HeadToolbar({
   insertText,

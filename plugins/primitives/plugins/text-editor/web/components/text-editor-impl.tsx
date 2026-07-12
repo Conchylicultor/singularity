@@ -7,7 +7,6 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "../internal/decorator-nav-plugin";
@@ -17,6 +16,7 @@ import type { NodeExtension } from "../internal/node-extensions";
 import {
   applyMarkdownToEditor,
   serializeEditorToMarkdown,
+  $insertMarkdownSnippet,
   $selectMarkdownRange,
 } from "../internal/markdown";
 
@@ -98,35 +98,40 @@ export function TextEditor({
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}
-      {insertRef && <InsertPlugin insertRef={insertRef} />}
+      {insertRef && (
+        <InsertPlugin insertRef={insertRef} extensions={extensions} />
+      )}
       <HistoryPlugin />
     </LexicalComposer>
   );
 }
 
+// Imperative insert-at-caret handle. Goes through `$insertMarkdownSnippet`, so
+// the snippet is deserialized by the node extensions on the way in (a
+// `<ui-context …>` tag lands as its chip) exactly as it would through the value
+// round-trip, and the caret is left after the insertion so the user keeps typing.
 function InsertPlugin({
   insertRef,
+  extensions,
 }: {
   insertRef: React.MutableRefObject<((text: string) => void) | null>;
+  extensions: readonly NodeExtension[];
 }) {
   const [editor] = useLexicalComposerContext();
+  const extensionsRef = useLatestRef(extensions);
   useEffect(() => {
     insertRef.current = (text: string) => {
-      editor.update(() => {
-        const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
-          selection.insertText(text);
-        } else {
-          $getRoot().selectStart();
-          const sel = $getSelection();
-          if ($isRangeSelection(sel)) sel.insertText(text);
-        }
-      });
+      editor.update(
+        () => {
+          $insertMarkdownSnippet(text, extensionsRef.current);
+        },
+        { onUpdate: () => editor.focus() },
+      );
     };
     return () => {
       insertRef.current = null;
     };
-  }, [editor, insertRef]);
+  }, [editor, insertRef, extensionsRef]);
   return null;
 }
 

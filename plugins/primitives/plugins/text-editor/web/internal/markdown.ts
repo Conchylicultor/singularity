@@ -1,8 +1,11 @@
 import {
   $getRoot,
+  $getSelection,
   $isElementNode,
   $isLineBreakNode,
+  $isRangeSelection,
   $isTextNode,
+  $createLineBreakNode,
   $createParagraphNode,
   $createTextNode,
   $createRangeSelection,
@@ -47,6 +50,43 @@ export function serializeEditorToMarkdown(
   return lines.join("\n");
 }
 
+// Deserialize one raw source line into Lexical nodes: every extension pattern
+// (`<ui-context …>`, image markdown, …) becomes its node, the rest stays text.
+// The single deserialization path — shared by the whole-value apply below and
+// the caret insert — so a snippet dropped at the cursor yields the same nodes
+// as the same snippet arriving through the value round-trip.
+function $lineToNodes(
+  line: string,
+  extensions: readonly NodeExtension[],
+): LexicalNode[] {
+  if (extensions.length === 0) return line ? [$createTextNode(line)] : [];
+
+  type Match = { start: number; end: number; node: LexicalNode };
+  const matches: Match[] = [];
+  for (const ext of extensions) {
+    const re = new RegExp(ext.deserializePattern.source, "g");
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(line)) !== null) {
+      const node = ext.createNodeFromMatch(m);
+      if (node) matches.push({ start: m.index, end: m.index + m[0].length, node });
+    }
+  }
+  matches.sort((a, b) => a.start - b.start);
+
+  const nodes: LexicalNode[] = [];
+  let lastIdx = 0;
+  for (const match of matches) {
+    if (match.start < lastIdx) continue;
+    const before = line.slice(lastIdx, match.start);
+    if (before) nodes.push($createTextNode(before));
+    nodes.push(match.node);
+    lastIdx = match.end;
+  }
+  const tail = line.slice(lastIdx);
+  if (tail) nodes.push($createTextNode(tail));
+  return nodes;
+}
+
 export function applyMarkdownToEditor(
   editor: LexicalEditor,
   markdown: string,
@@ -58,37 +98,35 @@ export function applyMarkdownToEditor(
     const lines = markdown.split("\n");
     for (const line of lines) {
       const para = $createParagraphNode();
-      if (extensions.length > 0) {
-        type Match = { start: number; end: number; node: import("lexical").LexicalNode };
-        const matches: Match[] = [];
-        for (const ext of extensions) {
-          const re = new RegExp(ext.deserializePattern.source, "g");
-          let m: RegExpExecArray | null;
-          while ((m = re.exec(line)) !== null) {
-            const node = ext.createNodeFromMatch(m);
-            if (node) matches.push({ start: m.index, end: m.index + m[0].length, node });
-          }
-        }
-        matches.sort((a, b) => a.start - b.start);
-        let lastIdx = 0;
-        for (const match of matches) {
-          if (match.start < lastIdx) continue;
-          const before = line.slice(lastIdx, match.start);
-          if (before) para.append($createTextNode(before));
-          para.append(match.node);
-          lastIdx = match.end;
-        }
-        const tail = line.slice(lastIdx);
-        if (tail) para.append($createTextNode(tail));
-      } else {
-        if (line) para.append($createTextNode(line));
-      }
+      for (const node of $lineToNodes(line, extensions)) para.append(node);
       root.append(para);
     }
     if (root.getChildrenSize() === 0) {
       root.append($createParagraphNode());
     }
   });
+}
+
+// Insert a raw markdown snippet at the caret, deserialized through the node
+// extensions (so e.g. a `<ui-context …>` tag lands as its chip, not as literal
+// text). With no live selection — the editor was never focused — the snippet
+// appends at the end of the document. Must run inside an `editor.update()`.
+export function $insertMarkdownSnippet(
+  snippet: string,
+  extensions: readonly NodeExtension[] = getNodeExtensions(),
+): void {
+  let selection = $getSelection();
+  if (!$isRangeSelection(selection)) {
+    $getRoot().selectEnd();
+    selection = $getSelection();
+    if (!$isRangeSelection(selection)) return;
+  }
+  const nodes: LexicalNode[] = [];
+  snippet.split("\n").forEach((line, i) => {
+    if (i > 0) nodes.push($createLineBreakNode());
+    nodes.push(...$lineToNodes(line, extensions));
+  });
+  selection.insertNodes(nodes);
 }
 
 // --- Selection mapping ------------------------------------------------------

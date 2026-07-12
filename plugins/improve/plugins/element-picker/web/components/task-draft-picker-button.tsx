@@ -4,9 +4,9 @@ import { PickerButton } from "./picker-button";
 
 /**
  * Draft-form entry: pick an element and inject its `<ui-context/>` tag into the
- * head card. Goes through `insertText` (append) rather than the Improve
+ * head card at the caret. Goes through `insertText` rather than the Improve
  * `OpenWithText` command, so it composes — pick several elements in a row and
- * each lands as its own chip in the prompt.
+ * each lands as its own chip, where the cursor was.
  */
 export function TaskDraftPickerButton({ insertText }: TaskDraftActionProps) {
   return (

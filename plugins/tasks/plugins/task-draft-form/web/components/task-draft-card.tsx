@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type CSSProperties, useCallback, useEffect, useRef } from "react";
+import { type CSSProperties, useCallback, useRef } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -149,25 +149,16 @@ export function TaskDraftCard({
     transition,
   };
 
-  // Append a snippet to the editor's markdown value (not the live Lexical
-  // selection): the value round-trip re-runs applyMarkdownToEditor, which is the
-  // only path that deserializes node patterns like `<ui-context/>` into chips.
-  // Drives the head-card action slot (e.g. the element picker). `textRef` reads
-  // the latest text so the callback identity stays stable across keystrokes.
-  // Synced in an effect (not during render): `insertText` only ever fires from a
-  // user action — well after commit — so the post-commit ref value is current.
-  const textRef = useRef(text);
-  useEffect(() => {
-    textRef.current = text;
-  }, [text]);
-  const insertText = useCallback(
-    (snippet: string) => {
-      const cur = textRef.current;
-      const sep = cur && !/[\s\n]$/.test(cur) ? " " : "";
-      onTextChange(`${cur}${sep}${snippet}`);
-    },
-    [onTextChange],
-  );
+  // Drives the head-card action slot (e.g. the element picker): the snippet
+  // lands at the caret, deserialized into its chip by the editor's node
+  // extensions. Falls back to the end of the document when the editor was never
+  // focused (no live selection).
+  const insertRef = useRef<((snippet: string) => void) | null>(null);
+  const insertText = useCallback((snippet: string) => {
+    const insert = insertRef.current;
+    if (!insert) throw new Error("TaskDraftCard: editor not mounted");
+    insert(snippet);
+  }, []);
 
   const showRelate = isHead && !!onRelateModeChange;
 
@@ -200,6 +191,7 @@ export function TaskDraftCard({
           minRows={isHead ? 5 : 2}
           maxHeight={isHead ? "20rem" : "8rem"}
           namespace={`task-draft-card-${cardId}`}
+          insertRef={insertRef}
         />
       </div>
       {isHead && <HeadToolbar insertText={insertText} />}
