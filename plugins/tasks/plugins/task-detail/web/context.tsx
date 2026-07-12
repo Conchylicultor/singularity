@@ -14,15 +14,12 @@ type FlushRegistry = {
   flushAll: () => Promise<void>;
 };
 
-type TaskNavigateHandler = (taskId: string) => void;
-
 const NOOP_FLUSH: FlushRegistry = {
   register: () => () => {},
   flushAll: async () => {},
 };
 
 const TaskDetailFlushCtx = createContext<FlushRegistry>(NOOP_FLUSH);
-const TaskNavigateCtx = createContext<TaskNavigateHandler | undefined>(undefined);
 
 export function TaskDetailFlushProvider({ children }: { children: ReactNode }) {
   const fns = useRef(new Set<FlushFn>());
@@ -54,10 +51,4 @@ export function useFlushAll() {
 export function useRegisterFlush(fn: FlushFn) {
   const { register } = useContext(TaskDetailFlushCtx);
   useEffect(() => register(fn), [register, fn]);
-}
-
-export const TaskNavigateProvider = TaskNavigateCtx.Provider;
-
-export function useTaskNavigate(): TaskNavigateHandler | undefined {
-  return useContext(TaskNavigateCtx);
 }

@@ -7,28 +7,18 @@ import {
   tasksRootPane,
   taskDetailPane,
 } from "./panes";
-import { GoToParentAction } from "./components/go-to-parent-action";
-import { ExpandTaskAction } from "./components/expand-task-action";
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
-export {
-  TaskNavigateProvider,
-  useTaskNavigate,
-  useFlushAll,
-  useRegisterFlush,
-} from "./context";
+export { useFlushAll, useRegisterFlush } from "./context";
 export { TaskDetail } from "./components/task-detail";
-export { TaskTreeDetail } from "./components/task-tree-detail";
 export { tasksRootPane, taskDetailPane } from "./panes";
 
 export default {
   description:
-    "Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.",
+    "Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.",
   contributions: [
     Pane.Register({ pane: tasksRootPane }),
     Pane.Register({ pane: taskDetailPane }),
-    taskDetailPane.Actions({ component: GoToParentAction }),
-    taskDetailPane.Actions({ component: ExpandTaskAction }),
     Shell.Sidebar({
       id: "tasks",
       ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}, { mode: "root" }) }),

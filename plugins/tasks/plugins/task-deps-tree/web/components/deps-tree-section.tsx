@@ -18,10 +18,7 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { listContainerTaskIds } from "@plugins/tasks/plugins/container-tasks/core";
-import {
-  taskDetailPane,
-  useTaskNavigate,
-} from "@plugins/tasks/plugins/task-detail/web";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TasksSubtree } from "@plugins/tasks/plugins/task-list/web";
 import { taskClusterIds } from "@plugins/tasks/plugins/task-deps-tree/core";
 import { DepsTreeView } from "./deps-tree-view";
@@ -65,14 +62,12 @@ function DepsTreeSectionLoaded({
   const { activeViewId, setActiveView } = useActiveViewId("task-deps-tree:view");
   const activeId = activeViewId ?? "deps";
 
-  const ctxNavigate = useTaskNavigate();
+  // Selecting a task in the tree re-roots this pane in place, so the URL stays
+  // truthful and the new root is shareable.
   const openPane = useOpenPane();
   const onNavigate = useCallback(
-    (id: string) => {
-      if (ctxNavigate) ctxNavigate(id);
-      else openPane(taskDetailPane, { taskId: id }, { mode: "swap" });
-    },
-    [ctxNavigate, openPane],
+    (id: string) => openPane(taskDetailPane, { taskId: id }, { mode: "swap" }),
+    [openPane],
   );
 
   // The single member set both tabs render — one set, organized two ways. Skip

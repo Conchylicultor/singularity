@@ -4,7 +4,7 @@ import { TaskGraph } from "./components/task-graph";
 
 export default {
   description:
-    "Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.",
+    "Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.",
   contributions: [
     TaskDetailSlots.Section({ id: "graph", label: "Graph", component: TaskGraph }),
   ],

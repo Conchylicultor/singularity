@@ -2,7 +2,6 @@ import { useResource, matchResource } from "@plugins/primitives/plugins/live-sta
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
@@ -21,18 +20,13 @@ const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
   const taskId = content.trim();
   const result = useResource(tasksResource);
-  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
   const openPane = useOpenPane();
 
   if (!taskId) return null;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (convId) {
-      openPane(taskDetailPane, { taskId }, { mode: "push" });
-    } else {
-      openPane(taskDetailPane, { taskId }, { mode: "push", options: { focused: true } });
-    }
+    openPane(taskDetailPane, { taskId }, { mode: "push" });
   };
 
   // While pending, render the degraded raw-id chip so it never disappears.

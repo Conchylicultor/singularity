@@ -17,8 +17,9 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { patchTask } from "@plugins/tasks/web";
-import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { EdgeActions } from "./edge-actions";
 
@@ -172,14 +173,11 @@ function TaskGraphLoaded({
       .map((id) => byId.get(id))
       .filter((t): t is TaskListItem => !!t);
   }, [taskId, allTasks]);
-  const ctxNavigate = useTaskNavigate();
+  // Clicking a node re-roots this pane in place, keeping the URL truthful.
   const openPane = useOpenPane();
   const onNavigate = useCallback(
-    (id: string) => {
-      if (ctxNavigate) ctxNavigate(id);
-      else openPane(taskDetailPane, { taskId: id }, { mode: "swap" });
-    },
-    [ctxNavigate, openPane],
+    (id: string) => openPane(taskDetailPane, { taskId: id }, { mode: "swap" }),
+    [openPane],
   );
   const onConnect = useCallback((source: string, target: string) => {
     void fetchEndpoint(addTaskDependency, { id: target }, { body: { dependsOnTaskId: source } });
@@ -192,8 +190,10 @@ function TaskGraphLoaded({
   if (closure.length <= 1) return null;
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-height (h-60) graph band; shrink-0 keeps it from being compressed among the stacked detail sections
-    <div className="bg-muted/30 h-60 shrink-0 border-b">
+    // Self-contained card: the graph is the last detail section, so it carries
+    // its own frame rather than relying on being the band at the top.
+    // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-height (h-60) graph card; shrink-0 keeps it from being compressed among the stacked detail sections
+    <Clip className="bg-muted/30 h-60 shrink-0 rounded-lg border">
       <GraphCanvas
         nodes={nodes}
         edges={edges}
@@ -204,7 +204,7 @@ function TaskGraphLoaded({
         edgePath="smoothstep"
         minZoom={0.5}
       />
-    </div>
+    </Clip>
   );
 }
 

@@ -148,19 +148,19 @@ Declare the **defaults**, not a type. The default *is* the deep-link value,
 stated once:
 
 ```ts
-export const taskDetailPane = Pane.define({
-  id: "task-detail",
-  segment: "t/:taskId",
-  component: TaskDetailBody,
-  options: { focused: false },
+export const filePane = Pane.define({
+  id: "file",
+  segment: "f/:path",
+  component: FileBody,
+  options: { compact: false },
 });
 
 // Opening with a partial override:
-openPane(taskDetailPane, { taskId }, { mode: "push", options: { focused: true } });
+openPane(filePane, { path }, { mode: "push", options: { compact: true } });
 
 // Reading — TOTAL, never Partial, so there is nothing to `??`:
-function TaskDetailBody() {
-  const { focused } = taskDetailPane.useOptions();   // boolean
+function FileBody() {
+  const { compact } = filePane.useOptions();   // boolean
 }
 ```
 

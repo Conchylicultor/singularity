@@ -4,12 +4,12 @@
 
 ## Plugin reference
 
-- Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
+- Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
 - Web:
-  - Slots: `TaskDetailSlots.Section` ← `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`, `taskDetailPane.Actions` ← `tasks.task-detail`, `tasksRootPane.Actions`
-  - Contributes: `Pane.Register` "tasks-root", `Pane.Register` "task-detail", `taskDetailPane.Actions` → `GoToParentAction`, `taskDetailPane.Actions` → `ExpandTaskAction`, `Shell.Sidebar` "Tasks" → `component`
-  - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.useOpenPane`, `shell.Shell`, `tasks.useTask`, `tasks/task-list.TasksListView`, `tasks/task-list.TasksSubtree`
-  - Exports: Values: `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
+  - Slots: `TaskDetailSlots.Section` ← `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`, `taskDetailPane.Actions`, `tasksRootPane.Actions`
+  - Contributes: `Pane.Register` "tasks-root", `Pane.Register` "task-detail", `Shell.Sidebar` "Tasks" → `component`
+  - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/css/spacing.Inset`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `shell.Shell`, `tasks.useTask`, `tasks/task-list.TasksListView`
+  - Exports: Values: `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`
 - Cross-plugin:
   - Imported by: `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/tasks-panel`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-deps-tree`, `tasks/task-description`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-preprompt`
 
