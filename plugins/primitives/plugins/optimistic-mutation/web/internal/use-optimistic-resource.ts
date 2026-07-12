@@ -482,16 +482,31 @@ export function useOptimisticResource<
     void drainFailed(["http", "network"]);
   }, [drainFailed]);
 
+  // Re-fetch the RESOURCE (not an op) — the retry for a failing READ.
+  const refetchRef = useLatestRef(result.refetch);
+  const retryLoad = useCallback(() => {
+    void refetchRef.current();
+  }, [refetchRef]);
+
   // Forced sync-status reporting: any optimistic surface lights up the universal
   // indicator with no indicator code of its own. Retry is wired to retryAll so
   // the indicator's Retry button re-runs only this hook's failed ops. A
   // network-failed op is unresolved, so it reports as `syncing` (the Yjs lane's
   // offline-is-syncing policy) — only a durable HTTP rejection is an `error`.
-  const phase = failed.length ? "error" : saving ? "syncing" : "idle";
+  //
+  // A failing READ is an `error` too, and this is the ONLY place it can surface.
+  // These surfaces are the sanctioned exemption to live-state's I1: they keep
+  // painting last-known-good (`base` falls back to `result.stale`) instead of
+  // blanking, which is right — but it means a durably-failing load is otherwise
+  // INVISIBLE (a never-loaded surface shimmers its skeleton forever; a
+  // once-loaded one silently serves stale rows). The exemption is only sound if
+  // the failure it swallows comes out here, with a Retry that re-fetches.
+  const loadFailed = resultError !== null;
+  const phase = failed.length || loadFailed ? "error" : saving ? "syncing" : "idle";
   useReportSync({
     phase,
     label,
-    retry: failed.length ? retryAll : undefined,
+    retry: failed.length ? retryAll : loadFailed ? retryLoad : undefined,
     savedAt,
   });
 

@@ -294,10 +294,10 @@ export class LiveStateYjsProvider implements Provider {
       this.preApplySeed();
     }
     // First value not in yet — onServerState completes the handshake when the
-    // subscription delivers it (push-based; never polled).
-    if (this.serverState === undefined) return;
-    if (this.serverState !== null) this.markSynced();
-    else this.maybeInit();
+    // subscription delivers it (push-based; never polled). A value that ALREADY
+    // arrived was held (see onServerState) and is applied here, now that the
+    // binding is listening.
+    this.ingestServerState();
   }
 
   /** Apply the (cached, deterministic) seed to the live doc, provider-origin. */
@@ -428,20 +428,23 @@ export class LiveStateYjsProvider implements Provider {
   onServerState(state: string | null): void {
     if (this.destroyed) return;
     this.serverState = state;
-    if (state !== null) {
-      if (state !== this.lastAppliedState) {
-        this.lastAppliedState = state;
-        applyUpdate(this.doc, base64ToBytes(state), this);
-      }
-      if (this.connected && !this.synced) this.markSynced();
-    } else if (this.connected) {
-      // No stored doc. Seed exactly once (first-writer-wins server-side).
-      // After a successful init this is normally unreachable (doc-init is the
-      // only row creator and rows die with the block, whose editor unmounts)
-      // — except the post-409 recovery state, where `synced` was reset and
-      // maybeInit re-runs the init in from-local-doc mode.
-      this.maybeInit();
-    }
+    // HOLD until connected — never apply into a doc no binding is watching.
+    // `@lexical/yjs` ingests the doc EXCLUSIVELY through the `observeDeep`
+    // events its binding registers on mount; it never reads a doc that already
+    // holds content (`createBinding` starts from an empty CollabElementNode and
+    // `shouldBootstrap` only ever inserts an empty paragraph). Bytes applied
+    // before the binding attaches are therefore invisible to the editor
+    // FOREVER — `lastAppliedState` makes the re-apply a no-op, and Yjs emits no
+    // event for a state it already holds, so no later push can heal it.
+    //
+    // This is not hypothetical timing paranoia: it is the warm-navigation path.
+    // Re-opening a page whose `page-block-doc` value is still cached settles the
+    // subscription on the FIRST render, so the owning hook's effect calls this
+    // before `CollaborationPlugin` has created its binding (which costs two more
+    // render passes) — every block rendered empty until a reload. `connect()`
+    // runs after the binding's observer is registered, which is precisely why
+    // the apply belongs there.
+    if (this.connected) this.ingestServerState();
     // Push-driven flush retry: a queue left behind by a transient network
     // failure (no armed debounce timer) drains on the next server push instead
     // of waiting for the next local keystroke. During normal typing the
@@ -454,6 +457,31 @@ export class LiveStateYjsProvider implements Provider {
     ) {
       void this.flushLoop();
     }
+  }
+
+  /**
+   * Apply the latest subscription value to the live doc. Called ONLY while
+   * connected — i.e. with the binding's `observeDeep` observer registered, so
+   * the resulting Yjs update events actually reach Lexical (see onServerState).
+   * `Y.applyUpdate` idempotency + `lastAppliedState` make repeat calls no-ops.
+   */
+  private ingestServerState(): void {
+    const state = this.serverState;
+    if (state === undefined) return; // first value not in yet
+    if (state === null) {
+      // No stored doc. Seed exactly once (first-writer-wins server-side).
+      // After a successful init this is normally unreachable (doc-init is the
+      // only row creator and rows die with the block, whose editor unmounts)
+      // — except the post-409 recovery state, where `synced` was reset and
+      // maybeInit re-runs the init in from-local-doc mode.
+      this.maybeInit();
+      return;
+    }
+    if (state !== this.lastAppliedState) {
+      this.lastAppliedState = state;
+      applyUpdate(this.doc, base64ToBytes(state), this);
+    }
+    if (!this.synced) this.markSynced();
   }
 
   /**
