@@ -82,7 +82,7 @@ export function TrackConfig({
 
       <Stack gap="xs">
         <Text as="div" variant="caption" tone="muted">
-          Pattern (which tones each onset strikes)
+          Pattern
         </Text>
         <Select
           items={figurationItems}
@@ -106,7 +106,7 @@ export function TrackConfig({
 
       <Stack gap="xs">
         <Text as="div" variant="caption" tone="muted">
-          Preset (snaps subdivisions to its native length)
+          Preset
         </Text>
         <Select
           items={items}
@@ -149,36 +149,31 @@ export function TrackConfig({
         </Stack>
       </Stack>
 
-      <Stack gap="xs">
-        <Stack direction="row" gap="sm" justify="between" align="center">
-          <Text as="span" variant="caption" tone="muted">
-            Subdivisions
-          </Text>
-          <Stack direction="row" gap="xs" align="center">
-            <IconButton
-              icon={MdRemove}
-              label="Fewer subdivisions"
-              disabled={pattern.subdivisions <= MIN_SUBDIVISIONS}
-              onClick={() =>
-                onChange(resample(pattern, Math.max(MIN_SUBDIVISIONS, pattern.subdivisions - 1)))
-              }
-            />
-            <Text as="span" variant="body" className="tabular-nums">
-              {pattern.subdivisions}
-            </Text>
-            <IconButton
-              icon={MdAdd}
-              label="More subdivisions"
-              disabled={pattern.subdivisions >= MAX_SUBDIVISIONS}
-              onClick={() =>
-                onChange(resample(pattern, Math.min(MAX_SUBDIVISIONS, pattern.subdivisions + 1)))
-              }
-            />
-          </Stack>
-        </Stack>
-        <Text as="div" variant="caption" tone="muted">
-          Changing this adapts the pattern proportionally.
+      <Stack direction="row" gap="sm" justify="between" align="center">
+        <Text as="span" variant="caption" tone="muted">
+          Subdivisions
         </Text>
+        <Stack direction="row" gap="xs" align="center">
+          <IconButton
+            icon={MdRemove}
+            label="Fewer subdivisions"
+            disabled={pattern.subdivisions <= MIN_SUBDIVISIONS}
+            onClick={() =>
+              onChange(resample(pattern, Math.max(MIN_SUBDIVISIONS, pattern.subdivisions - 1)))
+            }
+          />
+          <Text as="span" variant="body" className="tabular-nums">
+            {pattern.subdivisions}
+          </Text>
+          <IconButton
+            icon={MdAdd}
+            label="More subdivisions"
+            disabled={pattern.subdivisions >= MAX_SUBDIVISIONS}
+            onClick={() =>
+              onChange(resample(pattern, Math.min(MAX_SUBDIVISIONS, pattern.subdivisions + 1)))
+            }
+          />
+        </Stack>
       </Stack>
     </Stack>
   );
