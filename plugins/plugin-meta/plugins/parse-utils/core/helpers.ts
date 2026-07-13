@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, type Dirent } from "fs";
 import { dirname, join } from "path";
 import { maskSource } from "./mask-source";
-import { markerCallSpans } from "./find-marker-calls";
+import { markerCallSpans, type MarkerCallSpan } from "./find-marker-calls";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -67,9 +67,21 @@ export function readIfExists(path: string): string | null {
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
-const transpiler = new Bun.Transpiler({ loader: "ts" });
+const transpilers = {
+  ts: new Bun.Transpiler({ loader: "ts" }),
+  tsx: new Bun.Transpiler({ loader: "tsx" }),
+};
 
-export function stripTypes(src: string): string {
+/**
+ * Strip TS types from a source buffer. `path` selects the loader by extension and
+ * MUST be passed whenever the source can be a `.tsx` file: the `ts` loader treats
+ * the first JSX tag as a syntax error and throws a Bun `BuildMessage` (neither a
+ * `SyntaxError` nor a `TypeError`, so it escapes the fallback below and crashes
+ * the caller). Omitting `path` keeps the `ts` loader — correct for the `.ts`-only
+ * scans (barrels, `core/`, `shared/`, schema files).
+ */
+export function stripTypes(src: string, path?: string): string {
+  const transpiler = path?.endsWith(".tsx") ? transpilers.tsx : transpilers.ts;
   try {
     return transpiler.transformSync(src);
   } catch (err) {
@@ -364,6 +376,22 @@ export function matchBracket(src: string, start: number, open: string, close: st
   return -1;
 }
 
+/**
+ * The leading string-literal argument of a marker call, read from the ORIGINAL
+ * source at the call's arg span — `null` when the first argument is not a STATIC
+ * literal (an identifier, a call, or an interpolated template such as
+ * `` `${id}.section` `` inside a slot factory). Such ids are not statically
+ * resolvable, and a raw backtick-interior regex would otherwise hand back the
+ * literal text `"${id}.section"` as if it were a real id.
+ */
+export function readStaticCallId(original: string, span: MarkerCallSpan): string | null {
+  let at = span.open + 1;
+  while (at < span.close && /\s/.test(original[at]!)) at++;
+  const lit = readStringLiteral(original, at);
+  if (lit.kind !== "value") return null;
+  return lit.value;
+}
+
 export function parseDefineGroup<T>(
   src: string,
   builder: "defineSlot" | "defineDispatchSlot",
@@ -392,9 +420,7 @@ export function parseDefineGroup<T>(
       // Member name: the nearest `Word:` immediately before the builder call.
       const memberMatch = /([A-Z]\w*)\s*:\s*$/.exec(masked.slice(0, span.identifier));
       if (!memberMatch) continue;
-      const args = src.slice(span.open + 1, span.close);
-      const idMatch = /^\s*"([^"]+)"|^\s*'([^']+)'|^\s*`([^`]+)`/.exec(args);
-      const id = idMatch ? (idMatch[1] ?? idMatch[2] ?? idMatch[3]) : undefined;
+      const id = readStaticCallId(src, span);
       if (!id) continue;
       out.push(make(memberMatch[1]!, id, groupName));
     }

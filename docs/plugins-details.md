@@ -4692,7 +4692,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/plugin-tree`
       - Core:
-        - Exports: Types: `BarrelExport`, `DefaultExportObject`, `FsSnapshot`, `ImportRef`, `MarkerCall`, `MarkerCallSpan`, `StringFieldResult`, `StringLiteralResult`; Values: `defaultExportObjectBody`, `findImports`, `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `readStringLiteral`, `runWithFsSnapshot`, `stripTypes`, `walkFiles`
+        - Exports: Types: `BarrelExport`, `DefaultExportObject`, `FsSnapshot`, `ImportRef`, `MarkerCall`, `MarkerCallSpan`, `StringFieldResult`, `StringLiteralResult`; Values: `defaultExportObjectBody`, `findImports`, `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `readStaticCallId`, `readStringLiteral`, `runWithFsSnapshot`, `stripTypes`, `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`

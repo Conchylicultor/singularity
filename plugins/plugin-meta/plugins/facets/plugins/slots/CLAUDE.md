@@ -1,6 +1,11 @@
 # slots
 
-Extracts `defineSlot()` definitions from each plugin's `web/slots.ts`. Each
+Extracts `defineSlot()` definitions from each plugin's `web/`. When barrels are
+imported the runtime walk over the barrel export graph is authoritative; in the
+barrel-free (`skipBarrelImport`) path the facet statically parses **every source
+file under the plugin's own `web/`** (sub-plugin `plugins/` trees, tests and
+`node_modules` excluded), so the declaring filename is irrelevant — only
+*dynamic* (non-literal) slot ids stay out of reach there. Each
 `SlotDef` carries a **per-slot reverse index** `contributors: string[]` — the
 full plugin ids of every plugin that contributes to that specific slot. This
 facet has no `relate()` of its own: the join needs both the slots and

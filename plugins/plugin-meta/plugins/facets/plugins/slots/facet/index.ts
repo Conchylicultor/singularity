@@ -8,6 +8,8 @@ import {
   maskSource,
   parseDefineGroup,
   markerCallSpans,
+  readStaticCallId,
+  walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type SlotDef, slotsFacetDef } from "../core";
 
@@ -35,12 +37,9 @@ function parseSlotCalls(
   // string/template literal is never matched; read the id back from the ORIGINAL
   // at the call's arg span.
   for (const span of markerCallSpans(masked, builder)) {
-    const argsBody = original.slice(span.open + 1, span.close);
-
-    const idMatch = /^\s*"([^"]+)"|^\s*'([^']+)'|^\s*`([^`]+)`/.exec(argsBody);
-    const slotId = idMatch ? (idMatch[1] ?? idMatch[2] ?? idMatch[3]) : undefined;
     // Skip ids built from template/identifier expressions (e.g.
     // `${id}.section` inside defineDetailSections) — not statically resolvable.
+    const slotId = readStaticCallId(original, span);
     if (!slotId) continue;
 
     // The member/group name is the nearest `Word:` or `const Word =` before the
@@ -154,38 +153,56 @@ export default createFacet<SlotDef[]>({
     //    `Sonata.Toolbar.Start`) that no static text parse could reach — and
     //    reads each slot's `kind` from its constructor marker (`.Mount` →
     //    mount, `.Render` → render, `.Dispatch` → dispatch).
-    //  - No imports (`skipBarrelImport` build mode): fall back to the static
-    //    text parse of `web/slots.ts`. This cannot see factory slots (their
-    //    `defineRenderSlot` call lives in the factory file, not `slots.ts`), but
-    //    it is the only option when barrels aren't imported.
+    //  - No imports (`skipBarrelImport` build mode): fall back to a static text
+    //    parse of EVERY source file under the plugin's own `web/` (walkFiles
+    //    already skips sub-plugin `plugins/` trees, `node_modules` and tests),
+    //    so a slot's declaring filename is irrelevant. The one thing this mode
+    //    still cannot resolve is a *dynamic* slot id — an id built from a
+    //    template/identifier expression rather than a string literal (e.g. a
+    //    factory's `` `${id}.section` ``); those are skipped in `parseSlotCalls`.
     if (ctx.importedModules && ctx.importedModules.length > 0) {
       return collectRuntimeSlots(ctx.importedModules);
     }
 
     const slots: SlotDef[] = [];
-    const src = readIfExists(join(ctx.dir, "web", "slots.ts"));
-    if (src) {
+    // Dedupe by slot id across files (first writer wins), mirroring the
+    // barrel-walk's `seen` set: a slot re-declared/aliased in a second file is
+    // counted once.
+    const seen = new Set<string>();
+    const files: string[] = [];
+    walkFiles(join(ctx.dir, "web"), files);
+
+    for (const file of files) {
+      const src = readIfExists(file);
+      if (!src) continue;
       // stripTypes drops comments on the happy path; a FULL mask additionally
       // defends the transpile-failure fallback — a `defineSlot("x")` written in a
       // comment or string/template literal is blanked away and never parsed as a
       // real slot, while each real id is read back from the original by offset.
-      const original = stripTypes(src);
+      const original = stripTypes(src, file);
       const masked = maskSource(original);
       // Render and mount slots first: scanned by builder name (distinct from
       // `defineSlot`, so the group parser below won't double-count them).
-      slots.push(...parseSlotCalls(original, masked, "defineRenderSlot", "render"));
-      slots.push(...parseSlotCalls(original, masked, "defineMountSlot", "mount"));
-      slots.push(...parseSlotCalls(original, masked, "defineWrapperSlot", "wrap"));
-      slots.push(...parseDefineGroup(
-        original,
-        "defineSlot",
-        (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "slot", contributors: [] }),
-      ));
-      slots.push(...parseDefineGroup(
-        original,
-        "defineDispatchSlot",
-        (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "dispatch", contributors: [] }),
-      ));
+      const fileSlots: SlotDef[] = [
+        ...parseSlotCalls(original, masked, "defineRenderSlot", "render"),
+        ...parseSlotCalls(original, masked, "defineMountSlot", "mount"),
+        ...parseSlotCalls(original, masked, "defineWrapperSlot", "wrap"),
+        ...parseDefineGroup(
+          original,
+          "defineSlot",
+          (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "slot", contributors: [] }),
+        ),
+        ...parseDefineGroup(
+          original,
+          "defineDispatchSlot",
+          (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "dispatch", contributors: [] }),
+        ),
+      ];
+      for (const slot of fileSlots) {
+        if (seen.has(slot.slotId)) continue;
+        seen.add(slot.slotId);
+        slots.push(slot);
+      }
     }
     return slots;
   },

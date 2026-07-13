@@ -6,6 +6,7 @@ export {
   parseDefineGroup,
   parseStringField,
   readIfExists,
+  readStaticCallId,
   readStringLiteral,
   runWithFsSnapshot,
   stripTypes,

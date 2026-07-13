@@ -9,7 +9,7 @@
  * pure hard closure of the entries; soft contributors become reviewable `available`
  * options the human/agent selects explicitly.
  */
-import { test, expect, beforeAll } from "bun:test";
+import { test, expect, beforeAll, setDefaultTimeout } from "bun:test";
 import { join } from "path";
 import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -37,6 +37,13 @@ const manifest: CompositionManifest = {
 
 let tree: PluginTree;
 let graph: EdgeGraph;
+
+// The `beforeAll` below builds the FULL faceted plugin tree off disk (~4–6s, and
+// far more on a loaded machine). Bun's default per-hook timeout is 5s, so this
+// suite was intermittently failing the hook — surfacing as a bogus "(fail)
+// (unnamed)" with the file's other tests never running, which reads as a real
+// regression rather than a timeout. Give the disk walk honest headroom.
+setDefaultTimeout(60_000);
 
 beforeAll(async () => {
   const root = (await Bun.$`git rev-parse --show-toplevel`.text()).trim();
