@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { sentinelConfig } from "../../core";
@@ -116,15 +117,28 @@ function scheduleRespawn(s: HostState): void {
   s.backoffMs = Math.min(s.backoffMs * 2, RESPAWN_BACKOFF_MAX_MS);
 }
 
+/**
+ * Resolve the worker module URL.
+ *
+ * Dev (backend runs from source): the `new URL("./worker/entry.ts",
+ * import.meta.url)` form resolves against this file's on-disk location.
+ *
+ * Compiled release: `bun build --compile` does NOT trace/embed a
+ * `new Worker(new URL(...))` entry (verified Bun 1.3.13), so release.ts vendors
+ * the worker as a standalone bundled `.js` on disk and launch.ts points
+ * `SINGULARITY_SENTINEL_WORKER_JS` at it — the same vendored-asset pattern as
+ * `SINGULARITY_PARCEL_WATCHER_NODE`. When set, spawn from that file.
+ */
+function resolveWorkerUrl(): URL {
+  const vendored = process.env.SINGULARITY_SENTINEL_WORKER_JS;
+  return vendored
+    ? pathToFileURL(vendored)
+    : new URL("./worker/entry.ts", import.meta.url);
+}
+
 function spawn(s: HostState): void {
   const cfg = getConfig(sentinelConfig);
-  // NOTE (verified 2026-07-11, Bun 1.3.13): this URL form works when the
-  // backend runs from source (dev — the gateway spawns `bun bin/index.ts`).
-  // Under the release `bun build --compile` path the worker module is NOT
-  // auto-embedded, the spawn fails immediately, and the rapid-failure guard
-  // above gives up loudly. Embedding it needs the worker entry added to the
-  // release compile entrypoints — tracked as release follow-up work.
-  const worker = new Worker(new URL("./worker/entry.ts", import.meta.url));
+  const worker = new Worker(resolveWorkerUrl());
   s.worker = worker;
   s.spawnedAt = Date.now();
 

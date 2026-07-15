@@ -47,11 +47,16 @@ within 60 s — the fleet self-recovers (unchanged fail-safe). The worker's
 (the diagnostic instrument FOR cluster duress cannot ride the job queue that
 the congestion it measures saturates).
 
-⚠ **Compiled-release caveat** (verified on Bun 1.3.13): `bun build --compile`
-does NOT embed `new Worker(new URL(...))` — in a compiled release binary the
-spawn fails and the rapid-failure guard gives up loudly (sentinel + latch off
-until the release pipeline adds the worker entry as an extra compile
-entrypoint). Dev backends run from source, where the URL form works.
+**Compiled releases** (verified on Bun 1.3.13): `bun build --compile` does NOT
+trace/embed `new Worker(new URL(...))`, so the worker is **vendored** instead —
+`release.ts` bundles `worker/entry.ts` to a standalone `<out>/sentinel/worker.js`
+(its lean closure inlines), `launch.ts` points `SINGULARITY_SENTINEL_WORKER_JS`
+at it, and `worker-host.ts` spawns from that path when the env is set (else the
+dev source URL). This mirrors the vendored parcel-watcher native addon. The
+start-gate also admits releases: a release's single backend runs under the
+composition name (so `isMain()` is false), so `sentinel/server/index.ts` starts
+when `isMain() || isRelease()` — a release runs exactly one backend, so it stays
+the host singleton. See `research/sentinel-worker-in-compiled-release.md`.
 
 ## Each tick gathers
 
@@ -151,7 +156,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
   - Exports: Values: `readDuressEpisodes`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/float/config.floatField`, `fields/int/config.intField`

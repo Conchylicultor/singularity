@@ -67,6 +67,14 @@ const PGBOUNCER_START_ENTRY =
 // no host process to drive teardown, so it ships no teardown binary.
 const TEARDOWN_ENTRY = "plugins/infra/plugins/launcher/bin/teardown.ts";
 
+// The cluster sentinel runs its sampler + duress-latch lifecycle on a Bun
+// Worker. `bun --compile` does not trace/embed a `new Worker(new URL(...))`
+// entry, so we bundle it separately to a standalone `.js` and vendor it on
+// disk; launch.ts points SINGULARITY_SENTINEL_WORKER_JS at it and worker-host.ts
+// spawns from there (mirrors the vendored parcel-watcher native addon).
+const SENTINEL_WORKER_ENTRY =
+  "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
+
 // The filtered registry the compiled backend's `@composition-server-registry`
 // alias is repointed at, so the bundler's closure IS the composition closure.
 const FILTERED_SERVER_REGISTRY =
@@ -322,6 +330,32 @@ async function compile(opts: {
   }
 }
 
+/**
+ * Bundle the sentinel worker entry to a standalone `.js` (bundle mode, NOT
+ * `--compile`): its lean closure (the latch leaf, log-channels, embedded-pg
+ * constants, the pure detector/gatherers, and `pg`) inlines into one file that
+ * the release's compiled backend spawns as a `Worker`. `bun --compile` cannot
+ * embed a `new Worker(new URL(...))` entry, so the worker is vendored on disk
+ * instead — launch.ts points `SINGULARITY_SENTINEL_WORKER_JS` at this file.
+ */
+async function bundleSentinelWorker(opts: {
+  root: string;
+  outfile: string;
+}): Promise<void> {
+  const { root, outfile } = opts;
+  mkdirSync(dirname(outfile), { recursive: true });
+  const result = await Bun.build({
+    entrypoints: [join(root, SENTINEL_WORKER_ENTRY)],
+    outdir: dirname(outfile),
+    naming: basename(outfile),
+    target: "bun",
+  });
+  if (!result.success) {
+    for (const log of result.logs) console.error(String(log));
+    throw new Error(`bun build failed for the sentinel worker (${SENTINEL_WORKER_ENTRY})`);
+  }
+}
+
 /** Resolve the embedded-postgres native dir for the host platform. */
 function embeddedNativeDir(root: string): string {
   const tag = platformTag();
@@ -564,6 +598,15 @@ export function registerRelease(program: Command) {
           parcelWatcherNativeNode(root),
           join(out, "parcel-watcher", "watcher.node"),
         );
+
+        // Sentinel worker: `bun --compile` can't embed the `new Worker(new
+        // URL(...))` entry, so bundle it to a standalone .js the backend spawns
+        // via SINGULARITY_SENTINEL_WORKER_JS (set by launch.ts).
+        console.log("  • sentinel worker bundle");
+        await bundleSentinelWorker({
+          root,
+          outfile: join(out, "sentinel", "worker.js"),
+        });
 
         // Migration SQL files: the runner reads them from disk at boot (they are
         // not bundled into the compiled backend). Vendor the whole data/ tree;

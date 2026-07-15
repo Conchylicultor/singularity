@@ -25,6 +25,12 @@ const bundleRoot = dirname(process.execPath);
 // `??=` lets an operator override the data root (e.g. point at a persistent
 // volume) without editing the binary.
 process.env.SINGULARITY_DIR ??= join(bundleRoot, "data");
+// Mark this as a compiled release so host-singleton work that keys on the dev
+// "main" worktree (the cluster sentinel + duress latch) also runs on a
+// release's single backend, whose SINGULARITY_WORKTREE is the composition name
+// (so isMain() is false). Propagates launch → gateway (env spread) → backend
+// (gateway forwards os.Environ()). Read via isRelease() in infra/paths.
+process.env.SINGULARITY_RELEASE ??= "1";
 // Point the compiled pg-start / pgbouncer-start at the vendored native trees.
 // The gateway inherits this env and passes it to the supervised start binaries.
 process.env.SINGULARITY_PG_BIN_DIR ??= join(bundleRoot, "pg", "native", "bin");
@@ -51,6 +57,16 @@ process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
   bundleRoot,
   "parcel-watcher",
   "watcher.node",
+);
+// The cluster sentinel's Bun Worker entry can't be embedded by `bun --compile`
+// (the `new Worker(new URL(...))` module is not traced), so release.ts vendors
+// it as a standalone bundled .js; point worker-host.ts at it. The gateway
+// inherits this env and forwards it to the spawned backend, which spawns the
+// worker.
+process.env.SINGULARITY_SENTINEL_WORKER_JS ??= join(
+  bundleRoot,
+  "sentinel",
+  "worker.js",
 );
 // The raw git-layer config tree is read by getRawFileContent (Settings "View
 // raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves into the compiled

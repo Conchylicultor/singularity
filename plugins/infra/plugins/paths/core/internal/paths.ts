@@ -26,6 +26,19 @@ export function isMain(): boolean {
 }
 
 /**
+ * True when this backend is running inside a compiled release artifact (the
+ * `launch` binary sets `SINGULARITY_RELEASE=1` before bringing up the app; it
+ * propagates launch → gateway → backend). A release runs exactly ONE backend
+ * per host, so this is the release-side twin of `isMain()` for host-singleton
+ * work (e.g. the cluster sentinel + duress latch): in a release the backend's
+ * `SINGULARITY_WORKTREE` is the composition name, so `isMain()` is false, yet
+ * that single backend IS the host singleton.
+ */
+export function isRelease(): boolean {
+  return process.env.SINGULARITY_RELEASE === "1";
+}
+
+/**
  * The namespace this backend runs in: the worktree slug, or `MAIN_WORKTREE_NAME`
  * on main. Use to tag/scope per-namespace data so it can't leak across the
  * DB-fork boundary (a worktree DB is forked from main and inherits its rows).

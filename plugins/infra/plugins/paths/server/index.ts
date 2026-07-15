@@ -24,6 +24,7 @@ export {
   CLAUDE_SESSIONS_DIR,
   MAIN_WORKTREE_NAME,
   isMain,
+  isRelease,
   currentWorktreeName,
 } from "../core/internal/paths";
 
