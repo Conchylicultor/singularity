@@ -48,6 +48,27 @@ eaten the whole ceiling — the overcommit signal the `host-budget` check trips 
 their `defineHostPool` wiring lands in later steps (`layout-geometry`'s 1.0 is
 why `B` is 11, not 12).
 
+### The RAM dimension is a forward hook, NOT a budget
+
+Only **one** of the two dimensions is actually summed. `host-budget` sums `cpu`;
+`PoolCost.ramBytes` is declared, set by exactly one pool (`cpu`), and **read by
+nothing**. The only RAM that is accounted enters through `PER_UNIT_BYTES`, as a
+ceiling on `B`'s *size* — not as a per-pool budget.
+
+**Do not "finish" this by asserting `Σ(size × ramBytes) ≤ hostRamCeiling()`.** That
+assertion is unsound: `B` is *constructed* by the `min()` in `rawCpuResidual()` to
+satisfy `B × PER_UNIT_BYTES ≤ hostRamCeiling()`, so it is tautological on its dominant
+term and can never fail on its own. The apparent headroom is floor-rounding slack from
+whichever term won the `min()`, and spending it on a new pool double-spends the ceiling.
+
+The sound form is **reserved-subtraction** — a `reservedRamCost()` mirroring
+`reservedCpuCost()`, carved out *inside* the `min()` term, so a pool that reserves RAM
+legitimately pushes `B` down (more concurrent whole-builds ⇒ fewer concurrent heavy
+workers). That, plus a whole-build `build` pool, is designed and **gated on measurement**
+in [`research/2026-07-12-global-host-admission-memory-dimension.md`](../../../../research/2026-07-12-global-host-admission-memory-dimension.md)
+(Stage 2). `PER_UNIT_BYTES` itself is inherited rather than observed — see the warning on
+the constant.
+
 ## `defineHostPool` (`server`)
 
 `defineHostPool({ id, size, cost, laned? })` wraps `createHostSemaphore` and

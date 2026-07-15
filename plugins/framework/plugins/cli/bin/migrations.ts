@@ -69,6 +69,13 @@ export interface DrizzlePromptResult {
   /** Prompt keys (promptKey) drizzle showed that had no persisted answer, or
    * whose rename source was missing. Empty unless keyedAnswers was supplied. */
   unanswered: string[];
+  /**
+   * Peak RSS (bytes) of the drizzle-kit child, when the runtime reported rusage.
+   * One of the non-heavy build phases that runs under no host admission — see
+   * research/2026-07-12-global-host-admission-memory-dimension.md (gap 0); the
+   * build threads it onto its `generateMigration` profiler span.
+   */
+  maxRssBytes: number | undefined;
 }
 
 /**
@@ -435,7 +442,15 @@ export async function runDrizzleKitWithPrompts(opts: {
   const exitCode = await proc.exited;
   await Promise.all([stdoutDone, stderrDone]);
 
-  return { exitCode, stdoutBuf, stderrBuf, detectedPrompts, unanswered };
+  return {
+    exitCode,
+    stdoutBuf,
+    stderrBuf,
+    detectedPrompts,
+    unanswered,
+    // rusage is only populated once the child has exited.
+    maxRssBytes: proc.resourceUsage()?.maxRSS,
+  };
 }
 
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
@@ -457,6 +472,12 @@ const MIGRATION_NAME_REGEX = /^[a-z0-9_]+$/;
 const DRIZZLE_CUSTOM_PLACEHOLDER =
   "-- Custom SQL migration file, put your code below! --";
 
+/** What a completed `generateMigration` reports back to its caller. */
+export interface GenerateMigrationResult {
+  /** Peak RSS (bytes) of the drizzle-kit child, when the runtime reported rusage. */
+  maxRssBytes: number | undefined;
+}
+
 /**
  * Run `drizzle-kit generate`; detect whether it produced a new migration;
  * require --migration-name when it did; rename new files to the hash-based
@@ -466,6 +487,9 @@ const DRIZZLE_CUSTOM_PLACEHOLDER =
  * - Without migrationAnswers: discovers all prompts (auto-advancing with
  *   "create"), discards generated files, prints structured JSON, exits 2.
  * - With migrationAnswers: uses the provided semantic answers and proceeds.
+ *
+ * Returns the drizzle-kit child's peak RSS so the build can profile this phase
+ * (it runs outside every host grant — see the memory-dimension plan doc).
  */
 export async function generateMigration(opts: {
   root: string;
@@ -474,7 +498,7 @@ export async function generateMigration(opts: {
   resetMigration?: boolean;
   customMigration?: boolean;
   migrationAnswers?: MigrationAnswer[];
-}): Promise<void> {
+}): Promise<GenerateMigrationResult> {
   const { root, worktreeName, migrationName, resetMigration, customMigration, migrationAnswers } = opts;
 
   if (migrationName && !MIGRATION_NAME_REGEX.test(migrationName)) {
@@ -613,7 +637,7 @@ export async function generateMigration(opts: {
         "--migration-name was provided but no schema change was detected; ignoring.",
       );
     }
-    return;
+    return { maxRssBytes: result.maxRssBytes };
   }
 
   if (!migrationName) {
@@ -688,6 +712,8 @@ export async function generateMigration(opts: {
       console.log(`  wrote answers sidecar ${schemaTag}_answers.json`);
     }
   }
+
+  return { maxRssBytes: result.maxRssBytes };
 }
 
 /**

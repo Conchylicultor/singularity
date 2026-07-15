@@ -10,6 +10,28 @@ import type { Grant } from "@plugins/infra/plugins/host-admission/core";
  */
 export interface CheckContext {
   grant: Grant;
+  /**
+   * Emit a NON-FATAL OBSERVATION from inside a check — a measurement, a capacity
+   * note, anything a passing check needs to say. The line goes wherever the
+   * runner's own lines go: the console AND the durable transcript (`check.log`,
+   * and the build's checks section in `build.log`), so an observation is
+   * greppable after the fact instead of scrolling past in a terminal.
+   *
+   * It exists because a check had NO output channel of its own: `CheckResult`
+   * carries a `message` only on `ok: false`, so a passing check writing to
+   * `process.stderr` reached the terminal and nowhere else. Measurements that
+   * must survive the run (e.g. type-check's per-worker `maxRSS`, which calibrates
+   * host-admission's RAM quantum) evaporated.
+   *
+   * NOT an error channel, and NOT an escape hatch for silencing a failure: a
+   * check that has found a violation MUST return `{ ok: false, message }` (or
+   * throw). Logging a problem here instead would make it non-fatal and invisible
+   * to the verdict — the exact "fail loudly" violation the repo forbids.
+   *
+   * OPTIONAL: a check that observes nothing ignores it; a caller that runs a
+   * check outside the runner may not supply one. Call it as `ctx.log?.(…)`.
+   */
+  log?: (line: string, stream: "stdout" | "stderr") => void;
 }
 
 export interface Check {

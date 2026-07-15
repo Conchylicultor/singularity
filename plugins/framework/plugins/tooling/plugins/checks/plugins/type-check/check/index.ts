@@ -33,11 +33,21 @@ import { openClosureCache } from "./closure-cache";
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(ctx: CheckContext): Promise<CheckResult> };
 
-interface WorkerResult {
+/** The worker's JSON stdout contract (see `../shared/worker.ts`). */
+interface WorkerOutput {
   name: string;
   tscErrors: string;
   lintViolations: string;
   failedLintFiles: string[];
+}
+
+interface WorkerResult extends WorkerOutput {
+  /**
+   * Peak RSS of the worker PROCESS (bytes), measured by the parent after exit.
+   * `undefined` when the runtime reported no rusage — an unavailable
+   * measurement, not a failure: the footprint line is simply omitted.
+   */
+  maxRssBytes: number | undefined;
 }
 
 const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
@@ -142,7 +152,32 @@ async function runWorker(
   if (exitCode !== 0) {
     throw new Error(`type-check worker for "${target.name}" exited ${exitCode}:\n${stderr.trim() || stdout.trim()}`);
   }
-  return JSON.parse(stdout) as WorkerResult;
+  // Read AFTER exit: rusage is only final once the child is reaped, and it is a
+  // free read (no sampling loop) — getrusage reports the TRUE peak of the run.
+  return { ...(JSON.parse(stdout) as WorkerOutput), maxRssBytes: proc.resourceUsage()?.maxRSS };
+}
+
+// One greppable line per worker, e.g. "type-check worker web-core: maxRSS 2.4 GB".
+// THIS fleet is the process class host-admission's `PER_UNIT_BYTES` (2.7e9)
+// claims to size — "one type-check-class worker's resident set" — and it had
+// never actually been observed; the budget's RAM quantum was calibrated on vite
+// samples alone. See research/2026-07-12-global-host-admission-memory-dimension.md.
+//
+// Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B), the same convention as the
+// CLI's own footprint lines (cli/bin/commands/build.ts `maxRssLine`), because
+// PER_UNIT_BYTES is decimal. Labelling a 2**30 division "GB" would understate
+// the byte count by ~7% and silently corrupt the very constant these lines
+// calibrate. Kept as a private 5-line pure formatter rather than importing the
+// CLI's copy: `bin/` is not an importable barrel, and one duplicated formatter
+// beats inventing a shared plugin for it.
+//
+// `null` when the runtime reported no rusage — an unavailable measurement, not
+// a swallowed failure: the line is omitted and nothing else changes.
+function maxRssLine(label: string, maxRssBytes: number | undefined): string | null {
+  if (maxRssBytes == null) return null;
+  const gb = maxRssBytes / 1e9;
+  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
+  return `${label}: maxRSS ${amount}`;
 }
 
 const check: Check = {
@@ -196,12 +231,15 @@ const check: Check = {
 
     // Fan out at exactly `grant.units` concurrency, spending one unit per worker
     // via `grant.run`. A reduced grant (`units < targets.length`) simply runs the
-    // fleet at lower concurrency — surfaced as ONE plain stderr line (checks run
-    // under Promise.all in the runner, so never a blocking log or a progress bar).
+    // fleet at lower concurrency — surfaced as ONE observation line through the
+    // runner's `ctx.log` seam, so it lands in check.log/build.log and not only in
+    // a terminal (never a blocking log or a progress bar: checks run under
+    // Promise.all in the runner, which buffers and attributes these lines).
     const units = ctx.grant.units;
     if (units < targets.length) {
-      process.stderr.write(
-        `type-check: ${units} of ${targets.length} targets run concurrently (host CPU grant)\n`,
+      ctx.log?.(
+        `type-check: ${units} of ${targets.length} targets run concurrently (host CPU grant)`,
+        "stderr",
       );
     }
     await mapConcurrent(targets, units, (t) =>
@@ -213,6 +251,20 @@ const check: Check = {
         }
       }),
     );
+
+    // Peak RSS of every worker that ran, one labelled line per target (target
+    // order, not completion order, so successive runs are diffable). Emitted
+    // through the runner's `ctx.log` observation seam, so the measurement is
+    // DURABLE (check.log + the build's checks section) — a terminal-only write
+    // would evaporate, and calibrating host-admission's RAM quantum is exactly
+    // an after-the-fact grep over many runs. Purely an observation: a missing
+    // rusage, or a crashed worker (which threw before it could be measured),
+    // changes nothing about the verdict below.
+    const byName = new Map(results.map((r) => [r.name, r]));
+    for (const t of targets) {
+      const line = maxRssLine(`type-check worker ${t.name}`, byName.get(t.name)?.maxRssBytes);
+      if (line !== null) ctx.log?.(line, "stderr");
+    }
 
     // Record per-file lint PASSes for every file we sent that did NOT fail.
     // (Conservative: a crashed worker records nothing — re-lints next time.)

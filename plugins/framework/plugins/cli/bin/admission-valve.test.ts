@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   holdThroughValve,
   MAX_VALVE_HOLD_MS,
+  shouldRequeue,
   valveGates,
   type HoldOutcome,
   type ValveDeps,
@@ -61,14 +62,14 @@ describe("valveGates", () => {
 describe("holdThroughValve", () => {
   test("ungated never consults the valve", async () => {
     const h = makeHarness({ duress: [true] }); // would hold forever if consulted
-    await holdThroughValve({ gated: false }, h.deps);
+    expect(await holdThroughValve({ gated: false }, h.deps)).toBe("cleared");
     expect(h.calls.duressChecks).toBe(0);
     expect(h.calls.holdStarts).toEqual([]);
   });
 
   test("no duress: returns immediately, no hold", async () => {
     const h = makeHarness({ duress: [false] });
-    await holdThroughValve({ gated: true }, h.deps);
+    expect(await holdThroughValve({ gated: true }, h.deps)).toBe("cleared");
     expect(h.calls.wakes).toBe(0);
     expect(h.calls.holdStarts).toEqual([]);
     expect(h.calls.holdEnds).toEqual([]);
@@ -77,7 +78,7 @@ describe("holdThroughValve", () => {
   test("held then released: waits through the episode, then proceeds", async () => {
     // entry check: true → hold loop sees true, then false (clear) → done.
     const h = makeHarness({ duress: [true, true, true, false] });
-    await holdThroughValve({ gated: true }, h.deps);
+    expect(await holdThroughValve({ gated: true }, h.deps)).toBe("cleared");
     expect(h.calls.wakes).toBe(2);
     expect(h.calls.holdStarts).toEqual(["cluster-onset: decompressionsPerSec"]);
     expect(h.calls.holdEnds).toEqual(["cleared"]);
@@ -86,7 +87,7 @@ describe("holdThroughValve", () => {
   test("max-hold bound: fails open, proceeds despite persisting duress", async () => {
     // Duress never clears; each wake advances the clock so the bound trips.
     const h = makeHarness({ duress: [true], wakeAdvanceMs: MAX_VALVE_HOLD_MS / 4 });
-    await holdThroughValve({ gated: true }, h.deps);
+    expect(await holdThroughValve({ gated: true }, h.deps)).toBe("fail-open");
     expect(h.calls.wakes).toBe(4); // 4 × (bound/4) exhausts the bound exactly
     expect(h.calls.holdEnds).toEqual(["fail-open"]);
   });
@@ -103,5 +104,27 @@ describe("holdThroughValve", () => {
     };
     await holdThroughValve({ gated: true }, deps);
     expect(seen).toEqual([MAX_VALVE_HOLD_MS]); // remaining budget, not unbounded
+  });
+});
+
+// The post-acquire re-check (gap (a)): the build holds the host grant, then asks
+// whether duress tripped while it was parked in the flock queue.
+describe("shouldRequeue", () => {
+  test("duress tripped while parked in the grant queue ⇒ release and re-hold", () => {
+    expect(shouldRequeue(true, "cleared", true)).toBe(true);
+  });
+
+  test("host calm at the re-check ⇒ run the heavy section", () => {
+    expect(shouldRequeue(true, "cleared", false)).toBe(false);
+  });
+
+  test("after a fail-open hold, duress never requeues — the loop must terminate", () => {
+    // The failure mode this guards: a fail-open valve returns immediately while
+    // duress is still fresh, so re-checking would spin hold → requeue → hold …
+    expect(shouldRequeue(true, "fail-open", true)).toBe(false);
+  });
+
+  test("an ungated build (main / detached) is never requeued", () => {
+    expect(shouldRequeue(false, "cleared", true)).toBe(false);
   });
 });

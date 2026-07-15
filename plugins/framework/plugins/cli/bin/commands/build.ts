@@ -29,8 +29,9 @@ import {
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
-import { cpuBudget, type Lane } from "@plugins/infra/plugins/host-admission/core";
-import { holdThroughValve, valveGates } from "../admission-valve";
+import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
+import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
+import { holdThroughValve, shouldRequeue, valveGates } from "../admission-valve";
 import { publishLane } from "../lane";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
@@ -249,14 +250,19 @@ async function execBuffered(
   return { lines, exitCode, maxRssBytes: proc.resourceUsage()?.maxRSS };
 }
 
-// One greppable line per heavy subprocess step, e.g. "vite build: maxRSS 2.9 GB"
+// One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
 // (console + build.log). The calibration input for host-admission's per-holder
 // footprint constants (@plugins/infra/plugins/host-admission/core PER_UNIT_BYTES)
 // and any future per-build memory budget.
+//
+// Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B) — deliberately, because
+// PER_UNIT_BYTES is decimal (2.7e9). Dividing by 2**30 and labelling the result
+// "GB" (as this did) understates the true byte count by ~7 %, which silently
+// corrupts anyone calibrating the constant by reading these lines.
 function maxRssLine(label: string, maxRssBytes: number | undefined): string | null {
   if (maxRssBytes == null) return null;
-  const gb = maxRssBytes / 2 ** 30;
-  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 2 ** 20)} MB`;
+  const gb = maxRssBytes / 1e9;
+  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
   return `${label}: maxRSS ${amount}`;
 }
 
@@ -267,6 +273,14 @@ interface StepResult {
   durationMs: number;
   success: boolean;
 }
+
+/**
+ * Returned from inside the host grant when the post-acquire duress re-check
+ * fires: the heavy section did NOT run, and `withHostGrant`'s `finally` releases
+ * the share on the way out — so the caller can re-hold at the valve and try
+ * again. A `unique symbol` so it can never collide with a real `StepResult[]`.
+ */
+const REQUEUE = Symbol("requeue");
 
 function printStepResults(results: StepResult[]): void {
   for (const result of orderStepsForDisplay(results)) {
@@ -868,6 +882,53 @@ export function registerBuild(program: Command) {
       await sweepStagingLeftovers(webDir);
       endSpan();
 
+      // The non-heavy phases — `bun install`, drizzle generate, and the build
+      // orchestrator process itself — run outside every host grant and, unlike
+      // the heavy steps, produce no StepResult, so their maxRSS lines have no
+      // step block to ride into build.log. Rather than invent a second log
+      // mechanism, they are collected here and flushed as ONE synthetic step
+      // through the same `pushBuildStepLog` seam the heavy steps use — so
+      // `grep maxRSS <build.log>` finds every measured phase of a build in one
+      // place, which is exactly what the calibration pass needs. See
+      // research/2026-07-12-global-host-admission-memory-dimension.md (gap 0).
+      const footprintLines: StepResult["lines"] = [];
+      const recordFootprint = (label: string, maxRssBytes: number | undefined): void => {
+        const line = maxRssLine(label, maxRssBytes);
+        if (line === null) return;
+        console.log(line);
+        footprintLines.push({ text: line, stream: "stdout" });
+      };
+      // Flushed on every path that persists the build's artifacts (both writers
+      // read a module-level array, so this must run before them). Samples the
+      // orchestrator's own footprint here: `process.resourceUsage().maxRSS` is a
+      // TRUE peak (getrusage RUSAGE_SELF; Bun reports it in bytes), not an
+      // instantaneous sample, so it covers every in-process phase — registry /
+      // manifest / composition codegen, config propagation, the checks driver —
+      // no matter when it is read. Idempotent.
+      let footprintFlushed = false;
+      const flushFootprint = (): void => {
+        if (footprintFlushed) return;
+        footprintFlushed = true;
+        const orchestratorRss = process.resourceUsage().maxRSS;
+        recordFootprint("build orchestrator", orchestratorRss);
+        // The build profile carries spans only, and the profiling UI's phase set
+        // is a closed list (debug/profiling/build/web/phases.ts), so the
+        // orchestrator's peak rides a zero-width marker span in an existing
+        // phase rather than inventing one the Gantt could not render.
+        buildProfilerStart("buildOrchestrator", "build:deploy", "build orchestrator")({
+          maxRssBytes: orchestratorRss,
+        });
+        if (footprintLines.length > 0) {
+          pushBuildStepLog({
+            id: "resourceUsage",
+            label: "resource usage",
+            lines: footprintLines,
+            durationMs: 0,
+            success: true,
+          });
+        }
+      };
+
       // 1. Install dependencies. Required before the gateway can find the
       // platform-specific embedded-postgres binaries under
       // plugins/infra/plugins/database/node_modules/@embedded-postgres/.
@@ -875,8 +936,7 @@ export function registerBuild(program: Command) {
       console.log("Installing dependencies...");
       const install = await exec(["bun", "install"], root);
       endSpan({ maxRssBytes: install.maxRssBytes });
-      const installRss = maxRssLine("bun install", install.maxRssBytes);
-      if (installRss) console.log(installRss);
+      recordFootprint("bun install", install.maxRssBytes);
 
       // 1b–2a. Registry-level repo-tree codegen: barrel-import auto-stubs (from
       // .d.ts files) then the plugin registry. Must happen before central is
@@ -945,7 +1005,7 @@ export function registerBuild(program: Command) {
       // 3. Regenerate DB migrations from plugin schema files
       endSpan = buildProfilerStart("generateMigration", "build:database", "generate migrations");
       console.log("Generating DB migrations...");
-      await generateMigration({
+      const migration = await generateMigration({
         root,
         worktreeName: name,
         migrationName: opts.migrationName,
@@ -955,7 +1015,8 @@ export function registerBuild(program: Command) {
           ? parseMigrationAnswers(opts.migrationAnswers)
           : undefined,
       });
-      endSpan();
+      endSpan({ maxRssBytes: migration.maxRssBytes });
+      recordFootprint("drizzle generate", migration.maxRssBytes);
 
       // 4–4b. Manifest-level repo-tree codegen: plugin docs → reorderable-slots
       // → data-views → token-group-vars → config-origins. Run AFTER migrations
@@ -1013,32 +1074,62 @@ export function registerBuild(program: Command) {
       // relying on session inheritance.
       const demote = branch === "main" ? (argv: string[]) => argv : backgroundArgv;
 
-      // Duress admission valve: a background-lane build is held BEFORE it
-      // queues for the host grant while the host duress latch is fresh, so no
-      // new heavy work starts into a memory/congestion storm (event-driven
-      // wait, 30-min sticky fail-open). Interactive (main), push, and the
-      // detached auto-build are never held. See ../admission-valve.ts and
-      // research/2026-07-11-global-fleet-memory-admission-duress-valve.md.
-      await holdThroughValve({ gated: valveGates(lane, process.env) });
-
+      // The heavy section itself: everything the host CPU grant covers (checks +
+      // tsc + vite), running on the grant it is handed. Extracted so the acquire
+      // around it can be a retry loop (below) without the body moving.
+      //
       // buildId (computed up-front, before the "started" build-log record) is
       // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id
       // below — bundle and server agree by construction (no chicken-and-egg).
-      const stepResults = await withHostGrant(
-        { lane, max: cpuBudget().B },
-        async (grant) => {
-          const parallel: Array<Promise<StepResult>> = [];
+      const runHeavySection = async (grant: Grant): Promise<StepResult[]> => {
+        const parallel: Array<Promise<StepResult>> = [];
 
-          if (!opts.skipChecks) {
+        if (!opts.skipChecks) {
+          parallel.push(
+            (async (): Promise<StepResult> => {
+              const lines: StepResult["lines"] = [];
+              const start = performance.now();
+              const ok = await runChecks(undefined, {
+                // The build's host CPU grant — type-check spends it per worker.
+                grant,
+                // Full, untruncated check output lands here; the buffered
+                // `lines` (console + build.log) stay summarized.
+                logFile: join(worktreeDataDir(name), "check.log"),
+                onCheckDone: (id, durationMs, wallStartMs) => {
+                  pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
+                },
+                log: (line, stream) => {
+                  lines.push({ text: line, stream });
+                },
+              });
+              return {
+                id: "checks",
+                label: "checks",
+                lines,
+                durationMs: Math.round(performance.now() - start),
+                success: ok,
+              };
+            })(),
+          );
+        }
+
+        if (opts.skipChecks) {
+          // Cheap, structural checks opt into running even on the fast path
+          // (`--skip-checks`), so codegen-coupled obligations — e.g. a
+          // newly-reorderable slot that still owes an authored override —
+          // fail at build instead of slipping silently to `push`. Selected
+          // generically via the `alwaysRun` flag (never by naming a check).
+          const alwaysRunIds = (await listAllChecks())
+            .filter((c) => c.alwaysRun)
+            .map((c) => c.id);
+          // Guard: runChecks([]) falls through to running ALL checks.
+          if (alwaysRunIds.length > 0) {
             parallel.push(
               (async (): Promise<StepResult> => {
                 const lines: StepResult["lines"] = [];
                 const start = performance.now();
-                const ok = await runChecks(undefined, {
-                  // The build's host CPU grant — type-check spends it per worker.
+                const ok = await runChecks(alwaysRunIds, {
                   grant,
-                  // Full, untruncated check output lands here; the buffered
-                  // `lines` (console + build.log) stay summarized.
                   logFile: join(worktreeDataDir(name), "check.log"),
                   onCheckDone: (id, durationMs, wallStartMs) => {
                     pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
@@ -1049,7 +1140,7 @@ export function registerBuild(program: Command) {
                 });
                 return {
                   id: "checks",
-                  label: "checks",
+                  label: "checks (always-run)",
                   lines,
                   durationMs: Math.round(performance.now() - start),
                   success: ok,
@@ -1058,101 +1149,102 @@ export function registerBuild(program: Command) {
             );
           }
 
-          if (opts.skipChecks) {
-            // Cheap, structural checks opt into running even on the fast path
-            // (`--skip-checks`), so codegen-coupled obligations — e.g. a
-            // newly-reorderable slot that still owes an authored override —
-            // fail at build instead of slipping silently to `push`. Selected
-            // generically via the `alwaysRun` flag (never by naming a check).
-            const alwaysRunIds = (await listAllChecks())
-              .filter((c) => c.alwaysRun)
-              .map((c) => c.id);
-            // Guard: runChecks([]) falls through to running ALL checks.
-            if (alwaysRunIds.length > 0) {
-              parallel.push(
-                (async (): Promise<StepResult> => {
-                  const lines: StepResult["lines"] = [];
-                  const start = performance.now();
-                  const ok = await runChecks(alwaysRunIds, {
-                    grant,
-                    logFile: join(worktreeDataDir(name), "check.log"),
-                    onCheckDone: (id, durationMs, wallStartMs) => {
-                      pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
-                    },
-                    log: (line, stream) => {
-                      lines.push({ text: line, stream });
-                    },
-                  });
-                  return {
-                    id: "checks",
-                    label: "checks (always-run)",
-                    lines,
-                    durationMs: Math.round(performance.now() - start),
-                    success: ok,
-                  };
-                })(),
-              );
-            }
-
-            const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
-            for (const target of runtimeTargets) {
-              parallel.push(
-                (async (): Promise<StepResult> => {
-                  const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
-                  const start = performance.now();
-                  // Identical flags to the `typescript` check so both share one
-                  // `.tsbuildinfo` per target without options-hash churn.
-                  const buildInfo = tsBuildInfoPath(root, target.name);
-                  // Spend a grant unit per runtime tsc — a heavy child like a
-                  // type-check worker — so the fast-path (--skip-checks) fan-out
-                  // is bounded by the same grant as everything else.
-                  const output = await grant.run(() =>
-                    execBuffered(
-                      demote([process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo]),
-                      target.dir,
-                    ),
-                  );
-                  end({ maxRssBytes: output.maxRssBytes });
-                  const rss = maxRssLine(`tsc ${target.name}`, output.maxRssBytes);
-                  if (rss) output.lines.push({ text: rss, stream: "stdout" });
-                  return {
-                    id: `tsc:${target.name}`,
-                    label: `tsc ${target.name}`,
-                    lines: output.lines,
-                    durationMs: Math.round(performance.now() - start),
-                    success: output.exitCode === 0,
-                  };
-                })(),
-              );
-            }
+          const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
+          for (const target of runtimeTargets) {
+            parallel.push(
+              (async (): Promise<StepResult> => {
+                const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
+                const start = performance.now();
+                // Identical flags to the `typescript` check so both share one
+                // `.tsbuildinfo` per target without options-hash churn.
+                const buildInfo = tsBuildInfoPath(root, target.name);
+                // Spend a grant unit per runtime tsc — a heavy child like a
+                // type-check worker — so the fast-path (--skip-checks) fan-out
+                // is bounded by the same grant as everything else.
+                const output = await grant.run(() =>
+                  execBuffered(
+                    demote([process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo]),
+                    target.dir,
+                  ),
+                );
+                end({ maxRssBytes: output.maxRssBytes });
+                const rss = maxRssLine(`tsc ${target.name}`, output.maxRssBytes);
+                if (rss) output.lines.push({ text: rss, stream: "stdout" });
+                return {
+                  id: `tsc:${target.name}`,
+                  label: `tsc ${target.name}`,
+                  lines: output.lines,
+                  durationMs: Math.round(performance.now() - start),
+                  success: output.exitCode === 0,
+                };
+              })(),
+            );
           }
+        }
 
-          parallel.push(
-            (async (): Promise<StepResult> => {
-              const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
-              const start = performance.now();
-              // Vite is one of the heavy children the grant covers: spend a unit
-              // for it so it shares the build's CPU budget with the type-check
-              // workers rather than running on top of it.
-              const output = await grant.run(() =>
-                execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
-              );
-              end({ maxRssBytes: output.maxRssBytes });
-              const rss = maxRssLine("vite build", output.maxRssBytes);
-              if (rss) output.lines.push({ text: rss, stream: "stdout" });
-              return {
-                id: "viteBuild",
-                label: "vite build",
-                lines: output.lines,
-                durationMs: Math.round(performance.now() - start),
-                success: output.exitCode === 0,
-              };
-            })(),
+        parallel.push(
+          (async (): Promise<StepResult> => {
+            const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
+            const start = performance.now();
+            // Vite is one of the heavy children the grant covers: spend a unit
+            // for it so it shares the build's CPU budget with the type-check
+            // workers rather than running on top of it.
+            const output = await grant.run(() =>
+              execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
+            );
+            end({ maxRssBytes: output.maxRssBytes });
+            const rss = maxRssLine("vite build", output.maxRssBytes);
+            if (rss) output.lines.push({ text: rss, stream: "stdout" });
+            return {
+              id: "viteBuild",
+              label: "vite build",
+              lines: output.lines,
+              durationMs: Math.round(performance.now() - start),
+              success: output.exitCode === 0,
+            };
+          })(),
+        );
+
+        return await Promise.all(parallel);
+      };
+
+      // Duress admission valve: a background-lane build is held BEFORE it
+      // queues for the host grant while the host duress latch is fresh, so no
+      // new heavy work starts into a memory/congestion storm (event-driven
+      // wait, 30-min sticky fail-open). Interactive (main), push, and the
+      // detached auto-build are never held. See ../admission-valve.ts and
+      // research/2026-07-11-global-fleet-memory-admission-duress-valve.md.
+      //
+      // That hold covers only the PRE-QUEUE window. A build that entered the
+      // grant's flock queue while the host was CALM can sit parked in it while
+      // duress trips, and would otherwise walk straight into the storm — so the
+      // acquire is a retry loop whose re-check happens INSIDE the grant, the
+      // moment the slots are actually held. On a hit the closure returns
+      // REQUEUE, `withHostGrant`'s `finally` releases the share, and we re-hold
+      // at the valve. Barging is documented behaviour of the pool, so there is
+      // no FIFO position to lose. `shouldRequeue` skips the re-check after a
+      // fail-open hold — without that the loop would spin forever, since a
+      // failed-open valve returns immediately while duress is still fresh. See
+      // gap (a) in research/2026-07-12-global-host-admission-memory-dimension.md.
+      const gated = valveGates(lane, process.env);
+      const acquireAndRunHeavySection = async (): Promise<StepResult[]> => {
+        for (;;) {
+          const outcome = await holdThroughValve({ gated });
+          const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
+            { lane, max: cpuBudget().B },
+            async (grant) => {
+              if (shouldRequeue(gated, outcome, isUnderDuress())) return REQUEUE;
+              return await runHeavySection(grant);
+            },
           );
-
-          return await Promise.all(parallel);
-        },
-      );
+          if (result !== REQUEUE) return result;
+          console.log(
+            "build admission: duress tripped while queued for the host grant — " +
+              "released the grant, re-holding at the valve...",
+          );
+        }
+      };
+      const stepResults = await acquireAndRunHeavySection();
 
       for (const result of stepResults) {
         pushBuildStepLog(result);
@@ -1177,6 +1269,7 @@ export function registerBuild(program: Command) {
       // verdict's pointers name build.log's own path, so that path is computed
       // (pure helper) and the verdict rendered BEFORE build.log is written.
       const failBuild = (reason: string[], failedLabels: string[]): never => {
+        flushFootprint();
         const buildLogPath = worktreeArtifacts.buildLogText(name, buildId);
         const pointers = [`Full output: ${buildLogPath}`];
         if (stepResults.some((r) => r.id === "checks" && !r.success)) {
@@ -1322,6 +1415,7 @@ export function registerBuild(program: Command) {
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
         softNotes.push("restart skipped");
+        flushFootprint();
         writeBuildProfile(name);
         const okV = buildOkVerdict();
         writeBuildLogs(name, renderVerdict(okV));
@@ -1391,6 +1485,7 @@ export function registerBuild(program: Command) {
         endSpan();
       }
 
+      flushFootprint();
       writeBuildProfile(name);
       const okV = buildOkVerdict();
       writeBuildLogs(name, renderVerdict(okV));

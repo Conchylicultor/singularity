@@ -16,11 +16,16 @@ import { buildProfilerStart } from "./profiler";
 // the host duress latch is fresh — the cluster sentinel declared "the box is
 // in trouble" (compressor thrash, pg pressure, load) — background-lane builds
 // are held before they queue for their host grant. Already-running builds
-// finish untouched. The hold sits BEFORE `withHostGrant`'s queue; duress
-// tripping while a build waits inside the grant queue is not re-checked (the
-// closure-based grant API has no release-and-requeue seam) — pre-queue is
-// where the bulk of the protection lives, since duress trips during the
-// fleet bursts that also fill the queue.
+// finish untouched. The hold sits BEFORE `withHostGrant`'s queue.
+//
+// A build can also enter that queue while the host is CALM and sit parked in
+// it while duress trips. The closure-based grant API has no release-and-requeue
+// seam, so the caller closes that window itself: it re-checks duress ONCE the
+// grant is held and, if it is fresh, returns a sentinel from the closure (which
+// releases the share via withHostGrant's finally) and re-holds here. That
+// decision is `shouldRequeue` below — the caller supplies the hold's outcome so
+// a fail-open hold never requeues (see gap (a) in
+// research/2026-07-12-global-host-admission-memory-dimension.md).
 //
 // Waiting is event-driven, never a poll loop: one fs.watch on ~/.singularity
 // scoped to the latch filename (catches clearDuress's unlink AND refresh's
@@ -85,14 +90,16 @@ export interface ValveDeps {
 
 /**
  * Hold until the host is out of duress (or the fail-open bound trips), then
- * return — the caller proceeds to queue for its host grant. Not gated ⇒
- * returns immediately.
+ * return how the hold ended — the caller proceeds to queue for its host grant.
+ * Not gated (or not under duress) ⇒ returns `"cleared"` immediately: there was
+ * nothing to wait out, which is the same admission decision as a hold whose
+ * latch cleared.
  */
 export async function holdThroughValve(
   opts: { gated: boolean },
   deps: ValveDeps = createValveDeps(),
-): Promise<void> {
-  if (!opts.gated || !deps.isUnderDuress()) return;
+): Promise<HoldOutcome> {
+  if (!opts.gated || !deps.isUnderDuress()) return "cleared";
 
   // Wall-clock start of the hold; the fail-open bound is measured from here.
   const firstHoldAt = deps.now();
@@ -107,6 +114,27 @@ export async function holdThroughValve(
     await deps.waitForWake(remainingMs);
   }
   deps.onHoldEnd(outcome);
+  return outcome;
+}
+
+/**
+ * The post-acquire re-check decision (gap (a)): having acquired the host grant,
+ * should the holder release it and re-hold at the valve rather than start its
+ * heavy section?
+ *
+ * TERMINATION is the property this predicate exists to protect. After a
+ * `fail-open` hold the valve returns IMMEDIATELY while duress is still fresh —
+ * so re-checking duress on that path would spin the caller's retry loop forever
+ * (hold returns → duress fresh → requeue → hold returns → …). A fail-open hold
+ * has already decided "proceed anyway; a stuck latch must not stop deploys
+ * forever", and that decision must survive the re-check.
+ */
+export function shouldRequeue(
+  gated: boolean,
+  outcome: HoldOutcome,
+  underDuress: boolean,
+): boolean {
+  return gated && outcome !== "fail-open" && underDuress;
 }
 
 /** Production deps: the real latch, fs.watch wake, profiler span, console. */

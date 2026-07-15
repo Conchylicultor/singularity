@@ -100,20 +100,33 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       // as non-null in the guarded branches.
       if (cache !== null && treeHash !== null && sig !== null && cache.has(check.id, treeHash, sig)) {
         const result: CheckResult = { ok: true };
-        return { check, result, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true };
+        // A cache hit runs nothing, so it observes nothing.
+        const observations: { line: string; stream: "stdout" | "stderr" }[] = [];
+        return { check, result, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true, observations };
       }
+
+      // Non-fatal observations (measurements, capacity notes) a check emits via
+      // `ctx.log`. Buffered rather than written straight through: checks run
+      // under Promise.all, so a live write would interleave lines from every
+      // in-flight check. They are flushed through the runner's own `emit()`
+      // below, attributed under the emitting check's result line — so the
+      // transcript stays deterministic and diffable across runs.
+      const observations: { line: string; stream: "stdout" | "stderr" }[] = [];
 
       // Scan the SAME tree the cache key (treeHash) is computed from, so a
       // recorded PASS always reflects content the check actually inspected. The
       // grant is the caller's held host CPU admission; heavy checks spend it.
-      const ctx: CheckContext = { grant: options.grant };
+      const ctx: CheckContext = {
+        grant: options.grant,
+        log: (line, stream) => observations.push({ line, stream }),
+      };
       const result = await withScanTree(treeHash, () => check.run(ctx));
       const durationMs = Math.round(performance.now() - wallStart);
       // Cache PASSES only — failures must always re-run with full output.
       if (cache !== null && treeHash !== null && sig !== null && result.ok) {
         cache.record(check.id, treeHash, sig);
       }
-      return { check, result, durationMs, wallStart, cached: false };
+      return { check, result, durationMs, wallStart, cached: false, observations };
     }),
   );
 
@@ -154,12 +167,23 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
     if (result.hint) emit(`  hint: ${result.hint}`, "stderr");
   };
 
+  // Flush a check's `ctx.log` observations through the SAME `emit()` the runner
+  // uses for its own lines — console + full transcript (`logFile`, and the
+  // build's checks section) — indented under the check's result line, exactly
+  // like `emitDetail`. Purely informational: the verdict is already decided.
+  const emitObservations = (observations: { line: string; stream: "stdout" | "stderr" }[]) => {
+    for (const { line, stream } of observations) {
+      emit(`  ${line.split("\n").join("\n  ")}`, stream);
+    }
+  };
+
   let allOk = true;
   let anyInconclusive = false;
-  for (const { check, result, durationMs, wallStart, cached } of results) {
+  for (const { check, result, durationMs, wallStart, cached, observations } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
       emit(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
+      emitObservations(observations);
     } else if (result.inconclusive) {
       // Environmental, non-fatal outcome: NOT a pass and NOT a hard failure.
       // It stays `ok: false`, so the caching guard above never recorded it —
@@ -167,10 +191,12 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       // soften fatality here (allOk untouched).
       anyInconclusive = true;
       emit(`⚠ ${check.id} ... inconclusive — ${result.message.split("\n")[0]}`, "stdout");
+      emitObservations(observations);
       emitDetail(check, result);
     } else {
       allOk = false;
       emit(`• ${check.id} ... FAIL`, "stdout");
+      emitObservations(observations);
       emitDetail(check, result);
     }
   }
