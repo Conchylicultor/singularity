@@ -1,4 +1,5 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
 import { resolved, unresolved } from "@plugins/primitives/plugins/live-state/core";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
@@ -52,9 +53,11 @@ async function onWorktree<T>(
 // entry fire-and-forget. Dropping a still-referenced entry is harmless — it just
 // forces a cheap cold re-probe on the next read — so no coordination is needed.
 function evictWorktreeFor(attemptId: string): void {
-  void worktreeFor(attemptId).then((wt) => {
-    if (wt) evictWorktree(wt);
-  });
+  void runTracked("commits-graph:evict", () =>
+    worktreeFor(attemptId).then((wt) => {
+      if (wt) evictWorktree(wt);
+    }),
+  );
 }
 
 // Map upstream pushes notifications to the set of attemptIds that have ever

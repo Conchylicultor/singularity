@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute } from "@plugins/build/core";
@@ -119,7 +120,7 @@ function isUniqueViolation(err: unknown): boolean {
 export function triggerBuild(trigger: "manual" | "auto"): void {
   if (inflight) return;
   inflight = true;
-  void (async () => {
+  void runTracked("build:run", async () => {
     try {
       if (await isAnyBuildAlive()) return;
       await doRunBuild(trigger);
@@ -131,7 +132,7 @@ export function triggerBuild(trigger: "manual" | "auto"): void {
     } finally {
       inflight = false;
     }
-  })();
+  });
 }
 
 function getHeadCommit(): string | null {

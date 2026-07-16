@@ -2,6 +2,7 @@ import { initTokenStore } from "./token-store";
 import { startRefreshLoop } from "./refresh-loop";
 import { warmAuthState } from "./auth-state";
 import { AuthKeychainLockedError } from "@plugins/auth/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 
 let booted = false;
 
@@ -21,5 +22,5 @@ export async function onReady(): Promise<void> {
   startRefreshLoop();
   // Pre-warm credentials-configured cache so the first GET /api/auth/state
   // doesn't show stale "not configured" while the env probe runs.
-  void warmAuthState();
+  void runTracked("auth:warm-state", () => warmAuthState());
 }

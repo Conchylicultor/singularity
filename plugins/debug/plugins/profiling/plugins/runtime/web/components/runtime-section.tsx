@@ -16,7 +16,7 @@ import {
 
 const RUNTIME_VIEW = defineDataView("debug.profiling.runtime");
 
-type RuntimeKind = "http" | "db" | "loader" | "sub" | "push" | "flush" | "job" | "cascade";
+type RuntimeKind = "http" | "db" | "loader" | "sub" | "push" | "flush" | "job" | "cascade" | "bg";
 
 interface ParentRow {
   kind: RuntimeKind;
@@ -270,6 +270,7 @@ export function RuntimeSection(): ReactElement | null {
       ...tag("flush", toAggRows(data.aggregates.flush)),
       ...tag("job", toAggRows(data.aggregates.job)),
       ...tag("cascade", toAggRows(data.aggregates.cascade)),
+      ...tag("bg", toAggRows(data.aggregates.bg)),
     ];
   }, [data]);
 

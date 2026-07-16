@@ -43,6 +43,7 @@ export const handleGenerate = implement(generateConversationSummary, async ({ pa
     deleteConversation(conv.id).catch((err) => {
       console.error(`[conversation-summary] cleanup of ${conv.id} failed`, err);
     });
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget temp-file cleanup; no meaningful synchronous cost to attribute
     void fs.unlink(contextPath);
   }, CLEANUP_AFTER_MS).unref();
 

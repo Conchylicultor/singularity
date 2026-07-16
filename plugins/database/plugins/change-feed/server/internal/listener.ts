@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { parseLiveStatePayload, type DbChange } from "./parse-payload";
@@ -143,6 +144,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     const dead = client;
     client = null;
     if (dead) {
+      // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget close of an already-dead socket
       void dead.end().catch((err) => {
         // Already-dead socket; surface rather than swallow.
         log.publish(
@@ -154,19 +156,21 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     const delay = reconnectDelay;
     reconnectDelay = Math.min(reconnectDelay * 2, reconnectMaxMs);
     setTimeoutFn(() => {
-      if (started) void connect();
+      if (started) void runTracked("change-feed:reconnect", () => connect());
     }, delay);
   }
 
   function start(): void {
     if (started) return;
     started = true;
-    void connect();
+    void runTracked("change-feed:connect", () => connect());
 
     // Liveness watchdog: if the socket is gone (handlers missed, or a reconnect
     // attempt is overdue), re-establish it. Push-adjacent, not change-polling.
     livenessTimer = setIntervalFn(() => {
-      if (!client && !connecting) void connect();
+      if (!client && !connecting) {
+        void runTracked("change-feed:reconnect", () => connect());
+      }
     }, livenessIntervalMs);
   }
 

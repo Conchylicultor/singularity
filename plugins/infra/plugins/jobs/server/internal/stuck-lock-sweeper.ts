@@ -1,5 +1,6 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // Recovery floor for jobs that were mid-execution when their worker died
 // uncleanly (SIGKILL, OOM-killer, kernel panic, `process.exit()` from a
@@ -41,10 +42,12 @@ let timer: ReturnType<typeof setInterval> | null = null;
 export function startStuckLockSweeper(): void {
   if (timer) return;
   timer = setInterval(() => {
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    sweepOnce().catch((err) => {
-      console.warn("[jobs] stuck-lock sweep failed", err);
-    });
+    void runTracked("jobs:stuck-lock-sweep", () =>
+      // eslint-disable-next-line promise-safety/no-bare-catch
+      sweepOnce().catch((err) => {
+        console.warn("[jobs] stuck-lock sweep failed", err);
+      }),
+    );
   }, SWEEP_INTERVAL_MS);
 }
 

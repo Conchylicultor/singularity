@@ -15,6 +15,8 @@ export {
   installClock,
   runWithoutProfiling,
   runInBackgroundLane,
+  runTracked,
+  profilerNowMs,
   getSelfMeter,
   getRuntimeProfile,
   resetRuntimeProfile,

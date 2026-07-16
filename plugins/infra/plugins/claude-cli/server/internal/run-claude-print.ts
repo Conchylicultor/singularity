@@ -99,6 +99,7 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
         errorType: caughtError.name,
       });
     }
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: records a claude-cli call log; must stay profiler-invisible
     void recordClaudeCliCall({
       model: resolvedModel,
       sourceName: input.source.name,

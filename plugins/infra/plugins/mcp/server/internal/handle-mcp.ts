@@ -39,6 +39,7 @@ export async function handleMcpRequest(
   try {
     return await transport.handleRequest(req);
   } finally {
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget I/O cleanup (closing the MCP server in finally)
     void server.close();
   }
 }

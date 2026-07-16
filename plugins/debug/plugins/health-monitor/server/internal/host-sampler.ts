@@ -86,7 +86,9 @@ export function startHostSampler(): void {
   if (interval) return;
   channel = Log.channel("health-host", { persist: true });
   lastTickAt = Date.now();
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: host metrics tick; must stay profiler-invisible or it re-feeds the profiler it measures
   interval = setInterval(() => {
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: host metrics tick; must stay profiler-invisible or it re-feeds the profiler it measures
     void tick();
   }, SAMPLE_INTERVAL_MS);
 }

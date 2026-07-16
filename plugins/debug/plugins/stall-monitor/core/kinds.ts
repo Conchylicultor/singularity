@@ -30,5 +30,15 @@ export const StallPayloadSchema = z.object({
   // Deep-link into the coherent-instant stall trace (Debug → Slow Events) when
   // captureTrace admitted one.
   traceId: z.string().optional(),
+  // Coverage classification (Layer 4): `true` ⇒ NO tracked span covered this
+  // freeze, so `get_runtime_profile` / `slow_ops` / `byParent` are all blind to
+  // it and this report is the only surface that names it. `false` ⇒ some entry
+  // span was open across it (the cost landed in that span's selfMs, a traceable
+  // victim), named by `coveringSpan`. Optional ⇒ back-compat with pre-Layer-4
+  // rows.
+  unspanned: z.boolean().optional(),
+  coveringSpan: z
+    .object({ kind: z.string(), label: z.string() })
+    .optional(),
 });
 export type StallPayload = z.infer<typeof StallPayloadSchema>;

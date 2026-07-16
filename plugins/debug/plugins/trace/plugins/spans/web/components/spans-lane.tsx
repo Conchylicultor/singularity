@@ -37,6 +37,9 @@ const KIND_CONFIG: Record<SpanKind, { label: string; bar: string; dot: string }>
   loader: { label: "Loader", bar: "bg-categorical-5", dot: "bg-categorical-5" },
   job: { label: "Job", bar: "bg-categorical-6", dot: "bg-categorical-6" },
   db: { label: "DB", bar: "bg-categorical-7", dot: "bg-categorical-7" },
+  // categorical-1..8 are all taken above; a `bg` (runTracked) root reuses the
+  // unused categorical-9 so it reads as its own distinct color in the waterfall.
+  bg: { label: "BG", bar: "bg-categorical-9", dot: "bg-categorical-9" },
 };
 
 // Stable per-LAYER color for wait bands (and their legend swatch), independent of

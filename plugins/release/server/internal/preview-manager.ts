@@ -107,7 +107,9 @@ export async function startPreview(runId: string): Promise<void> {
   // Stream the launcher's output into the release log so the UI surfaces preview
   // boot progress / socket errors. Fire-and-forget: the streams close when the
   // detached process exits; failures here must not crash the start handler.
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- long-lived detached-process output pump: I/O-bound for the child's whole lifetime, not main-thread CPU; a bg span would stay open for the process lifetime
   void streamPreviewOutput(runId, proc.stdout, "stdout");
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- long-lived detached-process output pump: I/O-bound for the child's whole lifetime, not main-thread CPU; a bg span would stay open for the process lifetime
   void streamPreviewOutput(runId, proc.stderr, "stderr");
 }
 

@@ -58,6 +58,7 @@ const facetsMemo = createGitStateMemo<PluginTree>({
 });
 
 export function getStructureTreeCached(): Promise<PluginTree> {
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- idempotent watcher-start guard; returns immediately once armed, the tree build is separately memoized
   void ensureWatcher();
   return structureMemo.get(
     PLUGINS_DIR,
@@ -67,6 +68,7 @@ export function getStructureTreeCached(): Promise<PluginTree> {
 }
 
 export function getFacetsTreeCached(): Promise<PluginTree> {
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- idempotent watcher-start guard; returns immediately once armed, the tree build is separately memoized
   void ensureWatcher();
   return facetsMemo.get(
     PLUGINS_DIR,

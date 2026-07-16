@@ -189,6 +189,7 @@ export function startProcessSampler(): void {
     startStallProfiler();
     stallArmed = true;
   }
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: drains the JSC stall profiler each tick; must stay profiler-invisible or it re-feeds the profiler it measures
   interval = setInterval(tick, SAMPLE_INTERVAL_MS);
 }
 

@@ -1,7 +1,12 @@
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordReport } from "@plugins/reports/server";
+import {
+  captureFlightWindow,
+  profilerNowMs,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import type { StallSection } from "@plugins/debug/plugins/trace/plugins/stall/core";
 import { deriveCulprit } from "./culprit";
+import { classifyCoverage } from "./coverage";
 
 // The alert side of an event-loop stall. health-monitor's sampler DETECTS +
 // AGGREGATES the freeze (it drains the JSC profiler and builds the StallSection);
@@ -16,8 +21,19 @@ export function recordEventLoopStall(
   section: StallSection,
   durationMs: number,
   thresholdMs: number,
+  windowMs: number,
 ): void {
   const { culpritStack, hotFrame } = deriveCulprit(section);
+
+  // Coverage test at the trip instant (synchronous, alongside captureTrace).
+  // `captureFlightWindow` reads the module-level open-entry registry + completed
+  // ring directly (no ALS), so it is safe to call from here. Was ANY tracked
+  // ENTRY span in flight across the freeze? No ⇒ the CPU burst inflated nothing
+  // the profiler can see ⇒ we badge the report as the profiler-invisible culprit.
+  // The window looks back `windowMs` (the health tick's actual wall-time since
+  // the previous drain) on the profiler's own clock domain.
+  const fw = captureFlightWindow({ windowStartMs: profilerNowMs() - windowMs });
+  const cov = classifyCoverage(fw, durationMs);
 
   // Evidence first — captureTrace mints the id synchronously (before persist) and
   // never throws. Pass the STABLE `culpritStack` as the label: `label` is part of
@@ -49,6 +65,8 @@ export function recordEventLoopStall(
       topLeaves: section.topLeaves,
       topStacks: section.topStacks,
       ...(trace ? { traceId: trace.id } : {}),
+      unspanned: cov.unspanned,
+      ...(cov.unspanned ? {} : { coveringSpan: cov.coveringSpan }),
     },
     message: `Event-loop stall ${Math.round(durationMs)}ms — ${hotFrame}`,
   });

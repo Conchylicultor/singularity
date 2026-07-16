@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   ensureMainWorktreeRoot,
   removeWorktree,
@@ -124,7 +125,7 @@ export async function landDefaults(
     // Landing failed: attempt cleanup, but throw the landing error (the root
     // cause) rather than letting a cleanup failure mask it. A cleanup failure
     // here still surfaces as an unhandled rejection the reports plugin files.
-    void removeWorktree(wtPath);
+    void runTracked("config-staging:remove-worktree", () => removeWorktree(wtPath));
     throw landErr;
   }
 

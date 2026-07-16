@@ -70,6 +70,7 @@ export function startEmitting(
   state.ticks = 0;
   state.lastSubscriberCount = 0;
 
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- synthetic churn test harness: deliberately drives N no-op pushes/sec to reproduce render bugs; spanning it would attribute synthetic test load
   state.timer = setInterval(() => {
     // triggerResourcePush re-emits the resource to its current subscribers with
     // no DB change → an empty-diff no-op push (the exact real-churn code path).

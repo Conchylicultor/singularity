@@ -249,6 +249,9 @@ function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
     // loader-class background DB work, so it shares the loader rate bar rather
     // than getting its own knob.
     case "cascade":
+    // `bg` (a runTracked root — detached background work) shares the loader rate
+    // bar for the same reason: background-class, no separate knob.
+    case "bg":
       return cfg.loaderPerWindow;
   }
 }
@@ -275,6 +278,9 @@ function kindMsBudget(kind: SpanKind, cfg: Thresholds): number {
     // `cascade` shares the loader budget for the same reason it shares the
     // loader rate bar in kindThreshold above: loader-class background DB work.
     case "cascade":
+    // `bg` (detached background work) shares the loader budget too — see
+    // kindThreshold above.
+    case "bg":
       return cfg.loaderMsPerWindow;
   }
 }

@@ -1,5 +1,6 @@
 import type * as parcel from "@parcel/watcher";
-import { extname } from "node:path";
+import { basename, extname } from "node:path";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 // Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
 // functions that close over a `binding` passed in at call time. Safe to import
 // at module top-level (the native `.node` addon is still loaded lazily below).
@@ -52,6 +53,13 @@ export interface FileWatcherOptions {
   reconcileMs?: number | null;
   extensions?: string[];
   ignore?: string[];
+  /**
+   * Label for the `bg` span each dispatch (`onChange` / `onReconcile`) runs
+   * under, so a watcher callback's synchronous main-thread cost is attributed to
+   * `watch:<name>` in the profiler instead of vanishing. Defaults to the first
+   * watched dir's basename.
+   */
+  name?: string;
 }
 
 export interface FileWatcher {
@@ -70,6 +78,7 @@ export async function createFileWatcher(
     reconcileMs = 30_000,
     extensions,
     ignore,
+    name = basename(dirs[0] ?? "file-watcher"),
   } = opts;
 
   const subscriptions: parcel.AsyncSubscription[] = [];
@@ -91,7 +100,11 @@ export async function createFileWatcher(
     }
     const events = pending;
     pending = [];
-    onChange(events);
+    // `onChange` is void-returning, so only its SYNCHRONOUS body is charged to
+    // the `bg` span — which is exactly the main-thread-blocking portion. Any
+    // async the callback detaches internally is the consumer's own runTracked
+    // responsibility.
+    void runTracked(`watch:${name}`, () => onChange(events));
   }
 
   function schedule(): void {
@@ -137,7 +150,7 @@ export async function createFileWatcher(
           if (filtered.length === 0) return;
 
           if (debounceMs === 0) {
-            onChange(filtered);
+            void runTracked(`watch:${name}`, () => onChange(filtered));
           } else {
             pending.push(...filtered);
             schedule();
@@ -154,11 +167,9 @@ export async function createFileWatcher(
 
   if (reconcileMs != null) {
     reconcileTimer = setInterval(() => {
-      if (onReconcile) {
-        onReconcile();
-      } else {
-        onChange([]);
-      }
+      void runTracked(`watch:${name}:reconcile`, () =>
+        onReconcile ? onReconcile() : onChange([]),
+      );
     }, reconcileMs);
   }
 

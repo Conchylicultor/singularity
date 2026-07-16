@@ -89,6 +89,7 @@ export const SPAN_KINDS = [
   "flush",
   "job",
   "cascade",
+  "bg",
 ] as const;
 export type SpanKind = (typeof SPAN_KINDS)[number];
 
@@ -255,6 +256,11 @@ let now: () => number = () => performance.now();
 
 export function installClock(fn: () => number): void {
   now = fn;
+}
+
+/** The current profiler clock reading (same domain as captureFlightWindow's atMs). */
+export function profilerNowMs(): number {
+  return now();
 }
 
 // --- Streaming interval union ---
@@ -554,6 +560,22 @@ export function runInBackgroundLane<T>(fn: () => T): T {
   return backgroundLaneRuntime.run(fn);
 }
 
+/**
+ * Run detached/background `fn` as a first-class `bg` entry span so its cost is
+ * ATTRIBUTED (get_runtime_profile / slow_ops / flight recorder) instead of
+ * silently inflating whatever span happens to be open. A `bg` root maps to the
+ * background lane (see ORIGIN_CLASS), so this also routes the work's DB queries
+ * through the background gate for free — no separate `runInBackgroundLane` wrap.
+ *
+ * The detached-work triad:
+ * - `runTracked`          — detached work we WANT attributed (opens a `bg` span).
+ * - `runInBackgroundLane` — declare the lane only, NO span (observability-internal).
+ * - `runWithoutProfiling` — suppress recording entirely (observability-internal).
+ */
+export function runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T> {
+  return recordEntrySpan("bg", label, fn);
+}
+
 // --- Slow-span push seam ---
 
 // The push counterpart to the pull-only getRuntimeProfile(). Subscribers are
@@ -618,6 +640,7 @@ const aggregates: Record<SpanKind, Map<string, AggregateInternal>> = {
   flush: new Map(),
   job: new Map(),
   cascade: new Map(),
+  bg: new Map(),
 };
 
 // Per-kind "slowest recent" buffer. We keep a slowest-N set rather than a plain
@@ -633,6 +656,7 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   flush: [],
   job: [],
   cascade: [],
+  bg: [],
 };
 
 let sinceMs = now();
@@ -1278,6 +1302,8 @@ const ORIGIN_CLASS: Record<SpanKind, OriginClass> = {
   cascade: "background",
   // A graphile-worker job body: queued work, by definition nobody is waiting.
   job: "background",
+  // A runTracked root: declared detached work we WANT attributed. Background because nobody is blocked on its millisecond, which also routes its DB work through the background lane for free.
+  bg: "background",
 };
 
 /**

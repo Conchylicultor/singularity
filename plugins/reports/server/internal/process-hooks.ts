@@ -19,7 +19,7 @@ export function installProcessHooks(): void {
     appendReportSync("server-unhandled", err);
     // Don't exit: rejections are recoverable in practice. The buffer is
     // flushed best-effort by flushBufferedReports below (next tick).
-    // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch, detached-work-safety/no-untracked-detached-work -- observability flush: drains buffered reports on unhandledRejection; must stay profiler-invisible
     void flushBufferedReports().catch((err) => {
       console.error("[reports] flushBufferedReports failed in unhandledRejection handler", err);
     });

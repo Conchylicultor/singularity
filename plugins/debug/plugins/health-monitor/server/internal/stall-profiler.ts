@@ -225,5 +225,5 @@ export function drainAndMaybeDump(eventLoopMaxMs: number, windowMs: number): voi
   // Hand the aggregated evidence to the alert plugin, which owns both the trace
   // (critical, stable-labelled) and the deduped `event-loop-stall` report. This
   // sampler's job ends at detect + aggregate.
-  recordEventLoopStall(section, eventLoopMaxMs, STALL_THRESHOLD_MS);
+  recordEventLoopStall(section, eventLoopMaxMs, STALL_THRESHOLD_MS, windowMs);
 }

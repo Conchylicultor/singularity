@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   REPO_ROOT,
   currentWorktreeName,
@@ -122,7 +123,7 @@ function isUniqueViolation(err: unknown): boolean {
 export function triggerRelease(composition: string, target: string): void {
   if (inflight) return;
   inflight = true;
-  void (async () => {
+  void runTracked("release:run", async () => {
     try {
       if (await isAnyReleaseAlive(composition)) return;
       await doRunRelease(composition, target);
@@ -134,7 +135,7 @@ export function triggerRelease(composition: string, target: string): void {
     } finally {
       inflight = false;
     }
-  })();
+  });
 }
 
 interface ReleaseManifest {

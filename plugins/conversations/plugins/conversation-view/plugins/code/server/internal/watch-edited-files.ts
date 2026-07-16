@@ -1,4 +1,5 @@
 import type * as parcel from "@parcel/watcher";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getParcelWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import type { EditedFile } from "../../core/protocol";
 import { computeEditedFiles } from "./compute-edited-files";
@@ -59,7 +60,8 @@ export function watchEditedFiles(
       subscribers: new Set(),
     };
     rooms.set(worktreePath, room);
-    void openRoom(room);
+    const created = room;
+    void runTracked("watch-edited-files:open", () => openRoom(created));
   } else if (room.lastFiles !== null) {
     // Fire the new subscriber with the last known list on next tick — but ONLY if
     // we have a real, successfully-computed list. If the room has never computed
@@ -126,7 +128,7 @@ function scheduleRecompute(room: Room): void {
   const delay = since >= CEILING_MS ? DEBOUNCE_MS : Math.min(DEBOUNCE_MS, CEILING_MS - since);
   room.debounceTimer = setTimeout(() => {
     room.debounceTimer = null;
-    void recompute(room);
+    void runTracked("watch-edited-files:recompute", () => recompute(room));
   }, delay);
 
   // Safety ceiling: guarantee a recompute at least every CEILING_MS.
@@ -136,7 +138,7 @@ function scheduleRecompute(room: Room): void {
       if (room.debounceTimer) {
         clearTimeout(room.debounceTimer);
         room.debounceTimer = null;
-        void recompute(room);
+        void runTracked("watch-edited-files:recompute", () => recompute(room));
       }
     }, CEILING_MS);
   }
@@ -202,7 +204,7 @@ function closeRoom(room: Room): void {
   if (room.debounceTimer) clearTimeout(room.debounceTimer);
   if (room.ceilingTimer) clearTimeout(room.ceilingTimer);
   if (room.subscription) {
-    // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch, detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget subscription cleanup
     void room.subscription.unsubscribe().catch((err: unknown) => {
       console.error("[watch-edited-files] unsubscribe failed", err);
     });

@@ -77,6 +77,7 @@ const byKind = <T extends z.ZodTypeAny>(item: T) =>
     flush: z.array(item),
     job: z.array(item),
     cascade: z.array(item),
+    bg: z.array(item),
   });
 
 export const runtimeProfileSchema = z.object({

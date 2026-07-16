@@ -1,3 +1,4 @@
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { listProviders } from "./registry";
 import { getAccount } from "./token-store";
 import { getAccessTokenInternal } from "./token-access";
@@ -10,7 +11,9 @@ let timer: any = null;
 
 export function startRefreshLoop(): void {
   if (timer) return;
-  timer = setInterval(() => { void tick(); }, TICK_INTERVAL_MS);
+  timer = setInterval(() => {
+    void runTracked("auth:refresh", () => tick());
+  }, TICK_INTERVAL_MS);
   if (timer && typeof timer.unref === "function") timer.unref();
 }
 

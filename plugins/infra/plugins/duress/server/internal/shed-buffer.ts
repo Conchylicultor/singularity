@@ -185,6 +185,7 @@ const realTimer: FlushTimer = {
   set: (fn, delayMs) => {
     setTimeout(() => {
       // fn (onFlushTimer) handles every failure internally and never rejects.
+      // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- duress flush timer: observability-internal shed-buffer replay; spanning it re-feeds the profiler under duress
       void fn();
     }, delayMs);
   },

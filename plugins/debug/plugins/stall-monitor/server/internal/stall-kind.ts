@@ -37,6 +37,32 @@ export const stallMonitorKind = ReportKind({
 
 function renderDescription(row: ReportRow, d: StallPayload): string {
   const lines: string[] = [];
+
+  // Coverage lead (Layer 4). When NO tracked span covered the freeze, this report
+  // is the ONLY surface that names the culprit — say so up front, prominently.
+  if (d.unspanned === true) {
+    lines.push(
+      `## ⚠️ PROFILER-INVISIBLE CULPRIT\n\n` +
+        `**No tracked span covered this freeze.** The CPU burst inflated nothing ` +
+        `the runtime profiler can see — \`get_runtime_profile\`, \`slow_ops\`, and ` +
+        `\`byParent\` are all blind to it, so **this report is the only surface ` +
+        `that names it**. This is the fire-and-forget / synchronous-CPU-block class ` +
+        `(the \`prewarmBundle\` shape): detached work that runs with no ambient ` +
+        `span. Fix: wrap the culprit named below in ` +
+        `\`runTracked(label, fn)\` (\`@plugins/infra/plugins/runtime-profiler/core\`) ` +
+        `so its cost becomes a first-class \`bg\` span.`,
+    );
+    lines.push("");
+  } else if (d.unspanned === false && d.coveringSpan) {
+    lines.push(
+      `A tracked span **\`${d.coveringSpan.kind}:${d.coveringSpan.label}\`** was in ` +
+        `flight across this freeze, so the CPU burst landed in that span's ` +
+        `\`selfMs\` — it is visible (and traceable) in \`get_runtime_profile\` / ` +
+        `\`slow_ops\` under that name.`,
+    );
+    lines.push("");
+  }
+
   lines.push(
     `The main event loop was **frozen for ${Math.round(d.durationMs)}ms** ` +
       `(threshold ${Math.round(d.thresholdMs)}ms) — the whole backend blocked, ` +

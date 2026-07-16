@@ -63,6 +63,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
       // rejection that the reports plugin captures and files — never silently
       // swallowed. `span.parent` carries the caller attribution this refactor
       // exists to capture.
+      // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: recordSlowOp persists via its own background-lane/suppressed path; must stay profiler-invisible
       void recordSlowOp({
         operationKind: span.kind,
         operation: span.label,

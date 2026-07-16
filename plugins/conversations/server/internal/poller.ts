@@ -11,6 +11,7 @@ import {
 import { recordReport } from "@plugins/reports/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
@@ -217,14 +218,16 @@ async function tick(): Promise<void> {
       desiredWaitingFor === "question" &&
       getConfig(autoAnswerConfig).enabled
     ) {
-      void flushInteractivePrompt(id).catch((err) => {
-        void recordReport({
-          kind: "crash",
-          source: "server-caught",
-          message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
-          data: { errorType: "AutoAnswerFlushError", label: "conversations.poller.autoAnswerFlush" },
-        });
-      });
+      void runTracked("conversations:flush-interactive-prompt", () =>
+        flushInteractivePrompt(id).catch((err) => {
+          void recordReport({
+            kind: "crash",
+            source: "server-caught",
+            message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
+            data: { errorType: "AutoAnswerFlushError", label: "conversations.poller.autoAnswerFlush" },
+          });
+        }),
+      );
     }
   }
 
@@ -290,8 +293,12 @@ function logTickError(label: string, err: unknown): void {
 }
 
 export function startPoller(): void {
-  tick().catch((err) => logTickError("initial tick", err));
+  void runTracked("conversations:poller", () =>
+    tick().catch((err) => logTickError("initial tick", err)),
+  );
   setInterval(() => {
-    tick().catch((err) => logTickError("tick", err));
+    void runTracked("conversations:poller", () =>
+      tick().catch((err) => logTickError("tick", err)),
+    );
   }, TICK_MS);
 }

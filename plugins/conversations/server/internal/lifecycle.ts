@@ -16,6 +16,7 @@ import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/
 import type { Conversation, ConversationKind } from "@plugins/tasks/plugins/tasks-core/core";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { spawnConversationJob } from "./spawn-job";
 import { conversationCreated } from "./tables-created-event";
@@ -142,7 +143,7 @@ export async function createConversation(
     // interactive response — and `createAttempt` inserts a row that carries the
     // not-yet-existent path (it is never existence-checked at write time).
     worktreePath = await worktreePathFor(thisAttemptId);
-    void forkConfig(thisAttemptId);
+    void runTracked("conversations:fork-config", () => forkConfig(thisAttemptId));
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });
     // Durable fork via a graphile job: the enqueue is a committed row, so an
     // interrupted fork (e.g. backend restart mid-fork) is re-run when the

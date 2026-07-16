@@ -11,6 +11,7 @@ import {
   installProfilingSuppressionRuntime,
   installBackgroundLaneRuntime,
   recordEntrySpan,
+  runTracked,
   recordSpan,
   chargeWait,
   getRuntimeProfile,
@@ -66,6 +67,7 @@ installBackgroundLaneRuntime({
 setProfilerHooks({
   recordEntrySpan: <T>(kind: string, label: string, fn: () => T | Promise<T>): Promise<T> =>
     recordEntrySpan(kind as SpanKind, label, fn),
+  runTracked,
   recordSpan: (kind: string, label: string, durationMs: number): void =>
     recordSpan(kind as SpanKind, label, durationMs),
   chargeWait,

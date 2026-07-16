@@ -1,4 +1,5 @@
 import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { resolveConversationTranscriptPaths } from "./resolve-chain";
@@ -47,14 +48,14 @@ export async function startTranscriptWatcher(): Promise<void> {
         const convId = pathToConvId.get(ev.path);
         if (!convId) continue;
         const room = rooms.get(convId);
-        if (room) void processRoom(room);
+        if (room) void runTracked("transcript-watcher:process", () => processRoom(room));
       }
     },
     onReconcile: () => {
       // Belt-and-suspenders for a missed parcel event AND for a missed
       // `refreshConversationChain` call: re-resolving here bounds the staleness of
       // a session switch to one reconcile period even if the poller never notified.
-      for (const room of rooms.values()) void reconcileRoom(room);
+      for (const room of rooms.values()) void runTracked("transcript-watcher:reconcile", () => reconcileRoom(room));
     },
     extensions: [".jsonl"],
     debounceMs: 0,
@@ -85,13 +86,16 @@ export function watchTranscript(
       abort: new AbortController(),
     };
     rooms.set(conversationId, room);
-    void resolveRoom(room).catch((err) => {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      console.error(
-        `[transcript-watcher] resolveRoom failed for ${conversationId}`,
-        err,
-      );
-    });
+    const created = room;
+    void runTracked("transcript-watcher:resolve", () =>
+      resolveRoom(created).catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error(
+          `[transcript-watcher] resolveRoom failed for ${conversationId}`,
+          err,
+        );
+      }),
+    );
   } else if (room.lastEvents.length > 0) {
     // Late subscriber: deliver current snapshot immediately. Both halves are read
     // here (and written in `processRoom`) together, so they can never be handed out

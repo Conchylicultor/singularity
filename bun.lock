@@ -2443,6 +2443,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-context-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/detached-work-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-detached-work-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-element-type-safety",
       "version": "0.0.1",
@@ -6110,6 +6114,8 @@
     "@singularity/plugin-framework-tooling-lint-caret-trigger-safety": ["@singularity/plugin-framework-tooling-lint-caret-trigger-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/caret-trigger-safety"],
 
     "@singularity/plugin-framework-tooling-lint-context-safety": ["@singularity/plugin-framework-tooling-lint-context-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-detached-work-safety": ["@singularity/plugin-framework-tooling-lint-detached-work-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/detached-work-safety"],
 
     "@singularity/plugin-framework-tooling-lint-element-type-safety": ["@singularity/plugin-framework-tooling-lint-element-type-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety"],
 

@@ -6,6 +6,7 @@ import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server"
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { yieldServer } from "./yield-server";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
@@ -401,7 +402,7 @@ export function createCorpusIndex<TPartial>(
         // A corpus change: mark the index stale and warm it in the background so
         // the next request finds nothing (or little) to do.
         dirty = true;
-        void ensureFresh();
+        void runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
     });
   }

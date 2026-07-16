@@ -2,6 +2,7 @@ import {
   createFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { watchConfig } from "@plugins/config_v2/server";
 import type { Disposable } from "@plugins/config_v2/core";
 import {
@@ -57,10 +58,10 @@ async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
         dirs,
         extensions: [".mid", ".midi"],
         onChange: (events) => {
-          void onChange(events);
+          void runTracked("midi-folders:change", () => onChange(events));
         },
         onReconcile: () => {
-          void reconcile();
+          void runTracked("midi-folders:reconcile", () => reconcile());
         },
       });
     }
@@ -80,7 +81,7 @@ export async function startMidiFolderWatcher(): Promise<void> {
   configSub = watchConfig(midiFoldersConfig, () => {
     const reconcileNow = !firstCall;
     firstCall = false;
-    void reconfigure({ reconcile: reconcileNow });
+    void runTracked("midi-folders:reconfigure", () => reconfigure({ reconcile: reconcileNow }));
   });
 }
 

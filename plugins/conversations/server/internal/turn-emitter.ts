@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { isActiveStatus } from "../../core";
 import { listConversationsForInfra } from "@plugins/tasks/plugins/tasks-core/server";
 import { db, isTransientDbError } from "@plugins/database/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
@@ -20,8 +21,11 @@ let timer: ReturnType<typeof setInterval> | null = null;
 
 export function startTurnEmitter(): void {
   if (timer) return;
-  void tick();
-  timer = setInterval(() => void tick(), POLL_MS);
+  void runTracked("conversations:turn-emitter", () => tick());
+  timer = setInterval(
+    () => void runTracked("conversations:turn-emitter", () => tick()),
+    POLL_MS,
+  );
 }
 
 export function stopTurnEmitter(): void {
@@ -104,7 +108,7 @@ function subscribeToConversation(conversationId: string): () => void {
   }
 
   return watchTranscript(conversationId, ({ events }) => {
-    void handleEvents(events);
+    void runTracked("conversations:turn-emitter-events", () => handleEvents(events));
   });
 }
 

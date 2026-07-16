@@ -84,6 +84,7 @@ async function refreshAccount(
     }
   })();
   inFlightRefreshes.set(key, promise);
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- bookkeeping handler attached to an already-detached refresh promise; no new main-thread work to attribute
   void promise.finally(() => inFlightRefreshes.delete(key));
   return promise;
 }

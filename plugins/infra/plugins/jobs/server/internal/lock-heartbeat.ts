@@ -36,6 +36,7 @@ const HEARTBEAT_MS = 60_000;
 
 export function startLockHeartbeat(jobId: string, workerId: string): () => void {
   let stopped = false;
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- pure lock keep-alive heartbeat: renews the job-system advisory lock; no attributable work, spanning it would be profiler noise
   const timer = setInterval(() => {
     // eslint-disable-next-line promise-safety/no-bare-catch
     db

@@ -33,6 +33,10 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
     // `cascade` is a dependsOn edge's ids-translation DB reads run inside the
     // flush cascade — loader-class background work, so it shares the loader bar.
     case "cascade":
+    // `bg` is a runTracked root — detached background work (warmups, pollers,
+    // watcher callbacks). Background-class like the above, so it shares the
+    // loader bar (no separate config knob).
+    case "bg":
       return t.loaderMs;
   }
 }

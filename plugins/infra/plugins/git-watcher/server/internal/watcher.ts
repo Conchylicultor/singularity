@@ -1,4 +1,5 @@
 import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { currentBranchRef } from "./current-branch-ref";
 import { gitCommonDir } from "./git-common-dir";
@@ -74,8 +75,8 @@ export async function startGitWatcher(): Promise<void> {
   // the safety net for packed-refs-only movement.
   watcher = await createFileWatcher({
     dirs: [`${commonDir}/refs`],
-    onChange: () => { void recompute(); },
-    onReconcile: () => { void recompute(); },
+    onChange: () => { void runTracked("git-watcher:recompute", () => recompute()); },
+    onReconcile: () => { void runTracked("git-watcher:recompute", () => recompute()); },
   });
 }
 

@@ -30,6 +30,7 @@ export interface RuntimeProfileView {
  */
 export interface ProfilerHooks {
   recordEntrySpan<T>(kind: string, label: string, fn: () => T | Promise<T>): Promise<T>;
+  runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T>;
   recordSpan(kind: string, label: string, durationMs: number): void;
   chargeWait(layer: string, ms: number): void;
   getRuntimeProfile(): RuntimeProfileView;
@@ -60,6 +61,10 @@ export function recordEntrySpan<T>(
   fn: () => T | Promise<T>,
 ): Promise<T> {
   return hooks ? hooks.recordEntrySpan(kind, label, fn) : Promise.resolve(fn());
+}
+
+export function runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T> {
+  return hooks ? hooks.runTracked(label, fn) : Promise.resolve(fn());
 }
 
 export function recordSpan(kind: string, label: string, durationMs: number): void {

@@ -315,6 +315,7 @@ export function createHostSemaphore(opts: {
     }
     const releaseGuard = async (): Promise<void> => {
       if (guardChild) {
+        // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
         void guardChild.stdin.end();
         guardChild.kill();
         await guardChild.exited;
@@ -464,6 +465,7 @@ export function createHostSemaphore(opts: {
           turnstileReleased = true;
           if (turnstileFd !== undefined) closeSync(turnstileFd);
           if (turnstileChild) {
+            // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
             void turnstileChild.stdin.end();
             turnstileChild.kill();
             await turnstileChild.exited;
@@ -508,6 +510,7 @@ export function createHostSemaphore(opts: {
         // Closing stdin gives the winner EOF → it exits → its fd closes → the flock
         // releases. Fire-and-forget the flush; correctness is guaranteed by kill() +
         // awaiting exited, which reaps the child so we never leave a zombie.
+        // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
         void winner.stdin.end();
         winner.kill();
         await winner.exited;

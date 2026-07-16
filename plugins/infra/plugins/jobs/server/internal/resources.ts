@@ -122,6 +122,7 @@ export const jobsListResource = defineExternalResource({
   schema: JobsPayloadSchema,
   loader: async (): Promise<JobsPayload> => loadJobsList(500),
   onFirstSubscribe: () => {
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- cheap resource-refresh tick: only calls notify(); the recompute it schedules is separately spanned as a loader
     pollTimer = setInterval(() => {
       jobsListResource.notify();
     }, 3000);

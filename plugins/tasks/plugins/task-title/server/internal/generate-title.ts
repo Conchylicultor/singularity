@@ -1,4 +1,5 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getTask, updateConversationsTitleForTask, updateTaskTitle } from "@plugins/tasks/plugins/tasks-core/server";
 
 // Haiku ignores a system-only instruction when the user message looks like a
@@ -65,7 +66,7 @@ export function scheduleTaskTitleUpdate(
   fallbackTitle: string,
 ): void {
   if (!description.trim()) return;
-  void (async () => {
+  void runTracked("task-title:generate", async () => {
     try {
       const generated = await generateTaskTitle(description, taskId);
       if (generated !== fallbackTitle) {
@@ -76,14 +77,14 @@ export function scheduleTaskTitleUpdate(
     } catch (err) {
       console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);
     }
-  })();
+  });
 }
 
 const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];
 
 export function scheduleTaskTitleUpgrade(taskId: string, text: string): void {
   if (!text.trim()) return;
-  void (async () => {
+  void runTracked("task-title:generate", async () => {
     try {
       const task = await getTask(taskId);
       if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
@@ -95,5 +96,5 @@ export function scheduleTaskTitleUpgrade(taskId: string, text: string): void {
     } catch (err) {
       console.warn("[task-title] scheduleTaskTitleUpgrade failed:", err);
     }
-  })();
+  });
 }

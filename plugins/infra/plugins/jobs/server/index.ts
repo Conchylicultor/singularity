@@ -1,5 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   handleCancelJob,
   handleListDeadJobs,
@@ -76,7 +77,7 @@ export default {
     // onReadyBlocking migration barrier, so dead_jobs exists. Fire-and-forget:
     // a failure surfaces as an unhandled rejection (the reports plugin files it)
     // rather than being swallowed into an invisible boot-time no-op.
-    void reconcileDeadJobs();
+    void runTracked("jobs:reconcile-dead", () => reconcileDeadJobs());
   },
   // Cron schedules are installed only after every plugin's onReady has run, so
   // resolver-form schedules (e.g. backup's, which reads config) see ready state.
