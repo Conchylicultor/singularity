@@ -47,6 +47,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   canIndent,
   canOutdent,
+  pasteAnchorId,
   textOf,
   planForestInsert,
   serializeForestToMarkdown,
@@ -467,7 +468,6 @@ function SelectionLayer({
   const {
     containerRef,
     control: selectionControl,
-    headRef,
     applyRange,
     clearSelection,
     focusContainer,
@@ -530,9 +530,7 @@ function SelectionLayer({
       if (picked) {
         e.preventDefault();
         const { file, handler } = picked;
-        const roots = selectionRoots(rowsRef.current, selectedRef.current);
-        const afterId =
-          headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
+        const afterId = pasteAnchorId(toNodes(rowsRef.current), selectedRef.current, focusedBlockId);
         void (async () => {
           const data = await handler.build(file);
           await paste({
@@ -558,12 +556,10 @@ function SelectionLayer({
       }
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();
-      const roots = selectionRoots(rowsRef.current, selectedRef.current);
-      const afterId =
-        headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
+      const afterId = pasteAnchorId(toNodes(rowsRef.current), selectedRef.current, focusedBlockId);
       void paste({ blocks: forest, afterId });
     },
-    [handles, paste, focusedBlockId, headRef, containerRef, allowAttachments],
+    [handles, paste, focusedBlockId, containerRef, allowAttachments],
   );
 
   // ---- Marquee drag-select on the empty container background ---------------

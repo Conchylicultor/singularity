@@ -44,6 +44,7 @@ export {
   canOutdent,
   childrenOf,
   opBlockIds,
+  pasteAnchorId,
   prevVisibleLeaf,
   textOf,
   runsOfNode,

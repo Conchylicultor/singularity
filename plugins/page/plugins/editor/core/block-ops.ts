@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { isDescendant, subtreeIds } from "@plugins/primitives/plugins/tree/core";
+import { isDescendant, selectionRoots, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import {
   mergeRuns,
@@ -264,6 +264,32 @@ function documentOrder(blocks: BlockNode[]): string[] {
 function inDocumentOrder(blocks: BlockNode[], ids: readonly string[]): string[] {
   const wanted = new Set(ids);
   return documentOrder(blocks).filter((id) => wanted.has(id));
+}
+
+/**
+ * Where a paste lands while a block selection is active: as a sibling AFTER the
+ * last selected subtree root in DOCUMENT order, falling back to the caret's own
+ * block when nothing is selected.
+ *
+ * Not the range's head — that is the selection's MOVING end, which is the TOP of
+ * the run whenever the user extended upward, and anchoring there drops the copies
+ * inside the run it was meant to follow. Document order is direction-independent
+ * by construction, so how the range was built cannot matter.
+ *
+ * Roots, not the last selected id: an insert after a root lands after that root's
+ * entire subtree, so a selected parent's descendants are never split. A selection
+ * spanning branches therefore anchors on whichever root is document-last — the
+ * copies land as its siblings, nested where it is nested. That is "after the end
+ * of the selection" read literally, and matches how the selection's other bulk
+ * ops treat roots.
+ */
+export function pasteAnchorId(
+  blocks: BlockNode[],
+  selectedIds: ReadonlySet<string>,
+  focusedBlockId: string | null,
+): string | null {
+  const roots = selectionRoots(blocks, selectedIds);
+  return lastOf(inDocumentOrder(blocks, roots)) ?? focusedBlockId ?? null;
 }
 
 /** The ids a `BlockOp` names — its write targets. Shared by the optimistic

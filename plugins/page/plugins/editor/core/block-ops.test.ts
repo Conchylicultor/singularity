@@ -18,6 +18,7 @@ import {
   canIndent,
   canOutdent,
   childrenOf,
+  pasteAnchorId,
   prevVisibleLeaf,
   runsOfNode,
   textOf,
@@ -583,6 +584,40 @@ describe("canIndent / canOutdent", () => {
     const nested = [...blocks, mk("A1", "A", a)];
     expect(canOutdent(nested, ["A1"])).toBe(true);
     expect(canIndent(nested, ["A1"])).toBe(false); // only child
+  });
+});
+
+// ---------------------------------------------------------------------------
+// pasteAnchorId — the block-selection paste anchor
+// ---------------------------------------------------------------------------
+
+describe("pasteAnchorId", () => {
+  test("a downward-extended run anchors on its bottom block", () => {
+    expect(pasteAnchorId(fourSiblings(), new Set(["A", "B"]), "B")).toBe("B");
+  });
+
+  test("an upward-extended run anchors on its bottom block too, never the head", () => {
+    // Shift+ArrowUp from B leaves the range's head on A — the TOP of the run.
+    // Anchoring there drops the copies between A and B, splitting the selection.
+    expect(pasteAnchorId(fourSiblings(), new Set(["B", "A"]), "A")).toBe("B");
+  });
+
+  test("array order is irrelevant — the anchor comes from document order", () => {
+    // `selectionRoots` preserves the row array's order, which is not the forest's.
+    expect(pasteAnchorId(fourSiblings().reverse(), new Set(["A", "B"]), null)).toBe("B");
+  });
+
+  test("a selected parent anchors on the parent, not on its last descendant", () => {
+    // An insert after A lands after A's whole subtree; after A1 it would land
+    // inside it.
+    const blocks = [...fourSiblings(), mk("A1", "A", a)];
+    expect(pasteAnchorId(blocks, new Set(["A", "A1"]), null)).toBe("A");
+  });
+
+  test("no selection → the caret's own block, else null", () => {
+    const blocks = fourSiblings();
+    expect(pasteAnchorId(blocks, new Set(), "C")).toBe("C");
+    expect(pasteAnchorId(blocks, new Set(), null)).toBe(null);
   });
 });
 
