@@ -155,6 +155,21 @@ watermark-newer-than-value is structurally excluded. A throwing capture reports
 via `reportLoaderError` and the frame ships watermark-less (never blocked).
 `runtime-watermark.test.ts` pins all of this.
 
+**The HTTP body's ETag is paired with `Cache-Control: no-store`.**
+`handleResourceHttp` emits an `ETag` on both the 200 and the 304 branch, and MUST
+set `cache-control: no-store` alongside it on both. The invariant: *the handler
+that emits an ETag — the header that invites caching — owns forbidding
+shared/browser cache storage.* Without it, the browser HTTP cache stored an
+old-boot body and transparently revalidated it with its stored ETag; a
+**restart-stable** ETag (`edited-files` is content-addressed for 304
+herd-collapse) then let the server 304 after a backend restart and hand the
+client the *old-boot* body — cross-boot version-incomparable, dropped as stale,
+pane wedged on "Close (state unknown)". The client mirrors this with
+`cache: "no-store"` on its fetches, and server-core applies a `no-store` default
+to any API response that sets no `cache-control` — three layers, each a
+standalone fix. See
+`research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md`.
+
 ## Read path: version short-circuit (bootEpoch), gate-after-dedup, per-tab subs
 
 Three structural changes born from the 2026-07-11 replay-storm forensics
@@ -202,6 +217,25 @@ push-mode sub used to run the full loader behind the 6-slot read-admission gate.
   A keyed sub that short-circuits does NOT re-seed an evicted snapshot; the
   next notify finds no snapshot and ships a FULL update — self-healing by
   construction.
+
+**The HTTP body carries `epoch`.** The `/api/resources/:key` body is now
+`{ value, version, epoch }`, where `epoch` is this boot's `bootEpoch` — the same
+UUID the `sub-ack`/`up-to-date` frames echo, minted per `createResourceRuntime`.
+It is the twin of the WS ack epoch: `entry.versions` is per-boot in-memory state
+(nothing restores it across restarts), so a bare HTTP version compare across a
+boot is meaningless. The client needs the epoch to distinguish a same-boot stale
+read (drop) from a stale-boot cache entry it should adopt the fresh body over —
+the 4-case guard matrix in `live-state/CLAUDE.md`. (The HTTP path still has no
+version short-circuit; the epoch is for the client guard, not a server-side
+skip.)
+
+**`sub-error` frames carry `params`.** All four `sub-error` send sites now include
+`params` alongside `key`. The shared-socket client broadcasts every frame to
+every tab, so it must gate `sub-error` on the local sub entry exactly like
+`update`/`delta` — which requires the params to match the held subscription. A
+params-less legacy frame won't match a live sub and is safely dropped. On a match
+the client runs `applyInvalidate(key, params)`, so the fallback refetch's own
+outcome surfaces (`ResourceHttpError`) or heals — see `live-state/CLAUDE.md`.
 
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 

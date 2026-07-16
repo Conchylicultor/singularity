@@ -171,7 +171,7 @@ describe("watermark — full frames carry it", () => {
     expect("watermark" in entry).toBe(false);
   });
 
-  test("HTTP body carries { value, version, watermark }", async () => {
+  test("HTTP body carries { value, version, epoch, watermark }", async () => {
     const cap = makeCapture();
     const h = createHarness({ captureWatermark: cap.fn });
     h.runtime.defineExternalResource({
@@ -185,8 +185,17 @@ describe("watermark — full frames carry it", () => {
       { key: "r" },
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { value: unknown; version: number; watermark?: string };
+    const body = (await res.json()) as {
+      value: unknown;
+      version: number;
+      epoch: string;
+      watermark?: string;
+    };
     expect(body.value).toBe("val");
+    // `epoch: bootEpoch` rides every HTTP body (Fix B); it equals the ack epoch —
+    // pinned in runtime-version-shortcircuit.test.ts (here we only assert its shape,
+    // to avoid a subscribe consuming a makeCapture tick).
+    expect(typeof body.epoch).toBe("string");
     expect(body.watermark).toBe("100");
   });
 });
@@ -263,5 +272,7 @@ describe("watermark — degrade + adoption", () => {
     );
     const body = (await res.json()) as Record<string, unknown>;
     expect("watermark" in body).toBe(false);
+    // `epoch` is unconditional (independent of the captureWatermark hook).
+    expect(typeof body.epoch).toBe("string");
   });
 });

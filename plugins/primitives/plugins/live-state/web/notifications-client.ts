@@ -12,6 +12,7 @@ import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { ResourceOrigin } from "../core/resource";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { noteResourceWatermark } from "./watermark-registry";
+import { httpStaleDropReportSink } from "./stale-drop-reporter";
 
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
@@ -114,6 +115,28 @@ export class ResourceHttpError extends Error {
   }
 }
 
+/**
+ * An HTTP resource GET returned a value the version guard rejected as stale, on
+ * a `(key, params)` whose cache holds only the descriptor's placeholder (never a
+ * server-vouched value). `fetchOverHttp` throws this rather than settling the
+ * query with that placeholder (the "Close (state unknown)" wedge) or applying
+ * the stale body (which would render old-boot data). React Query's `retry` plus
+ * the next `invalidate` frame converge the legitimate same-epoch race; if the
+ * retry also loses, `q.error` settles typed and visible. Swallowed by
+ * `primeFromHttp` (prime is best-effort; the WS sub-ack is the source of truth).
+ */
+export class ResourceStaleReadError extends Error {
+  constructor(
+    public readonly key: string,
+    public readonly bodyVersion: number,
+    public readonly haveVersion: number,
+    public readonly reason: "stale-version" | "stale-epoch",
+  ) {
+    super(`Resource ${key} stale read: body v${bodyVersion} vs have v${haveVersion} (${reason})`);
+    this.name = "ResourceStaleReadError";
+  }
+}
+
 type ServerMsg =
   // `etag` (conditional revalidation): the fresh content signature accompanying a
   // full value. Present only for a resource that declares `revalidate`; the client
@@ -140,7 +163,11 @@ type ServerMsg =
   // `sub-batch` replay. Each entry runs through the exact per-entry `up-to-date`
   // logic (version guard, adoption, lastAckVersion).
   | { kind: "up-to-date-batch"; epoch: string; entries: Array<{ id?: number; key: string; params: ResourceParams; version: number }> }
-  | { kind: "sub-error"; id?: number; key: string; reason: string }
+  // `params` (Fix D): a sub-error now names the exact subscription it failed for,
+  // so the client can gate it on a live local sub (the all-tabs fan-out safety)
+  // and drive an HTTP-fallback refetch. A pre-upgrade server omits `params`
+  // (undefined at runtime); such a legacy frame simply fails the sub gate.
+  | { kind: "sub-error"; id?: number; key: string; params: ResourceParams; reason: string }
   | { kind: "ping" };
 
 function paramsKey(params: ResourceParams | undefined): string {
@@ -200,6 +227,16 @@ interface ActiveSub {
    * base / drift) so recovery forces a full reload, never a stale `up-to-date`.
    */
   etag?: string;
+  /**
+   * Which server boot `version` belongs to — learned from any epoch-carrying ack
+   * frame (`sub-ack` / `up-to-date`). Server versions are per-boot in-memory
+   * counters, incomparable across boots; `epoch` labels the boot so
+   * `fetchOverHttp`'s guard can tell a same-boot stale read (drop) from a
+   * stale-boot cache that a live response should replace (adopt). Undefined until
+   * the first ack, or on a pre-epoch server. `update`/`delta`/`invalidate` frames
+   * leave it unchanged (they ride the same boot's stream).
+   */
+  epoch?: string;
 }
 
 /** One entry per active sub returned by `debugSnapshot()` (Layer 2 inspector). */
@@ -279,6 +316,14 @@ export class NotificationsClient {
    * delta. Absent for non-keyed resources.
    */
   private keyedKeyOf = new Map<string, (row: unknown) => string>();
+  /**
+   * `${key}\0${paramsKey}` → count of consecutive HTTP stale drops since the last
+   * successful apply. Incremented on every `fetchOverHttp` drop (both same-epoch
+   * strict-`<` and cross-boot stale-epoch), emitted with the running count to the
+   * stale-drop report sink, and reset in `markApplied` (WS or HTTP). A sustained
+   * never-applied run is the wedge signature the reports consumer thresholds on.
+   */
+  private staleDropCounts = new Map<string, number>();
   private channelStatuses = new Map<string, WsStatus>();
   private statusListeners = new Set<(s: WsStatus) => void>();
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
@@ -291,6 +336,12 @@ export class NotificationsClient {
   /** Socket factory (injection seam): defaults to a real `SharedWebSocket`; a
    *  test wires one built on fake transports. */
   private makeSocket: (url: string) => SharedWebSocket;
+  /** `fetch` implementation (injection seam): defaults to the global `fetch`; a
+   *  test wires a scripted one to drive `fetchOverHttp` deterministically. Used
+   *  for BOTH the conditional GET and the defensive refetch. Typed as the call
+   *  signature only (not `typeof fetch`, which also carries the `preconnect`
+   *  static a plain closure lacks). */
+  private fetchImpl: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>;
   /**
    * This tab's stable id, stamped on every sub/unsub frame so the server can
    * track which tab holds which sub (the per-tab bookkeeping behind `unsub-tab`
@@ -321,10 +372,15 @@ export class NotificationsClient {
 
   constructor(
     private queryClient: QueryClient,
-    hooks?: { makeSocket?: (url: string) => SharedWebSocket; tabId?: string },
+    hooks?: {
+      makeSocket?: (url: string) => SharedWebSocket;
+      tabId?: string;
+      fetchImpl?: typeof fetch;
+    },
   ) {
     // Socket factory must be set before channelFor (openChannel reads it).
     this.makeSocket = hooks?.makeSocket ?? ((u) => new SharedWebSocket(u));
+    this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
     this.tabId = hooks?.tabId ?? getTabId();
     // Open the worktree channel eagerly (always used). Central stays lazy —
     // opened on the first central-origin observe() via channelFor.
@@ -670,23 +726,57 @@ export class NotificationsClient {
   }
 
   /**
+   * Has a server-vouched value EVER landed in the cache for (key, params)? True
+   * iff `dataUpdatedAt` has left epoch 0 — the exact signal `use-resource.ts`
+   * reads for its `pending` flag. A descriptor's `initialData` is seeded at
+   * `initialDataUpdatedAt: 0`, so a mounted-but-never-applied query reads a
+   * non-undefined `getQueryData` (the placeholder) yet `false` here. This is
+   * what separates "cache holds newer server truth" (keep it) from "cache holds
+   * only the placeholder the server never vouched for" (must not settle with it).
+   */
+  private hasAppliedValue(key: string, params: ResourceParams): boolean {
+    return (this.queryClient.getQueryState(queryKeyFor(key, params))?.dataUpdatedAt ?? 0) !== 0;
+  }
+
+  /**
    * THE single HTTP resource-cache write path. Fetches a resource's `{ value,
-   * version }` over plain HTTP (conditional `If-None-Match`/304) and writes it
-   * through the SAME version guard as WS frames, so a late HTTP response can
-   * never clobber a newer WS value. Returns the EFFECTIVE cached value — the
-   * freshly-applied one, or the retained value on a `304`/stale drop — so React
-   * Query's `queryFn` contract holds (data returned, `dataUpdatedAt` bumps,
-   * `pending` flips) with no separate render path.
+   * version, epoch?, watermark? }` over plain HTTP (`cache: "no-store"` so the
+   * browser cache can never hand back an old-boot body — the poisoning class this
+   * closes; conditional `If-None-Match`/304) and writes it through an epoch-aware
+   * version guard, so a late or old-boot HTTP response can never clobber a newer
+   * WS value. Returns the EFFECTIVE cached value — the freshly-applied one, or the
+   * retained value on a `304`/stale drop — so React Query's `queryFn` contract
+   * holds (data returned, `dataUpdatedAt` bumps, `pending` flips) with no separate
+   * render path.
    *
-   * Guard uses strict `<` (not the WS path's `<=`): an HTTP GET REPORTS the
-   * server's version counter without bumping it, so a legitimate response can
-   * EQUAL the version we already applied (the normal `invalidate`-mode refetch:
-   * the `invalidate` frame advanced us to `N`, the refetch GET returns `N`). `<`
-   * accepts that equal version (a no-op write for push/keyed via structural
-   * sharing) while still dropping a genuinely-stale older read.
+   * Version guard: server versions are per-`(key,params)` in-memory counters that
+   * reset each boot, so a raw comparison is only meaningful WITHIN one boot. When
+   * the body carries an `epoch` (its boot identity) and we hold a sub `entry`:
+   *   - same boot as `entry` (or `entry` not yet epoch-stamped): strict `<` drop —
+   *     an HTTP GET reports the counter without bumping it, so a legitimate
+   *     response can EQUAL the version we hold (the normal `invalidate`-mode
+   *     refetch), which `<` accepts;
+   *   - `entry` is a stale boot but the body matches the live WS server identity:
+   *     ADOPT (the live response beats a cached memory of an older boot);
+   *   - the body is a stale boot while `entry` matches the live server: DROP
+   *     (`stale-epoch`);
+   *   - neither matches the live server (the WS-down fallback window): ADOPT — a
+   *     live response beats a memory of unknown vintage, and dropping would starve
+   *     the fallback this function exists to serve.
+   * An epoch-less body (pre-upgrade server) keeps the strict-`<` behavior byte-for-
+   * byte. On a cross-epoch adopt the entry's `version`/`epoch` are re-stamped from
+   * the body (the old-boot number is meaningless); a same-epoch apply keeps the
+   * monotonic bump.
+   *
+   * On a DROP: if a server-vouched value was ever applied, the cache holds newer
+   * truth — return it. Otherwise throw `ResourceStaleReadError` — NEVER settle the
+   * query with the descriptor's placeholder (the "Close (state unknown)" wedge)
+   * nor apply the stale body (old-boot data under destructive buttons). Every drop
+   * also feeds the stale-drop report sink with the running consecutive count.
    *
    * Throws on network (`fetch` `TypeError`), HTTP status (`ResourceHttpError`),
-   * or schema/parse failure — callers choose how to surface each.
+   * stale never-applied read (`ResourceStaleReadError`), or schema/parse failure —
+   * callers choose how to surface each.
    */
   async fetchOverHttp<T>(
     key: string,
@@ -695,47 +785,128 @@ export class NotificationsClient {
     schema: ZodType<T>,
     source: "prime" | "fallback",
   ): Promise<T> {
-    const entry = this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${paramsKey(params)}`);
+    const channel = this.channels[socketKindFor(origin)];
+    const entry = channel?.subs.get(`${key}\0${paramsKey(params)}`);
+    const serverEpoch = channel?.serverEpoch;
     const qs = new URLSearchParams(params).toString();
     const base = origin === "central" ? "/api/central-resources" : "/api/resources";
     const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
     const etag = this.etagFor(key, params, origin);
-    let res = await fetch(url, etag !== undefined ? { headers: { "If-None-Match": etag } } : undefined);
+    // `cache: "no-store"` on BOTH fetches: the browser HTTP cache must never
+    // store or transparently 304-revalidate a resource body — a restart-stable
+    // ETag would otherwise let it replay an old-boot `{value, version}`.
+    let res = await this.fetchImpl(
+      url,
+      etag !== undefined
+        ? { cache: "no-store", headers: { "If-None-Match": etag } }
+        : { cache: "no-store" },
+    );
     if (res.status === 304) {
       const cached = this.getCachedResource(key, params);
-      // "Still current" — keep the cached value (same reference; structural
-      // sharing sees no change).
-      if (cached !== undefined) return cached as T;
-      // Defensive: 304 with no cached base (shouldn't happen — we only send an
-      // ETag when we hold a value). Re-fetch unconditionally so a needless 304
-      // never leaves the cache empty, then fall through to the write path.
-      res = await fetch(url);
+      // "Still current" — keep the cached value ONLY when a server-vouched value
+      // was actually applied (same reference; structural sharing sees no change).
+      // A 304 against a never-applied placeholder must NOT settle the query with
+      // it — fall through to the unconditional refetch below.
+      if (cached !== undefined && this.hasAppliedValue(key, params)) return cached as T;
+      // 304 with only a placeholder (or no base): re-fetch unconditionally so a
+      // needless 304 never leaves the cache empty/stale, then take the write path.
+      res = await this.fetchImpl(url, { cache: "no-store" });
     }
     if (!res.ok) throw new ResourceHttpError(key, res.status);
-    const body = (await res.json()) as { value: unknown; version: number; watermark?: string };
+    const body = (await res.json()) as { value: unknown; version: number; epoch?: string; watermark?: string };
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
-    // Version guard — same discipline as handleServerMessage, but strict `<`
-    // (see doc comment). Drop only a response strictly older than the value we
-    // already hold, keeping the newer cached value.
-    const cached = this.getCachedResource(key, params);
-    if (entry && cached !== undefined && body.version < entry.version) {
-      trace(`http drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry.version} reason=stale-version source=${source}`);
-      return cached as T;
+
+    // Epoch-aware version guard (see doc comment). Compute the adopt/drop decision
+    // only when we hold a sub `entry` to compare against; with no entry there is
+    // nothing to guard, so apply straight through.
+    let drop: "stale-version" | "stale-epoch" | null = null;
+    let crossEpochAdopt = false;
+    if (entry) {
+      if (body.epoch === undefined || body.epoch === entry.epoch || entry.epoch === undefined) {
+        // Legacy body OR same boot (or entry not yet epoch-stamped): strict `<`.
+        if (body.version < entry.version) drop = "stale-version";
+      } else if (body.epoch === serverEpoch) {
+        // Entry is a stale boot; body matches the live WS server identity → adopt.
+        crossEpochAdopt = true;
+      } else if (entry.epoch === serverEpoch) {
+        // Body is a stale boot while the entry matches the live server → drop.
+        drop = "stale-epoch";
+      } else {
+        // No arbiter (WS-down fallback window): adopt the live response.
+        crossEpochAdopt = true;
+      }
     }
+
+    if (drop !== null) {
+      // entry is non-null whenever drop is set (only that branch assigns it).
+      const applied = this.hasAppliedValue(key, params);
+      this.emitStaleDrop(key, params, drop, body, entry!, serverEpoch, source, !applied);
+      trace(`http drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry!.version} reason=${drop} source=${source}`);
+      // Applied → the cache holds newer server-vouched truth; keep it. Never-
+      // applied → the cache holds only the placeholder, and settling the query
+      // with it (or applying the stale body) is the wedge. Throw instead: RQ
+      // retry + the next invalidate frame converge the legitimate race, and a
+      // persistent failure surfaces typed and visible instead of confidently
+      // wrong.
+      if (applied) return this.getCachedResource(key, params) as T;
+      throw new ResourceStaleReadError(key, body.version, entry!.version, drop);
+    }
+
     const parsed = schema.parse(body.value); // schema violation throws — surfaced by the caller
-    // Adopt the body's commit watermark AFTER the strict-`<` guard (a stale-
-    // dropped response never advances the causal floor) and IMMEDIATELY BEFORE
-    // the cache write it describes — same load-bearing order as the WS paths.
+    // Adopt the body's commit watermark AFTER the guard (a stale-dropped response
+    // never advances the causal floor) and IMMEDIATELY BEFORE the cache write it
+    // describes — same load-bearing order as the WS paths.
     if (body.watermark !== undefined) noteResourceWatermark(key, params, body.watermark);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     if (entry) {
-      // Advance monotonically (never lower) so a later WS frame at this version
-      // is stale-dropped cheaply and a genuinely-newer one still applies.
-      if (body.version > entry.version) entry.version = body.version;
-      this.markApplied(entry, key); // stamps lastAppliedAt + emitDebug + verbose trace
+      if (crossEpochAdopt) {
+        // Cross-epoch adopt: the old-boot version number is meaningless, so take
+        // the body's version UNCONDITIONALLY and re-stamp the entry's boot
+        // identity (body.epoch is defined on every cross-epoch adopt path).
+        entry.version = body.version;
+        entry.epoch = body.epoch;
+      } else if (body.version > entry.version) {
+        // Same-epoch (or legacy) apply: advance monotonically (never lower) so a
+        // later WS frame at this version is stale-dropped cheaply and a genuinely-
+        // newer one still applies. Epoch is left to the WS ack path.
+        entry.version = body.version;
+      }
+      this.markApplied(entry, key); // stamps lastAppliedAt + resets drop count + emitDebug + verbose trace
     }
     trace(`http key=${key} params=${paramsKey(params)} version=${body.version} source=${source}`);
     return parsed;
+  }
+
+  /** Bump the consecutive-drop counter for (key, params) and emit the running
+   *  count to the stale-drop report sink. Called on EVERY `fetchOverHttp` drop
+   *  (both same-epoch strict-`<` and cross-boot stale-epoch); the counter resets
+   *  in `markApplied` on the next successful apply. */
+  private emitStaleDrop(
+    key: string,
+    params: ResourceParams,
+    reason: "stale-version" | "stale-epoch",
+    body: { version: number; epoch?: string },
+    entry: ActiveSub,
+    serverEpoch: string | undefined,
+    source: "prime" | "fallback",
+    neverApplied: boolean,
+  ): void {
+    const id = `${key}\0${paramsKey(params)}`;
+    const consecutiveDrops = (this.staleDropCounts.get(id) ?? 0) + 1;
+    this.staleDropCounts.set(id, consecutiveDrops);
+    httpStaleDropReportSink.emit({
+      key,
+      params,
+      reason,
+      consecutiveDrops,
+      bodyVersion: body.version,
+      haveVersion: entry.version,
+      bodyEpoch: body.epoch ?? null,
+      entryEpoch: entry.epoch ?? null,
+      serverEpoch: serverEpoch ?? null,
+      source,
+      neverApplied,
+    });
   }
 
   /** Cold-start accelerator: prime a resource's first value over plain HTTP when
@@ -752,10 +923,20 @@ export class NotificationsClient {
     try {
       await this.fetchOverHttp(key, params, origin, schema, "prime");
     } catch (err) {
-      if (err instanceof TypeError || err instanceof ResourceHttpError) {
-        // Transient network / HTTP-status failure during cold boot — non-fatal;
-        // the WS sub-ack remains the source of truth and will deliver.
-        trace(`http drop key=${key} params=${paramsKey(params)} reason=${err instanceof TypeError ? "network" : "http"} source=prime error=${String(err)}`);
+      if (
+        err instanceof TypeError ||
+        err instanceof ResourceHttpError ||
+        err instanceof ResourceStaleReadError
+      ) {
+        // Transient network / HTTP-status / stale-read failure during cold boot —
+        // non-fatal; prime is best-effort and the WS sub-ack remains the source of
+        // truth and will deliver.
+        // Each check runs on the full caught union (no cross-narrowing) so the
+        // trace label is derived without a nested-instanceof narrow.
+        const isNetwork = err instanceof TypeError;
+        const isStaleRead = err instanceof ResourceStaleReadError;
+        const reason = isNetwork ? "network" : isStaleRead ? "stale-read" : "http";
+        trace(`http drop key=${key} params=${paramsKey(params)} reason=${reason} source=prime error=${String(err)}`);
         return;
       }
       // Schema violation / malformed body is a real bug — surface loudly like the
@@ -945,6 +1126,24 @@ export class NotificationsClient {
     }
     if (msg.kind === "sub-error") {
       console.error(`[notifications] sub-error key=${msg.key} reason=${msg.reason}`);
+      const pk = paramsKey(msg.params);
+      trace(`sub-error key=${msg.key} params=${pk} reason=${msg.reason}`);
+      // Gate on the local sub entry exactly like every other frame: the shared
+      // socket broadcasts to every tab, and a pre-upgrade server's params-less
+      // frame (`msg.params` undefined) won't match a live sub → safe drop. When
+      // this tab DOES hold the sub, drive the HTTP-fallback refetch via
+      // applyInvalidate — its own outcome sets q.error naturally (500
+      // loader-failed / 404 → ResourceHttpError) or heals if transient — instead
+      // of leaving the resource wedged `pending` forever with `error: null`.
+      // NOTE: handleResourceHttp runs no `authorize` check today; moot with zero
+      // authorize resources, a follow-up composes with this invalidate flow when
+      // the authorize seam ships.
+      const entry = channel.subs.get(`${msg.key}\0${pk}`);
+      if (!entry) {
+        trace(`drop key=${msg.key} params=${pk} reason=no-sub source=sub-error`);
+        return;
+      }
+      this.applyInvalidate(msg.key, msg.params);
       return;
     }
     // Learn the server's boot epoch from any ack frame carrying one — BEFORE the
@@ -1004,6 +1203,12 @@ export class NotificationsClient {
     // (re)subscribe; every other kind is a live, server-initiated frame.
     if (msg.kind === "sub-ack" || msg.kind === "up-to-date") {
       entry.lastAckVersion = msg.version;
+      // Stamp which server boot `entry.version` now belongs to. Only ack frames
+      // carry `epoch` (sub-ack, and up-to-date — incl. the up-to-date-batch that
+      // recurses through it with the batch epoch attached); update/delta/
+      // invalidate ride the same boot's stream and leave `entry.epoch` unchanged.
+      // This is what lets `fetchOverHttp`'s guard compare an HTTP body cross-boot.
+      if (msg.epoch !== undefined) entry.epoch = msg.epoch;
     } else {
       entry.liveFrameSeq++;
     }
@@ -1064,9 +1269,13 @@ export class NotificationsClient {
     this.markApplied(entry, key);
   }
 
-  /** Stamp the apply time, fire debug listeners, and emit the verbose-gated apply trace. */
+  /** Stamp the apply time, fire debug listeners, and emit the verbose-gated apply
+   *  trace. Covers WS applies (applyUpdate/applyDelta) and the HTTP apply
+   *  (fetchOverHttp), so it is the single place the consecutive stale-drop counter
+   *  is reset on a successful apply. */
   private markApplied(entry: ActiveSub, key: string): void {
     entry.lastAppliedAt = Date.now();
+    this.staleDropCounts.delete(`${key}\0${paramsKey(entry.params)}`);
     if (verboseTraceOn()) {
       trace(`applyUpdate key=${key} params=${paramsKey(entry.params)} version=${entry.version}`);
     }

@@ -248,13 +248,21 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
         return "val";
       },
     });
+    // The HTTP body carries `epoch: bootEpoch` — the same epoch the ack frames
+    // carry (Fix B) — so the client can compare its cached version cross-boot. Grab
+    // the ack epoch first, then reset `loads` so the HTTP no-short-circuit assertion
+    // counts only the GET's own load.
+    await h.subscribe("r");
+    const ackEpoch = h.frames.find((f) => f.kind === "sub-ack")!.epoch!;
+    loads = 0;
     const res = await h.runtime.handleResourceHttp(
       new Request("http://localhost/api/resources/r"),
       { key: "r" },
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { value: unknown; version: number };
+    const body = (await res.json()) as { value: unknown; version: number; epoch: string };
     expect(body.value).toBe("val");
+    expect(body.epoch).toBe(ackEpoch);
     expect(loads).toBe(1);
   });
 });

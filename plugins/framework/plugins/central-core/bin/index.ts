@@ -166,6 +166,37 @@ registerHttpRoute("GET /api/central-resources/:key", handleResourceHttp);
 const socketPath = Bun.env.SOCKET_PATH;
 if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 
+// Default every API response to `cache-control: no-store` unless the handler set
+// its own — the dispatch-layer floor beneath handleResourceHttp's own explicit
+// `no-store` that closes the cache-poisoning wedge class on central too (Fix E).
+// Bun's constructed-Response headers are mutable in place (probed), so no clone.
+function withDefaultCacheControl(res: Response): Response {
+  if (!res.headers.has("cache-control")) res.headers.set("cache-control", "no-store");
+  return res;
+}
+
+// Central had no try/catch around handler dispatch — a throw surfaced as Bun's
+// default 500 with no log line. Mirror server-core's `safeHandle` (console.error
+// with method + pathname + stack → generic 500); central has no reportServerError
+// hook, so the console line is the parity floor. Also applies the Cache-Control
+// default so both the success and error responses go through one chokepoint.
+async function safeHandle(
+  handler: HttpHandler,
+  req: Request,
+  params: Record<string, string>,
+  pathname: string,
+): Promise<Response> {
+  try {
+    return withDefaultCacheControl(await handler(req, params));
+  } catch (err) {
+    const errObj = err instanceof Error ? err : new Error(String(err));
+    console.error(`[http] ${req.method} ${pathname}: ${errObj.message}`, errObj.stack ?? "");
+    return withDefaultCacheControl(
+      Response.json({ error: "Internal server error" }, { status: 500 }),
+    );
+  }
+}
+
 const server = Bun.serve<WsData>({
   unix: socketPath,
   fetch(req, server) {
@@ -182,14 +213,14 @@ const server = Bun.serve<WsData>({
 
     const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    if (literal) return literal(req, {});
+    if (literal) return safeHandle(literal, req, {}, url.pathname);
 
     const matched = matchSegments(
       url.pathname,
       paramHttpRoutes,
       (r) => (r as HttpParamRoute).method === req.method,
     );
-    if (matched) return matched.handler(req, matched.params);
+    if (matched) return safeHandle(matched.handler, req, matched.params, url.pathname);
 
     return new Response("Not found", { status: 404 });
   },

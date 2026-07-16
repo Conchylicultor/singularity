@@ -288,6 +288,12 @@ function mergeKeyedDeltaLocal(
 export interface ClientView {
   readonly value: unknown;
   readonly version: number;
+  /**
+   * The boot epoch `version` belongs to — stamped from the last epoch-carrying WS
+   * frame (`sub-ack`/`up-to-date`) that adopted a version. `undefined` until the
+   * first such frame. Labels `version` so a cross-boot HTTP body isn't mis-compared.
+   */
+  readonly epoch: string | undefined;
   /** How many deltas arrived with no resolvable base (the real client resubs). */
   readonly driftResubs: number;
   /** Set by an `invalidate` frame; a test converges it via `applyHttpRefetch`. */
@@ -296,11 +302,17 @@ export interface ClientView {
   applyAll(frames: readonly RecordedFrame[]): void;
   /**
    * Adopt a refetch (HTTP GET) result — the invalidate-mode convergence path.
-   * Mirrors `fetchOverHttp`'s STRICT `<` guard (apply iff `version >= current`),
-   * the deliberate WS-vs-HTTP difference that lets an invalidate refetch at the
-   * same version land.
+   * Hand-mirrors `fetchOverHttp`'s epoch-aware guard (Fix B). An epoch-less body
+   * (pre-upgrade server) keeps today's strict-`<` behavior; when the body carries
+   * an `epoch` and the view holds an entry epoch, the guard matrix applies:
+   *   1. same boot (`body.epoch === entry.epoch`) → strict-`<` (equal-version accept);
+   *   2. entry stale-boot (`body.epoch === serverEpoch`) → ADOPT unconditionally;
+   *   3. body stale-boot (`entry.epoch === serverEpoch`) → DROP;
+   *   4. no arbiter (neither matches serverEpoch) → ADOPT (WS-down fallback window).
+   * The view's "known server epoch" mirrors the WS channel's current identity: the
+   * last epoch seen on any `sub-ack`/`up-to-date` frame.
    */
-  applyHttpRefetch(res: { value: unknown; version: number }): void;
+  applyHttpRefetch(res: { value: unknown; version: number; epoch?: string }): void;
 }
 
 export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): ClientView {
@@ -308,6 +320,11 @@ export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): 
   let value: unknown = undefined;
   let driftResubs = 0;
   let stale = false;
+  // The boot `version` belongs to. Stamped from epoch-carrying WS frames only
+  // (`sub-ack`/`up-to-date`); `update`/`delta`/`invalidate` leave it unchanged.
+  let entryEpoch: string | undefined = undefined;
+  // The WS channel's current server identity — the last epoch seen on any frame.
+  let serverEpoch: string | undefined = undefined;
 
   return {
     get value() {
@@ -316,6 +333,9 @@ export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): 
     get version() {
       return version;
     },
+    get epoch() {
+      return entryEpoch;
+    },
     get driftResubs() {
       return driftResubs;
     },
@@ -323,17 +343,24 @@ export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): 
       return stale;
     },
     apply(frame: RecordedFrame): void {
+      // Any epoch-carrying frame refreshes the channel's known server identity,
+      // even if its version fails the guard below (an old-boot replay still tells
+      // us which boot the socket is now talking to).
+      if (frame.epoch !== undefined) serverEpoch = frame.epoch;
       if (frame.version === undefined) return; // sub-error / ping — no version
       // WS version guard: drop anything not strictly newer than what we hold.
       if (frame.version <= version) return;
       if (frame.kind === "sub-ack" || frame.kind === "update") {
         version = frame.version;
         value = frame.value;
+        // `update` carries no epoch → leaves `entryEpoch` unchanged; `sub-ack` does.
+        if (frame.epoch !== undefined) entryEpoch = frame.epoch;
         return;
       }
       if (frame.kind === "up-to-date") {
         // Conditional-revalidation hit: adopt the version, keep the cached value.
         version = frame.version;
+        if (frame.epoch !== undefined) entryEpoch = frame.epoch;
         return;
       }
       if (frame.kind === "invalidate") {
@@ -362,11 +389,41 @@ export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): 
     applyAll(fs: readonly RecordedFrame[]): void {
       for (const f of fs) this.apply(f);
     },
-    applyHttpRefetch(res: { value: unknown; version: number }): void {
-      if (res.version < version) return; // strict-< HTTP guard
-      version = res.version;
-      value = res.value;
-      stale = false;
+    applyHttpRefetch(res: { value: unknown; version: number; epoch?: string }): void {
+      const bodyEpoch = res.epoch;
+      const adopt = (): void => {
+        // Cross-epoch adopt: `version` is NOT monotonic here — an old-boot number is
+        // meaningless against a new-boot body — so we take the body's version wholesale.
+        version = res.version;
+        value = res.value;
+        if (bodyEpoch !== undefined) entryEpoch = bodyEpoch;
+        stale = false;
+      };
+      // Epoch-less body (pre-upgrade server) or no known entry epoch → today's
+      // behavior byte-for-byte: strict-`<` guard on version.
+      if (bodyEpoch === undefined || entryEpoch === undefined) {
+        if (res.version < version) return; // strict-< HTTP guard
+        version = res.version;
+        value = res.value;
+        if (bodyEpoch !== undefined) entryEpoch = bodyEpoch;
+        stale = false;
+        return;
+      }
+      // Case 1 — same boot: keep strict-`<` (preserves the equal-version accept).
+      if (bodyEpoch === entryEpoch) {
+        if (res.version < version) return;
+        version = res.version;
+        value = res.value;
+        stale = false;
+        return;
+      }
+      // Epochs differ.
+      // Case 2 — entry is stale-boot, body is the WS's current server identity: ADOPT.
+      if (bodyEpoch === serverEpoch) return adopt();
+      // Case 3 — body is stale-boot, entry is the current server identity: DROP.
+      if (entryEpoch === serverEpoch) return;
+      // Case 4 — no arbiter (serverEpoch matches neither / undefined): ADOPT.
+      adopt();
     },
   };
 }

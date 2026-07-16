@@ -3750,6 +3750,10 @@
       "name": "@singularity/plugin-reports-launch-fix",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/live-state-stale-drop": {
+      "name": "@singularity/plugin-reports-live-state-stale-drop",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/mutation-errors": {
       "name": "@singularity/plugin-reports-mutation-errors",
       "version": "0.0.1",
@@ -6679,6 +6683,8 @@
     "@singularity/plugin-reports-endpoint-errors": ["@singularity/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
 
     "@singularity/plugin-reports-launch-fix": ["@singularity/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
+
+    "@singularity/plugin-reports-live-state-stale-drop": ["@singularity/plugin-reports-live-state-stale-drop@workspace:plugins/reports/plugins/live-state-stale-drop"],
 
     "@singularity/plugin-reports-mutation-errors": ["@singularity/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
 

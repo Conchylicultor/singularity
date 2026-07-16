@@ -258,6 +258,14 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * callback takes only `params` today (the resource key is fixed per entry, and
    * no caller identity is threaded through the socket yet); widening it with a
    * caller-context argument later is a non-breaking additive change.
+   *
+   * DECLARING IT CURRENTLY THROWS AT REGISTRATION: only the WS subscribe path
+   * enforces it — `handleResourceHttp` would serve the value unchecked (and the
+   * client heals a `sub-error` via an HTTP refetch), a silent authorization
+   * bypass. The guard in `createResource` refuses the declaration until HTTP
+   * parity exists; build one shared admission check across handleSub /
+   * handleSubBatch / handleResourceHttp, then delete the guard and restore the
+   * WS-enforcement tests from history.
    */
   authorize?: (params: P) => boolean | Promise<boolean>;
   /**
@@ -1477,6 +1485,18 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         );
       }
     }
+    // The `authorize` seam is enforced on the WS subscribe path ONLY —
+    // `handleResourceHttp` (and the client's sub-error → HTTP-refetch heal)
+    // would serve the value without ever consulting it, a silent authorization
+    // bypass. Refuse the declaration until HTTP parity exists, so the first
+    // real consumer hits this wall instead of shipping the hole. Build parity
+    // (one shared admission check across handleSub/handleSubBatch/
+    // handleResourceHttp) before deleting this guard.
+    if (def.authorize) {
+      throw new Error(
+        `defineResource: "authorize" is not enforced on the HTTP read path yet for key "${def.key}" — build handleResourceHttp parity before using this seam`,
+      );
+    }
     const upstreamKeys: string[] = [];
     const ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }> = [];
     for (const dep of def.dependsOn ?? []) {
@@ -2586,7 +2606,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (!key) return;
     const entry = registry.get(key);
     if (!entry) {
-      sendJson(state.ws, { kind: "sub-error", id, key, reason: "unknown-key" });
+      sendJson(state.ws, { kind: "sub-error", id, key, params, reason: "unknown-key" });
       return;
     }
     // Subscription-authorization seam (deferred; single-instance-per-user — see
@@ -2605,7 +2625,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         allowed = false;
       }
       if (!allowed) {
-        sendJson(state.ws, { kind: "sub-error", id, key, reason: "unauthorized" });
+        sendJson(state.ws, { kind: "sub-error", id, key, params, reason: "unauthorized" });
         return;
       }
     }
@@ -2643,7 +2663,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     //     counter (its truth may live outside the notify stream, e.g. git).
     // The HTTP path (`handleResourceHttp`) deliberately has NO version
     // short-circuit: the invalidate-mode refetch must return a body at an equal
-    // version (the client's strict-`<` HTTP guard accepts it).
+    // version (the client's strict-`<` HTTP guard accepts it). That HTTP body
+    // carries `epoch: bootEpoch` alongside the version, so the client can tell a
+    // fresh same-boot body apart from a stale-boot cache — the epoch-aware guard
+    // that fixes the cross-boot cache-poisoning drop (Fix B).
     const currentVersion = entry.versions.get(pk) ?? 0;
     if (
       !entry.revalidate &&
@@ -2743,7 +2766,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       ({ value, etag, watermark } = await gatedRead(entry, params, freshEtag));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
-      sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
+      sendJson(state.ws, { kind: "sub-error", id, key, params, reason: "loader-failed" });
       return;
     }
     // Yield ONCE before touching the snapshot or the wire. A push continuation
@@ -2838,7 +2861,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       retained.add(`${e.key}\0${pk}`);
       const entry = registry.get(e.key);
       if (!entry) {
-        sendJson(state.ws, { kind: "sub-error", id: e.id, key: e.key, reason: "unknown-key" });
+        sendJson(state.ws, { kind: "sub-error", id: e.id, key: e.key, params, reason: "unknown-key" });
         continue;
       }
       if (entry.authorize) {
@@ -3038,7 +3061,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const ifNoneMatch = req.headers.get("If-None-Match");
     const freshEtag = entry.revalidate ? await computeEtag(entry, resourceParams) : undefined;
     if (freshEtag !== undefined && ifNoneMatch != null && freshEtag === ifNoneMatch) {
-      return new Response(null, { status: 304 });
+      // `no-store` even on the 304: the handler that emits the ETag (the header that
+      // invites caching) owns forbidding the browser HTTP cache from storing the
+      // revalidated body. Without it a restart-stable ETag lets the browser 304
+      // onto a stale old-boot body it hands JS transparently — the cache-poisoning
+      // wedge. See research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md.
+      return new Response(null, { status: 304, headers: { "cache-control": "no-store" } });
     }
 
     let value: unknown;
@@ -3057,17 +3085,32 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
     const pk = paramsKey(resourceParams);
     const version = entry.versions.get(pk) ?? 0;
-    const headers: Record<string, string> = { "content-type": "application/json" };
+    // `no-store` forbids the browser HTTP cache from storing this body — the
+    // structural cure for the cache-poisoning wedge (a restart-stable ETag let the
+    // browser 304-replay an old-boot body). See the 304 branch above and Fix A/E.
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+    };
     // Stamp the etag the FLIGHT carried, never `freshEtag` — stamping a signature
     // newer than the body would let the next conditional GET 304 onto a stale
     // value forever. Undefined (opt-out, throwing signature, or a joined push-path
     // flight) → OMIT the header; the client then sends no If-None-Match next time
     // and gets a full body.
     if (etag !== undefined) headers["ETag"] = etag;
-    // The body is a full value, so it may carry the flight's commit watermark
+    // The body carries `epoch: bootEpoch` so the client can compare its cached
+    // `entry.version` cross-boot: per-boot in-memory version counters are only
+    // comparable within one boot, so an epoch-less strict-`<` guard dropped a
+    // fresh body as "stale" against a stale-boot cache. See Fix B's guard matrix.
+    // The body is a full value, so it may also carry the flight's commit watermark
     // (Rule B′) — same adoption discipline as the etag above.
     return new Response(
-      JSON.stringify({ value, version, ...(watermark !== undefined ? { watermark } : {}) }),
+      JSON.stringify({
+        value,
+        version,
+        epoch: bootEpoch,
+        ...(watermark !== undefined ? { watermark } : {}),
+      }),
       { headers },
     );
   }

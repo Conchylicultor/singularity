@@ -26,6 +26,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-slow-op",
   "client-render-loop",
   "client-optimistic-divergence",
+  "client-live-state-stale-drop",
   "boot-snapshot",
   "plugin-load",
   "client-storage",

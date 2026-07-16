@@ -118,6 +118,20 @@ the "no schema registered for key=…" crash whenever one tab observes a resourc
 (e.g. the config sidebar's `config-v2.conflicts`) and another tab, mounted on a
 page that never observes it, receives the broadcast push.
 
+**`sub-error` frames carry `params` and heal through `applyInvalidate`.** A
+`sub-error` frame is now `{ kind, id?, key, params, reason }` — `params` was added
+so the shared-socket broadcast can be gated on the local sub entry exactly like
+every other frame (a params-less legacy frame won't match a live sub → safe
+drop). When the entry exists, the client calls `applyInvalidate(key, params)`:
+the HTTP fallback refetch runs and **its own outcome** sets `q.error` naturally
+(a 500 loader-failed / 404 unknown-key surfaces as `ResourceHttpError`) or heals
+if the failure was transient. This reuses the single existing error channel — no
+queryClient internals — and actually un-wedges the pane, instead of the old
+`console.error`-and-drop that left the resource `pending` forever with
+`error: null`. (Pre-existing hole, out of scope: `handleResourceHttp` runs no
+`authorize` check — moot today with zero `authorize` resources, tracked as a
+follow-up for when that seam ships.)
+
 ## Resource schemas
 
 Every resource **must** declare a `schema` (Zod) — it is required on
@@ -175,6 +189,72 @@ refetch. `fetchOverHttp` returns the *effective* cached value (the freshly
 applied one, or the retained value on a `304`/stale drop) so React Query's
 `queryFn` contract holds with no separate render path. See
 `research/2026-07-02-converge-http-resource-writes-version-guard.md`.
+
+**Both fetches are `cache: "no-store"`, deliberately.** The conditional GET and
+the defensive refetch pass `cache: "no-store"` so the browser HTTP cache never
+stores or replays a resource body. Without it, the browser cached an old-boot
+body `{value, version: 1}` and, on a later request, transparently revalidated it
+with its stored `ETag`. Because some resources emit a **restart-stable** ETag
+(`edited-files` is content-addressed for 304 herd-collapse), the server 304'd
+after a backend restart and the browser handed JS the *old-boot* body — versions
+are per-boot in-memory counters, so the cross-boot compare dropped it as stale
+and the pane wedged on "Close (state unknown)". `no-store` kills that at the
+client; the server pairs it with `Cache-Control: no-store` on the 200 **and** the
+304 (the handler that emits the ETag owns forbidding cache storage — see
+`resource-runtime/CLAUDE.md`). Design:
+`research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md`.
+
+**Epoch-aware cross-boot guard.** The HTTP body now carries
+`{ value, version, epoch }` — `epoch` is the server `bootEpoch`, the twin of the
+WS ack epoch — because a bare version compare across boots is meaningless (the
+counter resets to 0 each boot). `ActiveSub` carries `epoch?` labelling which boot
+`entry.version` belongs to (stamped when a version is adopted from an
+epoch-carrying frame, and on an HTTP apply). The strict-`<` guard is replaced by a
+4-case matrix, engaged only when `entry` exists and `body.epoch` is defined (an
+epoch-less body from a pre-upgrade server keeps today's strict-`<` behavior):
+
+1. **Same boot** (`body.epoch === entry.epoch`) — keep strict-`<` (preserves the
+   equal-version accept the `invalidate` refetch depends on).
+2. **Entry is stale-boot** (epochs differ, `body.epoch === channel.serverEpoch`) —
+   **ADOPT**; the WS channel's current server identity vouches for the body, and a
+   cross-epoch adopt sets `entry.version = body.version` unconditionally (the old
+   number is meaningless).
+3. **Body is stale-boot** (epochs differ, `entry.epoch === channel.serverEpoch`) —
+   **DROP** (`stale-epoch`), subject to the never-applied escape below.
+4. **No arbiter** (epochs differ, `serverEpoch` matches neither / undefined) —
+   **ADOPT**. This is the WS-down fallback window — `fetchOverHttp`'s raison
+   d'être; dropping here would starve the fallback for a whole outage, and a live
+   response beats a memory of unknown vintage. A socket reopen resets the replay
+   baseline to -1 before any WS frame applies, so a post-adopt frame can't
+   mis-compare.
+
+**Never settle with a placeholder (`ResourceStaleReadError`).** A stale-dropped or
+`304` body must never *settle* a query that still holds only its `initialData`
+placeholder (the exact limb of the wedge: React Query marks the queryFn a success
+and the query settles holding a value the server never vouched for). The guard is
+`hasAppliedValue(key, params)` (`dataUpdatedAt !== 0` — `initialData` is seeded at
+`0`): when a value was already applied, a stale drop returns the cached value
+(today's behavior — the cache holds server-vouched newer truth); when
+**never-applied**, it **throws a typed `ResourceStaleReadError`** (a sibling of
+`ResourceHttpError` carrying `key`, `bodyVersion`, `haveVersion`, `reason`) rather
+than returning the placeholder or applying the stale body (which could render
+old-boot data under destructive buttons). On the same-epoch invalidate race
+(entry bumped to N+1, GET raced the flush and returned N) the throw drives RQ's
+`retry: 1` → the flush lands → it applies; a persistent throw settles `q.error`
+typed and visible (through `ResourceView`/`matchResource`'s error arm, no toast)
+and the next invalidate frame heals it. `primeFromHttp` swallows
+`ResourceStaleReadError` as a transient (prime is best-effort; the WS sub-ack is
+truth) with its own trace line.
+
+**Stale-drop observability sink.** Every stale drop emits a policy-free
+`HttpStaleDropReport` into `httpStaleDropReportSink` (`web/stale-drop-reporter.ts`,
+re-exported from the barrel) carrying a running `consecutiveDrops` count
+(`NotificationsClient` keeps a `Map` keyed `(key, params)`, incremented on drop,
+**reset in `markApplied`** on any WS or HTTP apply). The primitive owns no
+threshold — it emits on every drop; the `reports/live-state-stale-drop` consumer
+owns the wedge policy (fire once at `consecutiveDrops === 3 && neverApplied`).
+Import direction is legal: `live-state` → `report-sink` (a leaf); `live-state`
+must never import `reports`.
 
 ## Commit watermarks (`getResourceWatermark` / `compareTxWatermark`)
 
@@ -379,6 +459,13 @@ The one sanctioned exemption is `useOptimisticResource`: editors keep painting
 `stale` under an error and report it through `error` + `sync-status`, rather than
 blanking the document.
 
+`ResourceStaleReadError` (see "One version-guarded HTTP write path") lives in this
+transient channel: a never-applied HTTP body the version/epoch guard rejected is
+**thrown**, not returned, so the resource stays `pending` (retryable) instead of
+settling on its `initialData` placeholder — the structural fix for the
+"Close (state unknown)" wedge, where returning the placeholder had marked the
+queryFn a success and settled a value the server never vouched for.
+
 **The value channel — determinate.** *"The server has an answer, and the answer
 is: there is nothing to determine."* A loader branch that **cannot determine**
 its value must say so in the payload, via `Resolvable<T>` from `live-state/core`:
@@ -507,9 +594,9 @@ reaching for a heavier entity cache.
 - Load-bearing: yes
 - Web:
   - Uses: `infra/endpoints.endpointQueryKey`, `primitives/css/placeholder.Placeholder`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
-  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`; Values: `centralResourceDescriptor`, `combineResources`, `ensureNotificationsClient`, `getNotificationsClient`, `getResourceWatermark`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `noteResourceWatermark`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
+  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `HttpStaleDropReport`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`; Values: `centralResourceDescriptor`, `combineResources`, `ensureNotificationsClient`, `getNotificationsClient`, `getResourceWatermark`, `httpStaleDropReportSink`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `noteResourceWatermark`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceStaleReadError`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
 - Cross-plugin:
-  - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/trash`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/studio/release/release-logs`, `apps/website/blog/pages-integration`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `infra/query-resource`, `infra/trash`, `page/editor`, `page/editor-collab`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/data-view/view-order`, `primitives/optimistic-mutation`, `release`, `reports`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-deps-tree`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
+  - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/trash`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/studio/release/release-logs`, `apps/website/blog/pages-integration`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `infra/query-resource`, `infra/trash`, `page/editor`, `page/editor-collab`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/data-view/view-order`, `primitives/optimistic-mutation`, `release`, `reports`, `reports/live-state-stale-drop`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-deps-tree`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
 - Core:
   - Exports: Types: `Resolvable`, `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `compareTxWatermark`, `keyedResourceDescriptor`, `resolvableSchema`, `resolved`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`, `unresolved`
 

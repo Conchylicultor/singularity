@@ -281,6 +281,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "release", id: "release", loader: () => import("@plugins/release/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/launcher", "infra/plugins/paths", "infra/plugins/query-resource", "primitives/plugins/log-channels"] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },
   { pluginPath: "reports/plugins/crash", id: "reports.crash", loader: () => import("@plugins/reports/plugins/crash/server"), dependsOn: ["build/plugins/server-build-id", "reports"] },
+  { pluginPath: "reports/plugins/live-state-stale-drop", id: "reports.live-state-stale-drop", loader: () => import("@plugins/reports/plugins/live-state-stale-drop/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/noise-rules", id: "reports.noise-rules", loader: () => import("@plugins/reports/plugins/noise-rules/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/optimistic-divergence", id: "reports.optimistic-divergence", loader: () => import("@plugins/reports/plugins/optimistic-divergence/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/render-loop", id: "reports.render-loop", loader: () => import("@plugins/reports/plugins/render-loop/server"), dependsOn: ["reports"] },

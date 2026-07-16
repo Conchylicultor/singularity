@@ -25,6 +25,7 @@ const ALLOWED: { prefix: string; reason: string }[] = [
   { prefix: "plugins/infra/plugins/endpoints/", reason: "the endpoints primitive — implement() owns Response.json()" },
   // Framework 500 fallback when a handler throws before any typed response.
   { prefix: "plugins/framework/plugins/server-core/bin/index.ts", reason: "framework 500 error fallback" },
+  { prefix: "plugins/framework/plugins/central-core/bin/index.ts", reason: "framework 500 error fallback" },
   // handleClassify returns 202 Accepted; implement() always emits 200/204.
   { prefix: "plugins/conversations/plugins/conversation-category/server/internal/routes.ts", reason: "202 Accepted status (implement() is 200/204 only)" },
   // 400/404 guards emitted before an NDJSON stream Response.

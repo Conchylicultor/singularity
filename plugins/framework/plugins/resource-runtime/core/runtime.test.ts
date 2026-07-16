@@ -17,7 +17,7 @@
  *     flush's frames (the guard serializes; it never overlaps two flushes).
  */
 
-import { test, expect, describe } from "bun:test";
+import { test, expect, describe, mock } from "bun:test";
 import { z } from "zod";
 import { type ResourceParams } from "./runtime";
 // The harness / controllable-loader / tick helpers live in the shared
@@ -775,28 +775,33 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
       loader: async () => 5,
       revalidate: async () => "sig-A",
     });
-    // First GET (no If-None-Match) → 200 + the opaque ETag token.
+    // First GET (no If-None-Match) → 200 + the opaque ETag token. Every response —
+    // even the ETag-bearing ones that invite caching — forbids the browser HTTP
+    // cache from storing the body (Fix A: the cache-poisoning cure).
     const first = await h.runtime.handleResourceHttp(
       new Request("http://x/api/resources/r"),
       { key: "r" },
     );
     expect(first.status).toBe(200);
+    expect(first.headers.get("Cache-Control")).toBe("no-store");
     const token = first.headers.get("ETag");
     expect(token).toBeTruthy();
 
-    // Conditional GET with the real token → 304, empty body.
+    // Conditional GET with the real token → 304, empty body — also no-store.
     const notModified = await h.runtime.handleResourceHttp(
       new Request("http://x/api/resources/r", { headers: { "If-None-Match": token! } }),
       { key: "r" },
     );
     expect(notModified.status).toBe(304);
+    expect(notModified.headers.get("Cache-Control")).toBe("no-store");
 
-    // A stale token → 200 with the value and the same fresh ETag.
+    // A stale token → 200 with the value and the same fresh ETag — also no-store.
     const fresh = await h.runtime.handleResourceHttp(
       new Request("http://x/api/resources/r", { headers: { "If-None-Match": "stale" } }),
       { key: "r" },
     );
     expect(fresh.status).toBe(200);
+    expect(fresh.headers.get("Cache-Control")).toBe("no-store");
     expect(fresh.headers.get("ETag")).toBe(token);
     expect((await fresh.json()).value).toBe(5);
   });
@@ -818,67 +823,75 @@ describe("authorize — deferred subscription-authorization seam", () => {
     expect(h.frames.some((f) => f.kind === "sub-error")).toBe(false);
   });
 
-  test("authorize returning false ⇒ sub-error/unauthorized, loader never runs", async () => {
+  // The WS handlers enforce `authorize` (fail-closed, sub-error/unauthorized),
+  // but `handleResourceHttp` does NOT — and the client heals a sub-error via an
+  // HTTP refetch, which would serve the value straight past the denial. Until
+  // that parity exists, declaring the seam is refused at registration, so the
+  // first real consumer hits a loud wall instead of shipping a silent
+  // authorization bypass. The WS enforcement behavior (deny, per-params, throw
+  // ⇒ fail closed) was pinned here until this guard landed — restore those
+  // tests from history when parity ships and the guard is deleted.
+  test("declaring authorize throws at registration until HTTP parity exists", () => {
     const h = createHarness();
-    let loaded = false;
-    h.runtime.defineResource({
-      key: "r",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => {
-        loaded = true;
-        return 1;
-      },
-      authorize: () => false,
-    });
-    await h.subscribe("r");
-
-    const errs = h.frames.filter((f) => f.key === "r" && f.kind === "sub-error");
-    expect(errs).toHaveLength(1);
-    expect(errs[0]!.reason).toBe("unauthorized");
-    // No initial value leaked, and the (side-effecting) loader was never invoked.
-    expect(h.frames.some((f) => f.key === "r" && f.kind === "sub-ack")).toBe(false);
-    expect(loaded).toBe(false);
+    expect(() =>
+      h.runtime.defineResource({
+        key: "r",
+        mode: "invalidate",
+        schema: z.number(),
+        loader: async () => 1,
+        authorize: () => false,
+      }),
+    ).toThrow(/"authorize" is not enforced on the HTTP read path/);
   });
+});
 
-  test("authorize can decide per-params (async, allow one tuple, deny another)", async () => {
+describe("sub-error frames — reason + params echo (Fix D)", () => {
+  // Every sub-error carries `params` so the client can gate the frame on its own
+  // local sub entry — a shared socket broadcasts to every tab, and a params-less
+  // legacy frame would match no entry (safe drop). See notifications-client.
+
+  test("unknown key via handleSub ⇒ sub-error/unknown-key with params echoed", async () => {
     const h = createHarness();
-    h.runtime.defineResource<number, { id: string }>({
-      key: "r",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-      authorize: async (params) => params.id === "ok",
-    });
-    await h.subscribe("r", { id: "ok" });
-    await h.subscribe("r", { id: "nope" });
+    await h.subscribe("nope", { id: "x" });
 
-    expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(1);
     const errs = h.frames.filter((f) => f.kind === "sub-error");
     expect(errs).toHaveLength(1);
-    expect(errs[0]!.reason).toBe("unauthorized");
+    expect(errs[0]!.key).toBe("nope");
+    expect(errs[0]!.reason).toBe("unknown-key");
+    expect(errs[0]!.params).toEqual({ id: "x" });
   });
 
-  test("a throwing authorize fails CLOSED (rejects the sub, no value)", async () => {
+  test("unknown key via handleSubBatch ⇒ sub-error/unknown-key with params echoed", async () => {
     const h = createHarness();
-    let loaded = false;
-    h.runtime.defineResource({
+    await h.subscribeBatch([{ key: "nope", params: { id: "y" } }]);
+
+    const errs = h.frames.filter((f) => f.kind === "sub-error");
+    expect(errs).toHaveLength(1);
+    expect(errs[0]!.key).toBe("nope");
+    expect(errs[0]!.reason).toBe("unknown-key");
+    expect(errs[0]!.params).toEqual({ id: "y" });
+  });
+
+  test("a throwing loader ⇒ sub-error/loader-failed with params echoed", async () => {
+    const reportError = mock((_ctx: string, _err: unknown) => {});
+    const h = createHarness({ reportError });
+    h.runtime.defineExternalResource<number, { id: string }>({
       key: "r",
       mode: "invalidate",
       schema: z.number(),
       loader: async () => {
-        loaded = true;
-        return 1;
-      },
-      authorize: () => {
-        throw new Error("boom");
+        throw new Error("loader boom");
       },
     });
-    await h.subscribe("r");
+    await h.subscribe("r", { id: "z" });
 
     const errs = h.frames.filter((f) => f.key === "r" && f.kind === "sub-error");
     expect(errs).toHaveLength(1);
-    expect(errs[0]!.reason).toBe("unauthorized");
-    expect(loaded).toBe(false);
+    expect(errs[0]!.reason).toBe("loader-failed");
+    expect(errs[0]!.params).toEqual({ id: "z" });
+    // The failure is still additively reported (never silently absorbed).
+    expect(
+      reportError.mock.calls.some(([ctx]) => String(ctx).includes("loader failed for r")),
+    ).toBe(true);
   });
 });

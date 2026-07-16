@@ -257,6 +257,42 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     expect(qc.getQueryData(["k"])).toEqual({ status: "fresh" });
   });
 
+  // sub-error handling (Fix D): a sub-error names the (key, params) it failed
+  // for, so the client drives the HTTP-fallback refetch via invalidateQueries —
+  // its outcome sets q.error / heals — instead of absorbing the frame and
+  // wedging the resource pending forever. Gated on a live local sub, like every
+  // other broadcast frame.
+  test("sub-error with params for a held sub → invalidateQueries for exactly that query key", async () => {
+    const { client, socket, qc } = await setup();
+    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    client.observe("k", { id: "c1" }, undefined, pushSchema);
+
+    socket.serverSend({ kind: "sub-error", key: "k", params: { id: "c1" }, reason: "loader-failed" });
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(invalidate.mock.calls[0]![0]).toEqual({ queryKey: ["k", { id: "c1" }] });
+  });
+
+  test("sub-error for a non-held key → dropped, no invalidate (broadcast-gate pin)", async () => {
+    const { socket, qc } = await setup();
+    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    // The shared socket broadcasts every frame to every tab; a tab that never
+    // observed the key must not act on its sub-error.
+    socket.serverSend({ kind: "sub-error", key: "ghost", params: {}, reason: "unknown-key" });
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  test("legacy params-less sub-error frame → dropped safely (no throw, no invalidate)", async () => {
+    const { client, socket, qc } = await setup();
+    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    client.observe("k", { id: "c1" }, undefined, pushSchema);
+    // A pre-upgrade server omits `params`; the client computes paramsKey({}) which
+    // cannot match the non-empty-params sub → safe drop, never a throw.
+    expect(() =>
+      socket.serverSend({ kind: "sub-error", key: "k", reason: "legacy" } as unknown as Record<string, unknown>),
+    ).not.toThrow();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   // Commit-watermark adoption (Rule B′ client half). The registry is
   // MODULE-LEVEL (shared across tests in this process — that is the point: the
   // optimistic hook reads it without a NotificationsProvider), so each test

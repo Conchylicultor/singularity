@@ -253,6 +253,17 @@ registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 const socketPath = Bun.env.SOCKET_PATH;
 if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 
+// Default every API response to `cache-control: no-store` unless the handler set
+// its own. The browser HTTP cache storing a live-state body then 304-replaying an
+// old-boot copy is the cache-poisoning wedge class (Fix E, the dispatch-layer
+// floor beneath handleResourceHttp's own explicit `no-store`); media/raw handlers
+// that set their own Cache-Control keep it. Bun's constructed-Response headers are
+// mutable in place (probed), so no clone is needed.
+function withDefaultCacheControl(res: Response): Response {
+  if (!res.headers.has("cache-control")) res.headers.set("cache-control", "no-store");
+  return res;
+}
+
 async function safeHandle(
   handler: HttpHandler,
   req: Request,
@@ -260,7 +271,7 @@ async function safeHandle(
   pathname: string,
 ): Promise<Response> {
   try {
-    return await handler(req, params);
+    return withDefaultCacheControl(await handler(req, params));
   } catch (err) {
     const errObj = err instanceof Error ? err : new Error(String(err));
     // Fail loudly: always emit a durable log line (captured by the gateway into
