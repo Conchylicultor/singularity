@@ -65,6 +65,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync", id: "framework.tooling.checks.token-group-vars-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/tsconfig-alias-single-owner", id: "framework.tooling.checks.tsconfig-alias-single-owner", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/tsconfig-alias-single-owner/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check"), dependsOn: ["infra/plugins/paths"] },
+  { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["plugin-meta/plugins/facets"] },

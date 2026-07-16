@@ -262,6 +262,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
+        - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
     - **`web-core`**
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
 
