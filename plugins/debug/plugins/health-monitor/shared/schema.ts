@@ -15,6 +15,19 @@ export const HealthSampleSchema = z.object({
   // which over-counted ~6× on macOS. Pre-cutover JSONL lines lack this field and
   // are dropped by safeParse (a brief history gap as the rolling window refills).
   physFootprintMb: z.number(),
+  // Real macOS ri_resident_size (MB) — pages physically in RAM right now,
+  // EXCLUDING pages sitting in the compressor / swap. phys_footprint INCLUDES
+  // compressed private pages, so `physFootprintMb − residentMb` ≈ this
+  // backend's squeezed-out bytes — the direct paging-victimhood series (see
+  // research/perfs/2026-07-16-main-paging-victim-investigation-PLAN.md §A2).
+  // Read it as a TREND, not an absolute: resident also counts shared/file-backed
+  // pages footprint does not charge, so a small unsqueezed process can read
+  // resident > footprint (negative difference). The squeeze signal is resident
+  // FALLING while footprint holds.
+  // NOT `process.memoryUsage().rss`, which over-counts ~6× on macOS (the very
+  // reason the old rssMb field was removed). Optional — pre-cutover JSONL lines
+  // must still parse, same rationale as `monitorOps` below; absent off-darwin.
+  residentMb: z.number().optional(),
   heapUsedMb: z.number(),
   heapTotalMb: z.number(),
   heapGrowthMb: z.number(), // Δ heapUsed vs prior tick; negative = a GC reclaimed

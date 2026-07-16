@@ -4,17 +4,58 @@
 // `@plugins/primitives/plugins/live-state/web/keyed-delta-merge.ts` — is named,
 // isolated, and fuzzable without standing up a socket or a registry.
 //
-// A keyed-mode array resource keeps a per-`(key,params)` snapshot of id→hash
-// (the hash is the row's canonical JSON, computed identically on every path).
-// On a notify the runtime re-runs the loader, diffs the new array against that
-// snapshot by row id, and broadcasts only the changed rows + the id order — so
-// a single-row change ships one row instead of the whole list. This module owns
-// that diff. The runtime owns the snapshot *storage* (the `Map<pk, snapshot>`):
-// these functions take the prior snapshot in and hand the next snapshot back,
-// staying pure (no I/O, no mutation of their inputs).
+// A keyed-mode array resource keeps a per-`(key,params)` snapshot of
+// id→`SnapEntry` (a content identity over the row's canonical JSON — see
+// `SnapEncoder` — computed identically on every path). On a notify the runtime
+// re-runs the loader, diffs the new array against that snapshot by row id, and
+// broadcasts only the changed rows + the id order — so a single-row change
+// ships one row instead of the whole list. This module owns that diff. The
+// runtime owns the snapshot *storage* (the `Map<pk, snapshot>`) AND the
+// per-resource encoder choice: these functions take the prior snapshot + the
+// encoder in and hand the next snapshot back, staying pure (no I/O, no
+// mutation of their inputs). A resource's `prev` snapshots must have been
+// built with the SAME encoder passed to the diff (entries are compared for
+// equality) — the runtime guarantees this by deriving the encoder statically
+// from the resource definition.
 
-/** A keyed snapshot: row id → canonical-JSON hash, in array order. */
-export type KeyedSnapshot = ReadonlyMap<string, string>;
+/**
+ * One retained snapshot entry for a row: either the row's full canonical JSON
+ * (`string`) or a 64-bit content hash of it (`bigint`). Which one an entry
+ * stores is a PER-RESOURCE choice made once by the runtime (`SnapEncoder`
+ * below) — the two never mix within one resource's snapshots.
+ */
+export type SnapEntry = string | bigint;
+
+/** A keyed snapshot: row id → snapshot entry (see `SnapEntry`), in array order. */
+export type KeyedSnapshot = ReadonlyMap<string, SnapEntry>;
+
+/**
+ * Encodes a row's canonical JSON into the value retained in the snapshot. The
+ * diff functions below only ever compare entries for EQUALITY, so any injective
+ * -enough encoding works for diffing; the choice is about memory and about the
+ * one consumer that needs the bytes back:
+ *
+ * - `hashSnapEncoder` (the default for keyed resources): retain a 64-bit
+ *   wyhash instead of the full JSON string. A snapshot Map shrinks from
+ *   value-sized (UTF-16 ⇒ ~2 B/char of row JSON, rebuilt and dropped on every
+ *   recompute — the delivery-path GC sawtooth) to ~16 B/row. The trade,
+ *   explicit: a 64-bit collision makes a genuinely-changed row read as
+ *   unchanged — a missed update no self-heal path catches (the diff sees no
+ *   change, so no frame and no flushAgain). Birthday-bounded: for a pk with
+ *   n rows the probability of ANY collision is ~n²/2⁶⁵ (n=10⁵ ⇒ ~3·10⁻¹⁰);
+ *   the length fold below additionally kills every different-length collision.
+ * - `retainSnapEncoder`: keep the canonical JSON string — REQUIRED for
+ *   `scopedMembership` resources, whose persisted-incremental path
+ *   reconstructs the FULL value from the stored snapshot via `JSON.parse`
+ *   (`runtime.ts` drainMembershipScoped). Behavior identical to the
+ *   pre-`SnapEntry` code.
+ */
+export type SnapEncoder = (canonicalJson: string) => SnapEntry;
+
+export const hashSnapEncoder: SnapEncoder = (json) =>
+  Bun.hash.wyhash(json) ^ BigInt(json.length);
+
+export const retainSnapEncoder: SnapEncoder = (json) => json;
 
 export interface KeyedDiff {
   upserts: [string, unknown][];
@@ -37,13 +78,14 @@ export interface KeyedDiff {
   hadSnapshot: boolean;
 }
 
-/** Build the id→hash map for a keyed resource's array `value`, in array order. */
+/** Build the id→entry map for a keyed resource's array `value`, in array order. */
 export function buildSnapshot(
   value: readonly unknown[],
   keyOf: (row: unknown) => string,
-): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const row of value) map.set(keyOf(row), JSON.stringify(row));
+  encode: SnapEncoder,
+): Map<string, SnapEntry> {
+  const map = new Map<string, SnapEntry>();
+  for (const row of value) map.set(keyOf(row), encode(JSON.stringify(row)));
   return map;
 }
 
@@ -63,17 +105,18 @@ export function diffKeyedFull(
   prev: KeyedSnapshot | undefined,
   value: readonly unknown[],
   keyOf: (row: unknown) => string,
-): { diff: KeyedDiff; nextSnapshot: Map<string, string> } {
+  encode: SnapEncoder,
+): { diff: KeyedDiff; nextSnapshot: Map<string, SnapEntry> } {
   const hadSnapshot = prev !== undefined;
   // Map preserves insertion order, and the snapshot was built from the prior
   // `value` in order, so its key iteration order is the prior id order.
   const prevOrder = prev ? [...prev.keys()] : undefined;
-  const next = new Map<string, string>();
+  const next = new Map<string, SnapEntry>();
   const upserts: [string, unknown][] = [];
   const order: string[] = [];
   for (const row of value) {
     const id = keyOf(row);
-    const hash = JSON.stringify(row);
+    const hash = encode(JSON.stringify(row));
     next.set(id, hash);
     order.push(id);
     if (!prev || prev.get(id) !== hash) upserts.push([id, row]);
@@ -110,12 +153,13 @@ export function diffKeyedScoped(
   prev: KeyedSnapshot,
   scopedRows: readonly unknown[],
   keyOf: (row: unknown) => string,
-): { upserts: [string, unknown][]; nextSnapshot: Map<string, string> } {
-  const next = new Map<string, string>(prev);
+  encode: SnapEncoder,
+): { upserts: [string, unknown][]; nextSnapshot: Map<string, SnapEntry> } {
+  const next = new Map<string, SnapEntry>(prev);
   const upserts: [string, unknown][] = [];
   for (const row of scopedRows) {
     const id = keyOf(row);
-    const hash = JSON.stringify(row);
+    const hash = encode(JSON.stringify(row));
     if (next.get(id) !== hash) {
       upserts.push([id, row]);
       next.set(id, hash);
@@ -179,23 +223,24 @@ export function diffKeyedScopedMembership(
   refillRows: readonly unknown[],
   input: KeyedMembershipInput,
   keyOf: (row: unknown) => string,
+  encode: SnapEncoder,
 ): {
   upserts: [string, unknown][];
   deletes: string[];
   order: string[] | undefined;
-  nextSnapshot: Map<string, string>;
+  nextSnapshot: Map<string, SnapEntry>;
 } {
   const { requestedIds, deletedIds, orderedIds } = input;
 
   // (1) Merge the partial refill into a copy of prev. A row whose hash differs
   // (changed) or is absent (new) is an upsert; carried-over rows stay intact.
-  const merged = new Map<string, string>(prev);
+  const merged = new Map<string, SnapEntry>(prev);
   const upserts: [string, unknown][] = [];
   const refillIds = new Set<string>();
   for (const row of refillRows) {
     const id = keyOf(row);
     refillIds.add(id);
-    const hash = JSON.stringify(row);
+    const hash = encode(JSON.stringify(row));
     if (merged.get(id) !== hash) {
       upserts.push([id, row]);
       merged.set(id, hash);
@@ -249,7 +294,7 @@ export function diffKeyedScopedMembership(
   // not in finalOrder (an `orderedIds` disagreement / concurrent delete) drops out
   // — its own feed event later becomes a no-op.
   const survivors = new Set(finalOrder);
-  const nextSnapshot = new Map<string, string>();
+  const nextSnapshot = new Map<string, SnapEntry>();
   for (const id of finalOrder) nextSnapshot.set(id, merged.get(id)!);
   const survivingUpserts = upserts.filter(([id]) => survivors.has(id));
   return { upserts: survivingUpserts, deletes, order: finalOrder, nextSnapshot };

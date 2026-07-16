@@ -8,7 +8,11 @@ import {
   diffKeyedFull,
   diffKeyedScoped as diffKeyedScopedPure,
   diffKeyedScopedMembership,
+  hashSnapEncoder,
+  retainSnapEncoder,
   type KeyedDiff,
+  type SnapEncoder,
+  type SnapEntry,
 } from "./keyed-diff";
 
 // Shared live-state resource runtime. See
@@ -541,11 +545,14 @@ interface RegistryEntry {
    */
   scopedMembership?: { orderOf: (params: ResourceParams) => Promise<string[]> };
   /**
-   * Per-pk snapshot of id→hash for keyed entries. Allocated lazily only when
-   * `mode === "keyed"`. Lets the diff ship only changed rows. Evicted per-pk on
-   * the N→0 sub transition so memory is bounded to actively-observed pks.
+   * Per-pk snapshot of id→SnapEntry for keyed entries. Allocated lazily only
+   * when `mode === "keyed"`. Lets the diff ship only changed rows. Evicted
+   * per-pk on the N→0 sub transition so memory is bounded to actively-observed
+   * pks. The entry representation is per-resource (see `snapEncoderFor`): a
+   * 64-bit content hash by default, the full canonical JSON string for
+   * `scopedMembership` entries (their persist path parses it back).
    */
-  snapshots?: Map<string, Map<string, string>>;
+  snapshots?: Map<string, Map<string, SnapEntry>>;
   /**
    * Monotonic count of state changes (notifies) per params-tuple. Bumped ONLY
    * in flushNotifies — a real state change. sub-acks and the HTTP fallback
@@ -1387,7 +1394,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
       };
-      for (const s of subs) sendJson(s.ws, msg);
+      broadcastJson(subs, msg);
     };
     if (!entry.revalidate) {
       broadcast(); // sync send — no microtask before the wire (H5a)
@@ -1726,6 +1733,27 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
   }
 
+  // Broadcast one frame to N subscribers: serialize ONCE, send the string to
+  // each socket. The per-subscriber `sendJson` loop this replaces stringified
+  // the identical frame N times — for a large value that multiplied the
+  // delivery path's allocation churn by subscriber count (the ±60–70 MB/10 s
+  // GC sawtooth; research/perfs/2026-07-16-main-paging-victim-investigation-PLAN.md
+  // §B2). Synchronous end-to-end so the no-await-before-send property of the
+  // push path (H5a) is untouched. Per-socket try/catch mirrors sendJson: a
+  // dead socket's close handler cleans up, the rest still receive.
+  function broadcastJson(subs: readonly SocketState[], obj: unknown): void {
+    if (subs.length === 0) return;
+    const str = JSON.stringify(obj);
+    for (const s of subs) {
+      try {
+        s.ws.send(str);
+      // eslint-disable-next-line promise-safety/no-bare-catch
+      } catch {
+        // close handler will clean up
+      }
+    }
+  }
+
   // Schedule a single global microtask flush, guarded so concurrent callers
   // coalesce onto one flush. The immediate (non-debounced) path.
   function scheduleFlush(): void {
@@ -1803,11 +1831,28 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     scheduleFlush();
   }
 
-  // Build the id→hash map for a keyed resource's array value. The hash is the
-  // row's canonical JSON string — a fast non-crypto identity over the full row
-  // (including nested arrays like an attempt's `conversations`). Shared by
-  // `diffKeyed` and `handleSub` so both sides compute identity identically.
-  function snapshotOf(entry: RegistryEntry, value: unknown): Map<string, string> {
+  // The snapshot entry representation for THIS resource, decided statically
+  // from the definition so it can never flip between seeding and consumption:
+  //
+  // - `scopedMembership` entries retain the row's full canonical JSON — their
+  //   persisted-incremental path (`drainMembershipScoped`) reconstructs the
+  //   FULL value by `JSON.parse` of the stored entries, so the bytes must be
+  //   there. (Keying this off `shouldPersist` instead would race the hook's
+  //   registration: a snapshot seeded as hashes before the persist hooks are
+  //   wired would crash the first incremental persist.)
+  // - Every other keyed entry retains a 64-bit content hash — same diff
+  //   semantics (entries are only equality-compared), ~16 B/row instead of a
+  //   value-sized string Map rebuilt on every recompute. Collision trade
+  //   documented on `hashSnapEncoder`.
+  function snapEncoderFor(entry: RegistryEntry): SnapEncoder {
+    return entry.scopedMembership ? retainSnapEncoder : hashSnapEncoder;
+  }
+
+  // Build the id→entry map for a keyed resource's array value. The identity is
+  // computed over the row's canonical JSON string (including nested arrays like
+  // an attempt's `conversations`). Shared by `diffKeyed` and `handleSub` so
+  // both sides compute identity identically.
+  function snapshotOf(entry: RegistryEntry, value: unknown): Map<string, SnapEntry> {
     const keyOf = entry.keyOf;
     if (!keyOf) {
       throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
@@ -1817,7 +1862,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         `[resources] keyed resource "${entry.key}" loader must return an array`,
       );
     }
-    return buildSnapshot(value, keyOf);
+    return buildSnapshot(value, keyOf, snapEncoderFor(entry));
   }
 
   // Diff the new array `value` against the stored snapshot for `pk`, then REPLACE
@@ -1835,7 +1880,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       );
     }
     const snapshots = (entry.snapshots ??= new Map());
-    const { diff, nextSnapshot } = diffKeyedFull(snapshots.get(pk), value, keyOf);
+    const { diff, nextSnapshot } = diffKeyedFull(
+      snapshots.get(pk),
+      value,
+      keyOf,
+      snapEncoderFor(entry),
+    );
     snapshots.set(pk, nextSnapshot);
     return diff;
   }
@@ -1864,7 +1914,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         `[resources] diffKeyedScoped called for "${entry.key}" pk "${pk}" with no snapshot`,
       );
     }
-    const { upserts, nextSnapshot } = diffKeyedScopedPure(snap, scopedRows, keyOf);
+    const { upserts, nextSnapshot } = diffKeyedScopedPure(
+      snap,
+      scopedRows,
+      keyOf,
+      snapEncoderFor(entry),
+    );
     snapshots.set(pk, nextSnapshot);
     return { upserts };
   }
@@ -2098,7 +2153,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           version,
           ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
         };
-        for (const s of subs) sendJson(s.ws, msg);
+        broadcastJson(subs, msg);
         opts.onPush?.(entry.key, {
           subscribers: subs.length,
           changed: upserts.length > 0 || deletes.length > 0 || order !== undefined,
@@ -2203,15 +2258,27 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       refillRows,
       { requestedIds, deletedIds, orderedIds },
       keyOf,
+      snapEncoderFor(entry),
     );
     snapshots.set(pk, nextSnapshot);
 
     // Persisted: reconstruct the FULL value from the post-diff snapshot (ordered
-    // id list + canonical-JSON hashes) and persist it. `JSON.parse` of the stored
-    // hash round-trips to the identical row object a FULL loader would persist, so
-    // the jsonb is byte-identical to a FULL persist.
+    // id list + canonical-JSON entries) and persist it. `JSON.parse` of the
+    // stored entry round-trips to the identical row object a FULL loader would
+    // persist, so the jsonb is byte-identical to a FULL persist. This is the ONE
+    // consumer that reads snapshot bytes back — `snapEncoderFor` guarantees a
+    // scopedMembership entry's snapshot retains strings, and the guard makes a
+    // future violation loud instead of a silent corrupt persist.
     if (persisted && watermark !== undefined && opts.persistSnapshot) {
-      const full = [...nextSnapshot.values()].map((hash) => JSON.parse(hash));
+      const full = [...nextSnapshot.values()].map((snap) => {
+        if (typeof snap !== "string") {
+          throw new Error(
+            `[resources] scopedMembership entry "${entry.key}" holds a hashed snapshot — ` +
+              "persist reconstruction needs canonical-JSON entries (snapEncoderFor invariant broken)",
+          );
+        }
+        return JSON.parse(snap);
+      });
       const tablesRead = persistReadSet(entry.key);
       try {
         await opts.persistSnapshot(entry.key, pk, full, watermark, tablesRead);
@@ -2237,7 +2304,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           order,
           version,
         };
-        for (const s of subs) sendJson(s.ws, msg);
+        broadcastJson(subs, msg);
         opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
       }
     }
@@ -2384,7 +2451,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       if (subs.length > 0) {
         if (entry.mode === "invalidate") {
           const msg = { kind: "invalidate" as const, key: entry.key, params, version };
-          for (const s of subs) sendJson(s.ws, msg);
+          broadcastJson(subs, msg);
         } else if (entry.mode === "keyed") {
           // `value` is guaranteed computed (needValue is true for keyed + subs).
           const hadSnapshot = entry.snapshots?.has(pk) ?? false;
@@ -2421,7 +2488,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 order: undefined,
                 version,
               };
-              for (const s of subs) sendJson(s.ws, msg);
+              broadcastJson(subs, msg);
             }
             // Emit regardless of whether a frame was sent: the recompute happened,
             // so an empty scoped diff (upserts.length === 0) is a recorded no-op push.
@@ -2450,7 +2517,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 version,
                 ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
               };
-              for (const s of subs) sendJson(s.ws, msg);
+              broadcastJson(subs, msg);
               opts.onPush?.(entry.key, {
                 subscribers: subs.length,
                 changed: upserts.length > 0 || deletes.length > 0 || order !== undefined,

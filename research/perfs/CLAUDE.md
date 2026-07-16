@@ -133,6 +133,19 @@ follower tab full-replaying on ANY tab join (shared-websocket open-dedup) — a 
 healthy-period replay bursts. 111/111 runtime + 36/36 DOM hazard tests green. NOT built: fleet
 *memory* admission (fix 3 — user deferred). Full evidence + checklist →
 **[`2026-07-11-compressor-thrash-subscription-replay-storm.md`](./2026-07-11-compressor-thrash-subscription-replay-storm.md)**.
+**2026-07-16 continuation — the paging-victim investigation gets its harness + main-layer churn fixes
+(worktree `att-1784197364-no0m`, awaiting merge):** A3 heap attribution RUN on live main — JS heap is
+only ~97 MB self of a 352–469 MB phys_footprint (keyed-snapshot strings ~5–6 MB, cost corpus-index
+2.5 MB and not even loaded ⇒ its retention bound SKIPPED by gate); the standing footprint is mostly
+code + off-heap native, and the 1.26 GB episode peaks were transient churn backlog ⇒ **axis (b) churn
+is the fixable axis**. BUILT: `residentMb` (ri_resident_size) in every health sample —
+`physFootprint − resident` is the per-backend squeeze trend; the `debug/paging-probe` twin-probe
+discriminator (lean / fat-idle / fat-touch child processes, config-gated OFF, `lateByMs` headline);
+serialize-once broadcast (one stringify per frame, was per-subscriber); hash-based keyed snapshots
+(64-bit wyhash instead of retained full-row JSON; `scopedMembership` keeps strings for its persist
+reconstruction). 🔬 still unrun: the A4 controlled-pressure run (user-gated) = the discriminator
+verdicts + the 07-11 stack's live re-validation. Plan + session log →
+**[`2026-07-16-main-paging-victim-investigation-PLAN.md`](./2026-07-16-main-paging-victim-investigation-PLAN.md)**.
 
 ### Read-admission wedge — nested heavy-read slots deadlock the warmup drain (Completed)
 

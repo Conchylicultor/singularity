@@ -1,0 +1,13 @@
+// @hash b30bd9d3d52b
+{
+  // When off, the twin probes do not run. Main backend only, restart to apply. Kept off by default — the fat variants each allocate ~fatSizeMb of cold heap.
+  "enabled": false,
+  // Heap each fat-* probe allocates (mixed-entropy, touched resident once, then left cold). Restart to apply.
+  "fatSizeMb": 400,
+  // Size of the random contiguous slice the fat-touch probe faults back in every 10 s tick. Restart to apply.
+  "touchSliceMb": 25,
+  // When on, the fat-touch probe runs a timed Bun.gc(true) once per minute to measure GC marking over a cold heap. Restart to apply.
+  "gcEachMinute": true,
+  // When on, each probe raises its own thread to user-interactive QoS (a boosted second axis). Off by default — the fair twin is a normal, default-QoS app. Restart to apply.
+  "boostQos": false
+}

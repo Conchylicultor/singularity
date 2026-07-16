@@ -6,7 +6,7 @@ import {
   type IntervalHistogram,
 } from "node:perf_hooks";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
+import { procMemory } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
 import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
 import { worktreeDataDir, currentWorktreeName, isMain } from "@plugins/infra/plugins/paths/server";
@@ -98,6 +98,7 @@ function tick(): void {
   if (wallJumpMs !== undefined) histogram.reset();
   const mem = process.memoryUsage();
   const meter = getSelfMeter();
+  const proc = procMemory();
   const sample: HealthSample = {
     sampledAt: now,
     worktree: currentWorktreeName(),
@@ -106,7 +107,10 @@ function tick(): void {
     eventLoopMaxMs: histogram.max / 1e6,
     // Real footprint, not rss (rss over-counts ~6× on macOS). Sync FFI call so a
     // wedged event loop never starves it. Falls back to rss off-darwin.
-    physFootprintMb: (physFootprintBytes() ?? mem.rss) / 1_048_576,
+    physFootprintMb: (proc?.physFootprintBytes ?? mem.rss) / 1_048_576,
+    // ri_resident_size — physFootprintMb minus this is the squeezed-out series
+    // (see the schema comment). Same syscall as physFootprint; absent off-darwin.
+    residentMb: proc ? proc.residentSizeBytes / 1_048_576 : undefined,
     heapUsedMb: mem.heapUsed / 1_048_576,
     heapTotalMb: mem.heapTotal / 1_048_576,
     // Δ JS heap since the last tick: a sharp drop is a GC reclaim, a sustained

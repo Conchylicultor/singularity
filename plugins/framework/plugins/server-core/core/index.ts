@@ -8,7 +8,7 @@ export { reportServerError, setErrorReporter } from "./error-reporter";
 export type { ServerErrorReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type { ProfilerHooks, RuntimeProfileView, LoaderAggregateView } from "./profiler-hooks";
-export { physFootprintBytes } from "./phys-footprint";
+export { physFootprintBytes, procMemory, type ProcMemory } from "./phys-footprint";
 export { getProfilingData, profilerStart, recordMemoryCheckpoint } from "./profiler";
 export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";

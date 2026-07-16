@@ -1700,6 +1700,10 @@
       "name": "@singularity/plugin-debug-op-rate",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/paging-probe": {
+      "name": "@singularity/plugin-debug-paging-probe",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling": {
       "name": "@singularity/plugin-debug-profiling",
       "version": "0.0.1",
@@ -5729,6 +5733,8 @@
     "@singularity/plugin-debug-memory": ["@singularity/plugin-debug-memory@workspace:plugins/debug/plugins/memory"],
 
     "@singularity/plugin-debug-op-rate": ["@singularity/plugin-debug-op-rate@workspace:plugins/debug/plugins/op-rate"],
+
+    "@singularity/plugin-debug-paging-probe": ["@singularity/plugin-debug-paging-probe@workspace:plugins/debug/plugins/paging-probe"],
 
     "@singularity/plugin-debug-profiling": ["@singularity/plugin-debug-profiling@workspace:plugins/debug/plugins/profiling"],
 

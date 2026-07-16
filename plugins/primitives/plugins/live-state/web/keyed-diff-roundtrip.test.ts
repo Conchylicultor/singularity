@@ -23,7 +23,14 @@ import {
   buildSnapshot,
   diffKeyedFull,
   diffKeyedScoped,
+  hashSnapEncoder,
+  type KeyedSnapshot,
 } from "@plugins/framework/plugins/resource-runtime/core";
+
+// The round-trip only exercises wire frames (upserts/order), never snapshot
+// contents, so one representative encoder suffices; the per-encoder diff
+// invariants are pinned server-side in keyed-diff.test.ts.
+const enc = hashSnapEncoder;
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 
 type Row = { id: string; v: number };
@@ -43,8 +50,8 @@ function rng(seed: number): () => number {
 
 // Apply a server FULL diff to a client base via the client merge, asserting the
 // result reconstructs `next` exactly. Returns the rebuilt rows (the new base).
-function applyFull(clientRows: Row[], prevSnap: ReadonlyMap<string, string> | undefined, next: Row[]): Row[] {
-  const { diff } = diffKeyedFull(prevSnap, next, keyOf);
+function applyFull(clientRows: Row[], prevSnap: KeyedSnapshot | undefined, next: Row[]): Row[] {
+  const { diff } = diffKeyedFull(prevSnap, next, keyOf, enc);
   const upsertMap = new Map<string, unknown>(diff.upserts);
   // The client merge consumes `order` + `upserts`. A FULL diff that omits order
   // (in-place) still applies via the order-undefined branch. Deletes are encoded
@@ -64,23 +71,23 @@ describe("server diff → client merge round-trip (FULL diffs)", () => {
     // add
     {
       const prev: Row[] = [{ id: "A", v: 1 }];
-      const out = applyFull(prev, buildSnapshot(prev, keyOf), [{ id: "A", v: 1 }, { id: "B", v: 2 }]);
+      const out = applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "A", v: 1 }, { id: "B", v: 2 }]);
       expect(out).toEqual([{ id: "A", v: 1 }, { id: "B", v: 2 }]);
     }
     // update (in-place; order omitted)
     {
       const prev: Row[] = [{ id: "A", v: 1 }, { id: "B", v: 1 }];
-      applyFull(prev, buildSnapshot(prev, keyOf), [{ id: "A", v: 1 }, { id: "B", v: 9 }]);
+      applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "A", v: 1 }, { id: "B", v: 9 }]);
     }
     // delete
     {
       const prev: Row[] = [{ id: "A", v: 1 }, { id: "B", v: 1 }];
-      applyFull(prev, buildSnapshot(prev, keyOf), [{ id: "A", v: 1 }]);
+      applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "A", v: 1 }]);
     }
     // reorder
     {
       const prev: Row[] = [{ id: "A", v: 1 }, { id: "B", v: 1 }, { id: "C", v: 1 }];
-      applyFull(prev, buildSnapshot(prev, keyOf), [{ id: "C", v: 1 }, { id: "A", v: 1 }, { id: "B", v: 1 }]);
+      applyFull(prev, buildSnapshot(prev, keyOf, enc), [{ id: "C", v: 1 }, { id: "A", v: 1 }, { id: "B", v: 1 }]);
     }
   });
 
@@ -96,7 +103,7 @@ describe("server diff → client merge round-trip (FULL diffs)", () => {
 
       // Server truth + its per-pk snapshot (id→hash).
       let truth: Row[] = [];
-      let snapshot: Map<string, string> = new Map();
+      let snapshot: KeyedSnapshot = new Map();
       // Client base, kept in lock-step via merges.
       let client: Row[] = [];
 
@@ -119,7 +126,7 @@ describe("server diff → client merge round-trip (FULL diffs)", () => {
         }
 
         // Server diffs truth against its snapshot, advancing the snapshot.
-        const { diff, nextSnapshot } = diffKeyedFull(snapshot, truth, keyOf);
+        const { diff, nextSnapshot } = diffKeyedFull(snapshot, truth, keyOf, enc);
         snapshot = nextSnapshot;
 
         // Client merges the delta onto its base.
@@ -149,7 +156,7 @@ describe("server scoped diff → client merge round-trip (Layer 2)", () => {
         .filter(() => rand() < 0.7)
         .map((id) => ({ id, v: Math.floor(rand() * 4) }));
       if (base.length === 0) continue;
-      const snapshot = buildSnapshot(base, keyOf);
+      const snapshot = buildSnapshot(base, keyOf, enc);
 
       // Client starts in sync with the base.
       const client: Row[] = base.map((r) => ({ ...r }));
@@ -159,7 +166,7 @@ describe("server scoped diff → client merge round-trip (Layer 2)", () => {
         .filter(() => rand() < 0.5)
         .map((r) => ({ id: r.id, v: rand() < 0.4 ? r.v : r.v + 10 }));
 
-      const { upserts } = diffKeyedScoped(snapshot, scoped, keyOf);
+      const { upserts } = diffKeyedScoped(snapshot, scoped, keyOf, enc);
 
       // Expected client truth: the base with the scoped rows overlaid (same
       // membership + order — scoped never moves or removes rows).

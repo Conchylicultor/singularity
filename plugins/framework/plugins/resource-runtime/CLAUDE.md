@@ -94,7 +94,7 @@ drift-resub. It **throws** if a refill id entered membership but no `orderedIds`
 was supplied (the caller must run `orderOf` on any entry).
 
 Persisted (`bootCritical`) scopedMembership entries reconstruct the FULL value
-from the post-diff snapshot (`JSON.parse` of each stored canonical-JSON hash →
+from the post-diff snapshot (`JSON.parse` of each stored canonical-JSON entry →
 byte-identical jsonb to a FULL persist) and persist it with a watermark captured
 **before** the refill/`orderOf` reads. Their snapshot is **kept across N→0 subs**
 (they recompute on every change regardless of subscribers and need the diff base);
@@ -102,6 +102,32 @@ branch 2/3 (`drainMembershipFull`) seeds/replaces the snapshot even with zero su
 so the next incremental diff has a base. A DELETE cascades downstream FULL (a
 vanished row has no value for an `affectedMap` to translate); inserts/updates
 cascade scoped.
+
+## Keyed snapshot representation (`SnapEntry` / `SnapEncoder`)
+
+A keyed entry's per-pk snapshot stores one `SnapEntry` per row — the row's
+content identity, compared only for equality by every diff path. The
+representation is per-resource, decided statically by `snapEncoderFor`
+(`runtime.ts`):
+
+- **Default (`hashSnapEncoder`)**: a 64-bit wyhash of the row's canonical JSON
+  (+ a length fold) — ~16 B/row instead of a value-sized UTF-16 string Map
+  rebuilt on every recompute (the delivery-path churn/RSS fix from
+  `research/perfs/2026-07-16-main-paging-victim-investigation-PLAN.md` §B1).
+  The accepted trade — a 64-bit collision silently masks one row update, at
+  ~n²/2⁶⁵ per pk — is documented on the encoder and pinned by a
+  collision-injection test in `keyed-diff.test.ts`.
+- **`scopedMembership` entries (`retainSnapEncoder`)**: keep the full canonical
+  JSON string — their persisted-incremental path (above) `JSON.parse`s the
+  stored entries to reconstruct the FULL value, so the bytes must be there. The
+  choice keys off the *definition* (not `shouldPersist`) so it can never flip
+  between seeding and consumption; the reconstruction site throws loudly if it
+  ever meets a hashed entry.
+
+`keyed-diff.ts` stays pure: every diff function takes the encoder as a
+parameter, and a resource's prior snapshots must have been built with the same
+encoder the diff receives (the runtime guarantees this by deriving both from
+the definition). The whole diff suite runs under BOTH encoders.
 
 ## A push ETag rides the `update` frame — and nothing else
 
@@ -296,7 +322,7 @@ and those plugins' `CLAUDE.md`.
 
 - Core:
   - Uses: `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
-  - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedMembershipInput`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`, `diffKeyedScopedMembership`
+  - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedMembershipInput`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`, `SnapEncoder`, `SnapEntry`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`, `diffKeyedScopedMembership`, `hashSnapEncoder`, `retainSnapEncoder`
 - Cross-plugin:
   - Imported by: `framework/central-core`, `framework/server-core`
 

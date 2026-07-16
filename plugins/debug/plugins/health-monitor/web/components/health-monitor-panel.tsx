@@ -225,6 +225,11 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           markers={markers}
           lines={[
             { key: "physFootprintMb", label: "Footprint", color: "var(--destructive)" },
+            // ri_resident_size: pages physically in RAM. The gap between Footprint
+            // and this line is the backend's squeezed-out (compressed/swapped)
+            // bytes — the paging-victimhood signal. Optional field ⇒ gaps on
+            // pre-cutover samples, like monitorMs below.
+            { key: "residentMb", label: "resident", color: "var(--warning)" },
             { key: "heapUsedMb", label: "heap used", color: "var(--primary)" },
           ]}
         />

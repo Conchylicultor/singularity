@@ -26,6 +26,7 @@ import { dlopen, ptr } from "bun:ffi";
 //   };                                 // size 96
 
 const RUSAGE_INFO_V0 = 0;
+const RESIDENT_SIZE_OFFSET = 64;
 const PHYS_FOOTPRINT_OFFSET = 72;
 const BUF_BYTES = 128; // ≥ sizeof(rusage_info_v0)=96, padded for forward-compat
 
@@ -47,14 +48,30 @@ function bind(): typeof procPidRusage {
   return procPidRusage;
 }
 
+export interface ProcMemory {
+  /** ri_phys_footprint — the kernel's memory-pressure charge, INCLUDING the
+   * process's compressed private pages. */
+  physFootprintBytes: number;
+  /** ri_resident_size — pages physically in RAM right now, EXCLUDING pages
+   * sitting in the compressor / swapped out. `physFootprintBytes −
+   * residentSizeBytes` therefore approximates the process's squeezed-out bytes
+   * — the direct paging-victimhood signal (see
+   * research/perfs/2026-07-16-main-paging-victim-investigation-PLAN.md §A2).
+   * Do NOT substitute `process.memoryUsage().rss` here: on macOS it over-counts
+   * ~6× (Gigacage etc., header comment above), which makes the difference
+   * negative and meaningless. */
+  residentSizeBytes: number;
+}
+
 /**
- * Physical memory footprint of `pid` in bytes (defaults to this process).
+ * Physical memory metrics of `pid` (defaults to this process) from one
+ * `proc_pid_rusage` syscall.
  *
- * Returns `null` on non-macOS platforms (there is no phys_footprint equivalent;
- * callers fall back to `process.memoryUsage().rss`). On macOS a non-zero syscall
- * return throws — a broken FFI binding must fail loudly, never silently degrade.
+ * Returns `null` on non-macOS platforms (no phys_footprint equivalent; callers
+ * fall back to `process.memoryUsage().rss`). On macOS a non-zero syscall return
+ * throws — a broken FFI binding must fail loudly, never silently degrade.
  */
-export function physFootprintBytes(pid: number = process.pid): number | null {
+export function procMemory(pid: number = process.pid): ProcMemory | null {
   if (process.platform !== "darwin") return null;
   const buf = new Uint8Array(BUF_BYTES);
   const rc = bind()!(pid, RUSAGE_INFO_V0, ptr(buf));
@@ -62,5 +79,13 @@ export function physFootprintBytes(pid: number = process.pid): number | null {
     throw new Error(`proc_pid_rusage(${pid}) failed with code ${rc}`);
   }
   const view = new DataView(buf.buffer);
-  return Number(view.getBigUint64(PHYS_FOOTPRINT_OFFSET, true));
+  return {
+    physFootprintBytes: Number(view.getBigUint64(PHYS_FOOTPRINT_OFFSET, true)),
+    residentSizeBytes: Number(view.getBigUint64(RESIDENT_SIZE_OFFSET, true)),
+  };
+}
+
+/** Physical memory footprint of `pid` in bytes — see `procMemory`. */
+export function physFootprintBytes(pid: number = process.pid): number | null {
+  return procMemory(pid)?.physFootprintBytes ?? null;
 }

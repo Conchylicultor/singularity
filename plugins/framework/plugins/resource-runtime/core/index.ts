@@ -20,5 +20,13 @@ export {
   diffKeyedFull,
   diffKeyedScoped,
   diffKeyedScopedMembership,
+  hashSnapEncoder,
+  retainSnapEncoder,
 } from "./keyed-diff";
-export type { KeyedDiff, KeyedSnapshot, KeyedMembershipInput } from "./keyed-diff";
+export type {
+  KeyedDiff,
+  KeyedSnapshot,
+  KeyedMembershipInput,
+  SnapEncoder,
+  SnapEntry,
+} from "./keyed-diff";
