@@ -1,7 +1,7 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "cards", "name": "Cards", "view": { "type": "gallery" } },
+    { "id": "cards", "name": "Cards", "view": { "type": "gallery", "groupBy": "source" } },
     {
       "id": "all",
       "name": "All",
