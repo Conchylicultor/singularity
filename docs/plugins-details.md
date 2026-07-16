@@ -3717,6 +3717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
+            - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
@@ -4047,7 +4048,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `infra/endpoints`
       - Core:
-        - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `OriginClass`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBand`, `WaitBreakdown`; Values: `__contribute`, `__pushBand`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `currentOriginClass`, `getLastLoaderReadSet`, `getReadSetIndex`, `getRuntimeProfile`, `getSelfMeter`, `installBackgroundLaneRuntime`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runInBackgroundLane`, `runWithoutProfiling`, `seedReadSetIndex`, `SPAN_KINDS`, `waitSplit`
+        - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `OriginClass`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBand`, `WaitBreakdown`; Values: `__contribute`, `__pushBand`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `currentOriginClass`, `getLastLoaderReadSet`, `getReadSetIndex`, `getRuntimeProfile`, `getSelfMeter`, `installBackgroundLaneRuntime`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `profilerNowMs`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runInBackgroundLane`, `runTracked`, `runWithoutProfiling`, `seedReadSetIndex`, `SPAN_KINDS`, `waitSplit`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by: `apps-core/surface/floating/wallpaper`, `apps-core/surface/floating/wallpaper/openverse`, `apps/browser/proxy`, `apps/mail/remote-images`, `apps/sonata/sources/ultimate-guitar`, `apps/workflows/steps/http-request`, `page/bookmark`

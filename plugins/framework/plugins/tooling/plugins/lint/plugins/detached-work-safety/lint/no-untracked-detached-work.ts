@@ -28,6 +28,28 @@ const INTERVAL_WRAPPERS = new Set([
   "runInBackgroundLane",
 ]);
 
+/**
+ * Off-main-thread entry points: code that runs on a Bun `Worker` thread or in a
+ * spawned child process, NOT on the backend's main event loop. The
+ * runtime-profiler is installed only on main, so `runTracked` there is a no-op —
+ * and for subprocess probes it is outright forbidden (importing the plugin
+ * runtime would pull the whole plugin graph into the measured process's heap and
+ * destroy the footprint measurement it exists to take). So detached work in these
+ * files has no span to attribute to and the rule does not apply.
+ *
+ * Two greppable, self-documenting conventions — extend this predicate as new
+ * off-main entries are added, rather than adding per-line disables:
+ *   • a `/worker/` path segment — a Bun Worker-thread subtree (e.g. the sentinel
+ *     sampler/latch worker; the whole directory runs off-main).
+ *   • an `entry.ts` basename — the spawned worker / child-process entry-point
+ *     convention (the sentinel worker, the paging-probe child process).
+ * The on-main *supervisor* that spawns these (e.g. `worker-host.ts` /
+ * `probe-host.ts`) is NOT exempt — it runs on main and stays subject to the rule.
+ */
+function isOffMainThreadEntry(filename: string): boolean {
+  return filename.includes("/worker/") || filename.endsWith("/entry.ts");
+}
+
 /** The callee's simple name: `foo` from `foo()`, `foo` from `obj.foo()`. */
 function calleeName(call: TSESTree.CallExpression): string | undefined {
   const callee = call.callee;
@@ -102,7 +124,11 @@ export default createRule({
         "selfMs (or vanishing at boot). Server/central only. `setTimeout` is " +
         "deliberately NOT flagged: debounce / backoff / one-shot uses dominate it, " +
         "it is rarely the invisible-long-work class, and the file-watcher substrate " +
-        "already spans its timers.",
+        "already spans its timers. Off-main-thread entry files (a `/worker/` " +
+        "subtree or an `entry.ts` spawned worker/subprocess entry point) are also " +
+        "skipped: the runtime-profiler is not installed on a Worker thread or child " +
+        "process (and is forbidden in the subprocess probes), so there is no span to " +
+        "attribute to. Their on-main supervisor (`*-host.ts`) stays in scope.",
     },
     schema: [],
     messages: {
@@ -140,6 +166,10 @@ export default createRule({
     if (!filename.includes("/server/") && !filename.includes("/central/")) {
       return {};
     }
+    // ...but code that runs off the backend main thread (a Worker thread or a
+    // spawned child process) has no main-thread profiler to attribute to — see
+    // `isOffMainThreadEntry`.
+    if (isOffMainThreadEntry(filename)) return {};
 
     return {
       // Trigger 1 — `void <Call>`. Only DIRECT calls (`void foo()`,

@@ -62,6 +62,7 @@ function outPathFor(variant: ProbeVariant): string {
 // directly and prints nothing to stdout. Fire-and-forget (void): the reader ends
 // when the child exits and the stream closes.
 function pipeStderr(host: HostState, child: ChildState, stream: ReadableStream<Uint8Array>): void {
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- drains a child process's stderr into a log channel (non-blocking stream I/O on the supervisor); diagnostic plumbing (paging-probe is OFF by default), not attributable main-thread work.
   void (async () => {
     const decoder = new TextDecoder();
     let buffer = "";

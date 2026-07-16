@@ -38,6 +38,28 @@ Only `/server/` and `/central/` files. Skips `.test.ts` / `.spec.ts` and the
 `/web/`, `/core/`, `/shared/`, `/bin/` trees (client / isomorphic /
 separate-process — a different concern).
 
+### Off-main-thread entry files are also skipped
+
+Code that runs off the backend **main event loop** — on a Bun `Worker` thread or
+in a spawned **child process** — has no main-thread runtime-profiler to attribute
+to, so `runTracked` there is a no-op (and in the subprocess probes it is outright
+**forbidden**: importing the plugin runtime would pull the whole plugin graph into
+the measured process's heap and destroy the footprint measurement it exists to
+take). Detached work in these files therefore falls outside the rule. Two
+greppable, self-documenting conventions are exempt (`isOffMainThreadEntry` in the
+rule — extend it as new off-main entries are added, rather than sprinkling
+per-line disables):
+
+- a **`/worker/`** path segment — a Bun Worker-thread subtree (e.g.
+  `sentinel/server/internal/worker/`; the whole directory runs off-main).
+- an **`entry.ts`** basename — the spawned worker / child-process entry-point
+  convention (`sentinel/.../worker/entry.ts`, `paging-probe/.../probe/entry.ts`).
+
+The on-main **supervisor** that spawns these (`worker-host.ts` / `probe-host.ts`)
+runs on main and stays in scope — its own detached work is still flagged (e.g.
+`paging-probe/.../probe-host.ts` carries a reasoned line-disable for draining a
+child's stderr into a log channel).
+
 ## Plugin reference
 
 - Description: detached-work-safety lint rule: no-untracked-detached-work

@@ -248,6 +248,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
+            - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
