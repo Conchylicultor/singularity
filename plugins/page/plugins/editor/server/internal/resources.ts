@@ -8,7 +8,8 @@ import type { Block } from "../../core/schemas";
 import { _blocks } from "./tables";
 
 // All pages (`type="page"` blocks), ordered by rank. The sidebar tree is built
-// from these by `parentId`.
+// from these by `pageId` (the nearest page ancestor — `parentId` may point at a
+// content block).
 export const pagesLiveResource = defineResource<Block[]>({
   key: pagesResource.key,
   mode: "push",

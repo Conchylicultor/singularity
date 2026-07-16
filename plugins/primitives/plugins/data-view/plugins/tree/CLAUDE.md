@@ -73,6 +73,20 @@ the lower-level building block.
   field declares no `onEdit`) the
   view passes no handler to `TreeList`, so the row's drag source, every Add
   affordance, and inline rename genuinely disappear (no inert placeholders).
+- **Alias (reference) nodes** — `hierarchy.getAliasParents` declares extra
+  (parent → row) reference edges: the row *also* renders as a leaf under each
+  returned parent (skipping parents that aren't rendered rows, the row itself,
+  or its real parent). Alias node ids are a projection-internal encoding
+  (`<rowKey>\u0000alias\u0000<parentKey>`), so `rowKey` never needs to know;
+  `onRowActivate` receives the real row. Aliases are navigation-only: read-only
+  label, no row menu / item actions, a trailing link glyph, and `expanded:
+  false` (a leaf — the referenced row's own subtree stays at its canonical
+  place). Mutations are alias-translated before reaching the consumer: an alias
+  can't be dragged (drop no-ops), a `child` drop / add-child on an alias
+  resolves to the REAL row, and a drop *beside* an alias degrades to an append
+  under the destination parent (an alias has no real sibling position). An
+  alias keeps its row's own rank, so a consumer using aliases must be
+  endpoint-based (`targetId`/`zone`), like every filtered-projection tree.
 
 ## Options
 

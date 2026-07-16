@@ -143,6 +143,13 @@ except the two accessors, so a read-only nav tree supplies just those two. The
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
 renders an inline editor (the same `onEdit` contract the table/gallery/list use).
 
+Beyond the single-parent tree, `getAliasParents` declares optional **reference
+edges**: the row *also* appears as a read-only leaf ("alias") under each
+returned parent id (e.g. the pages sidebar rendering linked pages as children
+of the linking page). Aliases are pure references — navigation only, no
+rename/menu/actions/drag; a `child` drop or add-child on one resolves to the
+real row. See the tree view child's CLAUDE.md for the exact semantics.
+
 ## Manual order
 
 Flat rank-based drag reordering — the flat twin of the tree-only

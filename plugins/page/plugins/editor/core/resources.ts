@@ -4,7 +4,8 @@ import { BlockSchema } from "./schemas";
 import type { Block } from "./schemas";
 
 // All pages (`type="page"` blocks), ordered by rank. The sidebar tree is built
-// from these by `parentId`.
+// from these by `pageId` (the nearest page ancestor — `parentId` may point at a
+// content block).
 export const pagesResource = resourceDescriptor<Block[]>(
   "pages",
   z.array(BlockSchema),

@@ -10,3 +10,12 @@ export const BacklinkRowSchema = z.object({
   iconSvgNodes: z.array(SvgNodeSchema).nullable(),
 });
 export type BacklinkRow = z.infer<typeof BacklinkRowSchema>;
+
+// One raw (source page → target page) edge from the page_links index.
+// Consumers needing the hierarchy-wide link graph (the pages sidebar showing
+// linked pages as reference children) subscribe to the full edge list.
+export const PageLinkEdgeSchema = z.object({
+  sourcePageId: z.string(),
+  targetPageId: z.string(),
+});
+export type PageLinkEdge = z.infer<typeof PageLinkEdgeSchema>;

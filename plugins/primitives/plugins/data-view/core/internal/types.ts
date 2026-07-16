@@ -52,6 +52,18 @@ export type FilterFieldValue = FieldValue | readonly string[];
  */
 export interface HierarchyConfig<TRow> {
   getParentId: (row: TRow) => string | null;
+  /**
+   * Additional (parent → row) reference edges: the row ALSO appears as a
+   * read-only leaf ("alias") under each returned parent id — e.g. the pages
+   * sidebar rendering the pages a page links to as children of that page. Ids
+   * are in the same space as `getParentId` / `rowKey`. Alias rows are pure
+   * references: they navigate to the row but expose no rename, no row
+   * menu/actions, and no drag; a `child` drop or add-child on an alias resolves
+   * to the REAL row it references. A returned parent id that isn't a rendered
+   * row, equals the row's own id, or equals the row's real parent (the row is
+   * already a child there) is skipped.
+   */
+  getAliasParents?: (row: TRow) => readonly string[];
   getRank: (row: TRow) => Rank;
   /** Server-persisted expand state. Omit → tree manages expand locally. */
   isExpanded?: (row: TRow) => boolean;

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from "react";
+import { MdLink } from "react-icons/md";
 import {
   evaluateNode,
   FieldCell,
@@ -31,13 +32,27 @@ import { EditableTreeLabel } from "./editable-tree-label";
  * The projected tree row: the original `TRow` plus the `TreeItem` fields the
  * tree primitive needs (`id`, `parentId`, `rank`, `expanded`). We keep the
  * original row reachable via `__row` so callbacks recover the concrete `TRow`.
+ * `alias` marks a reference node synthesized from `hierarchy.getAliasParents`
+ * — the same `__row` rendered as a read-only leaf under an additional parent.
  */
 type Projected<TRow> = {
   id: string;
   parentId: string | null;
   rank: Rank;
   expanded: boolean;
+  alias: boolean;
   __row: TRow;
+};
+
+// Alias node ids: `<rowKey>\u0000alias\u0000<parentRowKey>`. A NUL byte cannot
+// appear in a real row key, so the encoding is collision-free and reversible.
+const ALIAS_SEP = "\u0000alias\u0000";
+const aliasNodeId = (rowId: string, parentId: string) =>
+  `${rowId}${ALIAS_SEP}${parentId}`;
+const isAliasNodeId = (id: string) => id.includes(ALIAS_SEP);
+const realNodeId = (id: string) => {
+  const i = id.indexOf(ALIAS_SEP);
+  return i === -1 ? id : id.slice(0, i);
 };
 
 /**
@@ -63,13 +78,20 @@ function DefaultRow<TRow>(props: {
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
   const row = node.__row;
+  // Alias (reference) nodes are navigation-only: read-only label, no row
+  // menu/actions, and a trailing link glyph marking them as references.
+  const isAlias = node.alias;
 
   const primaryValue = primaryField?.value?.(row);
   const primaryString = String(primaryValue ?? "");
   const labelClass = options.labelClassName?.(row);
 
   let label: ReactNode;
-  if (primaryField && (primaryField.onEdit || primaryField.onEditValues)) {
+  if (
+    primaryField &&
+    !isAlias &&
+    (primaryField.onEdit || primaryField.onEditValues)
+  ) {
     const readNode =
       resolveCell(
         primaryField as FieldDef<unknown>,
@@ -106,7 +128,7 @@ function DefaultRow<TRow>(props: {
   }
 
   const menu: ((helpers: RowChromeMenuHelpers) => RowMenuItem[]) | undefined =
-    options.rowMenu
+    options.rowMenu && !isAlias
       ? (helpers) => options.rowMenu!(helpers, row)
       : undefined;
 
@@ -120,7 +142,7 @@ function DefaultRow<TRow>(props: {
       depth={depth}
       accent={accent}
       actions={
-        itemActions ? (
+        itemActions && !isAlias ? (
           <itemActions.Row row={row} hasChildren={node.children.length > 0} />
         ) : undefined
       }
@@ -152,7 +174,11 @@ function DefaultRow<TRow>(props: {
           ))}
         </Inline>
       ) : null}
-      {trailing != null ? (
+      {isAlias ? (
+        <Center as="span" axis="both">
+          <MdLink className="size-3.5 text-muted-foreground" />
+        </Center>
+      ) : trailing != null ? (
         <Center as="span" axis="both">
           {trailing}
         </Center>
@@ -220,9 +246,38 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           expanded?.[id] ??
           options.defaultExpanded ??
           false,
+        alias: false,
         __row: row,
       });
     });
+    // Second pass: synthesize the alias (reference) leaves AFTER every real
+    // node, so `buildTree` (insertion-order children) lands them last among
+    // each parent's children. An alias keeps its row's own rank — good enough
+    // for the DnD arithmetic, which consumers of alias trees ignore anyway
+    // (they are endpoint-based, like every filtered-projection tree).
+    const getAliasParents = hierarchy.getAliasParents;
+    if (getAliasParents) {
+      rows.forEach((row, i) => {
+        const id = rowKey(row, i);
+        const realParentId = hierarchy.getParentId(row);
+        for (const parent of getAliasParents(row)) {
+          if (parent === id || parent === realParentId || !byId.has(parent)) {
+            continue;
+          }
+          const nodeId = aliasNodeId(id, parent);
+          if (byId.has(nodeId)) continue; // duplicate edge
+          byId.set(nodeId, row);
+          out.push({
+            id: nodeId,
+            parentId: parent,
+            rank: hierarchy.getRank(row),
+            expanded: false,
+            alias: true,
+            __row: row,
+          });
+        }
+      });
+    }
     return { projected: out, originalById: byId };
   }, [rows, rowKey, hierarchy, expanded, options.defaultExpanded]);
 
@@ -317,13 +372,65 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     return (row: Projected<unknown>) => primaryAccessor(row);
   }, [options, primaryAccessor]);
 
+  // Alias-aware mutation wrappers: alias node ids are a projection-internal
+  // encoding, so they are translated back to real row ids before a mutation
+  // reaches the consumer (which only knows real ids).
+  const hierOnMove = hierarchy?.onMove;
+  const wrappedOnMove = useCallback(
+    (
+      id: string,
+      dest: {
+        parentId: string | null;
+        rank: Rank;
+        targetId: string | null;
+        zone: "before" | "after";
+      },
+    ) => {
+      // An alias row is a reference — it has no position of its own to move.
+      if (isAliasNodeId(id)) return;
+      // A `child` drop onto an alias reparents into the REAL row it references.
+      const parentId =
+        dest.parentId === null ? null : realNodeId(dest.parentId);
+      if (parentId === id) return; // child-drop onto the row's own alias
+      // An alias neighbour has no real sibling position — degrade a drop beside
+      // one to an append under the (real) destination parent.
+      const aliasTarget =
+        dest.targetId !== null && isAliasNodeId(dest.targetId);
+      return hierOnMove?.(id, {
+        ...dest,
+        parentId,
+        targetId: aliasTarget ? null : dest.targetId,
+        zone: aliasTarget ? "after" : dest.zone,
+      });
+    },
+    [hierOnMove],
+  );
+  const hierOnCreate = hierarchy?.onCreate;
+  const wrappedOnCreate = useCallback(
+    async (args: { parentId: string | null; afterId?: string }) => {
+      // Add-child on an alias creates under the REAL row it references; an
+      // alias `afterId` has no real sibling position — drop it (the consumer's
+      // default position, normally an append).
+      const parentId =
+        args.parentId === null ? null : realNodeId(args.parentId);
+      const afterId =
+        args.afterId !== undefined && isAliasNodeId(args.afterId)
+          ? undefined
+          : args.afterId;
+      return hierOnCreate?.(
+        afterId === undefined ? { parentId } : { parentId, afterId },
+      );
+    },
+    [hierOnCreate],
+  );
+
   if (!hierarchy) return null;
   if (sortedProjected.length === 0) return <>{props.emptyState}</>;
 
   // A field sort overrides the manual (rank) order, so drag-to-reorder would set
   // a rank with no visible effect — disable DnD while sorted (drop back to manual
   // to reorder), mirroring Notion. `onCreate` stays enabled.
-  const onMove = sortActive ? undefined : hierarchy.onMove;
+  const onMove = sortActive || !hierOnMove ? undefined : wrappedOnMove;
 
   // Expand fallback: when the data source has no server-persisted expand state,
   // persist it in this view's ViewState (localStorage) via the host.
@@ -354,11 +461,11 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         }}
         onToggleExpanded={onToggleExpanded}
         onMove={onMove}
-        onCreate={hierarchy.onCreate}
+        onCreate={hierOnCreate ? wrappedOnCreate : undefined}
         Row={Row}
         dragOverlay={dragOverlay}
         addLabel={addLabel}
-        canCreate={!!hierarchy.onCreate}
+        canCreate={!!hierOnCreate}
         multiSelect={
           props.selection ? { actions: props.selection.bulkActions } : undefined
         }

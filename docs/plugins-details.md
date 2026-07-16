@@ -4366,11 +4366,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockDeleteHook`, `page/editor.BlockLifecycle`, `page/editor.BlockRestoreHook`, `page/editor.blocksChanged`, `page/editor.BlockTrashHook`, `page/editor.PAGE_BLOCK_TYPE`
         - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
-        - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexPage`
+        - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `pageLinksLiveResource`, `reindexPage`
         - Register: `defineJob('page.links.reindex')`
       - Core:
         - Uses: `page/editor.SvgNodeSchema`, `primitives/live-state.resourceDescriptor`
-        - Exports: Types: `BacklinkRow`; Values: `BacklinkRowSchema`, `backlinksResource`
+        - Exports: Types: `BacklinkRow`, `PageLinkEdge`; Values: `BacklinkRowSchema`, `backlinksResource`, `PageLinkEdgeSchema`, `pageLinksResource`
       - Cross-plugin:
         - Imported by: `apps/pages/page-tree`, `page/inline-page-link`, `page/page-link`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
