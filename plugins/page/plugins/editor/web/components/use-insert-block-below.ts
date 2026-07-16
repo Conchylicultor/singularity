@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useBlockEditor } from "../block-editor-context";
-import { defaultTextHandle } from "../markdown-blocks";
+import { defaultTextHandle } from "../../core";
 import { Editor } from "../slots";
 import type { BlockEditorAPI } from "../types";
 

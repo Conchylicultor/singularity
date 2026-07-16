@@ -3,10 +3,14 @@ import { z } from "zod";
 /**
  * Structured inline rich-text model (Notion-style runs) stored in `data.text`.
  *
- * `data.text` is `string | RichText`. A legacy plain string is a single unmarked
- * run; `runsOf` coerces `string | RichText → RichText` and `plainOf` flattens
- * back to a plain string. New writes always persist arrays. This is the single
- * back-compat seam — no DB migration.
+ * The persisted `page_blocks.data.text` shape is runs-only (`RichText`) — the
+ * legacy `string | RichText` union is retired. Two compat seams remain: the
+ * write-boundary normalizer in `parse-block-data.ts` canonicalizes any string
+ * `text` to runs before it lands, and a one-time backfill migration
+ * (`normalize_block_text_runs`) rewrote the existing string-typed rows. `runsOf`
+ * and `plainOf` KEEP their string branches forever, because inputs that never
+ * pass the write boundary still carry strings: pre-migration `entity_versions`
+ * history snapshots (replayed verbatim on restore) and external text.
  *
  * Page-link tokens (`[[<pageId>]]`) live inside run `text`, so `plainOf` still
  * yields them and the backlinks extractor / `BlockTextExtension` token mechanism
@@ -99,8 +103,12 @@ export const TextRunSchema = z.object({
   link: z.string().optional(),
 });
 
-/** The persisted `data.text` shape: a legacy string OR an array of runs. */
-export const RichTextSchema = z.union([z.string(), z.array(TextRunSchema)]);
+/**
+ * The persisted `data.text` shape: runs only. Strings are canonicalized to runs
+ * at the write boundary (`parse-block-data.ts`), so nothing that reaches storage
+ * or a block schema's `.parse` is ever a bare string.
+ */
+export const RichTextSchema = z.array(TextRunSchema);
 
 // ---------------------------------------------------------------------------
 // Coercion

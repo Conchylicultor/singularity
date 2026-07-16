@@ -7,7 +7,7 @@ export const quoteBlock = defineBlock({
   label: "Quote",
   icon: MdFormatQuote,
   aliases: ["blockquote", "cite", "quotation"],
-  empty: () => ({ text: "" }),
+  empty: () => ({ text: [] }),
   placeholder: "Quote",
   // NOTE: the canonical Markdown quote prefix `> ` is already claimed by the
   // `toggle` block, so this block intentionally declares no `markdownPrefixes`.

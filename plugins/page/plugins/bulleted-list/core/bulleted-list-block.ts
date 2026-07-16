@@ -7,7 +7,7 @@ export const bulletedListBlock = defineBlock({
   label: "Bulleted list",
   icon: MdFormatListBulleted,
   aliases: ["bullet", "unordered", "ul", "list"],
-  empty: () => ({ text: "" }),
+  empty: () => ({ text: [] }),
   marker: "•",
   placeholder: "List",
   // CommonMark bullet markers. Typing any of these at the start of a block

@@ -34,7 +34,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     description: "Track tasks with checkboxes.",
     icon: MdChecklist,
     page: { title: "To-do list" },
-    seed: [{ type: toDoBlock.type, data: { text: "", checked: false } }],
+    seed: [{ type: toDoBlock.type, data: { text: [], checked: false } }],
   },
   {
     id: "bulleted-list",
@@ -42,6 +42,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     description: "Jot down a quick bullet list.",
     icon: MdFormatListBulleted,
     page: { title: "Bulleted list" },
-    seed: [{ type: bulletedListBlock.type, data: { text: "" } }],
+    seed: [{ type: bulletedListBlock.type, data: { text: [] } }],
   },
 ];

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { defineBlock } from "./define-block";
+import { textBlockSchema } from "./text-data";
 
 describe("defineBlock acceptsText", () => {
   test("is true when the schema declares a top-level `text` key", () => {
@@ -44,5 +45,44 @@ describe("text-carry rule (the convert-path gate)", () => {
   test("omits text for a void target, preserving its empty payload", () => {
     const handle = defineBlock({ type: "divider", schema: z.object({}) });
     expect(carry(handle, {}, "hello")).toEqual({});
+  });
+});
+
+describe("typed text lens", () => {
+  // Branded via `textBlockSchema`, so the lens is present at both the type level
+  // (required `text(data): RichText`) and at runtime.
+  const textHandle = defineBlock({
+    type: "text",
+    schema: textBlockSchema({}),
+    empty: () => ({ text: [] }),
+  });
+
+  // The TYPED contract is runs-only (the union is retired), but the lens's
+  // runtime still tolerates legacy strings: pre-migration history snapshots can
+  // reach readers un-normalized. The cast below is the test deliberately handing
+  // it that legacy wire shape.
+  const legacy = (text: string) => ({ text }) as unknown as { text: [] };
+
+  test("coerces a legacy empty string to []", () => {
+    expect(textHandle.text(legacy(""))).toEqual([]);
+  });
+
+  test("coerces a legacy non-empty string to a single unmarked run", () => {
+    expect(textHandle.text(legacy("hello"))).toEqual([{ text: "hello" }]);
+  });
+
+  test("passes an existing runs array through", () => {
+    expect(textHandle.text({ text: [{ text: "a", marks: ["bold"] }] })).toEqual([
+      { text: "a", marks: ["bold"] },
+    ]);
+  });
+
+  test("a void handle has no lens (runtime undefined + type-level undefined)", () => {
+    const voidHandle = defineBlock({ type: "divider", schema: z.object({}) });
+    expect(voidHandle.text).toBeUndefined();
+    // Type-level assertion: `text` is `undefined` on an unbranded (void) handle.
+    // This line fails to compile if the lens type ever widens to a function.
+    const lens: undefined = voidHandle.text;
+    expect(lens).toBeUndefined();
   });
 });

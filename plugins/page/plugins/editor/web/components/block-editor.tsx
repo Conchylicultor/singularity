@@ -49,6 +49,9 @@ import {
   canOutdent,
   textOf,
   planForestInsert,
+  serializeForestToMarkdown,
+  parseMarkdownToForest,
+  defaultTextHandle,
   type Block,
   type SerializedBlock,
 } from "../../core";
@@ -57,11 +60,6 @@ import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { serializeForest } from "../serialize-blocks";
-import {
-  blocksToMarkdown,
-  defaultTextHandle,
-  markdownToForest,
-} from "../markdown-blocks";
 import { SelectionControlProvider } from "../selection-control";
 import { useBlockSelection, type BlockSelectionActions } from "../internal/use-block-selection";
 import { AddBlockMenu } from "./add-block-menu";
@@ -73,15 +71,12 @@ import {
   resolvePastedBlock,
   type BlockPasteHandler,
 } from "../internal/block-paste-handlers";
+import { BLOCKS_MIME } from "../internal/clipboard";
 
 type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
 /** The editor drops *between* rows only — it has no tree `child` reparent zone. */
 type SiblingZone = Extract<DropZone, "before" | "after">;
 type DropTarget = { id: string; zone: SiblingZone };
-
-/** Custom clipboard MIME carrying a serialized block forest (round-trips full
- *  structure); `text/plain` carries a markdown fallback for external apps. */
-const BLOCKS_MIME = "application/x-singularity-blocks+json";
 
 // Depth-first flatten that carries each block's depth. Rendering the tree as a
 // flat list of keyed siblings (rather than nesting children inside their parent's
@@ -498,7 +493,7 @@ function SelectionLayer({
       if (roots.length === 0) return false;
       const forest = serializeForest(rowsRef.current, roots);
       e.clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
-      e.clipboardData.setData("text/plain", blocksToMarkdown(forest, handles));
+      e.clipboardData.setData("text/plain", serializeForestToMarkdown(forest, handles));
       e.preventDefault();
       return true;
     },
@@ -559,7 +554,7 @@ function SelectionLayer({
       } else {
         const text = e.clipboardData.getData("text/plain");
         if (!text.trim()) return;
-        forest = markdownToForest(text, handles);
+        forest = parseMarkdownToForest(text, handles);
       }
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();

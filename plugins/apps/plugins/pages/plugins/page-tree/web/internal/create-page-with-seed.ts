@@ -58,7 +58,7 @@ export async function createPageWithSeed(args: {
   const seed: PageSeedBlock[] =
     args.seed && args.seed.length > 0
       ? args.seed
-      : [{ type: textBlock.type, data: textBlock.schema.parse({ text: "" }) }];
+      : [{ type: textBlock.type, data: textBlock.schema.parse({ text: [] }) }];
 
   for (const block of seed) {
     await fetchEndpoint(

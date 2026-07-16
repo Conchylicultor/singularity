@@ -10,8 +10,20 @@ export const toDoBlock = defineBlock({
   label: "To-do",
   icon: MdCheckBox,
   aliases: ["checkbox", "task", "checklist", "todo"],
-  empty: () => ({ text: "", checked: false }),
+  empty: () => ({ text: [], checked: false }),
   placeholder: "To-do",
+  // Markdown task list: `- [ ] x` / `- [x] x`. `precedence: 10` so this claims
+  // the line before bulleted-list's derived `- ` prefix parse (which would else
+  // capture `[ ] x` as the text).
+  markdown: {
+    precedence: 10,
+    serialize: (d, ctx) => `- [${d.checked ? "x" : " "}] ` + ctx.plain(d.text),
+    parseLine: (line, ctx) => {
+      const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
+      if (!m) return null;
+      return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
+    },
+  },
   // Typing `[] ` or `[ ] ` at the start of a block converts it into a to-do,
   // preserving any trailing text.
   markdownPrefixes: ["[] ", "[ ] "],

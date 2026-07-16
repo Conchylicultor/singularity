@@ -35,7 +35,7 @@ export async function createStory(): Promise<string> {
       body: {
         parentId: page.id,
         type: textBlock.type,
-        data: textBlock.schema.parse({ text: "" }),
+        data: textBlock.schema.parse({ text: [] }),
       },
     },
   );

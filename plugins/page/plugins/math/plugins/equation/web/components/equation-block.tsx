@@ -82,7 +82,7 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
       // block (avoids an editor↔text cycle), so — like divider — we, a consumer
       // of both, construct the seed.
       e.preventDefault();
-      editor.insertAfter(textBlock.type, textBlock.schema.parse({ text: "" }));
+      editor.insertAfter(textBlock.type, textBlock.schema.parse({ text: [] }));
     }
   }
 

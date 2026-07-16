@@ -1,3 +1,4 @@
+import { plainOf } from "@plugins/page/plugins/editor/core";
 import type { StoryNode } from "./types";
 
 /**
@@ -5,9 +6,10 @@ import type { StoryNode } from "./types";
  *
  * - Two spaces of indent per `depth`.
  * - A `role: "break"` node renders as a bare `---` line (no bullet).
- * - A content node renders as `- ${text}`, where text is pragmatically pulled
- *   from `(data as { text?: string }).text ?? ""`. Empty text still emits `-`
- *   so structure stays visible.
+ * - A content node renders as `- ${text}`, where text is flattened from the
+ *   block's `data.text` via `plainOf` (handles both the legacy string and the
+ *   runs array — a raw read would stringify runs as `[object Object]`). Empty
+ *   text still emits `-` so structure stays visible.
  * - Children are recursed after each node.
  *
  * Generic, deterministic serialization; per-lens *framing* (blog/slides prompt
@@ -21,7 +23,7 @@ export function outlineToBullets(nodes: StoryNode[]): string {
       if (n.role === "break") {
         lines.push(`${indent}---`);
       } else {
-        const text = (n.data as { text?: string }).text ?? "";
+        const text = plainOf((n.data as { text?: unknown }).text);
         lines.push(text ? `${indent}- ${text}` : `${indent}-`);
       }
       walk(n.children);

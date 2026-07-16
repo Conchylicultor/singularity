@@ -13,6 +13,19 @@ export const codeBlock = defineBlock({
   icon: MdCode,
   aliases: ["snippet", "syntax", "monospace", "pre"],
   empty: () => ({ code: "" }),
+  // Fenced markdown: ```lang\n…code…\n``` round-trips code + language. The info
+  // string after the opening fence is the shiki language id (empty ⇒ plain text).
+  markdown: {
+    fence: {
+      open: "```",
+      close: "```",
+      parseFenced: (info, body) => ({
+        code: body,
+        ...(info ? { language: info } : {}),
+      }),
+    },
+    serialize: (d) => "```" + (d.language ?? "") + "\n" + d.code + "\n```",
+  },
   // Typing ``` at the start of a text block converts it into a code block. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.
   markdownPrefixes: ["```"],

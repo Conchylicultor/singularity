@@ -88,5 +88,12 @@ export { serializeSubtree, rankWindow, planForestInsert } from "./block-forest";
 export { defineBlock } from "./define-block";
 export type { BlockHandle, BlockTextVariant } from "./define-block";
 
+export {
+  serializeForestToMarkdown,
+  parseMarkdownToForest,
+  defaultTextHandle,
+} from "./markdown";
+export type { BlockMarkdown, MdSerializeCtx, MdParseCtx } from "./markdown";
+
 export { textDataSchema, textBlockSchema } from "./text-data";
-export type { TextData } from "./text-data";
+export type { TextData, TextBearingSchema } from "./text-data";

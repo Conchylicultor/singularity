@@ -20,6 +20,7 @@ import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
 import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
+import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
 import { BLOCK_INSET, MARKER_GUTTER } from "../internal/page-column";
@@ -219,6 +220,7 @@ export function BlockTextEditor({
           <FormatShortcutsPlugin />
           <FormatToolbarPlugin />
           <BlockPastePlugin block={block} editor={editor} />
+          <BlockForestPastePlugin block={block} editor={editor} />
           {getBlockTextExtensions().map((ext) =>
             ext.Plugin ? (
               <ext.Plugin key={ext.id} block={block} editor={editor} />

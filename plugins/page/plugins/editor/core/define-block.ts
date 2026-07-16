@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
 import type { AnyZodObject, z } from "zod";
+import { runsOf, type RichText } from "./rich-text";
+import type { TextBearingSchema } from "./text-data";
+import type { BlockMarkdown } from "./markdown";
 
 /**
  * The semantic typography roles an editable-text block can render at. Mirrors the
@@ -20,6 +23,13 @@ export interface BlockHandle<T> {
   schema: AnyZodObject;
   parse(data: unknown): T;
   /**
+   * Non-throwing twin of `parse`, typed against the block's own data. Defensive
+   * readers (data may be transient/empty mid-edit) use this instead of
+   * `schema.safeParse` — the interface erases `schema` to `AnyZodObject`, whose
+   * `safeParse` result is untyped.
+   */
+  safeParse(data: unknown): { success: true; data: T } | { success: false; error: z.ZodError };
+  /**
    * Whether this block type carries editable text — DERIVED once from the schema
    * (`"text" in schema.shape`), never inferred from a type name. Consumers use it
    * to decide whether to carry `text` through a type conversion: injecting `text`
@@ -27,6 +37,30 @@ export interface BlockHandle<T> {
    * write a key the write boundary now rejects with a 400.
    */
   acceptsText: boolean;
+  /**
+   * Typed text lens — present IFF this block type is text-bearing (its schema
+   * came from `textBlockSchema`). `handle.text(data)` is THE single reader that
+   * turns the block's own `data` into canonical `RichText`, coercing the legacy
+   * `string | RichText` union via `runsOf`. Generic consumers read text through
+   * this rather than dereferencing `data.text` — which was duck-typed as a string
+   * and silently produced `""` for the runs array. Void block types have
+   * `text: undefined` at runtime and type level. Installed off `acceptsText`.
+   *
+   * Declared in METHOD syntax deliberately: methods are checked bivariantly, so
+   * a concrete `BlockHandle<{text: …}>` stays assignable to the registries'
+   * `BlockHandle<unknown>` (a property-typed function would be contravariant in
+   * `data` and break every `Editor.BlockData(handle)` call site).
+   */
+  text?(data: T): RichText;
+  /**
+   * Per-type markdown serialize/parse. When present it fully owns this block's
+   * clipboard markdown; when absent the central orchestrator derives it from the
+   * text lens + `markdownPrefixes`. Typed against the block's own inferred data,
+   * so a field rename is a compile error in the block's own function instead of a
+   * silent empty line — the class of bug the June-16 `data.text` string→runs
+   * migration caused when generic code duck-typed `data.text`.
+   */
+  markdown?: BlockMarkdown<T>;
   /**
    * Optional insert-menu label (e.g. "Text", "Link to page"). A block type
    * without a `label` is not offered in the editor's "add block" menu.
@@ -137,6 +171,16 @@ export interface BlockHandle<T> {
   splitChildWhenExpanded?: { childType: string };
 }
 
+/**
+ * The typed text lens conditional on the schema brand: a text-bearing schema
+ * (from `textBlockSchema`) gets a required `text(data)` reader; a void schema
+ * gets `text?: undefined`. Keyed on the compile-time brand so the lens is present
+ * exactly where the block carries text.
+ */
+type TextLens<S extends AnyZodObject> = S extends TextBearingSchema
+  ? { text(data: z.infer<S>): RichText }
+  : { text?: undefined };
+
 export function defineBlock<S extends AnyZodObject>(opts: {
   type: string;
   schema: S;
@@ -145,6 +189,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   icon?: ComponentType<{ className?: string }>;
   aliases?: string[];
   empty?: () => z.infer<S>;
+  markdown?: BlockMarkdown<z.infer<S>>;
   markdownPrefixes?: string[];
   resetToOnBackspaceAtStart?: string;
   breakOutOnEmptyEnter?: string;
@@ -157,13 +202,21 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   toggle?: { field: string; doneClassName?: string };
   collapsible?: "always";
   splitChildWhenExpanded?: { childType: string };
-}): BlockHandle<z.infer<S>> {
-  return {
+}): BlockHandle<z.infer<S>> & TextLens<S> {
+  // Computed once at definition: text-bearing-ness is a fact of the schema.
+  const acceptsText = "text" in opts.schema.shape;
+  const handle: BlockHandle<z.infer<S>> = {
     type: opts.type,
     schema: opts.schema,
-    // Computed once at definition: text-bearing-ness is a fact of the schema.
-    acceptsText: "text" in opts.schema.shape,
+    acceptsText,
+    // The typed text lens: canonical `RichText` from the block's own `data`,
+    // coercing the legacy `string | RichText` union. Present iff text-bearing.
+    text: acceptsText
+      ? (data) => runsOf((data as { text?: unknown }).text)
+      : undefined,
+    markdown: opts.markdown,
     parse: (data) => opts.schema.parse(data),
+    safeParse: (data) => opts.schema.safeParse(data),
     label: opts.label,
     defaultText: opts.defaultText,
     icon: opts.icon,
@@ -182,4 +235,8 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     collapsible: opts.collapsible,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
   };
+  // The conditional `TextLens<S>` cannot be proved from the value: the runtime
+  // `text` presence tracks `acceptsText`, which mirrors the brand by construction
+  // (every text block composes `textBlockSchema`).
+  return handle as BlockHandle<z.infer<S>> & TextLens<S>;
 }

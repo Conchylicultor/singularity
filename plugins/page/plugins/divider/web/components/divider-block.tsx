@@ -51,7 +51,7 @@ export function DividerBlock({ block, isFocused, editor }: BlockRendererProps) {
       // Continue typing on a new line below. The editor deliberately does not
       // know the text block (avoids an editor↔text cycle), so — like
       // create-page-with-seed — we, a consumer of both, construct the seed.
-      editor.insertAfter(textBlock.type, textBlock.schema.parse({ text: "" }));
+      editor.insertAfter(textBlock.type, textBlock.schema.parse({ text: [] }));
     }
   }
 

@@ -29,7 +29,7 @@ export async function turnBlockIntoPage(args: { block: Block }): Promise<void> {
         title: textOf(block),
         seedChild: {
           type: textBlock.type,
-          data: textBlock.schema.parse({ text: "" }),
+          data: textBlock.schema.parse({ text: [] }),
         },
       },
     },

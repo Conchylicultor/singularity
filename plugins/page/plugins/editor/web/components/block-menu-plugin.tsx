@@ -13,7 +13,7 @@ import {
   useCaretQuery,
   useForcedCaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
-import type { BlockHandle } from "../../core";
+import { runsOf, type BlockHandle } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import {
@@ -133,7 +133,10 @@ export function BlockMenuPlugin({
     // Only carry `text` into a text-bearing target; a void block type (audio,
     // divider, …) rejects an unknown `text` key at the write boundary.
     const base = handle.empty?.() ?? {};
-    editor.convertTo(handle.type, handle.acceptsText ? { ...base, text: remaining } : base);
+    editor.convertTo(
+      handle.type,
+      handle.acceptsText ? { ...base, text: runsOf(remaining) } : base,
+    );
     if (useForced) clearBlockMenu(blockId);
   }
 

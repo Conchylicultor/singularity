@@ -23,9 +23,14 @@ export const TEXT_BLOCKS = [
   "equation",
 ] as const;
 
-/** A plain-text block. `data.text` accepts a bare string (coerced to runs). */
+/** A plain-text block. `data.text` is runs-only — a non-empty string is one run. */
 function text(type: string, value: string): SerializedBlock {
-  return { type, data: { text: value }, expanded: false, children: [] };
+  return {
+    type,
+    data: { text: value ? [{ text: value }] : [] },
+    expanded: false,
+    children: [],
+  };
 }
 
 /**
@@ -42,26 +47,28 @@ export const SEED_DOC: SerializedBlock[] = [
   text("heading-2", "What you can do"),
   {
     type: "to-do",
-    data: { text: "Type a line and press Enter", checked: true },
+    data: { text: [{ text: "Type a line and press Enter" }], checked: true },
     expanded: false,
     children: [],
   },
   {
     type: "to-do",
-    data: { text: "Press / to open the block menu", checked: false },
+    data: { text: [{ text: "Press / to open the block menu" }], checked: false },
     expanded: false,
     children: [],
   },
   {
     type: "to-do",
-    data: { text: "Drag a block by its handle to reorder", checked: false },
+    data: { text: [{ text: "Drag a block by its handle to reorder" }], checked: false },
     expanded: false,
     children: [],
   },
   {
     type: "callout",
     data: {
-      text: "Everything here is in-memory — nothing you type is saved or sent anywhere.",
+      text: [
+        { text: "Everything here is in-memory — nothing you type is saved or sent anywhere." },
+      ],
       icon: null,
       iconSvgNodes: null,
       color: "info",

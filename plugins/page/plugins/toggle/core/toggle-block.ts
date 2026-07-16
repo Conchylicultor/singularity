@@ -9,7 +9,7 @@ export const toggleBlock = defineBlock({
   label: "Toggle",
   icon: MdChevronRight,
   aliases: ["collapsible", "accordion", "details", "expand"],
-  empty: () => ({ text: "" }),
+  empty: () => ({ text: [] }),
   placeholder: "Toggle",
   // Typing `> ` at the start of a block converts it into a toggle, preserving
   // any trailing text.

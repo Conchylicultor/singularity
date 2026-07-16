@@ -1394,6 +1394,13 @@
       "tag": "20260711_215802_4bd2ad0e__add_trash",
       "hash": "4bd2ad0e",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784203082000,
+      "tag": "20260716_115802_b9cf0101__normalize_block_text_runs",
+      "hash": "b9cf0101",
+      "breakpoints": true
     }
   ]
 }

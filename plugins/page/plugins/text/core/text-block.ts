@@ -8,6 +8,6 @@ export const textBlock = defineBlock({
   defaultText: true,
   icon: MdNotes,
   aliases: ["paragraph", "plain", "body", "p"],
-  empty: () => ({ text: "" }),
+  empty: () => ({ text: [] }),
   placeholder: "Type '/' for commands",
 });

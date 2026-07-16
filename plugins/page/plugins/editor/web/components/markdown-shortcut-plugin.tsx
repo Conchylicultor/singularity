@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import type { Block } from "../../core";
+import { runsOf, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor } from "../slots";
 
@@ -110,7 +110,7 @@ export function MarkdownShortcutPlugin({
               const base = empty?.() ?? {};
               editorRef.current.convertTo(
                 type,
-                acceptsText ? { ...base, text: remaining } : base,
+                acceptsText ? { ...base, text: runsOf(remaining) } : base,
                 collapsible === "always" ? { expanded: true } : undefined,
               );
             });

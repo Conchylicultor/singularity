@@ -14,6 +14,12 @@ export const dividerBlock = defineBlock({
   icon: MdHorizontalRule,
   aliases: ["hr", "rule", "separator", "line", "horizontal rule", "---"],
   empty: () => ({}),
+  // Markdown: `---`. A void type — parseLine returns `{}` (never a `text` key, so
+  // paste can't inject the unknown-key the write boundary rejects).
+  markdown: {
+    serialize: () => "---",
+    parseLine: (line) => (line.trim() === "---" ? {} : null),
+  },
   // Typing --- at the start of a text block converts it into a divider. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.
   // Longest-prefix-wins, so "---" beats any shorter marker; it fires the moment

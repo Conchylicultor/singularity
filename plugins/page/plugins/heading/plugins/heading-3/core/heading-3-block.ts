@@ -7,7 +7,7 @@ export const heading3Block = defineBlock({
   label: "Heading 3",
   icon: MdTitle,
   aliases: ["h3"],
-  empty: () => ({ text: "" }),
+  empty: () => ({ text: [] }),
   placeholder: "Heading 3",
   // Typing `### ` at the start of a block converts it into an H3, preserving any
   // trailing text.
