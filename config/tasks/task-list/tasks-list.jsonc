@@ -2,6 +2,7 @@
 {
   "views": [
     {
+      "id": "tree",
       "name": "Tree",
       "view": {
         "type": "tree",
@@ -21,7 +22,7 @@
         }
       }
     },
-    { "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } }
+    { "id": "recent", "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } }
   ],
   "filterPresets": [
     {

@@ -6,9 +6,21 @@ ordering.
 
 This barrel registers ONLY the `FieldIdentity` (label "List", `MdList` icon) in
 the `fields.identity` registry. The value type is `ListItem<F>[]` — each item
-carries an auto-injected `id` (UUID) and `rank` (fractional-index string) plus
-the user-defined sub-fields — exported from this core for type-only cross-plugin
-use.
+carries an `id` and `rank` (fractional-index string) plus the user-defined
+sub-fields — exported from this core for type-only cross-plugin use.
+
+The `id` is **not** an auto-injected UUID by default. A row authored without an
+explicit `id` is seeded by the config_v2 registry (`injectCollectionIds`) as
+`auto-<hash([index, content])>` — idempotent per read but **content- and
+position-dependent** (it changes when the row's content or order changes). Only
+the generic Settings-pane "Add item" UI mints a real `crypto.randomUUID()`.
+
+**`stableIdentity` option.** Set `listField({ stableIdentity: true, … })` when a
+list's item ids are used as **durable external keys** — the DataView `views` list
+is the worked example, since its ids key `data_view_row_order` (per-view saved
+manual order). Such lists must carry **explicit** ids in their committed config;
+the `config-stable-list-ids` check enforces it. Absent the flag, the
+content+index-derived seed above is fine for render-only lists.
 
 The config-render capability — the `listField` factory plus the sortable
 drag-and-drop renderer contributed to the frozen `config-v2.fields.renderer`

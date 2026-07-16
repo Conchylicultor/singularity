@@ -2,6 +2,7 @@
 {
   "views": [
     {
+      "id": "inbox",
       "name": "Inbox",
       "view": { "type": "list", "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }] }
     }

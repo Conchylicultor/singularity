@@ -6,7 +6,11 @@ restores it. No per-consumer wiring, no opt-in flag.
 
 **A row order is a property of the view instance, not of the data.** The key is
 `(dataViewId, viewId, rowKey)`: two view instances of the same surface hold two
-different orders, and a `+`-created view can be arranged independently. That is
+different orders, and a `+`-created view can be arranged independently. Because
+`viewId` is part of that key, every identity-bearing view config **must author an
+explicit `id`** on each view row (enforced by the `config-stable-list-ids`
+check) — a content-derived `auto-<hash>` id would shift on rename/filter-edit and
+orphan the `data_view_row_order` rows keyed on the old id. That is
 why this lives in the primitive rather than in each consumer's own rank column
 (the pre-existing `DataViewProps.manualOrder` seam, which a consumer owning a
 domain rank still uses and which still outranks this contributor).

@@ -2,6 +2,7 @@
 {
   "views": [
     {
+      "id": "history",
       "name": "History",
       "view": { "type": "list", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
     }

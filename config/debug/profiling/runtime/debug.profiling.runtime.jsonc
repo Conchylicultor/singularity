@@ -1,8 +1,9 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "name": "All", "view": { "type": "table", "sort": { "fieldId": "maxMs", "direction": "desc" } } },
+    { "id": "all", "name": "All", "view": { "type": "table", "sort": { "fieldId": "maxMs", "direction": "desc" } } },
     {
+      "id": "http",
       "name": "HTTP",
       "view": {
         "type": "table",
@@ -18,6 +19,7 @@
       }
     },
     {
+      "id": "db",
       "name": "DB",
       "view": {
         "type": "table",
@@ -33,6 +35,7 @@
       }
     },
     {
+      "id": "loaders",
       "name": "Loaders",
       "view": {
         "type": "table",

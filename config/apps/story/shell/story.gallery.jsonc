@@ -1,8 +1,9 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "name": "Gallery", "view": { "type": "gallery" } },
+    { "id": "gallery", "name": "Gallery", "view": { "type": "gallery" } },
     {
+      "id": "recent",
       "name": "Recent",
       "view": {
         "type": "gallery",

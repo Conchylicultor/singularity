@@ -6,12 +6,26 @@ sortable drag-and-drop list renderer contributed to `config-v2.fields.renderer`
 
 The factory builds a config_v2 `FieldDef<ListItem<F>[]>` carrying the canonical
 `fields/` list token (`@plugins/fields/plugins/list/core`, id `"list"`);
-dispatch is by id string. Each item gets an auto-injected `id` (UUID) and `rank`
-(fractional-index string) plus the user-defined sub-fields. The list's zod
-schema wraps each sub-field via `fieldSchemaWithDefault` so a key added after
-items were stored heals to its default. The `ListItem` value type comes from the
-identity core; `FieldRenderer` (recursion into sub-fields) comes from the slot
-owner (`@plugins/config_v2/plugins/fields/web`).
+dispatch is by id string. Each item gets an `id` and `rank` (fractional-index
+string) plus the user-defined sub-fields. The list's zod schema wraps each
+sub-field via `fieldSchemaWithDefault` so a key added after items were stored
+heals to its default. The `ListItem` value type comes from the identity core;
+`FieldRenderer` (recursion into sub-fields) comes from the slot owner
+(`@plugins/config_v2/plugins/fields/web`).
+
+The item `id` is **not** an auto-injected UUID by default. A row authored without
+an explicit `id` is seeded by the config_v2 registry (`injectCollectionIds`) as
+`auto-<hash([index, content])>` — idempotent per read but **content- and
+position-dependent**; only the generic Settings-pane "Add item" UI mints a real
+`crypto.randomUUID()`.
+
+**`stableIdentity` option.** `listField` accepts an optional
+`stableIdentity?: boolean`. Set it when a list's item ids are used as **durable
+external keys** (the DataView `views` list is the example — its ids key
+`data_view_row_order`, the per-view saved manual order). Such lists must carry
+**explicit** ids in their committed config, enforced by the
+`config-stable-list-ids` check; the flag lives on the `FieldDef` itself
+(`descriptor.fields[key].stableIdentity`) so the build-time check can read it.
 
 ## Plugin reference
 

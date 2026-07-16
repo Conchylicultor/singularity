@@ -2,6 +2,7 @@
 {
   "views": [
     {
+      "id": "all",
       "name": "All",
       "view": { "type": "table", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
     }

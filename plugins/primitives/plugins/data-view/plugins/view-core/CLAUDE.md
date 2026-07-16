@@ -21,6 +21,12 @@ from code. `buildInstanceFromRow` resolves a row's `view.type` → renderer (and
 powers the add-view menu); `useResolvedInstances` (the old default-synthesis
 resolver) was removed.
 
+**Author an explicit `id` on every view row** (bare slug, e.g. `{ "id": "all",
+"name": "All", … }`). The `config-stable-list-ids` check enforces this repo-wide:
+a view instance's `id` keys the durable `data_view_row_order` rows, so an omitted
+id — filled in as a content-derived `auto-<hash>` — would silently change on
+rename/filter-edit/reinsert and orphan the user's saved per-view row order.
+
 Each per-id descriptor is registered under the **consuming plugin's** tree: the
 consumer passes a per-entry `pluginId` to `buildViewConfigContributions` (web) /
 `buildViewConfigRegistrations` (server), so config_v2 derives

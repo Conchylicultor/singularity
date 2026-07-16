@@ -1,4 +1,4 @@
 // @hash 6ec84829688d
 {
-  "views": [{ "name": "Gallery", "view": { "type": "gallery" } }]
+  "views": [{ "id": "gallery", "name": "Gallery", "view": { "type": "gallery" } }]
 }

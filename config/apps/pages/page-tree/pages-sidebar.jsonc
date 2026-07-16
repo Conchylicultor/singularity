@@ -14,12 +14,9 @@
   // Its row order is owned by the view instance (data-view/view-order), which is
   // why `starred` needs no rank column.
   //
-  // `id` is authored explicitly, NOT left to be derived. An omitted id is filled
-  // in by config_v2's listField as `auto-<hash(index, content)>` — so renaming a
-  // view, editing its filter, or inserting a view above it would mint a NEW id
-  // and silently orphan the `data_view_row_order` rows keyed on the old one
-  // (the user's saved Favorites order would revert to source order). Pinning the
-  // id makes the view instance's identity independent of its content.
+  // Each view's `id` is authored explicitly (enforced by the
+  // `config-stable-list-ids` check): view ids key `data_view_row_order`, so a
+  // derived/auto id would shift on rename/edit and orphan the saved order.
   "views": [
     { "id": "pages", "name": "Pages", "view": { "type": "tree", "visibleFields": ["title"] } },
     {

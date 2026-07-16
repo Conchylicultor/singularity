@@ -60,6 +60,9 @@ export function viewsDescriptor(
       fields: {
         views: listField({
           label: "Views",
+          // View ids key `data_view_row_order` (per-view saved manual order), so
+          // they must be stable/explicit — not content+index-derived seeds.
+          stableIdentity: true,
           itemFields: {
             name: textField({ label: "Name" }),
             view: variantField({ label: "View" }),

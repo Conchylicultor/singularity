@@ -34,6 +34,7 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
   - **`collected-dir-tsconfig-coverage`**
   - **`composition-closure`**
   - **`config-origins-in-sync`**
+  - **`config-stable-list-ids`**
   - **`conversation-trailer`**
   - **`css-vars-single-owner`**
   - **`css-vars-supplied`**

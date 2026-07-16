@@ -1,16 +1,19 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "name": "Cards", "view": { "type": "gallery" } },
+    { "id": "cards", "name": "Cards", "view": { "type": "gallery" } },
     {
+      "id": "all",
       "name": "All",
       "view": { "type": "table", "sort": { "fieldId": "title", "direction": "asc" } }
     },
     {
+      "id": "longest",
       "name": "Longest",
       "view": { "type": "table", "sort": { "fieldId": "duration", "direction": "desc" } }
     },
     {
+      "id": "composed",
       "name": "Composed",
       "view": {
         "type": "table",

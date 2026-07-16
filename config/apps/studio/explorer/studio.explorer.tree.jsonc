@@ -1,9 +1,10 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } },
-    { "name": "Table", "view": { "type": "table" } },
+    { "id": "tree", "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } },
+    { "id": "table", "name": "Table", "view": { "type": "table" } },
     {
+      "id": "load-bearing",
       "name": "Load-bearing",
       "view": {
         "type": "table",

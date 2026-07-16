@@ -3657,6 +3657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`collected-dir-tsconfig-coverage`**
             - **`composition-closure`**
             - **`config-origins-in-sync`**
+            - **`config-stable-list-ids`**
             - **`conversation-trailer`**
             - **`css-vars-single-owner`**
             - **`css-vars-supplied`**

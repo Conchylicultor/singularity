@@ -1,7 +1,7 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "name": "All",  "view": { "type": "table", "sort": { "fieldId": "lastSeen", "direction": "desc" } } },
-    { "name": "Feed", "view": { "type": "list",  "sort": { "fieldId": "lastSeen", "direction": "desc" } } }
+    { "id": "all",  "name": "All",  "view": { "type": "table", "sort": { "fieldId": "lastSeen", "direction": "desc" } } },
+    { "id": "feed", "name": "Feed", "view": { "type": "list",  "sort": { "fieldId": "lastSeen", "direction": "desc" } } }
   ]
 }

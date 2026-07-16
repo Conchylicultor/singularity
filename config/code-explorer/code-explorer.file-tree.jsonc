@@ -1,4 +1,4 @@
 // @hash 6ec84829688d
 {
-  "views": [{ "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } }]
+  "views": [{ "id": "tree", "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } }]
 }

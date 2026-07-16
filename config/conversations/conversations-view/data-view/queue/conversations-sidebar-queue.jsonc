@@ -2,6 +2,7 @@
 {
   "views": [
     {
+      "id": "queue",
       "name": "Queue",
       "view": { "type": "list", "groupBy": "section" }
     }

@@ -2255,6 +2255,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-config-origins-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/config-stable-list-ids": {
+      "name": "@singularity/plugin-framework-tooling-checks-config-stable-list-ids",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer": {
       "name": "@singularity/plugin-framework-tooling-checks-conversation-trailer",
       "version": "0.0.1",
@@ -5999,6 +6003,8 @@
     "@singularity/plugin-framework-tooling-checks-composition-closure": ["@singularity/plugin-framework-tooling-checks-composition-closure@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/composition-closure"],
 
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-config-stable-list-ids": ["@singularity/plugin-framework-tooling-checks-config-stable-list-ids@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-stable-list-ids"],
 
     "@singularity/plugin-framework-tooling-checks-conversation-trailer": ["@singularity/plugin-framework-tooling-checks-conversation-trailer@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer"],
 

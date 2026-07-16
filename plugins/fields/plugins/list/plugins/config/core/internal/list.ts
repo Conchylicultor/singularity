@@ -12,6 +12,7 @@ import { listFieldType, type ListItem } from "@plugins/fields/plugins/list/core"
 export interface ListFieldDef<F extends FieldsRecord = FieldsRecord>
   extends FieldDef<ListItem<F>[]> {
   readonly itemFields: F;
+  readonly stableIdentity: boolean;
 }
 
 export function isListFieldDef(field: FieldDef): field is ListFieldDef {
@@ -33,6 +34,13 @@ export function listField<const F extends FieldsRecord>(
     // (both optional, exactly as the stored schema permits) so a code-authored
     // default row is editable + ordered without waiting for a UI "Add".
     default?: Array<InferFieldsObject<F> & { id?: string; rank?: string }>;
+    // Opt in when this list's item ids are used as DURABLE EXTERNAL KEYS (e.g. a
+    // saved row order keyed by view id): each row must then carry an explicit,
+    // content-independent `id` persisted in the config file — enforced by the
+    // `config-stable-list-ids` check. Absent the flag, a row authored without an
+    // `id` gets a content+index-derived seed that changes when the row's content
+    // or position changes (fine for render-only lists, unsafe for durable keys).
+    stableIdentity?: boolean;
   },
 ): ListFieldDef<F> {
   const subShape: z.ZodRawShape = {};
@@ -58,5 +66,6 @@ export function listField<const F extends FieldsRecord>(
     defaultValue: (opts.default ?? []) as ListItem<F>[],
     meta: pickMeta(opts),
     itemFields: opts.itemFields,
+    stableIdentity: opts.stableIdentity ?? false,
   });
 }
