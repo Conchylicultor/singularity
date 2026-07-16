@@ -55,8 +55,14 @@ let _fullSetCache: FullIconSet | null = null;
 export async function loadFullIconSet(): Promise<FullIconSet> {
   if (_fullSetCache) return _fullSetCache;
 
+  // Lazy import of the OWN CORE BARREL (not the deep generated file): in
+  // artifact mode own-core imports are rewritten to the external
+  // `@plugins/primitives/plugins/icon-picker/core` specifier, which the barrel
+  // closure composes into a mapped, lazily-fetched artifact — the import-map
+  // twin of the monolith's lazy chunk. A deep import would rewrite to the same
+  // specifier but fail as a missing export.
   const [{ ICON_SVG_MAP }, { default: meta }] = await Promise.all([
-    import("../../core/internal/icon-svg-map.generated"),
+    import("../../core"),
     import("./icon-metadata.json"),
   ]);
 

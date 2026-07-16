@@ -11,3 +11,10 @@ export interface SvgNode {
 }
 
 export { svgNodesToString } from "./internal/svg-nodes-to-string";
+
+// The full generated icon map. Re-exported from the barrel (not deep-imported)
+// so the web picker's lazy `import("../../core")` stays a barrel edge: in
+// artifact mode every own-core import is rewritten to the external
+// `@plugins/<path>/core` specifier, and only barrel exports resolve there.
+// Consumers load it lazily — the map is ~2 MB of generated data.
+export { ICON_SVG_MAP } from "./internal/icon-svg-map.generated";

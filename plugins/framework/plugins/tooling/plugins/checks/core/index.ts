@@ -7,6 +7,7 @@ export { computeTreeHash } from "./tree-hash";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
 export { grepCode, grepImports, listCandidateSources } from "./grep-code";
+export { isBuildInProgress, markBuildInProgress } from "./run-context";
 export type { CodeMatch, ImportMatch, CandidateSource, ListCandidateSourcesOptions } from "./grep-code";
 // NOTE: token-group-vars.generated.ts is intentionally NOT re-exported. Checks
 // must read token-group vars FRESH via codegen core's collectTokenGroupVars() —

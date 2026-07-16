@@ -105,7 +105,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleStatic serves a file from the worktree's web/dist directory. Any path
 // that doesn't match an existing file falls back to index.html so the SPA
-// client router can handle it (including paths with extensions like /file/foo.ts).
+// client router can handle it (including paths with extensions like /file/foo.ts)
+// — except /artifacts/*, which never falls back (see below).
 func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	webDir := wt.Spec().Web
 	if webDir == "" {
@@ -122,6 +123,14 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	info, err := os.Stat(full)
 	if err == nil && !info.IsDir() {
 		http.ServeFile(w, r, full)
+		return
+	}
+	// /artifacts/* URLs are content-addressed module files (import-map targets),
+	// never SPA routes: serving index.html for a miss — including a dangling
+	// store symlink — would hand the module loader an HTML document and surface
+	// as a cryptic parse error. An honest 404 instead.
+	if strings.HasPrefix(upath, "/artifacts/") {
+		http.NotFound(w, r)
 		return
 	}
 	// File not found or is a directory → SPA fallback regardless of extension.

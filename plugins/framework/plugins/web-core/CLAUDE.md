@@ -29,7 +29,37 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
 
 ## Commands
 
-Always go through `./singularity build` from the repo root — it runs `bun run build` here as part of the deploy.
+Always go through `./singularity build` from the repo root.
+
+### Frontend build modes
+
+`./singularity build` has two frontend modes (announced by a `Frontend mode: …`
+line at the top of every build):
+
+- **Per-plugin web artifacts — the DEFAULT** for normal builds (agent branches
+  and main). Each plugin's `web/` barrel (plus every statically or dynamically
+  imported folder barrel — `core`, `fixtures`, …) builds into an independent,
+  content-addressed ES-module artifact; the browser composes them via an inline
+  import map in `dist/index.html`. Only changed plugins rebuild (typical warm
+  step: a few seconds vs minutes for the monolith). Artifacts are stored in
+  `~/.singularity/web-artifacts/` (`store/` per-plugin artifacts, `vendors/`
+  npm pre-bundles, `css/` cached global Tailwind passes, `fingerprints/` stat
+  caches), shared across all worktrees, pruned by age. `dist/` symlinks into
+  the store. Guarded by the `web-artifacts:map-in-sync` and
+  `web-artifacts:no-vendored-state-inlined` checks; engine lives in
+  [`framework/tooling/web-artifacts`](../tooling/plugins/web-artifacts/CLAUDE.md).
+  `--no-minify` skips esbuild minification for debugging (hash input).
+- **Monolithic Vite build — the rollback escape hatch** (`bun run build` here):
+  force it with `./singularity build --monolith` or `SINGULARITY_WEB_MONOLITH=1`.
+  Precedence: explicit flag > env > default. `--artifacts` /
+  `SINGULARITY_WEB_ARTIFACTS=1` are accepted no-ops from the opt-in phase.
+- **Release/composition builds are ALWAYS monolithic** — `--composition` (and
+  therefore `./singularity release`, which shells out to it) unconditionally
+  uses the optimized Rollup build regardless of flags/env.
+
+The bundle-analysis and `manualChunks` guidance below applies to the monolithic
+mode (and to release bundles); in artifact mode, eager-boot bytes are governed
+by the eager tier's `modulepreload` closure instead.
 
 ### Bundle analysis (eager boot bytes)
 
@@ -82,6 +112,10 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
 
 - Web:
   - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.ensureNotificationsClient`, `primitives/live-state.NotificationsProvider`, `primitives/perfs/boot-trace.markBootInstant`, `primitives/perfs/boot-trace.startBootSpan`, `primitives/perfs/scheduler.yieldToMain`
+- Cross-plugin:
+  - Imported by: `framework/tooling/web-artifacts`
+- Core:
+  - Exports: Types: `BabelPluginItem`, `OrderedBabelContribution`, `ViteContributionReturn`; Values: `findViteContributions`, `loadBabelContributions`
 - Structure:
   - Loose top-level files: `vite.config.ts`
   - Composition root: yes

@@ -46,7 +46,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
   - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
+  - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`, `MAX_EMIT_LINES`
 - Cross-plugin:
   - Imported by: `apps/mail/sync`, `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-tables`, `database/derived-views`, `database/live-state-snapshot`, `database/migrations`, `debug/boot-events`, `debug/health-monitor`, `debug/op-rate`, `debug/paging-probe`, `debug/render-profiler`, `debug/sentinel`, `debug/slow-ops`, `debug/timeline`, `debug/worktree-cleanup`, `infra/attachments`, `infra/duress`, `primitives/live-state`, `release`, `reports/render-loop`, `shell/notifications`
 

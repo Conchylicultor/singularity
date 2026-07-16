@@ -205,26 +205,66 @@ function walkTsFiles(dir: string, out: string[]): void {
   }
 }
 
-function collectImportPrefixes(pluginDir: string, dir: string, entryPrefixes: Set<string>): Set<string> {
+// Every import specifier found in a plugin's `<dir>/` tree. `findImports` masks
+// comments/regex/strings and reads each specifier back by offset, so an import
+// written inside a string/comment can't register a phantom dependency edge.
+// Covers both `import … from` and `export … from`.
+function collectImportSpecifiers(pluginDir: string, dir: string): Set<string> {
   const subDir = join(pluginDir, dir);
   const files: string[] = [];
   walkTsFiles(subDir, files);
-  const prefixes = new Set<string>();
+  const specifiers = new Set<string>();
   for (const f of files) {
-    // `findImports` masks comments/regex/strings and reads each specifier back by
-    // offset, so an import written inside a string/comment can't register a
-    // phantom dependency edge. Covers both `import … from` and `export … from`.
     for (const imp of findImports(readFileSync(f, "utf8"))) {
-      const mod = imp.specifier;
-      if (!mod.startsWith("@plugins/")) continue;
-      const lastSlash = mod.lastIndexOf("/");
-      if (lastSlash > 0) {
-        const prefix = mod.slice(0, lastSlash);
-        if (entryPrefixes.has(prefix)) prefixes.add(prefix);
-      }
+      specifiers.add(imp.specifier);
+    }
+  }
+  return specifiers;
+}
+
+function collectImportPrefixes(pluginDir: string, dir: string, entryPrefixes: Set<string>): Set<string> {
+  const prefixes = new Set<string>();
+  for (const mod of collectImportSpecifiers(pluginDir, dir)) {
+    if (!mod.startsWith("@plugins/")) continue;
+    const lastSlash = mod.lastIndexOf("/");
+    if (lastSlash > 0) {
+      const prefix = mod.slice(0, lastSlash);
+      if (entryPrefixes.has(prefix)) prefixes.add(prefix);
     }
   }
   return prefixes;
+}
+
+/** True for npm-style bare specifiers (neither relative/absolute nor `@plugins/*`). */
+function isBareNpmSpecifier(mod: string): boolean {
+  return (
+    !mod.startsWith(".") &&
+    !mod.startsWith("/") &&
+    !mod.startsWith("@plugins/") &&
+    !mod.startsWith("@composition-web-registry")
+  );
+}
+
+/**
+ * Bare npm specifiers (per subpath: `react-dom/client` ≠ `react-dom`) imported
+ * by each collected plugin's `<dir>/` tree — the source-level vendor-set input
+ * for the web-artifacts engine (and its Phase-2 `map-in-sync` cross-check).
+ * Node builtins (`node:*`) are included verbatim; consumers filter. Does NOT
+ * change the emitted registry shape.
+ */
+export function collectBareSpecifiers(
+  ctx: RegistryGenContext,
+  dir: string,
+): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const e of collectEntries(ctx.tree, dir)) {
+    const pluginDir = join(resolve(ctx.root, "plugins"), e.pluginPath);
+    const bare = [...collectImportSpecifiers(pluginDir, dir)]
+      .filter(isBareNpmSpecifier)
+      .sort();
+    if (bare.length > 0) out.set(e.pluginPath, bare);
+  }
+  return out;
 }
 
 function buildDepsForDir(

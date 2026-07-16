@@ -16,6 +16,7 @@ export {
   collectedDirRegistryPath,
   collectedDirCompositionRegistryPath,
   clearCompositionRegistries,
+  collectBareSpecifiers,
   collectEntriesWithDeps,
   discoverCollectedDirs,
   generateCompositionRegistry,

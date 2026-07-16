@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -76,5 +77,85 @@ func TestGatewayAPIReservedUnderDefaultNamespace(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "unknown worktree") {
 		t.Fatalf("/gateway/* must not route to the default namespace, got %q", rec.Body.String())
+	}
+}
+
+// newStaticProxy registers a worktree with a real web dist dir (index.html +
+// one artifact file) and returns a proxy serving it — exercising handleStatic.
+func newStaticProxy(t *testing.T) (*Proxy, string) {
+	t.Helper()
+	regDir := t.TempDir()
+	sockDir, err := os.MkdirTemp("/tmp", "gwsta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(sockDir) })
+	cfg := &Config{
+		RegistryDir:    regDir,
+		SocketsDir:     sockDir,
+		LogDir:         t.TempDir(),
+		LogBufferLines: 16,
+	}
+	reg := NewRegistry(cfg)
+
+	sub := filepath.Join(regDir, "alpha")
+	server := filepath.Join(sub, "server")
+	if err := os.MkdirAll(server, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	web := t.TempDir()
+	if err := os.WriteFile(filepath.Join(web, "index.html"), []byte("<html>spa-shell</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	artifactDir := filepath.Join(web, "artifacts", "tasks.web.abc123")
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(artifactDir, "index.js"), []byte("export {};"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	spec := `{"server":"` + server + `","web":"` + web + `"}`
+	if err := os.WriteFile(filepath.Join(sub, "spec.json"), []byte(spec), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	routes := NewCentralRoutesStore(filepath.Join(t.TempDir(), "central-routes.json"))
+	return NewProxy(reg, routes, &Supervisor{}, ""), web
+}
+
+// An existing /artifacts/* file is served as-is.
+func TestArtifactsHitServesFile(t *testing.T) {
+	p, _ := newStaticProxy(t)
+	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/index.js")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "export {}") {
+		t.Fatalf("expected artifact body, got %q", rec.Body.String())
+	}
+}
+
+// A missing /artifacts/* file is an honest 404, never the SPA fallback: the
+// import-map loader would otherwise receive index.html for a module URL and
+// die with a cryptic parse error.
+func TestArtifactsMissReturns404NotSPAFallback(t *testing.T) {
+	p, _ := newStaticProxy(t)
+	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/missing.js")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "spa-shell") {
+		t.Fatalf("artifact miss must not serve index.html, got %q", rec.Body.String())
+	}
+}
+
+// Non-artifact unknown paths keep today's SPA fallback.
+func TestNonArtifactMissKeepsSPAFallback(t *testing.T) {
+	p, _ := newStaticProxy(t)
+	rec := serve(p, "alpha.localhost:9000", "/tasks/t/some-route")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (SPA fallback)", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "spa-shell") {
+		t.Fatalf("expected index.html fallback, got %q", rec.Body.String())
 	}
 }

@@ -38,7 +38,7 @@ query never wait.) See
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `framework/resource-runtime`, `infra/endpoints`
+  - Imported by: `framework/resource-runtime`, `framework/tooling/web-artifacts`, `infra/endpoints`
 - Core:
   - Exports: Types: `Semaphore`; Values: `createSemaphore`
 

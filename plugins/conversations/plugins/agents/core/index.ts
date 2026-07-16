@@ -17,3 +17,5 @@ export type {
   LaunchAgentBody,
   LaunchAgentResponse,
 } from "./endpoints";
+export { AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./schemas";
+export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";

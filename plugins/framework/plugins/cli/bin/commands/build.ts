@@ -17,7 +17,8 @@ import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/rout
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { listDatabases, forkTempPrefix } from "@plugins/database/plugins/admin/server";
 import {
   libpqEnv,
@@ -715,8 +716,56 @@ export function registerBuild(program: Command) {
       "--composition <name>",
       "Build only the named composition's plugin closure (filtered self-contained registry)",
     )
-    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string }) => {
+    .option(
+      "--monolith",
+      "Force the monolithic vite build instead of the default per-plugin web artifacts (rollback escape hatch; also SINGULARITY_WEB_MONOLITH=1). Composition/release builds are always monolithic.",
+    )
+    .option(
+      "--artifacts",
+      "Accepted no-op: per-plugin web artifacts are the DEFAULT (kept so pre-flip invocations, incl. SINGULARITY_WEB_ARTIFACTS=1, don't break). Never active for --composition/release builds.",
+    )
+    .option(
+      "--no-minify",
+      "Artifact mode only: skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
+    )
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string; artifacts?: boolean; monolith?: boolean; minify: boolean }) => {
       const buildStartedAt = new Date();
+
+      // Mark this process as a build: dist-comparing checks (map-in-sync) skip
+      // while the dist they'd inspect is the one this build replaces.
+      markBuildInProgress();
+
+      // Frontend mode. Per-plugin web artifacts are the DEFAULT for normal
+      // (agent-branch and main) builds; the monolithic vite build is the
+      // rollback escape hatch. Precedence: explicit flag > env > default.
+      // Composition builds are ALWAYS monolithic regardless of flags/env — the
+      // release pipeline shells out to `build --composition <name>`, so this
+      // unconditional branch is its hard guard. `--artifacts` /
+      // SINGULARITY_WEB_ARTIFACTS=1 remain accepted no-ops from the opt-in
+      // phase, except where explicitly contradictory (fail loudly).
+      if (opts.artifacts && opts.composition) {
+        console.error(
+          "ERROR: --artifacts cannot be combined with --composition (release/composition builds stay monolithic).",
+        );
+        process.exit(1);
+      }
+      if (opts.artifacts && opts.monolith) {
+        console.error("ERROR: --artifacts and --monolith are contradictory.");
+        process.exit(1);
+      }
+      const frontendMode: { artifacts: boolean; why: string } = opts.composition
+        ? { artifacts: false, why: "composition/release builds are always monolithic" }
+        : opts.monolith
+          ? { artifacts: false, why: "--monolith" }
+          : opts.artifacts
+            ? { artifacts: true, why: "--artifacts" }
+            : process.env.SINGULARITY_WEB_MONOLITH === "1"
+              ? { artifacts: false, why: "SINGULARITY_WEB_MONOLITH=1" }
+              : { artifacts: true, why: "default" };
+      const artifactsMode = frontendMode.artifacts;
+      console.log(
+        `Frontend mode: ${artifactsMode ? "web artifacts" : "monolithic vite build"} (${frontendMode.why})`,
+      );
 
       // Per-step wrapper for the shared codegen pipeline: keeps build's per-step
       // profiler granularity while the ordered call list lives in codegen core
@@ -1182,28 +1231,85 @@ export function registerBuild(program: Command) {
           }
         }
 
-        parallel.push(
-          (async (): Promise<StepResult> => {
-            const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
-            const start = performance.now();
-            // Vite is one of the heavy children the grant covers: spend a unit
-            // for it so it shares the build's CPU budget with the type-check
-            // workers rather than running on top of it.
-            const output = await grant.run(() =>
-              execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
-            );
-            end({ maxRssBytes: output.maxRssBytes });
-            const rss = maxRssLine("vite build", output.maxRssBytes);
-            if (rss) output.lines.push({ text: rss, stream: "stdout" });
-            return {
-              id: "viteBuild",
-              label: "vite build",
-              lines: output.lines,
-              durationMs: Math.round(performance.now() - start),
-              success: output.exitCode === 0,
-            };
-          })(),
-        );
+        if (artifactsMode) {
+          // Per-plugin artifact pipeline, in-process, into the SAME staging
+          // dir the monolith would use — the atomic publish below is shared.
+          // Grant-gated like the vite build it replaces: the pipeline's
+          // internal fan-out (per-plugin vite builds on a cold store) is the
+          // same class of heavy work, so it spends a unit of the build's CPU
+          // budget rather than running on top of it.
+          parallel.push(
+            (async (): Promise<StepResult> => {
+              const end = buildProfilerStart("viteBuild", "build:frontend", "web artifacts");
+              const start = performance.now();
+              const lines: StepResult["lines"] = [];
+              let success = true;
+              try {
+                const result = await grant.run(() =>
+                  runWebArtifactsPipeline({
+                    root,
+                    stagingDir: stagingPath,
+                    minify: opts.minify,
+                    buildId,
+                    log: (line) => lines.push({ text: line, stream: "stdout" }),
+                    onStage: async (id, label, run) => {
+                      const endStage = buildProfilerStart(id, "build:frontend", label);
+                      try {
+                        return await run();
+                      } finally {
+                        endStage();
+                      }
+                    },
+                  }),
+                );
+                lines.push({
+                  text:
+                    `web artifacts: ${result.builtArtifacts} built, ${result.reusedArtifacts} reused ` +
+                    `(${result.webArtifacts} web + ${result.coreArtifacts} core), ` +
+                    `${result.vendorSpecs} vendors, ${result.preloads} preloads`,
+                  stream: "stdout",
+                });
+              } catch (err) {
+                success = false;
+                const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+                for (const line of message.split("\n")) {
+                  lines.push({ text: line, stream: "stderr" });
+                }
+              }
+              end();
+              return {
+                id: "viteBuild",
+                label: "web artifacts",
+                lines,
+                durationMs: Math.round(performance.now() - start),
+                success,
+              };
+            })(),
+          );
+        } else {
+          parallel.push(
+            (async (): Promise<StepResult> => {
+              const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
+              const start = performance.now();
+              // Vite is one of the heavy children the grant covers: spend a unit
+              // for it so it shares the build's CPU budget with the type-check
+              // workers rather than running on top of it.
+              const output = await grant.run(() =>
+                execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
+              );
+              end({ maxRssBytes: output.maxRssBytes });
+              const rss = maxRssLine("vite build", output.maxRssBytes);
+              if (rss) output.lines.push({ text: rss, stream: "stdout" });
+              return {
+                id: "viteBuild",
+                label: "vite build",
+                lines: output.lines,
+                durationMs: Math.round(performance.now() - start),
+                success: output.exitCode === 0,
+              };
+            })(),
+          );
+        }
 
         return await Promise.all(parallel);
       };
