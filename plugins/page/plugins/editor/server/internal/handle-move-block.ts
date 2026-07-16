@@ -1,11 +1,11 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { moveBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksChanged } from "./tables-events";
-import { rankAdjacentTo } from "./forest";
+import { loadLiveSiblings, rankAdjacentTo } from "./forest";
 import { recomputePageIdSubtree } from "./page-id";
 
 export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => {
@@ -29,20 +29,9 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!before) throw new HttpError(404, "Not found");
 
-    // EVERY LIVE row under the destination parent — not scoped by `page_id`, not
-    // filtered by `type`, but excluding trashed rows: `(parent_id, rank)` is one
-    // ordering space shared by sub-page rows and content rows, but the partial
-    // unique index only constrains LIVE rows, so a trashed row may legitimately
-    // share a live row's rank. Including it would hand `rankAdjacentTo` two
-    // siblings at one rank and abort with `Rank.between(r, r)`.
-    const siblings = await tx
-      .select()
-      .from(_blocks)
-      .where(
-        body.parentId === null
-          ? and(isNull(_blocks.parentId), isNull(_blocks.deletedAt))
-          : and(eq(_blocks.parentId, body.parentId), isNull(_blocks.deletedAt)),
-      );
+    // Guards that the destination parent is LIVE (404 otherwise) and returns its
+    // complete live sibling set for the rank math — see `loadLiveSiblings`.
+    const siblings = await loadLiveSiblings(tx, body.parentId);
     if (body.targetId !== null && !siblings.some((s) => s.id === body.targetId)) {
       throw new HttpError(
         400,

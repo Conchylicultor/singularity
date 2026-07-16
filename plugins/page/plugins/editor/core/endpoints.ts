@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { TrashOutcomeSchema } from "@plugins/infra/plugins/trash/core";
-import { BlockSchema } from "./schemas";
+import { BlockSchema, PageRowSchema } from "./schemas";
 import { BlockOpSchema } from "./block-ops";
 import { BlockPatchSchema } from "./block-diff";
 import { SerializedBlockSchema } from "./serialized-block";
@@ -81,11 +81,15 @@ export const PasteBlocksBodySchema = z.object({
 });
 export type PasteBlocksBody = z.infer<typeof PasteBlocksBodySchema>;
 
-// Pages are blocks of `type="page"`, ordered by rank (sidebar tree built by
-// `parentId`).
+// Pages are blocks of `type="page"`, in document order per sidebar sibling group
+// and carrying the derived `docRank` — the SAME shape and order as the `pages`
+// live resource, because both are `loadPages()`. Deliberately not the plain rank
+// sort it used to be: `rank` is only comparable within one `(parent_id, rank)`
+// space, and a page's sidebar siblings can span several, so a second definition
+// of "the pages list" here would be a second, wrong order for one concept.
 export const listPages = defineEndpoint({
   route: "GET /api/pages",
-  response: z.array(BlockSchema),
+  response: z.array(PageRowSchema),
 });
 
 // A page's content: non-page blocks scoped by `pageId`, ordered by rank.

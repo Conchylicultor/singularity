@@ -4,7 +4,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   pagesResource,
   pageData,
-  type Block,
+  type PageRow,
 } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { storiesResource } from "@plugins/apps/plugins/story/plugins/marker/web";
@@ -35,7 +35,7 @@ export function StoryGallery() {
   const all = useCombinedResources({ stories: storiesResult, pages: pagesResult });
   const openPane = useOpenPane();
 
-  const openStory = (page: Block) => {
+  const openStory = (page: PageRow) => {
     openPane(storyDetailPane, { pageId: page.id }, { mode: "root" });
   };
 
@@ -44,17 +44,17 @@ export function StoryGallery() {
     openPane(storyDetailPane, { pageId }, { mode: "root" });
   };
 
-  let cards: Block[] = [];
+  let cards: PageRow[] = [];
   if (!all.pending) {
     const { stories: storyMarks, pages } = all.data;
     cards = Object.values(storyMarks)
       // Resolve each mark to its page; drop marks with no surviving page.
       .map((mark) => pages.find((p) => p.id === mark.pageId))
-      .filter((page): page is Block => page !== undefined);
+      .filter((page): page is PageRow => page !== undefined);
   }
 
   return (
-    <DataView<Block>
+    <DataView<PageRow>
       loading={all.pending}
           creators={[
             {
@@ -93,7 +93,7 @@ export function StoryGallery() {
             gallery: {
               minCardWidth: 224,
               showCreateCard: true,
-              cover: (p: Block) => ({
+              cover: (p: PageRow) => ({
                 kind: "icon",
                 icon: (
                   <PageIcon

@@ -18,7 +18,7 @@ import {
   updateBlock,
   moveBlock,
   pageData,
-  type Block,
+  type PageRow,
 } from "@plugins/page/plugins/editor/core";
 import { pageLinksResource } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -56,7 +56,7 @@ export function PagesSidebar() {
   // collapse that makes loading look like a confirmed-empty tree); the DataView
   // gets `loading={result.pending}`, so the switcher chrome paints immediately
   // and only the body shows the skeleton.
-  let rows: Block[] = [];
+  let rows: PageRow[] = [];
   if (!result.pending) {
     rows = result.data;
   }
@@ -66,7 +66,7 @@ export function PagesSidebar() {
   // intent — the display hierarchy below runs on `pageId`, a different relation.
   // Keyed on `result` (stable between pushes), not the per-render `rows` array.
   const pagesById = useMemo(() => {
-    const map = new Map<string, Block>();
+    const map = new Map<string, PageRow>();
     if (result.pending) return map;
     for (const b of result.data) map.set(b.id, b);
     return map;
@@ -79,7 +79,7 @@ export function PagesSidebar() {
   const viewOptions = useMemo(
     () => ({
       tree: {
-        leadingIcon: (b: Block) => (
+        leadingIcon: (b: PageRow) => (
           <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
         ),
         rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
@@ -93,11 +93,11 @@ export function PagesSidebar() {
         // per-row sub-page creation on each row's hover "+", so the persistent
         // footer "New Page" line is dropped for a more compact tree.
         addLabel: null,
-        dragOverlay: (b: Block) => pageData(b).title || "Untitled",
+        dragOverlay: (b: PageRow) => pageData(b).title || "Untitled",
       },
       // Favorites (a filtered `list` view) gets the same page icon + density.
       list: {
-        leading: (b: Block) => (
+        leading: (b: PageRow) => (
           <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
         ),
         size: "sm" as const,
@@ -121,7 +121,7 @@ export function PagesSidebar() {
   // the DataView never owns a scroll — its `Sticky` toolbar pins against it.
   return (
     <Scroll fill className="py-xs">
-      <DataView<Block>
+      <DataView<PageRow>
         rows={rows}
         loading={result.pending}
         fields={[
@@ -167,7 +167,17 @@ export function PagesSidebar() {
           // as read-only reference children of the linking page.
           getAliasParents: (b) =>
             linkSourcesByTarget.get(b.id) ?? NO_LINK_PARENTS,
-          getRank: (b) => b.rank,
+          // `docRank`, NOT the storage `rank`: a `rank` is comparable only
+          // within one `(parent_id, rank)` space, and this sibling group (pages
+          // sharing a `pageId`) can span several — some sub-pages are direct
+          // children of the page, others sit under a text line / toggle. The
+          // server mints `docRank` per group from true document order, so
+          // display order, array order, and `computeFlatReorder`'s rank-sorted
+          // neighbourhood are now ONE order. They silently disagreed before:
+          // display followed the array (a global rank sort), the DnD arithmetic
+          // re-sorted the sibling set — so a drop resolved against neighbours
+          // the user never saw, or hit a cross-space duplicate rank and aborted.
+          getRank: (b) => b.docRank,
           isExpanded: (b) => b.expanded,
           onToggleExpanded: (id, next) =>
             void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),

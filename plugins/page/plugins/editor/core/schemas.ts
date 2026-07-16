@@ -44,6 +44,27 @@ export const BlockSchema = z.object({
 });
 export type Block = z.infer<typeof BlockSchema>;
 
+// A page row as the `pages` resource emits it: a `type="page"` block plus
+// `docRank` — a DERIVED, per-load ordering key.
+//
+// `rank` is the storage key: a fractional index comparable ONLY within its own
+// `(parent_id, rank)` space. The sidebar's sibling group is "pages sharing a
+// `pageId`", which can span SEVERAL such spaces (a sub-page may be a direct
+// child of its page, or sit under a text line / toggle), so sorting those `rank`
+// strings against each other is meaningless — and duplicates across spaces make
+// the DnD rank arithmetic throw. `docRank` is a real fractional-index `Rank`
+// minted by the loader, unique and ordered WITHIN one `pageId` group, derived
+// from true document order (a rank-ordered DFS of the block forest).
+//
+// It is **never persisted and never written back**: no column, no migration, no
+// request body. A `docRank` is only valid against the group it was minted with,
+// and the SAME row read through `blocksResource` carries no `docRank` at all —
+// writing one back would give one row two conflicting `rank` values. Moves send
+// positional intent (an anchor id); the server mints the real `rank` against the
+// complete sibling set.
+export const PageRowSchema = BlockSchema.extend({ docRank: RankSchema });
+export type PageRow = z.infer<typeof PageRowSchema>;
+
 // The reserved block type for a page node.
 export const PAGE_BLOCK_TYPE = "page";
 

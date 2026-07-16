@@ -1,15 +1,14 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
-import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { listPages } from "../../core/endpoints";
-import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { PageRowSchema } from "../../core/schemas";
+import { loadPages } from "./resources";
 
+// Delegates to `loadPages` — the SAME function behind the `pages` live resource,
+// so this HTTP read and the pushed value can never disagree. It used to run its
+// own `ORDER BY rank` select, which is a second (and wrong) definition of page
+// order: `rank` is comparable only within one `(parent_id, rank)` space, while a
+// page's sidebar siblings can span several. One concept, one loader.
 export const handleListPages = implement(listPages, async () => {
-  const rows = await db
-    .select()
-    .from(_blocks)
-    .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)))
-    .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
-  return rows.map((r) => BlockSchema.parse(r));
+  const rows = await loadPages();
+  return rows.map((r) => PageRowSchema.parse(r));
 });

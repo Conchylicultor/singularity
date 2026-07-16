@@ -18,9 +18,11 @@ the lower-level building block.
 ## How it works
 
 - **Projection** — each raw `TRow` becomes a `TreeItem`-shaped row
-  (`{ id, parentId, rank, expanded, __row }`) via the `HierarchyConfig`
+  (`{ id, parentId, rank, expanded, alias, __row }`) via the `HierarchyConfig`
   accessors. A map back to the original row lets `TreeList` callbacks recover the
-  concrete `TRow`.
+  concrete `TRow`. It lives in `web/internal/project-rows.ts` as a **pure**
+  function (the view just memoizes it), so its rank arithmetic — notably the
+  alias minting below — is directly testable without mounting the view.
 - **Row label** — the primary field (`FieldDef.primary` → first `text` → first,
   run via `pickPrimaryField` over the view's **visible** field subset) rendered
   through the same `data-view.cell` resolution the table uses, so a field-type
@@ -84,9 +86,24 @@ the lower-level building block.
   place). Mutations are alias-translated before reaching the consumer: an alias
   can't be dragged (drop no-ops), a `child` drop / add-child on an alias
   resolves to the REAL row, and a drop *beside* an alias degrades to an append
-  under the destination parent (an alias has no real sibling position). An
-  alias keeps its row's own rank, so a consumer using aliases must be
-  endpoint-based (`targetId`/`zone`), like every filtered-projection tree.
+  under the destination parent (an alias has no real sibling position).
+- **Alias ranks are minted, not borrowed.** Each alias-parent's aliases get a
+  contiguous run of fresh ranks *after* that parent's last real child
+  (`Rank.nBetween(maxRealRank, null, k)`), so rank order agrees with display
+  order (aliases render last) and no two nodes under one parent share a rank.
+  They must not carry the referenced row's own rank: a rank is only meaningful
+  within its own sibling group, so importing one from a foreign group collides —
+  with per-group ranks (`a0, a1, …`) an alias of any parent's first child lands
+  on `a0`, exactly where the host parent's own first child sits. That is not
+  cosmetic: `computeDrop` → `computeFlatReorder` rank-SORTS a parent's children
+  to find a drop's neighbours, so a duplicate makes `Rank.between(a0, a0)` throw
+  → `computeDrop` returns `null` → **the drag is silently swallowed, including
+  drops on the REAL rows beside the alias** (the abort happens inside
+  `computeDrop`, before the alias-degrading `onMove` wrapper is ever called).
+- A consumer using aliases must still be **endpoint-based** (`targetId`/`zone`),
+  like every filtered-projection tree. The minted ranks are projection-local:
+  an alias occupies rank space that does not exist in storage, so a `dest.rank`
+  computed beside one is not a valid key in the real sibling group.
 
 ## Options
 

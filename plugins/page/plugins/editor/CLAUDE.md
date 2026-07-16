@@ -1,5 +1,51 @@
 # editor
 
+## The sidebar's ordering space is `docRank`, not `rank`
+
+`page_blocks.rank` is a fractional index, and a fractional index is comparable
+**only within one `(parent_id, rank)` space**. The Pages sidebar's sibling group
+is *pages sharing a `pageId`* — which can span several such spaces: some
+sub-pages are direct children of their page, others sit under a text line or a
+toggle. Sorting those `rank` strings against each other is meaningless, and two
+pages in different spaces legitimately hold the same rank (`"a1"` under a toggle,
+`"a1"` under the page) — which fed `Rank.between("a1", "a1")`, threw inside
+`computeDrop`, and silently aborted the drag.
+
+So the **server** defines the order. `pagesLiveResource` emits a `PageRow` =
+`Block` + **`docRank`**: a real minted `Rank`, unique and ordered within one
+`pageId` group, derived from true document order by `docOrderPaths()` (an upward
+rank-path CTE, sorted in JS). Rows come back in that order, so **display order,
+array order, and `computeFlatReorder`'s rank-sorted neighbourhood are one order**
+— they silently disagreed before. See
+[`research/2026-07-16-page-sidebar-document-order.md`](../../../../research/2026-07-16-page-sidebar-document-order.md).
+
+Three rules:
+
+- **Never write `docRank` back.** It is derived per load: no column, no
+  migration, never in a request body. It is only valid against the group it was
+  minted with, and the *same row* read through `blocksResource` carries no
+  `docRank` at all — persisting it would give one row two conflicting ranks.
+  `rank` remains the storage key; moves send **positional intent** (an anchor
+  id) and the server mints the real rank against the complete sibling set.
+- **Membership is never a function of the traversal.** The loader's driving
+  relation is the plain drizzle select; the path map is looked *onto* it. A page
+  whose path can't resolve keeps its row (sorted last in its group, by raw
+  `rank`) — dropping it would remove the page from the `[[` picker, breadcrumbs,
+  the story gallery and the blog panel, not merely mis-order the sidebar.
+- **Don't move the sort into SQL.** `rank_text` is `TEXT COLLATE "C"`, but a
+  recursive CTE can flatten the domain back to plain `text` and revert to locale
+  collation, where `'a' < 'B'` while `Rank.compare` says `'B' < 'a'`.
+
+`docRank` derives from **ranks, not content** — which is why the ~1s
+`data.text` projection re-runs this loader on every keystroke burst and yields a
+byte-identical result, hence an empty diff and no push.
+
+The unresolved-path branch is reachable only from corruption, not from a user
+journey: delete cascades **across page boundaries** (`collectBlockSubtrees`), so
+`A ⊂ B` trashes `A` with `B` under `B`'s single trash entry; restoring `A` alone
+hits `untrashBlocks`' `parentGone` branch and re-parents it to the workspace
+root. A live page therefore can never point at a trashed parent.
+
 ## The page column (one owner for the content-left edge)
 
 `web/internal/page-column.ts` is the **single declaration site** for the column's
@@ -595,7 +641,7 @@ tests). The whole document lives in React state and is discarded on unmount.
   - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/turn-into-page`, `POST /api/pages/:pageId/blocks/op`, `POST /api/pages/:pageId/blocks/patch`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `infra/trash.TrashOutcomeSchema`, `primitives/collab-doc.readYDoc`, `primitives/collab-doc.yDocContent`, `primitives/collab-doc.yDocFromLexical`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.subtreeIds`
-  - Exports: Types: `Block`, `BlockData`, `BlockDiff`, `BlockHandle`, `BlockMarkdown`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MdParseCtx`, `MdSerializeCtx`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextBearingSchema`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defaultTextHandle`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `pageBlockHandle`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `PAGES_TRASH_SOURCE`, `pagesResource`, `parseMarkdownToForest`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLeaf`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeForestToMarkdown`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
+  - Exports: Types: `Block`, `BlockData`, `BlockDiff`, `BlockHandle`, `BlockMarkdown`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MdParseCtx`, `MdSerializeCtx`, `MoveBlockBody`, `PageCover`, `PageData`, `PageRow`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextBearingSchema`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defaultTextHandle`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `pageBlockHandle`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `PageRowSchema`, `PAGES_TRASH_SOURCE`, `pagesResource`, `parseMarkdownToForest`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLeaf`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeForestToMarkdown`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/story/story-core`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/website/demos/editor-toy`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/sub-page`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
   - Extended by: `apps/website/blog/publish` (table `page_blocks_ext_blog_post`), `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)

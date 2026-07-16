@@ -26,34 +26,13 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { TreeViewOptions } from "../internal/types";
+import {
+  isAliasNodeId,
+  projectRows,
+  realNodeId,
+  type Projected,
+} from "../internal/project-rows";
 import { EditableTreeLabel } from "./editable-tree-label";
-
-/**
- * The projected tree row: the original `TRow` plus the `TreeItem` fields the
- * tree primitive needs (`id`, `parentId`, `rank`, `expanded`). We keep the
- * original row reachable via `__row` so callbacks recover the concrete `TRow`.
- * `alias` marks a reference node synthesized from `hierarchy.getAliasParents`
- * — the same `__row` rendered as a read-only leaf under an additional parent.
- */
-type Projected<TRow> = {
-  id: string;
-  parentId: string | null;
-  rank: Rank;
-  expanded: boolean;
-  alias: boolean;
-  __row: TRow;
-};
-
-// Alias node ids: `<rowKey>\u0000alias\u0000<parentRowKey>`. A NUL byte cannot
-// appear in a real row key, so the encoding is collision-free and reversible.
-const ALIAS_SEP = "\u0000alias\u0000";
-const aliasNodeId = (rowId: string, parentId: string) =>
-  `${rowId}${ALIAS_SEP}${parentId}`;
-const isAliasNodeId = (id: string) => id.includes(ALIAS_SEP);
-const realNodeId = (id: string) => {
-  const i = id.indexOf(ALIAS_SEP);
-  return i === -1 ? id : id.slice(0, i);
-};
 
 /**
  * Default row: render the primary field through the same `data-view.cell`
@@ -229,56 +208,22 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveOperatorSet = useResolveOperatorSet();
 
   // Project each raw row → a TreeItem-shaped row, keeping a map back to the
-  // original so TreeList callbacks recover the concrete `TRow`.
+  // original so TreeList callbacks recover the concrete `TRow`. The projection
+  // itself is pure (`projectRows`) so its rank arithmetic is directly testable.
   const { projected, originalById } = useMemo(() => {
-    const byId = new Map<string, unknown>();
-    const out: Projected<unknown>[] = [];
-    if (!hierarchy) return { projected: out, originalById: byId };
-    rows.forEach((row, i) => {
-      const id = rowKey(row, i);
-      byId.set(id, row);
-      out.push({
-        id,
-        parentId: hierarchy.getParentId(row),
-        rank: hierarchy.getRank(row),
-        expanded:
-          hierarchy.isExpanded?.(row) ??
-          expanded?.[id] ??
-          options.defaultExpanded ??
-          false,
-        alias: false,
-        __row: row,
-      });
-    });
-    // Second pass: synthesize the alias (reference) leaves AFTER every real
-    // node, so `buildTree` (insertion-order children) lands them last among
-    // each parent's children. An alias keeps its row's own rank — good enough
-    // for the DnD arithmetic, which consumers of alias trees ignore anyway
-    // (they are endpoint-based, like every filtered-projection tree).
-    const getAliasParents = hierarchy.getAliasParents;
-    if (getAliasParents) {
-      rows.forEach((row, i) => {
-        const id = rowKey(row, i);
-        const realParentId = hierarchy.getParentId(row);
-        for (const parent of getAliasParents(row)) {
-          if (parent === id || parent === realParentId || !byId.has(parent)) {
-            continue;
-          }
-          const nodeId = aliasNodeId(id, parent);
-          if (byId.has(nodeId)) continue; // duplicate edge
-          byId.set(nodeId, row);
-          out.push({
-            id: nodeId,
-            parentId: parent,
-            rank: hierarchy.getRank(row),
-            expanded: false,
-            alias: true,
-            __row: row,
-          });
-        }
-      });
+    if (!hierarchy) {
+      return {
+        projected: [] as Projected<unknown>[],
+        originalById: new Map<string, unknown>(),
+      };
     }
-    return { projected: out, originalById: byId };
+    return projectRows({
+      rows,
+      rowKey,
+      hierarchy,
+      expanded,
+      defaultExpanded: options.defaultExpanded,
+    });
   }, [rows, rowKey, hierarchy, expanded, options.defaultExpanded]);
 
   // Apply the view's filter through the same `evaluateNode` evaluator the flat

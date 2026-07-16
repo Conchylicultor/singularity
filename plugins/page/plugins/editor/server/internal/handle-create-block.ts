@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { nextRankUnder, rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -17,10 +17,14 @@ export const handleCreateBlock = implement(createBlock, async ({ body }) => {
   if (body.afterId) {
     // Insert immediately after an existing block: same parent, rank between it
     // and its next sibling at that parent (same shape as the reducer's insert).
+    // LIVE only: a trashed block is not addressable (it appears in no resource),
+    // so positioning against one is the same 404 an unknown id already gets —
+    // and it would otherwise mint a rank against a trashed row's key. The
+    // destination PARENT this resolves is guarded by `computePageId` below.
     const [after] = await db
       .select()
       .from(_blocks)
-      .where(eq(_blocks.id, body.afterId))
+      .where(and(eq(_blocks.id, body.afterId), isNull(_blocks.deletedAt)))
       .limit(1);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!after) throw new HttpError(404, "Block not found");

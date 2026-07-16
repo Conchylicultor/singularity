@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   isDescendant,
@@ -12,7 +12,7 @@ import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksChanged } from "./tables-events";
 import { recomputePageIdSubtree } from "./page-id";
-import { loadPageBlocks, rankWindow } from "./forest";
+import { loadLiveSiblings, loadPageBlocks, rankWindow } from "./forest";
 import { parkRanks } from "./rank-park";
 
 export const handleBulkMoveBlock = implement(
@@ -46,20 +46,11 @@ export const handleBulkMoveBlock = implement(
       // destination parent is a `page` row its children — keyed
       // `page_id = <that row>` — are absent from it, and a window computed over
       // `rows` would mint `"a0"` straight onto the sub-page's existing first
-      // child. Query the destination's true LIVE siblings by `parent_id` alone:
-      // no `page_id` filter, no `type` filter, but excluding trashed rows — the
-      // partial unique index only constrains live rows, so a trashed row may
-      // share a live rank and would corrupt the `rankWindow` arithmetic. Read
-      // inside the transaction so the window can't go stale before the writes
-      // land.
-      const destSiblings = await tx
-        .select()
-        .from(_blocks)
-        .where(
-          body.parentId === null
-            ? and(isNull(_blocks.parentId), isNull(_blocks.deletedAt))
-            : and(eq(_blocks.parentId, body.parentId), isNull(_blocks.deletedAt)),
-        );
+      // child. `loadLiveSiblings` queries the destination's true live sibling
+      // set by `parent_id` alone (and guards that the destination itself is
+      // live — 404 otherwise). Read inside the transaction so the window can't
+      // go stale before the writes land.
+      const destSiblings = await loadLiveSiblings(tx, body.parentId);
 
       // Exclude everything that is moving, so the moved roots don't bound their
       // own insertion window.

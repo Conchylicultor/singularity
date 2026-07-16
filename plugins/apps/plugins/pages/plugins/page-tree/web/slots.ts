@@ -4,7 +4,7 @@ import {
   defineFieldExtensions,
   defineItemActions,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { Block } from "@plugins/page/plugins/editor/core";
+import type { PageRow } from "@plugins/page/plugins/editor/core";
 
 /**
  * Extensible host for sections rendered below a page's editor in the
@@ -31,8 +31,8 @@ export const PageDetail = {
  *  - `RowActions` — trailing actions on a page-tree row (e.g. delete, star).
  *    Mirrors the task-list `Tasks.TaskActions` pattern so other plugins can add
  *    row actions without editing the row component. Contributors receive the
- *    full page `row` (derive id/title from it) via `ItemActionProps<Block>`.
- *  - `Fields` — extra DataView `FieldDef<Block>[]` injected by other plugins. A
+ *    full page `row` (derive id/title from it) via `ItemActionProps<PageRow>`.
+ *  - `Fields` — extra DataView `FieldDef<PageRow>[]` injected by other plugins. A
  *    field extension is a *component* (not plain data) so its `value` closure can
  *    capture hook-loaded data — e.g. `starred` reads its own live resource and
  *    yields a `starred` bool field. Contributed fields show up in the Sort pill,
@@ -40,6 +40,6 @@ export const PageDetail = {
  *    filtered `list` view over the `starred` field rather than a bespoke sidebar.
  */
 export const PageTree = {
-  RowActions: defineItemActions<Block>("pages.tree.row-actions"),
-  Fields: defineFieldExtensions<Block>("pages.tree.fields"),
+  RowActions: defineItemActions<PageRow>("pages.tree.row-actions"),
+  Fields: defineFieldExtensions<PageRow>("pages.tree.fields"),
 };

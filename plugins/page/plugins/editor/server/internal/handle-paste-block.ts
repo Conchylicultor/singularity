@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -16,10 +16,19 @@ export const handlePasteBlock = implement(
   async ({ params, body }) => {
     if (body.blocks.length === 0) return { rootIds: [] };
 
+    // LIVE only: a trashed page is not addressable, so pasting into one (an open
+    // editor whose page another tab just trashed) is a 404, not a write into an
+    // invisible page. `body.parentId` is guarded separately by `computePageId`.
     const [page] = await db
       .select({ id: _blocks.id })
       .from(_blocks)
-      .where(and(eq(_blocks.id, params.pageId), eq(_blocks.type, PAGE_BLOCK_TYPE)))
+      .where(
+        and(
+          eq(_blocks.id, params.pageId),
+          eq(_blocks.type, PAGE_BLOCK_TYPE),
+          isNull(_blocks.deletedAt),
+        ),
+      )
       .limit(1);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!page) throw new HttpError(404, "Page not found");
@@ -34,9 +43,14 @@ export const handlePasteBlock = implement(
     const parentId = afterRow
       ? afterRow.parentId
       : body.parentId ?? params.pageId;
+    // Resolves the page scope AND guards that `parentId` is live (404 on a
+    // trashed/missing one) — before any rank is minted, and well before the
+    // insert transaction. `afterRow` comes from `rows` (live, page-scoped), so
+    // the parent it yields is live by construction; a caller-supplied
+    // `body.parentId` is what this actually checks.
+    const pageId = await computePageId(parentId);
     const [prev, next] = rankWindow(rows, parentId, body.afterId, EMPTY);
     const rootRanks = Rank.nBetween(prev, next, body.blocks.length);
-    const pageId = await computePageId(parentId);
 
     const { rootIds } = await db.transaction((tx) =>
       insertForest(tx, {
