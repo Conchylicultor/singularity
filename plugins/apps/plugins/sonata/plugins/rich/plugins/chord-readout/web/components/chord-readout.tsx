@@ -8,7 +8,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   chordPitches,
   invertVoicing,
-  formatChordSymbol,
+  formatChordSymbolWithBass,
   romanNumeral,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
@@ -24,30 +24,53 @@ import {
 const ORDINALS = ["Root", "1st", "2nd", "3rd", "4th", "5th"];
 
 /**
- * Fixed keyboard window: C4 (60) … B6 (95), three octaves. Chord-independent on
- * purpose — the keyboard frame stays identical across chords, so changing chord
- * only re-lights keys instead of re-laying-out the whole keyboard (no flicker).
- * Each chord's voicings are octave-transposed to sit centered in this window
- * (see `centerInWindow`), so a triad and all its inversions fit with room to
- * spare on both sides.
+ * Default keyboard window: C4 (60) … B6 (95), three octaves — enough for a triad
+ * or 7th chord and all its inversions, with room to spare on both sides. Held
+ * fixed across chords wherever it fits, so changing chord only re-lights keys
+ * instead of re-laying-out the whole keyboard (no flicker).
  */
 const KB_LOW = 60;
 const KB_HIGH = 95;
 const KB_CENTER = (KB_LOW + KB_HIGH) / 2;
 
 /**
- * Shift a set of voicings by whole octaves so their overall midpoint lands as
- * close as possible to the window center. The keyboard only illustrates chord
- * *shape* (not the sounding octave), so an octave shift is free — and keeping it
- * a multiple of 12 preserves which keys (pitch classes) light. The shift is
- * computed over ALL inversions so it stays stable whether or not the inversions
- * are expanded.
+ * Fit a chord's inversions to a keyboard window: octave-shift them toward the
+ * center of the default window, then widen that window (in whole octaves, so it
+ * still starts on a C and ends on a B — `keyLayout` tiles flush only then) if
+ * anything still falls outside it.
+ *
+ * The shift is a multiple of 12 because the keyboard illustrates chord *shape*,
+ * not sounding octave: an octave shift is free, anything else would light the
+ * wrong keys. It's computed over ALL inversions at once, so the frame is stable
+ * whether or not they're expanded and the bass visibly climbs from row to row.
+ *
+ * Widening is what makes wide chords honest rather than clipped. A rotation of a
+ * chord stacked past an octave spans further than the chord itself — Bm7(♭9)'s
+ * five inversions cover B4…A7 (34 semitones) — and since the shift is quantized
+ * to octaves, no shift can slide that inside a 36-key window: it lands 1 key
+ * over the bottom or 10 over the top. Such a chord gets four octaves; triads and
+ * 7ths are untouched and keep the default three.
  */
-function centerInWindow(voicings: number[][]): number[][] {
+function fitToWindow(voicings: number[][]): {
+  low: number;
+  high: number;
+  voicings: number[][];
+} {
   const all = voicings.flat();
-  const mid = (Math.min(...all) + Math.max(...all)) / 2;
-  const shift = Math.round((KB_CENTER - mid) / 12) * 12;
-  return shift === 0 ? voicings : voicings.map((v) => v.map((p) => p + shift));
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const shift = Math.round((KB_CENTER - (min + max) / 2) / 12) * 12;
+
+  let low = KB_LOW;
+  let high = KB_HIGH;
+  while (min + shift < low) low -= 12;
+  while (max + shift > high) high += 12;
+
+  return {
+    low,
+    high,
+    voicings: shift === 0 ? voicings : voicings.map((v) => v.map((p) => p + shift)),
+  };
 }
 
 /**
@@ -102,11 +125,12 @@ export function ChordReadout() {
   }, [current, score]);
 
   // Every inversion of the current chord (index 0 = root position), each an
-  // ascending MIDI voicing. Used for the keyboards below the symbol.
-  const voicings = useMemo(() => {
+  // ascending MIDI voicing, with the keyboard window they're drawn in. Used for
+  // the keyboards below the symbol.
+  const fitted = useMemo(() => {
     if (!current) return null;
     const root = chordPitches(current.data);
-    return centerInWindow(root.map((_, k) => invertVoicing(root, k)));
+    return fitToWindow(root.map((_, k) => invertVoicing(root, k)));
   }, [current]);
 
   if (!current) {
@@ -150,11 +174,11 @@ export function ChordReadout() {
         </div>
       </Stack>
 
-      {voicings && (
+      {fitted && (
         <Stack gap="sm">
           <div className="flex items-center justify-between">
             <SectionLabel>Notes</SectionLabel>
-            {voicings.length > 1 && (
+            {fitted.voicings.length > 1 && (
               <ToggleChip
                 active={showInversions}
                 onClick={() => setShowInversions((v) => !v)}
@@ -164,13 +188,12 @@ export function ChordReadout() {
             )}
           </div>
           <Stack gap="sm">
-            {(showInversions ? voicings : voicings.slice(0, 1)).map(
+            {(showInversions ? fitted.voicings : fitted.voicings.slice(0, 1)).map(
               (voicing, k) => {
-                const slash = formatChordSymbol({
-                  root: current.data.root,
-                  quality: current.data.quality,
-                  bass: ((voicing[0]! % 12) + 12) % 12,
-                });
+                const slash = formatChordSymbolWithBass(
+                  current.data,
+                  ((voicing[0]! % 12) + 12) % 12,
+                );
                 return (
                   <Stack key={k} gap="xs">
                     {/* Per-row caption — only when stacking inversions; the
@@ -187,8 +210,8 @@ export function ChordReadout() {
                       </div>
                     )}
                     <Keyboard
-                      low={KB_LOW}
-                      high={KB_HIGH}
+                      low={fitted.low}
+                      high={fitted.high}
                       lit={voicing}
                       className="h-11 w-full"
                     />

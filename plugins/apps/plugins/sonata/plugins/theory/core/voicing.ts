@@ -28,14 +28,28 @@ export function chordPitches(
 }
 
 /**
- * The k-th inversion of an ascending voicing: raise the lowest `k` notes an
- * octave and re-sort ascending. k=0 returns the voicing unchanged. E.g.
- * [60,64,67] → 1st inversion [64,67,72], 2nd [67,72,76].
+ * The k-th inversion of an ascending voicing: the k-th chord tone in the bass,
+ * the rest stacked above in their original cyclic order. k=0 returns the voicing
+ * unchanged. E.g. [60,64,67] → 1st inversion [64,67,72], 2nd [67,72,76].
+ *
+ * Each step lifts the lowest note by however many WHOLE OCTAVES it takes to
+ * clear the current top — not by a fixed octave. The distinction only shows up
+ * on chords whose stack spans more than an octave (9ths/11ths/13ths, and any
+ * altered chord realising an interval ≥ 12): B m7(♭9) is [B4 D5 F#5 A5 C6], and
+ * raising B4 by a single octave lands on B5 — a semitone BELOW the ♭9, so it
+ * sorts straight back into the bass and the "inversion" is a root-position
+ * re-spacing. Lifting to B6 instead puts D in the bass, as the 1st inversion of
+ * a ♭9 chord must. Octaves keep the pitch-class set intact either way.
  */
 export function invertVoicing(pitches: readonly number[], k: number): number[] {
-  const p = [...pitches];
-  for (let i = 0; i < k && i < p.length; i++) p[i] = p[i]! + 12;
-  return p.sort((a, b) => a - b);
+  const p = [...pitches].sort((a, b) => a - b);
+  if (p.length < 2) return p;
+  for (let i = 0; i < k && i < p.length; i++) {
+    const low = p.shift()!;
+    const top = p[p.length - 1]!;
+    p.push(low + 12 * (Math.floor((top - low) / 12) + 1));
+  }
+  return p;
 }
 
 /**

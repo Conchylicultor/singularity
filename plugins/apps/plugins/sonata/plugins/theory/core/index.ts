@@ -16,6 +16,7 @@ export {
   qualityToIntervals,
   qualitySymbol,
   formatChordSymbol,
+  formatChordSymbolWithBass,
   formatSpelledChordSymbol,
 } from "./chords";
 export { chordPitches, invertVoicing, nearestVoicing } from "./voicing";

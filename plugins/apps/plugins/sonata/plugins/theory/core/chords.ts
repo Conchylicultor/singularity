@@ -119,6 +119,37 @@ export function formatChordSymbol(data: {
 }
 
 /**
+ * A chord's OWN symbol re-based on `bass`, e.g. Bm7(♭9) over C → "Bm7(♭9)/C".
+ *
+ * `formatChordSymbol` rebuilds the symbol from `quality`, which can only name
+ * the base vocabulary — a chord realised beyond it (`intervals` set: `(♭9)`,
+ * `add9`, `sus4(♯5)`, …) would silently lose its alteration. This instead keeps
+ * `data.symbol` verbatim — root spelling and full suffix — and swaps only the
+ * slash bass, the way `reRootSymbol` (transpose.ts) swaps only the root. Use it
+ * whenever the chord is already named and only the bass varies (inversions);
+ * `formatChordSymbol` remains right for naming a chord from `{root, quality}`
+ * alone (detection, Roman realisation).
+ *
+ * `data.symbol` carries its own slash bass as the LAST "/" when `data.bass` is
+ * set (both producers — `parseChordSymbol` and `formatChordSymbol` — append it
+ * there), so that tail is dropped before the new bass goes on. A "/" with no
+ * `data.bass` is part of the quality (`"Eb6/9"`) and is left alone. A `bass`
+ * equal to the root names the chord unslashed (root position).
+ */
+export function formatChordSymbolWithBass(
+  data: { symbol: string; root: number; bass?: number },
+  bass: number,
+): string {
+  const slash = data.symbol.lastIndexOf("/");
+  const base =
+    data.bass !== undefined && slash !== -1
+      ? data.symbol.slice(0, slash)
+      : data.symbol;
+  if (pc12(bass) === pc12(data.root)) return base;
+  return base + "/" + PC_NAMES[pc12(bass)]!;
+}
+
+/**
  * Key-aware display symbol for a chord. Unlike `formatChordSymbol` (which always
  * names the root from the sharps-only `PC_NAMES`), this spells the root through
  * a `KeySpeller`, so a B♭ minor chord in a flat key reads "B♭m" rather than
