@@ -62,7 +62,9 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
 });
 
 describe("closureSpecsOf (which emitted imports extend the barrel closure)", () => {
-  const meta = (partial: Pick<ArtifactMeta, "staticImports" | "dynamicImports">): ArtifactMeta => ({
+  const meta = (
+    partial: Pick<ArtifactMeta, "staticImportsByFile" | "dynamicImports">,
+  ): ArtifactMeta => ({
     specifier: "@plugins/x/web",
     kind: "web",
     pluginPath: "x",
@@ -75,18 +77,32 @@ describe("closureSpecsOf (which emitted imports extend the barrel closure)", () 
     expect(
       closureSpecsOf(
         meta({
-          staticImports: ["@plugins/a/core", "@plugins/b/prewarm"],
+          staticImportsByFile: { "index.js": ["@plugins/a/core", "@plugins/b/prewarm"] },
           dynamicImports: [],
         }),
       ),
     ).toEqual(["@plugins/a/core", "@plugins/b/prewarm"]);
   });
 
+  test("static imports of code-split chunks extend the closure like the entry's", () => {
+    expect(
+      closureSpecsOf(
+        meta({
+          staticImportsByFile: {
+            "index.js": ["@plugins/a/core"],
+            "impl-abc.mjs": ["@plugins/lazy-only/core", "@plugins/a/core"],
+          },
+          dynamicImports: [],
+        }),
+      ),
+    ).toEqual(["@plugins/a/core", "@plugins/lazy-only/core"]);
+  });
+
   test("dynamic folder-barrel imports extend the closure (lazy artifacts get mapped)", () => {
     expect(
       closureSpecsOf(
         meta({
-          staticImports: [],
+          staticImportsByFile: {},
           dynamicImports: [
             "@plugins/primitives/plugins/icon-picker/core",
             "@plugins/primitives/plugins/css/plugins/pin/fixtures",
@@ -103,7 +119,7 @@ describe("closureSpecsOf (which emitted imports extend the barrel closure)", () 
     expect(
       closureSpecsOf(
         meta({
-          staticImports: ["@plugins/infra/plugins/asset-mirror/core"],
+          staticImportsByFile: { "index.js": ["@plugins/infra/plugins/asset-mirror/core"] },
           dynamicImports: [
             "@plugins/apps/plugins/sonata/plugins/audio/plugins/piano/prewarm",
             "@plugins/primitives/plugins/icon-picker/core",

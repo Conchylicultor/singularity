@@ -20,6 +20,7 @@ import {
   type PlannedTarget,
 } from "./plan";
 import {
+  allStaticImports,
   artifactStorePath,
   ensureStoreDirs,
   loadFingerprintCache,
@@ -38,6 +39,7 @@ import {
   pruneGlobalCssCache,
 } from "./global-css";
 import { composeDist } from "./compose";
+import { scanStagedModules } from "./staged-verify";
 
 export interface WebArtifactsPipelineOptions {
   root: string;
@@ -171,6 +173,7 @@ export async function runWebArtifactsPipeline(
       requests,
       minify: opts.minify,
       builderVersion: BUILDER_VERSION,
+      builderSource: plan.identity.sourceDigest,
     });
     log(`vendors: ${requests.length} specifiers (set ${meta.setHash.slice(0, 12)})`);
     return meta;
@@ -213,13 +216,15 @@ export async function runWebArtifactsPipeline(
     const registerArtifact = (dirName: string, strictDynamic: boolean): void => {
       links.push({ linkName: dirName, storePath: artifactStorePath(dirName) });
       const meta = buildOut.metas.get(dirName)!;
-      const url = artifactUrl(dirName);
-      staticImportsByUrl[url] = meta.staticImports;
+      // Per emitted file (index.js + code-split .mjs chunks): the preload BFS
+      // must walk real static edges, so a lazy chunk's deps stay unpreloaded.
+      for (const [file, imports] of Object.entries(meta.staticImportsByFile)) {
+        staticImportsByUrl[`/artifacts/${dirName}/${file}`] = imports;
+      }
+      const statics = allStaticImports(meta);
       emitted.push({
         importer: dirName,
-        specifiers: strictDynamic
-          ? [...meta.staticImports, ...meta.dynamicImports]
-          : meta.staticImports,
+        specifiers: strictDynamic ? [...statics, ...meta.dynamicImports] : statics,
       });
       if (!strictDynamic && meta.dynamicImports.length > 0) {
         dynamicOnly.push({ importer: dirName, specifiers: meta.dynamicImports });
@@ -271,6 +276,28 @@ export async function runWebArtifactsPipeline(
           `it will fail if ever invoked in the browser`,
       );
     }
+
+    // Ground truth: re-scan the STAGED module files themselves (through the
+    // store symlinks) — independent of the builders' meta.json, so a scanner
+    // blind spot cannot blind this gate too.
+    const groundTruth = await scanStagedModules({
+      stagingDir: opts.stagingDir,
+      imports: importMap.imports,
+    });
+    for (const w of groundTruth.warnings) {
+      log(
+        `warning: staged dynamic import "${w.specifier}" (in ${w.file}) has no import-map entry — ` +
+          `it will fail if ever invoked in the browser`,
+      );
+    }
+    if (groundTruth.failures.length > 0) {
+      const lines = groundTruth.failures.map((f) => `  ${f.specifier}  (in ${f.file})`);
+      throw new Error(
+        `compose: ${groundTruth.failures.length} staged import(s) do not resolve ` +
+          `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
+      );
+    }
+
     log(`compose: ${links.length} links, ${mapEntries.length} map entries, ${preloads.length} preloads`);
     return { preloads };
   });

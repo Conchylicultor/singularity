@@ -9,7 +9,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findViteContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION, INLINE_PACKAGES } from "../constants";
-import { computeIdentityHash, sha256Hex } from "../hash";
+import { computeIdentityHash, computeOwnHash, sha256Hex } from "../hash";
+import { listOwnFiles } from "./own-files";
 
 const require = createRequire(import.meta.url);
 
@@ -27,8 +28,33 @@ export function packageVersion(pkg: string, fromDir?: string): string {
 
 export interface BuilderIdentity {
   identityHash: string;
+  /** Content hash of THIS plugin's own `core/` source (see builderSourceDigest). */
+  sourceDigest: string;
   /** Human-readable record kept for debugging (written into the manifest). */
   record: Record<string, string | number | boolean>;
+}
+
+const WEB_ARTIFACTS_REL = "framework/plugins/tooling/plugins/web-artifacts";
+
+/**
+ * Content hash of the builder's OWN implementation (this plugin's `core/`
+ * subtree + `package.json`, tests excluded). The builder's code is an input of
+ * every artifact — a scanner/compose/vite-wiring change alters outputs (or
+ * their recorded metadata) without touching any plugin's files, and the
+ * content-addressed store would silently reuse stale artifacts. Hashing the
+ * source here auto-invalidates the fleet on ANY builder edit, so
+ * `BUILDER_VERSION` is only a forced-bump lever, never a thing to remember.
+ */
+export function builderSourceDigest(pluginsRoot: string): string {
+  const pluginDir = join(pluginsRoot, WEB_ARTIFACTS_REL);
+  const files = listOwnFiles(pluginDir, "core").map((abs) => ({
+    rel: abs.slice(pluginDir.length + 1),
+    content: readFileSync(abs),
+  }));
+  if (files.length === 0) {
+    throw new Error(`builder identity: no own files found under ${pluginDir}/core`);
+  }
+  return computeOwnHash(files);
 }
 
 /**
@@ -44,8 +70,10 @@ export function computeBuilderIdentity(opts: {
   // Versions come from package.json reads (require.resolve), NOT module
   // imports — loading vite/esbuild here would put ~1s of module eval on every
   // pipeline run's detect stage (and on docgen's barrel import).
+  const sourceDigest = builderSourceDigest(opts.pluginsRoot);
   const record: Record<string, string | number | boolean> = {
     builderVersion: BUILDER_VERSION,
+    builderSource: sourceDigest,
     minify: opts.minify,
     vite: packageVersion("vite"),
     esbuild: packageVersion("esbuild"),
@@ -65,5 +93,5 @@ export function computeBuilderIdentity(opts: {
     }
     record[`babel:${rel}`] = digest;
   }
-  return { identityHash: computeIdentityHash(record), record };
+  return { identityHash: computeIdentityHash(record), sourceDigest, record };
 }

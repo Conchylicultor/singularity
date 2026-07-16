@@ -236,11 +236,14 @@ export async function resolveVendorSet(opts: {
   requests: VendorSpecRequest[];
   minify: boolean;
   builderVersion: number;
+  /** Builder own-source digest — vendor semantics live in this plugin's code. */
+  builderSource: string;
 }): Promise<{ resolved: ResolvedVendor[]; setHash: string }> {
   const resolved = await resolveVendors(opts.requests);
   const setHash = sha256Hex(
     JSON.stringify({
       v: opts.builderVersion,
+      src: opts.builderSource,
       minify: opts.minify,
       esbuild: esbuild.version,
       entries: resolved.map((r) => [r.spec, r.version, r.cjs, r.wrapper]),
@@ -265,6 +268,7 @@ export async function ensureVendorSet(opts: {
   requests: VendorSpecRequest[];
   minify: boolean;
   builderVersion: number;
+  builderSource: string;
 }): Promise<VendorSetMeta> {
   const { resolved, setHash } = await resolveVendorSet(opts);
   const dest = vendorSetPath(setHash);

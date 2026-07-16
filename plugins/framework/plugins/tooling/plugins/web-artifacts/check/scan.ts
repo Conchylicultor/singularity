@@ -18,7 +18,7 @@ export function extractEntryScriptSrc(html: string): string | null {
 /**
  * The npm packages whose modules a built artifact INLINED, read from its
  * sourcemap `sources`. The sourcemap is the one reliable positive inclusion
- * signal: the builder's `meta.staticImports`/`dynamicImports` record only what
+ * signal: the builder's `meta.staticImportsByFile`/`dynamicImports` record only what
  * stayed EXTERNAL (the import map's job), so an accidentally-bundled package is
  * invisible there — while every module rollup folded into the bundle appears in
  * `sources` (the builder builds every artifact with `sourcemap: true`,

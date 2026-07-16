@@ -45,6 +45,11 @@ const ARTIFACT_DEFINE: Record<string, string> = {
   "import.meta.env.PROD": "true",
   "import.meta.env.MODE": JSON.stringify("production"),
   "import.meta.env.VITE_BUILD_ID": BUILD_ID_GLOBAL,
+  // Vite's APP build replaces this automatically, but LIB mode deliberately
+  // preserves it — and `process` does not exist in the browser, so any
+  // first-party or inlined npm code branching on NODE_ENV would crash at
+  // runtime. Match the monolith (and the vendor esbuild pass, vendors.ts).
+  "process.env.NODE_ENV": JSON.stringify("production"),
 };
 
 /**
@@ -128,25 +133,34 @@ function cssInjectionSnippet(css: string, dirName: string): string {
   );
 }
 
-/** Parse the emitted module's external imports (static + dynamic). */
-async function parseEmittedImports(
+/**
+ * Parse EVERY emitted module's external imports. An artifact with internal
+ * dynamic imports (lazy-component) code-splits into `.mjs` chunks next to
+ * `index.js` — the chunks' imports are as load-bearing as the entry's (a bare
+ * specifier only a lazy chunk imports still needs a vendor + map entry).
+ * Statics are recorded PER FILE so the preload BFS walks real static edges and
+ * never eagerly preloads a lazy chunk's dependencies.
+ */
+export async function parseEmittedImports(
   outDir: string,
-): Promise<{ staticImports: string[]; dynamicImports: string[] }> {
+): Promise<{ staticImportsByFile: Record<string, string[]>; dynamicImports: string[] }> {
   await esLexerInit;
-  const staticImports = new Set<string>();
+  const staticImportsByFile: Record<string, string[]> = {};
   const dynamicImports = new Set<string>();
-  for (const name of readdirSync(outDir)) {
-    if (!name.endsWith(".js")) continue;
+  for (const name of readdirSync(outDir).sort()) {
+    if (!name.endsWith(".js") && !name.endsWith(".mjs")) continue;
     const code = readFileSync(join(outDir, name), "utf8");
     const [imports] = esLexerParse(code, name);
+    const statics = new Set<string>();
     for (const imp of imports) {
       if (imp.n === undefined) continue;
       if (imp.d >= 0) dynamicImports.add(imp.n);
-      else if (imp.d === -1) staticImports.add(imp.n);
+      else if (imp.d === -1) statics.add(imp.n);
     }
+    staticImportsByFile[name] = [...statics].sort();
   }
   return {
-    staticImports: [...staticImports].sort(),
+    staticImportsByFile,
     dynamicImports: [...dynamicImports].sort(),
   };
 }
@@ -206,13 +220,13 @@ export async function buildArtifact(
       throw new Error(`vite build of ${target.dirName} emitted no index.js`);
     }
 
-    const { staticImports, dynamicImports } = await parseEmittedImports(tmpDir);
+    const { staticImportsByFile, dynamicImports } = await parseEmittedImports(tmpDir);
     const meta: ArtifactMeta = {
       specifier: target.specifier,
       kind: target.kind,
       pluginPath: target.pluginPath,
       inputsHash: target.inputsHash,
-      staticImports,
+      staticImportsByFile,
       dynamicImports,
       builtAtMs: Date.now(),
     };
@@ -253,13 +267,13 @@ export async function buildRegistryArtifact(opts: {
   const tmpDir = artifactTmpDir(opts.dirName);
   writeFileSync(join(tmpDir, "index.js"), result.code + "\n//# sourceMappingURL=index.js.map\n");
   writeFileSync(join(tmpDir, "index.js.map"), result.map);
-  const { staticImports, dynamicImports } = await parseEmittedImports(tmpDir);
+  const { staticImportsByFile, dynamicImports } = await parseEmittedImports(tmpDir);
   const meta: ArtifactMeta = {
     specifier: "@composition-web-registry",
     kind: "registry",
     pluginPath: null,
     inputsHash: opts.inputsHash,
-    staticImports,
+    staticImportsByFile,
     dynamicImports,
     builtAtMs: Date.now(),
   };

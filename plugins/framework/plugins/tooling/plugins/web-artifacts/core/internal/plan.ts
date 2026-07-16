@@ -14,6 +14,7 @@ import type { ImportMapEntry } from "../import-map";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
 import { ownHashFor, type ArtifactKind } from "./own-files";
 import {
+  allStaticImports,
   artifactDirName,
   hasArtifact,
   type ArtifactMeta,
@@ -152,7 +153,7 @@ export async function planFleet(opts: {
  */
 export function closureSpecsOf(meta: ArtifactMeta): string[] {
   return [
-    ...meta.staticImports,
+    ...allStaticImports(meta),
     ...meta.dynamicImports.filter((s) => !isBrowserUnreachableDynamic(s)),
   ];
 }
@@ -250,7 +251,7 @@ export async function collectVendorRequests(opts: {
   for (const t of [...opts.targets].sort((a, b) => (a.dirName < b.dirName ? -1 : 1))) {
     const meta = opts.metaOf(t.dirName);
     const dir = t.pluginPath ? join(opts.pluginsRoot, t.pluginPath) : join(opts.root, WEB_CORE_REL);
-    for (const spec of [...meta.staticImports, ...meta.dynamicImports]) {
+    for (const spec of [...allStaticImports(meta), ...meta.dynamicImports]) {
       if (isBareSpecifier(spec) && !requests.has(spec)) requests.set(spec, dir);
     }
   }

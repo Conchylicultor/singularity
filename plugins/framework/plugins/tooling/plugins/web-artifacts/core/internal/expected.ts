@@ -37,6 +37,7 @@ export async function planExpectedFleet(opts: { root: string; minify: boolean })
   entryDirName: string;
   metas: Map<string, ArtifactMeta>;
   missing: string[];
+  builderSource: string;
 }> {
   const pluginsRoot = join(opts.root, "plugins");
   const cache = loadFingerprintCache(basename(opts.root));
@@ -75,6 +76,7 @@ export async function planExpectedFleet(opts: { root: string; minify: boolean })
     entryDirName: plan.entryTarget.dirName,
     metas,
     missing: [...missing].sort(),
+    builderSource: plan.identity.sourceDigest,
   };
 }
 
@@ -98,6 +100,7 @@ export async function computeExpectedComposition(opts: {
     requests,
     minify: opts.minify,
     builderVersion: BUILDER_VERSION,
+    builderSource: fleet.builderSource,
   });
   const vendorMeta = readVendorSetMeta(setHash);
   if (vendorMeta === null) {

@@ -35,11 +35,24 @@ export interface ArtifactMeta {
   kind: string;
   pluginPath: string | null;
   inputsHash: string;
-  /** External specifiers the EMITTED module statically imports. */
-  staticImports: string[];
-  /** External specifiers the emitted module dynamically imports (registry). */
+  /**
+   * External static import specifiers PER EMITTED FILE (`index.js` plus any
+   * code-split `.mjs` chunks). Per-file so the preload BFS walks real static
+   * edges — a lazy chunk's dependencies must not be preloaded eagerly.
+   */
+  staticImportsByFile: Record<string, string[]>;
+  /** External specifiers ANY emitted file dynamically imports (union). */
   dynamicImports: string[];
   builtAtMs: number;
+}
+
+/** Union of every emitted file's static imports (coverage / closure / vendors). */
+export function allStaticImports(meta: ArtifactMeta): string[] {
+  const specs = new Set<string>();
+  for (const imports of Object.values(meta.staticImportsByFile)) {
+    for (const s of imports) specs.add(s);
+  }
+  return [...specs].sort();
 }
 
 export function artifactDirName(slug: string, kind: string, inputsHash: string): string {
