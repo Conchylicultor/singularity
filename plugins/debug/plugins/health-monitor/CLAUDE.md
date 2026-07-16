@@ -45,6 +45,30 @@ dead-end `stall-profiles.jsonl` that nothing read.) The Health pane still shows
 *that* a stall happened via the `eventLoopMaxMs` spike line; the trace + report
 answer *why*. See `server/internal/stall-profiler.ts`.
 
+**`topStacks` carries its own `frames`.** Each stack bucket ships, alongside its
+name-only `stack` signature, the resolved `frameKey` identities of the same
+frames (the `name @ path:line` / `name [category]` form `topLeaves[].key` uses),
+taken from the first trace seen with that signature. **Invariant** (by
+construction in `aggregateTraces`, asserted in its tests): `frames[i]` is the
+frameKey of the frame whose bare name is `stack.split(" ← ")[i]` — same slice,
+same order, same 40-frame cap. So `frames[0]` is always that stack's own leaf
+key — the very key that trace contributed to the `topLeaves` tally (though not
+necessarily one that survived into the top-15 slice).
+
+They are **one representative sample's** keys, not a canonical position for the
+path: `frame.line` is the sample's executing line, so traces sharing a name-only
+signature can resolve differently (the Jul-16 evidence has both
+`is @ …/entity.js:7` and `is @ …/entity.js:18` for the same `is`). Read `frames`
+as *a* position on the call path, not *the* position — enough to attribute the
+path to a subsystem, which is all the label needs.
+
+This exists because `topLeaves` and `topStacks` are otherwise two *independent*
+histograms: a consumer labelling the stall from `topLeaves` may name a different
+stall than the one `topStacks[0]` fingerprints. That really happened — a
+`spawn`-rooted freeze (7/15 samples) was reported titled with a 1-sample drizzle
+frame. `stall-monitor` now derives its label from the dominant stack's own
+frames; this sampler's job is to not throw the association away.
+
 **Arming policy** (congestion-observability plan, Phase B): **main** arms at
 boot — always-on for the UX-critical backend. **Worktree backends**
 arm-on-elevated: unarmed (zero sampler cost) until one of their own ticks

@@ -43,8 +43,36 @@ misattributes and collapses unrelated JSON-heavy freezes into one row. The top
 already line-free (names only, robust to edits), and distinguishes callers sharing
 a native leaf. The same stack is passed as `captureTrace`'s `label` so the
 trace-side admission/cooldown key stays stable across the ticks of one freeze.
-`hotFrame` (the hottest *attributable* JS frame) is a human hint for the summary +
-task title only — never the fingerprint.
+`hotFrame` is a human hint for the summary + task title only — never the
+fingerprint.
+
+## The LABEL comes from the dominant stack's own frames
+
+`hotFrame` is derived from `topStacks[0].frames` — **that same stack's** own
+frames, innermost → outermost — and never from the independent `topLeaves`
+histogram. The leaf leads (it burned the samples); if it is native (`spawn`,
+`JSON.parse` — a mechanism, not a subsystem) we walk outward for the first frame
+carrying a ` @ path:line` source and append it as the *where*, giving
+`spawn ← listPanes @ …/tmux-runtime.ts:499`. An already-attributable leaf is both
+halves at once, so it is returned bare.
+
+Why structural rather than a filter tweak — the incident, Jul 16: a `spawn`-rooted
+freeze (7 of 15 samples, `spawn ← listPanes ← … ← collectLive`, the conversations
+poller's 1s tick spawning `tmux`/`ps`) filed a report titled
+`is @ .../drizzle-orm/entity.js:7` — a **1-of-15** frame with nothing to do with
+the freeze. Two defects, one structural. Proximate: the old scan filtered
+`topLeaves` for ` @ `, which skips *unattributed* frames, so the dominant native
+`spawn` was passed over and the scan landed on an arbitrary cold tie. Structural:
+`hotFrame` came from `topLeaves` while `culpritStack` came from `topStacks` — two
+**separately-sorted populations**, so even with the filter fixed the label could
+describe a minority stall while the fingerprint described the dominant one.
+Reading the dominant stack's own frames makes label/fingerprint coherence hold by
+construction; they cannot drift apart. This is the same failure mode the plugin
+exists to prevent (Jul-7: real evidence buried under misleading reports) — a title
+that lies sends triage into the wrong subsystem entirely.
+
+`frames` is additive evidence on `StallStack`, optional so pre-existing traces
+still parse; without it `deriveCulprit` falls back to the legacy `topLeaves[0]`.
 
 ## Load-bearing literals
 

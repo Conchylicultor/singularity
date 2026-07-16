@@ -11,20 +11,19 @@ import {
 //
 // Everything here is DERIVED from the existing `StallSection` (the trace
 // evidence) at report time — `StallSection` stays purely the stack evidence, and
-// the presentation grain (`culprit` / `culpritStack` / `hotFrame`) is computed in
-// this plugin (see server/internal/culprit.ts). `topLeaves` / `topStacks` reuse
-// the section's shapes verbatim (imported, never redeclared) so the report and
-// the trace can never disagree on the histogram shape.
+// the presentation grain (`culpritStack` / `hotFrame`) is computed in this plugin
+// (see server/internal/culprit.ts). `topLeaves` / `topStacks` reuse the section's
+// shapes verbatim (imported, never redeclared) so the report and the trace can
+// never disagree on the histogram shape.
 export const StallPayloadSchema = z.object({
   durationMs: z.number(),
   thresholdMs: z.number(),
   nSamples: z.number(),
   sampleRateHz: z.number(),
-  // The human-readable hot-frame label (the hottest ATTRIBUTABLE JS frame) —
-  // shown in the summary and the task title. NOT the fingerprint.
-  culprit: z.string(),
   // The dominant caller-path signature (topStacks[0].stack) — THE dedup grain.
   culpritStack: z.string(),
+  // The human-readable label derived from THAT stack's own frames (`what ←
+  // where`) — shown in the summary and the task title. NOT the fingerprint.
   hotFrame: z.string(),
   topLeaves: z.array(StallLeafSchema),
   topStacks: z.array(StallStackSchema),

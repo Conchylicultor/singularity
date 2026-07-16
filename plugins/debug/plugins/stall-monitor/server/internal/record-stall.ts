@@ -44,7 +44,6 @@ export function recordEventLoopStall(
       thresholdMs,
       nSamples: section.nSamples,
       sampleRateHz: section.sampleRateHz,
-      culprit: hotFrame,
       culpritStack,
       hotFrame,
       topLeaves: section.topLeaves,
