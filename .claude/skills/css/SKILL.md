@@ -19,7 +19,7 @@ Write the role, not the mechanics; let the container own the policy.
 - **Space-sharing is a container property, declared once** — never negotiated per child by sprinkling `min-w-0`/`shrink-0`/`flex-1` and hoping it converges.
 - **The shrink hierarchy is explicit and total.** For any row that can overflow, "what gives first?" has one answer in one place: rigid identity (chips/icons) never shrinks → secondary metadata truncates first → primary content truncates last.
 - **Prefer the layout mode where the bug is unrepresentable.** `rigid | flexible | rigid` is canonical Grid (`auto minmax(0,1fr) auto`); an `auto` track can't collapse under its own rigid content, so "container crushed by its own chip" *cannot* happen. Choose the mode that forbids the bug over the one that merely lets you avoid it.
-- **`min-width: 0` is a deliberate leaf decision, never a container reflex.** Exactly one primitive — the truncation leaf (`Text`) — owns it. (Fill containers like `Scroll`/`Clip` use `min-w-0`/`min-h-0` as a *flex-basis* mechanic — a different role that happens to share the class.)
+- **`min-width: 0` is a deliberate leaf decision, never a container reflex.** Two primitives own it, each for one role: the truncation leaf (`Text`) carries `min-w-0` so it can ellipsize, and the grow cell (`Fill`) owns the `min-w-0 flex-1` pair. (`Scroll`/`Clip` also carry `min-w-0`/`min-h-0` — there as a *flex-basis* fill mechanic, a third role that happens to share the class.)
 - **Single-line is a property of the CONTAINER, not the text.** The same `<Text>` is correct wrapping in a paragraph and broken wrapping in a row — so whether it truncates is owned by where it lives. **Line containers** (`Row`, `Bar`, collapsible headers, the app tab chip) are single-line by contract: they provide an ambient `SingleLine` context (so every `<Text>` inside ellipsizes on one line) *and* `whitespace-nowrap` (so raw strings/chips don't wrap). That two-layer contract is packaged as the bare **`Line`** primitive (`css/line`) — `Row`/`Bar` compose it, and you reach for it directly for any bespoke single-line strip. **Flow containers** (`Stack` col / `Stack wrap` / `Column` / `Cluster`) RESET both, so text wraps again. There is **no truncation prop on `Text`** — you pick the container, and "non-truncating text in a line row" is unrepresentable. (A plain horizontal `Stack`/`Inline` — row, no `wrap` — is line-ish: it *inherits* the surrounding contract rather than resetting.) The rare forced-single-line case is exactly what `<Line>` is for (or, for just the ambient half without a flex row, `<SingleLineProvider value={true}>` from `…/ui-kit/web`).
 - **Group-wrap is a SEPARATE axis from text-wrap.** `whitespace-nowrap` stops *text* wrapping but never `flex-wrap`, so a *group of chips* (a render slot's contributions, a badge cluster) wrapping is owned by container choice: `Cluster` wraps, `Inline`/`Row` stay one line. A multi-contribution chip slot must be wrapped in `Inline`/`Cluster` — a bare `.Render` adds no container, so the chips wrap by default.
 - **Semantic intent over mechanics.** Write `content` / `meta` / `stack with sm rhythm`; the primitive owns `flex items-center gap-2 min-w-0 …` and can fix it once, globally. Same "CSS-in-semantics" philosophy as `spacing`/`text`/`surface`.
@@ -36,13 +36,15 @@ Write the role, not the mechanics; let the container own the policy.
   <div className="absolute right-2"><Actions /></div> {/* pr-hint only → floats over title */}
 </div>
 
-// RIGHT — Frame owns the grid tracks; each box has one job; the overlap is unrepresentable
-<Frame
-  leading={<Icon />}                  // rigid `auto` track, never crushed
-  content={title}                     // string → single-lining Text leaf, truncates last
-  meta={<RelativeTime date={t} />}    // truncates first
-  trailing={<Actions />}              // rigid `auto` track, pinned right
-/>
+// RIGHT — Line is a single-line container; one Fill holds the truncating leaf; each box has one job
+<Line>
+  <Icon />                            {/* rigid leaf, never crushed */}
+  <Fill>
+    <Text>{title}</Text>             {/* the ONE grow cell; Text truncates under pressure */}
+  </Fill>
+  <RelativeTime date={t} />          {/* rigid meta, sits in its own track */}
+  <Actions />                        {/* rigid trailing — a real track, never absolute */}
+</Line>
 ```
 
 ## The overlap bug class (read before hand-rolling any row)
@@ -53,10 +55,11 @@ track. Two recurring shapes, both fixed by a grid track / clip:
 
 - **Absolute trailing indicator + reservation padding.** `relative flex … pr-2xl`
   with a trailing checkmark/badge `absolute right-2`. The `pr-2xl` is only a hint;
-  a `flex-1`/`shrink-0` label grows under the floating indicator. → Use a real
-  rigid track (`Frame` `trailing`, or inline `grid-cols-[minmax(0,1fr)_auto]` at
-  the layers below `Frame`). Never `absolute` + padding-reservation for a
-  trailing affordance.
+  a `flex-1`/`shrink-0` label grows under the floating indicator. → Give the
+  trailing affordance a real track: a rigid leaf after an empty `<Fill>` (the
+  `Fill` absorbs the slack, the leaf sits flush-right in its own track), or drop
+  to inline `grid-cols-[minmax(0,1fr)_auto]`. Never `absolute` +
+  padding-reservation for a trailing affordance.
 - **Rigid leaf in an unclipped flexible cell.** A `flex-1 min-w-0` cell with **no
   overflow clip** holding a `shrink-0` child (a `SegmentedControl`, a fixed
   control): when narrow the child overflows onto the next sibling. → The cell must
@@ -64,24 +67,26 @@ track. Two recurring shapes, both fixed by a grid track / clip:
   truncate` **without** `min-w-0` never shrinks (implicit `min-width:auto`) — the
   `truncate` is dead; always `min-w-0 flex-1 truncate`.
 
-**Layer rule — no primitive re-derives flex+absolute row layout by hand.** Above
-`Frame` in the DAG, compose `Frame`. At/below `Frame` (the few primitives `Frame`
-itself is built on, e.g. `ui-kit`'s shadcn menu items — importing `Frame` there
-would cycle), write the grid tracks directly. Either way the indicator/affordance
-lives in a track, never floats over the label.
+**Layer rule — no feature code re-derives flex+absolute row layout by hand.**
+Compose the row from a line container (`Line`/`Row`/`Bar`) + `Fill` + rigid
+leaves, so the affordance is a sibling leaf in a real track. Only the lowest
+primitives that can't reach for `Fill` — e.g. `ui-kit`'s shadcn menu items, where
+the import would cycle — write the grid tracks directly, with a named
+`eslint-disable`. Either way the indicator/affordance lives in a track, never
+floats over the label.
 
 ## Layout primitives
 
 Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the `css/*` layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last. **All accept `ref?: React.Ref<HTMLElement>`** (React-19 ref-as-prop) — pass `<Scroll ref={sticky.scrollRef}>` for auto-scroll / sticky-scroll / ResizeObserver / scroll-into-view; never fall back to a raw `<div ref=…>` + eslint-disable just to attach a ref.
 
-**Pick a container:** structured chrome row → `Frame` · sticky-header / scroll-body / footer surface → `Column` · card grid → `Grid` · wrapping chips/tags → `Cluster` · chips mid-sentence → `Inline` · just center something → `Center` · plain stack of blocks with rhythm → `Stack` (+ `Inset` for padding). Then surfaces (`Card`/`Surface`/`Bar`) sit *inside* structure, leaves (`Text`/`Badge`) *inside* those: structure → surface → leaf, outside-in. **A list of domain records is not a container choice at all** — it's a [`DataView`](../../../plugins/primitives/plugins/data-view/CLAUDE.md) (`data-view/no-adhoc-row-list` bans `.map()`→`<Row>`); `Row`+map is only for transient chrome (menus, pickers, tab strips) with a named disable.
+**Pick a container:** single-line chrome row → `Line`/`Row` + `Fill` · sticky-header / scroll-body / footer surface → `Column` · card grid → `Grid` · wrapping chips/tags → `Cluster` · chips mid-sentence → `Inline` · just center something → `Center` · plain stack of blocks with rhythm → `Stack` (+ `Inset` for padding). Then surfaces (`Card`/`Surface`/`Bar`) sit *inside* structure, leaves (`Text`/`Badge`) *inside* those: structure → surface → leaf, outside-in. **A list of domain records is not a container choice at all** — it's a [`DataView`](../../../plugins/primitives/plugins/data-view/CLAUDE.md) (`data-view/no-adhoc-row-list` bans `.map()`→`<Row>`); `Row`+map is only for transient chrome (menus, pickers, tab strips) with a named disable.
 
-**Defaults differ — check, don't assume:** `gap` is *required* on `Stack`/`Inline`, but `none` on `Column`, `sm` on `Frame`/`Cluster`, `md` on `Grid`. `as` defaults to `div` everywhere *except* `Inline`/`Text` (`span`) and `Bar` (`header`).
+**Defaults differ — check, don't assume:** `gap` is *required* on `Stack`/`Inline`, but `none` on `Column`, `sm` on `Cluster`, `md` on `Grid`. `as` defaults to `div` everywhere *except* `Inline`/`Text` (`span`) and `Bar` (`header`).
 
 - **`Stack` / `Inset`** (`spacing`) — 1-D flow container (dir·gap·align·justify·wrap) · padding container. The home for layout rhythm. → [CLAUDE.md](../../../plugins/primitives/plugins/spacing/CLAUDE.md)
-- **`Frame`** (`css/frame`) — named-slot row, **slots-as-props** (no children): `leading` (rigid) · `content` (truncates last) · `meta` (truncates first) · `trailing` (rigid-right). CSS Grid owns the shrink hierarchy in one place — the structural fix for overlapping/overflowing header rows. String `content`/`meta` auto-wrap in the truncation leaf.
-- **`Column`** (`css/column`) — named-slot **column** (the vertical twin of `Frame`), **slots-as-props** (no children): `header` (rigid) · `body` (flexible, scrolls by default) · `footer` (rigid). Bakes the `rigid | flexible | rigid` fill policy — `shrink-0` header/footer, body delegated to `<Scroll fill>` — so sticky-header / scroll-body / footer surfaces (panels, panes, dialogs) never re-derive `min-h-0 flex-1 overflow-y-auto` by hand. `scrollBody={false}` for a plain flexible body; `fill` to fill a flex-col parent (e.g. inside a `FloatingAction` morph panel).
-- **`Grid`** (`css/grid`) — responsive/uniform card grid via closed `minCellWidth` + `mode: fill|fit` (or fixed `cols`). **Not** a raw `grid-template` passthrough; the rigid|flex|rigid structural case is `Frame`'s job.
+- **`Fill`** (`css/fill`) — the single grow+shrink cell of a line row: owns the `min-w-0 flex-1` pair (the one sanctioned home). Pair it with a line container (`Line`/`Row`/`Bar`) — the rigid chips stay put, and the ONE `<Fill>` holds the `<Text>` that truncates under pressure. An **empty** `<Fill>` pushes trailing actions flush-right (the structural replacement for `ml-auto`). This row-level `rigid | flexible | rigid` composition keeps overlapping/overflowing header rows unrepresentable.
+- **`Column`** (`css/column`) — named-slot **column** (the vertical `rigid | flexible | rigid` primitive), **slots-as-props** (no children): `header` (rigid) · `body` (flexible, scrolls by default) · `footer` (rigid). Bakes the `rigid | flexible | rigid` fill policy — `shrink-0` header/footer, body delegated to `<Scroll fill>` — so sticky-header / scroll-body / footer surfaces (panels, panes, dialogs) never re-derive `min-h-0 flex-1 overflow-y-auto` by hand. `scrollBody={false}` for a plain flexible body; `fill` to fill a flex-col parent (e.g. inside a `FloatingAction` morph panel).
+- **`Grid`** (`css/grid`) — responsive/uniform card grid via closed `minCellWidth` + `mode: fill|fit` (or fixed `cols`). **Not** a raw `grid-template` passthrough; the rigid|flex|rigid row case is `Line`/`Row` + `Fill`'s job.
 - **`Cluster`** (`css/cluster`) — wrap-friendly group of rigid chips/tags. Thin `Stack` row+wrap specialization (chips wrap, never crush).
 - **`Center`** (`css/center`) — centering box (`grid place-items`), `axis: both|horizontal|vertical`.
 - **`Overlay`** (`css/overlay`) — in-flow positioning: `behind`/`above` full-bleed layers (z-layer-aware) + `clickThrough` with `Overlay.Interactive` opt-in (the sanctioned home for the click-through-toggle idiom). Pairs with `ViewportOverlay` (which portals to body for true `fixed inset-0`).
