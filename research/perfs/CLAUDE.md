@@ -168,6 +168,24 @@ reconstruction). 🔬 still unrun: the A4 controlled-pressure run (user-gated) =
 verdicts + the 07-11 stack's live re-validation. Plan + session log →
 **[`2026-07-16-main-paging-victim-investigation-PLAN.md`](./2026-07-16-main-paging-victim-investigation-PLAN.md)**.
 
+### Bounded working sets — architecture direction (2026-07-18)
+
+Distilled from the 07-17 compressor-thrash recurrence: the reason one interaction takes *minutes*
+under memory pressure is the **thrashing cliff** — a single navigation's working set is O(total app
+state) (read-time loader aggregation, heap-warehoused resource values, full-heap GC marks, shared
+gates convoying everything behind the collapsed op), so when the kernel squeezes main's residency
+below that working set, throughput collapses 100–500× (measured: `deliver:conversation-categories`
+sub-second → 393 s; page load 506 s; resident 66–150 MB of ~700 MB footprint). Apps whose
+interactions touch O(one screen) (VS Code server) degrade to seconds on the same host. The recorded
+direction: **an interaction's working set must be O(visible/changed), never O(total state)** — four
+rules (stateless server / state in partial-residency storage; write-time incremental derivation;
+small managed heap; windowed reads) and a per-resource migration sequence whose contract
+(row-shaped, delta-synced) is deliberately Zero-compatible. Also records the 07-17 correction: the
+gateway's blue-green hot restart **worked** (the "main down 11.5 min" claim is refuted by
+`gateway.log`); a failed hot restart is silent in the gateway log (observability gap, owned by the
+debug-surface consolidation workstream). Full doc →
+**[`2026-07-18-bounded-working-set-architecture.md`](./2026-07-18-bounded-working-set-architecture.md)**.
+
 ### Read-admission wedge — nested heavy-read slots deadlock the warmup drain (Completed)
 
 2026-07-10, 13:10 and again ~3 min after a 15:53 restart — **recurs on every main boot** since
