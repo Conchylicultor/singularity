@@ -279,7 +279,10 @@ export async function runWebArtifactsPipeline(
 
     // Ground truth: re-scan the STAGED module files themselves (through the
     // store symlinks) — independent of the builders' meta.json, so a scanner
-    // blind spot cannot blind this gate too.
+    // blind spot cannot blind this gate too. Verifies both specifier
+    // resolution and the linkage of every bound name: an importer is reused
+    // from the store unrebuilt when its target changes, so this is the only
+    // place the composed fleet's bytes are ever read against each other.
     const groundTruth = await scanStagedModules({
       stagingDir: opts.stagingDir,
       imports: importMap.imports,
@@ -290,10 +293,25 @@ export async function runWebArtifactsPipeline(
           `it will fail if ever invoked in the browser`,
       );
     }
+    for (const file of groundTruth.opaqueTargets) {
+      log(
+        `warning: staged module ${file} emits \`export *\` — its export set is incomplete, ` +
+          `so imports of its names are NOT link-verified`,
+      );
+    }
     if (groundTruth.failures.length > 0) {
       const lines = groundTruth.failures.map((f) => `  ${f.specifier}  (in ${f.file})`);
       throw new Error(
         `compose: ${groundTruth.failures.length} staged import(s) do not resolve ` +
+          `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
+      );
+    }
+    if (groundTruth.linkFailures.length > 0) {
+      const lines = groundTruth.linkFailures.map(
+        (f) => `  "${f.specifier}" does not export "${f.name}"  (imported by ${f.file})`,
+      );
+      throw new Error(
+        `compose: ${groundTruth.linkFailures.length} staged import(s) do not link ` +
           `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
       );
     }

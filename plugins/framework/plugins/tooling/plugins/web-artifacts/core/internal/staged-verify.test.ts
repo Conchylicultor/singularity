@@ -64,3 +64,151 @@ describe("scanStagedModules (ground-truth scan of the staged dist)", () => {
     expect(warnings).toEqual([]);
   });
 });
+
+describe("scanStagedModules (link verification: names the target must export)", () => {
+  let staging: string;
+  afterEach(() => rmSync(staging, { recursive: true, force: true }));
+
+  const artifact = (linkName: string, files: Record<string, string>): void => {
+    const dir = join(staging, "artifacts", linkName);
+    mkdirSync(dir, { recursive: true });
+    for (const [name, content] of Object.entries(files)) {
+      writeFileSync(join(dir, name), content);
+    }
+  };
+
+  test("a named import the target does not export fails; the ones it does pass", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    artifact("a.web.111", {
+      "index.js": `import { TaskRow, TaskList } from "@plugins/tasks/web";\nexport default {};\n`,
+    });
+    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\nexport default {};\n` });
+
+    const { failures, linkFailures } = await scanStagedModules({
+      stagingDir: staging,
+      imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+    });
+    expect(failures).toEqual([]);
+    expect(linkFailures).toEqual([
+      { specifier: "@plugins/tasks/web", name: "TaskRow", file: "artifacts/a.web.111/index.js" },
+    ]);
+  });
+
+  test("a missing default, and a relative link into a sibling chunk, both fail", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    artifact("a.web.111", {
+      "index.js": `import midi from "@tonejs/midi";\nimport { gone } from "./chunk.mjs";\nexport default {};\n`,
+      "chunk.mjs": `export const here = 1;\n`,
+    });
+    artifact("set.f", { "midi.js": `export const Midi = 1;\n` });
+
+    const { failures, linkFailures } = await scanStagedModules({
+      stagingDir: staging,
+      imports: { "@tonejs/midi": "/artifacts/set.f/midi.js" },
+    });
+    expect(failures).toEqual([]);
+    expect(linkFailures).toEqual([
+      { specifier: "@tonejs/midi", name: "default", file: "artifacts/a.web.111/index.js" },
+      { specifier: "./chunk.mjs", name: "gone", file: "artifacts/a.web.111/index.js" },
+    ]);
+  });
+
+  test("namespace and dynamic imports are not name-checked", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    artifact("a.web.111", {
+      "index.js":
+        `import * as ns from "@plugins/tasks/web";\n` + // member access is dynamic
+        `const lazy = () => import("@plugins/tasks/web");\n` + // names unknowable
+        `export default { ns, lazy };\n`,
+    });
+    artifact("tasks.web.222", { "index.js": `export default {};\n` });
+
+    const { failures, linkFailures } = await scanStagedModules({
+      stagingDir: staging,
+      imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+    });
+    expect(failures).toEqual([]);
+    expect(linkFailures).toEqual([]);
+  });
+
+  test("`export {…} from` re-exports never invent a phantom `default` requirement", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    // The lexer reports this in the IMPORTS array, d === -1 — see import-clause.ts.
+    artifact("a.web.111", {
+      "index.js": `export { TaskList } from "@plugins/tasks/web";\nexport default {};\n`,
+    });
+    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\nexport default {};\n` });
+
+    const { failures, linkFailures } = await scanStagedModules({
+      stagingDir: staging,
+      imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+    });
+    expect(failures).toEqual([]);
+    expect(linkFailures).toEqual([]);
+  });
+
+  test("an opaque (`export *`) target warns instead of failing", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    artifact("a.web.111", {
+      "index.js": `import { Anything } from "@plugins/tasks/web";\nexport default {};\n`,
+    });
+    artifact("tasks.web.222", {
+      "index.js": `export * from "./inner.mjs";\nexport default {};\n`,
+      "inner.mjs": `export const Anything = 1;\n`,
+    });
+
+    const { failures, linkFailures, opaqueTargets } = await scanStagedModules({
+      stagingDir: staging,
+      imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+    });
+    expect(failures).toEqual([]);
+    expect(linkFailures).toEqual([]);
+    expect(opaqueTargets).toEqual(["artifacts/tasks.web.222/index.js"]);
+  });
+
+  test("a web barrel with no `default` export fails, blamed on the registry", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    artifact("composition-web-registry.registry.333", {
+      "index.js": `export const load = () => import("@plugins/tasks/web");\n`,
+    });
+    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\n` });
+    artifact("tasks.core.444", { "index.js": `export const Task = 1;\n` }); // non-web: not asserted
+
+    const { failures, linkFailures } = await scanStagedModules({
+      stagingDir: staging,
+      imports: {
+        "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js",
+        "@plugins/tasks/core": "/artifacts/tasks.core.444/index.js",
+      },
+    });
+    expect(failures).toEqual([]);
+    expect(linkFailures).toEqual([
+      {
+        specifier: "@plugins/tasks/web",
+        name: "default",
+        file: "artifacts/composition-web-registry.registry.333/index.js",
+      },
+    ]);
+  });
+
+  test("a fully-linked staged tree passes clean", async () => {
+    staging = mkdtempSync(join(tmpdir(), "staged-verify-"));
+    artifact("a.web.111", {
+      "index.js":
+        `import { TaskList as t } from "@plugins/tasks/web";\n` +
+        `import def, { helper } from "./chunk.mjs";\n` +
+        `export default { t, def, helper };\n`,
+      "chunk.mjs": `export const helper = 1;\nexport default 2;\n`,
+    });
+    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\nexport default {};\n` });
+
+    const { failures, warnings, linkFailures, opaqueTargets } = await scanStagedModules({
+      stagingDir: staging,
+      imports: { "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js" },
+    });
+    expect(failures).toEqual([]);
+    expect(warnings).toEqual([]);
+    expect(linkFailures).toEqual([]);
+    expect(opaqueTargets).toEqual([]);
+  });
+});

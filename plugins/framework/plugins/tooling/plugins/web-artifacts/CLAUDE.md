@@ -12,13 +12,26 @@ monolithic. Design/history:
 
 Key invariants:
 
-- **Every emitted external import must resolve in the import map.** Static
-  imports and the registry's dynamic imports hard-fail the build on a miss.
-  Other dynamic `@plugins/*` folder-barrel imports are composed into mapped,
-  lazily-fetched artifacts by the barrel closure — EXCEPT kinds declared
+- **Every emitted external import must resolve in the import map — and link.**
+  Static imports and the registry's dynamic imports hard-fail the build on a
+  miss. Other dynamic `@plugins/*` folder-barrel imports are composed into
+  mapped, lazily-fetched artifacts by the barrel closure — EXCEPT kinds declared
   browser-unreachable (`BROWSER_UNREACHABLE_DYNAMIC_KINDS` in
   `core/constants.ts`, currently `prewarm`), which are skipped and silent.
   Any other unmapped dynamic import warns loudly at compose.
+  Resolving is not enough: every name a static import binds must actually be
+  exported by the target's emitted bytes, or the browser throws `SyntaxError:
+  … does not provide an export named 'X'`. Because cross-plugin imports stay
+  external and an importer's hash excludes its target's contents, renaming an
+  export in B leaves A reused-unrebuilt and unexamined — compose is the only
+  place the fleet's bytes are read against each other, so it hard-fails on a
+  broken link too (`--skip-checks` included; `type-check` is skippable and
+  casts/stale `.d.ts` typecheck green while the bytes disagree). Skipped as
+  semantically unknowable: `import * as ns`, dynamic imports, and targets
+  emitting `export *` (an incomplete export set — the fleet emits zero, and one
+  appearing warns loudly rather than silently weakening the gate). Web barrels
+  additionally must export `default`: the registry's loaders are dynamic and
+  typed `Promise<{ default: unknown }>`, so nothing else catches its loss.
 - **One URL = one module instance.** Own-core imports are rewritten to the
   external `@plugins/<path>/core` barrel (never inlined); vendors are one
   esbuild split build so stateful transitives are shared. Guarded by the
