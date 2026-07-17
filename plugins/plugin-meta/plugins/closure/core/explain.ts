@@ -27,7 +27,7 @@ export function explainInclusion(
   // The entry frontier is the expanded seeds (entries ∪ their subtrees): a
   // no-runtime umbrella entry has no hard imports of its own, so the hard chain to
   // `target` actually originates at a runtime-bearing sub-plugin of the entry.
-  const entrySet = expandEntrySeeds(manifest.entryPoints, graph);
+  const { seeds: entrySet } = expandEntrySeeds(manifest.entryPoints, graph);
   // Contributor origins = the explicitly selected contributors that are bundled.
   const activeSet = new Set<PluginId>();
   for (const a of manifest.selectedContributors) {

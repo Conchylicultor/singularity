@@ -1,6 +1,7 @@
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
+import { matchEntryPattern, parseEntryPattern, type EntryPattern } from "./entry-pattern";
 import type { Composition, CompositionManifest, EdgeGraph, MembershipState } from "./types";
 
 /**
@@ -45,18 +46,44 @@ export function disabledClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Se
 }
 
 /**
- * Expand declared entry points to the actual seed set: each entry plus its whole
- * subtree (containment). A no-runtime umbrella entry contributes nothing on its
- * own, so its sub-plugins are seeded here. Unknown ids (no `subtree` entry) pass
- * through inertly.
+ * Expand declared entry patterns into the actual seed set under the glob grammar
+ * (see {@link parseEntryPattern}). "Entry a node" means *that node alone* — its
+ * hard dependencies are added later by {@link hardClosure}, never seeded here.
+ * A whole subtree is opt-in via a trailing `.**`; a leading `!` trims ids.
+ *
+ * Two passes:
+ *  1. Positives (`!negate`): the exact `base` of every positive goes into `named`
+ *     (the set that classifies as `entry` and drives `redundantSelections`);
+ *     every id the pattern matches (`base` ∪ its `.**` subtree) goes into `seeds`.
+ *  2. Negatives: each matched id is `delete`d from `seeds` — UNLESS it is a `named`
+ *     positive, which is protected. A negative may therefore only trim ids pulled
+ *     in *implicitly* by some `.**` glob; it can never remove an explicitly-named
+ *     positive. This keeps resolution a pure additive union (a positive from
+ *     anywhere in a flattened `extends` chain wins over a negative from anywhere).
+ *
+ * Unknown bases (no `subtree` entry) pass through inertly — the base itself is
+ * still seeded/trimmed, it just contributes no descendants.
  */
-export function expandEntrySeeds(entryPoints: Iterable<PluginId>, graph: EdgeGraph): Set<PluginId> {
+export function expandEntrySeeds(
+  entryPoints: Iterable<EntryPattern>,
+  graph: EdgeGraph,
+): { seeds: Set<PluginId>; named: Set<PluginId> } {
   const seeds = new Set<PluginId>();
-  for (const id of entryPoints) {
-    seeds.add(id);
-    for (const d of graph.subtree.get(id) ?? []) seeds.add(d);
+  const named = new Set<PluginId>();
+  const parsed = [...entryPoints].map(parseEntryPattern);
+  for (const p of parsed) {
+    if (p.negate) continue;
+    named.add(p.base);
+    for (const id of matchEntryPattern(p, graph)) seeds.add(id);
   }
-  return seeds;
+  for (const p of parsed) {
+    if (!p.negate) continue;
+    for (const t of matchEntryPattern(p, graph)) {
+      if (named.has(t)) continue; // protected — never trim an explicit positive
+      seeds.delete(t);
+    }
+  }
+  return { seeds, named };
 }
 
 export function resolveComposition(graph: EdgeGraph, manifest: CompositionManifest): Composition;
@@ -67,10 +94,13 @@ export function resolveComposition(
 ): Composition {
   const graph = isTree(graphOrTree) ? classifyEdges(graphOrTree) : graphOrTree;
 
-  // Entry seeds = the declared entries ∪ their subtrees. Selecting an umbrella app
-  // as an entry ships its whole subtree (a no-runtime umbrella has no imports of its
-  // own, so its runtime-bearing sub-plugins must be seeded explicitly).
-  const entrySeeds = expandEntrySeeds(manifest.entryPoints, graph);
+  // Entry seeds under the glob grammar: each positive pattern seeds its exact base
+  // (hard deps flow in via hardClosure below), plus its whole subtree when written
+  // `.**`; negatives trim `.**`-implicit ids (never a named positive). `named` is
+  // the set of exact positive bases — it drives `entry` membership and
+  // `redundantSelections`, so a `.**` base is `entry` while its implicit descendants
+  // are `required`.
+  const { seeds: entrySeeds, named } = expandEntrySeeds(manifest.entryPoints, graph);
 
   // `required` = hard closure of the entry seeds ALONE — the locked set, unchanged.
   const required = hardClosure(entrySeeds, graph);
@@ -94,7 +124,7 @@ export function resolveComposition(
   // via-contributor). The `contributor` set is the selected contributors that landed
   // in the bundle (not already entry/required). `available` is assigned only to
   // out-of-bundle nodes in the available set; everything else defaults to `excluded`.
-  const entrySet = new Set(manifest.entryPoints);
+  const entrySet = named;
   const selectedSet = new Set(manifest.selectedContributors);
   const membership = new Map<PluginId, MembershipState>();
   for (const id of allNodeIds(graph)) membership.set(id, "excluded");

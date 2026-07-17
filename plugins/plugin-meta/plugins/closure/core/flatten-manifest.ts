@@ -1,5 +1,5 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { CompositionManifest } from "./types";
+import type { CompositionManifest, EntryPattern } from "./types";
 
 /**
  * Resolve a manifest's `extends` chain into a single flat manifest. The result's
@@ -27,7 +27,7 @@ export function flattenManifest(
   const byName = new Map<string, CompositionManifest>();
   for (const m of registry) byName.set(m.name, m);
 
-  const entryPoints = new Set<PluginId>();
+  const entryPoints = new Set<EntryPattern>();
   const selectedContributors = new Set<PluginId>();
   const visited = new Set<string>();
 

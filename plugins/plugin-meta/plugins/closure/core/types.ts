@@ -1,4 +1,7 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { EntryPattern } from "./entry-pattern";
+
+export type { EntryPattern } from "./entry-pattern";
 
 /** How a cross-plugin dependency binds: a hard `import` (mandatory) or a soft
  *  slot `contribution` (prunable). */
@@ -29,9 +32,11 @@ export interface EdgeGraph {
   softReverse: Map<PluginId, PluginId[]>;
   /**
    * Node → all descendant ids (its proper subtree). NOT a dependency edge:
-   * containment is applied only at *entry seeding* — selecting an umbrella as an
-   * entry ships its whole subtree — never as a transitive import edge. (Importing
-   * an umbrella's barrel does not pull in its children.)
+   * containment is applied only at *entry seeding*, and only when opted into with a
+   * `.**` entry pattern — writing `apps.website.**` ships its whole subtree, while a
+   * bare `apps.website` seeds the node alone (its hard deps flow in via the closure).
+   * Never a transitive import edge (importing an umbrella's barrel does not pull in
+   * its children).
    */
   subtree: Map<PluginId, PluginId[]>;
   /** Flat derived list of every edge (hard then soft). */
@@ -40,7 +45,10 @@ export interface EdgeGraph {
 
 /**
  * A named, conservative selection over the plugin space. `entryPoints` are the
- * explicitly-included plugins (an umbrella entry implies its whole subtree).
+ * explicitly-included plugins as {@link EntryPattern} globs: entrying a node means
+ * *that node + its hard deps* — nothing more. Its whole subtree is opt-in via a
+ * trailing `.**` (`apps.website.**`); a leading `!` trims only ids pulled in
+ * implicitly by a `.**` glob, never an explicitly-named positive.
  * `selectedContributors` are the soft contributors a human/agent has explicitly
  * opted IN — reviewed options pulled into the bundle. Default `[]` ⇒ the bundle
  * is the pure hard closure of the entries; NOTHING soft is included by default.
@@ -55,7 +63,7 @@ export interface EdgeGraph {
  */
 export interface CompositionManifest {
   name: string;
-  entryPoints: PluginId[];
+  entryPoints: EntryPattern[];
   selectedContributors: PluginId[];
   /** Names of other compositions merged into this one, transitively. Optional;
    *  absent ⇒ `[]`. Cleared to `[]` once {@link flattenManifest} has merged them. */

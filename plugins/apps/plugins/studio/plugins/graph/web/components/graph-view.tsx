@@ -20,6 +20,7 @@ import {
   useActiveMembership,
   useGraph,
 } from "@plugins/plugin-meta/plugins/composition/web";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
 import { STATE_LEGEND } from "@plugins/apps/plugins/studio/plugins/membership-tint/web";
 import { focusSubgraph, toCanvas, type Direction } from "../internal/subgraph";
 
@@ -38,7 +39,10 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
   const active = useActiveComposition();
 
   // Seed focus: pane param → active composition's first entry point → unset.
-  const seed = paneFocusId ?? active?.entryPoints[0] ?? null;
+  // Entry points are EntryPatterns (`id`, `id.**`, `!id.**`); strip a pattern down
+  // to its base id before using it as a focus node.
+  const firstEntry = active?.entryPoints[0];
+  const seed = paneFocusId ?? (firstEntry ? parseEntryPattern(firstEntry).base : null);
   const [focusId, setFocusId] = useState<PluginId | null>(seed);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [direction, setDirection] = useState<Direction>("both");

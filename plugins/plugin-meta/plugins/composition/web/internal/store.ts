@@ -214,9 +214,11 @@ export function setCompareComposition(manifest: CompositionManifest | null): voi
 }
 
 /** Pin a single plugin as the composition root — visualize the closure from here.
- *  Sets an ad-hoc draft with `id` as the sole entry and no selected contributors. */
+ *  Sets an ad-hoc draft with the plugin's whole subtree (`id.**`) as the sole entry
+ *  and no selected contributors, so pinning keeps whole-subtree closure behavior
+ *  (a bare id would now resolve to the node + its hard deps only). */
 export function pinAsRoot(id: PluginId): void {
-  store.setActive({ name: "(pinned)", entryPoints: [id], selectedContributors: [] });
+  store.setActive({ name: "(pinned)", entryPoints: [`${id}.**`], selectedContributors: [] });
 }
 
 export function clearActive(): void {

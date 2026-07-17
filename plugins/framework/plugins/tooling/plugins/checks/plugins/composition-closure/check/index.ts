@@ -4,8 +4,11 @@ import { parse as parseJsonc } from "jsonc-parser";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   classifyEdges,
+  expandEntrySeeds,
   explainInclusion,
   flattenManifest,
+  matchEntryPattern,
+  parseEntryPattern,
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
@@ -127,8 +130,21 @@ const check: Check = {
     const allNames = seenNames;
 
     for (const m of manifests) {
-      // 2. Every id (own entry + own contributor) resolves to a real plugin.
-      for (const id of [...m.entryPoints, ...m.selectedContributors]) {
+      // 2. Every id resolves to a real plugin. Entries are now PATTERNS (a
+      //    dot-encoded PluginId with an optional leading `!` and trailing `.**`),
+      //    so parse each and validate its BASE — for both positive and negative
+      //    patterns (a `!X` typo is as wrong as an `X` typo). Contributors carry
+      //    no grammar and stay exact-id checks.
+      for (const entry of m.entryPoints) {
+        const base = parseEntryPattern(entry).base;
+        if (!allIds.has(base)) {
+          return fail(
+            `composition "${m.name}" references unknown plugin id "${base}" in entry pattern "${entry}"`,
+            "Entry points are patterns: a dot-encoded PluginId with an optional leading `!` (trim) and trailing `.**` (subtree), e.g. `apps.website.**` or `!apps.website.blog.**`. The base id must resolve to a real plugin.",
+          );
+        }
+      }
+      for (const id of m.selectedContributors) {
         if (!allIds.has(id)) {
           return fail(
             `composition "${m.name}" references unknown plugin id "${id}"`,
@@ -157,6 +173,46 @@ const check: Check = {
       // entries/contributors unioned), so a profile's `extends` packs are checked
       // in the app's real bundle context.
       const flat = flattenManifest(m, manifests);
+
+      // 3b. Negative-pattern validity, evaluated on the FLATTENED manifest so a
+      //     negative from one composition is judged against the positives unioned
+      //     in from its whole `extends` chain (additivity). A negative may only
+      //     trim ids pulled in IMPLICITLY by some `.**` subtree glob; the two ways
+      //     it can be meaningless are rejected here.
+      const parsedEntries = flat.entryPoints.map(parseEntryPattern);
+      const positiveSeeds = new Set<PluginId>();
+      const namedBases = new Set<PluginId>();
+      for (const p of parsedEntries) {
+        if (p.negate) continue;
+        namedBases.add(p.base);
+        for (const id of matchEntryPattern(p, graph)) positiveSeeds.add(id);
+      }
+      for (const p of parsedEntries) {
+        if (!p.negate) continue;
+        // (b) Contradictory negative: its base is also an explicit positive entry.
+        //     A negative can never cancel a named positive (positives are protected),
+        //     so `!X` alongside `X` is a self-cancelling no-op — reject it loudly
+        //     rather than silently keeping the positive.
+        if (namedBases.has(p.base)) {
+          return fail(
+            `composition "${m.name}" has a contradictory negative entry "${p.raw}": its base "${p.base}" is also an explicit positive entry`,
+            "A negative may only trim ids pulled in implicitly by a `.**` subtree glob — it can never cancel an id named as a positive entry (positives always win). Remove the negative, or remove the conflicting positive.",
+          );
+        }
+        // (a) Dead negative: trims nothing. Its match set, minus the protected
+        //     named positives, has no overlap with the positive seed set, so it
+        //     deletes no implicitly-seeded plugin — a typo or a stale leftover.
+        const trims = [...matchEntryPattern(p, graph)].filter(
+          (id) => !namedBases.has(id) && positiveSeeds.has(id),
+        );
+        if (trims.length === 0) {
+          return fail(
+            `composition "${m.name}" has a dead negative entry "${p.raw}" that trims no implicitly-seeded plugin`,
+            "A negative `!X` must remove at least one plugin pulled in implicitly by a `.**` subtree glob. This one matches nothing in the composition's seed set — remove it, or fix the id / add the `.**` positive it was meant to trim.",
+          );
+        }
+      }
+
       const comp = resolveComposition(graph, flat);
 
       // 4. No selection already locked in by the entries' hard edges.
@@ -198,13 +254,17 @@ const check: Check = {
       manifests.map((m) => [m.name, m]),
     );
 
-    // A bundle's containment: each (flattened) entry/contributor plus its
-    // subtree — NOT its hard deps. Shared by the `excludes` disjointness gate
-    // and the autoBuild warning below.
+    // A bundle's containment: the territory it DECLARES, not its hard deps.
+    // Entry side goes through the SAME pattern grammar the engine seeds with
+    // (`expandEntrySeeds`) — each positive's base, plus its subtree only when
+    // written `.**`, minus negatives — so containment tracks what the bundle
+    // actually ships, never a blind subtree of every entry. Contributor side has
+    // no grammar: selecting a contributor ships it + its whole subtree. Shared by
+    // the `excludes` disjointness gate and the autoBuild warning below.
     const containmentOf = (target: CompositionManifest): Set<PluginId> => {
       const targetFlat = flattenManifest(target, manifests);
-      const containment = new Set<PluginId>();
-      for (const id of [...targetFlat.entryPoints, ...targetFlat.selectedContributors]) {
+      const containment = new Set<PluginId>(expandEntrySeeds(targetFlat.entryPoints, graph).seeds);
+      for (const id of targetFlat.selectedContributors) {
         containment.add(id);
         for (const descendant of graph.subtree.get(id) ?? []) containment.add(descendant);
       }

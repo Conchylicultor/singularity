@@ -3779,7 +3779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`cli`**
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
-        - Imported by: `framework/tooling/codegen`, `framework/web-sdk`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/exports`, `plugin-meta/plugin-tree`
+        - Imported by: `framework/tooling/codegen`, `framework/web-sdk`, `plugin-meta/closure`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/exports`, `plugin-meta/plugin-tree`
       - Core:
         - Exports: Types: `PluginId`, `RuntimeFolder`; Values: `asFsPath`, `asPath`, `asPluginId`, `pluginIdSegments`, `RUNTIME_FOLDERS`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
@@ -4715,8 +4715,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `AutoStubEntry`; Values: `AUTO_STUB_CSS`, `AUTO_STUB_PACKAGES`, `importBarrel`, `registerBarrelStubs`, `setPreBarrelImportGuard`
     - **`closure`**
       - Core:
-        - Uses: `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`
-        - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `disabledClosure`, `explainInclusion`, `flattenManifest`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`, `serializeEdgeGraph`
+        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`
+        - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `EntryPattern`, `InclusionPath`, `InclusionStep`, `MembershipState`, `ParsedPattern`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `disabledClosure`, `expandEntrySeeds`, `explainInclusion`, `flattenManifest`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `matchEntryPattern`, `parseEntryPattern`, `resolveComposition`, `serializeEdgeGraph`
       - Cross-plugin:
         - Imported by: `framework/tooling/codegen`
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.

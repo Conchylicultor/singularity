@@ -11,13 +11,23 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { updateActiveDraft } from "@plugins/plugin-meta/plugins/composition/web";
-import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
+import {
+  parseEntryPattern,
+  type CompositionManifest,
+  type EntryPattern,
+} from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
-function shortName(id: PluginId): string {
-  const s = String(id);
+// Compact chip label for an entry pattern: the base's last segment, decorated
+// with the grammar markers so `apps.website.blog`, `apps.website.blog.**`, and
+// `!apps.website.blog.**` stay visually distinct. (The full pattern editor is a
+// deferred increment; this keeps the current chips honest.)
+function shortName(pattern: EntryPattern): string {
+  const p = parseEntryPattern(pattern);
+  const s = String(p.base);
   const dot = s.lastIndexOf(".");
-  return dot === -1 ? s : s.slice(dot + 1);
+  const leaf = dot === -1 ? s : s.slice(dot + 1);
+  return `${p.negate ? "!" : ""}${leaf}${p.subtree ? ".**" : ""}`;
 }
 
 /**
@@ -34,10 +44,10 @@ export function EntryEditor({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const current = new Set(draft.entryPoints);
+  const current = new Set<EntryPattern>(draft.entryPoints);
 
-  function remove(id: PluginId): void {
-    updateActiveDraft({ entryPoints: draft.entryPoints.filter((x) => x !== id) });
+  function remove(pattern: EntryPattern): void {
+    updateActiveDraft({ entryPoints: draft.entryPoints.filter((x) => x !== pattern) });
   }
   function add(id: PluginId): void {
     if (current.has(id)) return;
@@ -105,22 +115,22 @@ export function EntryEditor({
         </Text>
       ) : (
         <Cluster gap="xs">
-          {draft.entryPoints.map((id) => (
+          {draft.entryPoints.map((pattern) => (
             <Badge
-              key={id}
+              key={pattern}
               variant="primary"
-              title={String(id)}
+              title={String(pattern)}
               icon={
                 <ControlSizeProvider size="sm">
                   <IconButton
                     icon={MdClose}
                     label="Remove entry point"
-                    onClick={() => remove(id)}
+                    onClick={() => remove(pattern)}
                   />
                 </ControlSizeProvider>
               }
             >
-              <span className="font-mono">{shortName(id)}</span>
+              <span className="font-mono">{shortName(pattern)}</span>
             </Badge>
           ))}
         </Cluster>

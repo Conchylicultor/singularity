@@ -56,21 +56,47 @@ Two edge kinds, both indexed forward + reverse:
   `contributions.relate()` exactly, but keyed by `PluginId` (not `node.name`).
 
 `EdgeGraph` also carries `subtree` (node → descendant ids). **Containment is NOT
-a dependency edge** — it is applied only at *entry seeding*: selecting an
-umbrella *as an entry* ships its whole subtree; merely importing it does not.
-This is why `apps.agent-manager` (a no-runtime umbrella) correctly bundles its
-runtime-bearing `…​.shell` sub-plugin without dragging in every sibling app that
-shares the `apps` barrel.
+a dependency edge** — it is applied only at *entry seeding*, and only when an
+entry pattern explicitly opts in via `.**` (see the grammar below): entrying
+`apps.agent-manager.**` ships the whole subtree, so its runtime-bearing
+`…​.shell` sub-plugin is bundled without dragging in every sibling app that shares
+the `apps` barrel; merely *importing* an umbrella never pulls its children (the
+barrel re-exports only the umbrella's own symbols).
+
+## Entry patterns (`entry-pattern.ts`)
+
+`entryPoints` are **patterns**, not plain ids (`EntryPattern = string`), parsed by
+`parseEntryPattern` / expanded by `matchEntryPattern`:
+
+| Pattern | Seeds |
+|---|---|
+| `apps.deploy` | that node only (+ its hard closure, as always). **No implicit subtree.** |
+| `apps.deploy.**` | node ∪ `subtree(node)` — opt into containment. |
+| `!apps.website.blog.**` | negative — subtracts from *this composition's* seed set. |
+
+`expandEntrySeeds(entryPoints, graph)` returns `{ seeds, named }`: positives
+seed their matches and record their exact base in `named`; negatives
+`seeds.delete()` each match **unless it is in `named`** (an explicitly-named
+positive is never removed). Two invariants this upholds: (1) a negative can never
+sever a real dependency — it prunes containment *seeding*, not import edges, so a
+kept plugin's hard-import under a negated branch still ships via `hardClosure`
+(fail-loud); (2) additivity survives — negatives are applied *after*
+`flattenManifest`, and a positive from anywhere in the `extends` union shields its
+id, so union-of-compositions stays a pure union. Unknown bases pass inertly, as
+before.
 
 ## Resolution (`resolveComposition`)
 
 Single pass, **no fixpoint loop, no auto-activation**:
 
 ```
-entrySeeds = expandEntrySeeds(entryPoints)            // umbrella entry ships its subtree
-required   = hardClosure(entrySeeds)                  // entries alone — the locked set
-bundle     = hardClosure(entrySeeds ∪ selectedContributors)
+{ seeds, named } = expandEntrySeeds(entryPoints)     // patterns → seed set + named bases
+required         = hardClosure(seeds)                // entries alone — the locked set
+bundle           = hardClosure(seeds ∪ selectedContributors)
 ```
+
+Membership `entry` is the `named` set (the positive pattern bases); a `.**` base
+is `entry`, its implicitly-seeded descendants are `required`.
 
 With the default `selectedContributors: []`, `bundle === required` — a small,
 purely-hard bundle. Reviewing a composition means recursively *selecting* options
@@ -137,8 +163,8 @@ empty. Run with
 ## Plugin reference
 
 - Core:
-  - Uses: `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`
-  - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `disabledClosure`, `explainInclusion`, `flattenManifest`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`, `serializeEdgeGraph`
+  - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`
+  - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `EntryPattern`, `InclusionPath`, `InclusionStep`, `MembershipState`, `ParsedPattern`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `disabledClosure`, `expandEntrySeeds`, `explainInclusion`, `flattenManifest`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `matchEntryPattern`, `parseEntryPattern`, `resolveComposition`, `serializeEdgeGraph`
 - Cross-plugin:
   - Imported by: `framework/tooling/codegen`
 

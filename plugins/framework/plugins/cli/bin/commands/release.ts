@@ -19,8 +19,9 @@ import {
   SINGULARITY_DIR,
   currentWorktreeName,
 } from "@plugins/infra/plugins/paths/server";
-import { asFsPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { asFsPath } from "@plugins/framework/plugins/plugin-id/core";
 import { buildPluginTree, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   compositionsConfig,
   manifestItemToManifest,
@@ -264,10 +265,14 @@ async function resolveCompositionIconKey(opts: {
     skipBarrelImport: true,
   });
 
-  // Each entry point (e.g. "apps.sonata") is a dotted plugin id; its tree node is
-  // keyed by the fs-path encoding ("apps/plugins/sonata") in `byPath`.
+  // Each entry point is an EntryPattern (`id`, `id.**`, or `!id.**`); its base id
+  // is a dotted plugin id whose tree node is keyed by the fs-path encoding
+  // ("apps/plugins/sonata") in `byPath`. Negative patterns exclude a subtree from
+  // the bundle — they name no app node, so skip them when deriving the icon.
   for (const entry of entryPoints) {
-    const node = tree.byPath.get(asFsPath(asPluginId(entry)));
+    const parsed = parseEntryPattern(entry);
+    if (parsed.negate) continue;
+    const node = tree.byPath.get(asFsPath(parsed.base));
     if (!node) continue;
     const iconKey = findDefineAppIconKey(node);
     if (iconKey) return iconKey;

@@ -14,7 +14,8 @@ import { join } from "path";
 import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
-import { resolveComposition, disabledClosure } from "./resolve-composition";
+import { resolveComposition, disabledClosure, expandEntrySeeds } from "./resolve-composition";
+import { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
 import { flattenManifest } from "./flatten-manifest";
 import { explainInclusion } from "./explain";
 import { impactOfPruning, impactOfSelecting } from "./impact";
@@ -31,7 +32,7 @@ const REVIEW = asPluginId("review");
 
 const manifest: CompositionManifest = {
   name: "agent-manager",
-  entryPoints: [AGENT_MANAGER],
+  entryPoints: [asPluginId("apps.agent-manager.**")],
   selectedContributors: [],
 };
 
@@ -116,6 +117,152 @@ test("conservative: sonata's subtree is NOT bundled", () => {
     expect(comp.bundle.has(id)).toBe(false);
     expect(["excluded", "available"]).toContain(comp.membership.get(id)!);
   }
+});
+
+// ── entry-pattern grammar: `.**` subtree opt-in + `!` negation ────────────────
+
+test("parseEntryPattern splits negation / base / subtree", () => {
+  expect(parseEntryPattern("apps.website")).toMatchObject({
+    negate: false,
+    base: "apps.website",
+    subtree: false,
+  });
+  expect(parseEntryPattern("apps.website.**")).toMatchObject({
+    negate: false,
+    base: "apps.website",
+    subtree: true,
+  });
+  expect(parseEntryPattern("!apps.website.blog.**")).toMatchObject({
+    negate: true,
+    base: "apps.website.blog",
+    subtree: true,
+  });
+  // raw is preserved verbatim.
+  expect(parseEntryPattern("!apps.website.blog.**").raw).toBe("!apps.website.blog.**");
+});
+
+// (i) A bare id seeds ONLY the node + its hard closure — no implicit subtree.
+test("bare entry seeds node + hard deps only (subtree NOT bundled)", () => {
+  const bare: CompositionManifest = {
+    name: "agent-manager-bare",
+    entryPoints: [AGENT_MANAGER],
+    selectedContributors: [],
+  };
+  const comp = resolveComposition(graph, bare);
+
+  // The umbrella node itself is the entry.
+  expect(comp.membership.get(AGENT_MANAGER)).toBe("entry");
+  // A no-runtime umbrella hard-imports nothing, so the runtime-bearing `.shell`
+  // sub-plugin is NOT seeded by a bare entry ⇒ not bundled.
+  expect(comp.bundle.has(AGENT_MANAGER_SHELL)).toBe(false);
+  expect(comp.bundle.has(SHELL)).toBe(false);
+
+  // matchEntryPattern on a bare pattern is just the base.
+  expect([...matchEntryPattern(parseEntryPattern("apps.agent-manager"), graph)]).toEqual([
+    AGENT_MANAGER,
+  ]);
+});
+
+// (ii) `.**` seeds the whole subtree — shell present and required.
+test(".** entry seeds the whole subtree (shell present, required)", () => {
+  const comp = resolveComposition(graph, manifest); // entryPoints: ["apps.agent-manager.**"]
+  expect(comp.membership.get(AGENT_MANAGER)).toBe("entry");
+  expect(comp.bundle.has(AGENT_MANAGER_SHELL)).toBe(true);
+  expect(comp.bundle.has(SHELL)).toBe(true);
+  expect(comp.membership.get(SHELL)).toBe("required");
+
+  // The subtree match includes the `.shell` sub-plugin.
+  const matched = matchEntryPattern(parseEntryPattern("apps.agent-manager.**"), graph);
+  expect(matched.has(AGENT_MANAGER)).toBe(true);
+  expect(matched.has(AGENT_MANAGER_SHELL)).toBe(true);
+});
+
+// (iii) A negative trims a `.**`-implicit id — but an explicit positive of the SAME
+// id survives (additivity: a named positive is protected from any negative).
+test("negation trims a .**-implicit id, but an explicit positive survives", () => {
+  // root has two children a, b. `root.**` pulls both in implicitly.
+  const g = syntheticGraph(
+    ["root", "root.a", "root.b"],
+    [],
+    { root: ["root.a", "root.b"] },
+  );
+
+  // `.**` then `!root.a` ⇒ a is trimmed (implicit only).
+  const trimmed = expandEntrySeeds(
+    [asPluginId("root.**"), asPluginId("!root.a")],
+    g,
+  );
+  expect(trimmed.seeds.has(asPluginId("root.a"))).toBe(false);
+  expect(trimmed.seeds.has(asPluginId("root.b"))).toBe(true);
+  expect(trimmed.seeds.has(asPluginId("root"))).toBe(true);
+
+  // Same negative, but `root.a` is ALSO named as an explicit positive ⇒ it survives.
+  const survives = expandEntrySeeds(
+    [asPluginId("root.**"), asPluginId("root.a"), asPluginId("!root.a")],
+    g,
+  );
+  expect(survives.seeds.has(asPluginId("root.a"))).toBe(true);
+  expect(survives.named.has(asPluginId("root.a"))).toBe(true);
+});
+
+// (iv) Fail-loud: a negative drops a branch from SEEDING, but if a kept sibling
+// hard-imports an id under the negated branch, hardClosure re-adds it — it ships.
+test("negation cannot sever a hard import: a kept sibling's dep still ships", () => {
+  // root.**: children keep, drop, dep. `!root.drop.**` trims the drop branch from
+  // seeding — but root.keep hard-imports root.drop.inner, so it must still ship.
+  const g = syntheticGraph(
+    ["root", "root.keep", "root.drop", "root.drop.inner"],
+    [["root.keep", "root.drop.inner"]], // keep imports an id under the negated branch
+    { root: ["root.keep", "root.drop", "root.drop.inner"], "root.drop": ["root.drop.inner"] },
+  );
+  const comp = resolveComposition(g, {
+    name: "fail-loud",
+    entryPoints: [asPluginId("root.**"), asPluginId("!root.drop.**")],
+    selectedContributors: [],
+  });
+
+  // The negated branch node itself is dropped from the bundle...
+  expect(comp.bundle.has(asPluginId("root.drop"))).toBe(false);
+  // ...but the imported inner id is re-added via hardClosure of the kept sibling.
+  expect(comp.bundle.has(asPluginId("root.keep"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("root.drop.inner"))).toBe(true);
+});
+
+// (v) Real-tree `website`-shaped manifest: `.**` minus two branch negatives excludes
+// every blog / editor-toy id and keeps the rest of the website subtree.
+test("website-shaped manifest: .** minus negatives drops blog + editor-toy branches", () => {
+  const websiteManifest: CompositionManifest = {
+    name: "website",
+    entryPoints: [
+      asPluginId("apps.website.**"),
+      asPluginId("!apps.website.blog.**"),
+      asPluginId("!apps.website.demos.editor-toy.**"),
+    ],
+    selectedContributors: [],
+  };
+  const comp = resolveComposition(graph, websiteManifest);
+
+  // Every blog id and every editor-toy id is OUT of the bundle.
+  const blogIds = [...tree.byDir.values()]
+    .map((n) => n.id)
+    .filter((id) => id === "apps.website.blog" || id.startsWith("apps.website.blog."));
+  const editorToyIds = [...tree.byDir.values()]
+    .map((n) => n.id)
+    .filter(
+      (id) =>
+        id === "apps.website.demos.editor-toy" ||
+        id.startsWith("apps.website.demos.editor-toy."),
+    );
+  expect(blogIds.length).toBeGreaterThan(0);
+  expect(editorToyIds.length).toBeGreaterThan(0);
+  for (const id of [...blogIds, ...editorToyIds]) {
+    expect(comp.bundle.has(asPluginId(id))).toBe(false);
+  }
+
+  // Kept website ids ARE bundled.
+  expect(comp.bundle.has(asPluginId("apps.website.shell"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("apps.website.landing"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("apps.website.demos.app-gallery"))).toBe(true);
 });
 
 test("available frontier: reviewable soft options into the bundle", () => {

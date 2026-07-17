@@ -1,5 +1,12 @@
 export { classifyEdges } from "./classify-edges";
-export { resolveComposition, hardClosure, disabledClosure } from "./resolve-composition";
+export {
+  resolveComposition,
+  hardClosure,
+  disabledClosure,
+  expandEntrySeeds,
+} from "./resolve-composition";
+export { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
+export type { EntryPattern, ParsedPattern } from "./entry-pattern";
 export { flattenManifest } from "./flatten-manifest";
 export { explainInclusion } from "./explain";
 export { impactOfPruning, impactOfSelecting } from "./impact";

@@ -1,4 +1,4 @@
-// @hash 18ad559111ad
+// @hash 384ddbb247f8
 {
   "manifests": [
     {
@@ -7,7 +7,7 @@
       "name": "agent-manager",
       "category": "profile",
       "entryPoints": [
-        "apps.agent-manager"
+        "apps.agent-manager.**"
       ],
       "selectedContributors": [
         "tasks.attempt-view",
@@ -26,7 +26,7 @@
       "name": "agent-manager-lean",
       "category": "profile",
       "entryPoints": [
-        "apps.agent-manager"
+        "apps.agent-manager.**"
       ],
       "selectedContributors": [
         "tasks.attempt-view",
@@ -44,7 +44,7 @@
       "name": "home",
       "category": "app",
       "entryPoints": [
-        "apps.home"
+        "apps.home.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -59,7 +59,7 @@
       "name": "pages",
       "category": "app",
       "entryPoints": [
-        "apps.pages"
+        "apps.pages.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -74,7 +74,7 @@
       "name": "settings",
       "category": "app",
       "entryPoints": [
-        "apps.settings"
+        "apps.settings.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -89,7 +89,7 @@
       "name": "studio",
       "category": "app",
       "entryPoints": [
-        "apps.studio"
+        "apps.studio.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -104,7 +104,7 @@
       "name": "sonata",
       "category": "app",
       "entryPoints": [
-        "apps.sonata"
+        "apps.sonata.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -123,7 +123,7 @@
       "name": "story",
       "category": "app",
       "entryPoints": [
-        "apps.story"
+        "apps.story.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -138,7 +138,7 @@
       "name": "debug",
       "category": "app",
       "entryPoints": [
-        "apps.debug"
+        "apps.debug.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -153,7 +153,7 @@
       "name": "deploy",
       "category": "app",
       "entryPoints": [
-        "apps.deploy"
+        "apps.deploy.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -168,7 +168,7 @@
       "name": "file-explorer",
       "category": "app",
       "entryPoints": [
-        "apps.file-explorer"
+        "apps.file-explorer.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -183,7 +183,7 @@
       "name": "workflows",
       "category": "app",
       "entryPoints": [
-        "apps.workflows"
+        "apps.workflows.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -198,15 +198,9 @@
       "name": "website",
       "category": "app",
       "entryPoints": [
-        "apps.website.shell",
-        "apps.website.landing",
-        "apps.website.pillars",
-        "apps.website.downloads",
-        "apps.website.demos.agent-run",
-        "apps.website.demos.app-gallery",
-        "apps.website.demos.plugin-pyramid",
-        "apps.website.demos.release-switcher",
-        "apps.website.demos.theme-toy"
+        "apps.website.**",
+        "!apps.website.blog.**",
+        "!apps.website.demos.editor-toy.**"
       ],
       "selectedContributors": [
         "apps.sonata.audio.piano"
@@ -226,7 +220,7 @@
       "name": "data",
       "category": "subsystem",
       "entryPoints": [
-        "database"
+        "database.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -239,9 +233,9 @@
       "name": "jobs-events",
       "category": "subsystem",
       "entryPoints": [
-        "infra.jobs",
-        "infra.events",
-        "infra.secrets"
+        "infra.jobs.**",
+        "infra.events.**",
+        "infra.secrets.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -254,8 +248,8 @@
       "name": "live-state",
       "category": "subsystem",
       "entryPoints": [
-        "primitives.live-state",
-        "primitives.networking"
+        "primitives.live-state.**",
+        "primitives.networking.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -268,7 +262,7 @@
       "name": "auth",
       "category": "subsystem",
       "entryPoints": [
-        "auth"
+        "auth.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -281,7 +275,7 @@
       "name": "search",
       "category": "subsystem",
       "entryPoints": [
-        "search.engine"
+        "search.engine.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -294,7 +288,7 @@
       "name": "history",
       "category": "subsystem",
       "entryPoints": [
-        "history.engine"
+        "history.engine.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -307,7 +301,7 @@
       "name": "conversations",
       "category": "subsystem",
       "entryPoints": [
-        "conversations"
+        "conversations.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -320,7 +314,7 @@
       "name": "tasks-domain",
       "category": "subsystem",
       "entryPoints": [
-        "tasks"
+        "tasks.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -333,10 +327,10 @@
       "name": "agent-runtime",
       "category": "subsystem",
       "entryPoints": [
-        "infra.worktree",
-        "infra.git-watcher",
-        "infra.claude-cli",
-        "apps.agent-manager"
+        "infra.worktree.**",
+        "infra.git-watcher.**",
+        "infra.claude-cli.**",
+        "apps.agent-manager.**"
       ],
       "selectedContributors": [],
       "extends": [
@@ -352,7 +346,7 @@
       "name": "page-editor",
       "category": "subsystem",
       "entryPoints": [
-        "page"
+        "page.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -365,7 +359,7 @@
       "name": "fields",
       "category": "subsystem",
       "entryPoints": [
-        "fields"
+        "fields.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -378,7 +372,7 @@
       "name": "design-system",
       "category": "subsystem",
       "entryPoints": [
-        "primitives.css"
+        "primitives.css.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -391,7 +385,7 @@
       "name": "mcp",
       "category": "subsystem",
       "entryPoints": [
-        "infra.mcp"
+        "infra.mcp.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -404,17 +398,17 @@
       "name": "served-baseline",
       "category": "subsystem",
       "entryPoints": [
-        "apps-core.layout",
-        "infra.health",
-        "shell.toast",
-        "ui.theme-engine",
-        "ui.tokens.color-palette",
-        "ui.tokens.density",
-        "ui.tokens.shape",
-        "ui.tokens.type-scale",
-        "ui.tokens.font-family",
-        "ui.tokens.sidebar-palette",
-        "ui.tokens.shadow"
+        "apps-core.layout.**",
+        "infra.health.**",
+        "shell.toast.**",
+        "ui.theme-engine.**",
+        "ui.tokens.color-palette.**",
+        "ui.tokens.density.**",
+        "ui.tokens.shape.**",
+        "ui.tokens.type-scale.**",
+        "ui.tokens.font-family.**",
+        "ui.tokens.sidebar-palette.**",
+        "ui.tokens.shadow.**"
       ],
       "selectedContributors": [],
       "extends": [],

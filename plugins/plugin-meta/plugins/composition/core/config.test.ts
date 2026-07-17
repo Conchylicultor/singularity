@@ -70,30 +70,36 @@ test("each seed maps to a valid CompositionManifest via the mapper", () => {
 test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () => {
   const ar = byName("agent-runtime");
   expect(ar.category).toBe("subsystem");
-  // The deep taproots a self-contained app must never reach, listed as entries
-  // so an app's hard closure surfaces them for the disjointness check.
-  for (const id of ["infra.worktree", "infra.git-watcher", "infra.claude-cli"]) {
+  // The deep taproots a self-contained app must never reach, listed as
+  // whole-subtree (`.**`) entries so an app's hard closure surfaces them for the
+  // disjointness check.
+  for (const id of [
+    "infra.worktree.**",
+    "infra.git-watcher.**",
+    "infra.claude-cli.**",
+  ]) {
     expect(ar.entryPoints).toContain(id);
   }
   // Reuses the existing conversations/tasks-domain subsystems via `extends`.
   expect([...ar.extends].sort()).toEqual(["conversations", "tasks-domain"]);
 });
 
-test("the website app seed maps to a valid manifest and never entries the blog / pages", () => {
+test("the website app seed uses the glob grammar to take the site subtree minus blog / editor-toy", () => {
   const site = byName("website");
   expect(site.category).toBe("app");
   const m = manifestItemToManifest(site);
   expect(typeof m.name).toBe("string");
   expect(m.name.length).toBeGreaterThan(0);
   expect(m.entryPoints.length).toBeGreaterThan(0);
-  // The regression guard, stated as a test: entry-seeding ships a whole subtree,
-  // so entrying `apps.website` (or anything under `apps.website.blog`) would drag
-  // the Pages app + block editor (via blog/pages-integration) into the public
-  // bundle. Keep the site's entries strictly the non-blog sub-umbrellas.
-  for (const id of m.entryPoints) {
-    expect(id).not.toBe("apps.website");
-    expect(String(id).startsWith("apps.website.blog")).toBe(false);
-  }
+  // The regression guard, stated in the new glob grammar: `.**` takes the whole
+  // site subtree, then two negatives trim the branches that would drag in the
+  // Pages app + block editor + worktree infra (blog/pages-integration and the
+  // editor-toy demo). The "actually absent from the bundle" regression lives in
+  // closure.test.ts (with a real plugin tree); here we only assert the grammar.
+  const entries = m.entryPoints.map(String);
+  expect(entries).toContain("apps.website.**");
+  expect(entries).toContain("!apps.website.blog.**");
+  expect(entries).toContain("!apps.website.demos.editor-toy.**");
 });
 
 test("served-baseline forces the toast host alongside health", () => {
@@ -103,8 +109,8 @@ test("served-baseline forces the toast host alongside health", () => {
   // the "host ships with any served app" invariant enforced (facet-a regression
   // guard) without relying on a runtime throw.
   const baseline = byName("served-baseline");
-  expect(baseline.entryPoints).toContain("infra.health");
-  expect(baseline.entryPoints).toContain("shell.toast");
+  expect(baseline.entryPoints).toContain("infra.health.**");
+  expect(baseline.entryPoints).toContain("shell.toast.**");
 });
 
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {

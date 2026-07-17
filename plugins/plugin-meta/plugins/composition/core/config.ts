@@ -72,7 +72,7 @@ export const compositionsConfig = defineConfig({
           rank: "a0",
           name: "agent-manager",
           category: "profile",
-          entryPoints: ["apps.agent-manager"],
+          entryPoints: ["apps.agent-manager.**"],
           selectedContributors: [
             "tasks.attempt-view",
             "ui.theme-toggle",
@@ -86,7 +86,7 @@ export const compositionsConfig = defineConfig({
           rank: "a1",
           name: "agent-manager-lean",
           category: "profile",
-          entryPoints: ["apps.agent-manager"],
+          entryPoints: ["apps.agent-manager.**"],
           selectedContributors: [
             "tasks.attempt-view",
             "ui.theme-toggle",
@@ -117,34 +117,39 @@ export const compositionsConfig = defineConfig({
         app("file-explorer", "aA", "apps.file-explorer"),
         app("workflows", "aB", "apps.workflows"),
 
-        // The public equin site. Two non-obvious choices below:
-        //  1. It deliberately does NOT entry the `apps.website` umbrella.
-        //     `expandEntrySeeds` seeds an entry PLUS its whole subtree, and
-        //     `apps.website.blog.pages-integration` hard-imports
+        // The public equin site. The entry grammar takes the whole site subtree
+        // and then subtracts the two branches that would contaminate it:
+        //  1. `"apps.website.**"` seeds the `apps.website` node + its ENTIRE
+        //     subtree (the `.**` glob). Everything under the site ships by
+        //     default.
+        //  2. `"!apps.website.blog.**"` drops the whole `blog` umbrella. Its
+        //     `blog.pages-integration` hard-imports
         //     `@plugins/apps/plugins/pages/plugins/page-tree/web` (it mounts an
-        //     authoring panel into the Pages app). Entrying the umbrella would drag
-        //     the Pages app + block editor into the public site. The manifest
-        //     vocabulary is additive-only — there is no way to subtract it — so we
-        //     entry the sub-umbrellas individually and omit the whole `blog`
-        //     umbrella (the blog is being retired anyway; it is the site's only
-        //     server plugin and its only `page` dependency).
-        //  2. `selectedContributors: ["apps.sonata.audio.piano"]` is the sampled
+        //     authoring panel into the Pages app), so keeping it would drag the
+        //     Pages app + block editor into the public site. The negative trims
+        //     only the `.**`-implicit ids the site subtree pulled in (the blog is
+        //     being retired anyway; it is the site's only server plugin and its
+        //     only `page` dependency).
+        //  3. `"!apps.website.demos.editor-toy.**"` drops the editor-toy demo.
+        //     editor-toy embeds a live `<BlockEditor>`, and the block editor's
+        //     hard closure now reaches worktree infra: `page.editor → reorder →
+        //     config_v2.staging → infra.worktree` (staging lands a promoted config
+        //     default to git in the worktree). That taproot drags `infra.worktree`
+        //     — part of the excluded `agent-runtime` bundle — into a site meant to
+        //     be self-contained. `excludes: ["agent-runtime"]` below is the
+        //     AUTOMATED PROOF that this negative did its job: the check fails if
+        //     editor-toy's `→ infra.worktree` taproot survives into the site's
+        //     hard closure. A public site can't ship a live block editor without
+        //     also shipping the worktree/git-landing infra behind it, so
+        //     editor-toy is left out; every other demo ships. (Severing the
+        //     reorder→staging→worktree taproot to make a live editor releasable
+        //     stand-alone is a follow-up.)
+        //  4. `selectedContributors: ["apps.sonata.audio.piano"]` is the sampled
         //     grand behind the app-gallery's Sonata vignette — a genuine
         //     load-bearing soft option: it contributes `SonataAudio.Instrument`
         //     (the axis that lives in `apps.sonata.audio.instruments`, NOT in
         //     `sonata/shell`, so embedding a playable instrument does not drag a
         //     second `Apps.App` in), whose owner plugin the vignette hard-imports.
-        //  3. The `demos` sub-plugins are entried INDIVIDUALLY (not the `demos`
-        //     umbrella), to omit `demos.editor-toy`. editor-toy embeds a live
-        //     `<BlockEditor>`, and the block editor's hard closure now reaches
-        //     worktree infra: `page.editor → reorder → config_v2.staging →
-        //     infra.worktree` (staging lands a promoted config default to git in
-        //     the worktree). That drags `infra.worktree` — part of the excluded
-        //     `agent-runtime` bundle — into a site meant to be self-contained. A
-        //     public site can't ship a live block editor without also shipping the
-        //     worktree/git-landing infra behind it, so editor-toy is left out;
-        //     every other demo ships. (Making a live editor releasable stand-alone
-        //     — severing the reorder→staging→worktree taproot — is a follow-up.)
         // No `app-chrome`: a public site wants no rail and no tab strip
         // (`apps-core.layout` renders a chrome-less surface on its own — same as
         // the `sonata` composition). `excludes` mirrors the sonata precedent
@@ -166,16 +171,9 @@ export const compositionsConfig = defineConfig({
           name: "website",
           category: "app" as const,
           entryPoints: [
-            "apps.website.shell",
-            "apps.website.landing",
-            "apps.website.pillars",
-            "apps.website.downloads",
-            // Demos entried individually to omit `demos.editor-toy` (see note 3).
-            "apps.website.demos.agent-run",
-            "apps.website.demos.app-gallery",
-            "apps.website.demos.plugin-pyramid",
-            "apps.website.demos.release-switcher",
-            "apps.website.demos.theme-toy",
+            "apps.website.**",
+            "!apps.website.blog.**",
+            "!apps.website.demos.editor-toy.**",
           ],
           selectedContributors: ["apps.sonata.audio.piano"],
           extends: ["served-baseline"],
@@ -213,10 +211,10 @@ export const compositionsConfig = defineConfig({
           name: "agent-runtime",
           category: "subsystem" as const,
           entryPoints: [
-            "infra.worktree",
-            "infra.git-watcher",
-            "infra.claude-cli",
-            "apps.agent-manager",
+            "infra.worktree.**",
+            "infra.git-watcher.**",
+            "infra.claude-cli.**",
+            "apps.agent-manager.**",
           ],
           selectedContributors: [] as string[],
           extends: ["conversations", "tasks-domain"],
@@ -355,7 +353,7 @@ function app(
     rank,
     name,
     category: "app" as const,
-    entryPoints: [entry],
+    entryPoints: [entry + ".**"],
     selectedContributors: [] as string[],
     extends: ["served-baseline", ...extraExtends],
     excludes,
@@ -370,7 +368,7 @@ function subsystem(name: string, rank: string, entries: string[]) {
     rank,
     name,
     category: "subsystem" as const,
-    entryPoints: entries,
+    entryPoints: entries.map((e) => e + ".**"),
     selectedContributors: [] as string[],
     extends: [] as string[],
     excludes: [] as string[],
