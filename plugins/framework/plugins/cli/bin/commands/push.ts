@@ -63,13 +63,23 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 // Spawns a fresh process so checks see the post-rebase code on disk, not the
 // stale module cache from process start. The eslint check always considers the
 // full lintable set; its per-file closure cache decides what actually re-lints,
-// so there is no scope env to thread through. The child INHERITS this push's
-// host CPU grant via `grant.env()` (SINGULARITY_HOST_GRANT + SINGULARITY_LANE):
-// its own `inheritedGrant()` reconstructs the grant and SPENDS those units for
-// its type-check fleet without re-acquiring host-wide — no double-acquire, no
-// deadlock (the parent already holds the slots).
+// so there is no lint scope env to thread through. The child INHERITS this
+// push's host CPU grant via `grant.env()` (SINGULARITY_HOST_GRANT +
+// SINGULARITY_LANE): its own `inheritedGrant()` reconstructs the grant and
+// SPENDS those units for its type-check fleet without re-acquiring host-wide —
+// no double-acquire, no deadlock (the parent already holds the slots).
+//
+// `--scope tree` narrows the pass to the push payload (see `Check.scope`).
+// Deploy-scoped checks verify the local gitignored dist / artifact store that
+// `build` produces: it never lands on main, and this push's own rebase moves the
+// tree past it by construction, so a push can never meaningfully assert it — it
+// could only ever report the artifact as stale for having done its job. The
+// filter is EXPRESSED here as a flag and RESOLVED in the child, for the same
+// reason the child exists at all: computing an id list in this process would
+// read the pre-rebase module cache. It is by property, never by id, and
+// hand-reproducible as `./singularity check --scope tree`.
 async function runChecksSubprocess(root: string, grant: Grant): Promise<boolean> {
-  const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
+  const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check", "--scope", "tree"], {
     cwd: root,
     // `process.env` values are `string | undefined`; the inferred spread type is
     // exactly what Bun.spawn's `env` accepts (same pattern as build.ts's exec()).
@@ -509,7 +519,12 @@ export function registerPush(program: Command) {
           await postRebaseNormalize(await getWorktreeRoot(), pushId);
           profiler.stepEnd("normalize");
 
-          // 4. Run checks on the rebased tree — this is exactly what will land on main.
+          // 4. Run checks on the rebased tree — this is exactly what will land on
+          //    main, and the pass is scoped to exactly that (`--scope tree`).
+          //    Deploy-scoped checks verify the local gitignored dist/artifact
+          //    store, which never lands on main and which the rebase above
+          //    invalidates by construction; `build` and main's post-push
+          //    auto-build assert those for real.
           //    Spawned as a subprocess so the check code comes from the rebased
           //    tree, not the (potentially stale) module cache of this process.
           const root = await getWorktreeRoot();

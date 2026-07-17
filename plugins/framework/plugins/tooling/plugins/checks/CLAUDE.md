@@ -25,7 +25,7 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-  - Exports: Types: `CandidateSource`, `CheckCache`, `CodeMatch`, `ImportMatch`, `ListCandidateSourcesOptions`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `markBuildInProgress`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
+  - Exports: Types: `CandidateSource`, `CheckCache`, `CodeMatch`, `ImportMatch`, `ListCandidateSourcesOptions`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `markBuildInProgress`, `openCheckCache`, `runChecks`, `scopeOf`, `tsBuildInfoPath`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`apps-paths-from-app-ref`**

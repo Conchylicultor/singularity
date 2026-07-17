@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import type { Check, CheckContext, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type { Check, CheckContext, CheckResult, CheckScope } from "@plugins/framework/plugins/tooling/core";
 import type { Grant } from "@plugins/infra/plugins/host-admission/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
@@ -25,13 +25,47 @@ function isCheck(value: unknown): value is Check {
   );
 }
 
+/**
+ * A check's scope, with the default applied. THE one place `?? "tree"` is
+ * written — every consumer (the scope filter below, `--list`) reads it through
+ * here, so an unclassified check can never mean two different things in two
+ * places.
+ */
+export function scopeOf(check: Check): CheckScope {
+  return check.scope ?? "tree";
+}
+
+/**
+ * Enforce the `Check.scope` invariant at LOAD, not at run: a `deploy` check's
+ * subject is outside the tree hash, so without a `cacheSignature()` the runner
+ * would record its verdict under a tree-only key and replay that pass for every
+ * later deploy state — a green that can never go red again. Throwing here fires
+ * for `runChecks` and `--list` alike, so the violation surfaces the moment the
+ * check is written rather than as an inexplicably-passing check months later.
+ */
+function assertScopeInvariant(checks: Check[]): void {
+  for (const check of checks) {
+    if (scopeOf(check) === "deploy" && check.cacheSignature === undefined) {
+      throw new Error(
+        `Check "${check.id}" is scope: "deploy" but supplies no cacheSignature(). ` +
+          `A deploy-scoped verdict is not covered by the working-tree hash, so caching it ` +
+          `under the tree hash alone would record a permanently stale pass. Add a ` +
+          `cacheSignature() that covers the deploy state it inspects (or returns null to ` +
+          `opt out of caching entirely).`,
+      );
+    }
+  }
+}
+
 async function loadAllChecks(): Promise<Check[]> {
   const { checkEntries } = await import("./check.generated");
-  return loadCollectedDir<Check>(checkEntries, {
+  const checks = await loadCollectedDir<Check>(checkEntries, {
     isItem: isCheck,
     dedupeKey: (c) => c.id,
     label: "check",
   });
+  assertScopeInvariant(checks);
+  return checks;
 }
 
 export async function listAllChecks(): Promise<Check[]> {
@@ -53,6 +87,13 @@ export interface RunChecksOptions {
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
   /**
+   * Restrict the run to checks of this scope; omitted = every scope. See
+   * `Check.scope`: `push` passes "tree" because a deploy-scoped verdict is about
+   * an artifact outside the push payload. Selection is by PROPERTY — a caller
+   * never enumerates ids to include or exclude.
+   */
+  scope?: CheckScope;
+  /**
    * Absolute path to write the FULL, untruncated results to. The console
    * (`log`) output stays summarized/truncated so it doesn't flood an agent's
    * context (and survives being piped through `tail`); the file holds the
@@ -66,15 +107,35 @@ export interface RunChecksOptions {
 export async function runChecks(ids: string[] | undefined, options: RunChecksOptions): Promise<boolean> {
   const all = await listAllChecks();
 
-  const selected = ids && ids.length > 0
+  const named = ids && ids.length > 0
     ? all.filter((c) => ids.includes(c.id))
     : all;
 
-  if (ids && selected.length !== ids.length) {
+  if (ids && named.length !== ids.length) {
     const known = new Set(all.map((c) => c.id));
     const unknown = ids.filter((id) => !known.has(id));
     console.error(`Unknown check(s): ${unknown.join(", ")}`);
     return false;
+  }
+
+  // Scope filter runs AFTER id resolution so an unknown id still reports as
+  // unknown rather than as out-of-scope. An id the caller named EXPLICITLY but
+  // this scope excludes is a caller error, not a selection to quietly narrow:
+  // dropping it would run a smaller set than asked and report a pass — and with
+  // a single named id, an empty selection reaches `Promise.all([])` and passes
+  // vacuously. Fail loudly instead.
+  const scope = options.scope;
+  const selected = scope === undefined ? named : named.filter((c) => scopeOf(c) === scope);
+  if (scope !== undefined && ids && ids.length > 0) {
+    const excluded = named.filter((c) => scopeOf(c) !== scope);
+    if (excluded.length > 0) {
+      console.error(
+        `Excluded by --scope ${scope}: ${excluded
+          .map((c) => `${c.id} is ${scopeOf(c)}-scoped`)
+          .join(", ")}. Drop the --scope flag, or run only checks of that scope.`,
+      );
+      return false;
+    }
   }
 
   const noCache = options?.noCache || process.env.SINGULARITY_CHECK_NO_CACHE === "1";

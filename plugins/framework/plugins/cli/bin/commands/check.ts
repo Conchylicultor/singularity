@@ -5,7 +5,8 @@ import { withHostGrant, inheritedGrant } from "@plugins/infra/plugins/host-admis
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
 import { publishLane } from "../lane";
-import { listAllChecks, runChecks, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { listAllChecks, runChecks, scopeOf, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { CHECK_SCOPES, type CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 // The op-marker slug for this worktree — its directory basename, matching what
@@ -31,10 +32,31 @@ export function registerCheck(program: Command) {
     .argument("[checks...]", "Check IDs to run (default: all)")
     .option("--list", "List available checks and exit")
     .option("--no-cache", "Bypass the tree-hash check-result cache")
-    .action(async (checks: string[], opts: { list?: boolean; cache?: boolean }) => {
+    .option(
+      "--scope <scope>",
+      `Run only checks of this scope (${CHECK_SCOPES.join(" | ")}); default: every scope. ` +
+        "`tree` = the verdict is a function of the tree content, i.e. of what a push carries; " +
+        "`deploy` = it verifies the local gitignored dist/artifact store `build` produces. " +
+        "`--scope tree` reproduces the pass `./singularity push` runs.",
+    )
+    .action(async (checks: string[], opts: { list?: boolean; cache?: boolean; scope?: string }) => {
+      // Validate before anything else: an unrecognized scope must NOT fall
+      // through to `scope: undefined`, which means "every scope" — a typo would
+      // then silently run MORE than asked and report a pass.
+      let scope: CheckScope | undefined;
+      if (opts.scope !== undefined) {
+        if (!(CHECK_SCOPES as readonly string[]).includes(opts.scope)) {
+          console.error(`Unknown --scope "${opts.scope}". Expected one of: ${CHECK_SCOPES.join(", ")}.`);
+          process.exit(1);
+        }
+        scope = opts.scope as CheckScope;
+      }
+
       if (opts.list) {
         const all = await listAllChecks();
-        for (const c of all) console.log(`  ${c.id} — ${c.description}`);
+        // Print the scope: it decides whether `push` asserts a check at all, so
+        // the classification has to be auditable without reading every barrel.
+        for (const c of all) console.log(`  [${scopeOf(c)}] ${c.id} — ${c.description}`);
         return;
       }
       await checkBroadcasts("check");
@@ -85,6 +107,7 @@ export function registerCheck(program: Command) {
           const runOpts: RunChecksOptions = {
             grant,
             noCache: opts.cache === false,
+            scope,
             logFile,
             log: (line, stream) =>
               stream === "stderr" ? console.error(line) : console.log(line),

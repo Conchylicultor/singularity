@@ -3637,7 +3637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LiveStateSnapshotHooks`, `LoadedServerPlugin`, `LoaderAggregateView`, `MemoryCheckpoint`, `PhaseId`, `ProcMemory`, `ProfilerHooks`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `RuntimeProfileView`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `measureSubscribeCycle`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `procMemory`, `profilerStart`, `recomputeResource`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `scopedResourceIdentities`, `serverCollectedDir`, `setErrorReporter`, `setFeedExemptTables`, `setLiveStateSnapshotHooks`, `setProfilerHooks`, `setRelationResolver`, `triggerResourcePush`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
-        - Exports: Types: `Check`, `CheckContext`, `CheckResult`
+        - Exports: Types: `Check`, `CheckContext`, `CheckResult`, `CheckScope`; Values: `CHECK_SCOPES`
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
@@ -3648,7 +3648,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-            - Exports: Types: `CandidateSource`, `CheckCache`, `CodeMatch`, `ImportMatch`, `ListCandidateSourcesOptions`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `markBuildInProgress`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
+            - Exports: Types: `CandidateSource`, `CheckCache`, `CodeMatch`, `ImportMatch`, `ListCandidateSourcesOptions`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `markBuildInProgress`, `openCheckCache`, `runChecks`, `scopeOf`, `tsBuildInfoPath`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`apps-paths-from-app-ref`**

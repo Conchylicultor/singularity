@@ -34,10 +34,50 @@ export interface CheckContext {
   log?: (line: string, stream: "stdout" | "stderr") => void;
 }
 
+/**
+ * The scope axis, as values — so a caller that must validate one at runtime (the
+ * CLI's `--scope` flag) reads the same closed set the type is derived from, and
+ * a new scope can never be accepted by the type but rejected by the flag.
+ */
+export const CHECK_SCOPES = ["tree", "deploy"] as const;
+
+/**
+ * What a check's verdict is a function of — the axis that decides which callers
+ * can meaningfully assert it. See `Check.scope`.
+ */
+export type CheckScope = (typeof CHECK_SCOPES)[number];
+
 export interface Check {
   id: string;
   description: string;
   run(ctx: CheckContext): Promise<CheckResult>;
+  /**
+   * What the verdict is ABOUT, which decides who can assert it:
+   *   - "tree" (default) → the verdict is a function of the working-tree content
+   *     hash (`computeTreeHash`: tracked files + working changes, honoring
+   *     .gitignore). Whatever that hash covers is exactly what a push carries,
+   *     so the check is in the push payload and every caller can assert it.
+   *   - "deploy" → the check verifies the local, gitignored deployment that
+   *     `./singularity build` produces (`plugins/framework/plugins/web-core/dist`,
+   *     the `~/.singularity/web-artifacts` store). That artifact NEVER lands on
+   *     main, and `push`'s own internal rebase invalidates it by construction
+   *     (the tree moves past the deployed dist), so push cannot meaningfully
+   *     assert it — no matter how it is scheduled. Its real homes are `build`
+   *     (which deploys, then verifies), a standalone `./singularity check`, and
+   *     main's post-push auto-build.
+   *
+   * Consumers select BY THIS PROPERTY, NEVER by check id: `push` asks for
+   * `--scope tree`, not for "everything except web-artifacts:map-in-sync".
+   * Classifying a new check is then the only edit a new check needs.
+   *
+   * THE INVARIANT that makes this load-bearing: `scope: "deploy"` means the tree
+   * hash does NOT cover the check's subject, so the check MUST supply a
+   * `cacheSignature()` (covering the deploy state, or returning null). Without
+   * one, a verdict about the deploy would be recorded under a tree-only cache
+   * key — a pass that survives every later deploy change, i.e. a permanently
+   * stale green. Enforced at load; a violation throws.
+   */
+  scope?: CheckScope;
   /**
    * Run even when `./singularity build --skip-checks` is passed (and, as always,
    * during a normal build and `push`). For cheap, structural, codegen-coupled

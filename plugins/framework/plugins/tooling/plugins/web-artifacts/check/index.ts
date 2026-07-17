@@ -1,11 +1,19 @@
-// Contributed checks guarding the per-plugin web-artifact composition:
+// Contributed checks guarding the per-plugin web-artifact composition.
+//
+// BOTH are `scope: "deploy"`: their subject is the local deployment `build`
+// produces — `web-core/dist` (gitignored) and the `~/.singularity/web-artifacts`
+// store (outside any repo) — not the tree. So neither is in the push payload,
+// and `push` (which asks for `--scope tree`) does not run them; `build`, a
+// standalone `./singularity check`, and main's post-push auto-build do. Each
+// therefore owes a `cacheSignature()` covering that deploy state, since the
+// runner's tree hash does not reach it — see `Check.scope`.
 //
 //   web-artifacts:map-in-sync — the deployed artifact dist's import map is the
 //   one the CURRENT tree composes. A monolith dist passes (nothing to verify);
 //   a stale map fails with the `./singularity build` fix. Skips (uncached)
 //   inside a `./singularity build` process, where the dist under inspection is
-//   the one that very build is about to replace — push and standalone runs
-//   verify for real.
+//   the one that very build is about to replace — standalone runs verify for
+//   real.
 //
 //   web-artifacts:no-vendored-state-inlined — no plugin artifact in the current
 //   fleet's expected set bundles modules of an npm package outside the inline
@@ -13,6 +21,15 @@
 //   an inlined copy of a stateful package (React context registries, scheduler,
 //   …) is the silent dual-instance bug class. Verdicts are cached per artifact
 //   dir (content-addressed ⇒ immutable) so the sourcemap scan is one-time.
+//
+// `scope` and `isBuildInProgress()` are ORTHOGONAL — neither subsumes the other,
+// and deleting either as redundant reopens a real hole:
+//   - `isBuildInProgress()` (run-context) answers "a build races its own
+//     publish": a build MUST run these checks — it IS the deploy — but at check
+//     time its dist is still the previous one, so the comparison is skipped for
+//     that one process.
+//   - `scope` answers "push is not a deploy": push never inspects the dist at
+//     all, whatever process is or isn't building.
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
@@ -97,9 +114,10 @@ const mapInSync: Check = {
   id: "web-artifacts:map-in-sync",
   description:
     "the deployed artifact-mode dist's import map matches the composition the current tree produces (monolith dists pass)",
+  scope: "deploy",
   cacheSignature(): string | null {
     // Never cache the build-time skip: a cached "pass" recorded while the check
-    // didn't actually look would mask a stale dist at push time.
+    // didn't actually look would mask a stale dist on the next run that does.
     if (isBuildInProgress()) return null;
     const dist = distDir(rootSync());
     const marker = readIfExists(join(dist, MARKER_NAME));
@@ -249,6 +267,7 @@ const noVendoredStateInlined: Check = {
   id: "web-artifacts:no-vendored-state-inlined",
   description:
     "no web artifact in the current fleet bundles modules of an npm package outside the inline allowlist (the module-identity / dual-instance guard)",
+  scope: "deploy",
   cacheSignature(): string {
     // The verdict is a function of the tree (expected fleet) — covered by the
     // runner's tree hash — plus which artifacts the store holds.
