@@ -9,6 +9,7 @@
   - Contributes: `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`, `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigMenuContent`, `conversations/conversation-view.Conversation`, `conversations/model-provider.familyClass`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `primitives/css/badge.Badge`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `shell/notifications.toast`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Shared:
   - Exports: Values: `launchPromptsConfig`

@@ -86,6 +86,7 @@ Behavior:
   - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/inline-text.InlineTextWalker`, `primitives/inline-text.InlineTextWalkerContext`, `primitives/inline-text.InlineTextWalkerSlot`, `primitives/inline-text.useInlineTextWalker`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`, `primitives/text-editor.TextEditorSlots`
   - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Server:
+  - Contributes: `resource.declare` "active-data.bindings"
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`

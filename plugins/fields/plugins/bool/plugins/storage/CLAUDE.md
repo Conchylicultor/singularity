@@ -11,6 +11,7 @@ runtime) mapping the `bool` field token to a Postgres `boolean` column via
 
 - Description: Boolean field type: DB storage capability — maps to a Postgres boolean column.
 - Server:
+  - Contributes: `fields.storage` "bool"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

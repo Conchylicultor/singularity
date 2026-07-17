@@ -10,6 +10,7 @@
   - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/css/center.Center`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`
   - Exports: Values: `pageLinkBlock`
 - Server:
+  - Contributes: `page.block-data` "page-link", `page.links.extractor` "page-link"
   - Uses: `page/editor.Editor`, `page/links.PageLinks`
 - Core:
   - Uses: `page/editor.defineBlock`

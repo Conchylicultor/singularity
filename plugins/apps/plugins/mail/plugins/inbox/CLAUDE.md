@@ -63,6 +63,7 @@ string only.
   - Uses: `apps/mail/reading-pane.threadPane`, `apps/mail/shell.Mail`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/fill.Fill`, `primitives/css/line.Line`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`
   - Exports: Values: `inboxPane`
 - Server:
+  - Contributes: `resource.declare` "mail-inbox-revision"
   - Uses: `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`
   - Exports: Values: `handleQuery`, `inboxRevisionServerResource`
   - Resources: `mail-inbox-revision` (push)

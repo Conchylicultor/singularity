@@ -11,6 +11,7 @@
   - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`
   - Exports: Types: `Server`; Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
 - Server:
+  - Contributes: `resource.declare` "deploy.servers"
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`
   - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
   - Exports: Values: `_deployServers`, `serversResource`

@@ -9,6 +9,7 @@
   - Contributes: `Auth.Provider` "Google", `ConfigV2.WebRegister`
   - Uses: `auth.Auth`, `auth/google/setup-wizard.googleSetupPane`, `config_v2.ConfigV2`, `primitives/pane.openPane`
 - Server:
+  - Contributes: `ConfigV2.Register` "auth-google"
   - Uses: `config_v2.ConfigV2`
 - Central:
   - Uses: `auth.registerAuthProvider`, `fields/secret/config.readSecretConfig`

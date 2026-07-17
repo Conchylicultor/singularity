@@ -16,6 +16,8 @@ export interface Contribution {
 }
 
 export interface DocMetaContribution {
+  /** "slot" = web slot contribution (`_slotId`); "server" = server registration (`_kind`). */
+  kind: "slot" | "server";
   slotId: string;
   slotDisplayName?: string;
   componentName?: string;

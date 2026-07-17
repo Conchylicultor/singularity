@@ -10,6 +10,7 @@
   - Uses: `conversations/preprompts.PrepromptSelect`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/row.SectionHeaderRow`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `shell/notifications.toast`, `tasks/task-detail.TaskDetailSlots`
   - Exports: Values: `useTaskPreprompt`
 - Server:
+  - Contributes: `resource.declare` "task-preprompts"
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)

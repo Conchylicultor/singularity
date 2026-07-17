@@ -58,6 +58,7 @@ is drift repair, not a correctness dependency.
   - Contributes: `ConfigV2.WebRegister`, `Library.CardMeta` "midi-source-deleted" → `SourceDeletedBadge`
   - Uses: `apps/sonata/library.Library`, `apps/sonata/sources/midi.useSongMidi`, `config_v2.ConfigV2`, `primitives/css/badge.Badge`
 - Server:
+  - Contributes: `ConfigV2.Register` "midi-folders"
   - Uses: `apps/sonata/sources/midi.getSongMidiBySourcePath`, `apps/sonata/sources/midi.importMidiSong`, `apps/sonata/sources/midi.listFolderImportedSongs`, `apps/sonata/sources/midi.setSourceMissing`, `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `infra/corpus-index.CorpusDelta`, `infra/corpus-index.defineCorpusIndex`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/jobs.defineJob`, `infra/warmup.defineWarmup`
   - Register: `defineJob('sonata.midi.import')`, `defineWarmup('sonata.midi-folders.reconcile')`
 

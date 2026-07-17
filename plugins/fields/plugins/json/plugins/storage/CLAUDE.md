@@ -13,6 +13,7 @@ through `resolveFieldStorage("json")`.
 
 - Description: JSON field type: DB storage capability — maps to a Postgres jsonb column.
 - Server:
+  - Contributes: `fields.storage` "json"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

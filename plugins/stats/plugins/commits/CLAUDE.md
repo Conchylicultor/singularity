@@ -10,6 +10,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/config-link.ConfigGearButton`, `conversations/conversation-category.autoColorKey`, `conversations/conversation-category.useCategoryAvatars`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/loading.Loading`, `stats.Stats`, `stats.useShowEmptyDays`
   - Exports: Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `yAxisFormatter`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/conversation-category.conversationCategory`, `conversations/conversation-category.conversationCategoryConfig`, `database.db`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`
   - Routes: `GET /api/stats/commits/cumulative`, `GET /api/stats/commits/rate`, `GET /api/stats/commits/lines/cumulative`, `GET /api/stats/commits/lines/rate`
 - Cross-plugin:

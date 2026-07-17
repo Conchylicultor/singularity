@@ -28,6 +28,7 @@ The **secret** type's config capability, spanning all four runtimes:
   - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
   - Uses: `config_v2/fields.ConfigFieldContext`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/live-state.useResource`
 - Server:
+  - Contributes: `resource.declare` "config-v2.secret-meta"
   - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`, `infra/secrets.deleteSecret`, `infra/secrets.getSecret`, `infra/secrets.getSecretMetadata`, `infra/secrets.setSecret`
   - Resources: `config-v2.secret-meta` (push)
 - Central:

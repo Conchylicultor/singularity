@@ -10,6 +10,7 @@
   - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
   - Exports: Values: `imageBlock`
 - Server:
+  - Contributes: `page.block-data` "image"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`

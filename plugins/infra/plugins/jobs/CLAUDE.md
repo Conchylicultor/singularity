@@ -28,6 +28,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
 - Description: Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
 - Load-bearing: yes
 - Server:
+  - Contributes: `resource.declare` "jobs-list", `resource.declare` "dead-jobs"
   - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
   - Exports: Types: `BacklogJobStat`, `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `RunningJobStat`, `ScheduleSpec`; Values: `abortDurableRun`, `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `getJobSlowThresholdMs`, `isSuspendSignal`, `JOB_CONCURRENCY`, `jobsListResource`, `NonRetryableError`, `queryBacklogByJobName`, `queryDeadJobStats`, `queryQueueBacklog`, `queryRunningJobs`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`

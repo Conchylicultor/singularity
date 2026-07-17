@@ -21,6 +21,7 @@ list-specific nesting logic.
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `bulletedListBlock`
 - Server:
+  - Contributes: `page.block-data` "bulleted-list"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`

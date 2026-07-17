@@ -84,6 +84,7 @@ one `conversation-session-divergence` report — and zero rows for the healthy p
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `SessionDivergenceSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "session-divergence", `report-kind` "conversation-session-divergence"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/runtime-tmux.captureProcessTree`, `conversations/runtime-tmux.listPanes`, `conversations/runtime-tmux.ProcessTree`, `conversations/runtime-tmux.subtreePids`, `conversations/session-chain.listSessionChain`, `conversations/transcript-watcher.findTranscriptPath`, `infra/jobs.defineJob`, `infra/paths.CLAUDE_SESSIONS_DIR`, `reports.recordReport`, `reports.ReportKind`, `tasks/tasks-core.listActiveConversations`
   - Register: `defineJob('debug.session-divergence-monitor')`
 - Core:

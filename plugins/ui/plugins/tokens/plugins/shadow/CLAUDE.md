@@ -11,6 +11,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/cluster.Cluster`, `primitives/css/color-picker.Color`, `primitives/css/color-picker.ColorPickerPopover`, `primitives/css/row.Row`, `primitives/css/row.SectionHeaderRow`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine.useTokenGroupPresetOptions`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
   - Exports: Types: `ShadowPresetContribution`; Values: `Shadow`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Shared:
   - Exports: Types: `ShadowParams`, `ShadowTokenValues`; Values: `buildShadowTiers`, `DEFAULT_SHADOW_PARAMS`, `shadowConfig`, `shadowGroup`

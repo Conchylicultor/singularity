@@ -11,6 +11,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/spacing.Stack`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
   - Exports: Types: `ColorAdjustPresetContribution`; Values: `ColorAdjust`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Shared:
   - Exports: Values: `colorAdjustConfig`

@@ -52,6 +52,7 @@ sidebar — which owns the labels — shows the friendly name.
   - Uses: `apps/mail/reading-pane.threadPane`, `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/line.Line`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/cursor-pagination.InfiniteScrollFooter`, `primitives/cursor-pagination.InfiniteScrollHandle`, `primitives/cursor-pagination.useInfiniteScroll`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `primitives/virtual-rows.VirtualRows`
   - Exports: Values: `mailboxViewPane`
 - Server:
+  - Contributes: `resource.declare` "mail-threads-revision"
   - Uses: `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`, `infra/endpoints.implement`
   - Exports: Values: `mailThreadsRevisionServerResource`
   - Resources: `mail-threads-revision` (push)

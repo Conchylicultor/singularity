@@ -43,6 +43,7 @@ never the trace window's (engine clock-domain rule).
   - Contributes: `Trace.Lane` → `ClientBootLane`
   - Uses: `debug/boot-profile.BootProfileGantt`, `debug/trace/engine.Trace`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`
 - Server:
+  - Contributes: `trace-event-class` "client-boot"
   - Uses: `debug/trace/engine.defineTraceEventClass`
 - Core:
   - Exports: Types: `AssetRollup`, `ClientBootSection`; Values: `AssetRollupSchema`, `ClientBootSectionSchema`, `toClientBootSection`

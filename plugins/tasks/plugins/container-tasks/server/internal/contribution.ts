@@ -5,4 +5,5 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // the list of ids is never hardcoded in a consumer.
 export const ContainerTask = defineServerContribution<{ id: string }>(
   "containerTask",
+  { docLabel: (c) => c.id },
 );

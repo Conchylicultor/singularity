@@ -10,6 +10,7 @@
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `numberedListBlock`
 - Server:
+  - Contributes: `page.block-data` "numbered-list"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`

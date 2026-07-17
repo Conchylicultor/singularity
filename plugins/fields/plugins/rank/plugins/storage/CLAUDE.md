@@ -11,6 +11,7 @@ column via `build(name) => rankText(name)`. Resolved by exact token through
 
 - Description: Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.
 - Server:
+  - Contributes: `fields.storage` "rank"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

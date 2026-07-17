@@ -235,6 +235,7 @@ posture as `data_view_custom_values`.
   - Uses: `infra/endpoints.useEndpointMutation`, `primitives/data-view.DataViewSlots`, `primitives/latest-ref.useEventCallback`, `primitives/live-state.useResource`
   - Exports: Types: `RowOrderState`; Values: `useRowOrder`, `useSetRowOrder`
 - Server:
+  - Contributes: `resource.declare` "data-view-row-order"
   - Uses: `database.db`, `infra/endpoints.implement`, `primitives/rank.rankText`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/view-order/server/internal/tables.ts`
   - Exports: Values: `_dataViewRowOrder`, `applyRowOrder`, `rowOrderLiveResource`

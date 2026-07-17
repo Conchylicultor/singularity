@@ -43,6 +43,7 @@ view model stays icon-free plain data.
   - Contributes: `Mail.Sidebar` "Mailboxes" → `MailboxNav`
   - Uses: `apps/mail/shell.Mail`, `apps/mail/thread-list.mailboxViewPane`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.useOpenPane`
 - Server:
+  - Contributes: `resource.declare` "mail-labels", `resource.declare` "mail-view-counts"
   - Uses: `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`
   - Exports: Values: `mailLabelsServerResource`, `mailViewCountsServerResource`
   - Resources: `mail-labels` (push), `mail-view-counts` (push)

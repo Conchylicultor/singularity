@@ -15,7 +15,7 @@ export const Release = {
   EnvProvider: defineServerContribution<{
     target: string;
     provide: () => Promise<Record<string, string> | null>;
-  }>("Release.EnvProvider"),
+  }>("Release.EnvProvider", { docLabel: (p) => p.target }),
 };
 
 /**

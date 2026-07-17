@@ -83,6 +83,7 @@ type ResourceDeclarePayload = {
 
 const declareToken = defineServerContribution<ResourceDeclarePayload>(
   "resource.declare",
+  { docLabel: (r) => r.key },
 );
 
 const declareResource = ((resource: ResourceDeclarePayload) =>

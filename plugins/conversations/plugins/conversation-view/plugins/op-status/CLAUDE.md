@@ -76,6 +76,7 @@ lock) was indistinguishable from the agent merely "working".
   - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`, `Item.Chips` → `OpStatusChip`
   - Uses: `conversations.useConversation`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.Conversation`, `primitives/css/clip.Clip`, `primitives/css/inline.Inline`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/tooltip.WithTooltip`
 - Server:
+  - Contributes: `resource.declare` "worktree-ops"
   - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOp`, `infra/worktree.worktreesDir`
   - Exports: Values: `worktreeOpsResource`
   - Resources: `worktree-ops` (push)

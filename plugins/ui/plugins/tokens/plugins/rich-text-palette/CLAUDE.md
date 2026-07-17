@@ -9,6 +9,7 @@
   - Contributes: `ConfigV2.WebRegister`, `ThemeEngine.TokenGroup` "Rich-text palette"
   - Uses: `config_v2.ConfigV2`, `ui/theme-engine.ThemeEngine`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Shared:
   - Exports: Types: `RichTextPaletteValues`; Values: `richTextPaletteConfig`, `richTextPaletteGroup`

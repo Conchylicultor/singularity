@@ -32,6 +32,7 @@ access on their behalf.
   - Uses: `auth.Auth`, `auth.missingScopes`, `auth.useAccountStatus`, `config_v2.ConfigV2`, `config_v2.useConfig`
   - Exports: Types: `GmailAccess`; Values: `useGmailAccess`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `auth.getTokenFromCentral`, `config_v2.ConfigV2`, `config_v2.getConfig`
   - Exports: Values: `getGmailToken`, `isGmailEnabled`
 - Cross-plugin:

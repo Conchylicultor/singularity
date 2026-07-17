@@ -14,6 +14,7 @@ chord overlay and the progression strip so they label chords identically.
   - Uses: `apps/sonata/shell.Sonata`, `config_v2.ConfigV2`, `config_v2.useConfig`
   - Exports: Values: `useChordDisplayMode`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by: `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-progression`

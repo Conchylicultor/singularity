@@ -26,6 +26,7 @@ toggle-specific nesting logic.
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `toggleBlock`
 - Server:
+  - Contributes: `page.block-data` "toggle"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`

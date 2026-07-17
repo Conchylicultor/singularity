@@ -1,9 +1,6 @@
-import { existsSync } from "fs";
-import { join } from "path";
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { registerBarrelStubs, importBarrel } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 
 // Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
@@ -28,44 +25,13 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-/**
- * Block types that have a server-side `data` schema, read by reflecting over the
- * imported server barrels.
- *
- * WHY NOT the contributions facet (like the web side below): the facet's runtime
- * extractor only captures a contribution when it carries a web-SDK `_slotId`
- * string (`if (!c._slotId) continue;`). `Editor.BlockData` is a
- * `defineServerContribution`, which marks its contributions with a `_kind`
- * SYMBOL (in `def.contributions`) and no `_slotId` — so server contributions are
- * invisible to every facet and don't even render in docs. The barrel-import
- * reflection here is the SAME machinery the facet pipeline uses to read runtime
- * contributions (and the same technique `config_v2/check` uses to read config
- * descriptors) — NOT an ad-hoc source scan. Keyed by the contribution's `_kind`
- * symbol description, which equals the slot token the registry was defined with.
- */
-async function collectServerBlockDataTypes(
-  root: string,
-  serverDirs: string[],
-): Promise<Set<string>> {
-  registerBarrelStubs(join(root, ".."));
-  registerBarrelStubs(root);
-  const types = new Set<string>();
-  for (const dir of serverDirs) {
-    const barrel = join(dir, "server", "index.ts");
-    if (!existsSync(barrel)) continue;
-    const mod = (await importBarrel(barrel)) as { default?: unknown };
-    const def = mod.default as { contributions?: unknown } | undefined;
-    const contributions = Array.isArray(def?.contributions) ? def!.contributions : [];
-    for (const c of contributions as Array<{ _kind?: unknown; _doc?: { label?: string }; type?: string }>) {
-      if (typeof c._kind !== "symbol") continue;
-      if (c._kind.description !== SERVER_BLOCK_DATA_SLOT) continue;
-      const type = c._doc?.label ?? c.type;
-      if (type) types.add(type);
-    }
-  }
-  return types;
-}
-
+// Server `Editor.BlockData` contributions are now read off the SAME contributions
+// facet as the web `Editor.Block` half (see the loop below). The facet's runtime
+// extractor captures server registrations — `defineServerContribution` marks each
+// with a `_kind` SYMBOL whose description is the registry token — as
+// `{ kind: "server", slotId: <token>, doc.label: <type> }`, exactly mirroring how
+// web slot contributions surface as `{ kind: "slot", … }`. The former reflective
+// barrel-import workaround is gone: both sides of the invariant come from one tree.
 const check: Check = {
   id: "page.editor:block-data-registered",
   description:
@@ -88,22 +54,23 @@ const check: Check = {
     // asymmetry needs no per-plugin exception/allowlist: "page" ∈ serverTypes
     // automatically covers sub-page's web contribution.
     const webTypeToPlugins = new Map<string, string[]>();
-    const serverDirs: string[] = [];
+    const serverTypes = new Set<string>();
     for (const node of tree.byDir.values()) {
-      if (node.runtimes.server) serverDirs.push(node.dir);
       const facet = getFacet(node, contributionsFacetDef);
       if (!facet) continue;
       for (const c of facet.runtime) {
-        if (c.slotId !== WEB_BLOCK_SLOT) continue;
-        const type = c.doc.label;
-        if (!type) continue;
-        const list = webTypeToPlugins.get(type) ?? [];
-        list.push(node.id);
-        webTypeToPlugins.set(type, list);
+        if (c.kind === "slot" && c.slotId === WEB_BLOCK_SLOT) {
+          const type = c.doc.label;
+          if (!type) continue;
+          const list = webTypeToPlugins.get(type) ?? [];
+          list.push(node.id);
+          webTypeToPlugins.set(type, list);
+        } else if (c.kind === "server" && c.slotId === SERVER_BLOCK_DATA_SLOT) {
+          const type = c.doc.label;
+          if (type) serverTypes.add(type);
+        }
       }
     }
-
-    const serverTypes = await collectServerBlockDataTypes(root, serverDirs);
 
     // Fail LOUD if either side's data is missing rather than pass vacuously.
     // Empty web set ⇒ the contributions facet silently degraded; missing canary

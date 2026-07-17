@@ -73,6 +73,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Uses: `apps/sonata/primitives/rhythm-circle.RhythmCircle`, `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`, `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useHasAuthoredChord`, `apps/sonata/shell.useRhythmGroove`, `apps/sonata/shell.useSetRhythmGroove`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
   - Exports: Types: `RhythmGroove`; Values: `useSaveRhythm`
 - Server:
+  - Contributes: `resource.declare` "sonata-rhythm"
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_rhythm`)

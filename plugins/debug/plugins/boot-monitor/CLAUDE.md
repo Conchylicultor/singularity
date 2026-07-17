@@ -43,6 +43,7 @@ Key mechanics:
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
 - Server:
+  - Contributes: `ConfigV2.Register` "boot-monitor"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `debug/slow-ops.recordSlowOp`, `debug/trace/engine.captureTrace`, `infra/endpoints.implement`, `infra/jobs.defineJob`
   - Register: `defineJob('debug.boot-monitor')`
   - Routes: `POST /api/boot/gateway-report`

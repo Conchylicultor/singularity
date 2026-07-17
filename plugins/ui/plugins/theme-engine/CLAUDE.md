@@ -11,6 +11,7 @@
   - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core.useCurrentAppId`, `apps-core/theme-scope.useRootThemeScope`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useScopeMembership`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/ui-kit.appThemeScope`, `primitives/css/ui-kit.themeScopeSelectors`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ColorAdjustment`, `ColorMode`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `TokenGroupPresets`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ScopedAppTheme`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useColorMode`, `useResolvedColorMode`, `useThemeScopeId`, `useTokenGroupPresetOptions`, `useTokenGroupPresets`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`, `fields/enum/config.enumField`

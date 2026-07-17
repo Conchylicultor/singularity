@@ -1,5 +1,5 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type { PgView } from "drizzle-orm/pg-core";
+import { getViewConfig, type PgView } from "drizzle-orm/pg-core";
 
 // A plugin declares each of its derived (plain, non-materialized) views here, in
 // its server plugin definition's `contributions: [...]`. The framework collects
@@ -24,4 +24,4 @@ export const View = defineServerContribution<{
   view: PgView;
   dependsOn?: string[];
   identityTable?: string;
-}>("derived-view");
+}>("derived-view", { docLabel: (c) => getViewConfig(c.view).name });

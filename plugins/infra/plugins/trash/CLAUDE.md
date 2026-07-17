@@ -96,16 +96,17 @@ bun test plugins/infra/plugins/trash
 ## Plugin reference
 
 - Description: Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
-- Web:
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/undo-redo.useUndoRedo`
-  - Exports: Types: `UndoableTrash`, `UndoableTrashArgs`; Values: `useUndoableTrash`
 - Server:
+  - Contributes: `resource.declare` "trash-entries"
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/retention.defineRetention`
   - DB schema: `plugins/infra/plugins/trash/server/internal/tables.ts`
   - Exports: Types: `TrashExecutor`, `TrashSource`; Values: `_trashEntries`, `defineTrashSource`, `getTrashSource`, `recordTrashEntry`
   - Register: `defineJob('retention.trash_entries')`
   - Resources: `trash-entries` (push)
   - Routes: `GET /api/trash/:sourceId`, `POST /api/trash/:sourceId/:entryId/restore`, `POST /api/trash/:sourceId/:entryId/purge`
+- Web:
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/undo-redo.useUndoRedo`
+  - Exports: Types: `UndoableTrash`, `UndoableTrashArgs`; Values: `useUndoableTrash`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `TrashEntry`, `TrashOutcome`; Values: `listTrash`, `purgeTrash`, `restoreTrash`, `trashEntriesResource`, `TrashEntrySchema`, `TrashOutcomeSchema`

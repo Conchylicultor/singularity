@@ -90,6 +90,7 @@ export default createFacet<ContributionsFacetData>({
         const rawContributions = def.contributions as
           | Array<Record<string, unknown> & {
               _slotId?: string;
+              _kind?: symbol;
               id?: string;
               _doc?: { label?: string; detail?: string };
             }>
@@ -97,17 +98,31 @@ export default createFacet<ContributionsFacetData>({
         if (!rawContributions) continue;
 
         for (const c of rawContributions) {
-          if (!c._slotId) continue;
-          const comp = c.component;
-          const componentName =
-            typeof comp === "function" && comp.name ? (comp.name as string) : undefined;
-          runtimeContributions.push({
-            slotId: c._slotId,
-            // slotDisplayName + pluginId filled in by relate()
-            componentName,
-            doc: c._doc ?? {},
-            id: typeof c.id === "string" ? c.id : undefined,
-          });
+          if (typeof c._slotId === "string") {
+            // web slot contribution (existing behavior)
+            const comp = c.component;
+            const componentName =
+              typeof comp === "function" && comp.name ? (comp.name as string) : undefined;
+            runtimeContributions.push({
+              kind: "slot",
+              slotId: c._slotId,
+              // slotDisplayName + pluginId filled in by relate()
+              componentName,
+              doc: c._doc ?? {},
+              id: typeof c.id === "string" ? c.id : undefined,
+            });
+          } else if (typeof c._kind === "symbol" && c._kind.description) {
+            // server registration (defineServerContribution): the `_kind` symbol's
+            // description is the registry token (e.g. "page.block-data").
+            runtimeContributions.push({
+              kind: "server",
+              slotId: c._kind.description,
+              // pluginId filled in by relate(); no component, no SlotDef display name.
+              doc: c._doc ?? {},
+              id: typeof c.id === "string" ? c.id : undefined,
+            });
+          }
+          // else: no recognizable marker → skip (unchanged for malformed entries)
         }
       }
     }
@@ -135,7 +150,11 @@ export default createFacet<ContributionsFacetData>({
       const data = getFacet(node, contributionsFacetDef);
       if (!data || data.runtime.length === 0) continue;
       for (const c of data.runtime) {
-        if (!c.slotDisplayName) {
+        // Display names come from the slots facet — web slot contributions only.
+        // A server `slotId` (a registry token like "page.block-data") must never
+        // collide with a web `SlotDef.slotId`, so it stays undefined and renderDoc
+        // falls back to the raw token.
+        if (c.kind === "slot" && !c.slotDisplayName) {
           c.slotDisplayName = slotDisplayNames.get(c.slotId);
         }
         c.pluginId = node.id;
@@ -204,6 +223,7 @@ export default createFacet<ContributionsFacetData>({
       const data = getFacet(node, contributionsFacetDef);
       if (!data) continue;
       for (const c of data.runtime) {
+        if (c.kind !== "slot") continue;
         for (const slot of slotById.get(c.slotId) ?? []) record(slot, node.id);
       }
       for (const c of data.static) {
@@ -221,16 +241,17 @@ export default createFacet<ContributionsFacetData>({
 
   renderDoc(data: ContributionsFacetData) {
     const facts: DocFact[] = [];
-    if (data.runtime.length > 0) {
-      const values = data.runtime.map((c) => {
-        const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
-        if (c.doc.label) parts.push(`"${c.doc.label}"`);
-        if (c.doc.detail) parts.push(`(${c.doc.detail})`);
-        if (c.componentName) parts.push(`→ \`${c.componentName}\``);
-        return parts.join(" ");
-      });
-      facts.push({ folder: "web", key: "Contributes", values });
-    }
+    const fmt = (c: DocMetaContribution): string => {
+      const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
+      if (c.doc.label) parts.push(`"${c.doc.label}"`);
+      if (c.doc.detail) parts.push(`(${c.doc.detail})`);
+      if (c.componentName) parts.push(`→ \`${c.componentName}\``);
+      return parts.join(" ");
+    };
+    const web = data.runtime.filter((c) => c.kind === "slot");
+    const server = data.runtime.filter((c) => c.kind === "server");
+    if (web.length > 0) facts.push({ folder: "web", key: "Contributes", values: web.map(fmt) });
+    if (server.length > 0) facts.push({ folder: "server", key: "Contributes", values: server.map(fmt) });
     return facts;
   },
 });

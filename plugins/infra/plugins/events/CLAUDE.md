@@ -46,6 +46,7 @@ queue-health); only the wasted retry churn is removed.
 - Description: Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
 - Load-bearing: yes
 - Server:
+  - Contributes: `resource.declare` "event-emissions", `resource.declare` "event-triggers"
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/jobs.EnqueueTx`, `infra/jobs.getAllRegisteredJobNames`, `infra/jobs.NonRetryableError`, `infra/jobs.UNSAFE_getRegisteredJob`, `infra/jobs.UNSAFE_installDurableHooks`
   - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`, `plugins/infra/plugins/events/server/internal/tables.ts`
   - Exports: Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`; Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`

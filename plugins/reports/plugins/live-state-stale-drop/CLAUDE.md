@@ -61,6 +61,7 @@ the first sighting.
   - Contributes: `Core.Root` → `LiveStateStaleDropCollector`, `Reports.KindView` → `LiveStateStaleDropKindView`
   - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/live-state.httpStaleDropReportSink`, `reports.report`, `reports.Reports`
 - Server:
+  - Contributes: `report-kind` "live-state-stale-drop"
   - Uses: `reports.ReportKind`
 - Core:
   - Exports: Types: `LiveStateStaleDropPayload`; Values: `liveStateStaleDropFingerprint`, `LiveStateStaleDropPayloadSchema`

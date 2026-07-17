@@ -35,7 +35,7 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 export const ExcludeFromChangeFeed = defineServerContribution<{
   table: PgTable;
   reason: string;
-}>("change-feed-exclusion");
+}>("change-feed-exclusion", { docLabel: (c) => getTableName(c.table) });
 
 // The set of pg relation names contributed for exclusion. The drizzle table
 // object is passed (not a magic string) so a table rename is refactor-safe and a

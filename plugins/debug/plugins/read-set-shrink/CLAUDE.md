@@ -40,6 +40,7 @@ table unconditionally and the persisted set stays a superset).
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `ShrinkSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "read-set-shrink", `report-kind` "read-set-shrink"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database/live-state-snapshot.onReadSetShrink`, `infra/jobs.defineJob`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.read-set-shrink-monitor')`
 - Core:

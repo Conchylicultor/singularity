@@ -25,6 +25,7 @@ to-do-specific nesting logic.
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `toDoBlock`
 - Server:
+  - Contributes: `page.block-data` "to-do"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`

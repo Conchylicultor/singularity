@@ -65,6 +65,7 @@ the bar).
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`, `Reports.KindView` → `SlowOpKindView`
   - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.registerSlowResourceReporter`, `primitives/perfs/boot-trace.getBootTrace`, `reports.Reports`
 - Server:
+  - Contributes: `resource.declare` "slow-ops", `ConfigV2.Register` "slow-op", `report-kind` "slow-op", `change-feed-exclusion` "slow_ops"
   - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `debug/trace/engine.captureTrace`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.getJobSlowThresholdMs`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`

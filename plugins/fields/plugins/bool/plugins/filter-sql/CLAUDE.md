@@ -6,6 +6,7 @@
 
 - Description: Boolean field type: server filter-sql capability — operator→SQL fragments mirroring the data-view bool filter predicates.
 - Server:
+  - Contributes: `fields.filter-sql` "bool"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

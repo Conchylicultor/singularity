@@ -211,6 +211,7 @@ The three aggregate live resources — `config-v2.scopes` (one global `{}` map o
   - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
   - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeMembership`, `useSetConfig`
 - Server:
+  - Contributes: `resource.declare` "config-v2.values", `resource.declare` "config-v2.conflicts", `resource.declare` "config-v2.scopes", `resource.declare` "config-v2.conflict-paths", `resource.declare` "config-v2.modified-counts", `resource.declare` "config-v2.tiers"
   - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.REPO_CONFIG_DIR`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`
   - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkDescriptorScope`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `mergeConflictByPath`, `registerFieldStorageProvider`, `removeDescriptorScope`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Resources: `config-v2.conflict-paths` (push), `config-v2.conflicts` (push), `config-v2.modified-counts` (push), `config-v2.scopes` (push), `config-v2.tiers` (push), `config-v2.values` (push)

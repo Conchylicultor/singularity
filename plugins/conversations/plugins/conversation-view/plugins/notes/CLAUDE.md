@@ -9,6 +9,7 @@
   - Contributes: `Conversation.AbovePromptInput` → `NotesArea`, `Conversation.PromptBar` "Notes" → `NotesToggleButton`
   - Uses: `conversations/conversation-view.Conversation`, `infra/endpoints.fetchEndpoint`, `primitives/css/pin.Pin`, `primitives/editable-field.EditableField`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
 - Server:
+  - Contributes: `resource.declare` "conversation-notes"
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)

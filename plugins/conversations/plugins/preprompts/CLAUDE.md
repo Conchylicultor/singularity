@@ -10,6 +10,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigSelectContent`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
   - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptGlyph`, `prepromptsConfig`, `PrepromptSelect`, `usePreprompt`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
   - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`
 - Cross-plugin:

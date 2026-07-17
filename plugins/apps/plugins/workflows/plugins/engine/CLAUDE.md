@@ -22,6 +22,7 @@ linear data pipeline: each step's input is the previous step's output
   - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/relative-time.RelativeTime`
   - Exports: Values: `CollapsibleValue`, `StepStatusBadge`, `StepTraceShell`, `useStepTypeIndex`, `ValueBlock`, `Workflows`
 - Server:
+  - Contributes: `resource.declare` "workflow-definitions", `resource.declare` "workflow-executions"
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/jobs.abortDurableRun`, `infra/jobs.defineJob`, `infra/jobs.isSuspendSignal`
   - DB schema: `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables-events.ts`, `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables.ts`
   - Exports: Types: `StepExecutorRunArgs`, `StepExecutorSpec`, `StepResult`, `UserInputSubmittedPayload`; Values: `_userInputSubmittedTriggers`, `_workflowDefinitions`, `_workflowExecutions`, `_workflowExecutionSteps`, `defineStepExecutor`, `getExecutor`, `setStepExpiryIfUnset`, `userInputSubmitted`, `workflowDefinitionsResource`, `workflowExecutionsResource`

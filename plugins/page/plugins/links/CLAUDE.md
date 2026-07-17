@@ -5,14 +5,15 @@
 ## Plugin reference
 
 - Description: Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
-- Web:
-  - Uses: `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/live-state.useResource`
-  - Exports: Types: `BacklinksProps`; Values: `Backlinks`
 - Server:
+  - Contributes: `resource.declare` "page-backlinks", `resource.declare` "page-links", `trigger` "page.links.reindex", `page.editor.block.beforeDelete`, `page.editor.block.onTrash`, `page.editor.block.onRestore`
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockDeleteHook`, `page/editor.BlockLifecycle`, `page/editor.BlockRestoreHook`, `page/editor.blocksChanged`, `page/editor.BlockTrashHook`, `page/editor.PAGE_BLOCK_TYPE`
   - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
   - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `pageLinksLiveResource`, `reindexPage`
   - Register: `defineJob('page.links.reindex')`
+- Web:
+  - Uses: `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/live-state.useResource`
+  - Exports: Types: `BacklinksProps`; Values: `Backlinks`
 - Core:
   - Uses: `page/editor.SvgNodeSchema`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `BacklinkRow`, `PageLinkEdge`; Values: `BacklinkRowSchema`, `backlinksResource`, `PageLinkEdgeSchema`, `pageLinksResource`

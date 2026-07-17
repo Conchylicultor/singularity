@@ -9,6 +9,7 @@
   - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
   - Uses: `apps/pages/page-tree.pageDetailPane`, `apps/pages/shell.Pages`, `page/editor.PageIcon`, `primitives/css/row.Row`, `primitives/pane.useOpenPane`, `search/quick-find.QuickFindDialog`
 - Server:
+  - Contributes: `trigger` "pages.search.reindex", `page.editor.block.beforeDelete`, `page.editor.block.onTrash`, `page.editor.block.onRestore`
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/warmup.defineWarmup`, `page/editor._blocks`, `page/editor.BlockDeleteHook`, `page/editor.BlockLifecycle`, `page/editor.BlockRestoreHook`, `page/editor.blocksChanged`, `page/editor.BlockTrashHook`, `page/editor.PAGE_BLOCK_TYPE`, `page/editor.pageData`, `search/engine.deleteSearchDocs`, `search/engine.getSourceDocMetadata`, `search/engine.upsertSearchDocs`
   - Register: `defineJob('pages.search.reindex')`, `defineJob('pages.search.backfill')`, `defineWarmup('pages.search.backfill')`
 

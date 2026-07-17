@@ -10,6 +10,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/latest-ref.useEventCallback`
   - Exports: Types: `KeyboardProps`, `KeyHighlight`, `KeyLane`, `KeyStyle`; Values: `isBlackPitch`, `Keyboard`, `keyboardStyleConfig`, `keyLayout`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/website/demos/app-gallery`

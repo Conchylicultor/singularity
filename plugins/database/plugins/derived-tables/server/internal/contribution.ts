@@ -12,4 +12,6 @@ import type { DerivedRollupSpec } from "@plugins/database/plugins/derived-tables
 // The contributed value is an opaque-SQL `DerivedRollupSpec` (table + create /
 // function / trigger / reconcile DDL strings). The generic layer never inspects
 // the rollup's shape; it only orchestrates the four DDL phases.
-export const DerivedTable = defineServerContribution<DerivedRollupSpec>("derived-table");
+export const DerivedTable = defineServerContribution<DerivedRollupSpec>("derived-table", {
+  docLabel: (s) => s.table,
+});

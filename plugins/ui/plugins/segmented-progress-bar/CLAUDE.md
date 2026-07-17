@@ -11,6 +11,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.renderIsolated`, `ui/theme-engine.ThemeEngine`
   - Exports: Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`; Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`

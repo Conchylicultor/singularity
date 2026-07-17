@@ -6,6 +6,7 @@
 
 - Description: Date field type: server filter-sql capability — day-granular operator→SQL fragments mirroring the data-view date filter predicates.
 - Server:
+  - Contributes: `fields.filter-sql` "date"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

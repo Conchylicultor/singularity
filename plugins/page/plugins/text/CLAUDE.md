@@ -19,6 +19,7 @@ The bulleted-list block is the second consumer of the same primitive.
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `textBlock`
 - Server:
+  - Contributes: `page.block-data` "text"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`

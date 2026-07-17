@@ -11,6 +11,7 @@
   - Uses: `ui/variant-region.defineVariantRegionWeb`
   - Exports: Values: `conversationsSidebarRegionWeb`, `SidebarRegion`
 - Server:
+  - Contributes: `ConfigV2.Register` "conversations-sidebar"
   - Uses: `ui/variant-region.variantRegionServerContribution`
 - Core:
   - Uses: `ui/variant-region.defineVariantRegion`

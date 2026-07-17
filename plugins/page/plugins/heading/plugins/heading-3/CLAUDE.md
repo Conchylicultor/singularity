@@ -25,6 +25,7 @@ from the dispatch slot.
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `heading3Block`
 - Server:
+  - Contributes: `page.block-data` "heading-3"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`

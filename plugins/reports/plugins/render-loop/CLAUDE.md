@@ -9,6 +9,7 @@
   - Contributes: `Core.Root` → `RenderLoopController`, `Reports.KindView` → `RenderLoopKindView`
   - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/log-channels.clientLog`, `reports.report`, `reports.Reports`
 - Server:
+  - Contributes: `report-kind` "render-loop"
   - Uses: `reports.ReportKind`
 - Core:
   - Exports: Types: `RenderLoopPayload`; Values: `RENDER_LOOP`, `renderLoopFingerprint`, `RenderLoopPayloadSchema`

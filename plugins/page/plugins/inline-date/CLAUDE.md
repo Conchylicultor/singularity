@@ -5,12 +5,13 @@
 ## Plugin reference
 
 - Description: Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
-- Web:
-  - Uses: `page/editor.BlockTextPluginProps`, `page/editor.registerBlockTextExtension`, `primitives/css/center.Center`, `primitives/css/link-chip.LinkChip`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`
 - Server:
+  - Contributes: `trigger` "page.reminders.reconcile"
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.blocksChanged`, `shell/notifications.recordNotification`
   - DB schema: `plugins/page/plugins/inline-date/server/internal/tables.ts`
   - Register: `defineJob('page.reminders.reconcile')`, `defineJob('page.reminders.fire')`
+- Web:
+  - Uses: `page/editor.BlockTextPluginProps`, `page/editor.registerBlockTextExtension`, `primitives/css/center.Center`, `primitives/css/link-chip.LinkChip`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`
 - Core:
   - Exports: Values: `dateToken`, `MENTION_TOKEN_PATTERN`, `REMINDER_TOKEN_PATTERN`, `reminderToken`, `scanReminderTokens`, `stripInlineTokens`
 

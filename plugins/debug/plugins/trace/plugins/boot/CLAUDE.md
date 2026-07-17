@@ -39,6 +39,7 @@ recompile), so partial reports from either side of the skew must stay valid.
   - Contributes: `Trace.Lane` → `BootLane`
   - Uses: `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.MultiSpanLane`, `debug/profiling.SpanBar`, `debug/trace/engine.Trace`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`
 - Server:
+  - Contributes: `trace-event-class` "boot"
   - Uses: `debug/trace/engine.defineTraceEventClass`
 - Core:
   - Exports: Types: `BootGateway`, `BootMemoryCheckpoint`, `BootSection`, `BootSpan`; Values: `BootGatewaySchema`, `BootMemoryCheckpointSchema`, `BootSectionSchema`, `BootSpanSchema`

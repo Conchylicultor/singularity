@@ -10,6 +10,7 @@
   - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `page/math/render.KatexMath`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/editable-field.useEditableField`
   - Exports: Values: `EQUATION_TYPE`, `equationBlock`
 - Server:
+  - Contributes: `page.block-data` "equation"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`

@@ -19,6 +19,7 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `reports.report`
   - Exports: Types: `ModelSelectProps`; Values: `familyClass`, `ModelSelect`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
   - Exports: Values: `resolveCliFlag`
 - Core:

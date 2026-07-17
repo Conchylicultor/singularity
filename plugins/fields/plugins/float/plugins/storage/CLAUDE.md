@@ -11,6 +11,7 @@ via `build(name) => doublePrecision(name)`. Resolved by exact token through
 
 - Description: Float field type: DB storage capability — maps to a Postgres double precision column.
 - Server:
+  - Contributes: `fields.storage` "float"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

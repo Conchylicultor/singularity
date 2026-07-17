@@ -6,6 +6,7 @@
 
 - Description: Number field type: server filter-sql capability — operator→SQL fragments mirroring the data-view number filter predicates.
 - Server:
+  - Contributes: `fields.filter-sql` "number"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

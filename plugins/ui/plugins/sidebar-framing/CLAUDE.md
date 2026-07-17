@@ -11,6 +11,7 @@
   - Uses: `primitives/app-shell.AppShell`, `ui/variant-region.defineVariantRegionWeb`
   - Exports: Values: `SidebarFraming`
 - Server:
+  - Contributes: `ConfigV2.Register` "sidebar-framing"
   - Uses: `ui/variant-region.variantRegionServerContribution`
 - Core:
   - Uses: `ui/variant-region.defineVariantRegion`

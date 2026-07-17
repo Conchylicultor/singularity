@@ -30,6 +30,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   - Uses: `apps/pages/page-tree.PageDetail`, `apps/pages/page-tree.PageTree`, `infra/endpoints.useEndpointMutation`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
   - Exports: Types: `StarredPageRow`; Values: `StarredPageRowSchema`, `starredPagesResource`
 - Server:
+  - Contributes: `resource.declare` "pages-starred"
   - Uses: `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/query-resource.queryResource`, `page/editor._blocks`
   - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`
   - Entity extension of: `page/editor` (table `page_blocks_ext_starred`)

@@ -26,6 +26,7 @@ Enter splits into a sibling quote — no quote-specific nesting logic.
   - Uses: `page/editor.BlockRendererProps`, `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `quoteBlock`
 - Server:
+  - Contributes: `page.block-data` "quote"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`

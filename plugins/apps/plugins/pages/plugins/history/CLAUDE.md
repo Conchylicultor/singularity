@@ -9,6 +9,7 @@
   - Contributes: `PageDetail.HeaderActions` → `VersionHistoryAction`
   - Uses: `apps/pages/page-tree.PageDetail`, `history/dialog.VersionHistoryDialog`, `infra/endpoints.useEndpoint`, `page/editor.BLOCK_INSET`, `page/editor.PageIcon`, `page/read-only-view.ReadOnlyBlocks`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`
 - Server:
+  - Contributes: `trigger` "pages.history.schedule", `page.editor.block.beforeDelete`
   - Uses: `database.db`, `history/engine.defineHistorySource`, `history/engine.deleteVersions`, `history/engine.recordVersion`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockDeleteHook`, `page/editor.BlockLifecycle`, `page/editor.blocksChanged`, `page/editor.PAGE_BLOCK_TYPE`, `page/editor.PageContentSnapshot`, `page/editor.replacePageContent`, `page/editor.serializePageContent`
   - Register: `defineHistorySource('pages')`, `defineJob('pages.history.snapshot')`, `defineJob('pages.history.schedule')`
 

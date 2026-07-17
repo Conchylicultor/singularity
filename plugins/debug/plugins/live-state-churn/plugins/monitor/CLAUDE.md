@@ -26,6 +26,7 @@ The `live-state-noop` report kind renders a one-line Debug → Reports summary
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `NoopSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "live-state-churn", `report-kind` "live-state-noop"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/jobs.defineJob`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.live-state-churn-monitor')`
 - Core:

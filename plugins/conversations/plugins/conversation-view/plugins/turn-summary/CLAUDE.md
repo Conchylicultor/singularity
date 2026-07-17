@@ -30,6 +30,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
   - Contributes: `Conversation.AbovePromptInput` → `TurnSummaryCard`, `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `conversations/conversation-view.Conversation`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`
 - Server:
+  - Contributes: `ConfigV2.Register` "config", `resource.declare` "turn-summaries", `trigger` "turn-summary.generate"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_turn_summary`)

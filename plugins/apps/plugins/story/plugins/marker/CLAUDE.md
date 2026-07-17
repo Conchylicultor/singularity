@@ -5,16 +5,17 @@
 ## Plugin reference
 
 - Description: Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.
-- Web:
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
-  - Exports: Types: `StoryMark`; Values: `markStory`, `storiesResource`, `unmarkStory`, `useIsStory`, `useStories`
 - Server:
+  - Contributes: `resource.declare` "stories"
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `page/editor._blocks`
   - DB schema: `plugins/apps/plugins/story/plugins/marker/server/internal/tables.ts`
   - Entity extension of: `page/editor` (table `page_blocks_ext_story`)
   - Exports: Values: `getStoryMark`, `setStoryMark`, `storiesResource`, `storyMark`
   - Resources: `stories` (push)
   - Routes: `PUT /api/stories/:pageId`, `DELETE /api/stories/:pageId`
+- Web:
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
+  - Exports: Types: `StoryMark`; Values: `markStory`, `storiesResource`, `unmarkStory`, `useIsStory`, `useStories`
 - Cross-plugin:
   - Imported by: `apps/story/pages-integration`, `apps/story/shell`
 - Shared:

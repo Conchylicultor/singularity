@@ -35,6 +35,7 @@ lane that parses it.
   - Contributes: `Trace.Lane` → `StallLane`
   - Uses: `debug/profiling.formatDuration`, `debug/trace/engine.Trace`, `primitives/css/badge.Badge`, `primitives/css/fill.Fill`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`
 - Server:
+  - Contributes: `trace-event-class` "stall"
   - Uses: `debug/trace/engine.defineTraceEventClass`
 - Cross-plugin:
   - Imported by: `debug/stall-monitor`

@@ -31,6 +31,7 @@ Throws `ClaudeCliError` on non-zero exit or timeout. Callers that need graceful 
 
 - Description: One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
 - Server:
+  - Contributes: `resource.declare` "claude-cli-calls"
   - Uses: `database.db`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/paths.CLAUDE`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
   - Exports: Types: `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`

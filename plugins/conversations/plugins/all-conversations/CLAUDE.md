@@ -11,6 +11,7 @@
   - Uses: `conversations/conversation-ui/item.ConvStatusDot`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/inline.Inline`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `shell.Shell`
   - Exports: Values: `allConversationsPane`, `conversationFieldDefs`
 - Server:
+  - Contributes: `resource.declare` "conversations-revision"
   - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `tasks/tasks-core.conversationsView`
   - Exports: Values: `conversationsRevisionResource`, `handleQuery`
   - Resources: `conversations-revision` (push)

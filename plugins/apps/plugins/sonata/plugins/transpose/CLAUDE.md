@@ -40,6 +40,7 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
   - Uses: `apps/sonata/primitives/toolbar-control.ToolbarControl`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useSetTransposeSemitones`, `apps/sonata/shell.useSonata`, `apps/sonata/shell.useTransposeSemitones`, `infra/endpoints.fetchEndpoint`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
   - Exports: Values: `saveTranspose`
 - Server:
+  - Contributes: `resource.declare` "sonata-transpose"
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/transpose/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_transpose`)

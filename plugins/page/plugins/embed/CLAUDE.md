@@ -10,6 +10,7 @@
   - Uses: `page/editor.Editor`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`
   - Exports: Values: `EMBED_TYPE`, `embedBlock`
 - Server:
+  - Contributes: `page.block-data` "embed"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`

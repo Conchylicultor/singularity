@@ -15,5 +15,7 @@ interface ConfigRegistration {
 }
 
 export const ConfigV2 = {
-  Register: defineServerContribution<ConfigRegistration>("ConfigV2.Register"),
+  Register: defineServerContribution<ConfigRegistration>("ConfigV2.Register", {
+    docLabel: (c) => c.descriptor.name,
+  }),
 };

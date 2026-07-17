@@ -117,6 +117,7 @@ live-state-churn's accumulator + scheduled job.)
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `OpRateSummary`, `Reports.KindView` → `OpTimeSummary`
   - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "op-rate", `report-kind` "op-rate", `report-kind` "op-time"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `debug/trace/engine.captureTrace`, `infra/jobs.defineJob`, `primitives/log-channels.Log`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.op-rate-monitor')`
 - Core:

@@ -111,6 +111,7 @@ type and the read schema cannot drift.
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
 - Server:
+  - Contributes: `ConfigV2.Register` "paging-probe"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`

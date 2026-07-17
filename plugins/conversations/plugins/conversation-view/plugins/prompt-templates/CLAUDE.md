@@ -9,6 +9,7 @@
   - Contributes: `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`, `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigGearButton`, `conversations.useConversation`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `primitives/css/cluster.Cluster`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ButtonGroup`, `primitives/css/ui-kit.cn`, `primitives/floating-action.FloatingAction`, `primitives/floating-action.FloatingActionFadeIn`, `primitives/prompt-editor.PromptEditorSlots`, `primitives/responsive-overflow.ResponsiveOverflow`, `shell/notifications.toast`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Shared:
   - Exports: Values: `promptTemplatesConfig`

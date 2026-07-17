@@ -31,6 +31,7 @@ never the reverse) and the feature fully opt-in and removable.
   - Uses: `config_v2/config-link.ConfigPopoverHeader`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `conversations/preprompts.PrepromptGlyph`, `conversations/preprompts.prepromptsConfig`, `conversations/preprompts.usePreprompt`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/scroll.Scroll`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/tooltip.WithTooltip`
   - Exports: Values: `useConversationPreprompt`
 - Server:
+  - Contributes: `resource.declare` "conversation-preprompts", `trigger` "conversation-preprompt.record"
   - Uses: `conversations.conversationCreated`, `conversations/preprompts.resolvePrepromptItem`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/task-preprompt.getTaskPreprompt`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)

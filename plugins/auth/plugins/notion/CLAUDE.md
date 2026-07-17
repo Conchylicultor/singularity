@@ -9,6 +9,7 @@
   - Contributes: `Auth.Provider` "Notion", `ConfigV2.WebRegister`
   - Uses: `auth.Auth`, `config_v2.ConfigV2`
 - Server:
+  - Contributes: `ConfigV2.Register` "auth-notion"
   - Uses: `config_v2.ConfigV2`
 - Central:
   - Uses: `auth.registerAuthProvider`, `fields/secret/config.readSecretConfig`

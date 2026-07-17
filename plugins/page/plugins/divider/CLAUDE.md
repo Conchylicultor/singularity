@@ -10,6 +10,7 @@
   - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `primitives/css/spacing.Inset`, `primitives/css/ui-kit.cn`
   - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
 - Server:
+  - Contributes: `page.block-data` "divider"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`

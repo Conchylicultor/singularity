@@ -10,6 +10,7 @@
   - Uses: `config_v2.ConfigV2`, `infra/endpoints.fetchEndpoint`
   - Exports: Values: `markConversationViewed`
 - Server:
+  - Contributes: `ConfigV2.Register` "conversation-hibernation"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.deleteConversation`, `conversations.ensureResumed`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.isMain`, `tasks/tasks-core.listHibernationCandidates`, `tasks/tasks-core.setConversationHibernated`, `tasks/tasks-core.touchConversationViewed`
   - Register: `defineJob('conversations.hibernate-idle')`
   - Routes: `POST /api/conversations/:id/viewed`

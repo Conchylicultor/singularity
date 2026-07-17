@@ -10,6 +10,7 @@
   - Uses: `apps/sonata/library.Library`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/relative-time.formatRelativeTime`
   - Exports: Values: `usePlaybackHistory`, `usePlaybackHistoryMap`
 - Server:
+  - Contributes: `resource.declare` "sonata-playback-history"
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)

@@ -11,7 +11,9 @@ import { deleteTriggersFor, trigger } from "./trigger";
 import type { TriggerSpec } from "./trigger";
 
 // biome-ignore lint/suspicious/noExplicitAny: type params erased at the contribution boundary
-export const Trigger = defineServerContribution<TriggerSpec<any, any>>("trigger");
+export const Trigger = defineServerContribution<TriggerSpec<any, any>>("trigger", {
+  docLabel: (t) => t.do.name,
+});
 
 export async function syncTriggerContributions(): Promise<void> {
   const declared = Trigger.getContributions();

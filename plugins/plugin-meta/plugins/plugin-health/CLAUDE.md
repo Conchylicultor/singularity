@@ -9,6 +9,7 @@
   - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
   - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/scroll.Scroll`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
 - Server:
+  - Contributes: `resource.declare` "plugin-health-reviews"
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/query-resource.queryResource`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)

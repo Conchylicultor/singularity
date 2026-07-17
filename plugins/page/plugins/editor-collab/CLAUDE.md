@@ -51,6 +51,7 @@ bun test plugins/page/plugins/editor-collab/server/internal
 
 - Description: Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
 - Server:
+  - Contributes: `resource.declare` "page-block-doc"
   - Uses: `database.db`, `infra/endpoints.implement`, `page/editor._blocks`, `primitives/collab-doc.bytea`
   - DB schema: `plugins/page/plugins/editor-collab/server/internal/tables.ts`
   - Exports: Values: `_pageBlockDocs`, `blockContentServerResource`

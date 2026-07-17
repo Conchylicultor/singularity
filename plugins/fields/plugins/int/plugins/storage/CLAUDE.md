@@ -11,6 +11,7 @@ runtime) mapping the `int` field token to a Postgres `integer` column via
 
 - Description: Integer field type: DB storage capability — maps to a Postgres integer column.
 - Server:
+  - Contributes: `fields.storage` "int"
   - Uses: `fields/server-capabilities.Fields`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`

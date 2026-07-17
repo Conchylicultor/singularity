@@ -27,13 +27,14 @@ that settles would stop retrying and would render as a permanent answer.
 ## Plugin reference
 
 - Description: Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
-- Web:
-  - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
-  - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Server:
+  - Contributes: `resource.declare` "edited-files"
   - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createSignedMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `primitives/commit-list.WorktreeGoneError`, `tasks/tasks-core.getConversation`
   - Exports: Values: `editedFilesResource`, `editedFilesSignature`, `getEditedFiles`
   - Resources: `edited-files` (invalidate)
+- Web:
+  - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
+  - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Core:
   - Uses: `primitives/live-state.Resolvable`, `primitives/live-state.resolvableSchema`, `primitives/live-state.resourceDescriptor`, `primitives/live-state.unresolved`
   - Exports: Types: `EditedFile`, `EditedFilesPayload`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`

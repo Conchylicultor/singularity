@@ -10,6 +10,7 @@
   - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `infra/attachments.getAttachmentFile`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/live-state.useResource`
   - Exports: Values: `MIDI_SOURCE_ID`, `useSongMidi`
 - Server:
+  - Contributes: `resource.declare` "sonata-song-midi"
   - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.songAttachments`, `apps/sonata/library.updateSongMeta`, `database.db`, `infra/attachments.createAttachment`, `infra/attachments.getAttachment`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)

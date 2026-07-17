@@ -152,6 +152,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useSetConfig`, `config_v2/staging.useStageConfigDefault`, `infra/endpoints.useEndpoint`
   - Exports: Types: `CompositionDataResult`, `DiffState`, `ImpactResult`, `ManifestActions`, `PromoteManifestsToGit`; Values: `clearActive`, `pinAsRoot`, `setActiveComposition`, `setCompareComposition`, `updateActiveDraft`, `useActiveComposition`, `useActiveMembership`, `useCompareComposition`, `useCompositionData`, `useDiffMap`, `useDisabledClosure`, `useEnsureCompositionData`, `useGraph`, `useImpact`, `useInclusion`, `useIsCompareMode`, `useManifestActions`, `useManifestItems`, `usePromoteManifestsToGit`
 - Server:
+  - Contributes: `ConfigV2.Register` "compositions"
   - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `plugin-meta/plugin-tree.getFacetsTreeCached`
   - Routes: `GET /api/composition/data`
 - Core:

@@ -89,6 +89,7 @@ rename.
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `StallSummary`
   - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "stall-monitor", `report-kind` "event-loop-stall"
   - Uses: `config_v2.ConfigV2`, `debug/trace/engine.captureTrace`, `reports.recordReport`, `reports.ReportKind`
   - Exports: Values: `recordEventLoopStall`
 - Core:

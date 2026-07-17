@@ -87,6 +87,7 @@ aggregate queries per tick and files reports only when a threshold trips:
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `DeadJobSummary`, `Reports.KindView` → `BacklogSummary`, `Reports.KindView` → `SlotHogSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "queue-health", `report-kind` "queue-dead-job", `report-kind` "queue-backlog", `report-kind` "queue-slot-hog"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.JOB_CONCURRENCY`, `infra/jobs.queryBacklogByJobName`, `infra/jobs.queryDeadJobStats`, `infra/jobs.queryQueueBacklog`, `infra/jobs.queryRunningJobs`, `infra/mcp.Mcp`, `reports.recordReport`, `reports.ReportKind`, `tasks/tasks-core.getConversation`
   - Register: `defineJob('debug.queue-health-monitor')`, `mcpTool('get_queue_health')`
   - Routes: `GET /api/debug/queue-health/summary`

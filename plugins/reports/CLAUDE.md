@@ -10,6 +10,7 @@
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
+  - Contributes: `resource.declare` "reports", `change-feed-exclusion` "reports"
   - Uses: `build/server-build-id.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `infra/retention.defineRetention`, `infra/warmup.defineWarmup`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports: Types: `InvestigationTaskRequest`, `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `reportInvestigationSink`, `ReportKind`, `ReportNoiseRule`, `reportsResource`

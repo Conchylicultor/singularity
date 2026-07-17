@@ -58,6 +58,7 @@ plus a per-song reset.
   - Uses: `apps/sonata/audio/instruments.SonataAudio`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/color-picker.SwatchGrid`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`
   - Exports: Types: `TrackMixerEntry`; Values: `blackKeyColor`, `useHiddenTrackIds`, `useMutedTrackIds`, `useTrackColorMap`, `useTrackInstrumentMap`, `useTrackMixerEntries`
 - Server:
+  - Contributes: `resource.declare` "sonata-track-view"
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
   - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
   - Exports: Values: `_trackView`, `trackViewLiveResource`

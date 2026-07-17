@@ -11,6 +11,7 @@
   - Uses: `apps-core.Apps`, `ui/variant-region.defineVariantRegionWeb`
   - Exports: Values: `AppRailFraming`
 - Server:
+  - Contributes: `ConfigV2.Register` "app-rail-framing"
   - Uses: `ui/variant-region.variantRegionServerContribution`
 - Core:
   - Uses: `ui/variant-region.defineVariantRegion`

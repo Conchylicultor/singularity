@@ -7,6 +7,7 @@
 - Description: Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
 - Load-bearing: yes
 - Server:
+  - Contributes: `resource.declare` "git-watcher.refHead"
   - Uses: `infra/events.defineTriggerEvent`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/commit-list.GitError`, `primitives/commit-list.tryRunGit`
   - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
   - Exports: Types: `RefAdvancedPayload`, `RefHead`; Values: `_refAdvancedTriggers`, `lastKnownMainSha`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`

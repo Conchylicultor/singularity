@@ -35,6 +35,7 @@ inferred key.
   - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSetKeyAutoDetect`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
   - Exports: Values: `saveKeyAutoDetect`
 - Server:
+  - Contributes: `resource.declare` "sonata-key-auto-detect"
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_key_auto_detect`)

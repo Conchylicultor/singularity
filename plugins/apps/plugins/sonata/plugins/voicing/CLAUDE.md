@@ -40,6 +40,7 @@ without changing those types.
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
 - Server:
+  - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses: `apps/sonata/rhythm.effectiveOnsets`, `apps/sonata/score.bars`, `apps/sonata/score.scoreEndBeat`, `apps/sonata/theory.chordPitches`, `apps/sonata/theory.nearestVoicing`, `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/float/config.floatField`

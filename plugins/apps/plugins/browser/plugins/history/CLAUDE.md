@@ -10,6 +10,7 @@
   - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.useResource`
   - Exports: Types: `BrowserRecent`; Values: `BrowserRecentSchema`, `browserRecentsResource`, `useRecents`, `useRecordVisit`
 - Server:
+  - Contributes: `resource.declare` "browser-recents"
   - Uses: `database.db`, `infra/endpoints.implement`
   - DB schema: `plugins/apps/plugins/browser/plugins/history/server/internal/tables.ts`
   - Exports: Values: `browserHistory`, `browserRecentsServerResource`, `recordVisit`

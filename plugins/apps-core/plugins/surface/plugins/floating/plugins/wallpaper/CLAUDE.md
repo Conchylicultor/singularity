@@ -11,6 +11,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/css/grid.Grid`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.DialogTitle`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/cursor-menu.CursorAnchor`, `primitives/cursor-menu.CursorAnchoredMenu`, `primitives/imperative-dialog.openDialog`, `primitives/loading.Loading`, `primitives/search.SearchInput`
   - Exports: Types: `WallpaperCandidate`; Values: `DesktopContextMenu`, `openWallpaperPicker`, `Wallpaper`, `WallpaperAttribution`, `WallpaperSearchPanel`
 - Server:
+  - Contributes: `ConfigV2.Register` "wallpaper"
   - Uses: `config_v2.ConfigV2`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`, `infra/safe-fetch.parsePublicUrl`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
   - Exports: Types: `WallpaperSearchProvider`; Values: `defineWallpaperProvider`, `getWallpaperProvider`
   - Routes: `GET /api/wallpaper/search`, `POST /api/wallpaper/import-url`, `POST /api/wallpaper/upload`, `GET /api/wallpaper/image`

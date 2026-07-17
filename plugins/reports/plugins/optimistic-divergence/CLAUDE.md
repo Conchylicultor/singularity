@@ -63,6 +63,7 @@ bell resurfaces it periodically rather than collapsing forever onto the first si
   - Contributes: `Core.Root` → `OptimisticDivergenceCollector`, `Reports.KindView` → `OptimisticDivergenceKindView`
   - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/optimistic-mutation.optimisticDivergenceReportSink`, `reports.report`, `reports.Reports`
 - Server:
+  - Contributes: `report-kind` "optimistic-divergence"
   - Uses: `reports.ReportKind`
 - Core:
   - Exports: Types: `OptimisticDivergencePayload`; Values: `optimisticDivergenceFingerprint`, `OptimisticDivergencePayloadSchema`, `StoredOptimisticDivergencePayloadSchema`

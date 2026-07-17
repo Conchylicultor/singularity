@@ -5,10 +5,11 @@
 ## Plugin reference
 
 - Description: Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
+- Server:
+  - Contributes: `page.links.extractor` "* (all blocks)"
+  - Uses: `page/links.PageLinks`
 - Web:
   - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageIcon`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/css/center.Center`, `primitives/css/link-chip.LinkChip`, `primitives/css/placeholder.Placeholder`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`
-- Server:
-  - Uses: `page/links.PageLinks`
 - Core:
   - Exports: Values: `PAGE_LINK_TOKEN_PATTERN`, `pageLinkToken`, `scanPageLinkTokens`
 

@@ -50,6 +50,7 @@ onto each other. No notification cooldown: each episode is a fresh row.
   - Contributes: `Reports.KindView` → `DuressShedSummary`
   - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+  - Contributes: `report-kind` "duress-shed"
   - Uses: `reports.ReportKind`
 - Core:
   - Exports: Types: `DuressShedPayload`; Values: `DuressShedPayloadSchema`
