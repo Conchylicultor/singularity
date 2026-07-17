@@ -9,6 +9,11 @@ import {
   bootProfileListPane,
 } from "./panes";
 
+// Pure presentational Gantt of a BootTrace (no store/performance.* reads), so a
+// beacon-carried snapshot renders identically elsewhere (the trace detail's
+// client-boot lane embeds it).
+export { BootProfileGantt } from "./components/boot-profile-gantt";
+
 export default {
   description:
     "Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots.",

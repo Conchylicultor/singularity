@@ -13,6 +13,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-op-rate-monitor",
   "server-read-set-monitor",
   "server-boot-budget-monitor",
+  "server-boot-monitor",
   "server-session-monitor",
   "server-duress-shed",
   "server-stall-monitor",

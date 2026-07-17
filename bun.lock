@@ -1645,6 +1645,10 @@
       "name": "@singularity/plugin-debug-boot-events",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/boot-monitor": {
+      "name": "@singularity/plugin-debug-boot-monitor",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/boot-profile": {
       "name": "@singularity/plugin-debug-boot-profile",
       "version": "0.0.1",
@@ -1790,6 +1794,14 @@
     },
     "plugins/debug/plugins/trace": {
       "name": "@singularity/plugin-debug-trace",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/boot": {
+      "name": "@singularity/plugin-debug-trace-boot",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/client-boot": {
+      "name": "@singularity/plugin-debug-trace-client-boot",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/trace/plugins/contention": {
@@ -5733,6 +5745,8 @@
 
     "@singularity/plugin-debug-boot-events": ["@singularity/plugin-debug-boot-events@workspace:plugins/debug/plugins/boot-events"],
 
+    "@singularity/plugin-debug-boot-monitor": ["@singularity/plugin-debug-boot-monitor@workspace:plugins/debug/plugins/boot-monitor"],
+
     "@singularity/plugin-debug-boot-profile": ["@singularity/plugin-debug-boot-profile@workspace:plugins/debug/plugins/boot-profile"],
 
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
@@ -5804,6 +5818,10 @@
     "@singularity/plugin-debug-timeline": ["@singularity/plugin-debug-timeline@workspace:plugins/debug/plugins/timeline"],
 
     "@singularity/plugin-debug-trace": ["@singularity/plugin-debug-trace@workspace:plugins/debug/plugins/trace"],
+
+    "@singularity/plugin-debug-trace-boot": ["@singularity/plugin-debug-trace-boot@workspace:plugins/debug/plugins/trace/plugins/boot"],
+
+    "@singularity/plugin-debug-trace-client-boot": ["@singularity/plugin-debug-trace-client-boot@workspace:plugins/debug/plugins/trace/plugins/client-boot"],
 
     "@singularity/plugin-debug-trace-contention": ["@singularity/plugin-debug-trace-contention@workspace:plugins/debug/plugins/trace/plugins/contention"],
 

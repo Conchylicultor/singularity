@@ -13,8 +13,9 @@ const KIND_VARIANT: Record<string, BadgeVariant> = {
   flush: "info",
   sub: "info",
   job: "muted",
-  "client-element": "success",
-  "client-page-load": "success",
+  boot: "warning",
+  element: "success",
+  "page-load": "success",
 };
 
 export function triggerVariant(kind: string): BadgeVariant {

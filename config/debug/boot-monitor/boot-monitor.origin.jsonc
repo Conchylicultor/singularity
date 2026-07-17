@@ -1,0 +1,7 @@
+// @hash 0f305d6abc80
+{
+  // When off, the monitor job returns early and mints no boot slow-ops or traces.
+  "enabled": true,
+  // Mint a 'boot' slow-op + trace when a server boot's total profiled duration (through the drainWarmups phase) exceeds this many ms. Within-budget boots mint nothing — Debug → Boot Profile stays the always-on deep-dive.
+  "totalBootBudgetMs": 10000
+}

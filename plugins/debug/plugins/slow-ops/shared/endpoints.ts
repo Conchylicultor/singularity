@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { ClientBootSectionSchema } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { CallerRefSchema } from "../core";
 
 // The two client-side slow-op signals (page-load, element-settle) POST here.
@@ -22,6 +23,13 @@ export const SlowOpClientBodySchema = z.object({
   // resource compute.
   transportColdStart: z.boolean().optional(),
   transportWaitMs: z.number().optional(),
+  // Additive, backward-compatible client evidence for the `page-load` signal
+  // (absent for `element` and older clients): the browser's own boot
+  // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the
+  // keepalive beacon stays small. The handler threads it into the page-load
+  // trigger's detail, where the client-boot trace class validates and persists
+  // it; recordSlowOp never sees it.
+  clientBoot: ClientBootSectionSchema.optional(),
 });
 export type SlowOpClientBody = z.infer<typeof SlowOpClientBodySchema>;
 

@@ -29,15 +29,22 @@ engine+kind split:
   `captureTrace()` (admission → sync capture → async enrich/persist), the
   `traces` table + 7-day sweep, and the list/get/test endpoints. Owns the
   registry and generic interfaces; **never names a class**.
-- **`spans` / `gates` / `contention` / `stall`** — the **built-in event
-  classes**, each a real registry contributor (not an engine internal). They
-  prove the open API: adding a perf signal is one new plugin, zero engine edits —
-  exactly how `reports` never names `crash`. A class contributes a server capture
-  spec (`defineTraceEventClass`) and a web `Trace.Lane` that paints its section.
-  `stall` is the outlier: it is **trigger-owned** — the health-monitor sampler
-  detects an event-loop freeze, pre-aggregates the JSC stacks, and fires a
-  `critical` `stall` trigger carrying the section in `trigger.detail`; the class
-  is a passthrough. (The others read ambient in-memory state at the trip instant.)
+- **`spans` / `gates` / `contention` / `stall` / `boot` / `client-boot`** — the
+  **built-in event classes**, each a real registry contributor (not an engine
+  internal). They prove the open API: adding a perf signal is one new plugin,
+  zero engine edits — exactly how `reports` never names `crash`. A class
+  contributes a server capture spec (`defineTraceEventClass`) and a web
+  `Trace.Lane` that paints its section. `spans`/`gates`/`contention` read
+  ambient in-memory state at the trip instant; `stall`, `boot`, and
+  `client-boot` are **trigger-owned** — the producer pre-aggregates the evidence
+  and hands it in via `trigger.detail`, the class is a schema-validating
+  passthrough. `stall`: the health-monitor sampler's JSC stack histogram on a
+  `critical` `stall` trigger. `boot`: the server's boot-phase spans (+ the
+  gateway's spawn/readiness stats when reported), minted by `debug/boot-monitor`
+  on an over-budget boot — necessarily *after* the fact, so the section carries
+  its own wall-clock anchor and renders on its own axis. `client-boot`: the
+  browser's trimmed `perfs/boot-trace` snapshot riding the page-load slow-op
+  beacon's `clientBoot` field into the `"page-load"` trigger.
 - **`pane`** — **Debug → Slow Events**: the tabbed host (Events list + detail
   Gantt) that consumes only the generic snapshot sections and the `Trace.Lane`
   dispatch slot. The Slow Ops aggregate/cluster views merge in as sibling tabs.
@@ -53,6 +60,8 @@ how-to-read-a-snapshot walk.
 
 - Description: Umbrella for the durable slow-event trace engine: the generic perf-event trace registry + storage (engine) and the built-in event classes (spans, gates, contention).
 - Sub-plugins:
+  - **`boot`** — Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and passed in via the boot trigger's detail.
+  - **`client-boot`** — Client-boot trace lane: the browser's own boot decomposition rendered as the embedded Boot Profile Gantt on a slow page-load trace, with the trimmed-asset rollup caption. Built-in trace event class 'client-boot': the browser's own boot decomposition (spans, navigation/paint timing, long tasks, trimmed assets + rollup), built client-side and carried in the page-load slow-op beacon via the trigger's detail.
   - **`contention`** — Contention trace lane: a footer card of the cluster-wide system-contention snapshot (OS load average vs cores, Postgres backend counts, top databases) at the trip instant. Built-in trace event class 'contention': the cluster-wide system-contention snapshot (OS load average + Postgres backend counts) resolved during async enrich.
   - **`engine`** — Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table, list/get endpoints, a daily 7-day sweep, and the test-trigger verification endpoint.
   - **`gates`** — Gates trace lane: a point-in-time gate-occupancy strip (active/max + queued per concurrency layer, saturated gates highlighted) at the trip instant. Built-in trace event class 'gates': per-concurrency-gate occupancy (active / queued / max per layer) captured synchronously at the trip instant.

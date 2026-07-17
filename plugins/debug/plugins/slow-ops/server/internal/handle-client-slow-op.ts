@@ -32,6 +32,11 @@ export const handleClientSlowOp = implement(
         caller: body.caller ?? null,
         transportColdStart: body.transportColdStart,
         transportWaitMs: body.transportWaitMs,
+        // The browser's own boot decomposition (page-load only; undefined for
+        // element/older clients): the client-boot trace class reads it off the
+        // trigger detail and persists it as its section. recordSlowOp below
+        // must never receive it — the aggregate row stays lean.
+        clientBoot: body.clientBoot,
       },
     });
     await recordSlowOp({

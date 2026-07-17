@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -327,13 +328,21 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 	w.mu.Unlock()
 
 	// Run the spawn outside the lock so concurrent callers see Starting and wait.
+	var stats bootStats
+	stats.SpawnRequestedAt = time.Now().UnixMilli()
 	bk, spawnErr := w.startBackend(spec, socketPath)
 	if spawnErr == nil {
+		stats.SpawnedAt = time.Now().UnixMilli()
+		// Snapshot before any promote clears it (escalation or post-ready).
+		stats.Demoted = bk.demoted
 		// Make cmd visible so Stop can find it before readiness completes.
 		w.mu.Lock()
 		w.active = bk
 		w.mu.Unlock()
-		spawnErr = w.awaitBackendReady(bk, socketPath)
+		stats.Escalated, stats.RespondedHTTP, spawnErr = w.awaitBackendReady(bk, socketPath)
+		if spawnErr == nil {
+			stats.ReadyObservedAt = time.Now().UnixMilli()
+		}
 	}
 
 	if spawnErr != nil {
@@ -365,6 +374,7 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 	bk.proxy = newReverseProxy(socketPath)
 	w.lastActivity = time.Now()
 	w.mu.Unlock()
+	go postBootReport(socketPath, stats)
 	close(readyCh)
 	slog.Info("backend ready", "worktree", w.Name, "socket", socketPath)
 	return bk, nil
@@ -422,11 +432,19 @@ func (w *Worktree) Restart(ctx context.Context) error {
 
 	// --- Step 2: Spawn new backend on alternate socket ---
 	slog.Info("hot restart: spawning", "worktree", w.Name, "socket", newSocketPath)
+	var stats bootStats
+	stats.SpawnRequestedAt = time.Now().UnixMilli()
 	newBk, spawnErr := w.startBackend(spec, newSocketPath)
 
 	// --- Step 3: Wait for readiness ---
 	if spawnErr == nil {
-		spawnErr = w.awaitBackendReady(newBk, newSocketPath)
+		stats.SpawnedAt = time.Now().UnixMilli()
+		// Snapshot before any promote clears it (escalation or post-ready).
+		stats.Demoted = newBk.demoted
+		stats.Escalated, stats.RespondedHTTP, spawnErr = w.awaitBackendReady(newBk, newSocketPath)
+		if spawnErr == nil {
+			stats.ReadyObservedAt = time.Now().UnixMilli()
+		}
 	}
 
 	// --- Step 4 (failure): keep old backend, revert state ---
@@ -455,6 +473,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	w.state = StateRunning
 	w.lastActivity = time.Now()
 	w.mu.Unlock()
+	go postBootReport(newSocketPath, stats)
 	slog.Info("hot restart: swapped", "worktree", w.Name,
 		"old_socket", oldBk.socketPath, "new_socket", newSocketPath)
 
@@ -975,15 +994,20 @@ func logAdaptiveTimeout(worktree string, base, chosen time.Duration) {
 // awaitBackendReady waits for a freshly-spawned backend to pass its readiness
 // probe. Slow boots escalate (lift the darwinbg demotion, extend the wait)
 // instead of being killed — see waitReady for the wedge-vs-slow reasoning.
-func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) error {
+// Reports whether the wait escalated, and whether the backend had answered
+// HTTP by escalation time, so the caller can include both in the boot report.
+func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (escalated, respondedHTTP bool, err error) {
 	base := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
 	logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, base)
-	return waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, bk.demoted, func(respondedHTTP bool) {
+	err = waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, bk.demoted, func(responded bool) {
+		escalated = true
+		respondedHTTP = responded
 		slog.Warn("backend slow to become ready; lifting demotion and extending wait instead of killing",
-			"worktree", w.Name, "respondedHTTP", respondedHTTP,
+			"worktree", w.Name, "respondedHTTP", responded,
 			"base", base, "extension", w.cfg.ReadyTimeoutMax)
 		promoteBackend(bk, w.Name)
 	}, bk.exitCh)
+	return escalated, respondedHTTP, err
 }
 
 // waitReady polls the backend's `GET /api/health/ready` over its Unix socket
@@ -1054,6 +1078,53 @@ func waitReady(socketPath string, base, extension time.Duration, demoted bool, o
 			return errors.New("backend exited before ready")
 		case <-time.After(100 * time.Millisecond):
 		}
+	}
+}
+
+// bootStats is the spawn/readiness timing record the gateway reports to a
+// freshly-ready backend. Timestamps are epoch milliseconds; demoted records
+// whether the darwinbg wrap was applied at spawn (regardless of later promote).
+type bootStats struct {
+	SpawnRequestedAt int64 `json:"spawnRequestedAt"`
+	SpawnedAt        int64 `json:"spawnedAt"`
+	ReadyObservedAt  int64 `json:"readyObservedAt"`
+	Escalated        bool  `json:"escalated"`
+	RespondedHTTP    bool  `json:"respondedHTTP"`
+	Demoted          bool  `json:"demoted"`
+}
+
+// postBootReport POSTs a ready backend's spawn/readiness stats to the backend
+// itself, fire-and-forget. Runs in its own goroutine strictly after the proxy
+// swap: it never touches the worktree state machine and can never delay or
+// fail readiness. A 404 means the backend predates the endpoint — tolerated
+// version skew, logged at info instead of warn.
+func postBootReport(socketPath string, stats bootStats) {
+	body, err := json.Marshal(stats)
+	if err != nil {
+		slog.Warn("boot report: marshal failed", "socket", socketPath, "err", err)
+		return
+	}
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, "unix", socketPath)
+			},
+		},
+	}
+	resp, err := client.Post("http://backend/api/boot/gateway-report", "application/json", bytes.NewReader(body))
+	if err != nil {
+		slog.Warn("boot report: post failed", "socket", socketPath, "err", err)
+		return
+	}
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+	switch {
+	case resp.StatusCode == http.StatusNotFound:
+		slog.Info("boot report: endpoint absent (older backend)", "socket", socketPath)
+	case resp.StatusCode < 200 || resp.StatusCode >= 300:
+		slog.Warn("boot report: non-2xx response", "socket", socketPath, "status", resp.StatusCode)
 	}
 }
 

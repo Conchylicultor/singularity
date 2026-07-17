@@ -25,10 +25,13 @@ import type {
 } from "../../core";
 import { _slowOps } from "./tables";
 
-// The only two report sources a slow-op originates from — narrowed from the
+// The only report sources a slow-op originates from — narrowed from the
 // canonical ReportSource union (now in reports/core), so this stays a checked
 // subset of the real origins rather than a drifting hand-rolled copy.
-type SlowOpSource = Extract<ReportSource, "server-slow-op" | "client-slow-op">;
+type SlowOpSource = Extract<
+  ReportSource,
+  "server-slow-op" | "client-slow-op" | "server-boot-monitor"
+>;
 
 // A slim overlay marker per recorded slow op, dual-written to a persisted log
 // channel. Mirrors the health sampler's `Log.channel("health", { persist: true })`

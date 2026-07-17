@@ -19,7 +19,7 @@ clip long tasks to the boot window.
 
 - Description: Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace.
 - Cross-plugin:
-  - Imported by: `debug/boot-profile`, `framework/web-core`, `infra/boot-snapshot`
+  - Imported by: `debug/boot-profile`, `debug/slow-ops`, `framework/web-core`, `infra/boot-snapshot`
 - Web:
   - Exports: Types: `AssetTiming`, `BootPhase`, `BootSpan`, `BootTrace`, `LongTask`, `NavTiming`; Values: `bootWindowEnd`, `getBootTrace`, `markBootInstant`, `recordBootSpan`, `refreshBootTrace`, `startBootSpan`, `subscribeBootTrace`, `useBootTrace`
 - Core:

@@ -118,9 +118,20 @@ function readAssets(): AssetTiming[] {
   // Resource Timing is retained on the timeline and readable at any time, so —
   // unlike the span store — it covers the pre-boot-trace window (the eager
   // bundle + the plugin-chunk fan-out). Keep only scripts/stylesheets; /api and
-  // /ws fetches are already represented as resource-phase spans.
+  // /ws fetches are already represented as resource-phase spans. Dynamic
+  // `import()` fetches (the per-plugin web-artifacts import-map chunks — the
+  // bulk of boot JS) report initiatorType "other", so they are admitted by
+  // extension instead.
+  const isModuleChunk = (e: PerformanceResourceTiming) =>
+    e.initiatorType === "other" && /\.m?js(\?|$)/.test(e.name);
   return (performance.getEntriesByType("resource") as PerformanceResourceTiming[])
-    .filter((e) => e.initiatorType === "script" || e.initiatorType === "link" || e.initiatorType === "css")
+    .filter(
+      (e) =>
+        e.initiatorType === "script" ||
+        e.initiatorType === "link" ||
+        e.initiatorType === "css" ||
+        isModuleChunk(e),
+    )
     .map((e) => ({
       name: e.name,
       initiatorType: e.initiatorType,

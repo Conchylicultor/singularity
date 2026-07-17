@@ -3,6 +3,8 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { registerSlowResourceReporter } from "@plugins/primitives/plugins/live-state/web";
+import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { slowOpConfig } from "../../core";
 import { submitClientSlowOp } from "../../shared/endpoints";
 
@@ -36,6 +38,11 @@ export function SlowOpCollector() {
             operation: location.pathname,
             durationMs,
             thresholdMs: t,
+            // The browser's own boot decomposition rides along (trimmed to
+            // stay far under the 64KB keepalive cap), so the resulting trace
+            // carries the client evidence for WHY the load was slow — not just
+            // that it was.
+            clientBoot: toClientBootSection(getBootTrace()),
           },
           keepalive: true,
           report: false,
