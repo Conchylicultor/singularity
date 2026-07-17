@@ -4,10 +4,10 @@ import { cleanup, render, screen, fireEvent } from "@testing-library/react";
 
 import { Expandable } from "@plugins/primitives/plugins/expandable/web";
 
-// jsdom reports offsetHeight as 0 and lacks ResizeObserver. Expandable's
-// overflow detection needs both: stub a tall content box (so the clamp engages
-// and the toggle renders) and a no-op observer (the one synchronous recompute()
-// in the layout effect is enough to decide overflow).
+// jsdom reports offsetHeight as 0, so stub a tall content box to engage the clamp
+// and render the toggle. (The no-op ResizeObserver the overflow detection also
+// needs comes from the shared `test/setup.ts` — the one synchronous recompute() in
+// the layout effect is enough to decide overflow under it.)
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
     configurable: true,
@@ -15,12 +15,6 @@ beforeAll(() => {
       return 1000;
     },
   });
-  class RO {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  (globalThis as unknown as { ResizeObserver: typeof RO }).ResizeObserver = RO;
 });
 
 afterEach(cleanup);

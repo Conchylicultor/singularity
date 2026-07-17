@@ -22,7 +22,16 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
 
 The first `onResize` runs synchronously inside the layout effect (not behind
 RAF). This avoids a first-paint flash AND lets overflow/size decisions resolve
-under a no-op `ResizeObserver` (how jsdom tests stub it). Do not defer it.
+under a no-op `ResizeObserver`. Do not defer it.
+
+That second property is what makes this primitive mountable in jsdom, which ships
+no `ResizeObserver` and has no layout engine. The shared DOM-test setup
+(`test/setup.ts`) installs one **inert** observer globally — not a polyfill, since
+a 0x0 box that never resizes would give a polyfill nothing to report. Tests
+therefore get the synchronous measure and nothing more: a test needing a real size
+stubs the measurement source itself (e.g. `expandable`'s `offsetHeight` fixture),
+and a test needing to drive resizes installs a drivable observer via
+`vi.stubGlobal`.
 
 ## Don't hand-roll `new ResizeObserver`
 
