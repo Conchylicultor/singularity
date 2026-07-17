@@ -62,6 +62,7 @@ the `boot` channel stays classified as filing this report.
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `BootWedgeSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+  - Contributes: `ConfigV2.Register` "boot-watchdog", `report-kind` "boot-wedge"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `debug/boot-events.readBootEvents`, `infra/jobs.defineJob`, `infra/paths.listWorktreeDirs`, `primitives/log-channels.logsDirFor`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.boot-watchdog-monitor')`
 - Core:
