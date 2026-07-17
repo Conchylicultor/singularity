@@ -12,8 +12,6 @@ export { DataViewSlots } from "./slots";
 export type {
   DataViewContribution,
   DataViewSettingContribution,
-  GlobalFieldExtensionProps,
-  GlobalFieldExtensionContribution,
   GlobalRowOrderProps,
   GlobalRowOrderContribution,
 } from "./slots";

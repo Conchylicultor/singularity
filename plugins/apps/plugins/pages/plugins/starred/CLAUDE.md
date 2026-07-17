@@ -5,7 +5,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
 - `page_blocks_ext_starred` is a pure presence side-table (one row per starred
   page, no columns of its own beyond the synthesized `parentId`/timestamps).
   Presence = starred; there is no rank/order column.
-- The plugin contributes a single `starred` bool `FieldDef<Block>` into the
+- The plugin contributes a single `starred` bool `FieldDef<PageRow>` into the
   page-tree's `PageTree.Fields` field-extension seam (`StarredField` reads the
   `starredPagesResource` into a `Set` and closes the field's `value` over it).
   That makes `starred` a filter dimension of the one `pages-sidebar` DataView.

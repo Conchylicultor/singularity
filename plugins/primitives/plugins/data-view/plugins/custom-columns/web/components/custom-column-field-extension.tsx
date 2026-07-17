@@ -8,11 +8,11 @@ import {
   useResolveValueCodec,
   useResolveOperatorSet,
   useFieldIdentities,
-  type GlobalFieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   DataViewId,
   FieldDef,
+  FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/core";
 import { useCustomColumnDefs } from "../internal/use-custom-column-defs";
 import {
@@ -35,7 +35,7 @@ export function CustomColumnFieldExtension({
   storageKey,
   rowKey,
   render,
-}: GlobalFieldExtensionProps): ReactNode {
+}: FieldExtensionProps<unknown>): ReactNode {
   const descriptor = getDataViewDescriptor(storageKey);
   // Soft-disable for a storageKey with no registered viewsDescriptor — preserves
   // the old host's `descriptor != null` gate. `storageKey` is stable per surface,

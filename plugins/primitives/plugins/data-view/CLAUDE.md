@@ -381,20 +381,22 @@ play-count keyed by row id living in another plugin's live resource).
 `FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks,
 so the field has to be produced from inside a mounted component.
 
-The mechanism is the **`defineFieldExtensions<TRow>(id)` factory** (web barrel),
-the sibling of `defineItemActions` — **not** a global slot (disjoint row types per
-consumer → a factory, per the same collection-vs-factory rule). Each consumer
-calls it once with a stable id; the result is **callable for contributions**
-(`MyFields({ id, component })`, like any `defineRenderSlot`) and — being a slot —
-is itself the `FieldExtensionsDescriptor` the host reads (its `id` +
-`useContributions`; no extra `.Row`-style member, unlike item-actions). Pass it to
-`<DataView fieldExtensions={MyFields} />`.
+**One contribution shape.** A field-extension contribution is a **component** (not
+a plain `FieldDef[]`) typed `ComponentType<FieldExtensionProps<TRow>>`, where
 
-A contribution is a **component** (not a plain `FieldDef[]`) typed
-`ComponentType<FieldExtensionProps<TRow>>`, where
-`FieldExtensionProps<TRow> = { render: (fields: FieldDef<TRow>[]) => ReactNode }`.
+```ts
+interface FieldExtensionProps<TRow> {
+  storageKey: DataViewId;                              // which surface
+  rowKey: (row: TRow, index: number) => string;        // how to identify a row
+  render: (fields: FieldDef<TRow>[]) => ReactNode;      // hand the host the fields
+}
+```
+
 The component loads whatever it needs via hooks, closes its field `value`
-projections over that data, and hands the fields back through `render`:
+projections over that data, and hands the fields back through `render`. Every
+contributor receives the **surface coordinates** (`storageKey`, `rowKey`) so a
+cross-cutting contributor can key its per-row data over the surface; a contributor
+that doesn't need them just ignores them:
 
 ```tsx
 function PlaybackFields({ render }: FieldExtensionProps<Song>) {
@@ -403,49 +405,74 @@ function PlaybackFields({ render }: FieldExtensionProps<Song>) {
     { id: "playCount", label: "Plays", type: "int",
       value: (s) => map.get(s.id)?.playCount ?? 0, sortable: true },
   ], [map]);
-  return <>{render(fields)}</>;
+  return <>{render(fields)}</>;  // ignores storageKey/rowKey — it keys off its own resource
 }
 MyFields({ id: "playback", component: PlaybackFields });
 ```
 
-The host (`CollectFieldExtensions`, internal) reads `useContributions()` and
-**recursively folds** the contributors into nested render-callbacks — each mounts
-(error-boundary-isolated via `renderIsolated`), runs its own hooks, yields its
-`FieldDef[]`, and recurses to the next, finally calling
-`children([...base, ...extra])`. It is written as a recursive **component** (never
-a `.map` over contributed hooks, which `react-hooks/rules-of-hooks` rejects): the
-contribution set is fixed at build time, so recursion depth is stable and the
-per-component hook order never changes. The fold wraps the model + inner **before**
-the sort/filter controllers, so the merged `fields` reaches `useSortController`,
-`useFilterController`, and `renderProps.fields` uniformly — a contributed
-`int`/`date` field shows up in the Sort pill, the Filter pill, and the table
-columns for free. No `fieldExtensions` → the fold is a pass-through. This is the
-field-level generalization of the old single-active-component-yields-an-ordered-
-list render-callback pattern.
+**Two registration entry points, one mechanism.** A field extension reaches the
+host through exactly one of two places — the difference is only the **registration
+site** (and, consequently, the row typing):
 
-### The global `FieldExtension` slot (cross-plugin)
+1. **The always-on global `DataViewSlots.FieldExtension` slot** — the
+   **cross-cutting** case: a single slot **every** DataView folds, for a
+   contributor that augments *all* surfaces (custom-columns' user-defined columns).
+   It is literally `defineFieldExtensions<unknown>("primitives.data-view.field-extension")`
+   — the same factory, minted once at `<unknown>` (a global slot spans disjoint
+   consumer row types, so the row type erases and `rowKey` is
+   `(row: unknown, …) => string`). A cross-plugin contributor imports the slot and
+   contributes itself (`custom-columns → data-view`, the legal parent-ward edge),
+   so the host names **no** individual contributor.
+2. **The per-consumer `defineFieldExtensions<TRow>(id)` factory** (web barrel), the
+   sibling of `defineItemActions` — the **typed/scoped** case (disjoint row types
+   per consumer → a factory, per the same collection-vs-factory rule). Each
+   consumer calls it once with a stable id; the result is **callable for
+   contributions** (`MyFields({ id, component })`, like any `defineRenderSlot`) and
+   — being a slot — is itself the `FieldExtensionsDescriptor` the host reads (its
+   `id` + `useContributions`; no extra `.Row`-style member, unlike item-actions).
+   Pass it to `<DataView fieldExtensions={MyFields} />` (Sonata's play-count /
+   last-played fields). Full `TRow` typing.
 
-The `defineFieldExtensions` factory covers the **per-consumer** case (disjoint row
-types → a prop). Its twin is the **global** `DataViewSlots.FieldExtension` slot: a
-single always-on slot **every** DataView folds, for a cross-plugin contributor that
-augments *all* surfaces (custom-columns' user-defined columns). Because a global
-slot spans disjoint consumer row types, its props erase the row type to `unknown`
-and add the surface coordinates the contributor needs:
-`GlobalFieldExtensionProps = { storageKey, rowKey, render }` (vs the per-consumer
-`{ render }`). The host folds it through the SAME `CollectFieldExtensions`
-machinery, passing an `extraProps` object (`{ storageKey, rowKey }`) spread into
-each contribution's props alongside `render`; the top-level `DataView` nests the
-global fold (always) outside the per-consumer fold. The global fold runs at
-`<unknown>`, so `props.fields` and the merged result cross a safe
-`FieldDef<unknown>`↔`FieldDef<TRow>` cast at the boundary.
+**One fold over an ordered source list.** The host (`CollectFieldExtensions`,
+internal) folds a single ordered list of sources —
+`[DataViewSlots.FieldExtension, ...(props.fieldExtensions ? [props.fieldExtensions] : [])]`
+— threading `{ storageKey, rowKey }` to every contributor. It reads each source's
+`useContributions()` and **recursively folds** the contributors into nested
+render-callbacks — each mounts (error-boundary-isolated via `renderIsolated`), runs
+its own hooks, yields its `FieldDef[]`, and recurses to the next contributor (then
+the next source), finally calling `children([...base, ...allExtra])`. Both the
+source-level and contribution-level folds are recursive **components** (never a
+`.map` over contributed hooks, which `react-hooks/rules-of-hooks` rejects): the
+source list and each contribution set are fixed at build time, so recursion depth
+is stable and the per-component hook order never changes. The fold wraps the model
++ inner **before** the sort/filter controllers, so the merged `fields` reaches
+`useSortController`, `useFilterController`, and `renderProps.fields` uniformly — a
+contributed `int`/`date` field shows up in the Sort pill, the Filter pill, and the
+table columns for free. No `fieldExtensions` prop → only the global slot is folded;
+an empty global slot with no prop → a pass-through. This is the field-level
+generalization of the old single-active-component-yields-an-ordered-list
+render-callback pattern.
 
-This is what makes the host name **no** individual contributor: custom-columns
-imports the slot and contributes itself (`custom-columns → data-view`, the legal
-parent-ward edge), rather than the host importing custom-columns' hooks. The slot
-is a `defineRenderSlot`, so its fold order is a committed reorder override
+The fold runs at `<unknown>` (the global slot spans disjoint consumer row types),
+so `props.fields`/`rowKey` and the merged result cross a safe
+`FieldDef<unknown>`↔`FieldDef<TRow>` cast at the top-level `DataView` boundary. The
+global slot is a `defineRenderSlot` under the hood (via `defineFieldExtensions`),
+so its fold order is a committed reorder override
 (`config/primitives/data-view/primitives.data-view.field-extension.jsonc`).
 
-Its sibling is the global **`DataViewSlots.RowOrder`** slot — same shape (always-on,
+### Intentional asymmetry vs `RowOrder`
+
+`GlobalFieldExtensionProps` is intentionally **gone** — a field extension is one
+shape (`FieldExtensionProps<TRow>`) whether registered globally or per-consumer —
+while the sibling **`GlobalRowOrderProps` remains**. That is deliberate:
+`FieldExtension` had **two** cases (global custom-columns + per-consumer Sonata)
+that were needlessly wearing two coats, so they were unified onto one contribution
+shape + one fold. `RowOrder` has **only** a global case (the `view-order` plugin) —
+no per-consumer variant exists — so its "Global" prop type is just its one shape.
+Do **not** "restore symmetry" by re-splitting `FieldExtension` or by minting a
+per-consumer `RowOrder` factory that has no consumer.
+
+The global `RowOrder` slot is otherwise the same-shaped twin (always-on,
 row-type-erased, surface coordinates threaded in, a recursive component fold, a
 committed reorder override), but it folds a single `ManualOrderConfig | null` on a
 first-non-null-wins rule instead of accumulating a `FieldDef[]`, and it is *gated*
@@ -661,7 +688,7 @@ and `research/2026-06-18-tree-view-virtualization.md`).
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`, `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`, `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`, `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`, `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`, `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSection`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.InfiniteScrollFooter`, `primitives/cursor-pagination.InfiniteScrollHandle`, `primitives/cursor-pagination.useInfiniteScroll`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
-  - Exports: Types: `CellEditorProps`, `ColumnConfigProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `DataViewSettingContribution`, `DataViewSettingsContextValue`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `GlobalFieldExtensionContribution`, `GlobalFieldExtensionProps`, `GlobalRowOrderContribution`, `GlobalRowOrderProps`, `GroupByController`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ValueCodec`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DATA_VIEW_HEADER_OFFSET_VAR`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `getDataViewDescriptor`, `IDENTITY_CODEC`, `isFilterGroup`, `isGroupableField`, `makeSortComparator`, `partitionIntoSections`, `pickPrimaryField`, `resolveBodyFields`, `useDataViewSections`, `useDataViewSettings`, `useFieldIdentities`, `useFilterController`, `useFlatRows`, `useGroupByController`, `useResolveCell`, `useResolveCellEditor`, `useResolveColumnConfig`, `useResolveOperatorSet`, `useResolveValueCodec`, `useServerDataSource`, `useSortController`
+  - Exports: Types: `CellEditorProps`, `ColumnConfigProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `DataViewSettingContribution`, `DataViewSettingsContextValue`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `GlobalRowOrderContribution`, `GlobalRowOrderProps`, `GroupByController`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ValueCodec`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DATA_VIEW_HEADER_OFFSET_VAR`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `getDataViewDescriptor`, `IDENTITY_CODEC`, `isFilterGroup`, `isGroupableField`, `makeSortComparator`, `partitionIntoSections`, `pickPrimaryField`, `resolveBodyFields`, `useDataViewSections`, `useDataViewSettings`, `useFieldIdentities`, `useFilterController`, `useFlatRows`, `useGroupByController`, `useResolveCell`, `useResolveCellEditor`, `useResolveColumnConfig`, `useResolveOperatorSet`, `useResolveValueCodec`, `useServerDataSource`, `useSortController`
 - Server:
   - Uses: `config_v2.getConfig`, `primitives/data-view/view-core.buildViewConfigRegistrations`, `primitives/data-view/view-core.viewsDescriptor`
   - Exports: Values: `readDataViewConfigDoc`

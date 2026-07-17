@@ -4,20 +4,20 @@ import type {
   FieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import type { Block } from "@plugins/page/plugins/editor/core";
+import type { PageRow } from "@plugins/page/plugins/editor/core";
 import { starredPagesResource } from "../../shared/resources";
 
 /**
  * Field extension contributed into the page-tree's `PageTree.Fields` factory: a
  * render-callback component that reads this plugin's own live starred-pages
- * resource into a `Set<string>` and yields one `starred` bool `FieldDef<Block>`
+ * resource into a `Set<string>` and yields one `starred` bool `FieldDef<PageRow>`
  * closed over the set. Because the field carries a synchronous `value`
  * projection, it shows up in the DataView's Filter pill for free — so the
  * "Favorites" view is just a filtered `list` view over `starred`, with no
  * bespoke sidebar. While the resource is `pending` the set is empty (same as
  * today's hide-while-pending behavior).
  */
-export function StarredField({ render }: FieldExtensionProps<Block>) {
+export function StarredField({ render }: FieldExtensionProps<PageRow>) {
   const result = useResource(starredPagesResource);
   // An empty set while pending is genuinely correct, and is the LEAST wrong of
   // the three options: Favorites filters `starred is true`, so an empty set
@@ -29,7 +29,7 @@ export function StarredField({ render }: FieldExtensionProps<Block>) {
     if (result.pending) return new Set<string>();
     return new Set(result.data.map((r) => r.parentId));
   }, [result]);
-  const fields = useMemo<FieldDef<Block>[]>(
+  const fields = useMemo<FieldDef<PageRow>[]>(
     () => [
       {
         id: "starred",

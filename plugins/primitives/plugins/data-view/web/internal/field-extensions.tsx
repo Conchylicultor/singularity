@@ -6,6 +6,7 @@ import {
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type {
+  DataViewId,
   FieldDef,
   FieldExtensionProps,
   FieldExtensionsDescriptor,
@@ -47,52 +48,96 @@ export function defineFieldExtensions<TRow>(id: string): FieldExtensions<TRow> {
 }
 
 /**
- * Host fold. Reads the descriptor's contributions and **recursively** mounts
- * each one, threading the accumulated fields through nested render-callbacks:
- * every contributor mounts (running its own hooks), hands back its `FieldDef[]`
- * via `render`, and that recurses to the next contributor — finally calling
- * `children([...base, ...allExtra])`.
+ * Host fold. Folds an ORDERED LIST of field-extension sources into one merged
+ * schema: it recursively mounts each contributor of `sources[0]`, then each of
+ * `sources[1]`, etc., threading the accumulated fields through nested
+ * render-callbacks — every contributor mounts (running its own hooks), hands back
+ * its `FieldDef[]` via `render`, and that recurses to the next contributor (then
+ * the next source) — finally calling `children([...base, ...allExtra])`.
  *
- * Written as a recursive COMPONENT, never a `.map` over contributed hooks:
- * mounting each contributor as its own React element keeps the per-component hook
- * order stable (the contribution set is fixed at build time → recursion depth is
- * stable → `react-hooks/rules-of-hooks` is satisfied). No descriptor / empty set
- * → `children(base)` directly.
+ * The one call site passes `[DataViewSlots.FieldExtension, ...(fieldExtensions
+ * prop if present)]`: the always-on global slot first (cross-cutting contributors
+ * like custom-columns), then the optional per-consumer factory (Sonata's typed
+ * fields). Both share this one fold; `{ storageKey, rowKey }` is threaded to every
+ * contributor, and a contributor that doesn't need the coordinates ignores them.
+ *
+ * Written as recursive COMPONENTS (both source-level and contribution-level),
+ * never a `.map` over contributed hooks: mounting each source/contributor as its
+ * own React element keeps the per-component hook order stable (the source list and
+ * each contribution set are fixed at build time → recursion depth is stable →
+ * `react-hooks/rules-of-hooks` is satisfied). Empty source list → `children(base)`
+ * directly.
  *
  * This generalizes Sonata's deleted `Library.Sort` render-callback to the field
  * level.
  */
-export function CollectFieldExtensions<TRow>(props: {
-  descriptor?: FieldExtensionsDescriptor<TRow>;
-  base: FieldDef<TRow>[];
-  /** Extra props spread into every contribution's render props alongside
-   *  `render`. The per-consumer fold passes nothing; the global fold passes
-   *  `{ storageKey, rowKey }` (see `GlobalFieldExtensionProps`). */
-  extraProps?: Record<string, unknown>;
-  children: (fields: FieldDef<TRow>[]) => ReactNode;
+export function CollectFieldExtensions(props: {
+  sources: FieldExtensionsDescriptor<unknown>[];
+  base: FieldDef<unknown>[];
+  /** Surface coordinates threaded into every contribution's render props alongside
+   *  `render`, so a contributor can key its per-row data over the surface. */
+  storageKey: DataViewId;
+  rowKey: (row: unknown, index: number) => string;
+  children: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { descriptor, base, extraProps, children } = props;
-  // The common case: most consumers declare no field extensions. Skip the fold
-  // entirely (no `useContributions` subscription) and hand back the base fields.
-  if (!descriptor) return <>{children(base)}</>;
+  const { sources, base, storageKey, rowKey, children } = props;
   return (
-    <FieldExtensionFold
-      descriptor={descriptor}
-      base={base}
-      extraProps={extraProps}
+    <FieldExtensionSourceStep
+      sources={sources}
+      index={0}
+      acc={base}
+      storageKey={storageKey}
+      rowKey={rowKey}
       emit={children}
     />
   );
 }
 
-/** Reads `useContributions()` once, then kicks off the recursive fold. */
-function FieldExtensionFold<TRow>(props: {
-  descriptor: FieldExtensionsDescriptor<TRow>;
-  base: FieldDef<TRow>[];
-  extraProps?: Record<string, unknown>;
-  emit: (fields: FieldDef<TRow>[]) => ReactNode;
+/** One source-level fold level: fold every contribution of `sources[index]` into
+ *  `acc`, then recurse to the next source. Base case (all sources folded) → emit
+ *  the merged set. A source with zero contributions passes its accumulator
+ *  through (via `FieldExtensionFold`'s own base case). */
+function FieldExtensionSourceStep(props: {
+  sources: FieldExtensionsDescriptor<unknown>[];
+  index: number;
+  acc: FieldDef<unknown>[];
+  storageKey: DataViewId;
+  rowKey: (row: unknown, index: number) => string;
+  emit: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { descriptor, base, extraProps, emit } = props;
+  const { sources, index, acc, storageKey, rowKey, emit } = props;
+  // Every source has folded its contributions into `acc` → emit.
+  if (index >= sources.length) return <>{emit(acc)}</>;
+  return (
+    <FieldExtensionFold
+      descriptor={sources[index]!}
+      base={acc}
+      storageKey={storageKey}
+      rowKey={rowKey}
+      emit={(merged) => (
+        <FieldExtensionSourceStep
+          sources={sources}
+          index={index + 1}
+          acc={merged}
+          storageKey={storageKey}
+          rowKey={rowKey}
+          emit={emit}
+        />
+      )}
+    />
+  );
+}
+
+/** Reads one source's `useContributions()` once, then kicks off the recursive
+ *  contribution-level fold. */
+function FieldExtensionFold(props: {
+  descriptor: FieldExtensionsDescriptor<unknown>;
+  base: FieldDef<unknown>[];
+  storageKey: DataViewId;
+  rowKey: (row: unknown, index: number) => string;
+  emit: (fields: FieldDef<unknown>[]) => ReactNode;
+}): ReactNode {
+  const { descriptor, base, storageKey, rowKey, emit } = props;
   const contributions = descriptor.useContributions();
   return (
     <FieldExtensionStep
@@ -100,7 +145,8 @@ function FieldExtensionFold<TRow>(props: {
       contributions={contributions}
       index={0}
       acc={base}
-      extraProps={extraProps}
+      storageKey={storageKey}
+      rowKey={rowKey}
       emit={emit}
     />
   );
@@ -108,31 +154,35 @@ function FieldExtensionFold<TRow>(props: {
 
 /** One fold level: mount contribution `index` isolated; its `render` recurses to
  *  the next level with the accumulated fields. Base case → emit the merged set. */
-function FieldExtensionStep<TRow>(props: {
+function FieldExtensionStep(props: {
   slotId: string;
-  contributions: ReturnType<FieldExtensionsDescriptor<TRow>["useContributions"]>;
+  contributions: ReturnType<
+    FieldExtensionsDescriptor<unknown>["useContributions"]
+  >;
   index: number;
-  acc: FieldDef<TRow>[];
-  extraProps?: Record<string, unknown>;
-  emit: (fields: FieldDef<TRow>[]) => ReactNode;
+  acc: FieldDef<unknown>[];
+  storageKey: DataViewId;
+  rowKey: (row: unknown, index: number) => string;
+  emit: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { slotId, contributions, index, acc, extraProps, emit } = props;
+  const { slotId, contributions, index, acc, storageKey, rowKey, emit } = props;
   // Every contributor has mounted and folded its fields into `acc` → emit.
   if (index >= contributions.length) return <>{emit(acc)}</>;
 
   const contribution = contributions[index]!;
-  // Spread `extraProps` (the global fold's `{ storageKey, rowKey }`) alongside
-  // `render`. The per-consumer fold passes none, so contributions there still see
-  // exactly `FieldExtensionProps<TRow>` (`{ render }`).
-  const renderProps: FieldExtensionProps<TRow> & Record<string, unknown> = {
-    ...extraProps,
+  // Thread the surface coordinates `{ storageKey, rowKey }` alongside `render`.
+  // A contributor that doesn't need them (e.g. Sonata's play-count) ignores them.
+  const renderProps: FieldExtensionProps<unknown> = {
+    storageKey,
+    rowKey,
     render: (fields) => (
       <FieldExtensionStep
         slotId={slotId}
         contributions={contributions}
         index={index + 1}
         acc={[...acc, ...fields]}
-        extraProps={extraProps}
+        storageKey={storageKey}
+        rowKey={rowKey}
         emit={emit}
       />
     ),

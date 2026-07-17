@@ -16,6 +16,7 @@ import {
   type DataViewProps,
   type DataViewRenderProps,
   type FieldDef,
+  type FieldExtensionsDescriptor,
   type FilterGroup,
   type ManualOrderConfig,
   type SortRule,
@@ -57,35 +58,37 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   // Fold cross-plugin field contributions into `fields` BEFORE the model +
   // controllers, so the merged schema reaches `useSortController`,
   // `useFilterController`, and `renderProps.fields` uniformly (automatic once it
-  // is the `fields` prop). Two nested folds:
+  // is the `fields` prop). ONE fold over an ordered list of sources:
   //
   //  1. the **global** `DataViewSlots.FieldExtension` slot — always folded (every
-  //     DataView), threading `{ storageKey, rowKey }` so a contributor (e.g.
-  //     custom-columns) can key its per-row fields over this surface; then
+  //     DataView), the cross-cutting contributor case (e.g. custom-columns); then
   //  2. the **per-consumer** `props.fieldExtensions` factory (Sonata's play-count
-  //     / last-played fields) — a pass-through when absent.
+  //     / last-played fields) — appended only when present.
   //
-  // The host names no individual contributor: custom-columns folds in through the
-  // generic global slot, inverting the old host→child bridge.
+  // Both are the same `FieldExtensionsDescriptor`; the fold threads
+  // `{ storageKey, rowKey }` to every contributor (a per-consumer contributor
+  // ignores the coordinates it does not need). The host names no individual
+  // contributor: custom-columns folds in through the generic global slot,
+  // inverting the old host→child bridge.
   //
-  // The global fold runs in `unknown` row space (a global slot spans disjoint
-  // consumer row types), so it is instantiated at `<unknown>`; `FieldDef<unknown>`
-  // and `FieldDef<TRow>` are mutually related, so the two boundary casts are safe.
+  // The fold runs in `unknown` row space (the global slot spans disjoint consumer
+  // row types), so `props.fields`/`rowKey` and the merged result cross a safe
+  // `FieldDef<unknown>`↔`FieldDef<TRow>` boundary cast.
+  const sources = props.fieldExtensions
+    ? [
+        DataViewSlots.FieldExtension,
+        props.fieldExtensions as FieldExtensionsDescriptor<unknown>,
+      ]
+    : [DataViewSlots.FieldExtension];
   return (
-    <CollectFieldExtensions<unknown>
-      descriptor={DataViewSlots.FieldExtension}
+    <CollectFieldExtensions
+      sources={sources}
       base={props.fields as FieldDef<unknown>[]}
-      extraProps={{ storageKey: props.storageKey, rowKey: props.rowKey }}
+      storageKey={props.storageKey}
+      rowKey={props.rowKey as (row: unknown, index: number) => string}
     >
-      {(globalFields) => (
-        <CollectFieldExtensions<unknown>
-          descriptor={props.fieldExtensions}
-          base={globalFields}
-        >
-          {(fields) => (
-            <DataViewWithModel {...props} fields={fields as FieldDef<TRow>[]} />
-          )}
-        </CollectFieldExtensions>
+      {(fields) => (
+        <DataViewWithModel {...props} fields={fields as FieldDef<TRow>[]} />
       )}
     </CollectFieldExtensions>
   );

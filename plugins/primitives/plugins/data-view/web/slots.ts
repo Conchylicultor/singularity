@@ -6,10 +6,10 @@ import type { LoadingVariant } from "@plugins/primitives/plugins/loading/web";
 import type {
   DataViewId,
   DataViewRenderProps,
-  FieldDef,
   ManualOrderConfig,
 } from "../core";
 import type { DataViewSettingsContextValue } from "./components/settings/settings-context";
+import { defineFieldExtensions } from "./internal/field-extensions";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
@@ -73,33 +73,8 @@ export interface DataViewSettingContribution {
 }
 
 /**
- * Props a **global** field-extension contribution receives. Unlike the
- * per-consumer `FieldExtensionProps<TRow>` (minted by `defineFieldExtensions`,
- * passed as a prop, `{ render }`-only), this is a single always-on slot every
- * DataView folds — so the host threads the surface coordinates the contributor
- * needs to key its per-row data: the `storageKey` (which surface) and `rowKey`
- * (how to identify a row). The row type is erased to `unknown` (a global slot
- * spans disjoint consumer row types), so `rowKey` is `(row: unknown, index) =>
- * string` and the yielded fields are `FieldDef<unknown>[]`.
- */
-export interface GlobalFieldExtensionProps {
-  storageKey: DataViewId;
-  rowKey: (row: unknown, index: number) => string;
-  /** Hand the host this contributor's extra fields (called in render — the
-   *  component is mounted, so it may load hook-backed data first). */
-  render: (fields: FieldDef<unknown>[]) => ReactNode;
-}
-
-export interface GlobalFieldExtensionContribution {
-  /** Stable id (React key + reorder/doc identity). */
-  id: string;
-  component: ComponentType<GlobalFieldExtensionProps>;
-  order?: number;
-}
-
-/**
- * Props a **global** row-order contribution receives. The twin of
- * `GlobalFieldExtensionProps`: a single always-on slot every eligible DataView
+ * Props a **global** row-order contribution receives. The twin of the global
+ * `FieldExtension` slot's props: a single always-on slot every eligible DataView
  * folds, so the host threads the surface coordinates a contributor needs to key
  * a per-view-instance row order — the `storageKey` (which surface), the
  * `viewId` (which view instance owns this order), and `rowKey` (how to identify
@@ -136,16 +111,18 @@ export const DataViewSlots = {
     docLabel: (p) => p.title,
   }),
   /**
-   * Global, always-on field-extension slot: every DataView folds its
+   * Global, always-on field-extension slot: the global-registered instance of the
+   * same `defineFieldExtensions` factory (minted at `<unknown>`, since a global
+   * slot spans disjoint consumer row types). Every DataView folds its
    * contributions into the schema (before the sort/filter controllers), threading
    * `{ storageKey, rowKey }` so a contributor can key its per-row `FieldDef.value`
-   * over the surface. The cross-plugin twin of the per-consumer
-   * `defineFieldExtensions` factory — used by custom-columns to add every
-   * surface's user-defined columns without the host importing it.
+   * over the surface. This is the cross-plugin, always-on case of field extensions
+   * — used by custom-columns to add every surface's user-defined columns without
+   * the host importing it — as opposed to the per-consumer `fieldExtensions` prop
+   * (Sonata's typed/scoped fields). Both share one contribution shape and one fold.
    */
-  FieldExtension: defineRenderSlot<GlobalFieldExtensionContribution>(
+  FieldExtension: defineFieldExtensions<unknown>(
     "primitives.data-view.field-extension",
-    { docLabel: (p) => p.id },
   ),
   /**
    * Global, always-on row-order slot: every DataView eligible for a manual order

@@ -158,8 +158,18 @@ export interface ItemActionsDescriptor<TRow> {
  * then hand the resulting fields back via `render`. The host folds each
  * contributor's fields into the DataView's schema. The render-callback shape is
  * the generic lift of Sonata's old `Library.Sort` ordering-component slot.
+ *
+ * Every contributor also receives the surface coordinates — the `storageKey`
+ * (which surface) and `rowKey` (how to identify a row) — so a cross-cutting
+ * contributor (e.g. custom-columns) can key its per-row data over the surface. A
+ * contributor that doesn't need them (e.g. Sonata's play-count, which closes over
+ * its own live resource) simply ignores them.
  */
 export interface FieldExtensionProps<TRow> {
+  /** Which surface this DataView is (the `defineDataView` id). */
+  storageKey: DataViewId;
+  /** How to identify a row — used to key per-row data. */
+  rowKey: (row: TRow, index: number) => string;
   /** Hand the host this contributor's extra fields (called in render — the
    *  component is mounted, so it may load hook-backed data first). */
   render: (fields: FieldDef<TRow>[]) => ReactNode;
