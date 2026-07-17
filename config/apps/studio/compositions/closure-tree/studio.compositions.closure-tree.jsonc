@@ -1,0 +1,12 @@
+// @hash 6ec84829688d
+{
+  // The composition's closure tree. Same field schema as the Explorer's tree
+  // (both render `PluginTree`), but a separate view config on purpose: filtering
+  // the Explorer must not silently filter a composition's closure. The Explorer's
+  // "Load-bearing" filter view is a browsing concern and is deliberately absent
+  // here — this surface exists to show one composition's closure, tinted.
+  "views": [
+    { "id": "tree", "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } },
+    { "id": "table", "name": "Table", "view": { "type": "table" } }
+  ]
+}

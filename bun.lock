@@ -719,6 +719,42 @@
       "name": "@singularity/plugin-apps-studio-compositions",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree": {
+      "name": "@singularity/plugin-apps-studio-compositions-closure-tree",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/contributors": {
+      "name": "@singularity/plugin-apps-studio-compositions-contributors",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/draft-actions": {
+      "name": "@singularity/plugin-apps-studio-compositions-draft-actions",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/entry-points": {
+      "name": "@singularity/plugin-apps-studio-compositions-entry-points",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/membership-summary": {
+      "name": "@singularity/plugin-apps-studio-compositions-membership-summary",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/release": {
+      "name": "@singularity/plugin-apps-studio-compositions-release",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact": {
+      "name": "@singularity/plugin-apps-studio-compositions-release-release-artifact",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info": {
+      "name": "@singularity/plugin-apps-studio-compositions-release-release-info",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-logs": {
+      "name": "@singularity/plugin-apps-studio-compositions-release-release-logs",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/contributions": {
       "name": "@singularity/plugin-apps-studio-contributions",
       "version": "0.0.1",
@@ -781,22 +817,6 @@
     },
     "plugins/apps/plugins/studio/plugins/membership-tint": {
       "name": "@singularity/plugin-apps-studio-membership-tint",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/release": {
-      "name": "@singularity/plugin-apps-studio-release",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/release/plugins/release-artifact": {
-      "name": "@singularity/plugin-apps-studio-release-release-artifact",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/release/plugins/release-info": {
-      "name": "@singularity/plugin-apps-studio-release-release-info",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/studio/plugins/release/plugins/release-logs": {
-      "name": "@singularity/plugin-apps-studio-release-release-logs",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/studio/plugins/shell": {
@@ -5291,6 +5311,24 @@
 
     "@singularity/plugin-apps-studio-compositions": ["@singularity/plugin-apps-studio-compositions@workspace:plugins/apps/plugins/studio/plugins/compositions"],
 
+    "@singularity/plugin-apps-studio-compositions-closure-tree": ["@singularity/plugin-apps-studio-compositions-closure-tree@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree"],
+
+    "@singularity/plugin-apps-studio-compositions-contributors": ["@singularity/plugin-apps-studio-compositions-contributors@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/contributors"],
+
+    "@singularity/plugin-apps-studio-compositions-draft-actions": ["@singularity/plugin-apps-studio-compositions-draft-actions@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/draft-actions"],
+
+    "@singularity/plugin-apps-studio-compositions-entry-points": ["@singularity/plugin-apps-studio-compositions-entry-points@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/entry-points"],
+
+    "@singularity/plugin-apps-studio-compositions-membership-summary": ["@singularity/plugin-apps-studio-compositions-membership-summary@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/membership-summary"],
+
+    "@singularity/plugin-apps-studio-compositions-release": ["@singularity/plugin-apps-studio-compositions-release@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release"],
+
+    "@singularity/plugin-apps-studio-compositions-release-release-artifact": ["@singularity/plugin-apps-studio-compositions-release-release-artifact@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact"],
+
+    "@singularity/plugin-apps-studio-compositions-release-release-info": ["@singularity/plugin-apps-studio-compositions-release-release-info@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info"],
+
+    "@singularity/plugin-apps-studio-compositions-release-release-logs": ["@singularity/plugin-apps-studio-compositions-release-release-logs@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-logs"],
+
     "@singularity/plugin-apps-studio-contributions": ["@singularity/plugin-apps-studio-contributions@workspace:plugins/apps/plugins/studio/plugins/contributions"],
 
     "@singularity/plugin-apps-studio-contributions-tables": ["@singularity/plugin-apps-studio-contributions-tables@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables"],
@@ -5322,14 +5360,6 @@
     "@singularity/plugin-apps-studio-graph": ["@singularity/plugin-apps-studio-graph@workspace:plugins/apps/plugins/studio/plugins/graph"],
 
     "@singularity/plugin-apps-studio-membership-tint": ["@singularity/plugin-apps-studio-membership-tint@workspace:plugins/apps/plugins/studio/plugins/membership-tint"],
-
-    "@singularity/plugin-apps-studio-release": ["@singularity/plugin-apps-studio-release@workspace:plugins/apps/plugins/studio/plugins/release"],
-
-    "@singularity/plugin-apps-studio-release-release-artifact": ["@singularity/plugin-apps-studio-release-release-artifact@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-artifact"],
-
-    "@singularity/plugin-apps-studio-release-release-info": ["@singularity/plugin-apps-studio-release-release-info@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-info"],
-
-    "@singularity/plugin-apps-studio-release-release-logs": ["@singularity/plugin-apps-studio-release-release-logs@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-logs"],
 
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 

@@ -3,6 +3,7 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import {
   DataView,
   defineDataView,
+  type DataViewId,
   type FieldDef,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -49,9 +50,20 @@ interface PluginTreeProps {
   plugins: PluginNode[];
   selected: string | null;
   onSelect: (pluginId: string) => void;
+  /**
+   * Which surface's view/filter/sort config this tree reads and writes. Defaults
+   * to the Explorer pane's own. A second surface rendering this tree MUST pass
+   * its own marker — sharing one would make filtering either tree filter both.
+   */
+  storageKey?: DataViewId;
 }
 
-export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
+export function PluginTree({
+  plugins,
+  selected,
+  onSelect,
+  storageKey = EXPLORER_VIEW,
+}: PluginTreeProps) {
   // Host-owned expand state — all expandable ids initially, matching the
   // pre-DataView behavior (everything expanded on first paint).
   const [expanded, setExpanded] = useState<Set<string>>(() =>
@@ -184,7 +196,7 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
         rowKey={(r) => r.id}
         views={["tree", "table"]}
         defaultView="tree"
-        storageKey={EXPLORER_VIEW}
+        storageKey={storageKey}
         hierarchy={hierarchy}
         selectedRowId={selected ?? undefined}
         onRowActivate={(r) => onSelect(r.id)}

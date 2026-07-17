@@ -1,0 +1,11 @@
+// @hash 5adfac4f1d09
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.studio.compositions.release.release-artifact:artifact",
+    "apps.studio.compositions.release.release-info:info",
+    "apps.studio.compositions.release.release-logs:logs"
+  ]
+}

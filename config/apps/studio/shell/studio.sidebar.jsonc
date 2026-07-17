@@ -1,10 +1,11 @@
-// @hash 76c4ba22f264
+// @hash ce0ee4701778
 {
+  // Release is no longer a sidebar app: a release is a release OF a composition,
+  // so it now lives as sections of the composition detail pane.
   "items": [
     "apps.studio.explorer:explorer",
     "apps.studio.contributions:contributions",
     "apps.studio.compositions:compositions",
-    "apps.studio.graph:graph",
-    "apps.studio.release:release"
+    "apps.studio.graph:graph"
   ]
 }

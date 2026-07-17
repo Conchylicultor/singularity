@@ -1,0 +1,15 @@
+// @hash b4e4faf5af0a
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.studio.compositions.closure-tree:closure-tree",
+    "apps.studio.compositions.contributors:contributors",
+    "apps.studio.compositions.draft-actions:draft-actions",
+    "apps.studio.compositions.entry-points:entry-points",
+    "apps.studio.compositions.membership-summary:membership-summary",
+    "apps.studio.compositions.release:release",
+    "apps.studio.compositions.release:release-history"
+  ]
+}

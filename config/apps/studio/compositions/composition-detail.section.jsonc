@@ -1,0 +1,17 @@
+// @hash b4e4faf5af0a
+{
+  // Reading order for the composition detail pane, top to bottom: identify and
+  // name the draft first, then what it resolves to (summary), then the two
+  // editors that change it, then the closure it produces, and finally what you
+  // ship from it. The generated origin sorts alphabetically — this is the
+  // deliberate order.
+  "items": [
+    "apps.studio.compositions.draft-actions:draft-actions",
+    "apps.studio.compositions.membership-summary:membership-summary",
+    "apps.studio.compositions.contributors:contributors",
+    "apps.studio.compositions.entry-points:entry-points",
+    "apps.studio.compositions.closure-tree:closure-tree",
+    "apps.studio.compositions.release:release",
+    "apps.studio.compositions.release:release-history"
+  ]
+}

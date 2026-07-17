@@ -33,6 +33,8 @@ export const compositionsConfig = defineConfig({
   fields: {
     manifests: listField({
       label: "Compositions",
+      // Item ids are durable keys: the Studio detail pane routes on `comp/:id`.
+      stableIdentity: true,
       itemFields: {
         name: textField({ label: "Name" }),
         category: enumField({

@@ -1,79 +1,82 @@
 # compositions
 
-The Studio **Compositions** pane — list the repo's named compositions and
-either **live-edit** a working draft over the closure engine or **compare** two
-compositions side-by-side, entirely client-side.
+The Studio **Compositions** surface: a list pane, a per-composition **detail
+pane** whose content is a render slot, and a **compare** pane.
 
-Registers a `Studio.Sidebar` entry + a `Pane.Register` pane (`compositions`,
-titled "Compositions", width 380). The pane reads `useCompositionData()` from
-[`composition/web`](../../../../../plugin-meta/plugins/composition/CLAUDE.md) and
-drives the same active-composition store the Increment-1 Explorer band and
-plugin-view inclusion section already consume.
+```
+compositions (list, 380)                    [Studio.Sidebar entry]
+├── comp/:id   (detail — CompositionDetail.Host, collapsible sections)
+│     └── rel/:runId  (a release run, pushed from the history section)
+└── compare    (A/B pickers + delta)
+```
 
-A top **Draft / Compare** `SegmentedControl` switches modes. In either mode the
-pane opens the tinted **Explorer** tree as a sibling Miller column
-(`useOpenPane(explorerPane, …, { mode:"push", side:"right" })`, a no-op if it's
-already in the route) so the controls and the closure tint are visible at once.
-`explorerPane` is imported from `apps/studio/explorer/web` (a clean barrel
-export added for this; explorer never imports compositions → DAG-safe).
+The detail pane owns no content of its own. It hosts
+`CompositionDetail = defineDetailSections<{ id }>("composition-detail", { collapsible: true, defaultOpen: true })`,
+and every section is a sub-plugin contributing `CompositionDetail.Section` —
+draft-actions, membership-summary, contributors, entry-points, closure-tree, and
+release's two. Adding a section means adding a plugin; this barrel never changes.
+Order is curated in `config/apps/studio/compositions/composition-detail.section.jsonc`
+(the generated origin sorts alphabetically — the override is the real reading order).
 
-## Pane behavior (DRAFT-ONLY — no disk writes)
+## The URL is the selection
 
-1. **List** the named compositions (`manifests`) as a **DataView** `list`
-   (`defineDataView("studio.compositions")`, config authored at
-   `config/apps/studio/compositions/studio.compositions.jsonc`). Rows are the raw
-   `CompositionManifestItem[]` from `useManifestItems()`; the schema is `name`
-   (text, primary), `category` (enum), and the entry / contributor / extends
-   counts as typed `int` fields (trailing chips, replacing the former summary
-   badge). The list **groups by `category`** — the group order (Profiles / Apps /
-   Subsystems / Packs / Other) is the enum field's `options` order, since the
-   section engine renders enum groups in options order (this replaced the
-   hand-rolled `CATEGORY_GROUPS` reduction). `category` is a pure group/filter
-   dimension held out of the row body via the config's `visibleFields`. Activating
-   a row (`onRowActivate`) calls `setActiveComposition(structuredClone(manifest))`
-   so it becomes the working DRAFT; the Explorer tree tints by its closure via the
-   shared membership band. A per-row **Delete** action (`defineItemActions`, wired
-   to `useManifestActions().remove`) sits in the hover-trailing slot, independent
-   of the draft editor's own Delete. A **Clear** button calls `clearActive()`.
-2. **Summary** (`MembershipSummary`) — derived from the store's
-   `useActiveMembership()` map: bundle size plus a count per membership state
-   (entry / required / contributor / via-contributor / available / excluded).
-3. **Contributor editor** (`ContributorEditor`) — toggles `selectedContributors`
-   over the resolved `available` frontier (∪ current selections, so they stay
-   deselectable). Each toggle patches the draft via `updateActiveDraft`, which
-   re-resolves membership client-side → the Explorer tint + inclusion section
-   update instantly. Beside each chip the engine's `impactOfSelecting` (add) /
-   `impactOfPruning` (drop) count shows the cost.
-4. **Entry editor** (`EntryEditor`, secondary) — add (search over `allIds`) /
-   remove entry points, also via `updateActiveDraft`.
-5. A prominent **"Draft — not saved to repo"** banner. **No persistence this
-   round** — editing never touches `<plugin>/composition/index.ts`. Moving
-   manifests to a runtime data source is a filed follow-up.
+`comp/:id` carries the config item id, so a composition is deep-linkable and the
+list's `selectedRowId` derives from `compositionDetailPane.useRouteEntry()`. There
+is no `editingId` state, and no unsaved-draft mode: **New** writes the config row
+first (`save()` returns the new uuid) and then navigates to it, so `save(draft, id)`
+is always an in-place update and Delete is always available.
 
-## Compare mode (Increment 3)
+> The segment is `comp/:id`, not `c/:id` — segments are globally unique after
+> param names are erased, and `c/:convId` belongs to conversations. A collision
+> throws at runtime and fails the `pane:segments-unique` check.
 
-Entering Compare seeds the with/without-self-improvement anchor pair (default
-**A = `agent-manager`**, **B = `agent-manager-lean`**) by calling
-`setActiveComposition(A)` + `setCompareComposition(B)`. Two `CompositionPicker`
-lists let the user re-pick A and B. Setting both manifests puts the store into
-compare mode (`useIsCompareMode()` → true), which makes `useDiffMap()` non-null
-— a `Map<PluginId, "only-a"|"only-b"|"both"|"neither">` derived once per
-(active, compareWith, graph) from the two resolved `bundle` sets.
+## Seeding the store from the URL — two load-bearing rules
 
-- The Explorer band switches to its **diff color scheme** (a deliberately
-  different palette from the single-composition membership tints) driven by that
-  same map — see [`explorer/membership`](../explorer/plugins/membership/CLAUDE.md).
-- `DiffDelta` shows the **feature-level delta** — the symmetric difference grouped
-  into "Only in A" / "Only in B" with counts — plus the 4-color legend. The diff
-  tints + legend are imported (`DIFF_TINT` / `DIFF_LEGEND`) from the membership
-  band so the list chips and the tree paint the EXACT same colors (single source
-  of truth, no drift).
+`web/internal/use-seed-active-composition.ts` drives the module-level
+active-composition store from `:id`. Both of its rules look like tidiness and are
+actually correctness:
 
-For the anchor pair the "Only in A" group is exactly the self-improvement set
-(`improve.element-picker`, `review`, `reports.crash`, `reports.launch-fix`,
-`screenshot.draw-on-app`) plus its via-contributor hard closure; "Only in B" is
-empty. Leaving Compare drops the compare manifest (active stays), returning to
-single-composition draft mode.
+1. **The `seededFor` ref is the guard, not the dep array.** `item` is a fresh
+   object on every `manifests` config write, so an `[item]`-keyed effect would
+   re-fire after each `save()` and clobber the in-progress draft that
+   `updateActiveDraft` is building.
+2. **There is deliberately no cleanup.** `clearActive()` on unmount would be a
+   bug: Studio sidebar nav uses `mode:"root"`, which unmounts this pane, and
+   `explorer/membership` tints the Explorer off this same store. Pick a
+   composition here, then go look at the Explorer — the store *must* outlive the
+   pane. Clearing stays a user action (draft-actions' Clear button).
+
+## Why the Explorer is not the detail view
+
+It used to be. Selecting a row called `setActiveComposition` and pushed
+`explorerPane` in as a sibling column, because the membership tint happens to live
+there. That cast a peer browse surface as this plugin's detail pane, and it is the
+confusion this layout removes.
+
+The Explorer is an independent plugin browser (sidebar → tree → `pluginViewPane`)
+whose rows carry badges from six sub-plugins; `explorer/membership` is one of them,
+and the `graph` pane tints itself the same way. All of them read the store, never
+this plugin. So the closure tree is now a **section** here (reusing `PluginTree`
+from the explorer barrel, which yields the tint for free), and nothing auto-opens.
+The tint still appears on the standalone Explorer, because of rule 2 above.
+
+The closure-tree section passes its own `storageKey`
+(`defineDataView("studio.compositions.closure-tree")`) rather than reusing the
+Explorer's — otherwise filtering the Explorer would silently filter a
+composition's closure.
+
+## Compare
+
+`compare` is its own pane, seeded once with the with/without-self-improvement
+anchor pair (A = `agent-manager`, B = `agent-manager-lean`). Setting both puts the
+store in compare mode, which makes `useDiffMap()` non-null; `DiffDelta` renders the
+symmetric difference and imports `DIFF_TINT`/`DIFF_LEGEND` from
+[`explorer/membership`](../explorer/plugins/membership/CLAUDE.md) so the chips and
+the tree paint the exact same colors.
+
+Compare and the detail pane are **mutually exclusive by construction**: both are
+pushed from the list, so opening one truncates the other out of the route. That is
+the intent — both drive the single `active` slot in the store.
 
 All resolution is pure and client-side over the server-shipped `EdgeGraph`; there
 are no per-interaction round-trips.
@@ -82,9 +85,20 @@ are no per-interaction round-trips.
 
 ## Plugin reference
 
-- Description: Compositions pane: list named compositions and live-edit the working draft (contributor + entry-point selection) that drives the Explorer closure tint.
+- Description: Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
 - Web:
-  - Contributes: `Pane.Register` "compositions", `studio.compositions.item-actions` "delete" → `DeleteAction`, `Studio.Sidebar` "Compositions" → `component`
-  - Uses: `apps/studio/explorer.explorerPane`, `apps/studio/explorer/membership.DIFF_LEGEND`, `apps/studio/shell.Studio`, `plugin-meta/composition.clearActive`, `plugin-meta/composition.setActiveComposition`, `plugin-meta/composition.setCompareComposition`, `plugin-meta/composition.updateActiveDraft`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompareComposition`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useGraph`, `plugin-meta/composition.useManifestActions`, `plugin-meta/composition.useManifestItems`, `plugin-meta/composition.usePromoteManifestsToGit`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/badge.BadgeVariant`, `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/row-actions.RowActionButton`, `primitives/search.SearchInput`, `primitives/tooltip.WithTooltip`
+  - Slots: `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`, `comparePane.Actions`, `compositionDetailPane.Actions`, `compositionsPane.Actions`
+  - Contributes: `Pane.Register` "compositions", `Pane.Register` "composition-detail", `Pane.Register` "composition-compare", `studio.compositions.item-actions` "delete" → `DeleteAction`, `Studio.Sidebar` "Compositions" → `component`
+  - Uses: `apps/studio/explorer/membership.DIFF_LEGEND`, `apps/studio/shell.Studio`, `plugin-meta/composition.setActiveComposition`, `plugin-meta/composition.setCompareComposition`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useCompareComposition`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useManifestActions`, `plugin-meta/composition.useManifestItems`, `plugin-meta/composition.usePromoteManifestsToGit`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row-actions.RowActionButton`, `primitives/tooltip.WithTooltip`
+  - Exports: Values: `comparePane`, `CompositionDetail`, `compositionDetailPane`, `compositionsPane`
+- Cross-plugin:
+  - Imported by: `apps/studio/compositions/closure-tree`, `apps/studio/compositions/contributors`, `apps/studio/compositions/draft-actions`, `apps/studio/compositions/entry-points`, `apps/studio/compositions/membership-summary`, `apps/studio/compositions/release`
+- Sub-plugins:
+  - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
+  - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
+  - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
+  - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
+  - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
+  - **`release`** — Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
 
 <!-- AUTOGENERATED:END -->

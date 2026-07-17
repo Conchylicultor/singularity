@@ -12,6 +12,10 @@ export { usePluginTree } from "./context";
 // Explorer tree alongside their own controls via openPane. The pane object is a
 // pure factory; registration still happens via the Pane.Register below.
 export { explorerPane } from "./panes";
+// Exported so sibling Studio surfaces (the compositions closure-tree section) can render the
+// tinted tree inline. Standalone: {plugins, selected, onSelect, storageKey?} — no pane
+// coupling. Explorer never imports compositions → DAG-safe.
+export { PluginTree } from "./components/plugin-tree";
 
 export default {
   description:

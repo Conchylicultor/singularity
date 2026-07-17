@@ -1,4 +1,4 @@
-// @hash 76c4ba22f264
+// @hash ce0ee4701778
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -7,7 +7,6 @@
     "apps.studio.compositions:compositions",
     "apps.studio.contributions:contributions",
     "apps.studio.explorer:explorer",
-    "apps.studio.graph:graph",
-    "apps.studio.release:release"
+    "apps.studio.graph:graph"
   ]
 }

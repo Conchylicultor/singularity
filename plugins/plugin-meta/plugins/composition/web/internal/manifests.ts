@@ -24,8 +24,12 @@ export interface ManifestActions {
    * `rank`); otherwise appends a NEW item with a fresh `id` + `rank` (the same
    * generation the `list` field renderer uses — `crypto.randomUUID()` +
    * `Rank.between(lastRank, null)`).
+   *
+   * Returns the upserted item's `id` — `editingId` when replacing, the freshly
+   * minted one when appending. The Studio list pane's "New" creates the row and
+   * then navigates to `comp/:id`, so it needs the id the append just minted.
    */
-  save(draft: CompositionManifest, editingId?: string): void;
+  save(draft: CompositionManifest, editingId?: string): string;
   /** Remove the item with the given `id`. */
   remove(id: string): void;
 }
@@ -45,6 +49,7 @@ export function useManifestActions(): ManifestActions {
         extends: [...(draft.extends ?? [])],
       };
 
+      const newId = crypto.randomUUID();
       let next: CompositionManifestItem[];
       if (editingId !== undefined) {
         // Spreading the existing item first preserves its `category` (engine-opaque
@@ -61,7 +66,7 @@ export function useManifestActions(): ManifestActions {
         const lastRank =
           sorted.length > 0 ? Rank.from(sorted[sorted.length - 1]!.rank) : null;
         const newItem: CompositionManifestItem = {
-          id: crypto.randomUUID(),
+          id: newId,
           rank: Rank.between(lastRank, null).toString(),
           // New drafts default to the `app` category; re-categorise via config edit.
           category: "app",
@@ -75,6 +80,7 @@ export function useManifestActions(): ManifestActions {
       }
 
       setConfig("manifests", next);
+      return editingId ?? newId;
     },
     [items, setConfig],
   );
