@@ -41,7 +41,7 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
   - Uses: `primitives/css/center.Center`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/loading.Loading`
   - Exports: Types: `CursorPage`, `CursorPaginationHandle`, `InfiniteScrollFooterProps`, `InfiniteScrollHandle`, `InfiniteScrollOptions`, `ScrollSentinelProps`, `UseCursorPaginationOptions`; Values: `cursorPageSchema`, `InfiniteScrollFooter`, `ScrollSentinel`, `useCursorPagination`, `useInfiniteScroll`
 - Cross-plugin:
-  - Imported by: `apps/mail/search`, `apps/mail/thread-list`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `primitives/data-view`
+  - Imported by: `apps/mail/search`, `apps/mail/thread-list`, `primitives/data-view`
 - Core:
   - Exports: Types: `CursorPage`; Values: `cursorPageSchema`
 

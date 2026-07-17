@@ -4,15 +4,15 @@
 
 ## Plugin reference
 
-- Description: Umbrella for the `dataview` conversation-list sidebar variant: owns the tab host and registers the variant. Per-tab sub-plugins (History, Queue) contribute their tab into SidebarDataView.View.
+- Description: Umbrella for the DataView conversation-list sidebar: owns the tab host mounted directly by the conversations-view mount point. Per-tab sub-plugins (Grouped, Queue, History) contribute their tab into SidebarDataView.View.
 - Web:
-  - Slots: `SidebarDataView.View` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
-  - Contributes: `SidebarRegion.Variant` "DataView" → `DataViewBody`
-  - Uses: `conversations/conversations-view/sidebar-region.SidebarRegion`, `primitives/tabbed-view.defineTabbedView`
-  - Exports: Values: `SidebarDataView`
+  - Slots: `SidebarDataView.View` ← `conversations.conversations-view.data-view.grouped`, `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
+  - Uses: `primitives/tabbed-view.defineTabbedView`
+  - Exports: Types: `ConversationSidebarProps`; Values: `SidebarDataView`
 - Cross-plugin:
-  - Imported by: `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`
+  - Imported by: `conversations/conversations-view`, `conversations/conversations-view/data-view/grouped`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`
 - Sub-plugins:
+  - **`grouped`** — Contributes the user-defined conversation Groups (rebuilt on the official DataView primitive as a tree — group → conversations, both ranked, over the grouped plugin's live data/mutation layer) as the Grouped tab of the `dataview` sidebar variant.
   - **`history`** — Contributes the History list (a server-delegated DataView reusing the all-conversations query infra) as the History tab of the `dataview` sidebar variant.
   - **`queue`** — Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.
 

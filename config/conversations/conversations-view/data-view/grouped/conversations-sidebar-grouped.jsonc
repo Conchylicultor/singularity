@@ -1,0 +1,30 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "grouped",
+      "name": "Grouped",
+      "view": {
+        "type": "tree",
+        // Body = the row label only. `kind` stays a pure FILTER dimension (the
+        // filter pill's `kind is-none-of [system]` is the show/hide-system
+        // control) instead of rendering as a trailing chip on every row.
+        "visibleFields": ["title"],
+        "filter": {
+          "kind": "group",
+          "id": "root",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "no-system",
+              "fieldId": "kind",
+              "operatorId": "is-none-of",
+              "value": ["system"]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

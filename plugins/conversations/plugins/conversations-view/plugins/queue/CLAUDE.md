@@ -4,10 +4,9 @@
 
 ## Plugin reference
 
-- Description: Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
+- Description: Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
 - Web:
-  - Contributes: `ConversationsView.View` "Queue" → `QueueView`
-  - Uses: `conversations/conversation-ui/item.ConversationItem`, `conversations/conversations-view.ConversationsView`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/css/badge.Badge`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SidebarMenu`, `primitives/css/ui-kit.SidebarMenuButton`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/row-actions.RowActionButton`, `primitives/row-actions.RowActions`, `primitives/row-actions.rowActionsAnchor`
+  - Uses: `primitives/optimistic-mutation.OpNoLongerApplies`
   - Exports: Types: `ClassifiedQueue`, `RankedConversation`, `ReorderVars`, `TaskGroup`; Values: `applyReorder`, `classifyQueue`
 - Server:
   - Contributes: `resource.declare` "queue-ranks", `trigger` "queue.seed-rank", `trigger` "queue.pin-revalidate", `trigger` "queue.advance-pin", `trigger` "queue.task-status-pin"

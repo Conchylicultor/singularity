@@ -12,8 +12,10 @@ import { EditableCell } from "./editable-cell";
  * component, used by every view. Read precedence is uniform: consumer
  * `field.cell` override → contributed `data-view.cell` slot (`resolveCell`) →
  * `String(value)`. When the field declares a write-back (`onEdit`/`onEditValues`)
- * the read is wrapped in `EditableCell` for click-to-edit; otherwise the read is
- * rendered bare.
+ * AND `field.canEdit` admits this row (default: it does), the read is wrapped in
+ * `EditableCell` for click-to-edit; otherwise the read is rendered bare — a gated
+ * row gets no editor and no inert affordance, exactly like a field that declares
+ * no write-back at all.
  */
 export interface FieldCellProps {
   field: FieldDef<unknown>;
@@ -35,7 +37,10 @@ export function FieldCell({
   const read = field.cell
     ? field.cell(row)
     : (resolveCell(field, value, row, values) ?? String(value ?? ""));
-  if (field.onEdit || field.onEditValues) {
+  const editable =
+    (field.onEdit != null || field.onEditValues != null) &&
+    (field.canEdit?.(row) ?? true);
+  if (editable) {
     return (
       <EditableCell
         field={field}

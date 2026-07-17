@@ -5,7 +5,7 @@ import { _conversationGroupMembers, _conversationGroups } from "./tables";
 import {
   conversationGroupsResource as conversationGroupsDescriptor,
   type ConversationGroupsPayload,
-} from "../../shared";
+} from "../../core";
 
 export const conversationGroupsResource = defineResource(conversationGroupsDescriptor, {
   mode: "push",

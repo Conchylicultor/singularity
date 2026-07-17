@@ -223,6 +223,18 @@ export interface FieldDef<TRow> {
    * in practice (a field is scalar or multi). Consumer owns persistence.
    */
   onEditValues?: (row: TRow, next: string[]) => void | Promise<void>;
+  /**
+   * Per-row edit gate. Default: always editable when `onEdit`/`onEditValues` is
+   * declared. Return false → the cell/label renders read-only for that row (no
+   * editor, no inert affordance) — for heterogeneous row unions where only some
+   * kinds are writable, and for read-only/archived rows.
+   *
+   * Mirrors `ManualOrderConfig.getRank` returning `null` ("this row is not a drag
+   * source"): a per-row withdrawal of a capability the field otherwise declares.
+   * Honored uniformly by every view (the shared `FieldCell` path used by
+   * table/list/gallery, and the tree's primary label + secondary chips).
+   */
+  canEdit?: (row: TRow) => boolean;
   /** Default: true when `value` is present. */
   sortable?: boolean;
   /**

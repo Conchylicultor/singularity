@@ -12,7 +12,7 @@ import {
 } from "@plugins/conversations/plugins/all-conversations/core";
 import { conversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/sidebar-region/core";
+import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 
 // The DataView surface id — the config lives under the defining plugin's tree at

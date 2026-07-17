@@ -2,7 +2,7 @@ import { type ReactElement } from "react";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/sidebar-region/core";
+import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
 import { queueFields } from "./queue-fields";
 import { QueueItemActions, CloseConversationContext } from "./queue-item-actions";

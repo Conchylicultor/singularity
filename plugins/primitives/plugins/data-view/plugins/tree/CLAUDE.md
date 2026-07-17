@@ -24,13 +24,17 @@ the lower-level building block.
   function (the view just memoizes it), so its rank arithmetic — notably the
   alias minting below — is directly testable without mounting the view.
 - **Row label** — the primary field (`FieldDef.primary` → first `text` → first,
-  run via `pickPrimaryField` over the view's **visible** field subset) rendered
-  through the same `data-view.cell` resolution the table uses, so a field-type
-  plugin's cell renders identically as a table column and a tree row. When the
-  primary field declares `onEdit`/`onEditValues`, the label becomes an
-  `EditableTreeLabel` (select-then-edit over the shared `useResolveCellEditor`
-  capability — the same per-type editors the table uses); otherwise it stays a
-  read-only cell.
+  run via `pickPrimaryField` over the view's **visible** field subset) rendered on
+  the same read precedence the shared `FieldCell` documents and every other view
+  applies: consumer **`field.cell` override → contributed `data-view.cell` slot →
+  `String(value)`**. So a field-type plugin's cell renders identically as a table
+  column and a tree row, *and* a consumer whose rows are a heterogeneous union can
+  render one kind's label as a whole component (e.g. a conversation row) via
+  `field.cell`. When the primary field declares `onEdit`/`onEditValues` — and
+  `canEdit` admits the row — the label becomes an `EditableTreeLabel`
+  (select-then-edit over the shared `useResolveCellEditor` capability, the same
+  per-type editors the table uses) wrapping that same read node; otherwise it
+  stays a read-only cell.
 - **Secondary fields** — the body is no longer label-only. The row renders the
   primary field as the label **plus** the remaining visible fields (the view's
   `visibleFields` minus the primary; **default = all non-primary fields**) as

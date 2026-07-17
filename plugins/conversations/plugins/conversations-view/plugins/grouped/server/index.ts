@@ -5,6 +5,7 @@ import {
   handleAddMember,
   handleCreateGroup,
   handleDeleteGroup,
+  handleMoveMember,
   handlePatchGroup,
   handleRemoveMember,
 } from "./internal/routes";
@@ -14,7 +15,8 @@ import {
   deleteConversationGroup,
   addConversationGroupMembers,
   removeConversationGroupMember,
-} from "../shared/endpoints";
+  moveConversationGroupMember,
+} from "../core/endpoints";
 
 export { _conversationGroups, _conversationGroupMembers } from "./internal/tables";
 export { conversationGroupsResource } from "./internal/resource";
@@ -29,6 +31,7 @@ export default {
     [deleteConversationGroup.route]:      handleDeleteGroup,
     [addConversationGroupMembers.route]:  handleAddMember,
     [removeConversationGroupMember.route]: handleRemoveMember,
+    [moveConversationGroupMember.route]:   handleMoveMember,
   },
   contributions: [Resource.Declare(conversationGroupsResource)],
 } satisfies ServerPluginDefinition;

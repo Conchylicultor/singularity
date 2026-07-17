@@ -65,24 +65,35 @@ function DefaultRow<TRow>(props: {
   const primaryString = String(primaryValue ?? "");
   const labelClass = options.labelClassName?.(row);
 
+  // The label's read-rendering, on the SAME precedence the shared `FieldCell`
+  // documents and every other view applies: consumer `field.cell` override →
+  // contributed `data-view.cell` slot → `String(value)`. The override matters for
+  // heterogeneous row unions, where a kind's label is a whole component (e.g. a
+  // conversation row) rather than its type's generic cell.
+  const primaryRead: ReactNode = primaryField
+    ? primaryField.cell
+      ? primaryField.cell(row)
+      : (resolveCell(primaryField as FieldDef<unknown>, primaryValue ?? null, row) ??
+        primaryString)
+    : null;
+
   let label: ReactNode;
-  if (
-    primaryField &&
-    !isAlias &&
-    (primaryField.onEdit || primaryField.onEditValues)
-  ) {
-    const readNode =
-      resolveCell(
-        primaryField as FieldDef<unknown>,
-        primaryValue ?? null,
-        row,
-      ) ?? primaryString;
+  // The primary label is editable when the field declares a write-back AND
+  // `canEdit` admits this row (default: it does) — the same per-row gate the
+  // shared `FieldCell` applies to the secondary chips and every flat view.
+  // Gated rows fall through to the read-only label below: no editor, no inert
+  // affordance.
+  const primaryEditable =
+    primaryField != null &&
+    (primaryField.onEdit != null || primaryField.onEditValues != null) &&
+    (primaryField.canEdit?.(row) ?? true);
+  if (primaryField && !isAlias && primaryEditable) {
     label = (
       <EditableTreeLabel
         node={node}
         row={row}
         field={primaryField as FieldDef<unknown>}
-        read={readNode}
+        read={primaryRead}
         className={labelClass}
       />
     );
@@ -90,11 +101,7 @@ function DefaultRow<TRow>(props: {
     label = (
       // eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label, a row-level flex child of TreeRowChrome's flex row (it owns the row layout)
       <span className={cn("min-w-0 flex-1 truncate", labelClass)}>
-        {resolveCell(
-          primaryField as FieldDef<unknown>,
-          primaryValue ?? null,
-          row,
-        ) ?? primaryString}
+        {primaryRead}
       </span>
     );
   } else {

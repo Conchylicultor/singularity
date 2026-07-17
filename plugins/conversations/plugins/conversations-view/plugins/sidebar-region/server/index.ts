@@ -1,7 +1,0 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { variantRegionServerContribution } from "@plugins/ui/plugins/variant-region/server";
-import { conversationsSidebarRegion } from "../core";
-
-export default {
-  contributions: [variantRegionServerContribution(conversationsSidebarRegion)],
-} satisfies ServerPluginDefinition;

@@ -16,7 +16,7 @@ import {
   stepDownQueue,
   rerankQueue,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
-import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/sidebar-region/core";
+import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { QueueRow } from "./use-queue-rows";
 
 /** Per-consumer trailing-action slot for the Queue tab's rows. */

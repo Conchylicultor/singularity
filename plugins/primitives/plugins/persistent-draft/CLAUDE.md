@@ -12,7 +12,7 @@
 
 - Description: Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
 - Cross-plugin:
-  - Imported by: `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/push-and-exit`, `primitives/css/color-picker`, `shell/global-action-bar`, `tasks/task-draft-form`
+  - Imported by: `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/push-and-exit`, `conversations/conversations-view/data-view/grouped`, `primitives/css/color-picker`, `shell/global-action-bar`, `tasks/task-draft-form`
 - Web:
   - Exports: Values: `useDraft`
 
