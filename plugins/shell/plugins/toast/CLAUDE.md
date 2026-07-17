@@ -10,7 +10,7 @@
   - Uses: `apps-core/theme-scope.useChromeThemeScope`, `primitives/select-scope.ContentScope`, `ui/theme-engine.useColorMode`
   - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `showToast`
 - Cross-plugin:
-  - Imported by: `apps/pages/page-tree`, `debug/profiling/push`, `infra/health`, `shell/notifications`
+  - Imported by: `apps/pages/page-tree`, `apps/studio/compositions/auto-serve`, `debug/profiling/push`, `infra/health`, `shell/notifications`
 - Core:
   - Exports: Types: `ToastArgs`, `ToastVariant`
 

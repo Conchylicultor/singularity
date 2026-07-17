@@ -117,13 +117,16 @@ function isUniqueViolation(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === "23505";
 }
 
-export function triggerBuild(trigger: "manual" | "auto"): void {
+export function triggerBuild(
+  trigger: "manual" | "auto",
+  opts?: { serveComposition?: string },
+): void {
   if (inflight) return;
   inflight = true;
   void runTracked("build:run", async () => {
     try {
       if (await isAnyBuildAlive()) return;
-      await doRunBuild(trigger);
+      await doRunBuild(trigger, opts);
     } catch (err) {
       buildLog.publish(
         `Build error: ${err instanceof Error ? err.message : String(err)}`,
@@ -141,7 +144,10 @@ function getHeadCommit(): string | null {
   return proc.stdout.toString().trim() || null;
 }
 
-async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
+async function doRunBuild(
+  trigger: "manual" | "auto",
+  opts?: { serveComposition?: string },
+): Promise<void> {
   // A crashed prior owner can leave an unfinished row that the partial unique
   // index treats as a live claim and that would block every future build. Close
   // those dead-owner rows before claiming so a corpse never wedges the lock.
@@ -172,7 +178,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     throw err;
   }
 
-  const proc = Bun.spawn(["./singularity", "build", "--allow-main"], {
+  const args = ["./singularity", "build", "--allow-main"];
+  if (opts?.serveComposition) args.push("--serve-composition", opts.serveComposition);
+  const proc = Bun.spawn(args, {
     cwd: REPO_ROOT,
     stdout: "pipe",
     stderr: "pipe",

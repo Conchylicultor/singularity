@@ -16,6 +16,7 @@ import {
   usePromoteManifestsToGit,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
+import { useServeComposition } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve/web";
 import { compositionDetailPane, comparePane } from "../panes";
 import { CompositionItemActions } from "./composition-item-actions";
 
@@ -53,7 +54,8 @@ function PromoteDefaultButton(): ReactElement {
 export function CompositionsList(): ReactElement {
   const { isLoading } = useCompositionData();
   const items = useManifestItems();
-  const { save, setAutoBuild } = useManifestActions();
+  const { save } = useManifestActions();
+  const { serve, stop } = useServeComposition();
   const openPane = useOpenPane();
   // The URL is the selection — there is no local `editingId` state to drift.
   const selectedId = compositionDetailPane.useRouteEntry()?.params.id;
@@ -95,7 +97,8 @@ export function CompositionsList(): ReactElement {
           <CompositionsDataView
             items={items}
             selectedId={selectedId ?? null}
-            onToggleAutoBuild={setAutoBuild}
+            onServe={serve}
+            onStop={stop}
             onSelect={(item) =>
               openPane(
                 compositionDetailPane,
@@ -126,12 +129,14 @@ function CompositionsDataView({
   items,
   selectedId,
   onSelect,
-  onToggleAutoBuild,
+  onServe,
+  onStop,
 }: {
   items: CompositionManifestItem[];
   selectedId: string | null;
   onSelect: (item: CompositionManifestItem) => void;
-  onToggleAutoBuild: (id: string, on: boolean) => void;
+  onServe: (id: string) => void;
+  onStop: (id: string) => void;
 }) {
   const fields = useMemo<FieldDef<CompositionManifestItem>[]>(
     () => [
@@ -220,7 +225,8 @@ function CompositionsDataView({
             }
             onClick={(e: { stopPropagation: () => void }) => {
               e.stopPropagation();
-              onToggleAutoBuild(it.id, !it.autoBuild);
+              if (it.autoBuild) onStop(it.id);
+              else onServe(it.id);
             }}
           >
             {it.autoBuild ? "Serving" : "Serve"}
@@ -252,7 +258,7 @@ function CompositionsDataView({
         align: "end",
       },
     ],
-    [onToggleAutoBuild],
+    [onServe, onStop],
   );
 
   return (

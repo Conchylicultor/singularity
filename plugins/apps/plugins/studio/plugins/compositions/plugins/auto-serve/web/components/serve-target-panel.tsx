@@ -3,32 +3,19 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import {
-  useManifestItems,
-  useManifestActions,
-} from "@plugins/plugin-meta/plugins/composition/web";
+import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
+import { useServeComposition } from "../internal/use-serve-composition";
 
 /**
- * Auto build & serve section of the composition detail pane. Flips this
- * composition's `autoBuild` config flag; the CLI compose-serve stage reads it
+ * The **Serve live** target panel of the unified Build & serve section. Flips this
+ * composition's `autoBuild` config flag; enabling it also kicks an immediate main
+ * build (via `useServeComposition().serve`) so the live URL is ready without
+ * waiting for the next full build. The CLI compose-serve stage reads `autoBuild`
  * from MAIN's resolved config and, when on, composes a per-composition frontend
  * dist + empty DB served live at http://<id>.localhost:9000 on every main build.
- *
- * Keyed by the config item `id` the pane routes on, so the write targets exactly
- * this composition. `item` is undefined for the frame before the manifests config
- * loads (or if the id is stale) — the same null-window the sibling sections guard.
  */
-export function AutoServeSection({ id }: { id: string }): ReactElement {
-  const item = useManifestItems().find((it) => it.id === id);
-  const { setAutoBuild } = useManifestActions();
-
-  if (!item) {
-    return (
-      <Text variant="caption" tone="muted">
-        No composition.
-      </Text>
-    );
-  }
+export function ServeTargetPanel({ item }: { item: CompositionManifestItem }): ReactElement {
+  const { serve, stop } = useServeComposition();
 
   const host = `${item.id}.localhost:9000`;
   return (
@@ -41,7 +28,7 @@ export function AutoServeSection({ id }: { id: string }): ReactElement {
               ? "Auto-served — click to stop building & serving"
               : `Click to build & serve this composition at http://${host}`
           }
-          onClick={() => setAutoBuild(item.id, !item.autoBuild)}
+          onClick={() => (item.autoBuild ? stop(item.id) : serve(item.id))}
         >
           {item.autoBuild ? "Serving" : "Serve"}
         </ToggleChip>

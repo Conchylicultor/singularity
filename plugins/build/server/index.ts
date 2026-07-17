@@ -5,6 +5,7 @@ import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { ConfigV2, getConfig } from "@plugins/config_v2/server";
 import { handleBuild } from "./internal/handle-build";
+import { handleServeComposition } from "./internal/handle-serve-composition";
 import { reconcileOrphanBuilds } from "./internal/run-build";
 import { buildRunJob } from "./internal/build-run-job";
 import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
@@ -14,12 +15,13 @@ import { buildHistoryResource } from "./internal/build-history-resource";
 import { frontendHashResource } from "./internal/frontend-hash-resource";
 export { _buildRuns } from "./internal/tables";
 import { buildConfig } from "../shared";
-import { triggerBuildEndpoint } from "../core/endpoints";
+import { triggerBuildEndpoint, serveCompositionEndpoint } from "../core/endpoints";
 
 export default {
   contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource), Resource.Declare(frontendHashResource), Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: buildRunJob, with: {}, oneShot: false })],
   httpRoutes: {
     [triggerBuildEndpoint.route]: handleBuild,
+    [serveCompositionEndpoint.route]: handleServeComposition,
   },
   register: [buildRunJob, buildRunDebouncedJob],
   onReady: async () => {

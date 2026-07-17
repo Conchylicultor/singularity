@@ -12,15 +12,15 @@
   - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`, `useStaleFrontend`
 - Server:
   - Contributes: `ConfigV2.Register` "config", `resource.declare` "build.mainAheadCount", `resource.declare` "build.history", `resource.declare` "build.frontendHash", `trigger` "build.run"
-  - Uses: `build/server-build-id.getServerBuildId`, `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.pruneWorktreeBuildArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.WEB_DIST_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `infra/query-resource.queryResource`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
+  - Uses: `build/server-build-id.getServerBuildId`, `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.pruneWorktreeBuildArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.WEB_DIST_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `infra/query-resource.queryResource`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
   - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports: Values: `_buildRuns`
   - Register: `defineJob('build.run')`, `defineJob('build.run.debounced')`
   - Resources: `build.frontendHash` (push), `build.history` (keyed), `build.mainAheadCount` (push)
-  - Routes: `POST /api/build`
+  - Routes: `POST /api/build`, `POST /api/build/serve`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.queryResourceDescriptor`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
-  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildDetailRoute`, `buildHistoryResource`, `buildRoute`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
+  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildDetailRoute`, `buildHistoryResource`, `buildRoute`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `serveCompositionEndpoint`, `triggerBuildEndpoint`
 - Cross-plugin:
   - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`, `debug/reports`
 - Shared:

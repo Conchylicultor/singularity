@@ -1,15 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { CompositionDetail } from "@plugins/apps/plugins/studio/plugins/compositions/web";
-import { AutoServeSection } from "./components/auto-serve-section";
+
+export { ServeTargetPanel } from "./components/serve-target-panel";
+export { useServeComposition } from "./internal/use-serve-composition";
 
 export default {
   description:
-    "Auto build & serve section in the composition detail pane: toggle the composition's autoBuild flag and open its live serve URL.",
-  contributions: [
-    CompositionDetail.Section({
-      id: "auto-serve",
-      label: "Auto build & serve",
-      component: AutoServeSection,
-    }),
-  ],
+    "Serve capability for compositions: the live-serve toggle panel + the enable→build hook, consumed by the unified Build & serve section and the compositions list.",
 } satisfies PluginDefinition;
