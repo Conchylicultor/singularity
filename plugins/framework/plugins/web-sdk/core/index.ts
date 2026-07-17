@@ -7,7 +7,6 @@ export { PluginProvider, PluginRuntimeContext } from "./context";
 export type { PluginDefinition, LoadedPlugin, Contribution, DocMeta } from "./types";
 export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
-export { topoSortPlugins } from "./topo";
 export { partitionWebEntries, isDeferredPluginPath } from "./load-tiers";
 export {
   useDeferredLoadState,

@@ -1,5 +1,5 @@
 import { createContext, useMemo, type ReactNode } from "react";
-import { topoSortPlugins } from "./topo";
+import { topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
 import type { Contribution, LoadedPlugin } from "./types";
 
 export interface PluginRuntime {

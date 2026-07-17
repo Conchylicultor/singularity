@@ -245,6 +245,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`central-core`**
     - **`cli`**
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
+    - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
     - **`resource-runtime`**
     - **`server-core`**
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen

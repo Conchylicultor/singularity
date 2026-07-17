@@ -3782,6 +3782,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/tooling/codegen`, `framework/web-sdk`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/exports`, `plugin-meta/plugin-tree`
       - Core:
         - Exports: Types: `PluginId`, `RuntimeFolder`; Values: `asFsPath`, `asPath`, `asPluginId`, `pluginIdSegments`, `RUNTIME_FOLDERS`
+    - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
+      - Cross-plugin:
+        - Imported by: `framework/web-sdk`
+      - Core:
+        - Exports: Values: `computeLoadWaves`, `topoSortPlugins`
     - **`resource-runtime`**
       - Core:
         - Uses: `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
@@ -3911,8 +3916,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `config_v2.staging`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
-        - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
-        - Exports: Types: `Contribution`, `DeferredLoadState`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `PluginLoadReport`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineSlot`, `getDeferredLoadState`, `hasLoadErrorUnder`, `isDeferredPluginPath`, `loadPlugins`, `markDeferredLoadComplete`, `markDeferredPluginsFailed`, `markDeferredPluginsLoaded`, `partitionWebEntries`, `pluginLoadReportSink`, `PluginProvider`, `PluginRuntimeContext`, `resetDeferredLoadStateForTests`, `subscribeDeferredLoadState`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `useDeferredLoadState`, `useHasLoadErrorUnder`, `webCollectedDir`
+        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-loader.topoSortPlugins`, `framework/tooling/collected-dir.defineCollectedDir`
+        - Exports: Types: `Contribution`, `DeferredLoadState`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `PluginLoadReport`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineSlot`, `getDeferredLoadState`, `hasLoadErrorUnder`, `isDeferredPluginPath`, `loadPlugins`, `markDeferredLoadComplete`, `markDeferredPluginsFailed`, `markDeferredPluginsLoaded`, `partitionWebEntries`, `pluginLoadReportSink`, `PluginProvider`, `PluginRuntimeContext`, `resetDeferredLoadStateForTests`, `subscribeDeferredLoadState`, `UNSAFE_unsealSlotComponent`, `useDeferredLoadState`, `useHasLoadErrorUnder`, `webCollectedDir`
 
 - **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
   - Web:

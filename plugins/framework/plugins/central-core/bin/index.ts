@@ -2,33 +2,94 @@ import type { WsData, HttpHandler, WsHandler, CentralPluginDefinition, LoadedCen
 import { notificationsWsHandler, handleResourceHttp } from "@plugins/framework/plugins/central-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { centralEntries } from "../core/central.generated";
-import { topoSortPlugins } from "./topo";
+import { computeLoadWaves, topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
+import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
-// ── Load all central plugins ───────────────────────────────────
-const loadResults = await Promise.allSettled(
-  centralEntries.map((e) => e.loader() as Promise<{ default: CentralPluginDefinition }>),
-);
+// ── Load all central plugins (topological waves) ───────────────
+// Import in dependency-ordered waves over `dependsOn` rather than one flat
+// `Promise.allSettled` over every entry. `dependsOn` is the codegen-derived
+// cross-plugin import graph already carried by each entry (and already used to
+// order the register/onReady phases below). Flat concurrent import races a
+// barrel against a module that imports it: the dependent can evaluate while the
+// barrel is suspended mid-re-export and observe the barrel's uninitialized
+// `const` exports as a TDZ `ReferenceError` under Bun. Central runs under Bun
+// from source (the gateway spawns it via the same backend-spawn path as worktree
+// servers; there is no `--compile`), so it is exposed to exactly that race — the
+// two auth leaves (auth.google / auth.notion) share a `core` dep and sit in the
+// same final wave, the precise concurrent first-eval the warming step closes.
+// Loading wave-by-wave (concurrent WITHIN a wave, serialized only across edges)
+// guarantees a plugin's imports are fully evaluated before it is imported. See
+// `computeLoadWaves` for the invariant and cycle handling.
+const waves = computeLoadWaves(centralEntries);
 const byPath = new Map<string, LoadedCentralPlugin>();
 const seenIds = new Set<string>();
-for (let i = 0; i < loadResults.length; i++) {
-  const r = loadResults[i]!;
-  const e = centralEntries[i]!;
-  if (r.status === "rejected") {
-    console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
-    continue;
+// Collect ALL load failures across every wave and throw once at the end — the
+// operator needs the full list, not just the first plugin to blow up.
+const loadFailures: Array<{ pluginPath: string; error: string }> = [];
+// A plugin exposes a public `core` barrel iff `plugins/<path>/core/index.ts`
+// exists (`PLUGINS_DIR` is derived from this file's own location, not cwd).
+const hasCoreBarrel = (pluginPath: string): boolean =>
+  existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"));
+for (const wave of waves) {
+  // ── Warm this wave's core barrels BEFORE loading its central barrels ──
+  // Parity with the server loader, kept as forward-safe insurance. Central's
+  // cross-plugin imports go through the `core` *barrel index* (the boundary rule
+  // permits only `@plugins/<name>/core`, never a core submodule), so whenever a
+  // dependency has its own `central` barrel, loading that barrel in an earlier
+  // wave already evaluates its core index — for the current graph wave-ordering
+  // alone closes the race (unlike the server, whose barrels import core
+  // *submodules*, leaving the core index cold). The gap this warming closes is a
+  // *core-only* dependency (no `central` barrel) whose core index is imported by
+  // two central plugins in the SAME wave: nothing else would evaluate it before
+  // both race its first import. Warming each wave's cores here — concurrently,
+  // since every core they transitively import belongs to an already-evaluated
+  // earlier wave — makes that impossible. Rejections here are not the reporting
+  // site: a genuinely broken core re-rejects when its own (or a dependent's)
+  // central barrel imports it below, and is recorded there — nothing is swallowed.
+  const coreWave = wave.filter((e) => hasCoreBarrel(e.pluginPath));
+  await Promise.allSettled(coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)));
+
+  const results = await Promise.allSettled(
+    wave.map((e) => e.loader() as Promise<{ default: CentralPluginDefinition }>),
+  );
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i]!;
+    const e = wave[i]!;
+    if (r.status === "rejected") {
+      console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
+      // First line of the error (`Name: message`) for the aggregated summary;
+      // the full reason/stack is on the console.error line above.
+      loadFailures.push({
+        pluginPath: e.pluginPath,
+        error: String(r.reason).split("\n")[0]!,
+      });
+      continue;
+    }
+    // `id` is derived from the unique hierarchy path, never authored. The guard
+    // is structurally unreachable but fails loud if codegen ever produces a
+    // collision, rather than letting topo sort silently drop a plugin.
+    if (seenIds.has(e.id)) {
+      throw new Error(
+        `[plugin] duplicate derived plugin id "${e.id}" (${e.pluginPath})`,
+      );
+    }
+    seenIds.add(e.id);
+    const plugin = r.value.default as LoadedCentralPlugin;
+    plugin.id = asPluginId(e.id);
+    byPath.set(e.pluginPath, plugin);
   }
-  // `id` is derived from the unique hierarchy path, never authored. The guard
-  // is structurally unreachable but fails loud if codegen ever produces a
-  // collision, rather than letting topo sort silently drop a plugin.
-  if (seenIds.has(e.id)) {
-    throw new Error(
-      `[plugin] duplicate derived plugin id "${e.id}" (${e.pluginPath})`,
-    );
-  }
-  seenIds.add(e.id);
-  const plugin = r.value.default as LoadedCentralPlugin;
-  plugin.id = asPluginId(e.id);
-  byPath.set(e.pluginPath, plugin);
+}
+// Central is a single host-wide process, so a plugin that cannot load MUST NOT
+// let central come up degraded across every worktree. A module that throws at
+// import time is broken, full stop — aggregate every failure into one error so
+// the whole list is visible, and crash rather than serve a half-loaded central.
+if (loadFailures.length > 0) {
+  throw new Error(
+    `[plugin] ${loadFailures.length} plugin(s) failed to load:\n` +
+      loadFailures.map((f) => `  - ${f.pluginPath}: ${f.error}`).join("\n"),
+  );
 }
 for (const e of centralEntries) {
   const plugin = byPath.get(e.pluginPath);

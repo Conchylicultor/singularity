@@ -22,7 +22,7 @@ import { isMain, PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
-import { computeLoadWaves, topoSortPlugins } from "./topo";
+import { computeLoadWaves, topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so

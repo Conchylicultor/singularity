@@ -15,6 +15,29 @@ export interface PluginLoadError {
 export async function loadPlugins(
   entries: PluginEntry[],
 ): Promise<{ plugins: LoadedPlugin[]; errors: PluginLoadError[] }> {
+  // ── Why flat concurrent import is safe HERE (unlike server/central) ──
+  // The server and central loaders (`server-core/bin/index.ts`,
+  // `central-core/bin/index.ts`) load in dependency-ordered `dependsOn` waves,
+  // warming each wave's `core` barrels before its runtime barrels. This loader
+  // deliberately does NOT — a single flat `Promise.allSettled` over every entry
+  // — and that is correct, because the class of bug the waves close is
+  // Bun-loader-specific and structurally absent on the web runtime:
+  //   • In the BROWSER (native ESM via the artifact-mode import map), module
+  //     evaluation follows the spec's single-module-map, depth-first ordering
+  //     with the async-module evaluation-promise machinery — a dependency is
+  //     fully evaluated before a dependent's body runs, EVEN with top-level
+  //     await. So the concurrent-load ordering race (a dependent observing a
+  //     dependency barrel's not-yet-initialized `const` exports as a TDZ
+  //     `ReferenceError`) cannot occur here. Bun's loader violates that ordering
+  //     under concurrent `import()`; the browser does not.
+  //   • In release/monolith mode the whole graph is a SINGLE Rollup bundle with
+  //     no cross-artifact dynamic-import edge, so there is nothing to race.
+  // The claim is scoped to the concurrent-load ordering class only — NOT genuine
+  // import cycles (a different class the boundary checker confirms doesn't
+  // exist). Do NOT reorder this into waves: it would be dead complexity fighting
+  // the deliberate deferred-batch boot-perf design, buying nothing. If this ever
+  // regressed, `plugin-render.test.tsx` (a load-only canary that loads every web
+  // plugin) would fail loudly.
   const results = await Promise.allSettled(
     entries.map((e) => e.loader()),
   );
