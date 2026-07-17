@@ -177,6 +177,12 @@ export function createSampleGatherer(pg: SentinelPg, log: Logger): SampleGathere
   return {
     async gather(): Promise<ClusterSample> {
       tickCount++;
+      // A fresh loadavg() syscall on this latch-critical worker thread — NOT a
+      // read of health-monitor's 10s-cadence health-host file. Trip timing must
+      // not depend on stale host samples (the worker's isolation premise), so
+      // loadavg is deliberately re-read here rather than deduped. The compressor
+      // signal below IS single-sourced from that file (no second vm_stat spawn).
+      // See health-monitor's host-sampler.ts and both CLAUDE.mds.
       const [loadAvg1 = 0, loadAvg5 = 0] = loadavg();
 
       const pgRow = await pg.queryStats();

@@ -14,8 +14,10 @@ export const SERVER_REPORT_SOURCES = [
   "server-read-set-monitor",
   "server-boot-budget-monitor",
   "server-boot-monitor",
+  "server-boot-watchdog",
   "server-session-monitor",
   "server-duress-shed",
+  "server-duress-monitor",
   "server-stall-monitor",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [

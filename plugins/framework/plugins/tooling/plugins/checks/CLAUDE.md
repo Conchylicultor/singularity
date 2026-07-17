@@ -40,6 +40,7 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
   - **`css-vars-supplied`**
   - **`data-migration-dml-only`**
   - **`data-views-in-sync`**
+  - **`durable-signals-accounted`**
   - **`eager-tier-in-sync`**
   - **`fields-eager-in-sync`**
   - **`host-budget`**

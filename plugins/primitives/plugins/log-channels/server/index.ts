@@ -6,7 +6,7 @@ import { getLogChannels, emitLogs } from "../core/endpoints";
 
 export { Log } from "./internal/log";
 export type { LogChannel, LogStream } from "./internal/log";
-export { listChannels, readChannelEntries } from "./internal/persist";
+export { listChannels, logsDirFor, readChannelEntries, readChannelJson } from "./internal/persist";
 
 export default {
   httpRoutes: {

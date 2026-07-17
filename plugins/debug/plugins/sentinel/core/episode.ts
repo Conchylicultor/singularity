@@ -23,3 +23,28 @@ export const DuressEpisodeEventSchema = z.object({
   episodeSetAt: z.number(),
 });
 export type DuressEpisodeEvent = z.infer<typeof DuressEpisodeEventSchema>;
+
+// The jsonb payload for a `duress-episode` report — filed once per episode, on
+// clear, from onset.ts:handleClearFrame (WS3,
+// research/2026-07-17-global-debug-surface-consolidation.md). The report is the
+// missing report/bell half of the duress signal; the trip instant is already
+// covered by the cluster-onset trace + the timeline duress band. Fingerprinted
+// per CAUSE-SIGNATURE (sorted `elevated`), NOT per episode, so a storm of
+// episodes with the same cause collapses to one counted row.
+export const DuressEpisodeReportPayloadSchema = z.object({
+  /** The trip cause string (e.g. "cluster-onset: decompressionsPerSec"). */
+  reason: z.string(),
+  /** The elevated signal names at trip — the fingerprint's cause-signature. */
+  elevated: z.array(z.string()),
+  /** The latch's setAt (episode identity + trip instant), wall-clock ms epoch. */
+  episodeSetAt: z.number(),
+  /** The clear instant, wall-clock ms epoch. */
+  endedAt: z.number(),
+  /** endedAt − episodeSetAt. */
+  durationMs: z.number(),
+  /** True when the episode was force-cleared by max-episode-hold (not a natural calm). */
+  forced: z.boolean(),
+});
+export type DuressEpisodeReportPayload = z.infer<
+  typeof DuressEpisodeReportPayloadSchema
+>;

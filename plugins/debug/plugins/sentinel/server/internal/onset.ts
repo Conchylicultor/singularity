@@ -1,5 +1,6 @@
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { recordReport } from "@plugins/reports/server";
 import type { WorkerToMainFrame } from "./worker/protocol";
 
 // Main's best-effort re-emitter for the worker's onset transitions (Stage 5:
@@ -40,4 +41,30 @@ export function handleClearFrame(
   channel.publish(
     frame.forced ? "onset CLEAR (max-episode-hold forced)" : "onset CLEAR",
   );
+
+  // File the duress-episode report — the report/bell half of the signal, filed
+  // once per episode on clear (the detector emits exactly one trip and one clear
+  // per episode). The enrichment fields are present whenever the clear ended a
+  // real episode; a bare clear with no episode (defensive impossibility) carries
+  // none, so the report is skipped rather than filed with a hole.
+  const { reason, elevated, episodeSetAt, wall } = frame;
+  if (reason === undefined || elevated === undefined || episodeSetAt === undefined || wall === undefined) {
+    return;
+  }
+  // Plain `void`: recordReport wraps its own DB/bell writes in
+  // runInBackgroundLane(runWithoutProfiling(…)) — the caller must not double-wrap
+  // (stall-monitor precedent). Satisfies no-floating-promises; no catch needed.
+  void recordReport({
+    kind: "duress-episode",
+    source: "server-duress-monitor",
+    data: {
+      reason,
+      elevated,
+      episodeSetAt,
+      endedAt: wall,
+      durationMs: wall - episodeSetAt,
+      forced: frame.forced,
+    },
+    message: `cluster duress episode cleared (${elevated.join(", ") || "adopted"}) — ${Math.round((wall - episodeSetAt) / 1000)}s${frame.forced ? ", forced" : ""}`,
+  });
 }

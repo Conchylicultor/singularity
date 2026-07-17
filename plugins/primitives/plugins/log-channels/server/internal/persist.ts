@@ -11,6 +11,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { join } from "node:path";
+import type { ZodType } from "zod";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import type { LogStream } from "./registry";
 
@@ -221,4 +222,39 @@ export function readChannelEntries(
 ): { t: number; stream?: LogStream; line: string }[] | null {
   const file = join(logsDirFor(worktree), sanitizeChannel(channel) + ".jsonl");
   return readTail(file, tail);
+}
+
+// Read a channel whose payload lines are each a JSON object of type `T`: unwrap
+// the log-channel envelope, tolerantly parse the inner JSON, and schema-drop the
+// rest. The tolerant parse mirrors `readTail`'s envelope handling one level in — a
+// torn tail line (a half-flushed append) is skipped; any other parse error is a
+// real bug and rethrown. Invalid-shape lines (old schema, corrupt payload) are
+// dropped via `safeParse`.
+//
+// A missing/empty channel collapses to `[]` — indistinguishable from a channel
+// that exists but holds no valid lines. Callers that must tell "no channel yet"
+// apart from "channel present but empty" should use `readChannelEntries` directly
+// (it returns `null` for a missing file).
+export function readChannelJson<T>(
+  worktree: string,
+  channel: string,
+  tail: number,
+  schema: ZodType<T>,
+): T[] {
+  const entries = readChannelEntries(worktree, channel, tail);
+  if (!entries) return [];
+  const out: T[] = [];
+  for (const entry of entries) {
+    let obj: unknown;
+    try {
+      obj = JSON.parse(entry.line);
+    } catch (err) {
+      // Tolerate a torn tail line; surface anything else.
+      if (err instanceof SyntaxError) continue;
+      throw err;
+    }
+    const parsed = schema.safeParse(obj);
+    if (parsed.success) out.push(parsed.data);
+  }
+  return out;
 }

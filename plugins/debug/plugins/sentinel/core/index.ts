@@ -8,5 +8,7 @@ export {
 export {
   DURESS_EPISODES_CHANNEL,
   DuressEpisodeEventSchema,
+  DuressEpisodeReportPayloadSchema,
   type DuressEpisodeEvent,
+  type DuressEpisodeReportPayload,
 } from "./episode";

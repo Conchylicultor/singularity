@@ -193,6 +193,21 @@ describe("sentinel worker latch lifecycle", () => {
       await rig.waitFor((f) => f.type === "clear");
       expect(existsSync(latchPath)).toBe(false);
 
+      // ── WS3: the clear frame carries the duress-episode report enrichment
+      // (reason / elevated cause-signature / episodeSetAt / wall) that onset.ts
+      // turns into a `void recordReport({ kind: "duress-episode" })` on main.
+      // Asserting via the frame-handling seam (the worker emits it) proves the
+      // report has everything it needs without pulling the DB into a worker test.
+      const clearFrame = rig.frames.find((f) => f.type === "clear");
+      expect(clearFrame?.type).toBe("clear");
+      if (clearFrame?.type === "clear") {
+        expect(clearFrame.reason).toContain("decompressionsPerSec");
+        expect(clearFrame.elevated).toEqual(["decompressionsPerSec"]);
+        expect(clearFrame.episodeSetAt).toBe(latch.setAt);
+        expect(typeof clearFrame.wall).toBe("number");
+        expect(clearFrame.forced).toBe(false);
+      }
+
       // ── Stage 3: trip/clear landed as schema-valid duress-episode lines.
       const episodes = readEpisodeLines(dir);
       expect(episodes.map((e) => e.kind)).toEqual(["trip", "clear"]);
@@ -246,6 +261,15 @@ describe("sentinel worker latch lifecycle", () => {
       const episodes = readEpisodeLines(dir);
       expect(episodes.map((e) => e.kind)).toEqual(["clear"]);
       expect(episodes[0]?.episodeSetAt).toBe(setAt);
+
+      // An adopted episode has no trip event, so its clear frame carries an
+      // empty cause-signature but still the adopted latch's episodeSetAt — the
+      // duress-episode report renders it as "(adopted / unknown)".
+      const clearFrame = rig.frames.find((f) => f.type === "clear");
+      if (clearFrame?.type === "clear") {
+        expect(clearFrame.elevated).toEqual([]);
+        expect(clearFrame.episodeSetAt).toBe(setAt);
+      }
 
       rig.post({ type: "stop" });
       await rig.waitFor((f) => f.type === "stopped");

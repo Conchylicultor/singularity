@@ -29,8 +29,15 @@ rather than inheriting it.
 
 ## Method (non-negotiable) — see the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill for the full procedure
 
-1. Reproduce and quantify with the `benchmark_boot` MCP tool **and** the live
-   `get_runtime_profile` (aggregate `waits`, not just `avgMs`).
+1. **Front door first — situate the incident before you quantify.** Open
+   **Debug → Reports** (is a report already filed, with a linked *View-trace*?)
+   and the **Timeline** (`get_timeline` MCP, or Debug → Slow Events → Timeline)
+   for the window around the symptom — it shows the *whole* event: never-ready
+   boots, deploy restarts, build/check fleets, health heat and duress bands — so
+   you quantify the real incident, not a fragment of it. THEN reproduce and
+   quantify with the `benchmark_boot` MCP tool **and** the live
+   `get_runtime_profile` (aggregate `waits`, not just `avgMs`). See the
+   [`debug`](../../.claude/skills/debug/SKILL.md) skill's STEP 0.
 2. Separate **work** from **wait** — a high `avgMs` with a high `waitMs` / low `selfMs`
    is queueing, not a slow op. Every entry (composite `flush`/`push` included) now
    decomposes into `waitMs`/`childMs`/`selfMs`; find the *dominant* wait layer before
@@ -133,6 +140,20 @@ follower tab full-replaying on ANY tab join (shared-websocket open-dedup) — a 
 healthy-period replay bursts. 111/111 runtime + 36/36 DOM hazard tests green. NOT built: fleet
 *memory* admission (fix 3 — user deferred). Full evidence + checklist →
 **[`2026-07-11-compressor-thrash-subscription-replay-storm.md`](./2026-07-11-compressor-thrash-subscription-replay-storm.md)**.
+**2026-07-17 recurrence (~10:00–10:30) — full severity with the 07-11 stack landed; the stack is
+partially validated and the origin confirmed untreated:** compressor 23.5 GB @ ~240 k
+compressions+decompressions/s, free ~155 MB, load 46/18; main = measurable paging victim
+(`residentMb` 88–140 of 710 MB footprint, loop p50 0.5–1.2 s); pages take minutes because the
+delivery/flush wedge reproduces bigger (`deliver:*` 127–197 s avg, `flushNotifies` recentMax 427 s).
+The sub short-circuit ENGAGES (397 `subShortCircuits`) but is bypassed by design on fresh page
+loads (no client version state) and by the one mid-storm main restart (13:44 deploy → boot
+**wedged 11.5 min without ever reaching `ready`** = main down 13:44→13:56, then the replacement
+epoch-reset cold-boot into peak thrash — 🔬 NEW: nothing duress-gates a main deploy or alerts on a
+never-ready boot). Exogenous fill: 6 build/push + 3 check runs, 78
+claude processes, Chrome 26 GB; `fseventsd` 82 % again. 🔬 NEW: `corpus-index:ensure-fresh` 882
+calls · avg 85.7 s · recentMax 573 s (~0.5 reads/s — rate unexplained, not duress-shed). Remaining
+altitudes: fix 3 (fleet *memory* admission) + duress-gating deploys/restarts of main. Episode data →
+§"2026-07-17 recurrence" in the 07-11 doc.
 **2026-07-16 continuation — the paging-victim investigation gets its harness + main-layer churn fixes
 (worktree `att-1784197364-no0m`, awaiting merge):** A3 heap attribution RUN on live main — JS heap is
 only ~97 MB self of a 352–469 MB phys_footprint (keyed-snapshot strings ~5–6 MB, cost corpus-index

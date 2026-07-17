@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleTimeline } from "./internal/handle-timeline";
+import { timelineTool } from "./internal/mcp-tool";
 import { getTimeline } from "../shared/frames";
 
 export default {
@@ -8,4 +9,5 @@ export default {
   httpRoutes: {
     [getTimeline.route]: handleTimeline,
   },
+  register: [timelineTool],
 } satisfies ServerPluginDefinition;

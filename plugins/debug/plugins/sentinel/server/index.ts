@@ -4,6 +4,7 @@ import { isMain, isRelease } from "@plugins/infra/plugins/paths/server";
 import { sentinelConfig } from "../core";
 import { clusterClass } from "./internal/cluster-class";
 import { fleetFlightsClass } from "./internal/fleet-flights";
+import { duressEpisodeKind } from "./internal/duress-episode-kind";
 import { startSentinelSampler, stopSentinelSampler } from "./internal/sampler";
 
 export { readDuressEpisodes } from "./internal/read-duress-episodes";
@@ -14,6 +15,7 @@ export default {
   contributions: [
     clusterClass.contribution,
     fleetFlightsClass.contribution,
+    duressEpisodeKind,
     ConfigV2.Register({ descriptor: sentinelConfig }),
   ],
   // Runs on the host singleton: main in dev (the one backend of the worktree

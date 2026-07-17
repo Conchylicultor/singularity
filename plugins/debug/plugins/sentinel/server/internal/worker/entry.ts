@@ -48,6 +48,10 @@ declare var self: Worker;
 interface Episode {
   setAt: number;
   reason: string;
+  // The elevated signal names at trip — carried to the clear frame as the
+  // duress-episode report's cause-signature (its fingerprint axis). An adopted
+  // episode (respawn mid-episode) has no trip event, so it carries [].
+  elevated: string[];
 }
 
 let cadenceMs = 0;
@@ -88,17 +92,31 @@ function writeEpisodeLine(
   episodesChannel.publish(JSON.stringify(event));
 }
 
-function endEpisode(forced: boolean): void {
+function endEpisode(forced: boolean, wall: number): void {
   clearDuress();
-  if (episode) {
+  // Capture the ending episode BEFORE nulling it — both the clear line and the
+  // enriched clear frame (the duress-episode report's payload) read from it.
+  const ended = episode;
+  if (ended) {
     writeEpisodeLine(
       "clear",
-      forced ? `max-episode-hold: ${episode.reason}` : episode.reason,
-      episode.setAt,
+      forced ? `max-episode-hold: ${ended.reason}` : ended.reason,
+      ended.setAt,
     );
   }
   episode = null;
-  emit({ type: "clear", forced });
+  emit({
+    type: "clear",
+    forced,
+    ...(ended
+      ? {
+          reason: ended.reason,
+          elevated: ended.elevated,
+          episodeSetAt: ended.setAt,
+          wall,
+        }
+      : {}),
+  });
 }
 
 function processSample(sample: ClusterSample): void {
@@ -116,7 +134,7 @@ function processSample(sample: ClusterSample): void {
     // The latch's own setAt is the episode identity — read it back rather
     // than re-deriving, so lines and shed first-N keys can never disagree.
     const setAt = readDuress()?.setAt ?? Date.now();
-    episode = { setAt, reason };
+    episode = { setAt, reason, elevated: event.elevated };
     writeEpisodeLine("trip", reason, setAt);
     emit({
       type: "trip",
@@ -129,7 +147,7 @@ function processSample(sample: ClusterSample): void {
   }
 
   if (event?.kind === "clear") {
-    endEpisode(false);
+    endEpisode(false, sample.wall);
     return;
   }
 
@@ -142,7 +160,7 @@ function processSample(sample: ClusterSample): void {
       log(
         `max-episode-hold exceeded (${String(maxEpisodeHoldMs)}ms) — forcing clear + re-eval`,
       );
-      endEpisode(true);
+      endEpisode(true, sample.wall);
       detector = createOnsetDetector();
       return;
     }
@@ -179,7 +197,7 @@ function handleInit(frame: Extract<MainToWorkerFrame, { type: "init" }>): void {
     const latch = readDuress();
     if (latch) {
       detector = createOnsetDetector({ tripped: true });
-      episode = { setAt: latch.setAt, reason: latch.reason };
+      episode = { setAt: latch.setAt, reason: latch.reason, elevated: [] };
       log(
         `adopted existing duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
       );
@@ -200,7 +218,7 @@ async function handleStop(): Promise<void> {
   }
   // A stopping sentinel must not leave the fleet latched: the lease would
   // expire in 60s anyway, but an explicit clear removes the window entirely.
-  if (detector?.tripped && episode) endEpisode(false);
+  if (detector?.tripped && episode) endEpisode(false, Date.now());
   detector = null;
   await pg?.end();
   emit({ type: "stopped" });

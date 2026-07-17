@@ -136,6 +136,54 @@ Chrome filled 64 GB and lit the compressor.
   intended post-`e24e6040a` (worker-level budget may have made the build-level gate moot by
   design — verify before "fixing").
 
+## 2026-07-17 recurrence (~10:00–10:30) — the landed stack partially engages; minutes-scale page loads persist because the origin is unfixed
+
+Full-severity re-occurrence observed live (session in worktree `claude-1784290448`); the 07-11
+fixes (`408837e9c`, confirmed on main) are **partially validated but insufficient**:
+
+- **Origin identical, worse:** compressor 23.5 GB churning ~240 k compressions AND ~240 k
+  decompressions/s, free mem ~155 MB / 64 GB, load 46 on 18 cores. The sentinel's
+  `decompressionsPerSec` onset (fix 4 — landed) trips/clears repeatedly — the instrumentation
+  works. Exogenous fill: 5 concurrent `build` + 1 `push` + 3 `check` CLI runs with type-check
+  worker fleets, **78 claude processes (~7.2 GB rss)**, Chrome ~26 GB rss (86 procs), Warp
+  1.4 GB; `fseventsd` again 82 % CPU (still unattributed). Fleet *memory* admission (fix 3)
+  remains the unbuilt altitude.
+- **Paging-victim signature now directly measurable** (the 07-16 `residentMb` instrumentation):
+  main at physFootprint ~710 MB but **resident 88–140 MB** — ~80 % of its pages compressed out;
+  loop p50 550–1,180 ms, p99 ~2 s.
+- **Short-circuit (fix 1) ENGAGES but is structurally bypassed at minutes-scale:**
+  `subShortCircuits` total 397 (327 on `config-v2.values`) — the counter works — yet the
+  profiler still shows `sub config-v2.values` count 1,321 · avg 11.9 s · 98 % `read-admit` wait.
+  Two bypass channels, both by design: (a) **fresh page loads / new tabs have no `(version,
+  epoch)` state** — every navigation pays the full ~120-sub loader path behind the 6-slot gate;
+  (b) **one mid-storm restart of main** — a build's deploy at 13:44:54 CEST produced a boot that
+  **never logged `ready` (wedged ~11.5 min — main effectively DOWN 13:44→13:56)** and was
+  replaced at 13:56:29; the replacement reset `bootEpoch` and cold-booted straight into peak
+  thrash (duress re-tripped 53 s after ready) ⇒ cold-boot fan-out + every tab re-taking the full
+  sub path. (Earlier boots 11:47/12:01 predate the duress cycling, which began 12:40 —
+  trip/clear every 5–20 min until a final clear 14:28 as the build burst drained.)
+- **The user-visible minutes are the delivery/flush wedge, same shape as 07-11 but larger:**
+  `deliver:conversation-categories` avg **197 s** selfMs, `deliver:conversations-gone` 172 s,
+  `deliver:tasks` 127 s (recentMax 350–458 s); `flushNotifies` recentMax **427 s** (was 355 s).
+  A page cannot paint data until its boot-critical resources deliver ⇒ minutes per page.
+- **🔬 NEW suspect, not in prior episodes:** `bg corpus-index:ensure-fresh` — **882 calls ·
+  avg 85.7 s selfMs · recentMax 573 s** in a ~27-min window (~0.5 calls/s). The lazy on-read
+  freshness fallback runs per read of corpus-index-backed resources; under thrash each span
+  runs minutes. Rate axis unexplained (why 882 reads?) and it is not duress-shed. Needs its own
+  rate×cost pass before any fix.
+
+Verdict for the track: fixes 1/2/4/5 landed and behave as designed; the episode reproduces
+anyway because **the origin (aggregate fleet memory) is untreated** — fix 3 (fleet memory
+admission) is the remaining altitude, plus duress-gating for restarts-into-thrash (a deploy of
+main mid-episode re-arms the cold-boot fan-out at the worst possible moment).
+
+- **🔬 NEW (user-visible outage channel): a main deploy under duress can produce a boot that
+  wedges without ever reaching `ready`** (observed: 13:44:54 start, no ready line, replaced
+  13:56:29 — ~11.5 min of main down while the gateway dials a never-ready socket; page loads in
+  that window hang for minutes independent of any convoy). Nothing gates a main deploy on the
+  duress latch, fast-fails a wedged boot, or surfaces "boot in progress > N min" as a report
+  (boot-events records the open-ended bar; no alert consumes it).
+
 ## Fix directions (altitudes labelled) — 1, 2, 5 BUILT 2026-07-11 (worktree `claude-1783723665`), awaiting live re-validation
 
 1. **Cure, main's layer — make a replayed already-current sub cost ~0.** ✅ **Built, awaiting

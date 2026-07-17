@@ -1,5 +1,5 @@
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
-import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
 import {
   DURESS_EPISODES_CHANNEL,
   DuressEpisodeEventSchema,
@@ -25,21 +25,13 @@ const MAX_LINES = 1000;
  */
 export function readDuressEpisodes(windowMs: number): DuressEpisodeEvent[] {
   const cutoff = Date.now() - windowMs;
-  const entries = readChannelEntries(MAIN_WORKTREE_NAME, DURESS_EPISODES_CHANNEL, MAX_LINES);
-  // No duress-episodes.jsonl yet (no episode since the channel shipped) — a
-  // legitimately-empty history, not a failure.
-  if (!entries) return [];
-  const out: DuressEpisodeEvent[] = [];
-  for (const entry of entries) {
-    let obj: unknown;
-    try {
-      obj = JSON.parse(entry.line);
-    } catch (err) {
-      if (err instanceof SyntaxError) continue;
-      throw err;
-    }
-    const parsed = DuressEpisodeEventSchema.safeParse(obj);
-    if (parsed.success && parsed.data.atMs >= cutoff) out.push(parsed.data);
-  }
-  return out;
+  // Envelope-unwrap + safeParse-drop via the log-channels primitive (a missing
+  // duress-episodes.jsonl — no episode since the channel shipped — is a
+  // legitimately-empty history), then keep transitions inside the window.
+  return readChannelJson(
+    MAIN_WORKTREE_NAME,
+    DURESS_EPISODES_CHANNEL,
+    MAX_LINES,
+    DuressEpisodeEventSchema,
+  ).filter((e) => e.atMs >= cutoff);
 }

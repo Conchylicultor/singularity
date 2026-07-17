@@ -49,6 +49,11 @@ A prior "confirmed root cause" — yours or someone else's — is a hypothesis, 
 
 ## Phase 1 — Quantify: work vs wait, steady vs outlier
 
+Before quantifying, situate the incident: scan **Debug → Reports** and the
+**Timeline** (`get_timeline`) for the symptom window — the front door in the
+[`debug`](../debug/SKILL.md) skill — so you measure the whole event, not a
+fragment.
+
 1. Aggregate by total contribution (rate × cost), not by per-occurrence duration alone.
 2. Split every hot entry into **work** (active CPU/IO it does) and **wait** (time blocked on
    something else). A high duration that is mostly *wait* is head-of-line blocking — that

@@ -47,7 +47,11 @@ export function handleTimeline(req: Request): Response {
   );
 }
 
-async function produceTimeline(emit: Emit, fromMs: number, toMs: number): Promise<void> {
+// Exported so the in-process get_timeline MCP tool can drive the SAME producer
+// with an array-push emit (see internal/collect.ts) — one source of truth for
+// the fan-out, whether the frames stream to the web tab or collect into a
+// rendered text report.
+export async function produceTimeline(emit: Emit, fromMs: number, toMs: number): Promise<void> {
   const dbNames = await listLiveForkDatabases(Date.now());
   const logWorktrees = listWorktreeLogDirs();
   // Planned chunk count: every (DB × DB-source) cell, one boot chunk per

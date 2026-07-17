@@ -47,6 +47,17 @@ export type WorkerToMainFrame =
       elevated: string[];
       wall: number;
     }
-  | { type: "clear"; forced: boolean }
+  | {
+      type: "clear";
+      forced: boolean;
+      // Episode enrichment for the duress-episode report (onset.ts files it from
+      // these). Present whenever the clear ended a real episode — always, in
+      // practice; a bare clear with no episode is a defensive impossibility, and
+      // the report is skipped when they are absent.
+      reason?: string;
+      elevated?: string[];
+      episodeSetAt?: number;
+      wall?: number;
+    }
   | { type: "log"; line: string; stream?: "stdout" | "stderr" }
   | { type: "stopped" };

@@ -3,6 +3,22 @@
 The continuous per-backend health sampler (event-loop lag, GC/heap pressure,
 footprint → `health.jsonl`), surfaced as **Debug → Health**.
 
+## Host-metric ownership
+
+health-monitor's **host** sampler (`host-sampler.ts`, 10 s cadence → the
+persisted `health-host` channel) is the **single source** for the vm_stat host
+series — compressor decompressions/sec, compressor MB, swap, and free memory.
+The sentinel worker does **not** re-run `vm_stat`; it tail-reads this file (with
+a 30 s freshness guard) for those signals. So compressor/swap/freeMem are
+single-sourced here.
+
+**loadavg is the deliberate exception.** `os.loadavg()` is a free syscall, and
+the sentinel worker keeps its **own** call on its latch-critical thread rather
+than reading this 10 s-stale file — trip timing must not depend on a stale host
+sample (the worker's isolation premise). So loadavg is intentionally sampled in
+both places; only the expensive vm_stat read is shared. See `sentinel`'s
+CLAUDE.md for the mirror.
+
 ## Monitoring self-cost (`monitorOps` / `monitorMs`)
 
 Each tick also diffs the runtime profiler's cumulative monitoring self-meter
@@ -91,7 +107,7 @@ measured overhead on a real worktree workload is still an open task.
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
   - Exports: Values: `healthMonitorPane`
 - Server:
-  - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+  - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelJson`
   - Exports: Types: `HealthSample`, `HostSample`; Values: `HealthSampleSchema`, `HostSampleSchema`
   - Routes: `GET /api/debug/health-monitor`
 - Cross-plugin:

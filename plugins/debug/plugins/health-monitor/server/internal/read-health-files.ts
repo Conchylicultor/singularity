@@ -1,6 +1,7 @@
 import { listWorktreeDirs, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
-import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
+import type { ZodType } from "zod";
 import {
   HealthSampleSchema,
   HostSampleSchema,
@@ -13,30 +14,18 @@ import {
 // is ~4h of history — comfortably above the default 2h read window.
 const MAX_LINES = 1500;
 
-// Each entry is a log-channel envelope ({ t, stream, line }); the sample JSON is
-// in `line`. Parse the inner payload and validate it.
+// Read a channel's JSON payloads (envelope-unwrap + safeParse-drop via the
+// log-channels primitive) and keep only samples at/after the read cutoff.
 function parseSamples<T>(
   worktree: string,
   channel: string,
-  schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false } },
+  schema: ZodType<T>,
   cutoff: number,
   sampledAt: (v: T) => number,
 ): T[] {
-  const entries = readChannelEntries(worktree, channel, MAX_LINES);
-  if (!entries) return [];
-  const out: T[] = [];
-  for (const entry of entries) {
-    let obj: unknown;
-    try {
-      obj = JSON.parse(entry.line);
-    } catch (err) {
-      if (err instanceof SyntaxError) continue;
-      throw err;
-    }
-    const parsed = schema.safeParse(obj);
-    if (parsed.success && sampledAt(parsed.data) >= cutoff) out.push(parsed.data);
-  }
-  return out;
+  return readChannelJson(worktree, channel, MAX_LINES, schema).filter(
+    (v) => sampledAt(v) >= cutoff,
+  );
 }
 
 export function readHealthSeries(windowMs: number): {

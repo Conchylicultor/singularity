@@ -63,6 +63,11 @@ async function tick(): Promise<void> {
   }
   const total = totalmem();
   const free = freemem();
+  // This is the persisted host loadavg (10s cadence, health-host channel — the
+  // single source for compressor/swap/freeMem, tail-read by the sentinel). The
+  // sentinel worker deliberately keeps its OWN fresh loadavg() syscall on its
+  // latch-critical thread rather than reading this file — freshness beats dedup
+  // there. See worker/sample.ts and both CLAUDE.mds ("Host-metric ownership").
   const la = loadavg();
   const sample: HostSample = {
     sampledAt: now,

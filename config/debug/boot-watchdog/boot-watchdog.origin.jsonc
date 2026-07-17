@@ -1,0 +1,9 @@
+// @hash 744b7d0e3b7c
+{
+  // When off, the monitor job returns early and files no boot-wedge reports.
+  "enabled": true,
+  // File a boot-wedge report when a backend has not reached the boot `ready` line within this many ms of its process start. The default 120s is generous — a healthy boot (migrations + registry + onReady) is seconds; crossing two minutes means the backend is wedged, not merely slow.
+  "bootReadyBudgetMs": 120000,
+  // How far back each tick sweeps every worktree's boot channel for never-ready boots. 30 min comfortably covers a wedged boot that outlives many watchdog ticks while keeping old, already-superseded outages from re-surfacing forever.
+  "lookbackMs": 1800000
+}

@@ -81,6 +81,18 @@ carries a cluster-vitals lane for free — and the `onSentinelSample` listener
 registry. postMessage buffers while main is wedged; samples carry their own
 `wall`, so late delivery is harmless.
 
+## Host-metric ownership (loadavg not shared)
+
+The compressor/swap/freeMem signals are **single-sourced** from health-monitor's
+persisted `health-host` file (`worker/sample.ts` tail-reads it under a 30 s
+freshness guard — no second `vm_stat` spawn). **loadavg is not.** The worker
+re-runs its own `os.loadavg()` syscall each tick rather than reading that
+10 s-cadence file: a free syscall must not become a stale file read on the
+latch-critical thread, since trip timing depends on it (the worker's isolation
+premise). So loadavg is deliberately sampled in both the worker and
+health-monitor's host sampler; only the expensive vm_stat read is deduped. See
+`health-monitor`'s CLAUDE.md ("Host-metric ownership") for the owning half.
+
 ## The onset detector + duress latch (B4)
 
 `server/internal/detector.ts` is the pure state machine (dual-threshold,
@@ -113,6 +125,20 @@ The deterministic 03:34 reproduction lives in `worker/latch-lapse.test.ts`: a
 real Worker trips on injected `__sample` frames, the parent blocks itself with
 `Atomics.wait` (no event loop — a wedged main), and the latch mtime must
 advance during the block.
+
+## Duress-episode report (WS3)
+
+The report/bell half of the duress signal (the trip instant is already covered by
+the `cluster-onset` critical trace + the timeline band). The worker's clear frame
+is enriched with `{reason, elevated, episodeSetAt, wall, forced}`; `onset.ts`'s
+`handleClearFrame` files **one `duress-episode` report per episode, on clear** via
+`recordReport`. Fingerprint is the sorted **cause-signature** (`elevated`), NOT the
+episode, so a storm collapses to counted rows. The kind is
+**`duressExempt: true`** — it IS the durable record of the condition that drives
+shedding, so it must never be shed (a re-trip racing the async record, or buffer
+overflow at peak, would lose it — the same bar as `duress-shed`'s own summary
+kind). The `boot`/`duress-episodes` channels' report+timeline wiring is enforced by
+the `durable-signals-accounted` check.
 
 ## Fleet flight windows (B5)
 
@@ -151,17 +177,21 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 ## Plugin reference
 
-- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
+- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`
+  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `DuressEpisodeSummary`
+  - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
+<<<<<<< .merge_file_5O1cW4
   - Contributes: `trace-event-class` "cluster", `trace-event-class` "fleet-flights", `ConfigV2.Register` "sentinel"
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+=======
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
+>>>>>>> .merge_file_ESbefm
   - Exports: Values: `readDuressEpisodes`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/float/config.floatField`, `fields/int/config.intField`
-  - Exports: Types: `ClusterSample`, `ClusterSection`, `DuressEpisodeEvent`; Values: `ClusterSampleSchema`, `ClusterSectionSchema`, `DURESS_EPISODES_CHANNEL`, `DuressEpisodeEventSchema`, `sentinelConfig`
+  - Exports: Types: `ClusterSample`, `ClusterSection`, `DuressEpisodeEvent`, `DuressEpisodeReportPayload`; Values: `ClusterSampleSchema`, `ClusterSectionSchema`, `DURESS_EPISODES_CHANNEL`, `DuressEpisodeEventSchema`, `DuressEpisodeReportPayloadSchema`, `sentinelConfig`
 - Cross-plugin:
   - Imported by: `debug/timeline`
 
