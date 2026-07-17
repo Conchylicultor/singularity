@@ -9,6 +9,10 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import {
+  StickyStack,
+  StickyStackItem,
+} from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import {
   MdArrowDownward,
@@ -410,28 +414,36 @@ function renderGroupedBody<TRow>(
   groupHeaderTop: string,
 ): ReactNode {
   let i = 0;
-  return groups.map((group) => (
-    <Fragment key={group.key}>
-      {/* The group header pins flush below the sticky column header as you scroll
-          within its group. All group headers share the one grid as their sticky
-          containing block, so the next header covers the previous at the same top
-          (a swap hand-off) — the subgrid table can't wrap each group in its own
-          containing block without breaking column alignment. `mask` keeps rows
-          from showing through the pinned header. */}
-      <Sticky
-        as="div"
-        edge="top"
-        mask
-        layer="raised"
-        // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
-        className="col-span-full"
-        style={{ top: groupHeaderTop }}
-      >
-        {group.header}
-      </Sticky>
-      {group.collapsed ? null : group.rows.map((row) => renderRow(row, i++))}
-    </Fragment>
-  ));
+  // Group headers accumulate: with few enough groups every header stays pinned,
+  // each below the last (StickyStack sums their measured heights); past the
+  // stack's cap it degrades to the swap hand-off, where each arriving header
+  // covers the pinned one. `base` is the column header's own pinned bottom edge,
+  // so the first group header pins flush beneath it.
+  //
+  // All group headers already share the one grid as their sticky containing block
+  // (the subgrid table can't wrap a group in its own block without breaking column
+  // alignment), which is exactly what the stack needs — and StickyStack renders no
+  // element of its own, so the `col-span-full` headers stay direct grid children
+  // and the tracks still line up. `mask` keeps rows from showing through.
+  return (
+    <StickyStack keys={groups.map((group) => group.key)} base={groupHeaderTop}>
+      {groups.map((group) => (
+        <Fragment key={group.key}>
+          <StickyStackItem
+            itemKey={group.key}
+            as="div"
+            mask
+            layer="raised"
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
+            className="col-span-full"
+          >
+            {group.header}
+          </StickyStackItem>
+          {group.collapsed ? null : group.rows.map((row) => renderRow(row, i++))}
+        </Fragment>
+      ))}
+    </StickyStack>
+  );
 }
 
 function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {

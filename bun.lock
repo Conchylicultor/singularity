@@ -3355,6 +3355,10 @@
       "name": "@singularity/plugin-primitives-css-sticky",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/sticky/plugins/stack": {
+      "name": "@singularity/plugin-primitives-css-sticky-stack",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/surface": {
       "name": "@singularity/plugin-primitives-css-surface",
       "version": "0.0.1",
@@ -6526,6 +6530,8 @@
     "@singularity/plugin-primitives-css-status-dot": ["@singularity/plugin-primitives-css-status-dot@workspace:plugins/primitives/plugins/css/plugins/status-dot"],
 
     "@singularity/plugin-primitives-css-sticky": ["@singularity/plugin-primitives-css-sticky@workspace:plugins/primitives/plugins/css/plugins/sticky"],
+
+    "@singularity/plugin-primitives-css-sticky-stack": ["@singularity/plugin-primitives-css-sticky-stack@workspace:plugins/primitives/plugins/css/plugins/sticky/plugins/stack"],
 
     "@singularity/plugin-primitives-css-surface": ["@singularity/plugin-primitives-css-surface@workspace:plugins/primitives/plugins/css/plugins/surface"],
 

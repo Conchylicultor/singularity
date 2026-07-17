@@ -39,18 +39,27 @@ export function useCollapsibleContext(): CollapsibleCtx | null {
   return useContext(CollapsibleContext);
 }
 
-export interface CollapsibleProps extends UseCollapsibleOptions {
-  className?: string;
+export interface CollapsibleProviderProps extends UseCollapsibleOptions {
   children: ReactNode;
 }
 
-export function Collapsible({
+/**
+ * The open/toggle/aria state of a collapsible, WITHOUT the wrapper element —
+ * `Collapsible` minus its `<div>`. Reach for it when the trigger and the content
+ * must be **siblings in the parent's own layout** rather than nested inside a box
+ * of the collapsible's making: a subgrid row (a wrapper would displace the
+ * `col-span-full` children out of the grid), or a sticky stack (a wrapper becomes
+ * each header's containing block, so the header un-pins when its own section
+ * scrolls away — exactly what a stack must not do). Everything else should use
+ * `Collapsible`, whose `<div>` gives the group a real box and the `data-state`
+ * hook.
+ */
+export function CollapsibleProvider({
   defaultOpen,
   open: controlledOpen,
   onOpenChange,
-  className,
   children,
-}: CollapsibleProps) {
+}: CollapsibleProviderProps) {
   const { open, toggle, contentId } = useCollapsible({
     defaultOpen,
     open: controlledOpen,
@@ -62,16 +71,43 @@ export function Collapsible({
     [open, toggle, contentId],
   );
 
+  return <CollapsibleContext value={ctxValue}>{children}</CollapsibleContext>;
+}
+
+export interface CollapsibleProps extends CollapsibleProviderProps {
+  className?: string;
+}
+
+/** The standard collapsible: `CollapsibleProvider` plus the wrapper element that
+ *  gives the group a box, a `data-state` styling hook, and (for a plain sticky
+ *  header inside it) its own sticky containing block. */
+export function Collapsible({ className, children, ...options }: CollapsibleProps) {
   return (
-    <CollapsibleContext value={ctxValue}>
-      <div
-        data-slot="collapsible"
-        data-state={open ? "open" : "closed"}
-        className={className}
-      >
-        {children}
-      </div>
-    </CollapsibleContext>
+    <CollapsibleProvider {...options}>
+      <CollapsibleBox className={className}>{children}</CollapsibleBox>
+    </CollapsibleProvider>
+  );
+}
+
+/** The wrapper `Collapsible` adds over the provider. Private: it reads the context
+ *  the provider just published, so `data-state` stays on the same element it
+ *  always was. */
+function CollapsibleBox({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  const { open } = useCtx();
+  return (
+    <div
+      data-slot="collapsible"
+      data-state={open ? "open" : "closed"}
+      className={className}
+    >
+      {children}
+    </div>
   );
 }
 

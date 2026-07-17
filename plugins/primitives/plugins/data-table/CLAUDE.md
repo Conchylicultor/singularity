@@ -46,7 +46,7 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
+  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/sticky/stack.StickyStack`, `primitives/css/sticky/stack.StickyStackItem`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
   - Exports: Types: `ColumnDef`, `DataTableGroup`, `DataTableProps`, `DataTableRowDecoration`, `SortState`; Values: `DATA_TABLE_VIRTUALIZE_THRESHOLD`, `DataTable`
 - Cross-plugin:
   - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/boot-profile`, `debug/heap-snapshot`, `debug/profiling/boot`, `primitives/data-view/table`

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   Collapsible,
+  CollapsibleProvider,
   CollapsibleTrigger,
   CollapsibleContent,
   CollapsibleChevron,
@@ -9,6 +10,7 @@ export {
 } from "./internal/collapsible";
 export type {
   CollapsibleProps,
+  CollapsibleProviderProps,
   CollapsibleTriggerProps,
   CollapsibleContentProps,
   CollapsibleChevronProps,

@@ -1,5 +1,29 @@
 # collapsible
 
+## `Collapsible` vs `CollapsibleProvider`
+
+`Collapsible` is the provider **plus** a wrapper `<div data-slot="collapsible">`
+— the box that gives the group an element to style, a `data-state` hook, and (for
+a plain `<Sticky>` header inside it) its own sticky containing block. It is the
+default; reach for it unless the wrapper is actively in the way.
+
+`CollapsibleProvider` is the same state with **no DOM at all**, so the trigger and
+the content land as **siblings in the parent's own layout**. Use it when a box of
+the collapsible's making would break that layout:
+
+- **a subgrid row** — a wrapper would displace the `col-span-full` children out of
+  the grid, so the columns stop aligning;
+- **a sticky stack** (`css/sticky/stack`) — a wrapper becomes each header's sticky
+  containing block, so the header un-pins as soon as its own section scrolls away,
+  which is precisely what the stack must not do. The DataView list view uses it
+  for this reason: all its group headers must share the list as one containing
+  block to stack.
+
+Both take the same `UseCollapsibleOptions` (`open` / `defaultOpen` /
+`onOpenChange`); only `Collapsible` takes `className`, since only it has an
+element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
+`CollapsibleChevron` read the context and work identically under either.
+
 ## Plugin reference
 
 - Description: Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
@@ -14,7 +38,7 @@
 - Description: Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
 - Web:
   - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
-  - Exports: Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleCtx`, `CollapsibleProps`, `CollapsibleTriggerProps`, `ExpandAllButtonProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`, `UseExpandAllReturn`; Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `ExpandAllButton`, `useCollapsible`, `useCollapsibleContext`, `useExpandAll`
+  - Exports: Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleCtx`, `CollapsibleProps`, `CollapsibleProviderProps`, `CollapsibleTriggerProps`, `ExpandAllButtonProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`, `UseExpandAllReturn`; Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleProvider`, `CollapsibleTrigger`, `ExpandAllButton`, `useCollapsible`, `useCollapsibleContext`, `useExpandAll`
 - Cross-plugin:
   - Imported by: `apps/mail/reading-pane`, `apps/workflows/engine`, `build`, `build/build-logs`, `conversations/agents`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `debug/claude-cli-calls`, `fields/object/config`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/row`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/detail-sections`, `primitives/section-card`, `primitives/tree`, `reorder/node-types/header`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-list`, `tasks/task-preprompt`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`
 
