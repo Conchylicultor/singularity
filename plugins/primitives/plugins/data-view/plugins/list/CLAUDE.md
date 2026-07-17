@@ -46,6 +46,13 @@ visible fields (Properties)" section.
 When `options.renderRow` is set it owns the whole body instead, but is still
 wrapped in the selectable/clickable `Row`.
 
+## Grouping
+
+Under group-by the grouped branch renders through the shared **`<GroupedSections>`**
+chrome (`headerClassName="px-sm"`, matching the row body's inset), which owns the
+pinned/stacking group header for every flat view. The policy lives in the data-view
+parent, not here; see its CLAUDE.md ("Grouped sections: one pipeline, one chrome").
+
 ## Windowing + manual order
 
 A section windows through `VirtualRows` once its entry count exceeds 100; below
@@ -88,7 +95,7 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleProvider`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/row.SectionHeaderRow`, `primitives/css/spacing.Stack`, `primitives/css/sticky/stack.StickyStack`, `primitives/css/sticky/stack.StickyStackItem`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`, `primitives/data-view.DataViewAggregateConfig`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewRowEntry`, `primitives/data-view.DataViewSection`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.ManualOrderConfig`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.useDataViewSections`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/rank-reorder.RankReorderProvider`, `primitives/rank-reorder.useRankReorderItem`, `primitives/virtual-rows.VirtualRows`
+  - Uses: `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataViewAggregateConfig`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewRowEntry`, `primitives/data-view.DataViewSection`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.GroupedSections`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.ManualOrderConfig`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.useDataViewSections`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/rank-reorder.RankReorderProvider`, `primitives/rank-reorder.useRankReorderItem`, `primitives/virtual-rows.VirtualRows`
   - Exports: Types: `ListViewOptions`
 - Core:
   - Exports: Types: `ListViewOptions`

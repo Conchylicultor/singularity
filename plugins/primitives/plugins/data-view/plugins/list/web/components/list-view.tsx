@@ -1,28 +1,20 @@
 import { type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import {
-  StickyStack,
-  StickyStackItem,
-} from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  CollapsibleProvider,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
-import {
   FieldCell,
+  GroupedSections,
   pickPrimaryField,
   resolveBodyFields,
   useDataViewSections,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
-  DATA_VIEW_HEADER_OFFSET_VAR,
   type DataViewAggregateConfig,
   type DataViewRowEntry,
   type DataViewRenderProps,
@@ -284,59 +276,16 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     sections.length === 1 && sections[0]!.key === null ? (
       renderEntries(sections[0]!.entries, activeId)
     ) : (
-      // Grouped: one collapsible section per group key.
-      <Stack gap="none">
-        {/* Group headers accumulate: with few enough groups every header stays
-            pinned, each below the last (StickyStack sums their measured heights),
-            so you can see every group you scrolled past. Past the stack's cap it
-            degrades to the swap hand-off — each arriving header covers the pinned
-            one — because N pinned headers would eat the viewport.
-
-            The whole set shares THIS <Stack> as its sticky containing block, which
-            is what makes stacking possible: a per-group wrapper would re-bound each
-            header to its own group and un-pin it as the group scrolls away. Hence
-            <CollapsibleProvider> (no DOM) rather than <Collapsible>, and hence the
-            header/content landing as direct children of the Stack — a flex column
-            with `gap="none"`, so the arrangement is unchanged.
-
-            `base` stacks the first header BELOW the DataView toolbar by reading the
-            host-published `--dv-header-offset` (its measured height). `mask` keeps
-            rows from showing through; `raised` sits above the (relative, in
-            manual-order) rows while the toolbar's `nav` keeps the headers sliding
-            under it at the hand-off. */}
-        <StickyStack
-          keys={sections.map((section) => section.key!)}
-          base={`var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`}
-        >
-          {sections.map((section) => {
-            const key = section.key!;
-            const collapsed = props.collapsedSections?.has(key) ?? false;
-            return (
-              <CollapsibleProvider
-                key={key}
-                open={!collapsed}
-                onOpenChange={(open) => props.setSectionCollapsed?.(key, !open)}
-              >
-                <StickyStackItem itemKey={key} mask layer="raised">
-                  <SectionHeaderRow
-                    className="px-sm"
-                    actions={
-                      <Text variant="caption" tone="muted">
-                        {section.count}
-                      </Text>
-                    }
-                  >
-                    {section.label}
-                  </SectionHeaderRow>
-                </StickyStackItem>
-                <CollapsibleContent>
-                  {renderEntries(section.entries, activeId)}
-                </CollapsibleContent>
-              </CollapsibleProvider>
-            );
-          })}
-        </StickyStack>
-      </Stack>
+      // Grouped: the shared pinned/stacking group-header chrome, with `px-sm`
+      // aligning each header to the row body's own inset.
+      <GroupedSections
+        sections={sections}
+        collapsedSections={props.collapsedSections}
+        setSectionCollapsed={props.setSectionCollapsed}
+        headerClassName="px-sm"
+      >
+        {(section) => renderEntries(section.entries, activeId)}
+      </GroupedSections>
     );
 
   // Manual order: wrap the rendered sections in a single rank-reorder DnD host

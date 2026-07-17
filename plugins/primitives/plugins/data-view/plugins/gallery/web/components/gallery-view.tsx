@@ -8,14 +8,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   FieldCell,
+  GroupedSections,
   pickPrimaryField,
   resolveBodyFields,
   useDataViewSections,
@@ -333,37 +329,26 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     return renderGrid(cells);
   }
 
-  // Grouped: one collapsible grid per section.
+  // Grouped: the shared pinned/stacking group-header chrome (identical to the
+  // list's — the header is the same navigational aid whether the group holds rows
+  // or cards), with `px-xl` aligning each header to the grid's own `p-xl` inset.
   return (
-    <Stack gap="none">
-      {sections.map((section) => {
-        const key = section.key!;
-        const collapsed = props.collapsedSections?.has(key) ?? false;
-        const cells: GalleryCell[] = section.entries.map((e) => ({
-          kind: "row",
-          row: e.row,
-          key: e.key,
-        }));
-        return (
-          <Collapsible
-            key={key}
-            open={!collapsed}
-            onOpenChange={(open) => props.setSectionCollapsed?.(key, !open)}
-          >
-            <SectionHeaderRow
-              className="px-xl"
-              actions={
-                <Text variant="caption" tone="muted">
-                  {section.count}
-                </Text>
-              }
-            >
-              {section.label}
-            </SectionHeaderRow>
-            <CollapsibleContent>{renderGrid(cells)}</CollapsibleContent>
-          </Collapsible>
-        );
-      })}
-    </Stack>
+    <GroupedSections
+      sections={sections}
+      collapsedSections={props.collapsedSections}
+      setSectionCollapsed={props.setSectionCollapsed}
+      headerClassName="px-xl"
+    >
+      {(section) =>
+        renderGrid(
+          section.entries.map((e) => ({
+            kind: "row",
+            row: e.row,
+            key: e.key,
+            aggregateCount: e.aggregateCount,
+          })),
+        )
+      }
+    </GroupedSections>
   );
 }

@@ -36,6 +36,8 @@ export {
   partitionIntoSections,
   isGroupableField,
 } from "./internal/use-data-view-sections";
+export { GroupedSections } from "./internal/grouped-sections";
+export type { GroupedSectionsProps } from "./internal/grouped-sections";
 export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";
 export { useServerDataSource } from "./internal/use-server-data-source";

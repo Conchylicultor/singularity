@@ -17,6 +17,21 @@ the shared `FieldDef` schema.
   for cards with their own affordances (e.g. a play button) the schema can't
   express.
 
+## Grouping + windowing
+
+Under group-by the grouped branch renders through the shared **`<GroupedSections>`**
+chrome (`headerClassName="px-xl"`, matching the grid's own `p-xl` inset), so its
+group headers pin and stack exactly like the list's — the header is the same
+navigational aid whether a group holds rows or cards. The policy lives in the
+data-view parent, not here; see its CLAUDE.md ("Grouped sections: one pipeline, one
+chrome").
+
+Windowing is per-section and orthogonal: above **60 cards** a section swaps its
+auto-fill `<Grid>` for a lane-aware `<VirtualRows>` (each windowed row is one
+measured row of `columns` cards, the count read off an `aria-hidden h-0` probe grid).
+`VirtualRows` self-discovers the pane's scroll parent and folds the sticky chrome
+into its measured `scrollMargin`, so the two compose with no wiring.
+
 ## Options
 
 `options` (= `viewOptions.gallery`) is a `GalleryViewOptions<TRow>`:
@@ -52,7 +67,7 @@ the shared `FieldDef` schema.
 - Description: Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/badge.Badge`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/grid.Grid`, `primitives/css/pin.Pin`, `primitives/css/row.SectionHeaderRow`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewAggregateConfig`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.useDataViewSections`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/element-size.useResizeObserver`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.VirtualRows`
+  - Uses: `primitives/css/badge.Badge`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/grid.Grid`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewAggregateConfig`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.GroupedSections`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.useDataViewSections`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/element-size.useResizeObserver`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.VirtualRows`
   - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
 - Core:
   - Exports: Types: `CoverContent`, `GalleryViewOptions`
