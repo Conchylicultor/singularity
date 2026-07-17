@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { CodeMatch } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { findOffenders, parseAllowlistIdentifiers } from "./imperative-create-table-allowlisted";
+import {
+  findOffenders,
+  parseAllowlistIdentifiers,
+  usesThrowawayTestDb,
+} from "./imperative-create-table-allowlisted";
 
 const SAMPLE_ALLOWLIST_SRC = `
 export const MIGRATIONS_TABLE_NAME = "__singularity_migrations";
@@ -91,5 +95,44 @@ describe("findOffenders", () => {
       ),
     ];
     expect(findOffenders(matches, ids)).toEqual([]);
+  });
+
+  test("exempts a path the caller resolved as a throwaway-test-db file", () => {
+    const path = "plugins/database/plugins/change-feed/server/internal/triggers.test.ts";
+    const matches = [m(path, 45, `${CT} widgets (id text PRIMARY KEY)`)];
+    expect(findOffenders(matches, ids, new Set([path]))).toEqual([]);
+    // …and is still an offender when the caller did NOT exempt it.
+    expect(findOffenders(matches, ids).length).toBe(1);
+  });
+});
+
+// The exemption is deliberately evidence-based: a file qualifies only by being a
+// test AND importing the throwaway-database fixture. These pin both halves, so a
+// future loosening of either has to break a test first.
+describe("usesThrowawayTestDb", () => {
+  const FIXTURE_IMPORT = `import { createTestDb } from "@plugins/database/plugins/db-test-fixture/server";`;
+  // Bare basenames on purpose: usesThrowawayTestDb keys only off the `.test.ts`
+  // SUFFIX, so the dir is irrelevant — and a `plugins/<x>/…` shaped literal here
+  // would trip the plugin-refs-resolve check on a plugin that does not exist.
+  const TEST_PATH = "some-file.test.ts";
+  const SRC_PATH = "some-file.ts";
+
+  test("accepts a test file that imports the throwaway-db fixture", () => {
+    expect(usesThrowawayTestDb(TEST_PATH, FIXTURE_IMPORT)).toBe(true);
+  });
+
+  test("rejects a NON-test file even if it imports the fixture", () => {
+    expect(usesThrowawayTestDb(SRC_PATH, FIXTURE_IMPORT)).toBe(false);
+  });
+
+  test("rejects a test file that does NOT import the fixture", () => {
+    expect(usesThrowawayTestDb(TEST_PATH, "const a = 1;")).toBe(false);
+  });
+
+  test("rejects a test file that reaches the REAL db instead of the fixture", () => {
+    // The one way a test could create a table that actually persists — must stay
+    // covered by the rule.
+    const src = `import { db } from "@plugins/database/server";`;
+    expect(usesThrowawayTestDb(TEST_PATH, src)).toBe(false);
   });
 });

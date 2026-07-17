@@ -1,5 +1,53 @@
 # change-feed
 
+## The trigger rebuild skips when unchanged
+
+`rebuildTriggers` (`internal/triggers.ts`) installs the feed by `DROP+CREATE
+TRIGGER`ing **every** public table in **one** transaction — so mid-rebuild it
+holds an `AccessExclusive` lock on an alphabetically-ordered prefix of the whole
+database while still asking for more. That is hold-and-wait, and boot is the worst
+possible moment for it:
+
+- the **previous backend is still serving reads** of those same tables (the
+  hot-swap is ready-gated — it does not stop until the new backend is ready), and
+- this hook **races the database plugin's own `onReadyBlocking`** (migrations →
+  rollup reconcile → view rebuild): `onReadyBlocking` hooks run under a flat
+  `Promise.all` with no topo order.
+
+Any concurrent session that touches two tables in the opposite order closes a
+lock cycle. Postgres then shoots one session — and when the victim is the rebuild
+transaction, the error escapes `onReadyBlocking`, the backend **exits before
+ready**, and the deploy fails leaving the old code live. This is not theoretical:
+build `build-1784288281433-w62dep` on main died exactly this way (`attempts` ⇄
+`conversations`, SQLSTATE `40P01`).
+
+So, mirroring the identical fix in
+[`derived-views`](../derived-views/server/internal/rebuild.ts): the trigger layer
+is a pure function of (schema, denylist, emitted DDL), so the compiled DDL is
+fingerprinted into `live_state_trigger_state` and **the rebuild is skipped
+entirely when the signature matches what is already live**. A steady-state restart
+— the overwhelming majority of boots, since any frontend-only commit leaves the
+trigger set untouched — now takes **zero table locks**, and the lock window only
+opens on a genuine schema/denylist change.
+
+Two things keep that safe:
+
+- **The signature is never trusted alone.** `triggerLayerUpToDate` re-verifies
+  from the catalog that the function, the changelog table, and every expected
+  trigger physically exist, and that no `live_state_*` trigger lingers on an
+  excluded table. Anything dropped out of band falls through to a real rebuild.
+  (It reads only catalogs — no user-table locks, which is the whole point.)
+- **The rare rebuild path rides out a victim.** `db.transaction()` takes the
+  `pool.connect()` path, which bypasses `pool.query`'s deadlock retry (the leak
+  documented in `plugins/database/CLAUDE.md`) — which is *why* a deadlock killed
+  boot rather than retrying. `runRebuildTx` re-runs the whole (idempotent)
+  transaction on `40P01`/`40001`, bounded and logged; a persistent conflict still
+  throws and blocks boot loudly.
+
+The signature row lives in the DB so a worktree fork carries it with its triggers
+(`CREATE DATABASE … TEMPLATE` copies both), so a fork skips the rebuild too rather
+than paying a spurious first-boot one.
+
 ## Boot-time reconciliation against consumers
 
 The feed enforces two invariants against its consumers at boot (in

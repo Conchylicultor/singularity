@@ -18,16 +18,53 @@ type Check = {
 const ALLOWLIST_SRC_REL =
   "plugins/database/plugins/derived-views/core/internal/imperative-tables.ts";
 
-// Real-code occurrences of CREATE TABLE that are exempt from the rule. The
-// check scans the whole repo (an imperative table can be created from anywhere
-// that boots against a worktree DB), so the only legitimate exemptions are this
-// check's OWN source (its description/message/hint strings spell out the token)
-// and its test fixtures. Mirrors the ALLOWED_PATHS escape hatch in
-// no-raw-websocket, which exempts its own check file the same way.
+// Real-code occurrences of CREATE TABLE that are exempt by PATH: this check's OWN
+// source (its description/message/hint strings spell out the token) and its test
+// fixtures. Mirrors the ALLOWED_PATHS escape hatch in no-raw-websocket, which
+// exempts its own check file the same way. Keep this list to exactly that — it is
+// a self-reference hatch, not a general opt-out.
+//
+// The check otherwise scans the whole repo, because an imperative table can be
+// created from anywhere that boots against a worktree DB. The one other exemption
+// is derived from evidence rather than listed here: a CREATE TABLE aimed at a
+// throwaway test database (see `usesThrowawayTestDb` below).
 const ALLOWED_PATHS = [
   "plugins/database/plugins/migrations/check/imperative-create-table-allowlisted.ts",
   "plugins/database/plugins/migrations/check/imperative-create-table-allowlisted.test.ts",
 ];
+
+// A CREATE TABLE in a test that provisions its own THROWAWAY database is not
+// worktree schema, and exempting it is a scope correction rather than a hole.
+//
+// The rule this check enforces exists for exactly one downstream reason (see the
+// hint): an imperative public table that is not allowlisted gets flagged later by
+// `orphaned-db-tables` as dead schema. That check only ever scans the LIVE
+// WORKTREE DB. `createTestDb` mints a randomly-named database on the cluster and
+// drops it in teardown, so a table created through that fixture never enters the
+// worktree DB and cannot reach `orphaned-db-tables` at all — the failure mode the
+// allowlist prevents does not exist for it. Demanding an allowlist entry anyway
+// would be a false positive AND actively harmful: it would push per-suite
+// fixtures into the production allowlist, where `orphaned-db-tables` would then
+// treat a name that exists in no real database as declared schema.
+//
+// BOTH conditions are required, which is what keeps this narrow: the file must be
+// a test file AND must import the fixture barrel that hands out throwaway
+// databases. A `*.test.ts` that reaches the real `db` — the only way a test could
+// create a table that actually persists — imports `@plugins/database/server`, not
+// this barrel, so it stays fully covered by the rule.
+const TEST_FILE_RE = /\.test\.tsx?$/;
+const TEST_DB_FIXTURE_IMPORT_RE =
+  /from\s+["']@plugins\/database\/plugins\/db-test-fixture\/server["']/;
+
+/**
+ * PURE helper (exported for unit testing): does this file create its tables in a
+ * throwaway database provisioned by the db-test-fixture primitive? Takes the
+ * file's own source so the decision is evidence-based (a real import), never a
+ * path convention alone.
+ */
+export function usesThrowawayTestDb(path: string, src: string): boolean {
+  return TEST_FILE_RE.test(path) && TEST_DB_FIXTURE_IMPORT_RE.test(src);
+}
 
 // Matches `CREATE TABLE` and `CREATE UNLOGGED TABLE` (unlogged tables persist in
 // pg_stat_user_tables, so they are orphan-able and must be allowlisted too).
@@ -73,13 +110,20 @@ export function parseAllowlistIdentifiers(src: string): Set<string> {
 
 /**
  * PURE helper (exported for unit testing): an offender is a real-code
- * CREATE TABLE match whose line does NOT name any allowlist identifier (and is
- * not on an exempt path). Returns "path:line:text" strings.
+ * CREATE TABLE match whose line does NOT name any allowlist identifier, and which
+ * is neither on an exempt path nor in a file that creates it in a throwaway test
+ * database (`exemptPaths`, resolved by the caller — see `usesThrowawayTestDb`).
+ * Returns "path:line:text" strings.
  */
-export function findOffenders(matches: CodeMatch[], allowlistIds: Set<string>): string[] {
+export function findOffenders(
+  matches: CodeMatch[],
+  allowlistIds: Set<string>,
+  exemptPaths: ReadonlySet<string> = new Set(),
+): string[] {
   const ids = [...allowlistIds];
   return matches
     .filter((m) => !ALLOWED_PATHS.some((p) => m.path === p))
+    .filter((m) => !exemptPaths.has(m.path))
     .filter((m) => !ids.some((id) => new RegExp(`\\b${id}\\b`).test(m.text)))
     .map((m) => `${m.path}:${m.line}:${m.text.trim()}`);
 }
@@ -119,7 +163,18 @@ const check: Check = {
       maskStrings: false,
     });
 
-    const offenders = findOffenders(matches, allowlistIds);
+    // Resolve the throwaway-test-db exemption from each candidate's SOURCE (an
+    // actual fixture import), not from its path. Only test files among the
+    // matches are read, so this stays a handful of small reads on top of the grep.
+    const exemptPaths = new Set<string>();
+    for (const path of new Set(matches.map((m) => m.path))) {
+      if (!TEST_FILE_RE.test(path)) continue;
+      if (usesThrowawayTestDb(path, await Bun.file(join(root, path)).text())) {
+        exemptPaths.add(path);
+      }
+    }
+
+    const offenders = findOffenders(matches, allowlistIds, exemptPaths);
     if (offenders.length === 0) return { ok: true };
     return {
       ok: false,
@@ -132,7 +187,10 @@ const check: Check = {
         `will flag it as dead schema on a later build. Add a name constant there, include it in the ` +
         `IMPERATIVE_PUBLIC_TABLES array, and interpolate that constant by its canonical name on the ` +
         `CREATE TABLE line (e.g. \`CREATE TABLE IF NOT EXISTS \${MY_TABLE} (…)\`). To create a tracked, ` +
-        `drizzle-managed table instead, define it in the plugin's tables.ts and run ./singularity build.`,
+        `drizzle-managed table instead, define it in the plugin's tables.ts and run ./singularity build. ` +
+        `In a TEST that only needs a scratch table, provision a throwaway database with createTestDb ` +
+        `(@plugins/database/plugins/db-test-fixture/server) and create the table on it — that never ` +
+        `touches the worktree DB, so it is exempt and must NOT be added to the allowlist.`,
     };
   },
 };

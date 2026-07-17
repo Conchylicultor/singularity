@@ -1,10 +1,13 @@
+import { createHash } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
+import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
+  LIVE_STATE_TRIGGER_STATE_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
 import { excludedTableNames } from "./exclusion";
@@ -39,11 +42,17 @@ const log = Log.channel("change-feed", { persist: true });
 // consumer table (collection-consumer separation). Both are built at CALL time
 // (not module load) so the contribution sets are read after collectContributions
 // has run, the same way rebuildDerivedViews reads View.getContributions() lazily.
+// `live_state_trigger_state` (this layer's own content signature — see
+// `rebuildTriggers`) is denylisted for the same reason as the snapshot table: it
+// is written only by the rebuild itself and read only at boot, so it is pure
+// plumbing no live-state loader ever reads. Triggering on it would also make the
+// rebuild's own signature write re-enter the feed.
 function buildDenylist(): Set<string> {
   return new Set<string>([
     MIGRATIONS_TABLE_NAME,
     LIVE_STATE_CHANGELOG_TABLE,
     LIVE_STATE_SNAPSHOT_TABLE,
+    LIVE_STATE_TRIGGER_STATE_TABLE,
     ...feedExemptTables(),
     ...excludedTableNames(),
   ]);
@@ -218,17 +227,98 @@ async function singleColumnPk(
   return row ? row.attname : "";
 }
 
+// The statements that install one table's feed: a DROP IF EXISTS + CREATE per op,
+// so the pair is idempotent across boots. Compiled once and used for BOTH
+// execution and the content signature, so the fingerprint can never drift from the
+// SQL we actually emit — change this template and every table's signature changes,
+// forcing the rebuild that the change requires (mirrors derived-views compiling
+// `compileCreateView` once and hashing that same string).
+function compileTableTriggerDdl(table: string, pkCol: string): string[] {
+  const tbl = quoteIdent(table);
+  const arg = quoteLiteral(pkCol); // empty string ⇒ FULL-for-table
+  const ti = triggerName(table, "i");
+  const tu = triggerName(table, "u");
+  const td = triggerName(table, "d");
+  return [
+    `DROP TRIGGER IF EXISTS ${quoteIdent(ti)} ON ${tbl}`,
+    `DROP TRIGGER IF EXISTS ${quoteIdent(tu)} ON ${tbl}`,
+    `DROP TRIGGER IF EXISTS ${quoteIdent(td)} ON ${tbl}`,
+    `CREATE TRIGGER ${quoteIdent(ti)} AFTER INSERT ON ${tbl}
+           REFERENCING NEW TABLE AS new_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
+    `CREATE TRIGGER ${quoteIdent(tu)} AFTER UPDATE ON ${tbl}
+           REFERENCING NEW TABLE AS new_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
+    `CREATE TRIGGER ${quoteIdent(td)} AFTER DELETE ON ${tbl}
+           REFERENCING OLD TABLE AS old_rows
+           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
+  ];
+}
+
+type CompiledTable = { table: string; stmts: string[] };
+
+// Bookkeeping for the trigger layer's content signature — the exact twin of
+// derived-views' `derived_view_state`, created idempotently here (not via a
+// migration) because, like the triggers it tracks, it is derived-layer state, not
+// schema in the migration chain. It lives in the DB so a worktree fork carries the
+// signature with its triggers (`CREATE DATABASE … TEMPLATE` copies the row),
+// avoiding a spurious first-boot rebuild on every fork.
+const TRIGGER_STATE_DDL = `
+CREATE TABLE IF NOT EXISTS "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}" (
+  id boolean PRIMARY KEY DEFAULT true CHECK (id),
+  signature text NOT NULL
+)`;
+
+// A deadlock/serialization victim is by definition retryable: Postgres rolled the
+// whole transaction back, so it holds nothing and a fresh re-run has no partial
+// state to lose — the same argument `pool.query`'s retry makes in
+// database/server/internal/client.ts. It is repeated HERE because
+// `db.transaction()` takes the `pool.connect()` → `client.query` path, which
+// bypasses that wrapper entirely (the leak documented in plugins/database/CLAUDE.md)
+// — which is exactly why a deadlocked rebuild killed boot instead of retrying.
+// Bounded and logged: a persistent conflict still throws and blocks boot loudly.
+const RETRYABLE_SQLSTATES = new Set(["40P01", "40001"]);
+const MAX_REBUILD_RETRIES = 4;
+const rebuildRetryDelay = withJitter(exponential({ initial: 50, max: 1_000 }));
+
+type TxCallback = Parameters<NodePgDatabase["transaction"]>[0];
+
+async function runRebuildTx(db: NodePgDatabase, fn: TxCallback): Promise<void> {
+  await retryUntil(
+    async (attempt) => {
+      try {
+        await db.transaction(fn);
+        return true;
+      } catch (err) {
+        const code = (err as { code?: string } | null)?.code ?? "";
+        if (!RETRYABLE_SQLSTATES.has(code) || attempt >= MAX_REBUILD_RETRIES) throw err;
+        log.publish(
+          `[change-feed] [deadlock-retry] sqlstate=${code} attempt=${attempt + 1}/${MAX_REBUILD_RETRIES} — retrying trigger rebuild`,
+          "stderr",
+        );
+        return null; // retryable victim — back off and retry the whole rebuild
+      }
+    },
+    { delay: rebuildRetryDelay },
+  );
+}
+
 // Cached at boot during rebuildTriggers — the set of public tables we installed
 // triggers on. The listener's on-reconnect FULL sweep iterates this set (see
 // listener.ts). It is the by-construction-complete table universe; applyDbChange
 // drops any table no resource reads, so sweeping all of them is safe and total.
+//
+// Set from the DESIRED set on every boot, including the skip-when-unchanged path
+// (where "desired" is proven to equal "installed") — `assertScopePoliciesCovered`
+// reads it via `getCoveredTables()` immediately after, so it must be populated
+// whether or not we rebuilt.
 let coveredTables: string[] = [];
 
 export function getCoveredTables(): readonly string[] {
   return coveredTables;
 }
 
-// Rebuilds the entire change-feed trigger layer from source on every boot.
+// Rebuilds the entire change-feed trigger layer from source.
 //
 // Deterministic, data-less DDL (NOT a migration) — mirrors
 // rebuildDerivedViews: enumerate the live schema, then CREATE OR REPLACE the
@@ -239,6 +329,30 @@ export function getCoveredTables(): readonly string[] {
 // `db` is passed in (like rebuildDerivedViews / runMigrations) so this module
 // never imports @plugins/database/server — that would cycle (database/server
 // calls into the change-feed plugin's onReadyBlocking).
+//
+// SKIP WHEN UNCHANGED — mirrors the identical fix in rebuildDerivedViews, whose
+// header comment describes the same failure. `DROP+CREATE TRIGGER` takes an
+// AccessExclusive lock on its table until commit, and this rebuild does that for
+// EVERY public table in ONE transaction — so mid-rebuild it holds an exclusive
+// lock on a large, alphabetically-ordered prefix of the database while still
+// asking for more. That is textbook hold-and-wait, and during a hot-swap restart
+// it runs against a DB that is anything but quiet: the PREVIOUS backend is still
+// serving reads (the swap is ready-gated), and this hook races the database
+// plugin's own onReadyBlocking (migrations → rollup reconcile → view rebuild)
+// under Promise.all with no topo order. Any of those readers that touches two
+// tables in the opposite order closes a cycle, and Postgres shoots one session:
+// when the victim is THIS transaction, the exception escapes onReadyBlocking, the
+// backend exits before ready, and the deploy fails with the old code still live.
+// Build build-1784288281433-w62dep died exactly this way (attempts ⇄
+// conversations, SQLSTATE 40P01).
+//
+// The trigger layer is a pure function of (schema, denylist, emitted DDL), so we
+// fingerprint the compiled DDL and skip the rebuild entirely when it matches
+// what is already live — taking ZERO table locks on the steady-state restart
+// path, which is the overwhelming majority of boots (a frontend-only commit, as
+// that build was, changes no triggers at all). The lock window — and the deadlock
+// risk that comes with it — now only opens on a genuine schema/denylist change,
+// and `runRebuildTx` rides out a victim there rather than killing boot.
 export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   // Infra plumbing + derived-table rollups + feature `ExcludeFromChangeFeed`
   // opt-outs, all unioned (contributions collected by the framework before this
@@ -259,7 +373,38 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
     triggers.push({ table, pkCol: await singleColumnPk(db, table) });
   }
 
-  await db.transaction(async (tx) => {
+  // Compile once — this is both what we execute below and what we fingerprint.
+  const compiled: CompiledTable[] = triggers.map(({ table, pkCol }) => ({
+    table,
+    stmts: compileTableTriggerDdl(table, pkCol),
+  }));
+
+  // Content signature of the whole trigger layer: the shared function DDL plus
+  // every table's compiled statements, in enumeration order (listPublicTables
+  // already ORDER BYs, so the order is stable across boots). Identical signature
+  // ⇒ identical feed ⇒ nothing to do.
+  const signature = createHash("sha256")
+    .update(
+      [NOTIFY_FUNCTION_DDL, ...compiled.map((c) => `${c.table}\n${c.stmts.join("\n")}`)].join(
+        "\n--\n",
+      ),
+    )
+    .digest("hex");
+
+  // Populated on BOTH paths — assertScopePoliciesCovered reads it right after.
+  coveredTables = triggers.map((t) => t.table);
+
+  if (await triggerLayerUpToDate(db, signature, compiled, exclude)) {
+    log.publish(
+      `[change-feed] up to date (${coveredTables.length} table(s), signature unchanged) — skipping rebuild`,
+    );
+    // The up-to-date check just PROVED every expected trigger is installed, which
+    // is the same property warnOnCoverageGaps queries for — so the coverage sweep
+    // below would be a guaranteed-empty re-verification. Skip it too.
+    return;
+  }
+
+  await runRebuildTx(db, async (tx) => {
     // L2: the changelog the trigger function INSERTs into MUST exist before the
     // function is defined and before any per-table trigger that fires it. Create
     // it first, inside this same transaction — `onReadyBlocking` hooks run in
@@ -297,46 +442,23 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
       }
     }
 
-    for (const { table, pkCol } of triggers) {
-      const tbl = quoteIdent(table);
-      const arg = quoteLiteral(pkCol); // empty string ⇒ FULL-for-table
-      const ti = triggerName(table, "i");
-      const tu = triggerName(table, "u");
-      const td = triggerName(table, "d");
-
-      await tx.execute(
-        drizzleSql.raw(`DROP TRIGGER IF EXISTS ${quoteIdent(ti)} ON ${tbl}`),
-      );
-      await tx.execute(
-        drizzleSql.raw(`DROP TRIGGER IF EXISTS ${quoteIdent(tu)} ON ${tbl}`),
-      );
-      await tx.execute(
-        drizzleSql.raw(`DROP TRIGGER IF EXISTS ${quoteIdent(td)} ON ${tbl}`),
-      );
-
-      await tx.execute(
-        drizzleSql.raw(
-          `CREATE TRIGGER ${quoteIdent(ti)} AFTER INSERT ON ${tbl}
-           REFERENCING NEW TABLE AS new_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
-        ),
-      );
-      await tx.execute(
-        drizzleSql.raw(
-          `CREATE TRIGGER ${quoteIdent(tu)} AFTER UPDATE ON ${tbl}
-           REFERENCING NEW TABLE AS new_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
-        ),
-      );
-      await tx.execute(
-        drizzleSql.raw(
-          `CREATE TRIGGER ${quoteIdent(td)} AFTER DELETE ON ${tbl}
-           REFERENCING OLD TABLE AS old_rows
-           FOR EACH STATEMENT EXECUTE FUNCTION live_state_notify(${arg})`,
-        ),
-      );
+    for (const { stmts } of compiled) {
+      for (const stmt of stmts) {
+        await tx.execute(drizzleSql.raw(stmt));
+      }
     }
 
+    // Stamp the signature LAST, inside the same transaction: a rolled-back rebuild
+    // leaves no signature row, so a failed boot can never mark the layer current
+    // and skip a rebuild it never finished.
+    await tx.execute(drizzleSql.raw(TRIGGER_STATE_DDL));
+    await tx.execute(
+      drizzleSql`
+        INSERT INTO "public".${drizzleSql.raw(`"${LIVE_STATE_TRIGGER_STATE_TABLE}"`)} (id, signature)
+        VALUES (true, ${signature})
+        ON CONFLICT (id) DO UPDATE SET signature = EXCLUDED.signature
+      `,
+    );
   });
 
   coveredTables = triggers.map((t) => t.table);
@@ -346,6 +468,63 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   );
 
   await warnOnCoverageGaps(db, exclude);
+}
+
+// True iff the live trigger layer already IS the desired one, so the rebuild (and
+// its whole-database exclusive-lock window) can be skipped entirely.
+//
+// The stored signature alone is not trusted — it only says "the last rebuild that
+// committed emitted this DDL". Everything it asserts about the CURRENT database is
+// re-verified from the catalog, so anything dropped out of band (a manual DROP
+// TRIGGER, a restored dump, a half-cleaned fork) falls through to a real rebuild:
+// this mirrors derived-views' `allPresent` guard, widened to the three objects
+// this layer owns. Reads only catalogs + the signature row — no user-table locks,
+// which is the entire point.
+async function triggerLayerUpToDate(
+  db: NodePgDatabase,
+  signature: string,
+  compiled: CompiledTable[],
+  exclude: Set<string>,
+): Promise<boolean> {
+  await db.execute(drizzleSql.raw(TRIGGER_STATE_DDL));
+
+  const priorRes = await db.execute<{ signature: string }>(
+    drizzleSql.raw(
+      `SELECT signature FROM "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}" LIMIT 1`,
+    ),
+  );
+  if (priorRes.rows[0]?.signature !== signature) return false;
+
+  // The trigger function and the changelog table it INSERTs into must both still
+  // exist — a trigger whose function vanished would fire and error on every write.
+  const objRes = await db.execute<{ fn: string | null; changelog: string | null }>(
+    drizzleSql.raw(
+      `SELECT to_regproc('public.live_state_notify')::text        AS fn,
+              to_regclass('public.${LIVE_STATE_CHANGELOG_TABLE}')::text AS changelog`,
+    ),
+  );
+  const objs = objRes.rows[0];
+  if (!objs?.fn || !objs.changelog) return false;
+
+  // Every expected trigger is physically present, and no live_state_* trigger
+  // lingers on a now-excluded table (the stale-drop case the rebuild handles).
+  const installedRes = await db.execute<{ tgname: string; relname: string }>(
+    drizzleSql.raw(
+      `SELECT t.tgname, c.relname
+       FROM pg_trigger t
+       JOIN pg_class c ON c.oid = t.tgrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND NOT t.tgisinternal
+         AND t.tgname LIKE 'live_state_%'`,
+    ),
+  );
+  if (installedRes.rows.some((r) => exclude.has(r.relname))) return false;
+
+  const installed = new Set(installedRes.rows.map((r) => r.tgname));
+  return compiled.every((c) =>
+    (["i", "u", "d"] as const).every((op) => installed.has(triggerName(c.table, op))),
+  );
 }
 
 // Boot-time coverage check (replaces a separate ./singularity check, which can't

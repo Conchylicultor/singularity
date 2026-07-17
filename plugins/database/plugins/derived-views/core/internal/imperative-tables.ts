@@ -12,6 +12,14 @@
 // IMPERATIVE_PUBLIC_TABLES array, and interpolate that constant on the CREATE
 // TABLE line at the create site.
 //
+// This list is for tables in the REAL worktree DB only. A test that just needs a
+// scratch table must NOT be added here: provision a throwaway database with
+// `createTestDb` (@plugins/database/plugins/db-test-fixture/server) and create the
+// table on that instead. Such a database is dropped in teardown and is never what
+// orphaned-db-tables scans, so the check exempts those create sites — while an
+// entry here would make orphaned-db-tables treat a test fixture's name as declared
+// schema of a database it does not exist in.
+//
 // Lives in the derived-views CORE leaf — the shared sink every consumer already
 // depends on (migrations → derived-views, change-feed → derived-views,
 // database/server → derived-views, and the migrations check). It is deliberately
@@ -47,6 +55,17 @@ export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
  * declared.
  */
 export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
+
+/**
+ * Public table created imperatively by the change-feed trigger rebuilder
+ * (`plugins/database/plugins/change-feed/server/internal/triggers.ts`) — holds
+ * the trigger layer's content signature, the twin of
+ * `DERIVED_VIEW_STATE_TABLE_NAME`. It is what lets a steady-state restart skip
+ * the rebuild (and its whole-database AccessExclusive lock window) entirely. Not
+ * present in the drizzle snapshot; the orphaned-db-tables check treats it as
+ * declared.
+ */
+export const LIVE_STATE_TRIGGER_STATE_TABLE = "live_state_trigger_state";
 
 /**
  * The L2 persisted live-state materialization, created imperatively by
@@ -103,6 +122,7 @@ export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
 export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
   MIGRATIONS_TABLE_NAME,
   DERIVED_VIEW_STATE_TABLE_NAME,
+  LIVE_STATE_TRIGGER_STATE_TABLE,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
