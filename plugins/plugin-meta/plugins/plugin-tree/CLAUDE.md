@@ -1,5 +1,15 @@
 # plugin-tree
 
+## Boot warm-up (`server/internal/warmup.ts`)
+
+Both tree caches are in-memory and die with the process, and the facets build is
+~5s of pure CPU — so on main (which restarts on every deploy) the first
+Studio/plugin-view request of each process used to pay the whole build
+synchronously. A `host`-scoped `defineWarmup` pre-builds structure + facets in
+the throttled post-boot drain instead. Worktree backends keep the lazy cold path
+on purpose: their Studio surfaces are rarely opened, and N×-worktree boots would
+multiply the CPU burn exactly when the host is busiest.
+
 ## Barrel metadata (`core/internal/barrel-meta.ts`)
 
 `collectCoreFields` reads each runtime barrel's `description` / `loadBearing` /
@@ -23,8 +33,9 @@ dynamic value.
 
 - Description: Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
 - Server:
-  - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
+  - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`, `infra/warmup.defineWarmup`
   - Exports: Values: `getFacetsTreeCached`, `getStructureTreeCached`
+  - Register: `defineWarmup('plugin-tree.trees')`
 - Core:
   - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.defaultExportObjectBody`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`
   - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `resolvePluginSpecifier`

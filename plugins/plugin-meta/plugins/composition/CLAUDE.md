@@ -93,14 +93,16 @@ hardcoded in the check.
 Beyond the registry, this plugin ships the **Studio closure data**:
 
 - **`server/`** implements `GET /api/composition/data` (`core/endpoints.ts`):
-  builds + classifies the plugin tree **once per process** (module-cached), then
-  returns `{ graph: SerializedEdgeGraph, allIds }` — code-derived structure only.
-  Manifests are **not** on this endpoint; they are user data read client-side
-  from the `compositions` config. The graph is serialized via `closure/core`'s
-  `serializeEdgeGraph` so it crosses the wire as plain JSON; the
-  membership/inclusion/impact algorithms then run entirely client-side.
-  Tree-build staleness across a live plugin change is a filed follow-up
-  (invalidate on the git-watcher signal if it ever matters).
+  reads the cached facets tree from `plugin-tree` (watcher-invalidated, warmed
+  post-boot on main) and derives `{ graph: SerializedEdgeGraph, allIds,
+  disabledIds }` — code-derived structure only. The derivation (classify +
+  serialize + id scans, ~10ms) is memoized per tree identity (WeakMap), so it
+  re-runs exactly when plugin-tree's memo rebuilds — a live plugin change is
+  picked up on the next request, never served stale. Manifests are **not** on
+  this endpoint; they are user data read client-side from the `compositions`
+  config. The graph is serialized via `closure/core`'s `serializeEdgeGraph` so
+  it crosses the wire as plain JSON; the membership/inclusion/impact algorithms
+  then run entirely client-side.
 - **`web/`** owns the **manifest read/write API** over the config:
   `useManifestItems()` returns the raw config items (`{ id, rank, name,
   entryPoints, selectedContributors }[]`) for the Studio list + editing;

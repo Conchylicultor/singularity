@@ -4240,7 +4240,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.isMain`
         - Exports: Types: `WarmupSpec`; Values: `defineWarmup`, `drainWarmups`, `WARMUP_CONCURRENCY`
       - Cross-plugin:
-        - Imported by: `apps/pages/content-search`, `apps/sonata/sources/midi/folders`, `infra/corpus-index`, `reports`, `stats/cost`, `tasks`
+        - Imported by: `apps/pages/content-search`, `apps/sonata/sources/midi/folders`, `infra/corpus-index`, `plugin-meta/plugin-tree`, `reports`, `stats/cost`, `tasks`
     - **`worktree`**
       - Server:
         - Uses: `infra/host-admission.defineHostPool`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `packages/spawn-priority.backgroundArgv`
@@ -4913,8 +4913,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `pluginHealthReviewFields`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
       - Server:
-        - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
+        - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`, `infra/warmup.defineWarmup`
         - Exports: Values: `getFacetsTreeCached`, `getStructureTreeCached`
+        - Register: `defineWarmup('plugin-tree.trees')`
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.defaultExportObjectBody`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `resolvePluginSpecifier`

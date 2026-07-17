@@ -6,28 +6,22 @@ import {
 import { getFacetsTreeCached } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import { getCompositionData } from "@plugins/plugin-meta/plugins/composition/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import type { SerializedEdgeGraph } from "@plugins/plugin-meta/plugins/closure/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { CompositionData } from "@plugins/plugin-meta/plugins/composition/core";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
-// The plugin tree build + edge classification is expensive (reads every plugin's
-// facets off disk). It is invariant for the process lifetime, so build it once and
-// module-cache the serialized graph + the full id set. Mirrors the
-// `composition-closure` check's build, but cached for the runtime endpoint.
-// (Staleness across a live plugin-tree change is a filed follow-up — invalidate on
-// the git-watcher signal if it ever matters for an introspection tool.)
-let cached: {
-  graph: SerializedEdgeGraph;
-  allIds: PluginId[];
-  disabledIds: PluginId[];
-} | null = null;
+// The expensive part is the facets tree build, which plugin-tree already caches
+// (watcher-invalidated, warmed post-boot on main). The derivations on top of it
+// are cheap (~10ms measured: classify 8ms + serialize 1ms + two id scans), so
+// they are memoized per tree IDENTITY: when plugin-tree's memo rebuilds, the new
+// tree object misses the WeakMap and the graph is re-derived. This replaces the
+// old process-lifetime module cache, which never invalidated — after any live
+// plugin change it kept serving the boot-time graph forever (the staleness
+// follow-up noted in this plugin's CLAUDE.md).
+const derived = new WeakMap<PluginTree, CompositionData>();
 
-async function getGraph(): Promise<{
-  graph: SerializedEdgeGraph;
-  allIds: PluginId[];
-  disabledIds: PluginId[];
-}> {
-  if (cached) return cached;
-  const tree = await getFacetsTreeCached();
+function deriveCompositionData(tree: PluginTree): CompositionData {
+  const hit = derived.get(tree);
+  if (hit) return hit;
   const edgeGraph = classifyEdges(tree);
   const graph = serializeEdgeGraph(edgeGraph);
   const allIds = [...tree.byDir.values()].map((n) => n.id);
@@ -36,14 +30,14 @@ async function getGraph(): Promise<{
   // client renders the badge without shipping a per-node `disabled` field.
   const seeds = [...tree.byDir.values()].filter((n) => n.disabled).map((n) => n.id);
   const disabledIds = [...disabledClosure(seeds, edgeGraph)];
-  cached = { graph, allIds, disabledIds };
-  return cached;
+  const data = { graph, allIds, disabledIds };
+  derived.set(tree, data);
+  return data;
 }
 
-// Manifests are no longer served here — they are user data stored in the
+// Manifests are not served here — they are user data stored in the
 // `compositions` config_v2 config and read client-side. This endpoint returns
 // only the code-derived graph structure.
 export const handleCompositionData = implement(getCompositionData, async () => {
-  const { graph, allIds, disabledIds } = await getGraph();
-  return { graph, allIds, disabledIds };
+  return deriveCompositionData(await getFacetsTreeCached());
 });
