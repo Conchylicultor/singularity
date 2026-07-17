@@ -15,6 +15,7 @@ import {
   composeMapEntries,
   planFleet,
   resolveBarrelClosure,
+  type FleetSource,
   type PlannedTarget,
 } from "./plan";
 import {
@@ -24,14 +25,24 @@ import {
   saveFingerprintCache,
   type ArtifactMeta,
 } from "./store";
-import { readVendorSetMeta, resolveVendorSet, vendorSetDirName } from "./vendors";
+import {
+  readVendorSetMeta,
+  resolveVendorSet,
+  vendorSetDirName,
+  type VendorSetMeta,
+} from "./vendors";
 
 export type ExpectedComposition =
   | { kind: "computed"; imports: Record<string, string>; entryUrl: string }
   | { kind: "missing-artifacts"; missing: string[] };
 
 /** The expected fleet's targets and metas, stopping at store misses. */
-export async function planExpectedFleet(opts: { root: string; minify: boolean }): Promise<{
+export async function planExpectedFleet(opts: {
+  root: string;
+  minify: boolean;
+  /** Which registry + entry set to plan; defaults to the committed full registry. */
+  source?: FleetSource;
+}): Promise<{
   targets: PlannedTarget[];
   registryDirName: string;
   entryDirName: string;
@@ -41,7 +52,12 @@ export async function planExpectedFleet(opts: { root: string; minify: boolean })
 }> {
   const pluginsRoot = join(opts.root, "plugins");
   const cache = loadFingerprintCache(basename(opts.root));
-  const plan = await planFleet({ root: opts.root, minify: opts.minify, cache });
+  const plan = await planFleet({
+    root: opts.root,
+    minify: opts.minify,
+    cache,
+    source: opts.source,
+  });
 
   const metas = new Map<string, ArtifactMeta>();
   const missing: string[] = [];
@@ -117,4 +133,44 @@ export async function computeExpectedComposition(opts: {
     imports: buildImportMap(mapEntries).imports,
     entryUrl: artifactUrl(fleet.entryDirName),
   };
+}
+
+/**
+ * The stored vendor-set meta of the current tree's FULL fleet — the set a
+ * composition dist reuses (`WebArtifactsPipelineOptions.vendors`). Pure hashing
+ * plus store reads; throws when any fleet artifact or the set itself is absent,
+ * which means the full fleet has not been built from this tree yet.
+ */
+export async function readFleetVendorMeta(opts: {
+  root: string;
+  minify: boolean;
+}): Promise<VendorSetMeta> {
+  const fleet = await planExpectedFleet(opts);
+  if (fleet.missing.length > 0) {
+    const shown = fleet.missing.slice(0, 8).join(", ");
+    throw new Error(
+      `fleet vendor set: ${fleet.missing.length} fleet artifact(s) missing from the store ` +
+        `(build the full fleet first): ${shown}${fleet.missing.length > 8 ? ", …" : ""}`,
+    );
+  }
+  const requests = await collectVendorRequests({
+    root: opts.root,
+    pluginsRoot: join(opts.root, "plugins"),
+    targets: fleet.targets,
+    metaOf: (dirName) => fleet.metas.get(dirName)!,
+  });
+  const { setHash } = await resolveVendorSet({
+    requests,
+    minify: opts.minify,
+    builderVersion: BUILDER_VERSION,
+    builderSource: fleet.builderSource,
+  });
+  const meta = readVendorSetMeta(setHash);
+  if (meta === null) {
+    throw new Error(
+      `fleet vendor set: ${vendorSetDirName(setHash)} missing from the store ` +
+        `(build the full fleet first).`,
+    );
+  }
+  return meta;
 }

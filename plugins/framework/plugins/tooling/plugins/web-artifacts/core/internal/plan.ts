@@ -32,6 +32,75 @@ export interface RegistryEntryRecord {
   dependsOn: string[];
 }
 
+/**
+ * What the fleet is planned FROM: the web registry module (entries + file) and
+ * the deferred-tier set. The default source is the committed full registry;
+ * a composition dist injects its gitignored per-name filtered registry instead.
+ * Everything downstream of the entry list is a pure function of this source.
+ */
+export interface FleetSource {
+  webEntries: RegistryEntryRecord[];
+  deferredPaths: ReadonlySet<string>;
+  /** The registry module the registry artifact is built from (absolute path). */
+  registryFile: string;
+  /**
+   * Store slug for the registry artifact. The `@composition-web-registry`
+   * import-map alias stays FIXED across sources (it is the seam the entry
+   * artifact imports — same entry, different registry artifact = different
+   * composition); only the store name carries the source identity.
+   */
+  registrySlug: string;
+}
+
+/** The committed full registry — the source every plain build plans from. */
+export async function defaultFleetSource(root: string): Promise<FleetSource> {
+  const registryFile = join(root, WEB_SDK_CORE_REL, "web.generated.ts");
+  const { webEntries } = (await import(registryFile)) as { webEntries: RegistryEntryRecord[] };
+  const { DEFERRED_PLUGIN_PATHS } = (await import(
+    join(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
+  )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
+  return {
+    webEntries,
+    deferredPaths: DEFERRED_PLUGIN_PATHS,
+    registryFile,
+    registrySlug: "composition-web-registry",
+  };
+}
+
+/**
+ * The fleet source of one served composition: the gitignored per-name filtered
+ * web registry (emitted by codegen's `generateCompositionRegistry({ name })`)
+ * with the FULL deferred-tier set — eager-seed selection is a membership test
+ * (filtered targets minus deferred paths), so a superset is exact on the
+ * filtered entries and needs no per-composition tier codegen.
+ */
+export async function compositionFleetSource(opts: {
+  root: string;
+  name: string;
+}): Promise<FleetSource> {
+  const registryFile = join(
+    opts.root,
+    WEB_SDK_CORE_REL,
+    `web.composition.${opts.name}.generated.ts`,
+  );
+  if (!existsSync(registryFile)) {
+    throw new Error(
+      `composition fleet source: ${registryFile} does not exist — emit it first ` +
+        `via generateCompositionRegistry({ name: "${opts.name}" }).`,
+    );
+  }
+  const { webEntries } = (await import(registryFile)) as { webEntries: RegistryEntryRecord[] };
+  const { DEFERRED_PLUGIN_PATHS } = (await import(
+    join(opts.root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
+  )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
+  return {
+    webEntries,
+    deferredPaths: DEFERRED_PLUGIN_PATHS,
+    registryFile,
+    registrySlug: `web-registry-${opts.name}`,
+  };
+}
+
 export interface PlannedTarget extends ArtifactBuildTarget {
   needsBuild: boolean;
 }
@@ -62,6 +131,18 @@ export function artifactUrl(dirName: string): string {
 }
 
 /**
+ * The eager-tier web targets: the source's (possibly filtered) entries minus
+ * the deferred paths. A pure membership test, so a composition source passing
+ * the full deferred set gets the exact eager subset of ITS entries.
+ */
+export function eagerWebTargets(
+  webTargets: PlannedTarget[],
+  deferredPaths: ReadonlySet<string>,
+): PlannedTarget[] {
+  return webTargets.filter((t) => t.pluginPath !== null && !deferredPaths.has(t.pluginPath));
+}
+
+/**
  * Plan the base fleet (web entries + entry + registry) for the current tree:
  * pure hash computation over the plugins' own files (via the caller's
  * fingerprint cache) plus a store-existence probe per target. No builds, no
@@ -71,16 +152,15 @@ export async function planFleet(opts: {
   root: string;
   minify: boolean;
   cache: FingerprintCache;
+  /** Which registry + entry set to plan; defaults to the committed full registry. */
+  source?: FleetSource;
 }): Promise<FleetPlan> {
   const { root, cache } = opts;
   const pluginsRoot = join(root, "plugins");
   const webSrcDir = join(root, WEB_CORE_REL, "web");
 
-  const registryFile = join(root, WEB_SDK_CORE_REL, "web.generated.ts");
-  const { webEntries } = (await import(registryFile)) as { webEntries: RegistryEntryRecord[] };
-  const { DEFERRED_PLUGIN_PATHS } = (await import(
-    join(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
-  )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
+  const source = opts.source ?? (await defaultFleetSource(root));
+  const { webEntries, registryFile } = source;
 
   const identity = computeBuilderIdentity({ repoRoot: root, pluginsRoot, minify: opts.minify });
 
@@ -123,17 +203,17 @@ export async function planFleet(opts: {
     identityHash: identity.identityHash,
   });
   const registryTarget: RegistryTargetPlan = {
-    dirName: artifactDirName("composition-web-registry", "registry", registryInputsHash),
+    dirName: artifactDirName(source.registrySlug, "registry", registryInputsHash),
     inputsHash: registryInputsHash,
     registryFile,
     needsBuild: !hasArtifact(
-      artifactDirName("composition-web-registry", "registry", registryInputsHash),
+      artifactDirName(source.registrySlug, "registry", registryInputsHash),
     ),
   };
 
   return {
     webEntries,
-    deferredPaths: DEFERRED_PLUGIN_PATHS,
+    deferredPaths: source.deferredPaths,
     identity,
     webTargets,
     entryTarget,

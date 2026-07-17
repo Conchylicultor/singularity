@@ -63,6 +63,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
           - Plugins:
+            - **`auto-serve`** — Auto build & serve section in the composition detail pane: toggle the composition's autoBuild flag and open its live serve URL.
             - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
             - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
             - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.

@@ -13,14 +13,21 @@ export {
 } from "./docgen";
 
 export {
+  assertCompositionName,
+  assertServableCompositionNamespace,
+  COMPOSITION_NAME_RE,
+  RESERVED_COMPOSITION_NAMESPACES,
   collectedDirRegistryPath,
   collectedDirCompositionRegistryPath,
+  collectedDirNamedCompositionRegistryPath,
   clearCompositionRegistries,
   collectBareSpecifiers,
   collectEntriesWithDeps,
   discoverCollectedDirs,
   generateCompositionRegistry,
   generatePluginRegistry,
+  listNamedCompositionRegistries,
+  parseNamedCompositionRegistryFileName,
   renderCollectedDirRegistry,
   buildRegistryGenContext,
   standardPluginDirs,
@@ -46,8 +53,10 @@ export {
 // plugin-tree/facets, which codegen depends on).
 
 export {
+  fileConfigProxy,
   generateConfigOrigins,
   propagateConfigToUser,
+  readEffectiveConfigFromDisk,
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
   resolveOriginAnnotations,

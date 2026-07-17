@@ -14,9 +14,11 @@ import {
   artifactUrl,
   collectVendorRequests,
   composeMapEntries,
+  eagerWebTargets,
   planFleet,
   resolveBarrelClosure,
   WEB_CORE_REL,
+  type FleetSource,
   type PlannedTarget,
 } from "./plan";
 import {
@@ -31,7 +33,13 @@ import {
   type ArtifactMeta,
 } from "./store";
 import { buildArtifact, buildRegistryArtifact, type BuilderCtx } from "./vite-builder";
-import { ensureVendorSet, pruneVendorSets, vendorSetDirName, vendorSetPath } from "./vendors";
+import {
+  ensureVendorSet,
+  pruneVendorSets,
+  vendorSetDirName,
+  vendorSetPath,
+  type VendorSetMeta,
+} from "./vendors";
 import {
   computeGlobalCssKey,
   ensureGlobalCss,
@@ -47,6 +55,17 @@ export interface WebArtifactsPipelineOptions {
   stagingDir: string;
   minify: boolean;
   buildId: string;
+  /** Fleet source (entry set + registry); defaults to the committed full registry. */
+  source?: FleetSource;
+  /**
+   * A precomputed vendor set to reuse instead of resolving one from this
+   * fleet's own requests. A composition dist passes MAIN's full-fleet set: its
+   * targets are a strict subset of the fleet, so its vendor requests are a
+   * subset by construction — extra map entries are inert (the preload BFS only
+   * fetches what's imported), and compose's hard gates (every-URL-resolves +
+   * the staged ground-truth scan) still verify the dist end-to-end.
+   */
+  vendors?: VendorSetMeta;
   log: (line: string) => void;
   /** Stage wrapper — the caller records profiler spans here. */
   onStage: <T>(id: string, label: string, run: () => Promise<T>) => Promise<T>;
@@ -77,7 +96,7 @@ export async function runWebArtifactsPipeline(
     pruneVendorSets();
     pruneGlobalCssCache();
 
-    const fleet = await planFleet({ root, minify: opts.minify, cache });
+    const fleet = await planFleet({ root, minify: opts.minify, cache, source: opts.source });
     saveFingerprintCache(worktreeName, cache);
     log(
       `detect: ${fleet.webTargets.length} web artifacts (${fleet.staleWeb} stale), entry ${fleet.entryTarget.needsBuild ? "stale" : "cached"}, registry ${fleet.registryTarget.needsBuild ? "stale" : "cached"}`,
@@ -163,6 +182,13 @@ export async function runWebArtifactsPipeline(
   ];
 
   const vendors = await opts.onStage("artifacts:vendors", "vendor pre-bundles", async () => {
+    if (opts.vendors !== undefined) {
+      log(
+        `vendors: reusing set ${opts.vendors.setHash.slice(0, 12)} ` +
+          `(${Object.keys(opts.vendors.entries).length} specifiers)`,
+      );
+      return opts.vendors;
+    }
     const requests = await collectVendorRequests({
       root,
       pluginsRoot,
@@ -251,9 +277,9 @@ export async function runWebArtifactsPipeline(
     }
 
     const entryUrl = artifactUrl(plan.entryTarget.dirName);
-    const eagerSeeds = plan.webTargets
-      .filter((t) => t.pluginPath !== null && !plan.deferredPaths.has(t.pluginPath))
-      .map((t) => artifactUrl(t.dirName));
+    const eagerSeeds = eagerWebTargets(plan.webTargets, plan.deferredPaths).map((t) =>
+      artifactUrl(t.dirName),
+    );
     const preloadSeeds = [entryUrl, artifactUrl(plan.registryTarget.dirName), ...eagerSeeds];
 
     const { importMap, preloads } = composeDist({

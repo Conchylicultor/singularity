@@ -15,6 +15,7 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { readTypedConfig } from "@plugins/config_v2/core";
 import type { ConfigProxy, JsonValue } from "@plugins/config_v2/core";
+import { assertServableCompositionNamespace } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
@@ -95,6 +96,22 @@ const check: Check = {
       fileConfigProxy(overridePath),
     );
     const manifests = values.manifests.map(manifestItemToManifest);
+
+    // 0. Every manifest id is a servable gateway namespace: the compose-serve
+    //    stage uses the id verbatim as the subdomain / spec-dir / DB name, so
+    //    the gateway name rule (charset, ≤63 chars) and the reserved namespaces
+    //    (central / singularity / main) apply to every id — enforced via the
+    //    canonical helper, never a duplicated regex.
+    for (const item of values.manifests) {
+      try {
+        assertServableCompositionNamespace(item.id);
+      } catch (err) {
+        return fail(
+          `composition "${item.name}" has an unservable id "${item.id}": ${err instanceof Error ? err.message : String(err)}`,
+          "Composition ids double as gateway namespaces (http://<id>.localhost:9000). Rename the composition.",
+        );
+      }
+    }
 
     // 1. Unique names across all compositions (the config list does not de-dupe).
     const seenNames = new Set<string>();
@@ -180,6 +197,20 @@ const check: Check = {
     const byName = new Map<string, CompositionManifest>(
       manifests.map((m) => [m.name, m]),
     );
+
+    // A bundle's containment: each (flattened) entry/contributor plus its
+    // subtree — NOT its hard deps. Shared by the `excludes` disjointness gate
+    // and the autoBuild warning below.
+    const containmentOf = (target: CompositionManifest): Set<PluginId> => {
+      const targetFlat = flattenManifest(target, manifests);
+      const containment = new Set<PluginId>();
+      for (const id of [...targetFlat.entryPoints, ...targetFlat.selectedContributors]) {
+        containment.add(id);
+        for (const descendant of graph.subtree.get(id) ?? []) containment.add(descendant);
+      }
+      return containment;
+    };
+
     for (const item of values.manifests) {
       const excludes = item.excludes ?? [];
       if (excludes.length === 0) continue;
@@ -197,15 +228,7 @@ const check: Check = {
           );
         }
 
-        // The excluded bundle's containment: each entry/contributor plus its
-        // subtree (NOT its hard deps), unioned over the flattened bundle.
-        const targetFlat = flattenManifest(target, manifests);
-        const containment = new Set<PluginId>();
-        for (const id of [...targetFlat.entryPoints, ...targetFlat.selectedContributors]) {
-          containment.add(id);
-          for (const descendant of graph.subtree.get(id) ?? []) containment.add(descendant);
-        }
-
+        const containment = containmentOf(target);
         const offenders = [...appBundle].filter((p) => containment.has(p)).sort();
         if (offenders.length > 0) {
           const offender = offenders[0]!;
@@ -218,6 +241,29 @@ const check: Check = {
             `"${item.name}" declares it must stay disjoint from "${ref}" (self-containment), but "${offender}" is pulled into its bundle. Remove the dependency, or drop "${ref}" from this composition's \`excludes\`. Inclusion path for "${offender}":\n    ${trail}`,
           );
         }
+      }
+    }
+
+    // 7. WARNING (never a failure): an auto-served composition that does not
+    //    exclude `agent-runtime` may run worktree-assuming plugins against
+    //    main's checkout under a non-worktree namespace — unvalidated
+    //    territory. Declaring the exclude upgrades this to the hard
+    //    disjointness gate above.
+    const agentRuntime = byName.get("agent-runtime");
+    if (agentRuntime) {
+      const agentRuntimeContainment = containmentOf(agentRuntime);
+      for (const item of values.manifests) {
+        if (!item.autoBuild) continue;
+        if (item.excludes.includes("agent-runtime")) continue;
+        const flat = flattenManifest(manifestItemToManifest(item), manifests);
+        const bundle = resolveComposition(graph, flat).bundle;
+        const offenders = [...bundle].filter((p) => agentRuntimeContainment.has(p)).sort();
+        console.warn(
+          `[composition-closure] WARNING: auto-served composition "${item.name}" does not exclude "agent-runtime"` +
+            (offenders.length > 0
+              ? ` and its closure includes ${offenders.length} plugin(s) from it (${offenders.slice(0, 5).join(", ")}${offenders.length > 5 ? ", …" : ""}) — these would run against main's checkout under a non-worktree namespace.`
+              : ` — add \`excludes: ["agent-runtime"]\` to lock in its self-containment.`),
+        );
       }
     }
 

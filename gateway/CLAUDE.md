@@ -46,6 +46,8 @@ Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree
 
 Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
+Composition namespaces (`http://<composition>.localhost:9000`, the build CLI's compose-serve stage) are ordinary spec dirs written by the build — `server` points at main's checkout, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → `SINGULARITY_WORKTREE`).
+
 ### Discovery: dir-level watch + lazy resolve + periodic reconcile
 
 Registration is decoupled from fsnotify so it cannot silently fail at scale. Three layers (`registry.go`):

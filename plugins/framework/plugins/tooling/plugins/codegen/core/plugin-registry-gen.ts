@@ -405,6 +405,13 @@ export async function generatePluginRegistry(opts: {
 // registries — same export name, restricted to the composition's bundle. The
 // committed `<dir>.generated.ts` files are never touched, so the build stays
 // byte-identical and `plugins-registry-in-sync` + `git status` stay clean.
+//
+// Two flavors share one generator:
+//   - SINGLETON `<dir>.composition.generated.ts` — the `build --composition` /
+//     release path, where the whole checkout IS the composition.
+//   - PER-NAME `<dir>.composition.<name>.generated.ts` — the auto-serve path,
+//     where main's checkout serves several compositions at once and each
+//     backend/dist selects its own registry by name.
 
 // The registries that need a composition-filtered (closure-restricted) sibling.
 // `web`/`server` are the runtime registries the app actually loads at the import
@@ -416,29 +423,94 @@ export async function generatePluginRegistry(opts: {
 // loaded into a served app.
 const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm"]);
 
+// Per-name registries cover only the runtimes a SERVED composition loads;
+// `prewarm` stays on the singleton (release) path.
+const NAMED_COMPOSITION_RUNTIME_DIRS = new Set(["web", "server"]);
+
+// Composition ids double as gateway namespaces and per-name registry file
+// segments — same charset as the gateway's name regex (gateway/registry.go),
+// which also makes them path-safe by construction. This is the canonical TS
+// copy of the gateway name rule; the one place that cannot import it
+// (server-core/bin/plugins-active.ts — boot cannot import codegen) carries a
+// KEEP IN SYNC comment pointing here.
+export const COMPOSITION_NAME_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
+
+export function assertCompositionName(name: string): void {
+  if (!COMPOSITION_NAME_RE.test(name)) {
+    throw new Error(
+      `Invalid composition name "${name}" — must match ${COMPOSITION_NAME_RE}.`,
+    );
+  }
+}
+
+// Namespaces a composition can never claim: the central runtime, the main app
+// namespace, and the main git branch. Enforced by the compose-serve stage and
+// the `composition-closure` check.
+export const RESERVED_COMPOSITION_NAMESPACES: ReadonlySet<string> = new Set([
+  "central",
+  "singularity",
+  "main",
+]);
+
+/** A composition id that is also servable as a gateway namespace. */
+export function assertServableCompositionNamespace(name: string): void {
+  assertCompositionName(name);
+  if (RESERVED_COMPOSITION_NAMESPACES.has(name)) {
+    throw new Error(
+      `Composition name "${name}" is a reserved namespace ` +
+        `(${[...RESERVED_COMPOSITION_NAMESPACES].join(", ")}) — it can never be served.`,
+    );
+  }
+}
+
 export function collectedDirCompositionRegistryPath(
   def: DiscoveredCollectedDir,
 ): string {
   return join(def.ownerDir, "core", `${def.dir}.composition.generated.ts`);
 }
 
+export function collectedDirNamedCompositionRegistryPath(
+  def: DiscoveredCollectedDir,
+  name: string,
+): string {
+  assertCompositionName(name);
+  return join(def.ownerDir, "core", `${def.dir}.composition.${name}.generated.ts`);
+}
+
 export async function generateCompositionRegistry(opts: {
   root: string;
   bundle: Set<string>;
+  /**
+   * When set, emit per-name siblings (`<dir>.composition.<name>.generated.ts`)
+   * for the served runtimes instead of the singletons — the auto-serve path,
+   * which leaves `build --composition` (release) untouched.
+   */
+  name?: string;
+  // Optional prebuilt context so one build shares ONE tree walk across several
+  // compositions' registries. Built here when absent so standalone callers work.
+  ctx?: RegistryGenContext;
 }): Promise<void> {
-  const ctx = await buildRegistryGenContext(opts.root);
+  if (opts.name !== undefined) assertCompositionName(opts.name);
+  const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
+  const dirs = opts.name === undefined ? COMPOSITION_RUNTIME_DIRS : NAMED_COMPOSITION_RUNTIME_DIRS;
   for (const def of defs) {
-    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
-    const file = collectedDirCompositionRegistryPath(def);
+    if (!dirs.has(def.dir)) continue;
+    const file =
+      opts.name === undefined
+        ? collectedDirCompositionRegistryPath(def)
+        : collectedDirNamedCompositionRegistryPath(def, opts.name);
     const next = renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) writeFileSync(file, next);
   }
 }
 
-// Remove any stale filtered registries so a plain (non-composition) build
-// reverts the runtimes to the full committed registries. No-throw if absent.
+// Remove any stale filtered SINGLETON registries so a plain (non-composition)
+// build reverts the runtimes to the full committed registries. No-throw if
+// absent. Per-name registries are deliberately NOT cleared here — they belong
+// to the auto-serve stage, which rewrites the activated set and sweeps
+// deactivated leftovers itself (via `listNamedCompositionRegistries`).
 export async function clearCompositionRegistries(opts: {
   root: string;
 }): Promise<void> {
@@ -448,4 +520,41 @@ export async function clearCompositionRegistries(opts: {
     const file = collectedDirCompositionRegistryPath(def);
     if (existsSync(file)) rmSync(file);
   }
+}
+
+/** Parse `<dir>.composition.<name>.generated.ts` into its parts, else null. */
+export function parseNamedCompositionRegistryFileName(
+  fileName: string,
+): { dir: string; name: string } | null {
+  const m = /^([a-z]+)\.composition\.([a-z0-9][a-z0-9-]{0,62})\.generated\.ts$/.exec(fileName);
+  if (m === null) return null;
+  return { dir: m[1]!, name: m[2]! };
+}
+
+/**
+ * Every per-name composition registry currently on disk — the auto-serve
+ * stage's sweep input (delete the entries whose name is no longer activated).
+ */
+export function listNamedCompositionRegistries(
+  root: string,
+): Array<{ dir: string; name: string; file: string }> {
+  const out: Array<{ dir: string; name: string; file: string }> = [];
+  for (const def of discoverCollectedDirs(root)) {
+    if (!NAMED_COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
+    const coreDir = join(def.ownerDir, "core");
+    let entries;
+    try {
+      entries = readdirSync(coreDir, { withFileTypes: true });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const parsed = parseNamedCompositionRegistryFileName(entry.name);
+      if (parsed === null || parsed.dir !== def.dir) continue;
+      out.push({ ...parsed, file: join(coreDir, entry.name) });
+    }
+  }
+  return out;
 }

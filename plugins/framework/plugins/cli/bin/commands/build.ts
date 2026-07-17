@@ -1,14 +1,16 @@
 import type { Command } from "commander";
 import os from "node:os";
-import { existsSync, lstatSync, mkdirSync, writeFileSync } from "fs";
-import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { rename, rm } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { adaptiveTimeoutMs } from "./adaptive-timeout";
 import { acquireBuildLock } from "../build-lock";
+import { distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./internal/dist-publish";
+import { runComposeServeStage } from "./internal/compose-serve";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, generateCompositionRegistry, clearCompositionRegistries, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, generateCompositionRegistry, clearCompositionRegistries, COMPOSITION_NAME_RE, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { resolveComposition, flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
@@ -41,7 +43,9 @@ import { appendBuildLog } from "../build-log-writer-global";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 
-const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
+// Worktree names are gateway namespaces — same rule as composition ids (the
+// canonical TS copy lives in codegen's plugin-registry-gen.ts).
+const NAME_REGEX = COMPOSITION_NAME_RE;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
 
 function parseMigrationAnswers(raw: string): MigrationAnswer[] {
@@ -127,63 +131,6 @@ async function writeCentralRoutesManifest(root: string): Promise<void> {
   const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(manifest, null, 2) + "\n");
   await rename(tmp, CENTRAL_ROUTES_FILE);
-}
-
-// Publish layout inside web-core/. `dist` is a *symlink* → `dist.live.<pid>`,
-// the versioned release the gateway serves. A build compiles into
-// `dist.staging.<pid>/`, renames it to a `dist.live.<pid>/` release, then
-// repoints `dist` by renaming a fresh `dist.swap.<pid>` symlink over it. That
-// final rename is a POSIX-atomic replace of a symlink, so `dist` always
-// resolves to a *complete* release — there is no window where it is absent.
-// (`OLD_PREFIX` is the legacy move-aside scheme; still swept for back-compat.)
-// Leftovers from a crashed run are swept at the start of each build.
-const STAGING_PREFIX = "dist.staging.";
-const LIVE_PREFIX = "dist.live.";
-const SWAP_PREFIX = "dist.swap.";
-const OLD_PREFIX = "dist.old.";
-
-// Reclaim build leftovers and self-heal a crashed publish. `dist` is a symlink
-// → `dist.live.<pid>`; a publish killed mid-swap can leave `dist` missing or
-// dangling while a complete `dist.live.*` release survives on disk. Restore the
-// newest surviving release so the site is served again from the very next build
-// start, then reclaim every other transient dir — but never the release `dist`
-// currently points at (deleting it would dangle the live symlink).
-async function sweepStagingLeftovers(webDir: string): Promise<void> {
-  const distPath = resolve(webDir, "dist");
-  const entries = await readdir(webDir);
-
-  // The release `dist` currently resolves to (basename), if it is a live symlink.
-  let current: string | null = null;
-  const stat = lstatSync(distPath, { throwIfNoEntry: false });
-  if (stat?.isSymbolicLink()) {
-    if (existsSync(distPath)) {
-      current = basename(await readlink(distPath)); // existsSync follows: false ⇒ dangling
-    } else {
-      await unlink(distPath); // dangling symlink — drop it, restore below
-    }
-  }
-
-  // No healthy `dist` but a complete release survives → repoint at the newest.
-  if (current === null) {
-    const releases = entries.filter((e) => e.startsWith(LIVE_PREFIX)).sort();
-    const newest = releases.at(-1);
-    if (newest) {
-      current = newest;
-      await symlink(newest, distPath); // relative target, resolved within webDir
-    }
-  }
-
-  for (const entry of entries) {
-    if (entry === current) continue;
-    if (
-      entry.startsWith(STAGING_PREFIX) ||
-      entry.startsWith(LIVE_PREFIX) ||
-      entry.startsWith(SWAP_PREFIX) ||
-      entry.startsWith(OLD_PREFIX)
-    ) {
-      await rm(resolve(webDir, entry), { recursive: true, force: true });
-    }
-  }
 }
 
 async function exec(
@@ -714,7 +661,11 @@ export function registerBuild(program: Command) {
     )
     .option(
       "--composition <name>",
-      "Build only the named composition's plugin closure (filtered self-contained registry)",
+      "Build THIS checkout as the named composition (filtered singleton registry, monolithic frontend) — the release path. Unrelated to the auto-serve stage; see --serve-composition.",
+    )
+    .option(
+      "--serve-composition <name>",
+      "Force ONE composition through the compose-serve stage regardless of its autoBuild toggle (main checkout only; artifact mode only; skips the deactivation sweep). Composes a per-composition dist + empty DB served at http://<name>.localhost:9000.",
     )
     .option(
       "--monolith",
@@ -728,7 +679,7 @@ export function registerBuild(program: Command) {
       "--no-minify",
       "Artifact mode only: skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
     )
-    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string; artifacts?: boolean; monolith?: boolean; minify: boolean }) => {
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string; serveComposition?: string; artifacts?: boolean; monolith?: boolean; minify: boolean }) => {
       const buildStartedAt = new Date();
 
       // Mark this process as a build: dist-comparing checks (map-in-sync) skip
@@ -814,6 +765,26 @@ export function registerBuild(program: Command) {
 
       const root = await getWorktreeRoot();
       const name = basename(root);
+
+      // --serve-composition preflight. The compose-serve stage composes over
+      // main's artifact fleet (vendor set + store), so it needs the MAIN
+      // checkout in artifact mode — fail before any work, not after the build.
+      if (opts.serveComposition !== undefined) {
+        if (!artifactsMode) {
+          console.error(
+            "ERROR: --serve-composition requires artifact mode (it composes over the artifact fleet). " +
+              "Drop --monolith / --composition / SINGULARITY_WEB_MONOLITH=1.",
+          );
+          process.exit(1);
+        }
+        if (root !== (await getMainRepoRoot())) {
+          console.error(
+            "ERROR: --serve-composition only runs from the MAIN checkout — " +
+              "compositions are served from main's code and main's resolved config.",
+          );
+          process.exit(1);
+        }
+      }
 
       // Every build needs ONE stable id, shared by its build-log record, its
       // build-profile-<id>.json, its build-logs, and the bundle's .build-id —
@@ -928,7 +899,7 @@ export function registerBuild(program: Command) {
       endSpan();
 
       endSpan = buildProfilerStart("sweepStaging", "build:setup", "sweep staging leftovers");
-      await sweepStagingLeftovers(webDir);
+      await sweepDistLeftovers(resolve(webDir, "dist"));
       endSpan();
 
       // The non-heavy phases — `bun install`, drizzle generate, and the build
@@ -1094,8 +1065,8 @@ export function registerBuild(program: Command) {
       // double-checked cli/server-core/central-core on every build. With
       // `--skip-checks` the check doesn't run, so we still guard server
       // type-safety with a single incremental tsc over the runtime entrypoints.
-      const stagingName = `${STAGING_PREFIX}${process.pid}`;
-      const stagingPath = resolve(webDir, stagingName);
+      const stagingPath = distStagingPath(resolve(webDir, "dist"));
+      const stagingName = basename(stagingPath);
 
       console.log("Running checks, type-checking, and building frontend in parallel...");
 
@@ -1438,43 +1409,12 @@ export function registerBuild(program: Command) {
       // The build id baked into the bundle, so the server can detect stale tabs.
       writeFileSync(resolve(stagingPath, ".build-id"), buildId + "\n");
 
-      // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap. The
-      // staging tree is renamed to a versioned release, then `dist` is repointed
-      // by renaming a fresh symlink over it — a POSIX-atomic replace when `dist`
-      // is already a symlink, so `dist` always resolves to a *complete* release
-      // with no window where it is absent.
-      //
-      // This supersedes the earlier move-aside (`rename(dist→old); rename(staging→dist)`),
-      // which left a real gap between the two renames where `dist` did not exist
-      // at all: a build killed there (e.g. the gateway interrupting an in-flight
-      // build) left a permanent 404 on `/`. On the one-time migration from a
-      // legacy real-directory `dist`, it is removed just before the swap — that
-      // single build has a brief gap; every subsequent build is gapless.
+      // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap — see
+      // ./internal/dist-publish.ts for the mechanics (this supersedes the
+      // earlier move-aside scheme, which left a real gap between two renames).
       endSpan = buildProfilerStart("atomicPublish", "build:frontend", "atomic publish");
       const livePath = resolve(webDir, "dist");
-      const releaseName = `${LIVE_PREFIX}${process.pid}`;
-      const releasePath = resolve(webDir, releaseName);
-      const swapPath = resolve(webDir, `${SWAP_PREFIX}${process.pid}`);
-
-      await rename(stagingPath, releasePath);
-
-      // Reclaim the release `dist` currently points at after the swap. If `dist`
-      // is a legacy real directory, remove it first — a symlink cannot be
-      // renamed over a non-empty directory.
-      let prevRelease: string | null = null;
-      const liveStat = lstatSync(livePath, { throwIfNoEntry: false });
-      if (liveStat?.isSymbolicLink()) {
-        prevRelease = basename(await readlink(livePath));
-      } else if (liveStat?.isDirectory()) {
-        await rm(livePath, { recursive: true, force: true });
-      }
-
-      await symlink(releaseName, swapPath); // relative target, resolved within webDir
-      await rename(swapPath, livePath); // atomic replace of the dist symlink
-
-      if (prevRelease && prevRelease !== releaseName) {
-        await rm(resolve(webDir, prevRelease), { recursive: true, force: true });
-      }
+      await publishDistAtomic({ dir: livePath, stagingPath });
       endSpan();
 
       // 6. Write registry JSON
@@ -1527,8 +1467,63 @@ export function registerBuild(program: Command) {
         }
       }
 
+      // 6e. Compose-serve stage: activated compositions (autoBuild in main's
+      // resolved `compositions` config, or the one forced by
+      // --serve-composition) get per-composition dists + empty DBs served at
+      // http://<id>.localhost:9000. Main-checkout builds only (same gating as
+      // the central restart above), artifact mode only (the stage composes
+      // over the fleet this build just produced). Per-composition failures
+      // are collected and fail the build AFTER main's own deploy completes —
+      // main IS deployed either way; a failed composition keeps serving its
+      // previous dist.
+      const runComposeServe = async (): Promise<void> => {
+        if (root !== mainRoot) return;
+        if (!artifactsMode) {
+          // Config-driven activations are NOT recomposed under --monolith (no
+          // fresh fleet to compose from) — loud skip, never a silent stale serve.
+          console.warn(
+            "compose-serve: skipped (monolithic build) — activated compositions were NOT rebuilt.",
+          );
+          softNotes.push("compose-serve skipped (monolith)");
+          return;
+        }
+        endSpan = buildProfilerStart("composeServe", "build:deploy", "compose-serve compositions");
+        let result;
+        try {
+          result = await runComposeServeStage({
+            root,
+            minify: opts.minify,
+            buildId,
+            buildCommit,
+            force: opts.serveComposition,
+            log: (line) => console.log(line),
+            onStage: async (sid, label, run) => {
+              const end = buildProfilerStart(sid, "build:deploy", label);
+              try {
+                return await run();
+              } finally {
+                end();
+              }
+            },
+          });
+        } finally {
+          endSpan();
+        }
+        if (result.failures.length > 0) {
+          failBuild(
+            [
+              `Compose-serve failed for: ${result.failures.map((f) => f.id).join(", ")}.`,
+              `Main itself IS deployed — ${buildUrl} serves the new build; each failed composition keeps serving its previous dist.`,
+              ...result.failures.flatMap((f) => [`--- ${f.id} ---`, f.error]),
+            ],
+            ["compose-serve"],
+          );
+        }
+      };
+
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
+        await runComposeServe();
         softNotes.push("restart skipped");
         flushFootprint();
         writeBuildProfile(name);
@@ -1599,6 +1594,10 @@ export function registerBuild(program: Command) {
         if (note) softNotes.push(note);
         endSpan();
       }
+
+      // Compositions AFTER main is verified healthy — a broken main build must
+      // never half-update composition namespaces.
+      await runComposeServe();
 
       flushFootprint();
       writeBuildProfile(name);

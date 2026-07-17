@@ -31,8 +31,10 @@ dist.stats.html
 
 # Composition build-gating: per-worktree filtered registries emitted only by
 # `./singularity build --composition <name>` (never committed; siblings of the
-# committed `<dir>.generated.ts`).
+# committed `<dir>.generated.ts`). The second pattern covers the per-name
+# auto-serve registries (`<dir>.composition.<name>.generated.ts`).
 *.composition.generated.ts
+*.composition.*.generated.ts
 
 # Tauri desktop shell — generated/staged artifacts (the Rust project itself is
 # committed; these are produced per-release or per-build).

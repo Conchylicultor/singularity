@@ -3,9 +3,9 @@ import { randomUUID } from "crypto";
 import { dirname, join, relative } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
-import { computeHash, effective, propagate, readonlyProxy, stringifyConfigValue, APP_SCOPE_DIR } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigProxy, JsonValue } from "@plugins/config_v2/core";
-import type { FieldDef } from "@plugins/fields/core";
+import { computeHash, effective, propagate, readonlyProxy, readTypedConfig, stringifyConfigValue, APP_SCOPE_DIR } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigProxy, ConfigValues, JsonValue } from "@plugins/config_v2/core";
+import type { FieldDef, FieldsRecord } from "@plugins/fields/core";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -461,7 +461,7 @@ export async function generateConfigOrigins(opts: {
 
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
-function fileConfigProxy(filePath: string): ConfigProxy {
+export function fileConfigProxy(filePath: string): ConfigProxy {
   return {
     read() {
       if (!existsSync(filePath)) return null;
@@ -495,6 +495,48 @@ function fileConfigProxy(filePath: string): ConfigProxy {
       return existsSync(filePath);
     },
   };
+}
+
+/**
+ * The RESOLVED value a worktree's backend would read for one config, computed
+ * off disk with no server runtime — for build-time consumers (the CLI's
+ * compose-serve stage) that must see git-layer defaults AND user-layer edits,
+ * not `descriptor.fields.<x>.defaultValue` (the code-defaults-only bug-shape).
+ *
+ * Precedence is NEVER reimplemented here: the runtime reads the USER layer via
+ * `readTypedConfig(descriptor, userOrigin, userOverwrites)` (config_v2's
+ * registry), and the git layer only reaches that user layer through
+ * `propagateConfigToUser`. This mirrors exactly that chain — when the user
+ * origin was never propagated (fresh machine / new worktree name), the
+ * git-effective document IS the origin, layered via the same pure primitives
+ * (`effective` + `readTypedConfig`).
+ *
+ * `hierarchyPath` is the config's owning-plugin path (`asPath(pluginId)`) —
+ * the descriptor does not carry its plugin identity, so the caller supplies it.
+ */
+export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
+  descriptor: ConfigDescriptor<F>,
+  opts: {
+    root: string;
+    worktreeName: string;
+    singularityDir: string;
+    hierarchyPath: string;
+  },
+): ConfigValues<F> {
+  const gitDir = join(opts.root, "config", opts.hierarchyPath);
+  const gitOrigin = fileConfigProxy(join(gitDir, `${descriptor.name}.origin.jsonc`));
+  const gitOverwrites = fileConfigProxy(join(gitDir, `${descriptor.name}.jsonc`));
+
+  const userDir = join(opts.singularityDir, "config", opts.worktreeName, opts.hierarchyPath);
+  const userOrigin = fileConfigProxy(join(userDir, `${descriptor.name}.origin.jsonc`));
+  const userOverwrites = fileConfigProxy(join(userDir, `${descriptor.name}.jsonc`));
+
+  let origin: ConfigProxy = userOrigin;
+  if (!userOrigin.exists()) {
+    const gitEff = effective(gitOrigin, gitOverwrites);
+    if (gitEff !== undefined) origin = readonlyProxy(gitEff);
+  }
+  return readTypedConfig(descriptor, origin, userOverwrites);
 }
 
 export async function propagateConfigToUser(opts: {

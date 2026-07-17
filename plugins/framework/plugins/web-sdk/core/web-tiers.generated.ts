@@ -106,6 +106,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/story/plugins/renderers/plugins/blog",
   "apps/plugins/story/plugins/renderers/plugins/slides",
   "apps/plugins/studio/plugins/compositions",
+  "apps/plugins/studio/plugins/compositions/plugins/auto-serve",
   "apps/plugins/studio/plugins/compositions/plugins/closure-tree",
   "apps/plugins/studio/plugins/compositions/plugins/contributors",
   "apps/plugins/studio/plugins/compositions/plugins/draft-actions",

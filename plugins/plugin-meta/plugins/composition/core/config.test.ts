@@ -119,6 +119,18 @@ test("every seed carries `excludes` and each ref resolves to a real bundle", () 
   }
 });
 
+test("every seed carries `autoBuild` (default off) and the mapper drops it", () => {
+  for (const s of seeds) {
+    // The compose-serve opt-in flag is present on every seed, defaulting off.
+    expect(typeof s.autoBuild).toBe("boolean");
+    expect(s.autoBuild).toBe(false);
+    // Engine-opaque: `manifestItemToManifest` drops it exactly like `category` /
+    // `excludes`, so the resolved `CompositionManifest` never carries it.
+    const m = manifestItemToManifest(s);
+    expect("autoBuild" in m).toBe(false);
+  }
+});
+
 test("the self-improvement pack holds exactly the self-improvement set", () => {
   const pack = manifestItemToManifest(byName("self-improvement"));
   expect([...pack.selectedContributors].map(String).sort()).toEqual(

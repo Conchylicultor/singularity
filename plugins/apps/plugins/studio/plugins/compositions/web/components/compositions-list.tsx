@@ -7,6 +7,8 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   useCompositionData,
   useManifestItems,
@@ -51,7 +53,7 @@ function PromoteDefaultButton(): ReactElement {
 export function CompositionsList(): ReactElement {
   const { isLoading } = useCompositionData();
   const items = useManifestItems();
-  const { save } = useManifestActions();
+  const { save, setAutoBuild } = useManifestActions();
   const openPane = useOpenPane();
   // The URL is the selection — there is no local `editingId` state to drift.
   const selectedId = compositionDetailPane.useRouteEntry()?.params.id;
@@ -93,6 +95,7 @@ export function CompositionsList(): ReactElement {
           <CompositionsDataView
             items={items}
             selectedId={selectedId ?? null}
+            onToggleAutoBuild={setAutoBuild}
             onSelect={(item) =>
               openPane(
                 compositionDetailPane,
@@ -123,10 +126,12 @@ function CompositionsDataView({
   items,
   selectedId,
   onSelect,
+  onToggleAutoBuild,
 }: {
   items: CompositionManifestItem[];
   selectedId: string | null;
   onSelect: (item: CompositionManifestItem) => void;
+  onToggleAutoBuild: (id: string, on: boolean) => void;
 }) {
   const fields = useMemo<FieldDef<CompositionManifestItem>[]>(
     () => [
@@ -195,8 +200,59 @@ function CompositionsDataView({
         align: "end",
         sortable: true,
       },
+      {
+        // Opt-in auto build & serve. `value` keeps the field sortable and gives a
+        // yes/no Filter pill for free; the trailing cell is a one-click ToggleChip
+        // that writes MAIN's compositions config, which the CLI compose-serve
+        // stage reads to compose + serve the composition at build time.
+        id: "autoBuild",
+        label: "Auto-serve",
+        type: "bool",
+        value: (it) => it.autoBuild,
+        align: "end",
+        cell: (it) => (
+          <ToggleChip
+            active={it.autoBuild}
+            title={
+              it.autoBuild
+                ? "Auto-served — click to stop building & serving"
+                : "Click to build & serve this composition at http://<id>.localhost:9000"
+            }
+            onClick={(e: { stopPropagation: () => void }) => {
+              e.stopPropagation();
+              onToggleAutoBuild(it.id, !it.autoBuild);
+            }}
+          >
+            {it.autoBuild ? "Serving" : "Serve"}
+          </ToggleChip>
+        ),
+        sortable: true,
+        filterable: true,
+      },
+      {
+        // Live serve URL, shown only once a composition is activated. Namespace
+        // name == composition id, served by the gateway at <id>.localhost:9000.
+        id: "serveUrl",
+        label: "Serve URL",
+        type: "text",
+        value: (it) => (it.autoBuild ? `${it.id}.localhost:9000` : ""),
+        cell: (it) =>
+          it.autoBuild ? (
+            <LinkChip
+              mono
+              title={`Open http://${it.id}.localhost:9000`}
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`http://${it.id}.localhost:9000`, "_blank", "noopener");
+              }}
+            >
+              {it.id}.localhost:9000
+            </LinkChip>
+          ) : null,
+        align: "end",
+      },
     ],
-    [],
+    [onToggleAutoBuild],
   );
 
   return (

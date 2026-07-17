@@ -32,6 +32,13 @@ export interface ManifestActions {
   save(draft: CompositionManifest, editingId?: string): string;
   /** Remove the item with the given `id`. */
   remove(id: string): void;
+  /**
+   * Flip the `autoBuild` (auto build & serve) flag on the item with the given
+   * `id`, preserving every other field. `autoBuild` is engine-opaque config
+   * metadata (dropped by `manifestItemToManifest`), so this is a config-only
+   * write — the CLI compose-serve stage reads it from MAIN's resolved config.
+   */
+  setAutoBuild(id: string, on: boolean): void;
 }
 
 export function useManifestActions(): ManifestActions {
@@ -74,6 +81,8 @@ export function useManifestActions(): ManifestActions {
           // draft yet — seed it empty; set it via config edit. The edit path above
           // preserves any existing `excludes` through the `...item` spread.
           excludes: [] as string[],
+          // New drafts are not auto-served; activate via the Studio toggle.
+          autoBuild: false,
           ...fields,
         };
         next = [...items, newItem];
@@ -95,5 +104,17 @@ export function useManifestActions(): ManifestActions {
     [items, setConfig],
   );
 
-  return { save, remove };
+  const setAutoBuild = useCallback(
+    (id: string, on: boolean) => {
+      setConfig(
+        "manifests",
+        items.map((item) =>
+          item.id === id ? { ...item, autoBuild: on } : item,
+        ),
+      );
+    },
+    [items, setConfig],
+  );
+
+  return { save, remove, setAutoBuild };
 }

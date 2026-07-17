@@ -12,9 +12,10 @@ export type CompositionManifestItem =
   (typeof compositionsConfig)["fields"]["manifests"]["defaultValue"][number];
 
 /**
- * Drop the list field's `id` / `rank` identity (and `category`, which is
- * organisation metadata the engine never reads) and present a stored config item
- * as the engine's {@link CompositionManifest}. The id arrays are stored as plain
+ * Drop the list field's `id` / `rank` identity (and the engine-opaque metadata
+ * the closure engine never reads — `category`, `excludes`, and `autoBuild`, the
+ * last being the compose-serve stage's opt-in flag) and present a stored config
+ * item as the engine's {@link CompositionManifest}. The id arrays are stored as plain
  * `string[]` (config_v2's string-list field), so we cast at the config boundary
  * to the branded `PluginId[]` exactly like `endpoints.ts` validates the wire
  * shape — that the ids resolve to real plugins is the `composition-closure`

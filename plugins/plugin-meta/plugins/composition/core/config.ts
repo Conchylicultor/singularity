@@ -3,6 +3,7 @@ import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 
 // The composition manifest registry — plain editable data in config_v2 (no
 // codegen, no barrels). Each item is a `CompositionManifest`
@@ -51,6 +52,15 @@ export const compositionsConfig = defineConfig({
         // enforces disjointness against each named bundle's containment. Lets an
         // app declare it is self-contained (e.g. excludes `agent-runtime`/`auth`).
         excludes: stringListField({ label: "Excludes" }),
+        // Opt-in auto-build & serve. Read by the CLI compose-serve stage from
+        // MAIN's (`singularity`) resolved config: only compositions with this on
+        // are composed into a per-composition frontend dist + empty DB and
+        // served live at http://<id>.localhost:9000. Engine-opaque — like
+        // `category` / `excludes`, `manifestItemToManifest` DROPS it (the closure
+        // engine never sees it). The name intentionally collides with the build
+        // plugin's own `autoBuild` (main's rebuild-on-push toggle): different
+        // configs, distinct labels — keep this field name.
+        autoBuild: boolField({ label: "Auto build & serve", default: false }),
       },
       default: [
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -69,6 +79,7 @@ export const compositionsConfig = defineConfig({
           ],
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
+          autoBuild: false,
         },
         {
           id: "agent-manager-lean",
@@ -82,6 +93,7 @@ export const compositionsConfig = defineConfig({
           ],
           extends: ["served-baseline"],
           excludes: [] as string[],
+          autoBuild: false,
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -168,6 +180,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["apps.sonata.audio.piano"],
           extends: ["served-baseline"],
           excludes: ["agent-runtime", "auth"],
+          autoBuild: false,
         },
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
@@ -208,6 +221,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: [] as string[],
           extends: ["conversations", "tasks-domain"],
           excludes: [] as string[],
+          autoBuild: false,
         },
         subsystem("page-editor", "aK", ["page"]),
         subsystem("fields", "aL", ["fields"]),
@@ -345,6 +359,7 @@ function app(
     selectedContributors: [] as string[],
     extends: ["served-baseline", ...extraExtends],
     excludes,
+    autoBuild: false,
   };
 }
 
@@ -359,6 +374,7 @@ function subsystem(name: string, rank: string, entries: string[]) {
     selectedContributors: [] as string[],
     extends: [] as string[],
     excludes: [] as string[],
+    autoBuild: false,
   };
 }
 
@@ -373,5 +389,6 @@ function pack(name: string, rank: string, contributors: string[]) {
     selectedContributors: contributors,
     extends: [] as string[],
     excludes: [] as string[],
+    autoBuild: false,
   };
 }

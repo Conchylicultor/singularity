@@ -719,6 +719,10 @@
       "name": "@singularity/plugin-apps-studio-compositions",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve": {
+      "name": "@singularity/plugin-apps-studio-compositions-auto-serve",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree": {
       "name": "@singularity/plugin-apps-studio-compositions-closure-tree",
       "version": "0.0.1",
@@ -5302,6 +5306,8 @@
     "@singularity/plugin-apps-studio": ["@singularity/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
 
     "@singularity/plugin-apps-studio-compositions": ["@singularity/plugin-apps-studio-compositions@workspace:plugins/apps/plugins/studio/plugins/compositions"],
+
+    "@singularity/plugin-apps-studio-compositions-auto-serve": ["@singularity/plugin-apps-studio-compositions-auto-serve@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve"],
 
     "@singularity/plugin-apps-studio-compositions-closure-tree": ["@singularity/plugin-apps-studio-compositions-closure-tree@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree"],
 

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-studio-compositions-auto-serve",
+  "description": "Auto build & serve section in the composition detail pane: toggle the composition's autoBuild flag and open its live serve URL.",
+  "private": true,
+  "version": "0.0.1"
+}
