@@ -27,12 +27,14 @@ run-detail already owns `r/:runId`.
   omission; now every composition row is reachable, so the section disables Run and
   says why when `category !== "app"` — the other categories are inspection lenses
   with no product to build.
-- **The history is windowed, and says so.** `releaseHistoryResource` is
-  server-windowed to the 50 most-recent runs per worktree, and this section filters
-  it client-side by `ReleaseRun.composition`. A composition's older runs therefore
-  disappear once 50 newer runs exist for anything. The caption states this rather
-  than implying the list is complete; a per-composition server query is a filed
-  follow-up.
+- **The history is composition-scoped and unbounded.** The section is a
+  server-delegated DataView over `queryReleaseHistory` (`POST
+  /api/release/history/query`) — a keyset-paginated query scoped to this
+  composition's runs, kept live by the `release.history-revision` tick. There is
+  no 50-run cap and no client-side filter: a composition's full run history is
+  browsable via infinite scroll. Each run's detail pane resolves its run by id
+  through the `release.run` per-id resource, so an old run's detail resolves
+  regardless of age.
 
 The engine itself (`@plugins/release/core` — targets, endpoints, resources) is
 top-level and untouched by this; only the Studio UI lives here.
@@ -45,7 +47,7 @@ top-level and untouched by this; only the Studio UI lives here.
 - Web:
   - Slots: `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
   - Contributes: `Pane.Register` "release-detail", `CompositionDetail.Section` "release" → `ReleaseSection`, `CompositionDetail.Section` "release-history" → `ReleaseHistorySection`
-  - Uses: `apps/studio/compositions.CompositionDetail`, `apps/studio/compositions.compositionDetailPane`, `infra/endpoints.useEndpointMutation`, `plugin-meta/composition.useManifestItems`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`
+  - Uses: `apps/studio/compositions.CompositionDetail`, `apps/studio/compositions.compositionDetailPane`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `plugin-meta/composition.useManifestItems`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`
   - Exports: Values: `ReleaseDetail`
 - Cross-plugin:
   - Imported by: `apps/studio/compositions/release/release-artifact`, `apps/studio/compositions/release/release-info`, `apps/studio/compositions/release/release-logs`

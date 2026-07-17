@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 // One release run as seen by the client. Mirrors the `release_runs` table EXCEPT
 // `pid` — that is an internal liveness marker (see tables.ts), never part of the
@@ -22,16 +21,28 @@ export const ReleaseRunSchema = z.object({
 
 export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 
-// Keyed query-resource contract: rows key on `id`. The server half
-// (`server/internal/release-history-resource.ts`) is K/full — a windowed
-// `orderBy startedAt desc LIMIT 50` read, where a row entering/leaving the top-50
-// is a membership change a scoped refill cannot express. It still gains Layer-1
-// keyed row diffing. The wire shape stays `ReleaseRun[]`.
-export const releaseHistoryResource = queryResourceDescriptor<ReleaseRun>(
-  "release.history",
-  ReleaseRunSchema,
-  "id",
-  { bootCritical: true },
+// Per-id detail resource: one release run resolved by id, regardless of age.
+// Exact shape of `taskDetailResource` — parameterized (not keyed), NOT
+// bootCritical (the run-detail pane lives deep in Studio, not first paint). The
+// server half (`server/internal/release-run-resource.ts`) is `mode:"push"` with
+// no `identityTable`, so a status flip on that run re-pushes automatically. It
+// replaces scanning the old ambient 50-row window to resolve a run by id.
+export const releaseRunResource = resourceDescriptor<ReleaseRun | null, { id: string }>(
+  "release.run",
+  ReleaseRunSchema.nullable(),
+  null,
+);
+
+// Scalar invalidation tick: a cheap `{ rev }` hash the server pushes only when a
+// real change lands (new run / status flip). The composition-scoped release-history
+// DataView keeps it OUT of its query key and instead refetches the loaded window in
+// place when `rev` changes. Browser-safe descriptor; the server half (loader + push
+// mode) is built from it via `defineResource`. Not bootCritical (mirrors
+// `conversationsRevisionResource` — the section lives deep in a detail pane).
+export const releaseRunsRevisionResource = resourceDescriptor<{ rev: string }>(
+  "release.history-revision",
+  z.object({ rev: z.string() }),
+  { rev: "" },
 );
 
 // In-memory preview state, keyed by runId. Truth lives in the server's preview

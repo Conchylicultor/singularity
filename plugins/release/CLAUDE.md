@@ -8,11 +8,14 @@ orphan reconcile on boot, a partial unique inflight index). The Studio app is th
 first UI consumer; the engine ships no UI of its own. Its web barrel
 (`web/index.ts`) is **registration-only** — a side-effect import
 (`web/internal/register.ts`) that eagerly pulls `@plugins/release/core` into the
-web import graph so the boot-critical `release.history` / `release.previews`
-ResourceDescriptors self-register before first paint. This must live with the
-resource OWNER: the descriptors are read only by the Studio release pane, which is
-lazy-loaded, so nothing else guarantees eager registration and boot-snapshot would
-otherwise file a crash report every boot.
+web import graph so the boot-critical `release.previews` ResourceDescriptor
+self-registers before first paint. This must live with the resource OWNER: the
+descriptor is read only by the Studio release pane, which is lazy-loaded, so
+nothing else guarantees eager registration and boot-snapshot would otherwise file
+a crash report every boot. (The composition-scoped history now flows through the
+non-boot-critical `release.run` per-id resource + `release.history-revision`
+tick + the `queryReleaseHistory` keyset endpoint, which need no eager
+registration.)
 
 ## How it works
 
@@ -51,8 +54,10 @@ otherwise file a crash report every boot.
 - `@plugins/release/core` — `RELEASE_TARGETS`, `releaseTargetById`,
   `RELEASE_LOG_CHANNEL` (`"release"`), the endpoints
   (`triggerReleaseEndpoint`, `previewEndpoint`, `stopPreviewEndpoint`,
-  `releaseLogsEndpoint`), and the resources/schemas
-  (`releaseHistoryResource`/`ReleaseRun`, `previewStateResource`/`Preview`).
+  `releaseLogsEndpoint`, `queryReleaseHistory` — the composition-scoped
+  keyset history query), and the resources/schemas (`ReleaseRun`,
+  `releaseRunResource` — per-id run detail, `releaseRunsRevisionResource` —
+  the history invalidation tick, `previewStateResource`/`Preview`).
 
 ## Discovery
 
@@ -175,15 +180,15 @@ nothing remote is built here.
 
 - Description: Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
-  - Contributes: `resource.declare` "release.history", `resource.declare` "release.previews"
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `infra/query-resource.queryResource`, `primitives/log-channels.Log`
+  - Contributes: `resource.declare` "release.run", `resource.declare` "release.history-revision", `resource.declare` "release.previews"
+  - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.FieldColumnMap`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports: Values: `_releaseRuns`, `collectReleaseEnv`, `newReleaseRunId`, `Release`, `releaseOutDir`, `triggerRelease`
-  - Resources: `release.history` (keyed), `release.previews` (push)
-  - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`
+  - Resources: `release.history-revision` (push), `release.previews` (push), `release.run` (push)
+  - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`, `POST /api/release/history/query`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.queryResourceDescriptor`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `Preview`, `ReleaseLogLine`, `ReleaseLogsResponse`, `ReleaseRun`, `ReleaseTarget`; Values: `previewEndpoint`, `PreviewSchema`, `previewStateResource`, `RELEASE_LOG_CHANNEL`, `RELEASE_TARGETS`, `releaseHistoryResource`, `releaseLogsEndpoint`, `ReleaseLogsResponseSchema`, `ReleaseRunSchema`, `releaseTargetById`, `stopPreviewEndpoint`, `triggerReleaseEndpoint`
+  - Uses: `infra/endpoints.defineEndpoint`, `primitives/data-view.FilterGroupSchema`, `primitives/live-state.resourceDescriptor`
+  - Exports: Types: `Preview`, `QueryReleaseHistoryBody`, `ReleaseLogLine`, `ReleaseLogsResponse`, `ReleaseRun`, `ReleaseTarget`; Values: `previewEndpoint`, `PreviewSchema`, `previewStateResource`, `queryReleaseHistory`, `QueryReleaseHistoryBodySchema`, `QueryReleaseHistoryResponseSchema`, `RELEASE_LOG_CHANNEL`, `RELEASE_TARGETS`, `releaseLogsEndpoint`, `ReleaseLogsResponseSchema`, `releaseRunResource`, `ReleaseRunSchema`, `releaseRunsRevisionResource`, `releaseTargetById`, `SortRuleSchema`, `stopPreviewEndpoint`, `triggerReleaseEndpoint`
 - Cross-plugin:
   - Imported by: `auth/apple-signing`
 - Shared:

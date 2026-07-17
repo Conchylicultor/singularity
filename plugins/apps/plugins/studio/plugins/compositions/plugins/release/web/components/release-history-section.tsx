@@ -1,7 +1,5 @@
-import { useMemo, type ReactElement, type ReactNode } from "react";
+import { type ReactElement, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -11,10 +9,12 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
 import {
   RELEASE_TARGETS,
-  releaseHistoryResource,
+  queryReleaseHistory,
+  releaseRunsRevisionResource,
   type ReleaseRun,
 } from "@plugins/release/core";
 import { releaseDetailPane } from "../panes";
@@ -52,136 +52,112 @@ function statusBadge(run: ReleaseRun): ReactNode {
   );
 }
 
-function ReleaseHistoryTable({
-  rows,
-  loading,
-  selectedRunId,
-  onRunClick,
-}: {
-  rows: ReleaseRun[];
-  loading: boolean;
-  selectedRunId?: string;
-  onRunClick: (runId: string) => void;
-}): ReactElement {
-  const fields: FieldDef<ReleaseRun>[] = useMemo(() => {
-    // Platform is an open string set (e.g. "darwin-arm64"), so its enum options
-    // come from the live rows — exactly what reports does for `source`.
-    const platforms = [...new Set(rows.map((r) => r.platform).filter((p): p is string => !!p))]
-      .sort()
-      .map((p) => ({ value: p, label: p }));
-
-    return [
-      {
-        id: "target",
-        label: "Target",
-        type: "enum",
-        value: (r) => r.target,
-        options: RELEASE_TARGETS.map((t) => ({ value: t.id, label: t.label })),
-        cell: (r) => <Badge variant="muted">{r.target}</Badge>,
-        primary: true,
-        sortable: true,
-        filterable: true,
-        width: "9rem",
-      },
-      {
-        id: "status",
-        label: "Status",
-        type: "enum",
-        value: (r) => r.status,
-        options: STATUS_OPTIONS,
-        cell: (r) => statusBadge(r),
-        sortable: true,
-        filterable: true,
-        width: "8rem",
-      },
-      {
-        id: "platform",
-        label: "Platform",
-        type: "enum",
-        value: (r) => r.platform,
-        options: platforms,
-        cell: (r) =>
-          r.platform ? (
-            <span className="font-mono text-muted-foreground">{r.platform}</span>
-          ) : null,
-        sortable: true,
-        filterable: true,
-        width: "10rem",
-      },
-      {
-        id: "startedAt",
-        label: "Started",
-        type: "date",
-        value: (r) => r.startedAt,
-        cell: (r) => (
-          <span className="text-muted-foreground">
-            <RelativeTime date={r.startedAt} />
-          </span>
-        ),
-        sortable: true,
-        width: "8rem",
-      },
-      {
-        id: "finishedAt",
-        label: "Finished",
-        type: "date",
-        value: (r) => r.finishedAt,
-        cell: (r) =>
-          r.finishedAt ? (
-            <span className="text-muted-foreground">
-              <RelativeTime date={r.finishedAt} />
-            </span>
-          ) : null,
-        sortable: true,
-        width: "8rem",
-      },
-    ];
-  }, [rows]);
-
-  return (
-    <DataView<ReleaseRun>
-      rows={rows}
-      fields={fields}
-      rowKey={(r) => r.id}
-      views={["list", "table"]}
-      defaultView="list"
-      storageKey={RELEASE_HISTORY_VIEW}
-      loading={loading}
-      selectedRowId={selectedRunId}
-      onRowActivate={(r) => onRunClick(r.id)}
-      emptyState={<>No releases yet.</>}
-    />
-  );
-}
+// The rows are server-paginated (only a window is ever loaded here), so the
+// field schema is static — it derives nothing from the loaded rows. `platform`
+// is a free string set whose full enumeration lives server-side, so it stays a
+// sortable text column rather than a client-derived (and thus partial) enum
+// filter.
+const fields: FieldDef<ReleaseRun>[] = [
+  {
+    id: "target",
+    label: "Target",
+    type: "enum",
+    value: (r) => r.target,
+    options: RELEASE_TARGETS.map((t) => ({ value: t.id, label: t.label })),
+    cell: (r) => <Badge variant="muted">{r.target}</Badge>,
+    primary: true,
+    sortable: true,
+    filterable: true,
+    width: "9rem",
+  },
+  {
+    id: "status",
+    label: "Status",
+    type: "enum",
+    value: (r) => r.status,
+    options: STATUS_OPTIONS,
+    cell: (r) => statusBadge(r),
+    sortable: true,
+    filterable: true,
+    width: "8rem",
+  },
+  {
+    id: "platform",
+    label: "Platform",
+    type: "enum",
+    value: (r) => r.platform,
+    cell: (r) =>
+      r.platform ? (
+        <span className="font-mono text-muted-foreground">{r.platform}</span>
+      ) : null,
+    sortable: true,
+    width: "10rem",
+  },
+  {
+    id: "startedAt",
+    label: "Started",
+    type: "date",
+    value: (r) => r.startedAt,
+    cell: (r) => (
+      <span className="text-muted-foreground">
+        <RelativeTime date={r.startedAt} />
+      </span>
+    ),
+    sortable: true,
+    width: "8rem",
+  },
+  {
+    id: "finishedAt",
+    label: "Finished",
+    type: "date",
+    value: (r) => r.finishedAt,
+    cell: (r) =>
+      r.finishedAt ? (
+        <span className="text-muted-foreground">
+          <RelativeTime date={r.finishedAt} />
+        </span>
+      ) : null,
+    sortable: true,
+    width: "8rem",
+  },
+];
 
 export function ReleaseHistorySection({ id }: { id: string }): ReactElement {
   const openPane = useOpenPane();
   const name = useManifestItems().find((it) => it.id === id)?.name;
   const selectedRunId = releaseDetailPane.useRouteEntry()?.params.runId;
-  const result = useResource(releaseHistoryResource);
 
-  const table = (rows: ReleaseRun[], loading: boolean) => (
-    <ReleaseHistoryTable
-      rows={name === undefined ? [] : rows.filter((r) => r.composition === name)}
-      loading={loading}
-      selectedRunId={selectedRunId}
-      onRunClick={(runId) => openPane(releaseDetailPane, { runId }, { mode: "push" })}
-    />
-  );
+  // The cheap scalar tick drives an in-place refetch of the loaded window; the
+  // composition-scoped keyset query is the source of truth. While pending, hand
+  // a null tick (no refetch) — the first settled `rev` then refreshes once.
+  const tick = useResource(releaseRunsRevisionResource);
+  const changeTick = matchResource(tick, {
+    pending: () => null,
+    ready: (d) => d.rev,
+  });
 
   return (
-    <Stack gap="sm">
-      {/* One render path for both states (mirrors the reports/sonata-library
-          precedent): while loading, DataView renders its own skeleton via
-          `loading` and the field schema is still built from the (empty) rows. */}
-      {matchResource(result, {
-        pending: () => table([], true),
-        error: () => table([], true),
-        ready: (runs) => table(runs, false),
-      })}
-      <Text as="p" variant="caption" className="text-muted-foreground">
-        Showing this composition&apos;s runs from the 50 most recent overall.
-      </Text>
-    </Stack>
+    <DataView<ReleaseRun>
+      storageKey={RELEASE_HISTORY_VIEW}
+      rows={[]}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["list", "table"]}
+      defaultView="list"
+      selectedRowId={selectedRunId}
+      onRowActivate={(r) => openPane(releaseDetailPane, { runId: r.id }, { mode: "push" })}
+      emptyState={<>No releases yet.</>}
+      // Until the manifest resolves the composition name we have nothing to
+      // scope the query to; DataView renders its empty state until it settles.
+      dataSource={
+        name
+          ? {
+              changeTick,
+              fetchPage: (args) =>
+                fetchEndpoint(queryReleaseHistory, {}, { body: { ...args, composition: name } }),
+            }
+          : undefined
+      }
+    />
   );
 }

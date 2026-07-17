@@ -51,7 +51,7 @@ call.
 
 - Description: Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
 - Cross-plugin:
-  - Imported by: `apps/mail/inbox`, `conversations/all-conversations`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/bool/text-cast`, `fields/date/filter-sql`, `fields/date/storage`, `fields/date/text-cast`, `fields/enum/filter-sql`, `fields/float/storage`, `fields/int/storage`, `fields/json/storage`, `fields/number/filter-sql`, `fields/number/text-cast`, `fields/rank/storage`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid/storage`, `infra/entities`, `primitives/data-view/custom-columns`
+  - Imported by: `apps/mail/inbox`, `conversations/all-conversations`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/bool/text-cast`, `fields/date/filter-sql`, `fields/date/storage`, `fields/date/text-cast`, `fields/enum/filter-sql`, `fields/float/storage`, `fields/int/storage`, `fields/json/storage`, `fields/number/filter-sql`, `fields/number/text-cast`, `fields/rank/storage`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid/storage`, `infra/entities`, `primitives/data-view/custom-columns`, `release`
 - Server:
   - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FieldValueTextCastContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`, `ValueTextCast`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`, `resolveFieldValueTextCast`
 

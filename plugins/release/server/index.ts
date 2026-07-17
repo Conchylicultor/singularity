@@ -1,12 +1,25 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { triggerReleaseEndpoint, previewEndpoint, stopPreviewEndpoint, releaseLogsEndpoint } from "../core/endpoints";
+// Force the fields filter-sql capability barrels to evaluate (self-registering
+// their operator maps into the `server-capabilities` eager index) so
+// `resolveFieldFilterSql` in handle-history-query resolves, and so the composition
+// closure includes those barrels in any release bundle shipping this handler.
+import "@plugins/fields/plugins/server-capabilities-loader/server";
+import {
+  triggerReleaseEndpoint,
+  previewEndpoint,
+  stopPreviewEndpoint,
+  releaseLogsEndpoint,
+  queryReleaseHistory,
+} from "../core/endpoints";
 import { handleRelease } from "./internal/handle-release";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
+import { handleHistoryQuery } from "./internal/handle-history-query";
 import { reconcileOrphanReleases } from "./internal/run-release";
 import { reconcileOrphanPreviews } from "./internal/preview-manager";
-import { releaseHistoryResource } from "./internal/release-history-resource";
+import { releaseRunResource } from "./internal/release-run-resource";
+import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
 import { previewStateResource } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
 export { triggerRelease } from "./internal/run-release";
@@ -16,7 +29,8 @@ export { Release, collectReleaseEnv } from "./internal/env-provider";
 export default {
   description: "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",
   contributions: [
-    Resource.Declare(releaseHistoryResource),
+    Resource.Declare(releaseRunResource),
+    Resource.Declare(releaseRunsRevisionResource),
     Resource.Declare(previewStateResource),
   ],
   httpRoutes: {
@@ -24,6 +38,7 @@ export default {
     [previewEndpoint.route]: handlePreview,
     [stopPreviewEndpoint.route]: handleStopPreview,
     [releaseLogsEndpoint.route]: handleReleaseLogs,
+    [queryReleaseHistory.route]: handleHistoryQuery,
   },
   onReady: async () => {
     // Close any release left unfinished by a crashed owner (scoped to this

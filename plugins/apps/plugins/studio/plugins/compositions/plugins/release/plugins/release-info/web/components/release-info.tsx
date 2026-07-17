@@ -6,7 +6,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { releaseHistoryResource, type ReleaseRun } from "@plugins/release/core";
+import { releaseRunResource, type ReleaseRun } from "@plugins/release/core";
 
 function StatusBadge({ run }: { run: ReleaseRun }): ReactNode {
   if (run.status === "running") {
@@ -44,9 +44,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function ReleaseInfo({ runId }: { runId: string }) {
-  const result = useResource(releaseHistoryResource);
+  const result = useResource(releaseRunResource, { id: runId });
   if (result.pending) return <Loading />;
-  const run = result.data.find((r) => r.id === runId);
+  const run = result.data;
 
   if (!run) {
     return (

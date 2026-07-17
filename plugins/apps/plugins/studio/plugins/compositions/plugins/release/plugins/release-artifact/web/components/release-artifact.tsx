@@ -11,20 +11,20 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   previewEndpoint,
   stopPreviewEndpoint,
-  releaseHistoryResource,
+  releaseRunResource,
   previewStateResource,
 } from "@plugins/release/core";
 
 export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
-  const historyResult = useResource(releaseHistoryResource);
+  const runResult = useResource(releaseRunResource, { id: runId });
   const previewResult = useResource(previewStateResource);
 
   const startPreview = useEndpointMutation(previewEndpoint);
   const stopPreview = useEndpointMutation(stopPreviewEndpoint);
 
-  if (historyResult.pending || previewResult.pending) return <Loading />;
+  if (runResult.pending || previewResult.pending) return <Loading />;
 
-  const run = historyResult.data.find((r) => r.id === runId);
+  const run = runResult.data;
   if (!run) {
     return (
       <Text as="p" variant="caption" className="text-muted-foreground">

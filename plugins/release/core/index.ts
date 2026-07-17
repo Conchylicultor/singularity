@@ -6,11 +6,20 @@ export {
   stopPreviewEndpoint,
   releaseLogsEndpoint,
   ReleaseLogsResponseSchema,
+  SortRuleSchema,
+  queryReleaseHistory,
+  QueryReleaseHistoryBodySchema,
+  QueryReleaseHistoryResponseSchema,
 } from "./endpoints";
-export type { ReleaseLogLine, ReleaseLogsResponse } from "./endpoints";
+export type {
+  ReleaseLogLine,
+  ReleaseLogsResponse,
+  QueryReleaseHistoryBody,
+} from "./endpoints";
 export {
   ReleaseRunSchema,
-  releaseHistoryResource,
+  releaseRunResource,
+  releaseRunsRevisionResource,
   PreviewSchema,
   previewStateResource,
 } from "./resources";

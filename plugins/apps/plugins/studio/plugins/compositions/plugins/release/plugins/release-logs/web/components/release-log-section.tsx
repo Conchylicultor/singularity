@@ -16,7 +16,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   RELEASE_LOG_CHANNEL,
   releaseLogsEndpoint,
-  releaseHistoryResource,
+  releaseRunResource,
   type ReleaseLogLine,
 } from "@plugins/release/core";
 import type {
@@ -29,14 +29,14 @@ import type {
 const monoLogClass = "font-mono text-xs leading-5";
 
 export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
-  const result = useResource(releaseHistoryResource);
+  const result = useResource(releaseRunResource, { id: runId });
 
   // Live runs stream over `/ws/logs`; finished runs read the persisted fallback.
   // While the resource is still pending we optimistically show the live stream
   // (gate on `.pending` with an early return rather than collapsing it into a
   // fake-empty default — keeps "loading" distinct from "genuinely finished").
   if (result.pending) return <LiveLogs />;
-  const run = result.data.find((r) => r.id === runId);
+  const run = result.data;
   if (run?.status === "running") return <LiveLogs />;
   return <PersistedLogs runId={runId} />;
 }

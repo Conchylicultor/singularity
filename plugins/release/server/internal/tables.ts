@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 
 export const _releaseRuns = pgTable(
@@ -37,5 +37,14 @@ export const _releaseRuns = pgTable(
     uniqueIndex("release_runs_inflight_uniq")
       .on(t.namespace, t.composition)
       .where(sql`${t.finishedAt} IS NULL`),
+    // Supports the composition-scoped keyset seek (queryReleaseHistory): the
+    // history DataView pages a single composition's runs newest-first, so this
+    // covers the `WHERE namespace = ? AND composition = ? ORDER BY started_at DESC`
+    // prefix + tiebreak.
+    index("release_runs_ns_comp_started_idx").on(
+      t.namespace,
+      t.composition,
+      t.startedAt.desc(),
+    ),
   ],
 );

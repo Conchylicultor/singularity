@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "release_runs_ns_comp_started_idx" ON "release_runs" USING btree ("namespace","composition","started_at" DESC NULLS LAST);

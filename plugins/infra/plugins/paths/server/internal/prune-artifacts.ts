@@ -20,13 +20,16 @@ export const BUILD_ARTIFACTS_RETENTION = 50;
  * How many recent per-release fallback logs (`release-logs-<id>.json`) to retain
  * per worktree.
  *
- * Aligned with the release-history UI window (releaseHistoryResource keeps the
- * latest 50 runs) for the same reason as {@link BUILD_ARTIFACTS_RETENTION}: every
- * release still listed there keeps its persisted log readable, older ones are
- * pruned to bound disk. Only *failed* releases write a log file at all (successes
- * stream live and persist nothing), so 50 log files always span ≥50 history rows —
- * a visible release can never be missing its log. Same leaf-plugin soft-alignment:
- * `paths` must not import `release`, and every reader fails soft on ENOENT.
+ * A plain disk-retention bound: keep the newest 50 per-run fallback logs per
+ * worktree, pruning older ones to cap disk (same disk-bound rationale as
+ * {@link BUILD_ARTIFACTS_RETENTION}). The release-history UI no longer imposes a
+ * matching window — it is now a composition-scoped keyset-paginated query (no
+ * 50-run cap), so an old run beyond this retention is still *listed*, it just
+ * shows an empty (never a broken) persisted log if its file was pruned. Only
+ * *failed* releases write a log file at all (successes stream live and persist
+ * nothing), so 50 log files span many more than 50 history rows in practice. Same
+ * leaf-plugin constraint: `paths` must not import `release`, and every reader
+ * fails soft on ENOENT.
  */
 export const RELEASE_ARTIFACTS_RETENTION = 50;
 

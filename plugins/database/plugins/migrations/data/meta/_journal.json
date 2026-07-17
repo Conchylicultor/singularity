@@ -1401,6 +1401,13 @@
       "tag": "20260716_115802_b9cf0101__normalize_block_text_runs",
       "hash": "b9cf0101",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784328089000,
+      "tag": "20260717_224129_ce69db4d__release_runs_composition_history_index",
+      "hash": "ce69db4d",
+      "breakpoints": true
     }
   ]
 }
