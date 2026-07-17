@@ -487,13 +487,19 @@ function SelectionLayer({
   // event's target follows the DOM selection, which can still sit inside a blurred
   // block's text node. No handler moves focus during a clipboard dispatch.
 
+  // Structural, so this serves both React's delegated `copy`/`cut` (where the event
+  // originates inside the container) and a raw DOM `ClipboardEvent` caught at the
+  // document — which is how the selection bar's button copies, since it renders
+  // outside the container and its event never reaches `onCopy` below.
   const writeClipboard = useCallback(
-    (e: React.ClipboardEvent) => {
+    (e: { clipboardData: DataTransfer | null; preventDefault: () => void }) => {
       const roots = selectionRoots(rowsRef.current, selectedRef.current);
       if (roots.length === 0) return false;
+      const clipboardData = e.clipboardData;
+      if (clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, roots);
-      e.clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
-      e.clipboardData.setData("text/plain", serializeForestToMarkdown(forest, handles));
+      clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
+      clipboardData.setData("text/plain", serializeForestToMarkdown(forest, handles));
       e.preventDefault();
       return true;
     },
@@ -518,6 +524,50 @@ function SelectionLayer({
     },
     [writeClipboard, bulkDelete, clearSelection, containerRef],
   );
+
+  /**
+   * Copy the block selection from the selection bar's BUTTON, which has no clipboard
+   * event of its own to write into — so it has to provoke one. Two reasons it cannot
+   * just lean on `onCopy` above, both structural:
+   *
+   *  - The bar renders OUTSIDE this container (a React sibling, not a descendant),
+   *    so a `copy` provoked from it targets the button and never reaches the
+   *    container's delegated `onCopy`. We catch it at the document instead.
+   *  - `execCommand("copy")` only emits `copy` at all when the document has a
+   *    selection to copy, and block-selection mode deliberately holds none: entering
+   *    it relinquishes the text caret, because a caret parked in a blurred block lets
+   *    an untagged Lexical reconcile yank focus back out of the container (see
+   *    `releaseCaret` in `internal/use-block-selection.ts`). So seat a throwaway
+   *    range over the container to make the event fire.
+   *
+   * Until this was made explicit, the button worked only by accident of that stale
+   * caret: it put the event target inside a block, and hence inside the container.
+   *
+   * The range's own text never reaches the clipboard — `writeClipboard`
+   * preventDefaults and substitutes the serialized forest. Neither the range nor the
+   * listener can leak: `execCommand` dispatches `copy` synchronously, so nothing can
+   * interleave before both are torn down.
+   */
+  const copySelectionViaButton = useCallback(() => {
+    const container = containerRef.current;
+    if (container === null) return;
+    const doc = container.ownerDocument;
+    const write = (e: ClipboardEvent) => void writeClipboard(e);
+    doc.addEventListener("copy", write, { capture: true, once: true });
+    try {
+      // Never scroll the viewport just to seat the clipboard.
+      container.focus({ preventScroll: true });
+      const sel = doc.defaultView?.getSelection();
+      const range = doc.createRange();
+      range.selectNodeContents(container);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      doc.execCommand("copy");
+      sel?.removeAllRanges();
+    } finally {
+      doc.removeEventListener("copy", write, { capture: true });
+    }
+  }, [writeClipboard, containerRef]);
 
   const onPaste = useCallback(
     (e: React.ClipboardEvent) => {
@@ -904,12 +954,7 @@ function SelectionLayer({
               <button
                 type="button"
                 className="text-foreground hover:text-foreground/80"
-                onClick={() => {
-                  // Focus the container only to seat the clipboard — never
-                  // scroll the viewport for it.
-                  containerRef.current?.focus({ preventScroll: true });
-                  document.execCommand("copy");
-                }}
+                onClick={copySelectionViaButton}
               >
                 Copy
               </button>

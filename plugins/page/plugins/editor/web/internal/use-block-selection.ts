@@ -60,6 +60,46 @@ export interface BlockSelection {
 }
 
 /**
+ * Drop the text caret when block-selection mode takes the keyboard.
+ *
+ * Moving DOM focus to the container does NOT move the DOM selection: the caret
+ * stays parked in the text node of the block the user just left. That residue is
+ * not cosmetic — it is what lets a blurred block steal focus back:
+ *
+ * Lexical re-derives every commit's pending selection from the DOM selection
+ * (`$internalCreateSelection` reads it whenever the update has no originating
+ * event, i.e. any async/microtask-scheduled commit). Reconciling a selection whose
+ * DOM position is unchanged while `document.activeElement` is outside the editor
+ * root reads to Lexical as "the caret didn't move, so my root should have focus" —
+ * and it calls `rootElement.focus()`. Lexical guards that steal for its own remote
+ * collab updates (`COLLABORATION_TAG`), but `@lexical/yjs` issues an UNTAGGED
+ * follow-up commit (`$ensureEditorNotEmpty`) deliberately outside the tagged block,
+ * which the guard therefore never sees. So any Yjs update landing on a just-blurred
+ * block — a content-doc hydration echo, another client's edit — pulls focus back
+ * into that block a beat later, with no user input; `onFocusCapture` below then
+ * reads the non-container focus as "the user clicked into a block" and silently
+ * destroys their selection. Because the block-editor's clipboard handlers gate on
+ * `document.activeElement`, a subsequent paste also falls through to the caret path
+ * and lands in the wrong place.
+ *
+ * We cannot tag that commit — it is issued inside the library, with no
+ * update-options seam to reach it (unlike the app's own split-truncation, which
+ * tags itself with `SKIP_DOM_SELECTION_TAG` in `collab-text-surgery.ts`). So drop
+ * the DOM selection instead: with no caret in the block, a reconcile has nothing to
+ * restore and no reason to reclaim focus. That holds against ANY async refocus, not
+ * just this one trigger.
+ *
+ * Only ever clears a selection inside the container — a selection elsewhere on the
+ * page is not ours to drop. See `research/2026-07-17-page-block-selection-focus-steal.md`.
+ */
+function releaseCaret(container: HTMLElement): void {
+  const sel = container.ownerDocument.defaultView?.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  if (!container.contains(sel.anchorNode)) return;
+  sel.removeAllRanges();
+}
+
+/**
  * Block-selection mode: the range state, the container's focus/keyboard policy, and
  * the `SelectionControl` deep children drive it with.
  *
@@ -87,8 +127,7 @@ export interface BlockSelection {
  *
  * The CLIPBOARD handlers in `block-editor.tsx` deliberately keep the `activeElement`
  * check: they ask a different question — "does the container own the clipboard right
- * now?" — and a `copy` event's target follows the DOM selection, which can still sit
- * inside a blurred block's text node.
+ * now?" — and a `copy` event's target follows the DOM selection, not focus.
  */
 export function useBlockSelection({
   orderedIds,
@@ -103,9 +142,12 @@ export function useBlockSelection({
   const headRef = useRef<string | null>(null);
 
   const focusContainer = useCallback(() => {
+    const container = containerRef.current;
+    if (container === null) return;
     // Entering block-selection mode is not a pointer/keyboard caret motion the
     // user is chasing — never scroll the viewport to the container.
-    containerRef.current?.focus({ preventScroll: true });
+    container.focus({ preventScroll: true });
+    releaseCaret(container);
   }, []);
 
   const applyRange = useCallback(

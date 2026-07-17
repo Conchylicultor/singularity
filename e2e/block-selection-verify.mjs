@@ -120,6 +120,34 @@ await page.keyboard.press("Shift+Tab");
 await page.waitForTimeout(800);
 check("Shift+Tab outdents it again", await contentLeftOf(2), before);
 
+// 6. The selection survives an async refocus.
+// See research/2026-07-17-page-block-selection-focus-steal.md
+//
+// The defect: moving focus to the container left the text caret parked in the block
+// the user had just left. Lexical re-derives a commit's pending selection from the
+// DOM selection, so any UNTAGGED reconcile on that block — @lexical/yjs issues one
+// (`$ensureEditorNotEmpty`) outside its own tagged block, where Lexical's
+// COLLABORATION_TAG focus guard never sees it — concluded "the caret didn't move, so
+// my root should have focus" and called rootElement.focus() ~200-300ms later, with no
+// user input. `onFocusCapture` then read that as "the user clicked into a block" and
+// silently destroyed the selection; a subsequent Cmd+V failed the container's
+// activeElement guard and fell through to the per-block caret paste, landing in the
+// wrong place.
+//
+// Two things make it reproduce, and both are why it shipped unnoticed: a FRESH
+// navigation (so a content-doc hydration echo is still in flight) and NO settle
+// between the click and Escape. Every check above asserts immediately after the
+// keypress, where the state is still correct — the damage lands a beat later.
+// Measured on the unfixed build: 11/12 runs lost the selection.
+await page.reload();
+await block(1).waitFor({ state: "visible", timeout: 10000 });
+await block(1).click();
+await page.keyboard.press("Escape");
+await page.keyboard.press("Shift+ArrowDown");
+await page.waitForTimeout(1200);
+check("the selection survives an async refocus", await selectedCount(), 2);
+check("the container still holds focus after the settle", await containerFocused(), true);
+
 await browser.close();
 
 if (failures.length > 0) {

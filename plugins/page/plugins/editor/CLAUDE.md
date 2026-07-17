@@ -161,7 +161,32 @@ time and no handler can move it. See
 The **clipboard** handlers in `block-editor.tsx` deliberately keep the
 `activeElement` check — "does the container own the clipboard right now?" is a
 genuine `activeElement` question, and a `copy` event's target follows the DOM
-selection, which can still sit inside a blurred block's text node.
+selection, not focus.
+
+The second invariant, and the reason `focusContainer()` is not just a `.focus()`:
+
+> Entering block-selection mode **relinquishes the text caret**. The mode owns the
+> keyboard; no caret may stay parked in the block the user just left.
+
+Focusing the container does not move the DOM selection, and Lexical re-derives every
+commit's pending selection *from the DOM selection*. A caret left in a blurred block
+therefore lets any **untagged** reconcile conclude "the caret didn't move, so my root
+should have focus" and call `rootElement.focus()` — silently destroying the selection
+a beat later, with no user input. Lexical guards this for its own collab updates
+(`COLLABORATION_TAG`), but `@lexical/yjs` issues an untagged follow-up commit
+(`$ensureEditorNotEmpty`) outside its own tagged block, which the guard never sees —
+and being inside the library, it has no update-options seam to tag from outside (unlike
+the app's own split-truncation, which tags itself with `SKIP_DOM_SELECTION_TAG` in
+`collab-text-surgery.ts`). So `releaseCaret` drops the DOM selection instead: with no
+caret, a reconcile has nothing to restore. Robust to ANY async refocus, not one
+trigger. See
+[`research/2026-07-17-page-block-selection-focus-steal.md`](../../../../research/2026-07-17-page-block-selection-focus-steal.md).
+
+Consequence worth knowing before touching the selection bar: with no caret, a `copy`
+provoked from a bar BUTTON has neither a selection for `execCommand("copy")` to fire
+on, nor a path to the container's `onCopy` (the bar renders *outside* the container, so
+the event targets the button). `copySelectionViaButton` handles both explicitly. Cmd+C
+/ Cmd+X are unaffected — they originate inside the container.
 
 jsdom cannot reproduce the mid-dispatch flush (React's sync-lane work lands on a
 microtask that cannot run while the dispatch unwinds), so the unit test reaches the
