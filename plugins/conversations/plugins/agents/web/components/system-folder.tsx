@@ -39,6 +39,7 @@ export function SystemFolder({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <Stack gap="none">
+          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- closed registry of system agents (sidebar nav chrome) */}
           {descriptors.map((d) => {
             const Icon = d.icon ?? MdAutoAwesome;
             const selected = d.id === selectedSystemId;

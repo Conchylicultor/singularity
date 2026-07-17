@@ -148,6 +148,7 @@ function AddScopeButton({
         <Placeholder>All apps customized</Placeholder>
       ) : (
         <Stack gap="2xs">
+          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- add-app-scope picker (transient chrome) */}
           {available.map((app) => {
             const sid = `app:${app.id}`;
             return (

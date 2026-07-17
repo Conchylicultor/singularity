@@ -24,6 +24,7 @@ export function RecentsSection() {
         <Stack gap="sm">
           <SectionLabel>Recent</SectionLabel>
           <Stack gap="2xs">
+            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- start-page quick-access widget (bounded recent window) */}
             {recents.map((r) => (
               <Row
                 key={r.url}

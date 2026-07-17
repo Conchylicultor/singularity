@@ -32,6 +32,7 @@ export function TabStrip() {
   return (
     <Bar tier="pane">
       <Stack direction="row" gap="2xs" align="center" className="w-full">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- browser tab strip (ephemeral session chrome) */}
         {tabs.map((tab) => (
           <Row
             key={tab.id}

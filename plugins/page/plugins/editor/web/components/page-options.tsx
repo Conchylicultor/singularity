@@ -99,6 +99,7 @@ export function PageOptionsList({
       : { onMouseDown: (e: React.MouseEvent) => { e.preventDefault(); act(); } };
   return (
     <Stack gap="none">
+      {/* eslint-disable-next-line data-view/no-adhoc-row-list -- page-link typeahead menu (transient chrome) */}
       {options.map((option, i) =>
         option.kind === "page" ? (
           <Row

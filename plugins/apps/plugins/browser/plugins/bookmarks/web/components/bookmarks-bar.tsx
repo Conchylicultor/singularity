@@ -29,6 +29,7 @@ export function BookmarksBar() {
       return (
         <Bar tier="pane">
           <Stack direction="row" gap="2xs" align="center">
+            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- bookmarks bar chrome strip */}
             {bookmarks.map((b) => (
               <Row
                 key={b.id}

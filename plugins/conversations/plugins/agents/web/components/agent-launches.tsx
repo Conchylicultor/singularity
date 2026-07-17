@@ -4,11 +4,13 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { agentLaunchesResource } from "../../shared/resources";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/core";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { agentLaunchesResource, type AgentLaunchWithStatus } from "../../shared/resources";
+
+const AGENT_LAUNCHES_VIEW = defineDataView("agent-launches");
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -20,6 +22,44 @@ function formatDate(value: Date | string): string {
   });
 }
 
+// Conversation statuses, in lifecycle order — drives the enum field's chip
+// label + the filter/group-by option list. Mirrors ConversationStatusSchema.
+const STATUS_OPTIONS = [
+  { value: "starting", label: "Starting" },
+  { value: "working", label: "Working" },
+  { value: "waiting", label: "Waiting" },
+  { value: "gone", label: "Gone" },
+  { value: "done", label: "Done" },
+];
+
+function launchTitle(launch: AgentLaunchWithStatus): string {
+  return launch.latestConversation?.title ?? `Launch ${formatDate(launch.createdAt)}`;
+}
+
+const FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
+  {
+    id: "title",
+    label: "Conversation",
+    primary: true,
+    value: (l) => launchTitle(l),
+  },
+  {
+    id: "status",
+    label: "Status",
+    type: "enum",
+    align: "end",
+    options: STATUS_OPTIONS,
+    value: (l) => l.latestConversation?.status ?? null,
+  },
+  {
+    id: "started",
+    label: "Started",
+    type: "date",
+    align: "end",
+    value: (l) => l.createdAt,
+  },
+];
+
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
   const openPane = useOpenPane();
@@ -28,69 +68,49 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
 
   if (launchesQ.pending) return <Loading variant="text" />;
 
-  const launches = launchesQ.data
-    .filter((l) => l.agentId === agentId)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  const launches = launchesQ.data.filter((l) => l.agentId === agentId);
+
+  // Highlight the row whose conversation is the one open in the pane.
+  const selectedRowId = launches.find(
+    (l) => l.latestConversation?.id === activeConvId,
+  )?.id;
 
   return (
     <Stack as="section" gap="sm">
       <SectionLabel as="h3" className="font-medium">
         Attempts
       </SectionLabel>
-      {launches.length === 0 ? (
-        <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
-      ) : (
-        <Stack as="ul" gap="xs">
-          {launches.map((launch) => {
-            const primary = launch.latestConversation;
-            const isActive = primary ? activeConvId === primary.id : false;
-            const title = primary?.title ?? `Launch ${formatDate(launch.createdAt)}`;
-            return (
-              <li key={launch.id}>
-                <Row
-                  selected={isActive}
-                  bordered
-                  hover="accent"
-                  disabled={!primary}
-                  className={!primary ? "opacity-60" : undefined}
-                  icon={
-                    primary ? (
-                      <StatusDot colorClass={CONV_STATUS_DOT[primary.status]} />
-                    ) : (
-                      <StatusDot colorClass="bg-muted-foreground/40" />
-                    )
-                  }
-                  actions={
-                    <Cluster gap="xs">
-                      {primary ? (
-                        <Text as="span" variant="caption" tone="muted">
-                          {primary.status}
-                        </Text>
-                      ) : null}
-                      <Text as="span" variant="caption" tone="muted" className="tabular-nums">
-                        {formatDate(launch.createdAt)}
-                      </Text>
-                    </Cluster>
-                  }
-                  actionsAlwaysVisible
-                  onClick={() => {
-                    if (!primary) return;
-                    if (isActive && convEntry) {
-                      conversationPane.close(convEntry.instanceId);
-                    } else {
-                      openPane(conversationPane, {
-                        convId: primary.id,
-                      }, { mode: "push" });
-                    }
-                  }}
-                >
-                  <Text>{title}</Text>
-                </Row>
-              </li>
-            );
-          })}
-        </Stack>
-      )}
+      <DataView<AgentLaunchWithStatus>
+        rows={launches}
+        fields={FIELDS}
+        rowKey={(l) => l.id}
+        views={["list"]}
+        storageKey={AGENT_LAUNCHES_VIEW}
+        selectedRowId={selectedRowId}
+        emptyState={<Text tone="muted">No attempts yet.</Text>}
+        onRowActivate={(l) => {
+          const primary = l.latestConversation;
+          if (!primary) return;
+          if (activeConvId === primary.id && convEntry) {
+            conversationPane.close(convEntry.instanceId);
+          } else {
+            openPane(conversationPane, { convId: primary.id }, { mode: "push" });
+          }
+        }}
+        viewOptions={{
+          list: {
+            leading: (l: AgentLaunchWithStatus) => (
+              <StatusDot
+                colorClass={
+                  l.latestConversation
+                    ? CONV_STATUS_DOT[l.latestConversation.status]
+                    : "bg-muted-foreground/40"
+                }
+              />
+            ),
+          },
+        }}
+      />
     </Stack>
   );
 }

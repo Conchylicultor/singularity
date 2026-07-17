@@ -34,6 +34,7 @@ function TaskList(): ReactElement {
       <Stack gap="xs">
         <ResourceView resource={result} fallback={<Loading variant="rows" />}>
           {(tasks) =>
+            // eslint-disable-next-line data-view/no-adhoc-row-list -- frozen Zero pilot harness, slated for deletion
             tasks.map((t) => (
               <Row key={t.id}>
                 <Text>{t.title}</Text>

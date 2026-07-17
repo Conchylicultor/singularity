@@ -4,12 +4,17 @@ import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { compositionsPane } from "./panes";
+import {
+  CompositionItemActions,
+  DeleteAction,
+} from "./components/composition-item-actions";
 
 export default {
   description:
     "Compositions pane: list named compositions and live-edit the working draft (contributor + entry-point selection) that drives the Explorer closure tint.",
   contributions: [
     Pane.Register({ pane: compositionsPane }),
+    CompositionItemActions({ id: "delete", component: DeleteAction }),
     Studio.Sidebar({
       id: "compositions",
       ...sidebarNavItem({

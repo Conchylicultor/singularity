@@ -20,6 +20,7 @@ export function FileDisambiguation({
         <span className="font-mono font-medium text-foreground">{query}</span>
       </Text>
       <Scroll axis="both" fill>
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- ambiguous-path candidate picker (transient chrome) */}
         {matches.map((filePath) => {
           const lastSlash = filePath.lastIndexOf("/");
           const dir = lastSlash >= 0 ? filePath.slice(0, lastSlash + 1) : "";

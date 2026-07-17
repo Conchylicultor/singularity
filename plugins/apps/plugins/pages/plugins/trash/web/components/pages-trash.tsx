@@ -80,6 +80,7 @@ export function PagesTrash() {
           ) : (
             <Scroll axis="y" className="max-h-96">
               <Stack gap="2xs">
+                {/* eslint-disable-next-line data-view/no-adhoc-row-list -- modal trash dialog; revisit if Trash becomes a pane */}
                 {result.data.map((entry) => (
                   <Row
                     key={entry.id}

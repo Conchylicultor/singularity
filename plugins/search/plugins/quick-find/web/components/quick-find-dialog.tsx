@@ -150,6 +150,7 @@ function QuickFindDialogBody({
           ) : list.length === 0 ? (
             <Placeholder>No results.</Placeholder>
           ) : (
+            // eslint-disable-next-line data-view/no-adhoc-row-list -- Cmd-K transient search overlay
             list.map((result, idx) => (
               <Row
                 key={`${result.source}:${result.entityId}`}

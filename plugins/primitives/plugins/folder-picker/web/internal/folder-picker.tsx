@@ -58,6 +58,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
         ) : subdirs.length === 0 ? (
           <Placeholder>No subfolders.</Placeholder>
         ) : (
+          // eslint-disable-next-line data-view/no-adhoc-row-list -- directory drill-down picker (transient chrome)
           subdirs.map((entry) => (
             <Row
               key={entry.name}

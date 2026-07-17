@@ -141,6 +141,7 @@ function AnchorChooser({
         <Stack gap="sm">
           <Stack gap="2xs">
             <SectionLabel>Relative</SectionLabel>
+            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- fixed 3-preset option list inside the filter popover */}
             {PRESETS.map((p) => (
               <Row
                 key={p.label}

@@ -27,6 +27,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
       <SectionHeaderRow variant="eyebrow">Attachments</SectionHeaderRow>
       <CollapsibleContent>
         <Stack direction="row" wrap gap="md">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixed inline-image + file-chip section; bespoke layout (DataView candidate tracked in follow-up task) */}
         {attachments.map((a) =>
           a.mime.startsWith("image/") ? (
             <a

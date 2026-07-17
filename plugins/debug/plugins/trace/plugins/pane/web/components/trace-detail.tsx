@@ -109,6 +109,7 @@ function AlsoInWindow({
           (siblings can be rate-limited).
         </Text>
         <Stack gap="2xs">
+          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- derived related-traces strip in a detail pane; the Events tab is the DataView */}
           {siblings.map((t) => (
             <Row
               key={t.id}

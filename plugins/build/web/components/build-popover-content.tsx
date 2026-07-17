@@ -1,6 +1,6 @@
 import { Button, cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { triggerBuildEndpoint } from "../../core/endpoints";
@@ -22,7 +22,10 @@ import {
   CollapsibleContent,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { buildHistoryResource, mainAheadCountResource } from "../../shared";
 import type { BuildRun } from "../../shared";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
@@ -211,20 +214,154 @@ function StatusDot({ run }: { run: BuildRun }) {
   return <span className="block size-2 rounded-full bg-destructive" />;
 }
 
-function BuildHistoryList({
-  variant,
+type BuildStatus = "running" | "success" | "failed" | "canceled";
+
+function statusOf(run: BuildRun): BuildStatus {
+  if (run.finishedAt === null) return "running";
+  if (run.exitCode === 0) return "success";
+  if (run.exitCode === -1) return "canceled";
+  return "failed";
+}
+
+const STATUS_OPTIONS: { value: BuildStatus; label: string }[] = [
+  { value: "running", label: "Running" },
+  { value: "success", label: "Success" },
+  { value: "failed", label: "Failed" },
+  { value: "canceled", label: "Canceled" },
+];
+
+const STATUS_LABEL: Record<BuildStatus, string> = {
+  running: "Running",
+  success: "Success",
+  failed: "Failed",
+  canceled: "Canceled",
+};
+
+function StatusChip({ run }: { run: BuildRun }) {
+  return (
+    <Inline gap="xs">
+      <StatusDot run={run} />
+      {STATUS_LABEL[statusOf(run)]}
+    </Inline>
+  );
+}
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const BUILD_HISTORY_VIEW = defineDataView("build.history");
+
+/**
+ * Standing build pane history as a DataView — search / filter / sort / group-by
+ * come free over the build-run schema. The `buildHistoryResource` is already a
+ * server-windowed `orderBy startedAt desc LIMIT 50` read, so the view renders the
+ * full resource slice (no extra client cap). Natural-height: the enclosing
+ * `PaneChrome` body owns the single scroll.
+ */
+function BuildHistoryDataView({
+  runs,
   selectedRunId,
   onRunClick,
 }: {
-  variant: "popover" | "pane";
+  runs: BuildRun[];
   selectedRunId?: string;
   onRunClick?: (runId: string) => void;
 }) {
-  const result = useResource(buildHistoryResource);
-  if (result.pending) return <Loading variant="rows" count={3} />;
-  const runs = result.data;
-  const limit = variant === "popover" ? 10 : 50;
-  const visible = runs.slice(0, limit);
+  const fields = useMemo<FieldDef<BuildRun>[]>(
+    () => [
+      {
+        id: "startedAt",
+        label: "Started",
+        type: "date",
+        value: (r) => r.startedAt,
+        cell: (r) => (
+          <span className="text-muted-foreground">
+            <RelativeTime date={r.startedAt} />
+          </span>
+        ),
+        primary: true,
+        sortable: true,
+        width: "10rem",
+      },
+      {
+        id: "status",
+        label: "Status",
+        type: "enum",
+        value: (r) => statusOf(r),
+        options: STATUS_OPTIONS,
+        cell: (r) => <StatusChip run={r} />,
+        sortable: true,
+        filterable: true,
+      },
+      {
+        id: "trigger",
+        label: "Trigger",
+        type: "enum",
+        value: (r) => r.trigger,
+        options: [
+          { value: "manual", label: "Manual" },
+          { value: "auto", label: "Auto" },
+        ],
+        cell: (r) => (
+          <Badge variant={r.trigger === "auto" ? "info" : "muted"}>{r.trigger}</Badge>
+        ),
+        sortable: true,
+        filterable: true,
+      },
+      {
+        id: "duration",
+        label: "Duration",
+        type: "int",
+        // null for still-running builds — honest, and it sorts them apart from
+        // finished runs rather than pinning them to a fake 0.
+        value: (r) =>
+          r.finishedAt === null
+            ? null
+            : Math.floor((r.finishedAt.getTime() - r.startedAt.getTime()) / 1000),
+        cell: (r) => (
+          <span className="tabular-nums text-muted-foreground">
+            {r.finishedAt === null
+              ? "running…"
+              : formatDuration(r.startedAt, r.finishedAt)}
+          </span>
+        ),
+        sortable: true,
+        align: "end",
+        width: "7rem",
+      },
+    ],
+    [],
+  );
+
+  return (
+    <DataView<BuildRun>
+      rows={runs}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["list", "table"]}
+      defaultView="list"
+      storageKey={BUILD_HISTORY_VIEW}
+      selectedRowId={selectedRunId}
+      onRowActivate={onRunClick ? (r) => onRunClick(r.id) : undefined}
+      emptyState={<>No builds yet</>}
+    />
+  );
+}
+
+/**
+ * Compact history excerpt for the toolbar popover: the 10 most recent runs as a
+ * hand-rolled Row list. Deliberately NOT a DataView — the popover has no room
+ * for the view toolbar; the standing pane (`BuildHistoryDataView`) is the real
+ * data surface.
+ */
+function BuildHistoryExcerpt({
+  runs,
+  selectedRunId,
+  onRunClick,
+}: {
+  runs: BuildRun[];
+  selectedRunId?: string;
+  onRunClick?: (runId: string) => void;
+}) {
+  const visible = runs.slice(0, 10);
 
   return (
     <div className="px-md py-sm">
@@ -235,6 +372,7 @@ function BuildHistoryList({
       )}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below the History label, sibling of label not in a shared flex parent */}
       <Stack gap="2xs" className="mt-1">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- popover excerpt of the build pane DataView (compact chrome, no room for view toolbar) */}
         {visible.map((run) => (
           <Row
             key={run.id}
@@ -295,8 +433,22 @@ function BuildPopoverContentInner({
     <Stack gap="none" className={cn(variant === "pane" && "h-full")}>
       <MainAheadSection />
       <BuildControls building={building} onBuild={handleBuild} />
-      {variant === "popover" && <BuildLogView variant={variant} />}
-      <BuildHistoryList variant={variant} selectedRunId={selectedRunId} onRunClick={onRunClick} />
+      {variant === "popover" ? (
+        <>
+          <BuildLogView variant={variant} />
+          <BuildHistoryExcerpt
+            runs={runs}
+            selectedRunId={selectedRunId}
+            onRunClick={onRunClick}
+          />
+        </>
+      ) : (
+        <BuildHistoryDataView
+          runs={runs}
+          selectedRunId={selectedRunId}
+          onRunClick={onRunClick}
+        />
+      )}
     </Stack>
   );
 }

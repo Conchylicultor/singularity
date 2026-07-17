@@ -176,6 +176,7 @@ function InstrumentPicker({
             <div className="px-sm py-xs text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
               {group}
             </div>
+            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixer channel strips (bespoke instrument UI) */}
             {groupOptions.map((o) => {
               const Icon = o.icon;
               const active = customized && o.id === resolvedId;

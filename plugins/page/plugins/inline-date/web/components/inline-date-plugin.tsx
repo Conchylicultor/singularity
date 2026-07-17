@@ -90,6 +90,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
         </Text>
       ) : (
         <Stack gap="none">
+          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- caret typeahead menu (transient chrome) */}
           {options.map((option, i) => (
             <Row
               key={`${option.kind}-${i}`}

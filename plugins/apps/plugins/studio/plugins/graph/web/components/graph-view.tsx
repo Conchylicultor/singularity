@@ -210,6 +210,7 @@ function FocusResults({
 
   return (
     <Stack gap="2xs">
+      {/* eslint-disable-next-line data-view/no-adhoc-row-list -- search-match picker for graph recenter (transient chrome) */}
       {matches.map((id) => {
         const segs = pluginIdSegments(id);
         return (

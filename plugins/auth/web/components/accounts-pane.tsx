@@ -52,6 +52,7 @@ export function AccountsPane() {
             <code className="mx-1">auth-google</code>).
           </Text>
         ) : (
+          // eslint-disable-next-line data-view/no-adhoc-row-list -- closed plugin-contributed provider set (settings form, not data browsing)
           providers.map((p) => {
             const Row = p.rowComponent ?? DefaultProviderRow;
             return <Row key={p.id} providerId={p.id} />;

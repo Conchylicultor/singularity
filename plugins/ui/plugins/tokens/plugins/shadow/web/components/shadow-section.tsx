@@ -257,6 +257,7 @@ export function ShadowSection({ search }: { search: string }) {
             </Row>
 
             {/* Numeric/text param rows */}
+            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- fixed token-editor param rows, not domain records */}
             {PARAM_FIELDS.map(({ key, label }) => {
               const isOverridden = overrides[key] !== "";
               return (

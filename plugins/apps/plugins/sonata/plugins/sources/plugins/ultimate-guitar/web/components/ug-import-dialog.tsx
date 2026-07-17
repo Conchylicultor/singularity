@@ -289,6 +289,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
               <Placeholder>No results.</Placeholder>
             ) : (
               <Stack gap="2xs">
+                {/* eslint-disable-next-line data-view/no-adhoc-row-list -- import search-result picker (dialog chrome) */}
                 {filtered.map((result, idx) => {
                   const importing = importingId === result.tabId;
                   return (

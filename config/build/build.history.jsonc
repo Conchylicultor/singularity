@@ -1,0 +1,15 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "view": { "type": "list", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
+    },
+    {
+      "id": "table",
+      "name": "Table",
+      "view": { "type": "table", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
+    }
+  ]
+}

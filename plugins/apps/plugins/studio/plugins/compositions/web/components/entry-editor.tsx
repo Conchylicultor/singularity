@@ -81,6 +81,7 @@ export function EntryEditor({
                     No matching plugins.
                   </Text>
                 ) : (
+                  // eslint-disable-next-line data-view/no-adhoc-row-list -- add-item search popover (transient chrome)
                   candidates.map((id) => (
                     <Row
                       key={id}

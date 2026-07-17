@@ -3,12 +3,13 @@ import { MdAdd, MdDeleteOutline, MdPublic, MdSave } from "react-icons/md";
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { explorerPane } from "@plugins/apps/plugins/studio/plugins/explorer/web";
 import {
   useCompositionData,
@@ -38,19 +39,16 @@ import { MembershipSummary } from "./membership-summary";
 import { ContributorEditor } from "./contributor-editor";
 import { EntryEditor } from "./entry-editor";
 import { DiffDelta } from "./diff-delta";
+import { CompositionItemActions } from "./composition-item-actions";
 
 /** Default A / B for compare mode — the with/without self-improvement anchor demo. */
 const DEFAULT_A = "agent-manager";
 const DEFAULT_B = "agent-manager-lean";
 
-/** Display order + headings for the composition taxonomy. Compositions whose
- *  `category` falls outside this set are grouped last under "Other". */
-const CATEGORY_GROUPS: { id: string; label: string }[] = [
-  { id: "profile", label: "Profiles" },
-  { id: "app", label: "Apps" },
-  { id: "subsystem", label: "Subsystems" },
-  { id: "pack", label: "Packs" },
-];
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**. The
+// views config is authored at
+// `config/apps/studio/compositions/studio.compositions.jsonc` (groupBy category).
+const COMPOSITIONS_VIEW = defineDataView("studio.compositions");
 
 type Mode = "draft" | "compare";
 
@@ -321,17 +319,11 @@ function DraftSection({
             </Button>
           </div>
         </div>
-        {items.length === 0 ? (
-          <Text variant="caption" tone="muted">
-            No named compositions yet. Create one with New.
-          </Text>
-        ) : (
-          <CompositionList
-            items={items}
-            editingId={editingId}
-            onSelect={onSelect}
-          />
-        )}
+        <CompositionsDataView
+          items={items}
+          selectedId={editingId}
+          onSelect={onSelect}
+        />
       </Stack>
 
       {!active ? (
@@ -371,54 +363,109 @@ function DraftSection({
 }
 
 /**
- * The named compositions, grouped by their `category` (Profiles / Apps /
- * Subsystems / Packs, then any "Other"). Each row opens the manifest as the
- * working draft; the trailing badge summarises entry / contributor / extends
- * counts. Empty groups are omitted.
+ * The named compositions as a DataView `list`, grouped by `category` (the group
+ * order — Profiles / Apps / Subsystems / Packs / Other — is the enum field's
+ * `options` order; the section engine renders enum groups in options order). Each
+ * row opens the manifest as the working draft (`onRowActivate`); the entry /
+ * contributor / extends counts are typed `int` fields (trailing chips, replacing
+ * the old summary badge) so they come with sort / filter for free. A per-row
+ * Delete lives in the hover-trailing item-actions slot; the `category` field is a
+ * pure group/filter dimension kept out of the row body via the config's
+ * `visibleFields`. GroupBy + visibleFields are authored in
+ * `config/apps/studio/compositions/studio.compositions.jsonc`.
  */
-function CompositionList({
+function CompositionsDataView({
   items,
-  editingId,
+  selectedId,
   onSelect,
 }: {
   items: CompositionManifestItem[];
-  editingId: string | null;
+  selectedId: string | null;
   onSelect: (item: CompositionManifestItem) => void;
 }) {
-  const known = new Set(CATEGORY_GROUPS.map((g) => g.id));
-  const groups = [
-    ...CATEGORY_GROUPS.map((g) => ({
-      label: g.label,
-      rows: items.filter((it) => it.category === g.id),
-    })),
-    { label: "Other", rows: items.filter((it) => !known.has(it.category)) },
-  ].filter((g) => g.rows.length > 0);
+  const fields = useMemo<FieldDef<CompositionManifestItem>[]>(
+    () => [
+      {
+        id: "name",
+        label: "Name",
+        type: "text",
+        value: (it) => it.name,
+        primary: true,
+        sortable: true,
+      },
+      {
+        id: "category",
+        label: "Category",
+        type: "enum",
+        value: (it) => it.category,
+        // Options order is the group display order (profile / app / subsystem /
+        // pack, then any other); `other` catches categories outside the taxonomy.
+        options: [
+          { value: "profile", label: "Profiles" },
+          { value: "app", label: "Apps" },
+          { value: "subsystem", label: "Subsystems" },
+          { value: "pack", label: "Packs" },
+          { value: "other", label: "Other" },
+        ],
+        sortable: true,
+        filterable: true,
+      },
+      {
+        id: "entryCount",
+        label: "Entry points",
+        type: "int",
+        value: (it) => it.entryPoints.length,
+        cell: (it) => (
+          <span className="tabular-nums text-muted-foreground">
+            {it.entryPoints.length} entry
+          </span>
+        ),
+        align: "end",
+        sortable: true,
+      },
+      {
+        id: "contributorCount",
+        label: "Contributors",
+        type: "int",
+        value: (it) => it.selectedContributors.length,
+        cell: (it) => (
+          <span className="tabular-nums text-muted-foreground">
+            {it.selectedContributors.length} sel
+          </span>
+        ),
+        align: "end",
+        sortable: true,
+      },
+      {
+        id: "extendsCount",
+        label: "Extends",
+        type: "int",
+        value: (it) => it.extends.length,
+        cell: (it) =>
+          it.extends.length > 0 ? (
+            <span className="tabular-nums text-muted-foreground">
+              {it.extends.length} ext
+            </span>
+          ) : null,
+        align: "end",
+        sortable: true,
+      },
+    ],
+    [],
+  );
 
   return (
-    <Stack gap="md">
-      {groups.map((group) => (
-        <Stack key={group.label} gap="2xs">
-          <SectionLabel>{group.label}</SectionLabel>
-          {group.rows.map((item) => (
-            <Row
-              key={item.id}
-              selected={editingId === item.id}
-              onClick={() => onSelect(item)}
-              actions={
-                <Badge variant="muted">
-                  {item.entryPoints.length} entry · {item.selectedContributors.length}{" "}
-                  sel
-                  {item.extends.length > 0 ? ` · ${item.extends.length} ext` : ""}
-                </Badge>
-              }
-              actionsAlwaysVisible
-            >
-              <span className="truncate">{item.name}</span>
-            </Row>
-          ))}
-        </Stack>
-      ))}
-    </Stack>
+    <DataView<CompositionManifestItem>
+      rows={items}
+      fields={fields}
+      rowKey={(it) => it.id}
+      views={["list"]}
+      storageKey={COMPOSITIONS_VIEW}
+      selectedRowId={selectedId ?? undefined}
+      onRowActivate={onSelect}
+      itemActions={CompositionItemActions}
+      emptyState={<>No named compositions yet. Create one with New.</>}
+    />
   );
 }
 
@@ -485,6 +532,7 @@ function CompositionPicker({
     <Stack gap="2xs">
       <SectionLabel>{label}</SectionLabel>
       <Stack gap="2xs">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- single-select picker control for compare mode, not a browsable data surface */}
         {manifests.map((m) => (
           <Row
             key={m.name}

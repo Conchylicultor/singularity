@@ -19,10 +19,22 @@ export added for this; explorer never imports compositions → DAG-safe).
 
 ## Pane behavior (DRAFT-ONLY — no disk writes)
 
-1. **List** the named compositions (`manifests`). Selecting one calls
-   `setActiveComposition(structuredClone(manifest))` so it becomes the working
-   DRAFT; the Explorer tree tints by its closure via the shared membership band.
-   A **Clear** button calls `clearActive()`.
+1. **List** the named compositions (`manifests`) as a **DataView** `list`
+   (`defineDataView("studio.compositions")`, config authored at
+   `config/apps/studio/compositions/studio.compositions.jsonc`). Rows are the raw
+   `CompositionManifestItem[]` from `useManifestItems()`; the schema is `name`
+   (text, primary), `category` (enum), and the entry / contributor / extends
+   counts as typed `int` fields (trailing chips, replacing the former summary
+   badge). The list **groups by `category`** — the group order (Profiles / Apps /
+   Subsystems / Packs / Other) is the enum field's `options` order, since the
+   section engine renders enum groups in options order (this replaced the
+   hand-rolled `CATEGORY_GROUPS` reduction). `category` is a pure group/filter
+   dimension held out of the row body via the config's `visibleFields`. Activating
+   a row (`onRowActivate`) calls `setActiveComposition(structuredClone(manifest))`
+   so it becomes the working DRAFT; the Explorer tree tints by its closure via the
+   shared membership band. A per-row **Delete** action (`defineItemActions`, wired
+   to `useManifestActions().remove`) sits in the hover-trailing slot, independent
+   of the draft editor's own Delete. A **Clear** button calls `clearActive()`.
 2. **Summary** (`MembershipSummary`) — derived from the store's
    `useActiveMembership()` map: bundle size plus a count per membership state
    (entry / required / contributor / via-contributor / available / excluded).
@@ -72,7 +84,7 @@ are no per-interaction round-trips.
 
 - Description: Compositions pane: list named compositions and live-edit the working draft (contributor + entry-point selection) that drives the Explorer closure tint.
 - Web:
-  - Contributes: `Pane.Register` "compositions", `Studio.Sidebar` "Compositions" → `component`
-  - Uses: `apps/studio/explorer.explorerPane`, `apps/studio/explorer/membership.DIFF_LEGEND`, `apps/studio/shell.Studio`, `plugin-meta/composition.clearActive`, `plugin-meta/composition.setActiveComposition`, `plugin-meta/composition.setCompareComposition`, `plugin-meta/composition.updateActiveDraft`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompareComposition`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useGraph`, `plugin-meta/composition.useManifestActions`, `plugin-meta/composition.useManifestItems`, `plugin-meta/composition.usePromoteManifestsToGit`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/badge.BadgeVariant`, `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/tooltip.WithTooltip`
+  - Contributes: `Pane.Register` "compositions", `studio.compositions.item-actions` "delete" → `DeleteAction`, `Studio.Sidebar` "Compositions" → `component`
+  - Uses: `apps/studio/explorer.explorerPane`, `apps/studio/explorer/membership.DIFF_LEGEND`, `apps/studio/shell.Studio`, `plugin-meta/composition.clearActive`, `plugin-meta/composition.setActiveComposition`, `plugin-meta/composition.setCompareComposition`, `plugin-meta/composition.updateActiveDraft`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompareComposition`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useGraph`, `plugin-meta/composition.useManifestActions`, `plugin-meta/composition.useManifestItems`, `plugin-meta/composition.usePromoteManifestsToGit`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/badge.BadgeVariant`, `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/row-actions.RowActionButton`, `primitives/search.SearchInput`, `primitives/tooltip.WithTooltip`
 
 <!-- AUTOGENERATED:END -->
