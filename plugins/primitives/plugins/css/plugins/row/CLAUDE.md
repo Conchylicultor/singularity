@@ -24,6 +24,14 @@ that needs interactive controls *in its body* (e.g. an inline title button + a
 remove button) is a non-interactive container: pass no `onClick`/`href` and it
 stays a `<div>` that may legally nest them.
 
+"Presentational" bans nested **click targets**, not hover. A clickable row's body
+may hold hover-driven affordances — a tooltip trigger, a CSS `group-hover`
+chip — and they work: the split path's hit-area paints *beneath* the row content
+(`z-under`), so `:hover` still reaches the body. It used to sit on top and
+silently ate every pointer event aimed at the body, which read as "tooltips just
+don't fire in a DataView list". If you catch yourself hoisting body content out
+to `actions` to make it hoverable again, that's the bug, not the fix.
+
 `ref` forwards to the row's outermost element (the row box) for DnD /
 scroll-into-view.
 

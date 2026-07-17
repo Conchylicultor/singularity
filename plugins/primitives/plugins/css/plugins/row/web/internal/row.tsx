@@ -128,18 +128,16 @@ export function Row({
   // row's 4 icon buttons) permanently steals ~100px from the row body via
   // `shrink-0`, collapsing the flex-1 title cell and truncating the title even
   // when nothing is shown. Mirrors the row-actions primitive's Pin approach; on
-  // reveal the cluster overlays the row's right edge (raised above the hit-area,
-  // so its buttons stay clickable). `actionsAlwaysVisible` actions instead stay
-  // in flow: they are part of the row layout and legitimately reserve their space.
+  // reveal the cluster overlays the row's right edge. `actionsAlwaysVisible`
+  // actions instead stay in flow: they are part of the row layout and
+  // legitimately reserve their space. Either way they paint above the split
+  // path's `z-under` hit-area, so their buttons stay clickable.
   const actionsSpan = actions ? (
     actionsAlwaysVisible ? (
       <span
         onClick={(e) => e.stopPropagation()}
         className={cn(
           "ml-auto flex shrink-0 items-center gap-2xs",
-          // Raise above the stretched hit-area so the actions stay clickable
-          // (positioned siblings paint in DOM order — actions come after it).
-          interactive && "relative",
           hoverRevealClass(revealed, { alwaysVisible: true }),
         )}
       >
@@ -162,12 +160,27 @@ export function Row({
   // a non-interactive container and put the primary <button>/<a> beside the
   // actions. A full-bleed, aria-hidden hit-area child keeps the whole padded row
   // clickable and gives the button its accessible name from {children}.
+  //
+  // The hit-area is sized to the CONTAINER (`inset-0` resolves against the
+  // `relative` box, not the button), so it also covers the `p-row` padding ring
+  // the button — a `flex-1` child of an `items-center` line — can never reach.
+  //
+  // It MUST paint below the row's own content (`z-under`), never above it.
+  // Absolutely-positioned siblings paint over non-positioned ones regardless of
+  // DOM order, so an on-top hit-area silently swallows every pointer event aimed
+  // at the row body: hover-driven body content (a tooltip trigger, a CSS
+  // `group-hover` chip) goes dead, because :hover only applies to the element
+  // under the pointer and its ANCESTORS — and the hit-area is a sibling. Clicks
+  // on the ring still land on it (nothing else is there to hit), so pushing it
+  // under costs nothing. `isolate` is load-bearing: it makes the container a
+  // stacking context, without which the negative layer escapes to the nearest
+  // one up the tree and sinks behind intervening backgrounds.
   if (interactive && actions) {
     return (
       <Line
         as="div"
         ref={ref}
-        className={cn(chromeClass, "relative")}
+        className={cn(chromeClass, "relative isolate")}
         style={style}
         {...revealHandlers}
       >
@@ -184,7 +197,7 @@ export function Row({
         >
           {icon}
           {children}
-          <span aria-hidden className="absolute inset-0 rounded-md" />
+          <span aria-hidden className="absolute inset-0 z-under rounded-md" />
         </Tag>
         {actionsSpan}
       </Line>
