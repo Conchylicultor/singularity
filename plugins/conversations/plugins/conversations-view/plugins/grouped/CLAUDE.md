@@ -4,17 +4,11 @@
 
 ## Plugin reference
 
-- Description: grouped web presence: eagerly registers the boot-critical conversation-groups resource descriptor so boot-snapshot can hydrate it before first paint, independent of the (lazy) DataView Grouped tab. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
+- Description: Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
 - Server:
-  - Contributes: `resource.declare` "conversation-groups"
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks/tasks-core._conversations`
+  - Uses: `database.db`, `primitives/rank.nextRankUnder`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
-  - Exports: Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
-  - Resources: `conversation-groups` (push)
-  - Routes: `POST /api/conversation-groups`, `PATCH /api/conversation-groups/:id`, `DELETE /api/conversation-groups/:id`, `POST /api/conversation-groups/:id/members`, `DELETE /api/conversation-groups/members/:conversationId`, `POST /api/conversation-groups/members/:conversationId/move`
-- Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.RankSchema`
-  - Exports: Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`; Values: `addConversationGroupMembers`, `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`, `createConversationGroup`, `deleteConversationGroup`, `moveConversationGroupMember`, `patchConversationGroup`, `removeConversationGroupMember`
+  - Exports: Values: `addMemberToGroup`
 - Cross-plugin:
   - Imported by: `improve`
 

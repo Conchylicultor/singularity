@@ -78,15 +78,12 @@ function DefaultRow<TRow>(props: {
     : null;
 
   let label: ReactNode;
-  // The primary label is editable when the field declares a write-back AND
-  // `canEdit` admits this row (default: it does) — the same per-row gate the
-  // shared `FieldCell` applies to the secondary chips and every flat view.
-  // Gated rows fall through to the read-only label below: no editor, no inert
-  // affordance.
+  // The primary label is editable when the field declares a write-back — the same
+  // `onEdit`/`onEditValues` contract the shared `FieldCell` applies to the
+  // secondary chips and every flat view.
   const primaryEditable =
     primaryField != null &&
-    (primaryField.onEdit != null || primaryField.onEditValues != null) &&
-    (primaryField.canEdit?.(row) ?? true);
+    (primaryField.onEdit != null || primaryField.onEditValues != null);
   if (primaryField && !isAlias && primaryEditable) {
     label = (
       <EditableTreeLabel

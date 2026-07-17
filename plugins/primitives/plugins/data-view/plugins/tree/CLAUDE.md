@@ -30,11 +30,10 @@ the lower-level building block.
   `String(value)`**. So a field-type plugin's cell renders identically as a table
   column and a tree row, *and* a consumer whose rows are a heterogeneous union can
   render one kind's label as a whole component (e.g. a conversation row) via
-  `field.cell`. When the primary field declares `onEdit`/`onEditValues` — and
-  `canEdit` admits the row — the label becomes an `EditableTreeLabel`
-  (select-then-edit over the shared `useResolveCellEditor` capability, the same
-  per-type editors the table uses) wrapping that same read node; otherwise it
-  stays a read-only cell.
+  `field.cell`. When the primary field declares `onEdit`/`onEditValues` the label
+  becomes an `EditableTreeLabel` (select-then-edit over the shared
+  `useResolveCellEditor` capability, the same per-type editors the table uses)
+  wrapping that same read node; otherwise it stays a read-only cell.
 - **Secondary fields** — the body is no longer label-only. The row renders the
   primary field as the label **plus** the remaining visible fields (the view's
   `visibleFields` minus the primary; **default = all non-primary fields**) as
