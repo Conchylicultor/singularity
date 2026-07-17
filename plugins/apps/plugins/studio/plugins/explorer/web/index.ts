@@ -24,7 +24,7 @@ export default {
     Pane.Register({ pane: explorerPane }),
     Studio.Sidebar({
       id: "explorer",
-      ...sidebarNavItem({ title: "Explorer", icon: MdAccountTree, onClick: () => openPane(explorerPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({ title: "Plugin", icon: MdAccountTree, onClick: () => openPane(explorerPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

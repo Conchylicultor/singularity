@@ -10,7 +10,7 @@ export const explorerPane = Pane.define({
 
 function ExplorerBody() {
   return (
-    <PaneChrome pane={explorerPane} title="Explorer">
+    <PaneChrome pane={explorerPane} title="Plugin">
       <ExplorerView />
     </PaneChrome>
   );
