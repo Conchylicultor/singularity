@@ -1,4 +1,12 @@
-@import "tailwindcss";
+/* source(none): the scan surface is EXACTLY the @source dirs below — never
+   Tailwind's automatic source detection, whose base is the vite root. The
+   artifact-mode global-css pass builds with the REPO ROOT as vite root, and on
+   the main checkout auto-detection walked `.claude/worktrees/` (~90 agent
+   checkouts, millions of files; oxide's walkdir does not honor .gitignore) —
+   a ~5s pass became ~320s. The `tailwind-scan-covers-classes` check enforces
+   both directions: source(none) stays, and every class-authoring file lies
+   inside a declared @source. */
+@import "tailwindcss" source(none);
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/cascadia-code";

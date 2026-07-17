@@ -1,13 +1,18 @@
-// Global CSS stays global (v1): ONE Tailwind v4 pass over the whole tree —
-// app.css's own `@source "plugins/" + "prototypes/"` directives, identical
-// semantics to today's monolith — emitting the single global stylesheet plus
-// its font assets. The pass is the dominant warm-build cost (~5–7s), so its
-// output is CACHED content-addressed in the store, keyed by a fingerprint of
-// the pass's TRUE input surface:
+// Global CSS stays global (v1): ONE Tailwind v4 pass over app.css's own
+// `@source "plugins/" + "prototypes/"` directives, emitting the single global
+// stylesheet plus its font assets. app.css imports Tailwind with
+// `source(none)`, so the pass scans EXACTLY the declared @source dirs — never
+// automatic source detection, whose base is the vite root (the REPO ROOT
+// here): on the main checkout that walked `.claude/worktrees/` (~90 agent
+// checkouts, millions of files; oxide's walkdir does not honor .gitignore)
+// and turned the ~5s pass into ~320s. The `tailwind-scan-covers-classes`
+// check enforces source(none) stays. The pass is the dominant warm-build cost
+// (~5–15s), so its output is CACHED content-addressed in the store, keyed by
+// a fingerprint that errs WIDER than the true input surface:
 //
-//   - every not-ignored file in the worktree (Tailwind v4's automatic source
-//     detection scans the vite root — the repo root here — honoring gitignore),
-//     enumerated with `git ls-files` (tracked ∪ untracked-not-ignored);
+//   - every not-ignored file in the worktree, enumerated with `git ls-files`
+//     (tracked ∪ untracked-not-ignored) — a superset of the scanned dirs, so
+//     the key can never under-cover them;
 //   - every `@source` directory declared in app.css (parsed, not hardcoded —
 //     today `plugins/` + `prototypes/`, both inside the repo, but an explicit
 //     walk covers them even if one were gitignored or moved outside);

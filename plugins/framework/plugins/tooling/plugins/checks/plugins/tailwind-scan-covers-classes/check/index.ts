@@ -70,6 +70,27 @@ const check: Check = {
     const cssDir = dirname(cssPath);
     const css = readFileSync(cssPath, "utf8");
 
+    // The @source list below is the whole story only while automatic source
+    // detection is off. Auto-detection scans from the VITE ROOT — and the
+    // artifact-mode global-css pass builds with the repo root as vite root, so
+    // on the main checkout it walked `.claude/worktrees/` (~90 agent checkouts,
+    // millions of files; oxide's walkdir does not honor .gitignore), turning a
+    // ~5s Tailwind pass into ~320s. `source(none)` is the off switch; without
+    // it the crawl comes back silently, so its absence is a check failure.
+    const code = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const tailwindImport = code.match(/@import\s+["']tailwindcss["']([^;]*);/);
+    if (!tailwindImport || !/\bsource\(\s*none\s*\)/.test(tailwindImport[1] ?? "")) {
+      return {
+        ok: false,
+        message:
+          `app.css must import Tailwind with automatic source detection disabled: ` +
+          `@import "tailwindcss" source(none);. Auto-detection scans the vite root — the repo ` +
+          `root in the artifact-mode global-css pass — which on main crawls every agent ` +
+          `worktree under .claude/worktrees/ (~320s per Tailwind pass).`,
+        hint: `In ${APP_CSS}, change @import "tailwindcss"; to @import "tailwindcss" source(none); and declare scan dirs via @source.`,
+      };
+    }
+
     const sources = declaredSources(css);
     if (sources.length === 0) {
       return {

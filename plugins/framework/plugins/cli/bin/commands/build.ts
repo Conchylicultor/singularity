@@ -1334,12 +1334,21 @@ export function registerBuild(program: Command) {
       // gap (a) in research/2026-07-12-global-host-admission-memory-dimension.md.
       const gated = valveGates(lane, process.env);
       const acquireAndRunHeavySection = async (): Promise<StepResult[]> => {
+        // Profile the full admission wait (valve holds + grant queueing, across
+        // requeues) — without a span this wait is an unexplained hole in the
+        // build Gantt (a contended build once sat here ~5 min, unattributed).
+        const endGrantWait = buildProfilerStart(
+          "acquireHostGrant",
+          "build:setup",
+          "wait for host CPU grant",
+        );
         for (;;) {
           const outcome = await holdThroughValve({ gated });
           const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
             { lane, max: cpuBudget().B },
             async (grant) => {
               if (shouldRequeue(gated, outcome, isUnderDuress())) return REQUEUE;
+              endGrantWait();
               return await runHeavySection(grant);
             },
           );
