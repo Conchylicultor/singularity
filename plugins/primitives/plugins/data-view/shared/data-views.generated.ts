@@ -21,6 +21,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "build.history", pluginId: "build" },
   { id: "code-explorer.file-tree", pluginId: "code-explorer" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
+  { id: "conversations-sidebar-grouped", pluginId: "conversations.conversations-view.data-view.grouped" },
   { id: "conversations-sidebar-history", pluginId: "conversations.conversations-view.data-view.history" },
   { id: "conversations-sidebar-queue", pluginId: "conversations.conversations-view.data-view.queue" },
   { id: "debug.boot-profiles", pluginId: "debug.boot-profile" },
