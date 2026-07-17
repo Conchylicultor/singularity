@@ -34,12 +34,12 @@ import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profile
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
-import { holdThroughValve, shouldRequeue, valveGates } from "../admission-valve";
-import { publishLane } from "../lane";
+import { createValveDeps, holdThroughValve, shouldRequeue, valveGates, type ValveDeps } from "../admission-valve";
+import { laneFor, publishLane } from "../lane";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { renderStepBlock, orderStepsForDisplay, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
-import { appendBuildLog } from "../build-log-writer-global";
+import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 
@@ -540,7 +540,7 @@ async function probeHealth(
         // unambiguous deploy failure: the gateway SIGKILLed it (state reverts to
         // "running", never "broken") and is still serving the previous backend's
         // stale code. There is no lenient interpretation for this path — fail the
-        // build. finalizeBuildLog runs via the process.on("exit") handler.
+        // build. finalizeBuild runs via the process.on("exit") handler.
         if (isRestart) {
           const detail = restartError ? `Gateway restart error: ${restartError}` : "";
           onDeployFailure([
@@ -680,8 +680,6 @@ export function registerBuild(program: Command) {
       "Artifact mode only: skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
     )
     .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string; serveComposition?: string; artifacts?: boolean; monolith?: boolean; minify: boolean }) => {
-      const buildStartedAt = new Date();
-
       // Mark this process as a build: dist-comparing checks (map-in-sync) skip
       // while the dist they'd inspect is the one this build replaces.
       markBuildInProgress();
@@ -804,55 +802,63 @@ export function registerBuild(program: Command) {
         process.env.SINGULARITY_BUILD_ID ?? `${shortCommit || "nocommit"}-${Date.now()}`;
       process.env.SINGULARITY_BUILD_ID = buildId;
 
-      appendBuildLog({
-        phase: "started",
-        worktree: name,
+      // A main build is human-blocking (interactive lane); an agent build is
+      // background. Derived ONCE, here, because two consumers need the same
+      // fact: this record (the lane explains WHY a wait was as long as it was)
+      // and the heavy section's `withHostGrant` below.
+      const lane: Lane = laneFor(branch === "main");
+
+      // The op log's record for this build. `markRequested` lands where the old
+      // build-log "started" record did — but the old record's `startedAt` was
+      // ALSO the bar's start, stamped before `acquireBuildLock`, so `totalMs`
+      // silently swallowed every wait: a build that queued 5 min and worked 1
+      // rendered identically to one that worked 6. Here the waits below are
+      // recorded as their own segments instead.
+      //
+      // `opId` is `buildId`: unique and non-null on every path (a UI build gets
+      // SINGULARITY_BUILD_ID from run-build.ts, a manual CLI build the minted
+      // `<commit>-<now>` above). `buildId` is passed AGAIN, separately, because
+      // it means something else there — the join key to build-profile-<id>.json,
+      // which is what makes a bar's span breakdown openable.
+      const profiler = createOpProfiler("build", {
+        opId: buildId,
         branch,
+        opSlug: name,
+        lane,
         buildId,
-        startedAt: buildStartedAt.toISOString(),
-        completedAt: null,
-        totalMs: 0,
-        success: false,
       });
+      profiler.markRequested();
 
       // Mark this worktree as having a build in flight so the conversation
       // status poller keeps the agent's pane reading as "working" while the
       // CLI "shell" status persists (see worktree-op.ts). Written up-front as
       // "waiting-for-lock" and flipped to "running" once the per-worktree build
       // lock is granted below, so a build queued behind another reads as queued
-      // rather than running. Cleared in finalizeBuildLog below, which runs on
+      // rather than running. Cleared in finalizeBuild below, which runs on
       // every graceful exit.
       markWorktreeOpStart(name, "build", "waiting-for-lock");
 
-      // Guarantee a terminal "completed" record on every *graceful* exit
-      // path — a thrown build step, process.exit(1), or SIGINT/SIGTERM.
-      // Without this, any failure before the explicit success/failure writes
-      // below leaves a "started" with no "completed", which the profiler can
-      // only render as an ever-growing fake bar with no real end time. The
-      // exit handler captures the true end timestamp. Only a hard kill
-      // (SIGKILL/OOM/power loss) — which can't run handlers — legitimately
-      // leaves a record open; the profiler shows those as "interrupted".
+      // Guarantee a terminal record on every *graceful* exit path — a thrown
+      // build step, process.exit(1), or SIGINT/SIGTERM. Without this, any
+      // failure before the explicit success/failure writes below leaves a
+      // `requested` with no `completed`, which the reader can only render as an
+      // ever-growing fake bar with no real end time. The exit handler captures
+      // the true end timestamp. Only a hard kill (SIGKILL/OOM/power loss) —
+      // which can't run handlers — legitimately leaves a record open; those are
+      // the orphans `finalizeOrphanedOps` closes as "interrupted".
       // Mirrors the on-exit lock release in acquireBuildLock above.
-      let buildLogFinalized = false;
-      const finalizeBuildLog = (success: boolean): void => {
-        if (buildLogFinalized) return;
-        buildLogFinalized = true;
+      let buildFinalized = false;
+      const finalizeBuild = (success: boolean): void => {
+        if (buildFinalized) return;
+        buildFinalized = true;
         clearWorktreeOp(name, "build");
-        appendBuildLog({
-          phase: "completed",
-          worktree: name,
-          branch,
-          buildId,
-          startedAt: buildStartedAt.toISOString(),
-          completedAt: new Date().toISOString(),
-          totalMs: Date.now() - buildStartedAt.getTime(),
-          success,
-        });
+        profiler.complete(success ? "success" : "failed");
+        profiler.write();
       };
-      process.on("exit", () => finalizeBuildLog(false));
+      process.on("exit", () => finalizeBuild(false));
 
       // The build cannot terminate without printing its own verdict. Registered
-      // after finalizeBuildLog's exit hook so handlers run in order and the
+      // after finalizeBuild's exit hook so handlers run in order and the
       // banner is written last. Earlier exits (getWorktreeRoot, name/branch
       // guards, parseMigrationAnswers) fire before this point and before any
       // artifact is touched, so there is no deploy ambiguity for them to resolve.
@@ -892,10 +898,15 @@ export function registerBuild(program: Command) {
 
       endSpan = buildProfilerStart("acquireBuildLock", "build:setup", "acquire build lock");
       const webDir = resolve(root, WEB_CORE_RELATIVE);
-      await acquireBuildLock(resolve(webDir, ".build.lock"));
+      await profiler.wait("build-lock", () => acquireBuildLock(resolve(webDir, ".build.lock")));
       // Build lock granted — flip the marker from waiting to running so the UI
       // clocks build time from here, not from the queued wait.
       setWorktreeOpPhase(name, "build", "running");
+      // The build lock is this build's ENTRY ticket, so this is where it stops
+      // queuing and starts its own work. It is NOT done waiting: the duress
+      // valve and the host grant below are both post-`granted`, and are where a
+      // contended build actually spends its minutes.
+      profiler.markGranted();
       endSpan();
 
       endSpan = buildProfilerStart("sweepStaging", "build:setup", "sweep staging leftovers");
@@ -1077,7 +1088,7 @@ export function registerBuild(program: Command) {
       // background lane. The grant's `units` are subdivided across everything the
       // build fans out into (type-check workers, tsc, vite) — nothing re-acquires
       // host-wide. See @plugins/infra/plugins/host-admission.
-      const lane: Lane = branch === "main" ? "interactive" : "background";
+      // (`lane` is derived once, up-front, next to the op record it also feeds.)
       // Publish the lane from the same fact (so any inheriting subprocess sees
       // it) BEFORE runChecks runs in-process below. See ../lane.ts.
       publishLane(branch === "main");
@@ -1304,19 +1315,40 @@ export function registerBuild(program: Command) {
       // failed-open valve returns immediately while duress is still fresh. See
       // gap (a) in research/2026-07-12-global-host-admission-memory-dimension.md.
       const gated = valveGates(lane, process.env);
+
+      // Drive the `duress-valve` wait off the valve's OWN hold bracket — the
+      // same seam the `duressHold` span already hangs on, so the record and the
+      // span can never disagree about how long the hold was. Deps are built once
+      // rather than per `holdThroughValve` call (holds never nest, which is the
+      // invariant `createValveDeps`'s single span slot already relies on).
+      const baseValveDeps = createValveDeps();
+      const valveDeps: ValveDeps = {
+        ...baseValveDeps,
+        onHoldStart: (reason) => {
+          baseValveDeps.onHoldStart(reason);
+          profiler.waitStart("duress-valve");
+        },
+        onHoldEnd: (outcome) => {
+          baseValveDeps.onHoldEnd(outcome);
+          profiler.waitEnd();
+        },
+      };
+
       const acquireAndRunHeavySection = async (): Promise<StepResult[]> => {
         // Profile the full admission wait (valve holds + grant queueing, across
         // requeues) — without a span this wait is an unexplained hole in the
         // build Gantt (a contended build once sat here ~5 min, unattributed).
+        // The op record splits what this single span necessarily merges: one
+        // `host-grant` wait per requeue cycle, each distinct from the valve's.
         const endGrantWait = buildProfilerStart(
           "acquireHostGrant",
           "build:setup",
           "wait for host CPU grant",
         );
         for (;;) {
-          const outcome = await holdThroughValve({ gated });
+          const outcome = await holdThroughValve({ gated }, valveDeps);
           const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
-            { lane, max: cpuBudget().B },
+            { lane, max: cpuBudget().B, hooks: profiler.grantHooks() },
             async (grant) => {
               if (shouldRequeue(gated, outcome, isUnderDuress())) return REQUEUE;
               endGrantWait();
@@ -1369,7 +1401,7 @@ export function registerBuild(program: Command) {
           steps: stepRoster(),
         };
         writeBuildLogs(name, renderVerdict(v));
-        finalizeBuildLog(false);
+        finalizeBuild(false);
         emitVerdict(v);
         process.exit(1);
       };
@@ -1529,7 +1561,7 @@ export function registerBuild(program: Command) {
         writeBuildProfile(name);
         const okV = buildOkVerdict();
         writeBuildLogs(name, renderVerdict(okV));
-        finalizeBuildLog(true);
+        finalizeBuild(true);
         emitVerdict(okV);
         return;
       }
@@ -1603,7 +1635,7 @@ export function registerBuild(program: Command) {
       writeBuildProfile(name);
       const okV = buildOkVerdict();
       writeBuildLogs(name, renderVerdict(okV));
-      finalizeBuildLog(true);
+      finalizeBuild(true);
       emitVerdict(okV);
     });
 }

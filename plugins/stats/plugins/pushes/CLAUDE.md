@@ -1,8 +1,37 @@
 # pushes
 
-Push contention stats sourced from `~/.singularity/push-contention.jsonl`.
-The CLI appends one JSON line per `./singularity push` invocation; this
-plugin reads the file and serves three aggregate chart endpoints:
+Push contention stats sourced from the shared **op-log** reader
+(`readOpRecords()`, see [`op-log`](../../../debug/plugins/profiling/plugins/op-log/CLAUDE.md)),
+filtered to `kind === "push"` via the plugin's own `readCompletedPushes()`.
+
+This plugin used to carry its **own copy** of the push record + reader, and that
+copy had already drifted from the debug pane's — it never modelled `opSlug` and
+never knew about the synthetic in-flight outcomes. There is one reader now; the
+copy is deleted.
+
+## What counts
+
+`readCompletedPushes()` excludes two classes, and every pane goes through it so
+they cannot disagree:
+
+- **In-flight ops** (`outcome: "waiting" | "running"`). The op-log reader returns
+  live ops with durations clocked against its own `now`. Counting them would make
+  a chart depend on when it was loaded: an unfinished push has no final outcome,
+  its wait is still growing, and it has no steps yet.
+- **Interrupted ops.** Hard-killed and closed by the orphan reconciler — a
+  synthetic zero duration, not a measurement.
+
+Buckets key on `requestedAt` (the op-log's start instant) where they used to key
+on the legacy `startedAt`; the two differ only by the sub-second process-start →
+lock-request gap, which the new model does not carry.
+
+`waitMs` is the op-log's **derived** scalar (`sum(waits)`). For pushes written by
+the new writer it is genuinely wider than the legacy number — it now also counts
+the nested host-grant wait inside the `checks` step, which the old log never
+recorded. That is the intended correction: the wait was always real, merely
+invisible.
+
+Three aggregate chart endpoints:
 
 - **Wait time** — avg/max lock wait per bucket (seconds).
 - **Throughput** — success vs failed pushes per bucket.
@@ -19,7 +48,7 @@ All endpoints accept `?bucket=day|week|month` (default `day`).
   - Contributes: `Stats.Chart` "Pushes" → `PushesSection`
   - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Uses: `debug/profiling/op-log.readOpRecords`, `infra/endpoints.implement`
   - Routes: `GET /api/stats/pushes/wait-time`, `GET /api/stats/pushes/throughput`, `GET /api/stats/pushes/step-breakdown`
 - Shared:
   - Exports: Values: `getPushesStepBreakdown`, `getPushesThroughput`, `getPushesWaitTime`

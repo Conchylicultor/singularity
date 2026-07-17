@@ -8,12 +8,16 @@ import { publishLane } from "../lane";
 import { listAllChecks, runChecks, scopeOf, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { CHECK_SCOPES, type CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
+import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 
-// The op-marker slug for this worktree — its directory basename, matching what
-// `build` / `push` write (see worktree-op.ts). Mirrors the local
-// `getWorktreeRoot()` helpers in build.ts / push.ts.
-async function getWorktreeSlug(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
+// This worktree's identity, from ONE `git rev-parse`: the op-marker slug (the
+// root's basename, matching what `build` / `push` write — see worktree-op.ts)
+// and the branch the op record carries. `rev-parse` takes both requests in one
+// invocation and answers in order, so there is no reason to pay for a second
+// process launch. Mirrors the local `getWorktreeRoot()` helpers in build.ts /
+// push.ts.
+async function getWorktreeIdentity(): Promise<{ slug: string; branch: string }> {
+  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"], {
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -22,7 +26,12 @@ async function getWorktreeSlug(): Promise<string> {
     console.error("Not in a git repository");
     process.exit(1);
   }
-  return basename(output.trim());
+  const [root, branch] = output.trim().split("\n");
+  if (!root || !branch) {
+    console.error(`Could not determine the worktree root and branch (git rev-parse said: ${output.trim()})`);
+    process.exit(1);
+  }
+  return { slug: basename(root), branch };
 }
 
 export function registerCheck(program: Command) {
@@ -65,7 +74,7 @@ export function registerCheck(program: Command) {
       // full-output log file. The full check transcript is always written here
       // so a failure's real cause is one `cat` away even when the console copy
       // is truncated or piped through `tail`.
-      const slug = await getWorktreeSlug();
+      const { slug, branch } = await getWorktreeIdentity();
       const logFile = join(worktreeDataDir(slug), "check.log");
 
       // Publish the lane: a direct check on the main worktree is human-blocking
@@ -93,9 +102,37 @@ export function registerCheck(program: Command) {
       // (inherited grant, no wait) is already covered by the push marker, so a
       // second marker would just churn the status.
       const marker = inherited === undefined;
+
+      // The op-log record rides the SAME gate, deliberately: "this check has a
+      // marker of its own" and "this check contends for a grant of its own" are
+      // one fact, not two. A push-nested check inherits its parent's grant and
+      // never queues host-wide — the parent push already accounts for that time,
+      // so a second record would double-count it. Until this, a direct check
+      // wrote nothing at all: it occupied a grant slot, making every other
+      // agent's build and push queue, while appearing nowhere as the cause.
+      const profiler = marker
+        ? createOpProfiler("check", {
+            // A check has no natural id, unlike a push's pushId or a build's
+            // buildId — and `opId` must be unique and non-null.
+            opId: crypto.randomUUID(),
+            branch,
+            opSlug: slug,
+            lane,
+          })
+        : undefined;
+
       if (marker) {
+        profiler?.markRequested();
         markWorktreeOpStart(slug, "check", "waiting-for-lock");
-        process.on("exit", () => clearWorktreeOp(slug, "check"));
+        process.on("exit", () => {
+          clearWorktreeOp(slug, "check");
+          // The terminal record, on every graceful exit — including the
+          // `process.exit(1)` below, which skips the `finally`. Idempotent, and
+          // an outcome already stamped by `complete()` wins; a path that
+          // exits without one (an uncaught throw) lands as "error", which is
+          // the truth about it.
+          profiler?.write();
+        });
       }
       try {
         const runUnder = (grant: Grant): Promise<boolean> => {
@@ -104,8 +141,33 @@ export function registerCheck(program: Command) {
           // the marker to "running" (a no-op on the inherited path, where
           // `marker` is false and the parent push owns the status).
           if (marker) setWorktreeOpPhase(slug, "check", "running");
+          // The host grant IS a check's entry ticket — unlike push and build, it
+          // does no further waiting after this point.
+          profiler?.markGranted();
           const runOpts: RunChecksOptions = {
             grant,
+            // One step per individual check, so a `check` bar drills in to
+            // `type-check` / `eslint` / … — the affordance `build` already has
+            // via the same hook (build.ts:1158 → `pushBuildSpan`). Gated on the
+            // profiler, i.e. on `marker`: a push-nested check must write no
+            // record of its own, and therefore no steps either.
+            //
+            // `onCheckDone` reports a check that has ALREADY finished, so this
+            // must be `recordStep` (duration + start supplied) and never
+            // `stepStart`/`stepEnd` (which read the clock themselves and would
+            // stamp the check's end as its start).
+            //
+            // CLOCK. `wallStartMs` is a `performance.now()` reading (runner.ts:147)
+            // despite the name — monotonic, NOT a `Date.now()` epoch. It is passed
+            // through untouched because `recordStep` takes that clock by contract:
+            // it pairs `performance.now()` with `grantedAt` at the grant instant,
+            // so the step's offset is an exact monotonic subtraction. Converting
+            // here (`performance.timeOrigin + wallStartMs`) would look equivalent
+            // and would instead bake in `timeOrigin`'s process-start capture error
+            // — ~6ms under the load where this profiler earns its keep.
+            onCheckDone: profiler
+              ? (id, durationMs, wallStartMs) => profiler.recordStep(id, durationMs, wallStartMs)
+              : undefined,
             noCache: opts.cache === false,
             scope,
             logFile,
@@ -116,7 +178,12 @@ export function registerCheck(program: Command) {
         };
         const ok = inherited
           ? await runUnder(inherited)
-          : await withHostGrant({ lane, max: cpuBudget().B }, runUnder);
+          // `grantHooks()` is what makes this queue visible: this is the wait
+          // that made a direct check an invisible contender. On the inherited
+          // path there is no profiler and no acquire, so there is nothing to
+          // record.
+          : await withHostGrant({ lane, max: cpuBudget().B, hooks: profiler?.grantHooks() }, runUnder);
+        profiler?.complete(ok ? "success" : "failed");
         if (!ok) {
           // Last line, so it survives `./singularity check | tail`.
           console.error(`\nFull check output: ${logFile}`);

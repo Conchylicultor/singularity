@@ -6,7 +6,7 @@ import { convPushProfilingPane } from "./panes";
 
 export default {
   description:
-    "Toolbar button showing push/build Gantt scoped to the last hour.",
+    "Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.",
   contributions: [
     Pane.Register({ pane: convPushProfilingPane }),
     Conversation.ActionBar({

@@ -1,11 +1,11 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPushesWaitTime } from "../../shared/endpoints";
-import { readContentionRecords } from "./read-contention";
+import { readCompletedPushes } from "./read-pushes";
 import { keyFor } from "./buckets";
 
 export const handleWaitTime = implement(getPushesWaitTime, async ({ query }) => {
   const bucket = query.bucket ?? "day";
-  const records = readContentionRecords();
+  const records = readCompletedPushes();
 
   const buckets = new Map<
     string,
@@ -13,13 +13,20 @@ export const handleWaitTime = implement(getPushesWaitTime, async ({ query }) => 
   >();
 
   for (const r of records) {
-    const k = keyFor(r.startedAt, bucket);
+    // See handle-throughput.ts on `requestedAt` vs the legacy `startedAt`.
+    const k = keyFor(r.requestedAt, bucket);
     let entry = buckets.get(k);
     if (!entry) {
       entry = { waits: [], total: 0, contested: 0 };
       buckets.set(k, entry);
     }
     entry.total++;
+    // The derived `waitMs` (= sum of every wait) is the drop-in for the legacy
+    // scalar. For pushes recorded by the new writer it is genuinely wider than
+    // the old number: it now also counts the nested host-grant wait inside the
+    // checks step, which the legacy log never recorded. That is the intended
+    // correction — the chart measures "time this push spent blocked", and that
+    // wait was always real, merely invisible.
     if (r.waitMs > 0) {
       entry.contested++;
       entry.waits.push(r.waitMs);

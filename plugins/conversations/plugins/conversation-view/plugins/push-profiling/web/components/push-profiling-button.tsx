@@ -8,8 +8,8 @@ export function PushProfilingButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      title="Push profiling"
-      aria-label="Push profiling"
+      title="Op profiling"
+      aria-label="Op profiling"
       aria-pressed={isOpen}
       onClick={toggle}
       className="gap-xs"

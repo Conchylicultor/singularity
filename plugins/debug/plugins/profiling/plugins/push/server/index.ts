@@ -1,26 +1,24 @@
+import { finalizeOrphanedOps } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
-import { handlePushProfiling } from "./internal/handle-push-profiling";
-import { handlePushDetail } from "./internal/handle-push-detail";
-import { finalizeOrphanedBuilds } from "./internal/read-build-log";
-import { finalizeOrphanedPushes } from "./internal/read-contention";
-import { getPushProfiling, getPushDetail } from "../shared/endpoints";
+import { handleOpDetail } from "./internal/handle-op-detail";
+import { handleOpProfiling } from "./internal/handle-op-profiling";
+import { getOpDetail, getOpProfiling } from "../shared/endpoints";
 
 export default {
-  description: "Push contention profiling data endpoint.",
+  description: "Op contention profiling data endpoint (build / push / check).",
   httpRoutes: {
-    [getPushProfiling.route]: handlePushProfiling,
-    [getPushDetail.route]: handlePushDetail,
+    [getOpProfiling.route]: handleOpProfiling,
+    [getOpDetail.route]: handleOpDetail,
   },
-  // Reconcile orphaned build-log and push-contention records (builds/pushes
-  // hard-killed before their CLI could write a terminal record). Both are single
-  // global files, so only the main backend reconciles them — gating avoids
+  // Reconcile orphaned op-log records (ops hard-killed before their CLI could
+  // write a terminal record) — ONE reconciler for all three kinds. The op log is
+  // a single global file, so only the main backend reconciles it — gating avoids
   // concurrent writes from every worktree backend. Work still running is skipped
   // via the op marker.
   onReady: async () => {
     if (!isMain()) return;
-    await finalizeOrphanedBuilds(isWorktreeOpActive);
-    await finalizeOrphanedPushes(isWorktreeOpActive);
+    await finalizeOrphanedOps(isWorktreeOpActive);
   },
 } satisfies ServerPluginDefinition;

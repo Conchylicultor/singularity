@@ -16,7 +16,8 @@
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
   - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
   - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
-  - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
+  - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader (incl. read-only legacy adapters), and the single orphan reconciler.
+  - **`push`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
   - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
   - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
 

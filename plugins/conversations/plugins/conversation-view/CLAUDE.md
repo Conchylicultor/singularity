@@ -41,7 +41,7 @@
   - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
   - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
   - **`push-counter`**
-  - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
+  - **`push-profiling`** — Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.
   - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
   - **`status`** — Displays the conversation status as a colored badge in the toolbar.
   - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.

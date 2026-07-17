@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
 import { basename, join } from "path";
 import { checkBroadcasts } from "../broadcasts";
-import { createPushProfiler, type PushProfiler } from "../push-profiler";
+import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant } from "@plugins/infra/plugins/host-admission/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder } from "@plugins/infra/plugins/worktree/server";
@@ -97,11 +97,19 @@ async function runChecksSubprocess(root: string, grant: Grant): Promise<boolean>
 // The grant is acquired here (inside the already-held push mutex — acyclic: the
 // mutex holder waits for CPU units, a unit holder never waits for the push
 // mutex) and handed to the child via `grant.env()`.
-async function runRebasedChecks(root: string, profiler: PushProfiler): Promise<boolean> {
+//
+// This acquire is POST-`markGranted` — the push already holds its entry ticket
+// (the mutex) and is doing its own work — which is exactly why its wait was
+// invisible: with no hooks, the grant queue was folded into the `checks` step's
+// wall clock, so a slow `checks` was indistinguishably queue time or real check
+// time. `grantHooks()` lands it as its own `host-grant` wait, nested inside the
+// step.
+async function runRebasedChecks(root: string, profiler: OpProfiler<"push">): Promise<boolean> {
   profiler.stepStart("checks");
   console.log("Running checks...");
-  const ok = await withHostGrant({ lane: "interactive", max: cpuBudget().B }, (grant) =>
-    runChecksSubprocess(root, grant),
+  const ok = await withHostGrant(
+    { lane: "interactive", max: cpuBudget().B, hooks: profiler.grantHooks() },
+    (grant) => runChecksSubprocess(root, grant),
   );
   profiler.stepEnd("checks");
   return ok;
@@ -264,7 +272,7 @@ async function getCurrentBranch(): Promise<string> {
 // section, so at most one push runs host-wide. This folds the last hand-rolled
 // FFI flock onto the shared primitive: the size-1 fan-out is a single
 // `flock-wait` child (off the event loop), and the "waiting for lock" line moves
-// to the pool's `onWaitStart` hook. `markLockRequested` fires before the acquire
+// to the pool's `onWaitStart` hook. `onLockRequested` fires before the acquire
 // (so a blocked push shows as waiting); `onLockAcquired` fires once the slot is
 // held, as the first thing inside the run body.
 async function withPushLock<T>(
@@ -328,7 +336,16 @@ export function registerPush(program: Command) {
       // basename(root0) is the op-marker slug (see markWorktreeOpStart below).
       // The profiler carries it so the orphan reconciler can check push liveness.
       const opSlug = basename(root0);
-      const profiler = createPushProfiler(pushId, branch, opts.fromMain ? "from-main" : "worktree", opSlug);
+      // A push is human-blocking, so every grant it takes is interactive — the
+      // same fact `runRebasedChecks` passes to `withHostGrant`. Recorded on the
+      // op because the lane is what explains WHY a wait was as long as it was.
+      const profiler = createOpProfiler("push", {
+        opId: pushId,
+        branch,
+        opSlug,
+        lane: "interactive",
+        mode: opts.fromMain ? "from-main" : "worktree",
+      });
 
       // Mark this worktree as having a push in flight so the conversation status
       // poller keeps the agent's pane reading as "working" for the push duration
@@ -346,6 +363,14 @@ export function registerPush(program: Command) {
         // against a late-firing exit handler deleting the next holder's file).
         clearPushHolder(pushId);
       });
+      // Fires immediately BEFORE `pushPool.run` (see withPushLock), so a push
+      // blocked on the mutex lands on disk as a live "waiting" row before it
+      // ever holds the lock. A failure BEFORE this point writes no record at
+      // all — it never contended for anything.
+      const onLockRequested = (): void => {
+        profiler.markRequested();
+        profiler.waitStart("push-mutex");
+      };
       const onLockAcquired = (): void => {
         // Lock granted — publish this push as the single global lock holder. The
         // op-status resource DERIVES "running" from this holder file + the kernel
@@ -359,7 +384,11 @@ export function registerPush(program: Command) {
           acquiredAt: new Date().toISOString(),
         });
         setWorktreeOpPhase(opSlug, "push", "running");
-        profiler.markLockAcquired();
+        // The mutex — this push's ENTRY ticket — is held and its own work
+        // starts. It is not done waiting: `runRebasedChecks` still queues for a
+        // host grant, which lands as a further `host-grant` wait.
+        profiler.waitEnd();
+        profiler.markGranted();
       };
 
       // 1. Commit if -m provided, otherwise require clean tree
@@ -432,7 +461,7 @@ export function registerPush(program: Command) {
             console.log("Pushing main...");
             await exec(["git", "push"]);
             profiler.stepEnd("push-main");
-          }, profiler.markLockRequested, onLockAcquired);
+          }, onLockRequested, onLockAcquired);
         } catch (err) {
           profiler.complete("error");
           profiler.write();
@@ -563,7 +592,7 @@ export function registerPush(program: Command) {
           console.log("Pushing main...");
           await exec(["git", "push"], mainWorktree);
           profiler.stepEnd("push-main");
-        }, profiler.markLockRequested, onLockAcquired);
+        }, onLockRequested, onLockAcquired);
       } catch (err) {
         profiler.complete("error");
         profiler.write();

@@ -5,6 +5,7 @@ import {
   HOST_GRANT_ENV,
   HOST_LANE_ENV,
   type Grant,
+  type GrantHooks,
   type Lane,
 } from "@plugins/infra/plugins/host-admission/core";
 import { defineHostPool } from "./pool";
@@ -47,12 +48,19 @@ function grantOfUnits(units: number, lane: Lane): Grant {
  * guarantees `>= 1` slot, so a grant always has `units >= 1`: a 1-unit grant
  * merely serializes the holder's children — no starvation branch, no `min > 1`
  * acquire that could livelock two builds each holding one slot.
+ *
+ * `opts.hooks` are the acquire's observability seam, forwarded to the pool. They
+ * were dropped here for the pool's whole life, which is what made EVERY host-grant
+ * wait — build's, check's, push's nested one — unobservable by construction. The
+ * pool has always honoured them (`AcquireHooks`); this only stops swallowing them.
+ * `lane` is applied AFTER the spread: it is this function's own opt and must win,
+ * so a hooks object can never redirect the acquire to the other lane's slot window.
  */
 export async function withHostGrant<T>(
-  opts: { lane: Lane; max: number },
+  opts: { lane: Lane; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
-  const share = await cpuPool.acquireShare(opts.max, { lane: opts.lane });
+  const share = await cpuPool.acquireShare(opts.max, { ...opts.hooks, lane: opts.lane });
   try {
     return await fn(grantOfUnits(share.slots, opts.lane));
   } finally {

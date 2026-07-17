@@ -1,8 +1,11 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPushesStepBreakdown } from "../../shared/endpoints";
-import { readContentionRecords } from "./read-contention";
+import { readCompletedPushes } from "./read-pushes";
 import { keyFor } from "./buckets";
 
+// Keyed on the step names the push CLI emits. Those names were NOT changed by
+// the op-log cutover — `push.ts` still marks the same steps — so this table
+// keeps grouping both new and legacy records. Anything unmapped falls to "other".
 const STEP_GROUPS: Record<string, string> = {
   fetch: "fetch",
   "ff-main": "fetch",
@@ -17,7 +20,7 @@ const STEP_GROUPS: Record<string, string> = {
 
 export const handleStepBreakdown = implement(getPushesStepBreakdown, async ({ query }) => {
   const bucket = query.bucket ?? "day";
-  const records = readContentionRecords();
+  const records = readCompletedPushes();
 
   const buckets = new Map<
     string,
@@ -25,7 +28,8 @@ export const handleStepBreakdown = implement(getPushesStepBreakdown, async ({ qu
   >();
 
   for (const r of records) {
-    const k = keyFor(r.startedAt, bucket);
+    // See handle-throughput.ts on `requestedAt` vs the legacy `startedAt`.
+    const k = keyFor(r.requestedAt, bucket);
     let entry = buckets.get(k);
     if (!entry) {
       entry = { sums: { fetch: 0, rebase: 0, checks: 0, push: 0, other: 0 }, count: 0 };

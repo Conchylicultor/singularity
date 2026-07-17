@@ -1,1 +1,1 @@
-export { getPushProfiling } from "./endpoints";
+export { getOpProfiling } from "./endpoints";

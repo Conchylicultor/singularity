@@ -12,7 +12,7 @@ export const convPushProfilingPane = Pane.define({
 
 function ConvPushProfilingBody() {
   return (
-    <PaneChrome pane={convPushProfilingPane} title="Push Profiling">
+    <PaneChrome pane={convPushProfilingPane} title="Op Profiling">
       <PushProfilingPaneBody />
     </PaneChrome>
   );

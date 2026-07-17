@@ -25,3 +25,36 @@ export interface Grant {
   run<T>(fn: () => Promise<T>): Promise<T>;
   env(): Record<string, string>;
 }
+
+/**
+ * Observability hooks for a `withHostGrant` acquire. Neither gates behavior; they
+ * exist so a caller can make the grant queue visible (a profiler span, an op-log
+ * wait segment, a log line) without this plugin knowing about any of that.
+ *
+ * Structurally the host-semaphore primitive's `AcquireHooks` MINUS `lane` — and
+ * that omission is the point. `lane` is `withHostGrant`'s own opt (it selects the
+ * reserved-floor slot window, so it DOES gate behavior); leaving it out of the
+ * hooks makes it structurally impossible for a caller to smuggle a second,
+ * conflicting lane in through the observability channel.
+ *
+ * Declared here rather than re-exported from `packages/host-semaphore` because a
+ * cross-plugin re-export is banned (root CLAUDE.md) and, more concretely, the
+ * `host-pools-declared` check makes `@plugins/packages/plugins/host-semaphore/server`
+ * an import only `host-admission/server` may name — so a consumer literally cannot
+ * reach that barrel to spell the type.
+ */
+export interface GrantHooks {
+  /**
+   * The slow path was entered (every slot in the lane's window busy), BEFORE any
+   * child is spawned. Never fires on the fast path. Lets a caller *open* a
+   * "waiting for a slot" span, which `onAcquired` (fired once, at acquisition)
+   * can never express.
+   */
+  onWaitStart?(): void;
+  /**
+   * Always fires, fast path or slow, exactly once, at acquisition, before the
+   * body runs. Its argument is the milliseconds spent waiting (≈0 on the fast
+   * path).
+   */
+  onAcquired?(waitMs: number): void;
+}
