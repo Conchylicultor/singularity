@@ -96,6 +96,14 @@ export interface DataTableProps<TRow> {
   keepMountedRowKeys?: readonly string[];
   /** Control density for the table's controls/badges; defaults to compact (`xs`). */
   controlSize?: ControlSize;
+  /**
+   * Row horizontal padding follows the pane-gutter contract (`px-pane-gutter`,
+   * default = `--chrome-pad-x` ≡ `--pad-control-x`) instead of the fixed
+   * `p-control` inset — so an embedding host can re-rail or zero the gutter via
+   * `--pane-gutter`. Vertical padding is unchanged (`py-control`). Default off:
+   * rows keep `p-control`, byte-identical for existing consumers.
+   */
+  gutter?: boolean;
 }
 
 /**

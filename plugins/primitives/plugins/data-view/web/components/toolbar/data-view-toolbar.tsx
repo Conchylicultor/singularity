@@ -104,7 +104,7 @@ export function DataViewToolbar({
         // self-limiting — it engages only on the lines that actually overflow, so a
         // compact toolbar that already fits (≤1 view ⇒ switcher hidden) stays one row.
         // eslint-disable-next-line layout/no-adhoc-layout
-        className={cn("flex items-center gap-sm pb-sm pl-sm", compact && "flex-wrap")}
+        className={cn("flex items-center gap-sm py-sm px-pane-gutter", compact && "flex-wrap")}
       >
         {compact ? (
           searchExpanded ? (

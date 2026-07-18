@@ -60,7 +60,7 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
                         </SectionHeaderRow>
                       );
                     })()}
-                    <CollapsibleContent className="px-lg pb-lg">
+                    <CollapsibleContent className="px-lg pb-lg pane-gutter-flush">
                       <C {...entityProps} />
                     </CollapsibleContent>
                   </div>
@@ -72,7 +72,9 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
       );
     }
     return (
-      <Stack gap="xl" className="p-xl">
+      // Detail sections provide their own inset, so any embedded DataView's pane
+      // gutter is declared spent (generic — no per-consumer opt-out needed).
+      <Stack gap="xl" className="p-xl pane-gutter-flush">
         <Section.Render>
           {(item) => {
             const C = item.component;

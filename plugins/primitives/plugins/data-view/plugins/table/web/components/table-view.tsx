@@ -206,6 +206,9 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // Manual order: per-row drag affordances. Composes with DataTable's
     // windowing. Sort is already hidden by the host while manual order is on.
     useRowDecoration: manualOrder ? useRowDecoration : undefined,
+    // Rows follow the pane-gutter contract: the table always renders inside a
+    // DataView, whose bands share the pane gutter, so the row inset aligns to it.
+    gutter: true,
   };
 
   // Ungrouped renders as one flat body (the only body DataTable windows);

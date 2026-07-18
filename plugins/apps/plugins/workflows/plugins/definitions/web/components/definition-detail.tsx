@@ -87,7 +87,7 @@ export function DefinitionDetail({
 
       <WorkflowsDetail.Section.Render>
         {(s) => (
-          <Surface key={s.id} level="raised" as="section" className="p-lg">
+          <Surface key={s.id} level="raised" as="section" className="p-lg pane-gutter-flush">
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- section title offset inside a bg/border/padded card, not a flex-gap sibling */}
             <Text as="h2" variant="label" className="mb-3">{s.title}</Text>
             <s.component definitionId={definitionId} />

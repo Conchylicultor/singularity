@@ -79,6 +79,7 @@ export function DataTable<TRow>({
   keepMountedRowKeys,
   controlSize = "xs",
   stickyHeaderOffset = "0px",
+  gutter = false,
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -141,6 +142,7 @@ export function DataTable<TRow>({
       rowActions={rowActions}
       useRowDecoration={decorate}
       measure={measure}
+      gutter={gutter}
     />
   );
 
@@ -163,7 +165,10 @@ export function DataTable<TRow>({
         mask
         layer="raised"
         // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
-        className="col-span-full grid grid-cols-subgrid border-b p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground"
+        className={cn(
+          "col-span-full grid grid-cols-subgrid border-b text-3xs font-medium uppercase tracking-wider text-muted-foreground",
+          gutter ? "py-control px-pane-gutter" : "p-control",
+        )}
         style={{ top: stickyHeaderOffset }}
       >
         {columns.map((col) => {
@@ -189,7 +194,7 @@ export function DataTable<TRow>({
         {rowActions && <span aria-hidden />}
       </Sticky>
       {groups
-        ? renderGroupedBody(groups, renderRow, groupHeaderTop)
+        ? renderGroupedBody(groups, renderRow, groupHeaderTop, gutter)
         : rows.length > VIRTUALIZE_THRESHOLD ? (
             <VirtualTableBody
               rows={rows}
@@ -223,6 +228,7 @@ function DataTableRow<TRow>({
   rowActions,
   useRowDecoration,
   measure,
+  gutter,
 }: {
   row: TRow;
   index: number;
@@ -233,6 +239,7 @@ function DataTableRow<TRow>({
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
   useRowDecoration: (row: TRow, index: number) => DataTableRowDecoration | undefined;
   measure?: { ref: (el: Element | null) => void; index: number };
+  gutter: boolean;
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   const key = rowKey(row, index);
@@ -253,7 +260,8 @@ function DataTableRow<TRow>({
       data-index={measure?.index}
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid); `relative` hosts the decoration overlay
       className={cn(
-        "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
+        "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
+        gutter ? "py-control px-pane-gutter" : "p-control",
         hoverRevealGroup,
         key === selectedRowId && "bg-accent",
         onRowClick && "cursor-pointer",
@@ -412,6 +420,7 @@ function renderGroupedBody<TRow>(
   groups: DataTableGroup<TRow>[],
   renderRow: (row: TRow, i: number) => ReactNode,
   groupHeaderTop: string,
+  gutter: boolean,
 ): ReactNode {
   let i = 0;
   // Group headers accumulate: with few enough groups every header stays pinned,
@@ -435,7 +444,7 @@ function renderGroupedBody<TRow>(
             mask
             layer="raised"
             // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
-            className="col-span-full"
+            className={cn("col-span-full", gutter && "px-pane-gutter")}
           >
             {group.header}
           </StickyStackItem>

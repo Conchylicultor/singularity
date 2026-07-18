@@ -265,7 +265,7 @@ function DataViewInner<TRow>({
         <Sticky
           edge="top"
           // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row of variable-content controls; no named-slot primitive maps
-          className={cn("bg-background flex items-center gap-sm px-sm pb-sm")}
+          className={cn("bg-background flex items-center gap-sm py-sm px-pane-gutter")}
         >
           {title ? (
             <Text as="div" variant="label">
@@ -277,7 +277,7 @@ function DataViewInner<TRow>({
             <CreatorsControl creators={creators} />
           </div>
         </Sticky>
-        <div className="p-md">
+        <div className="px-pane-gutter py-md">
           <Placeholder>
             No views configured — author{" "}
             <code>config/&lt;plugin&gt;/{props.storageKey}.jsonc</code>

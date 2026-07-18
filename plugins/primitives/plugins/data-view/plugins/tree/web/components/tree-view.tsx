@@ -399,7 +399,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         : null;
 
   return (
-    <div className="px-sm">
+    <div className="px-pane-gutter">
       <TreeList<Projected<unknown>>
         rows={sortedProjected}
         selectedId={props.selectedRowId}

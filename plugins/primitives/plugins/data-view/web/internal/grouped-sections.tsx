@@ -22,9 +22,6 @@ export interface GroupedSectionsProps {
   sections: DataViewSection<unknown>[];
   collapsedSections?: ReadonlySet<string>;
   setSectionCollapsed?: (key: string, collapsed: boolean) => void;
-  /** Horizontal inset aligning the header with the view body's own padding
-   *  (list `px-sm`, gallery `px-xl`). */
-  headerClassName?: string;
   /** This section's body — rendered inside the collapsible content. */
   children: (section: DataViewSection<unknown>) => ReactNode;
 }
@@ -55,6 +52,11 @@ export interface GroupedSectionsProps {
  * showing through; `raised` sits above the (relative, in manual-order) rows while
  * the toolbar's `nav` keeps the headers sliding under it at the hand-off.
  *
+ * The header's horizontal inset is the shared **pane gutter** (`px-pane-gutter`),
+ * the same rail every view body reads — so a group header and its rows line up on
+ * one edge for free, and there is no longer a per-view `headerClassName` axis to
+ * keep in sync with each body's padding.
+ *
  * **The `table` view is the documented exception** and composes `StickyStack`
  * itself (inside `data-table`) under this same policy: its headers are
  * `col-span-full` rows of the subgrid, so the chrome cannot own a `<Stack>` without
@@ -64,7 +66,6 @@ export function GroupedSections({
   sections,
   collapsedSections,
   setSectionCollapsed,
-  headerClassName,
   children,
 }: GroupedSectionsProps): ReactNode {
   return (
@@ -84,7 +85,7 @@ export function GroupedSections({
             >
               <StickyStackItem itemKey={key} mask layer="raised">
                 <SectionHeaderRow
-                  className={headerClassName}
+                  className="px-pane-gutter"
                   actions={
                     <Text variant="caption" tone="muted">
                       {section.count}

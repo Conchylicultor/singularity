@@ -37,7 +37,9 @@ function TasksRoot(): ReactElement {
 
   return (
     <PaneChrome pane={tasksRootPane} title="Tasks">
-      <Inset pad="lg">
+      {/* Inset already supplies the horizontal inset, so the DataView's pane
+          gutter is zeroed to avoid double padding. */}
+      <Inset pad="lg" className="pane-gutter-flush">
         <TasksListView
           selectedId={selectedId}
           onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}

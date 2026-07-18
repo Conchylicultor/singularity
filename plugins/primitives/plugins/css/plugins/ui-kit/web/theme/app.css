@@ -240,6 +240,20 @@
 @utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); } /* twmerge: extend px */
 @utility pl-chrome { padding-left: var(--chrome-pad-x); } /* twmerge: extend pl */
 
+/* Pane-gutter contract — the single horizontal rail every band a DataView owns
+ * (toolbar, view bodies, group headers) reads, so they line up with the pane
+ * header instead of each inventing its own inset. `px-pane-gutter` READS the
+ * gutter with the pane header's own inset (--chrome-pad-x) as its DEFAULT, so
+ * nothing has to publish the var for the rail to auto-align (12/10/8 by density).
+ * A host that already supplies its own inset zeroes the gutter with the
+ * `pane-gutter-flush` class; a custom value goes through --pane-gutter directly
+ * (PANE_GUTTER_VAR, in data-view). `py-control` is the vertical half of
+ * `p-control`, for a row that takes the gutter horizontally but the control pad
+ * vertically. */
+@utility px-pane-gutter { padding-left: var(--pane-gutter, var(--chrome-pad-x)); padding-right: var(--pane-gutter, var(--chrome-pad-x)); } /* twmerge: extend px */
+@utility pane-gutter-flush { --pane-gutter: 0px; } /* twmerge: standalone -- pane-gutter override to 0 for a host that already supplies its own inset */
+@utility py-control { padding-top: var(--pad-control-y); padding-bottom: var(--pad-control-y); } /* twmerge: extend py */
+
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the
  * floating-bar plugin as --floating-bar-safe-area; it falls back to the chrome

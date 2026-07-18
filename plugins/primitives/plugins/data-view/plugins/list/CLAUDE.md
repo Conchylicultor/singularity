@@ -49,14 +49,15 @@ wrapped in the selectable/clickable `Row`.
 ## Grouping
 
 Under group-by the grouped branch renders through the shared **`<GroupedSections>`**
-chrome (`headerClassName="px-sm"`, matching the row body's inset), which owns the
+chrome, which owns the shared `px-pane-gutter` header inset and the
 pinned/stacking group header for every flat view. The policy lives in the data-view
 parent, not here; see its CLAUDE.md ("Grouped sections: one pipeline, one chrome").
 
 ## Windowing + manual order
 
 A section windows through `VirtualRows` once its entry count exceeds 100; below
-that it renders as a plain `.map` inside a `<Stack className="p-sm">`. That single
+that it renders as a plain `.map` inside a `<Stack className="px-pane-gutter py-sm">`
+(the shared pane gutter with a `py-sm` vertical rhythm). That single
 threshold is the *only* windowing decision — manual order does not bypass it.
 
 When the host hands down a `manualOrder`, both branches wrap each row in

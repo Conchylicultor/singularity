@@ -6,7 +6,12 @@ import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
 
 export { DataView } from "./components/data-view";
-export { defineDataView, DATA_VIEW_HEADER_OFFSET_VAR, IDENTITY_CODEC } from "../core";
+export {
+  defineDataView,
+  DATA_VIEW_HEADER_OFFSET_VAR,
+  PANE_GUTTER_VAR,
+  IDENTITY_CODEC,
+} from "../core";
 export type { DataViewId } from "../core";
 export { DataViewSlots } from "./slots";
 export type {

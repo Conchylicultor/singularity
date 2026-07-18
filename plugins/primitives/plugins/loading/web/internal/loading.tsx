@@ -63,7 +63,7 @@ export function Loading({
           role="status"
           aria-label="Loading"
           gap="sm"
-          className={cn("loading-delayed p-sm", className)}
+          className={cn("loading-delayed px-pane-gutter py-sm", className)}
         >
           {Array.from({ length: count ?? 6 }, (_, i) => (
             <Shimmer key={i} className="h-8 w-full" />
@@ -77,7 +77,7 @@ export function Loading({
           aria-label="Loading"
           minCellWidth="200px"
           gap="lg"
-          className={cn("loading-delayed p-xl", className)}
+          className={cn("loading-delayed px-pane-gutter py-sm", className)}
         >
           {Array.from({ length: count ?? 8 }, (_, i) => (
             <Stack key={i} gap="sm">

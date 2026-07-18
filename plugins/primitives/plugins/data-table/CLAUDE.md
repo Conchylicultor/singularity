@@ -2,6 +2,19 @@
 
 `DataTable` declares compact (`xs`) control density by default, so badges in cells and row-action buttons render at the smallest tier. Overridable via the `controlSize` prop.
 
+## Pane gutter (opt-in `gutter`)
+
+The optional `gutter?: boolean` prop (default `false`) swaps every row's horizontal
+padding from the fixed `p-control` to `py-control px-pane-gutter` — the column-header
+row, each data row, and the `col-span-full` group-header rows — so the table's left/
+right rail follows the shared **pane gutter** (`var(--pane-gutter, var(--chrome-pad-x))`)
+instead of its own control padding. It is **value-preserving at the defaults** (`--pad-control-x`
+equals `--chrome-pad-x`, 0.75rem, at every density), and column alignment is preserved
+because every subgrid row gets the identical horizontal padding. Default off means the
+~8 non-data-view consumers are byte-identical. `data-view/plugins/table` opts in
+(`gutter: true`) so table rows align with the rest of a DataView's bands; see
+`data-view/CLAUDE.md` ("Pane gutter").
+
 ## Per-row actions
 
 `DataTableProps.rowActions?(row, index)` renders trailing per-row actions in

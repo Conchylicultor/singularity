@@ -256,7 +256,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           items={entries}
           estimateSize={estimateSize}
           getKey={(entry) => entry.key}
-          itemClassName="px-sm"
+          itemClassName="px-pane-gutter"
           keepMounted={activeId ? [activeId] : undefined}
         >
           {(entry) => renderEntry(entry)}
@@ -264,7 +264,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       );
     }
     return (
-      <Stack gap="none" className="p-sm">
+      <Stack gap="none" className="px-pane-gutter py-sm">
         {entries.map(renderEntry)}
       </Stack>
     );
@@ -276,13 +276,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     sections.length === 1 && sections[0]!.key === null ? (
       renderEntries(sections[0]!.entries, activeId)
     ) : (
-      // Grouped: the shared pinned/stacking group-header chrome, with `px-sm`
-      // aligning each header to the row body's own inset.
+      // Grouped: the shared pinned/stacking group-header chrome. GroupedSections
+      // owns the shared pane-gutter inset, so header and body sit on one rail.
       <GroupedSections
         sections={sections}
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
-        headerClassName="px-sm"
       >
         {(section) => renderEntries(section.entries, activeId)}
       </GroupedSections>
