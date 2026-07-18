@@ -40,7 +40,14 @@ import { classifyEdges, flattenManifest, resolveComposition } from "@plugins/plu
 import type { CompositionManifest, EdgeGraph } from "@plugins/plugin-meta/plugins/closure/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { writeWorktreeSpec, removeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
+import {
+  writeWorktreeSpec,
+  removeWorktreeSpec,
+  namespaceCollision,
+  probeNamespace,
+  COMPOSITION_MARKER_FILE,
+  type CompositionMarker,
+} from "@plugins/infra/plugins/worktree/server";
 import { ensureDatabase, getAdminPool } from "@plugins/database/plugins/admin/server";
 import { SINGULARITY_DIR, WORKTREES_DIR, MAIN_WORKTREE_NAME } from "../../paths";
 import { distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./dist-publish";
@@ -48,14 +55,6 @@ import { distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./dist-p
 // The `compositions` config's owning plugin — where its jsonc files live under
 // `config/` and the per-worktree user config dir.
 const COMPOSITIONS_HIERARCHY_PATH = asPath(asPluginId("plugin-meta.composition"));
-
-const MARKER_FILE = "composition.json";
-
-interface CompositionMarker {
-  composition: string;
-  builtAt: string;
-  buildId: string;
-}
 
 export interface ComposeServeOptions {
   /** The MAIN checkout root — the stage never runs from an agent worktree. */
@@ -108,57 +107,11 @@ export function sweepIds(
   return [...new Set(present)].filter((id) => !activated.has(id)).sort();
 }
 
-export interface NamespaceProbe {
-  specDirExists: boolean;
-  hasCompositionMarker: boolean;
-  gitWorktreeDirExists: boolean;
-  branchExists: boolean;
-}
-
-/**
- * Refuse to claim a namespace another owner already holds. A composition dir is
- * ours only if it carries our `composition.json` marker; a same-named git
- * worktree or branch would collide the moment that worktree builds.
- */
-export function namespaceCollision(id: string, probe: NamespaceProbe): string | null {
-  if (probe.gitWorktreeDirExists) {
-    return `a git worktree checkout named "${id}" exists under .claude/worktrees/ — rename the composition.`;
-  }
-  if (probe.branchExists) {
-    return `a git branch named "${id}" exists — its worktree would collide with this namespace; rename the composition.`;
-  }
-  if (probe.specDirExists && !probe.hasCompositionMarker) {
-    return (
-      `the worktrees-registry dir for "${id}" exists WITHOUT a ${MARKER_FILE} marker — ` +
-      `it belongs to a git worktree or foreign namespace; refusing to overwrite.`
-    );
-  }
-  return null;
-}
-
-function branchExists(root: string, name: string): boolean {
-  const proc = Bun.spawnSync(
-    ["git", "show-ref", "--verify", "--quiet", `refs/heads/${name}`],
-    { cwd: root, stdout: "ignore", stderr: "ignore" },
-  );
-  return proc.exitCode === 0;
-}
-
-function probeNamespace(root: string, id: string): NamespaceProbe {
-  const specDir = join(WORKTREES_DIR, id);
-  return {
-    specDirExists: existsSync(specDir),
-    hasCompositionMarker: existsSync(join(specDir, MARKER_FILE)),
-    gitWorktreeDirExists: existsSync(join(root, ".claude", "worktrees", id)),
-    branchExists: branchExists(root, id),
-  };
-}
-
 // Atomic (temp + rename) like spec.json — a torn marker would make the dir read
 // as foreign and permanently fail the collision guard.
 function writeMarker(specDir: string, marker: CompositionMarker): void {
   mkdirSync(specDir, { recursive: true });
-  const path = join(specDir, MARKER_FILE);
+  const path = join(specDir, COMPOSITION_MARKER_FILE);
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(marker, null, 2) + "\n");
   renameSync(tmp, path);
@@ -265,7 +218,7 @@ function markerNamespaces(): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(WORKTREES_DIR, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    if (existsSync(join(WORKTREES_DIR, entry.name, MARKER_FILE))) out.push(entry.name);
+    if (existsSync(join(WORKTREES_DIR, entry.name, COMPOSITION_MARKER_FILE))) out.push(entry.name);
   }
   return out;
 }

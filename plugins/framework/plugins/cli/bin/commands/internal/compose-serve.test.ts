@@ -10,11 +10,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import {
-  activatedCompositionIds,
-  namespaceCollision,
-  sweepIds,
-} from "./compose-serve";
+import { activatedCompositionIds, sweepIds } from "./compose-serve";
 
 const HIER = asPath(asPluginId("plugin-meta.composition"));
 
@@ -114,37 +110,5 @@ describe("activated set / deactivation sweep arithmetic", () => {
     ]);
     expect(sweepIds([], new Set(["pages"]))).toEqual([]);
     expect(sweepIds(["pages"], new Set())).toEqual(["pages"]);
-  });
-});
-
-describe("namespaceCollision", () => {
-  const clean = {
-    specDirExists: false,
-    hasCompositionMarker: false,
-    gitWorktreeDirExists: false,
-    branchExists: false,
-  };
-
-  test("fresh namespace → no collision", () => {
-    expect(namespaceCollision("sonata", clean)).toBeNull();
-  });
-
-  test("re-serving our own marker-carrying namespace → no collision", () => {
-    expect(
-      namespaceCollision("sonata", { ...clean, specDirExists: true, hasCompositionMarker: true }),
-    ).toBeNull();
-  });
-
-  test("spec dir without our marker → collision (never overwrite a foreign namespace)", () => {
-    expect(
-      namespaceCollision("sonata", { ...clean, specDirExists: true }),
-    ).toContain("WITHOUT");
-  });
-
-  test("same-named git worktree checkout or branch → collision", () => {
-    expect(
-      namespaceCollision("sonata", { ...clean, gitWorktreeDirExists: true }),
-    ).toContain("worktree");
-    expect(namespaceCollision("sonata", { ...clean, branchExists: true })).toContain("branch");
   });
 });

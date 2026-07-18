@@ -3,8 +3,14 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { useEndpointMutation, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "../internal/use-serve-composition";
+import { resetCompositionData } from "../../shared/endpoints";
+import { ConfirmResetDialog } from "./confirm-reset-dialog";
 
 /**
  * The **Serve live** target panel of the unified Build & serve section. Flips this
@@ -16,6 +22,12 @@ import { useServeComposition } from "../internal/use-serve-composition";
  */
 export function ServeTargetPanel({ item }: { item: CompositionManifestItem }): ReactElement {
   const { serve, stop } = useServeComposition();
+  // Reset the served composition's own DB + config back to first-launch. Handles
+  // its own toasts (success + failure) so `onError` suppresses the global one.
+  const reset = useEndpointMutation(resetCompositionData, {
+    onError: (err) =>
+      showToast({ description: `Reset failed: ${err.message}`, variant: "error" }),
+  });
 
   const host = `${item.id}.localhost:9000`;
   return (
@@ -33,16 +45,54 @@ export function ServeTargetPanel({ item }: { item: CompositionManifestItem }): R
           {item.autoBuild ? "Serving" : "Serve"}
         </ToggleChip>
         {item.autoBuild ? (
-          <LinkChip
-            mono
-            title={`Open http://${host}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(`http://${host}`, "_blank", "noopener");
-            }}
-          >
-            {host}
-          </LinkChip>
+          <>
+            <LinkChip
+              mono
+              title={`Open http://${host}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`http://${host}`, "_blank", "noopener");
+              }}
+            >
+              {host}
+            </LinkChip>
+            <Button
+              variant="destructive"
+              aspect="text"
+              loading={reset.isPending}
+              title={`Wipe ${host}'s database and config back to first-launch (main is untouched)`}
+              onClick={() => {
+                // Fire-and-forget: don't return the openDialog promise, or the
+                // button would auto-pend for the dialog's whole open lifetime.
+                // `loading={reset.isPending}` reflects the actual reset instead.
+                void openDialog((close) => (
+                  <ConfirmResetDialog
+                    host={host}
+                    onCancel={close}
+                    onConfirm={() =>
+                      reset
+                        .mutateAsync({ body: { id: item.id } })
+                        .then(() => {
+                          close();
+                          showToast({
+                            description: `Reset ${host} to first-launch.`,
+                            variant: "success",
+                          });
+                        })
+                        .catch((err: unknown) => {
+                          // Expected reset failure — onError already toasted it;
+                          // keep the dialog open so the user can retry or cancel.
+                          if (err instanceof EndpointError) return;
+                          throw err;
+                        })
+                    }
+                  />
+                ));
+              }}
+            >
+              Reset
+            </Button>
+          </>
         ) : null}
       </Stack>
       <Text variant="caption" tone="muted">

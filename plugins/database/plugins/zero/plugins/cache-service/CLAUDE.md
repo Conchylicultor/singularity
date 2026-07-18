@@ -14,7 +14,7 @@
   - Exports: Values: `dropZeroReplicationArtifacts`, `worktreeReplicaFile`, `ZERO_DIR`, `ZERO_REPLICA_FILE`, `ZERO_UPSTREAM_DB`
   - Register: `defineJob('database.zero-slot-sweep')`
 - Cross-plugin:
-  - Imported by: `debug/worktree-cleanup`
+  - Imported by: `apps/studio/compositions/auto-serve`, `debug/worktree-cleanup`
 - Shared:
   - Exports: Values: `ZERO_DIR`, `ZERO_REPLICA_FILE`, `ZERO_UPSTREAM_DB`
 

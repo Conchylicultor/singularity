@@ -34,6 +34,15 @@ export {
   writeWorktreeSpec,
   removeWorktreeSpec,
 } from "./internal/spec";
+export {
+  type CompositionMarker,
+  type NamespaceProbe,
+  COMPOSITION_MARKER_FILE,
+  probeNamespace,
+  namespaceCollision,
+  readCompositionMarker,
+  hasCompositionMarker,
+} from "./internal/composition-namespace";
 
 export default {
 } satisfies ServerPluginDefinition;
