@@ -6,7 +6,7 @@
 
 - Description: Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
 - Cross-plugin:
-  - Imported by: `apps/mail/inbox`, `conversations/all-conversations`, `infra/query-resource`
+  - Imported by: `apps/mail/inbox`, `conversations/all-conversations`, `infra/query-resource`, `release`
 - Server:
   - Exports: Types: `KeysetColumnBinding`, `KeysetColumnMap`, `SortKey`, `Tiebreaker`; Values: `buildSortKeys`, `keyValuesOf`, `orderByClauses`, `seekPredicate`
 - Core:

@@ -11,11 +11,7 @@
   - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
 - Server:
   - Contributes: `resource.declare` "notifications"
-<<<<<<< .merge_file_o9V1vz
-  - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `primitives/log-channels.defineLogSink`
-=======
-  - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.windowQueryResource`, `primitives/log-channels.Log`
->>>>>>> .merge_file_jIycAi
+  - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.windowQueryResource`, `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
   - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`, `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`
