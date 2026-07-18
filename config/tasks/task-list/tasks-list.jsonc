@@ -6,6 +6,7 @@
       "name": "Tree",
       "view": {
         "type": "tree",
+        "visibleFields": ["title", "updatedAt"],
         "filter": {
           "kind": "group",
           "id": "hide-completed",
@@ -22,7 +23,28 @@
         }
       }
     },
-    { "id": "recent", "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } }
+    { "id": "recent", "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } },
+    {
+      "id": "attempted",
+      "name": "Attempted",
+      "view": {
+        "type": "tree",
+        "filter": {
+          "kind": "group",
+          "id": "attempted",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "attempted-status",
+              "fieldId": "status",
+              "operatorId": "is",
+              "value": "attempted"
+            }
+          ]
+        }
+      }
+    }
   ],
   "filterPresets": [
     {

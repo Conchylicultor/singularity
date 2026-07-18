@@ -1,0 +1,19 @@
+// @hash 6e2dcb8b8125
+{
+  // Order of the contributed actions in the config detail pane's toolbar, which
+  // renders as a horizontal right-aligned strip: first item = leftmost, sitting
+  // to the LEFT of the pane's own built-in actions ("Stop customizing",
+  // "Reset all", "Raw file"/"Fields").
+  //
+  // `promote-default` is the only contributor today. It is the widest and most
+  // consequential action in the strip (it publishes the user's values as the
+  // committed default for everyone), so it leads — read before the narrow
+  // built-in escape hatches that follow it.
+  //
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "config_v2.staging.promote-action:promote-default"
+  ]
+}

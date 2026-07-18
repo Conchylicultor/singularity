@@ -5,6 +5,28 @@
       "id": "all",
       "name": "All",
       "view": { "type": "table", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
+    },
+    {
+      "id": "fable",
+      "name": "Fable",
+      "view": {
+        "type": "table",
+        "visibleFields": ["title", "status", "createdAt", "endedAt", "model"],
+        "filter": {
+          "kind": "group",
+          "id": "fable",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "fable-model",
+              "fieldId": "model",
+              "operatorId": "is",
+              "value": "fable-5"
+            }
+          ]
+        }
+      }
     }
   ]
 }

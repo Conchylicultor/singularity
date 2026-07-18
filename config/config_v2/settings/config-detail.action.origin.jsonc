@@ -1,0 +1,9 @@
+// @hash 6e2dcb8b8125
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "config_v2.staging.promote-action:promote-default"
+  ]
+}

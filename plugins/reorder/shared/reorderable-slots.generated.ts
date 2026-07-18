@@ -32,6 +32,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "browser.viewport", pluginId: "apps.browser.shell" },
   { slotId: "build-detail.section", pluginId: "build" },
   { slotId: "composition-detail.section", pluginId: "apps.studio.compositions" },
+  { slotId: "config-detail.action", pluginId: "config_v2.settings" },
   { slotId: "conversation-item.chips", pluginId: "conversations.conversation-ui.item" },
   { slotId: "conversation.above-prompt-input", pluginId: "conversations.conversation-view" },
   { slotId: "conversation.action-bar", pluginId: "conversations.conversation-view.action-bar" },

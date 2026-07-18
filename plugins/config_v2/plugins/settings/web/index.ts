@@ -5,6 +5,8 @@ import { configNavPane, configDetailPane } from "./internal/panes";
 export { configNavPane, configDetailPane } from "./internal/panes";
 export { ConfigNav } from "./components/config-nav";
 export { ConfigSidebarButton } from "./components/config-sidebar-button";
+export { ConfigDetail } from "./internal/detail-action-slot";
+export type { ConfigDetailActionContext } from "./internal/detail-action-slot";
 
 export default {
   description:

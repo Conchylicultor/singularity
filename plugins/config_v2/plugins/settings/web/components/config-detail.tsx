@@ -15,7 +15,9 @@ import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } 
 import { configDetailPane } from "../internal/panes";
 import { useConflict } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
+import type { ConfigDetailActionContext } from "../internal/detail-action-slot";
 import { ConfigFieldRow } from "./config-field-row";
+import { ConfigDetailActions } from "./detail-actions";
 import { ConflictDiff } from "./conflict-diff";
 import { InvalidDiff } from "./invalid-diff";
 import { ScopeTabs } from "./scope-tabs";
@@ -158,6 +160,29 @@ function ConfigDetailBody({
     return false;
   }, [valueFor, defaults, registration.descriptor.fields]);
 
+  // The context handed to every `ConfigDetail.Action` contribution. Assembled
+  // here because this is the only place that holds all of it at once: the
+  // descriptor identity, the selected scope, the per-field tiers, and the
+  // document the editor is actually showing (override during a hash conflict).
+  // `modified` reads the tiers rather than a defaults comparison — "has a
+  // user-layer override" is the precise question an action cares about.
+  const actionContext = useMemo<ConfigDetailActionContext>(() => {
+    const doc: Record<string, unknown> = {};
+    for (const key of Object.keys(registration.descriptor.fields)) {
+      doc[key] = valueFor(key);
+    }
+    return {
+      pluginId: registration.pluginId,
+      configName: registration.descriptor.name,
+      storePath: registration.storePath,
+      scopeId,
+      promotableToGit: registration.descriptor.promotableToGit === true,
+      modified: Object.values(tiers).some((t) => t === "user"),
+      conflictKind: conflictEntry?.kind ?? null,
+      value: doc,
+    };
+  }, [registration, scopeId, tiers, valueFor, conflictEntry]);
+
   // useEndpointMutation (not void fetchEndpoint) so a failed reset/dismiss
   // surfaces via the global error toast instead of escaping as an unhandled
   // rejection. The config view refreshes via its live-state resource on success.
@@ -209,6 +234,9 @@ function ConfigDetailBody({
     <>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the action toolbar from the fields below (no named margin utility) */}
       <Stack direction="row" align="center" justify="end" gap="sm" className="mb-1">
+        {/* Contributed actions act on the config document, so they share the
+            fields view's visibility — hidden while the raw file is shown. */}
+        {!showRaw && <ConfigDetailActions {...actionContext} />}
         {scopeId && !showRaw && (
           <Button
             variant="ghost"

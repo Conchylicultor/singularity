@@ -1,4 +1,91 @@
 // @hash 6ec84829688d
 {
-  "views": [{ "id": "tree", "name": "Tree", "view": { "type": "tree", "visibleFields": ["label"] } }]
+  "views": [
+    {
+      "id": "tree",
+      "name": "Configs",
+      "view": {
+        "type": "tree",
+        "visibleFields": ["label", "modified", "conflict", "source"],
+        "filter": {
+          "kind": "group",
+          "id": "configs",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "configs-source",
+              "fieldId": "source",
+              "operatorId": "is-none-of",
+              "value": ["reorder", "view"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "conflicts",
+      "name": "Conflicts",
+      "view": {
+        "type": "tree",
+        "filter": {
+          "kind": "group",
+          "id": "conflicts",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "conflicts-flag",
+              "fieldId": "conflict",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "reorder",
+      "name": "Reorder",
+      "view": {
+        "type": "tree",
+        "visibleFields": ["label", "modified", "conflict", "source"],
+        "filter": {
+          "kind": "group",
+          "id": "reorder",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "reorder-source",
+              "fieldId": "source",
+              "operatorId": "is",
+              "value": "reorder"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "views",
+      "name": "DataView",
+      "view": {
+        "type": "tree",
+        "filter": {
+          "kind": "group",
+          "id": "views",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "views-source",
+              "fieldId": "source",
+              "operatorId": "is",
+              "value": "view"
+            }
+          ]
+        }
+      }
+    }
+  ]
 }

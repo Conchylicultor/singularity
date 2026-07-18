@@ -1107,6 +1107,10 @@
       "name": "@singularity/plugin-config_v2-staging",
       "version": "0.0.1",
     },
+    "plugins/config_v2/plugins/staging/plugins/promote-action": {
+      "name": "@singularity/plugin-config_v2-staging-promote-action",
+      "version": "0.0.1",
+    },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
@@ -5530,6 +5534,8 @@
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
     "@singularity/plugin-config_v2-staging": ["@singularity/plugin-config_v2-staging@workspace:plugins/config_v2/plugins/staging"],
+
+    "@singularity/plugin-config_v2-staging-promote-action": ["@singularity/plugin-config_v2-staging-promote-action@workspace:plugins/config_v2/plugins/staging/plugins/promote-action"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
