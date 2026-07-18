@@ -4,6 +4,14 @@
 **Scope:** `plugins/primitives/plugins/text-editor/` (the `ValueSyncPlugin` inside
 `web/components/text-editor-impl.tsx`)
 
+> **REVERTED** — see
+> [`2026-07-18-primitives-text-editor-guard-revert.md`](./2026-07-18-primitives-text-editor-guard-revert.md).
+> The guard below duplicated the focus check `useEditableField` already performs for
+> both server-backed consumers, while breaking clear-after-send in the conversation
+> prompt bar (`clearDraft()` was parked on focus, then dropped on the next keystroke).
+> Kept as the record of why it was tried. If the two holes it cites ever reproduce,
+> fix them in `useEditableField`, not in the editor.
+
 ## The bug
 
 `TextEditor` two-way-syncs a markdown `value` prop against a Lexical editor.

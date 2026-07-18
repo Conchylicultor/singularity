@@ -1,12 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef } from "react";
-import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import {
-  BLUR_COMMAND,
-  COMMAND_PRIORITY_LOW,
-  FOCUS_COMMAND,
-  type LexicalEditor,
-} from "lexical";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -245,21 +239,7 @@ function PluginSlot({ onError }: { onError?: (msg: string) => void }) {
   );
 }
 
-function editorHasFocus(editor: LexicalEditor): boolean {
-  const root = editor.getRootElement();
-  return !!root && root.contains(document.activeElement);
-}
-
-// Owns the inbound half of the two-way markdown sync. An external `value` change
-// rebuilds the whole document (`root.clear()` + reparse), which destroys the
-// caret/selection/scroll — harmless when the editor isn't focused, destructive
-// mid-edit. This plugin owns the invariant so no consumer has to: a replacement
-// is never applied to a FOCUSED editor; it is parked and applied on blur, unless
-// the user's own edits have since superseded it (the draft wins).
-// See research/2026-07-18-primitives-text-editor-external-value-guard.md.
-// Exported for the co-located jsdom test (web/__tests__/value-sync.test.tsx);
-// not re-exported from the plugin barrel.
-export function ValueSyncPlugin({
+function ValueSyncPlugin({
   value,
   onChange,
   extensions,
@@ -271,83 +251,20 @@ export function ValueSyncPlugin({
   const [editor] = useLexicalComposerContext();
   const selfWriteRef = useRef(false);
   const lastSerializedRef = useRef<string | null>(null);
-  // A replacement `value` that arrived while the editor was focused, held back
-  // to apply on blur so it never clobbers the user's live caret/selection.
-  const pendingExternalRef = useRef<string | null>(null);
-  // Editor focus, tracked via Lexical's FOCUS/BLUR commands (the same
-  // event-driven signal the caret-trigger primitive uses).
-  const focusedRef = useRef(false);
   const onChangeRef = useLatestRef(onChange);
   // Read fresh inside effects so the (boot-stable) extension set is never a
   // dependency that would re-run the markdown sync.
   const extensionsRef = useLatestRef(extensions);
 
-  // Apply an external value as a full-document replacement. Guarded by
-  // selfWriteRef so the update listener it triggers is a no-op (not echoed back
-  // out through onChange). Stable identity so the effects below don't re-run.
-  const applyValue = useEventCallback((next: string) => {
+  useEffect(() => {
+    if (lastSerializedRef.current === value) return;
     selfWriteRef.current = true;
-    applyMarkdownToEditor(editor, next, extensionsRef.current);
-    lastSerializedRef.current = next;
+    applyMarkdownToEditor(editor, value, extensionsRef.current);
+    lastSerializedRef.current = value;
     queueMicrotask(() => {
       selfWriteRef.current = false;
     });
-  });
-
-  useEffect(() => {
-    // Initialize from the DOM in case the editor was autofocused (by
-    // EditorShell's mount effect, a sibling that runs before this one) before
-    // this effect registered its FOCUS listener.
-    focusedRef.current = editorHasFocus(editor);
-    const unFocus = editor.registerCommand(
-      FOCUS_COMMAND,
-      () => {
-        focusedRef.current = true;
-        return false;
-      },
-      COMMAND_PRIORITY_LOW,
-    );
-    const unBlur = editor.registerCommand(
-      BLUR_COMMAND,
-      () => {
-        focusedRef.current = false;
-        // The caret is gone, so a parked replacement can safely land — unless a
-        // value that catches up to the edited content already cleared it, or the
-        // user's own edits superseded it (both leave nothing to apply).
-        const pending = pendingExternalRef.current;
-        pendingExternalRef.current = null;
-        if (pending !== null && pending !== lastSerializedRef.current) {
-          applyValue(pending);
-        }
-        return false;
-      },
-      COMMAND_PRIORITY_LOW,
-    );
-    return () => {
-      unFocus();
-      unBlur();
-    };
-  }, [editor, applyValue]);
-
-  useEffect(() => {
-    if (lastSerializedRef.current === value) {
-      // Content already equals the incoming value (e.g. a server echo of the
-      // user's own edit): nothing to apply, and any parked value is now stale.
-      pendingExternalRef.current = null;
-      return;
-    }
-    // Carve-out: the FIRST apply (lastSerialized === null) seeds an empty editor
-    // and must never be deferred, even if it is already autofocused — deferring
-    // it would leave the editor blank until blur. Every later apply is a
-    // replacement and is subject to the focus guard.
-    const isReplacement = lastSerializedRef.current !== null;
-    if (isReplacement && focusedRef.current) {
-      pendingExternalRef.current = value;
-      return;
-    }
-    pendingExternalRef.current = null;
-    applyValue(value);
-  }, [value, applyValue]);
+  }, [editor, value]);
 
   useEffect(() => {
     return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
@@ -355,9 +272,6 @@ export function ValueSyncPlugin({
       if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
       const md = serializeEditorToMarkdown(editor, extensionsRef.current);
       if (md === lastSerializedRef.current) return;
-      // A genuine user edit supersedes any parked external value: applying it on
-      // blur would clobber the user's edit back to the stale server version.
-      pendingExternalRef.current = null;
       lastSerializedRef.current = md;
       onChangeRef.current(md);
     });
