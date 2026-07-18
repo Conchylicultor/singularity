@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 export const ConversationCategorySchema = z.object({
   conversationId: z.string(),
@@ -16,16 +16,16 @@ export type ConversationCategoriesPayload = z.infer<
   typeof ConversationCategoriesPayloadSchema
 >;
 
-// Keyed query-resource contract: rows key on `conversationId` — the ALIAS the
-// server projection exposes the side-table's `parent_id` PK under (the
-// conversation-progress precedent). The server half is compiled from the drizzle
-// declaration in `server/internal/resource.ts`; the wire shape stays
-// `ConversationCategory[]`. orderBy asc(parentId) is immutable, so a re-classify
-// (UPDATE of category/source/classifiedAt) ships as one scoped keyed delta.
+// Bounded POINT resource: a consumer subscribes by an explicit conversation-id
+// set (`usePointResource(resource, convId)` → one row-or-null), so a category
+// read costs O(1) instead of an O(n) `.find()` over the whole collection. Rows
+// key on `conversationId` — the ALIAS the server projection exposes the
+// side-table's `parent_id` PK under (which IS the point identity). NOT
+// bootCritical: point resources hydrate post-mount (the recorded decision), and
+// the CategoryAvatarRow keeps its title-glyph fallback for the one round-trip.
 export const conversationCategoriesResource =
-  queryResourceDescriptor<ConversationCategory>(
+  pointQueryResourceDescriptor<ConversationCategory>(
     "conversation-categories",
     ConversationCategorySchema,
     "conversationId",
-    { bootCritical: true },
   );

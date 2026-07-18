@@ -123,6 +123,74 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
   ) => Promise<Map<string, string>> | Map<string, string>;
 }
 
+/**
+ * Bounded-membership selector for a keyed own-identity resource — the
+ * generalization of M5 `scopedMembership` to the bounded working-set contract
+ * (`research/2026-07-18-global-bounded-working-set-resource-contract.md`). A
+ * membership entry's per-(params) value is a BOUNDED subset of the collection,
+ * maintained incrementally: a feed change costs O(changed) + O(window), never
+ * O(collection).
+ *
+ * - `kind: "window"` — the params tuple names an ordered window (`WHERE … ORDER
+ *   BY … LIMIT n`). `windowIdsOf(params)` is the ids-only bounded ordered id
+ *   list for that window — the authority the runtime consults on any potential
+ *   membership change (an entrant candidate or a leaver) to re-derive the
+ *   window and pull the new tail row in. It MUST carry the window's LIMIT (a
+ *   bounded read); the loader at the same params must be the matching windowed
+ *   query, so a FULL recompute of a window entry is bounded by construction.
+ * - `kind: "point"` — the params tuple names an explicit id set. `idsOf(params)`
+ *   decodes it (pure, synchronous, cheap — it runs per subscribed tuple on the
+ *   feed-routing path). The entry's loader is the scoped read over those ids; a
+ *   feed change routes to a tuple iff the changed ids intersect its set. No ids
+ *   query ever runs; point sets are unordered (entrants append).
+ *
+ * Declaring `membership` requires `mode: "keyed"` + `identityTable` (enforced
+ * with a loud throw, exactly like `scopedMembership`) and marks the entry as
+ * BOUNDED: it is excluded from L2 persistence (`live_state_snapshot`) and its
+ * keyed snapshot uses the compact hash encoder. The legacy
+ * `scopedMembership: { orderOf }` is a thin alias for an UNBOUNDED window
+ * (`windowIdsOf = orderOf`, no LIMIT) that keeps the persisted-reconstruction
+ * path and the retain encoder — byte-identical to M5. The two fields are
+ * mutually exclusive.
+ */
+export type KeyedMembership<P extends ResourceParams = ResourceParams> =
+  | {
+      kind: "window";
+      windowIdsOf: (params: P) => Promise<string[]>;
+      /**
+       * Order signature of one wire row: a canonical encoding of exactly the
+       * fields the window's ORDER BY reads (pure, cheap — compared for equality
+       * only). When present, a refilled MEMBER row whose signature differs from
+       * the stored one is treated as membership-affecting: the window is
+       * re-derived via `windowIdsOf` (one bounded ids query) and the delta
+       * asserts the fresh `order` — so an UPDATE that moves an order column
+       * (e.g. a `createdAt` resurface bump) reorders the wire window instead of
+       * leaving it stale. Unchanged-signature refills keep the in-place path
+       * (no ids query — the M5 cost model for content-only bumps). Absent ⇒
+       * in-place updates never re-derive order (byte-identical prior behavior;
+       * the ORDER BY must then be update-stable).
+       */
+      orderSignatureOf?: (row: unknown) => string;
+    }
+  | { kind: "point"; idsOf: (params: P) => readonly string[] };
+
+/**
+ * The runtime-internal normalized membership record: the public `membership`
+ * field plus the `scopedMembership` alias fold into this one shape, so every
+ * consumer (routing, drain, encoder, persistence gate) branches on it alone.
+ * `bounded: false` marks the legacy alias — the only unbounded window — which
+ * keeps L2 persistence and the retain snapshot encoder.
+ */
+type MembershipRecord =
+  | {
+      kind: "window";
+      windowIdsOf: (params: ResourceParams) => Promise<string[]>;
+      bounded: boolean;
+      /** Order-signature seam — see `KeyedMembership`. Never set on the alias. */
+      orderSignatureOf?: (row: unknown) => string;
+    }
+  | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
+
 export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode?: ResourceMode;
@@ -207,6 +275,15 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * research/2026-07-03-global-scoped-membership-m5.md.
    */
   scopedMembership?: { orderOf: (params: P) => Promise<string[]> };
+  /**
+   * Bounded-membership selector (window / point) — see `KeyedMembership`. The
+   * generalization of `scopedMembership` (which remains as the unbounded-window
+   * alias); the two are mutually exclusive. Requires `mode: "keyed"` +
+   * `identityTable`, enforced with a loud throw in `createResource`. A
+   * membership-bounded entry is never L2-persisted and its snapshot uses the
+   * hash encoder.
+   */
+  membership?: KeyedMembership<P>;
   /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
@@ -310,7 +387,13 @@ export type ScopePolicy =
 export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
   Omit<
     ResourceDefinition<T, P>,
-    "mode" | "keyOf" | "identityTable" | "recompute" | "scopedMembership" | "bootCritical"
+    | "mode"
+    | "keyOf"
+    | "identityTable"
+    | "recompute"
+    | "scopedMembership"
+    | "membership"
+    | "bootCritical"
   > & {
     mode?: "push" | "invalidate";
     identityTable?: string;
@@ -378,6 +461,12 @@ export interface ServerResourceOptions<T, P extends ResourceParams = ResourcePar
    * throws if it is set without keyed mode + identityTable.
    */
   scopedMembership?: ResourceDefinition<T, P>["scopedMembership"];
+  /**
+   * Bounded-membership selector (window / point) — see `KeyedMembership`. Only
+   * meaningful on the KEYED overload (its `ScopePolicy` supplies the required
+   * `identityTable`); mutually exclusive with `scopedMembership`.
+   */
+  membership?: ResourceDefinition<T, P>["membership"];
   debounceMs?: number;
   onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
@@ -409,6 +498,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     identityTable: opts.identityTable,
     recompute: opts.recompute,
     scopedMembership: opts.scopedMembership,
+    membership: opts.membership,
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
@@ -535,15 +625,16 @@ interface RegistryEntry {
    */
   recompute?: { kind: "full"; reason: string };
   /**
-   * Opt-in row-level membership scoping (M5), declared via `scopedMembership`.
-   * Present ⇒ `applyDbChange` scopes INSERT/DELETE (not just UPDATE) to this
-   * resource's own keys and `drainEntry` runs the incremental membership path
-   * (`diffKeyedScopedMembership`) instead of a FULL recompute. `orderOf` is the
-   * ids-only ordered-membership query, run only on an entry. Undefined ⇒ the
-   * pre-M5 FULL-on-membership-change behavior (byte-identical). See
-   * research/2026-07-03-global-scoped-membership-m5.md.
+   * Normalized membership record (see `MembershipRecord`): the public
+   * `membership` selector or the legacy `scopedMembership` alias (an unbounded
+   * window, `bounded: false`). Present ⇒ `applyDbChange` scopes INSERT/DELETE
+   * (not just UPDATE) to this resource's own keys and `drainEntry` runs the
+   * incremental membership path (`diffKeyedScopedMembership`) instead of a FULL
+   * recompute. Undefined ⇒ the pre-M5 FULL-on-membership-change behavior
+   * (byte-identical). See research/2026-07-03-global-scoped-membership-m5.md
+   * and research/2026-07-18-global-bounded-working-set-resource-contract.md.
    */
-  scopedMembership?: { orderOf: (params: ResourceParams) => Promise<string[]> };
+  membership?: MembershipRecord;
   /**
    * Per-pk snapshot of id→SnapEntry for keyed entries. Allocated lazily only
    * when `mode === "keyed"`. Lets the diff ship only changed rows. Evicted
@@ -553,6 +644,15 @@ interface RegistryEntry {
    * `scopedMembership` entries (their persist path parses it back).
    */
   snapshots?: Map<string, Map<string, SnapEntry>>;
+  /**
+   * Per-pk order-signature map (member id → order signature) for a window
+   * membership entry that declared `orderSignatureOf`. Tiny — window-sized, one
+   * short string per member. Lifecycle identical to `snapshots`: seeded/replaced
+   * wherever the keyed snapshot is (sub-ack seed, membership FULL rebuild),
+   * maintained in lockstep by the incremental membership path, evicted with the
+   * snapshot on the N→0 sub transition. Undefined for every other entry.
+   */
+  orderSigs?: Map<string, Map<string, string>>;
   /**
    * Monotonic count of state changes (notifies) per params-tuple. Bumped ONLY
    * in flushNotifies — a real state change. sub-acks and the HTTP fallback
@@ -938,6 +1038,19 @@ export interface ResourceRuntime {
    * runtime importing a specific DB plugin.
    */
   scopedResourceIdentities: () => Array<{ key: string; identityTable: string }>;
+  /**
+   * Every registered resource whose definition is BOUNDED-membership (a bounded
+   * `membership: { kind: "window" }` or `{ kind: "point" }`) — the exact set the
+   * L2 persist gate (`!membershipBounded`) excludes. The unbounded-window
+   * `scopedMembership` alias is NOT bounded, so it is omitted (it keeps
+   * persistence). Read straight off the registry's normalized membership record,
+   * so it is the same definition-derived predicate the persist gate uses — never
+   * a resource-name list. The `live-state-snapshot` boot sweep consumes it to
+   * DELETE any leftover persisted rows for a key that USED to persist before it
+   * was migrated to the bounded contract (a stale unbounded value would otherwise
+   * be served via the L2 boot fast path).
+   */
+  boundedMembershipKeys: () => string[];
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -1474,24 +1587,62 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         `defineResource: mode "keyed" requires a keyOf for key "${def.key}"`,
       );
     }
-    // M5: `scopedMembership` is only sound on a keyed OWN-IDENTITY resource — the
-    // membership diff reconciles the loader's own row ids against the per-pk
-    // snapshot, and INSERT/DELETE scope through the identity view. Requiring
-    // `identityTable` also makes it incompatible with `recompute: { full }` (the
-    // ScopePolicy is identityTable XOR recompute), so a FULL opt-out can never
-    // also claim membership scoping. Fail loudly at registration.
-    if (def.scopedMembership) {
+    // Membership (bounded `membership` or the M5 `scopedMembership` alias) is
+    // only sound on a keyed OWN-IDENTITY resource — the membership diff
+    // reconciles the loader's own row ids against the per-pk snapshot, and
+    // INSERT/DELETE scope through the identity view. Requiring `identityTable`
+    // also makes it incompatible with `recompute: { full }` (the ScopePolicy is
+    // identityTable XOR recompute), so a FULL opt-out can never also claim
+    // membership scoping. Fail loudly at registration.
+    if (def.scopedMembership && def.membership) {
+      throw new Error(
+        `defineResource: "scopedMembership" and "membership" are mutually exclusive for key "${def.key}" — scopedMembership IS the unbounded-window membership alias`,
+      );
+    }
+    const membershipField = def.membership
+      ? "membership"
+      : def.scopedMembership
+        ? "scopedMembership"
+        : null;
+    if (membershipField) {
       if (mode !== "keyed") {
         throw new Error(
-          `defineResource: scopedMembership requires mode "keyed" for key "${def.key}"`,
+          `defineResource: ${membershipField} requires mode "keyed" for key "${def.key}"`,
         );
       }
       if (!def.identityTable) {
         throw new Error(
-          `defineResource: scopedMembership requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
+          `defineResource: ${membershipField} requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
         );
       }
     }
+    // Normalize both public forms into the one internal record every consumer
+    // branches on. The alias is the ONLY unbounded window (`bounded: false`) —
+    // it keeps L2 persistence and the retain snapshot encoder; a declared
+    // `membership` is bounded by contract (excluded from persistence, hashed).
+    const membership: MembershipRecord | undefined = def.membership
+      ? def.membership.kind === "window"
+        ? {
+            kind: "window",
+            windowIdsOf: def.membership.windowIdsOf as (
+              params: ResourceParams,
+            ) => Promise<string[]>,
+            bounded: true,
+            orderSignatureOf: def.membership.orderSignatureOf,
+          }
+        : {
+            kind: "point",
+            idsOf: def.membership.idsOf as (params: ResourceParams) => readonly string[],
+          }
+      : def.scopedMembership
+        ? {
+            kind: "window",
+            windowIdsOf: def.scopedMembership.orderOf as (
+              params: ResourceParams,
+            ) => Promise<string[]>,
+            bounded: false,
+          }
+        : undefined;
     // The `authorize` seam is enforced on the WS subscribe path ONLY —
     // `handleResourceHttp` (and the client's sub-error → HTTP-refetch heal)
     // would serve the value without ever consulting it, a silent authorization
@@ -1546,9 +1697,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       keyOf: def.keyOf as ((row: unknown) => string) | undefined,
       identityTable: def.identityTable,
       recompute: def.recompute,
-      scopedMembership: def.scopedMembership as
-        | { orderOf: (params: ResourceParams) => Promise<string[]> }
-        | undefined,
+      membership,
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
@@ -1831,21 +1980,88 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     scheduleFlush();
   }
 
+  // A bounded-membership entry: a window with a bound (declared via the public
+  // `membership` selector) or a point set. These are NEVER L2-persisted — their
+  // value is a per-subscription bounded working set, not a whole-collection
+  // materialization; persisting them would reintroduce the FULL-recompute-and-
+  // persist-on-every-change churn the bounded contract exists to kill. Read
+  // straight off the definition (generic — never by resource name). The legacy
+  // `scopedMembership` alias (`bounded: false`) keeps persistence.
+  function membershipBounded(entry: RegistryEntry): boolean {
+    const m = entry.membership;
+    if (!m) return false;
+    return m.kind === "point" || m.bounded;
+  }
+
+  // The unbounded-window alias (`scopedMembership`) — the ONLY membership shape
+  // whose persisted-reconstruction path exists, and therefore the only one that
+  // retains snapshot bytes and keeps its snapshot across N→0 (when persisted).
+  function isUnboundedWindow(entry: RegistryEntry): boolean {
+    return entry.membership?.kind === "window" && !entry.membership.bounded;
+  }
+
   // The snapshot entry representation for THIS resource, decided statically
   // from the definition so it can never flip between seeding and consumption:
   //
-  // - `scopedMembership` entries retain the row's full canonical JSON — their
-  //   persisted-incremental path (`drainMembershipScoped`) reconstructs the
-  //   FULL value by `JSON.parse` of the stored entries, so the bytes must be
-  //   there. (Keying this off `shouldPersist` instead would race the hook's
-  //   registration: a snapshot seeded as hashes before the persist hooks are
-  //   wired would crash the first incremental persist.)
-  // - Every other keyed entry retains a 64-bit content hash — same diff
-  //   semantics (entries are only equality-compared), ~16 B/row instead of a
-  //   value-sized string Map rebuilt on every recompute. Collision trade
-  //   documented on `hashSnapEncoder`.
+  // - `scopedMembership` (unbounded-window alias) entries retain the row's full
+  //   canonical JSON — their persisted-incremental path
+  //   (`drainMembershipScoped`) reconstructs the FULL value by `JSON.parse` of
+  //   the stored entries, so the bytes must be there. (Keying this off
+  //   `shouldPersist` instead would race the hook's registration: a snapshot
+  //   seeded as hashes before the persist hooks are wired would crash the first
+  //   incremental persist.)
+  // - Every other keyed entry — including bounded `membership` entries, which
+  //   are never persisted — retains a 64-bit content hash: same diff semantics
+  //   (entries are only equality-compared), ~16 B/row instead of a value-sized
+  //   string Map rebuilt on every recompute. Collision trade documented on
+  //   `hashSnapEncoder`.
   function snapEncoderFor(entry: RegistryEntry): SnapEncoder {
-    return entry.scopedMembership ? retainSnapEncoder : hashSnapEncoder;
+    return isUnboundedWindow(entry) ? retainSnapEncoder : hashSnapEncoder;
+  }
+
+  // The order-signature fn of a window membership entry, or undefined (point,
+  // the alias, non-membership, or a window that never declared one).
+  function orderSignatureFnOf(
+    entry: RegistryEntry,
+  ): ((row: unknown) => string) | undefined {
+    const m = entry.membership;
+    return m?.kind === "window" ? m.orderSignatureOf : undefined;
+  }
+
+  // Compute one row's order signature, fail-safe: a throwing `orderSignatureOf`
+  // is reported and yields undefined — callers treat "unknown" as MOVED, so a
+  // broken signature costs one extra bounded `windowIdsOf` run, never a stale
+  // wire order.
+  function safeOrderSig(
+    entry: RegistryEntry,
+    sigFn: (row: unknown) => string,
+    row: unknown,
+  ): string | undefined {
+    try {
+      return sigFn(row);
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and undefined is not an absorbable empty: it is the documented "unknown" sentinel the callers treat as MOVED — the fail-safe direction (re-derive the window), never a false "unchanged"
+    } catch (err) {
+      reportLoaderError(`orderSignatureOf failed for ${entry.key}`, err);
+      return undefined;
+    }
+  }
+
+  // REPLACE the per-member order-signature map for `pk` from a FULL row array.
+  // Called wherever a keyed snapshot is seeded/replaced from a full value
+  // (sub-ack seed, membership FULL rebuild), so the map's lifecycle is identical
+  // to the snapshot's. No-op unless the entry declares `orderSignatureOf`. A row
+  // whose signature could not be computed is stored WITHOUT one, so the next
+  // refill treats it as moved — fail-safe.
+  function reseedOrderSigs(entry: RegistryEntry, pk: string, value: unknown): void {
+    const sigFn = orderSignatureFnOf(entry);
+    if (!sigFn || !Array.isArray(value)) return;
+    const keyOf = entry.keyOf!;
+    const sigs = new Map<string, string>();
+    for (const row of value as unknown[]) {
+      const s = safeOrderSig(entry, sigFn, row);
+      if (s !== undefined) sigs.set(keyOf(row), s);
+    }
+    (entry.orderSigs ??= new Map()).set(pk, sigs);
   }
 
   // Build the id→entry map for a keyed resource's array value. The identity is
@@ -2074,9 +2290,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
   }
 
-  // M5 membership FULL path (drainEntry branches 2 & 3): a `scopedMembership`
-  // entry that is either sticky-FULL (an id-less contributor coalesced in) or has
-  // NO snapshot yet (first post-boot change, eviction, a race). It FULL-recomputes
+  // Membership FULL path (drainEntry branches 2 & 3): a membership entry
+  // (window / point / the M5 alias) that is either sticky-FULL (an id-less
+  // contributor coalesced in) or has NO snapshot yet (first post-boot change,
+  // eviction, a race). For a bounded window/point entry this "FULL" is bounded
+  // by construction — the entry loader at these params IS the windowed/point
+  // read, never an unbounded collection sweep. It FULL-recomputes
   // and — unlike the legacy keyed FULL path, which only touches the snapshot when
   // a subscriber is present — SEEDS/REPLACES the per-pk snapshot whenever the value
   // is computed (persisted or subscribed), so the next incremental membership diff
@@ -2166,25 +2385,31 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // has a base. This is the M5 difference from the legacy keyed FULL path.
       diffKeyed(entry, pk, value);
     }
+    // The order-signature map's lifecycle mirrors the snapshot's: whenever the
+    // FULL value replaced the snapshot above, reseed the sigs from it too.
+    if (valueComputed) reseedOrderSigs(entry, pk, value);
 
     // A FULL recompute cascades FULL (clears edge signatures inside the helper).
     await cascadeDownstream(entry, params, null, value, valueComputed);
   }
 
-  // M5 membership incremental path (drainEntry branch 4): a `scopedMembership`
-  // entry with a scoped pending AND a live snapshot. Refills only the requested
-  // ids (skipping the loader entirely for a pure DELETE), runs `orderOf` only when
-  // a row entered, reconciles membership via `diffKeyedScopedMembership`, ships an
-  // incremental delta (with `order` iff membership changed), and — for a persisted
-  // entry — reconstructs the FULL value from the post-diff snapshot and persists it
-  // (byte-identical jsonb to a FULL persist). Any loader/orderOf failure falls back
-  // to the FULL path so torn membership is never shipped. See the M5 plan doc.
+  // Membership incremental path (drainEntry branch 4): a membership entry
+  // (window — bounded or the M5 alias — or point) with a scoped pending AND a
+  // live snapshot. Refills only the requested ids (skipping the loader entirely
+  // for a pure DELETE), derives the authoritative order per kind (see the
+  // classification block below), reconciles membership via
+  // `diffKeyedScopedMembership`, ships an incremental delta (with `order` iff
+  // membership changed), and — for a persisted (alias) entry — reconstructs the
+  // FULL value from the post-diff snapshot and persists it (byte-identical
+  // jsonb to a FULL persist). Any loader/windowIdsOf failure falls back to the
+  // FULL path so torn membership is never shipped — bounded for window/point
+  // entries by construction, since their loader IS the windowed/point read.
   async function drainMembershipScoped(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
     persisted: boolean,
   ): Promise<void> {
-    const sm = entry.scopedMembership!;
+    const membership = entry.membership!;
     const keyOf = entry.keyOf!;
     const { params } = pendingEntry;
     const pk = paramsKey(params);
@@ -2230,26 +2455,148 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
     }
 
-    // `orderOf` runs ONLY when a refilled id is not already a member (an entry
-    // needs authoritative placement); an exit-only / in-place change derives its
-    // order from the prior snapshot, so no query runs.
+    // Classify the membership impact of this flush against the prior snapshot:
+    //   entered — a refilled id not already a member (a potential entrant; for a
+    //             BOUNDED window only `windowIdsOf` can decide whether it truly
+    //             enters — it may sort past the tail);
+    //   exited  — a requested id the refill omitted (where-flip exit) or a
+    //             deleted id that was a member (a leaver; for a bounded window a
+    //             leaver frees a slot the new tail row must fill).
+    // A pure in-place change (neither) runs NO ids query on ANY kind — the M5
+    // cost model. Corollary: an in-place UPDATE never reorders the window until
+    // the next membership delta, so a window's ORDER BY must be over
+    // update-stable columns (createdAt/pk); the compiler layer documents and
+    // owns that contract.
+    const refillIds = new Set<string>();
+    for (const row of refillRows) refillIds.add(keyOf(row));
     let entered = false;
-    for (const row of refillRows) {
-      if (!prev.has(keyOf(row))) {
+    for (const id of refillIds) {
+      if (!prev.has(id)) {
         entered = true;
         break;
       }
     }
+    let exited = false;
+    for (const id of requestedIds) {
+      if (prev.has(id) && !refillIds.has(id)) {
+        exited = true;
+        break;
+      }
+    }
+    if (!exited) {
+      for (const id of deletedIds) {
+        if (prev.has(id)) {
+          exited = true;
+          break;
+        }
+      }
+    }
+    // Order-signature seam: a refilled MEMBER row whose order-relevant
+    // projection moved is membership-affecting for a window that declared
+    // `orderSignatureOf` — its sort position may have changed, so the window is
+    // re-derived (one bounded `windowIdsOf`) and the delta asserts the fresh
+    // `order`. Unchanged-signature refills stay on the in-place path (no ids
+    // query — the M5 cost model for content-only bumps). A missing stored
+    // signature or a failed fresh one is treated as MOVED (fail-safe: one extra
+    // bounded ids query, never a stale order). `freshSigs` records every
+    // refilled row's signature (undefined = computation failed) for the
+    // post-diff map maintenance below.
+    const sigFn = orderSignatureFnOf(entry);
+    const freshSigs = sigFn ? new Map<string, string | undefined>() : undefined;
+    let orderMoved = false;
+    if (sigFn && freshSigs) {
+      const storedSigs = entry.orderSigs?.get(pk);
+      for (const row of refillRows) {
+        const id = keyOf(row);
+        const fresh = safeOrderSig(entry, sigFn, row);
+        freshSigs.set(id, fresh);
+        if (!prev.has(id)) continue; // an entrant has no stored sig to compare
+        if (fresh === undefined || fresh !== storedSigs?.get(id)) orderMoved = true;
+      }
+    }
+
+    // Derive the authoritative order per membership kind. `orderedIds`, when
+    // set, is the full member id list `diffKeyedScopedMembership` rebuilds the
+    // snapshot and wire `order` from.
     let orderedIds: string[] | undefined;
-    if (entered) {
-      try {
-        orderedIds = await (opts.wrapOrigin
-          ? opts.wrapOrigin("push", entry.key, () => sm.orderOf(params))
-          : sm.orderOf(params));
-      } catch (err) {
-        reportLoaderError(`orderOf failed for ${entry.key}`, err);
-        await drainMembershipFull(entry, pendingEntry, persisted);
-        return;
+    if (membership.kind === "point") {
+      // Point set: membership is the params' explicit id set — no ids query
+      // EVER. Entrants append to the prior order (point sets are unordered
+      // bags); exits derive from the prior snapshot inside the diff.
+      if (entered) {
+        orderedIds = [...prev.keys()];
+        for (const row of refillRows) {
+          const id = keyOf(row);
+          if (!prev.has(id)) orderedIds.push(id);
+        }
+      }
+    } else if (membership.bounded) {
+      // Bounded window: ANY potential membership change — an entrant candidate,
+      // a leaver, OR a member whose order signature moved — re-derives the
+      // window by running `windowIdsOf` (O(window), bounded; the v1
+      // correctness-first choice — a tail-cursor comparison that skips
+      // past-the-tail entrants without the ids query is a deferred
+      // optimization). It is the entrant arbiter (an id absent from the
+      // returned window did not enter; the diff drops it), the tail-pull source
+      // (a leaver's freed slot names the new tail id here), and the fresh order
+      // authority for a moved member.
+      if (entered || exited || orderMoved) {
+        try {
+          orderedIds = await (opts.wrapOrigin
+            ? opts.wrapOrigin("push", entry.key, () => membership.windowIdsOf(params))
+            : membership.windowIdsOf(params));
+        } catch (err) {
+          reportLoaderError(`windowIdsOf failed for ${entry.key}`, err);
+          await drainMembershipFull(entry, pendingEntry, persisted);
+          return;
+        }
+        // Tail backfill: window ids whose row bytes neither the client base
+        // (prev — the client holds those rows) nor this refill carries. Without
+        // this, `diffKeyedScopedMembership`'s survivor filter would silently
+        // drop the pulled-in tail row and the window would shrink. O(entrants).
+        const missing = orderedIds.filter((id) => !prev.has(id) && !refillIds.has(id));
+        if (missing.length > 0) {
+          try {
+            const ctx = { affectedIds: missing };
+            const { value: v } = await (opts.wrapOrigin
+              ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
+              : getResourceValue(entry, params, ctx));
+            if (!Array.isArray(v)) {
+              throw new Error(`keyed resource "${entry.key}" loader must return an array`);
+            }
+            for (const row of v as unknown[]) {
+              refillRows.push(row);
+              refillIds.add(keyOf(row));
+              // A backfilled row is a fresh read too — record its signature so
+              // the post-diff map maintenance stores it alongside the refill's.
+              if (sigFn && freshSigs) freshSigs.set(keyOf(row), safeOrderSig(entry, sigFn, row));
+            }
+            loaderRan = true;
+          } catch (err) {
+            reportLoaderError(`loader failed for ${entry.key}`, err);
+            await drainMembershipFull(entry, pendingEntry, persisted);
+            return;
+          }
+        }
+      }
+    } else {
+      // Unbounded window (the `scopedMembership` alias) — byte-identical M5:
+      // `windowIdsOf` (the orderOf query) runs ONLY when a row ENTERED (an
+      // entrant needs authoritative placement); an exit-only change derives its
+      // order from the prior snapshot inside the diff, so no query runs. No
+      // backfill: an unbounded order lists no id outside prev ∪ refill (a
+      // concurrent-insert straggler is dropped by the diff and healed by its
+      // own feed event — the recorded M5 semantics).
+      if (entered) {
+        try {
+          orderedIds = await (opts.wrapOrigin
+            ? opts.wrapOrigin("push", entry.key, () => membership.windowIdsOf(params))
+            : membership.windowIdsOf(params));
+        } catch (err) {
+          reportLoaderError(`orderOf failed for ${entry.key}`, err);
+          await drainMembershipFull(entry, pendingEntry, persisted);
+          return;
+        }
       }
     }
 
@@ -2261,6 +2608,20 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       snapEncoderFor(entry),
     );
     snapshots.set(pk, nextSnapshot);
+
+    // Maintain the order-signature map in lockstep with the snapshot: refilled
+    // rows take their fresh signature, carried-over members keep the stored one,
+    // ids that left the snapshot drop out. A refilled row whose fresh signature
+    // failed is stored WITHOUT one, so the next refill treats it as moved.
+    if (sigFn && freshSigs) {
+      const storedSigs = entry.orderSigs?.get(pk);
+      const nextSigs = new Map<string, string>();
+      for (const id of nextSnapshot.keys()) {
+        const s = freshSigs.has(id) ? freshSigs.get(id) : storedSigs?.get(id);
+        if (s !== undefined) nextSigs.set(id, s);
+      }
+      (entry.orderSigs ??= new Map()).set(pk, nextSigs);
+    }
 
     // Persisted: reconstruct the FULL value from the post-diff snapshot (ordered
     // id list + canonical-JSON entries) and persist it. `JSON.parse` of the
@@ -2287,9 +2648,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
     }
 
-    // Ship the delta + bump the version only on a real change. `order` is present
-    // iff membership changed (entries/exits), so its presence implies a change.
-    const changed = upserts.length > 0 || deletes.length > 0;
+    // Ship the delta + bump the version only on a real change. `order` present
+    // counts as a change on its own: the diff only returns it when the rebuilt
+    // snapshot's membership/order actually differs from the prior one (e.g. a
+    // member whose order signature moved past the tail leaves via `order` with
+    // no surviving upsert and no `deletes` entry) — the client must receive the
+    // frame or its array drifts from the mutated server snapshot.
+    const changed = upserts.length > 0 || deletes.length > 0 || order !== undefined;
     const subs = subscribersFor(entry.key, pk);
     if (changed) {
       const version = (entry.versions.get(pk) ?? 0) + 1;
@@ -2345,19 +2710,30 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // persisted as a stale partial: the FULL recompute below ignores `affected`.
     // Gated on `!entry.externalSource` defensively (the injected `shouldPersist`
     // already excludes external sources, but a runtime check makes the invariant
-    // hold regardless of how the hook is backed). See
-    // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.3.
-    const persisted = !entry.externalSource && (opts.shouldPersist?.(entry.key) ?? false);
+    // hold regardless of how the hook is backed), and on `!membershipBounded` —
+    // a bounded-membership entry (bounded window / point) is structurally
+    // excluded from persistence, read off the definition (never by name): its
+    // value is a per-subscription bounded working set, not a collection
+    // materialization. See
+    // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.3
+    // and research/2026-07-18-global-bounded-working-set-resource-contract.md.
+    const persisted =
+      !entry.externalSource &&
+      !membershipBounded(entry) &&
+      (opts.shouldPersist?.(entry.key) ?? false);
 
     for (const pendingEntry of pending) {
       const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
-      // M5: a `scopedMembership` entry runs the incremental membership path
-      // instead of the legacy scoped/FULL branches. Branch 2/3 (FULL: sticky-FULL
-      // `affected === null`, or no snapshot yet) vs branch 4 (incremental, snapshot
-      // present). The legacy body below is byte-identical for every non-membership
-      // entry — early-branch out so it is never touched. See the M5 plan doc.
-      if (entry.scopedMembership) {
+      // A membership entry (bounded window / point / the M5 alias) runs the
+      // incremental membership path instead of the legacy scoped/FULL branches.
+      // Branch 2/3 (FULL: sticky-FULL `affected === null`, or no snapshot yet)
+      // vs branch 4 (incremental, snapshot present). For a window/point entry
+      // the FULL branch is bounded by construction — its loader IS the
+      // windowed/point read at these params. The legacy body below is
+      // byte-identical for every non-membership entry — early-branch out so it
+      // is never touched. See the M5 plan doc.
+      if (entry.membership) {
         const hasSnapshot = entry.snapshots?.get(pk) !== undefined;
         if (affected === null || !hasSnapshot) {
           await drainMembershipFull(entry, pendingEntry, persisted);
@@ -2850,6 +3226,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // next notify can diff against it. The sub-ack itself stays full-value.
     if (entry.mode === "keyed") {
       (entry.snapshots ??= new Map()).set(pk, snapshotOf(entry, value));
+      reseedOrderSigs(entry, pk, value); // lifecycle mirrors the snapshot seed
     }
     // Stamp the etag the FLIGHT carried, not `freshEtag`. Three cases:
     //   - we started the flight  → `etag === freshEtag` (the common path).
@@ -3070,15 +3447,21 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       entry.subCounts.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
-      // M5 exception: a PERSISTED `scopedMembership` entry recomputes on every
-      // change regardless of subscribers and reconstructs its persisted value FROM
-      // the snapshot — so it must survive N→0, or the next change would degrade to
-      // a needless FULL. Bounded to opted-in persisted resources.
+      // M5 exception: a PERSISTED `scopedMembership` (unbounded-window alias)
+      // entry recomputes on every change regardless of subscribers and
+      // reconstructs its persisted value FROM the snapshot — so it must survive
+      // N→0, or the next change would degrade to a needless FULL. Bounded to
+      // opted-in persisted resources; bounded-membership entries (never
+      // persisted) evict like any other keyed entry and self-heal via the
+      // bounded FULL branch on the next change.
       const keepSnapshot =
-        entry.scopedMembership !== undefined &&
+        isUnboundedWindow(entry) &&
         !entry.externalSource &&
         (opts.shouldPersist?.(entry.key) ?? false);
-      if (!keepSnapshot) entry.snapshots?.delete(pk);
+      if (!keepSnapshot) {
+        entry.snapshots?.delete(pk);
+        entry.orderSigs?.delete(pk); // lifecycle mirrors the snapshot eviction
+      }
       if (entry.onLastUnsubscribe) {
         try {
           entry.onLastUnsubscribe(params);
@@ -3434,14 +3817,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // Drop a duplicate arriving via a SECONDARY view so it can't FULL the
             // scoped identity delivery.
             if (change.identityBase !== entry.identityTable) continue;
-            // UPDATE always scopes (today). For an M5 scopedMembership entry an
-            // INSERT scopes to the new ids and a DELETE scopes to an EMPTY affected
-            // set carrying the op-D ids in `deleted` — a deleted row can't be
-            // refilled, so the membership diff resolves the exit from `deleted`
-            // with ZERO loader runs. A non-membership entry keeps the pre-M5 FULL.
+            // UPDATE always scopes (today). For a membership entry (window /
+            // point / the M5 alias) an INSERT scopes to the new ids and a
+            // DELETE scopes to an EMPTY affected set carrying the op-D ids in
+            // `deleted` — a deleted row can't be refilled, so the membership
+            // diff resolves the exit from `deleted` with ZERO loader runs. A
+            // non-membership entry keeps the pre-M5 FULL.
             if (change.op === "U") {
               affected = scopedUpdate;
-            } else if (entry.scopedMembership && hasIds) {
+            } else if (entry.membership && hasIds) {
               if (change.op === "I") {
                 affected = new Set(change.ids!);
               } else {
@@ -3463,26 +3847,62 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           affected = null;
         }
 
-        // Build the RecomputeIntent (the shared L4 contract). Today it is routed
-        // straight through `scheduleNotify`; a future work-admission scheduler
-        // consumes it on the admit side. Construct it so the producer side is the
-        // stable contract surface. Use the REAL op; a scopedMembership DELETE
-        // names its removed ids (`deleted`), everything else the refill ids.
-        const delta: RecomputeIntent["delta"] =
-          affected === null
-            ? "FULL"
-            : { table: change.table, ids: [...(deleted ?? affected)], op: change.op };
-
         const subscribed = subscribedParamsFor(key);
+        const pointMembership =
+          entry.membership?.kind === "point" ? entry.membership : undefined;
         // Fan out to every subscribed params tuple. A param-less resource is
         // always covered (key = {}); a parametrized resource with no current
         // subscribers admits nothing (a fresh subscribe loads from scratch).
-        const targets: ResourceParams[] =
-          subscribed.length > 0 ? subscribed : [{}];
+        // A POINT entry never fans out to the `{}` fallback tuple — its params
+        // ARE the id set, so with no subscribers there is nothing to maintain.
+        const targets: ResourceParams[] = pointMembership
+          ? subscribed
+          : subscribed.length > 0
+            ? subscribed
+            : [{}];
         for (const params of targets) {
+          let tupleAffected = affected;
+          let tupleDeleted = deleted;
+          // Point routing: a scoped change reaches a subscribed tuple iff the
+          // changed ids intersect that tuple's explicit id set (upsert), or a
+          // D op hits one of its ids (delete). Empty intersection → the tuple
+          // is untouched: no notify, no version bump, no frame. A FULL change
+          // (`affected === null`, e.g. an id-less bulk statement) still reaches
+          // every tuple — its FULL recompute is the point loader over the
+          // tuple's own ids, bounded by construction.
+          if (pointMembership && affected !== null) {
+            const idSet = new Set(pointMembership.idsOf(params));
+            tupleAffected = new Set([...affected].filter((id) => idSet.has(id)));
+            tupleDeleted = deleted
+              ? new Set([...deleted].filter((id) => idSet.has(id)))
+              : undefined;
+            if (
+              tupleAffected.size === 0 &&
+              (tupleDeleted === undefined || tupleDeleted.size === 0)
+            ) {
+              continue;
+            }
+          }
+          // Build the RecomputeIntent (the shared L4 contract). Today it is
+          // routed straight through `scheduleNotify`; a future work-admission
+          // scheduler consumes it on the admit side. Construct it so the
+          // producer side is the stable contract surface. Use the REAL op; a
+          // membership DELETE names its removed ids (`deleted`), everything
+          // else the refill ids.
+          const delta: RecomputeIntent["delta"] =
+            tupleAffected === null
+              ? "FULL"
+              : {
+                  table: change.table,
+                  ids: [...(tupleDeleted ?? tupleAffected)],
+                  op: change.op,
+                };
           const intent: RecomputeIntent = { resource: key, key: params, delta };
           void intent;
-          scheduleNotify(entry, params, affected, { source: "feed", deleted });
+          scheduleNotify(entry, params, tupleAffected, {
+            source: "feed",
+            deleted: tupleDeleted,
+          });
         }
       }
     } catch (err) {
@@ -3521,6 +3941,17 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return out;
   }
 
+  // The bounded-membership keys — the same set the L2 persist gate excludes via
+  // `membershipBounded`. Reuses that exact predicate so the sweep and the gate
+  // can never disagree about which keys are non-persistable.
+  function boundedMembershipKeys(): string[] {
+    const out: string[] = [];
+    for (const entry of registry.values()) {
+      if (membershipBounded(entry)) out.push(entry.key);
+    }
+    return out;
+  }
+
   return {
     defineResource,
     defineExternalResource,
@@ -3534,6 +3965,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     recomputeResource,
     notifyStatsFor,
     scopedResourceIdentities,
+    boundedMembershipKeys,
     readGateStats: () => readLoadGate.stats(),
   };
 }

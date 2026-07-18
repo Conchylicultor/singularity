@@ -1,6 +1,7 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { loadResourceByKey } from "@plugins/framework/plugins/server-core/core";
 import { readPersistedSnapshots } from "@plugins/database/plugins/live-state-snapshot/server";
+import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import { bootSnapshot } from "../../core";
 import { bootCriticalKeys } from "./boot-keys";
 
@@ -31,7 +32,13 @@ export async function assembleBootSnapshot(): Promise<{
   const loaded = await Promise.allSettled(
     missing.map(async (k): Promise<[string, unknown, number]> => {
       const s = performance.now();
-      const v = await loadResourceByKey(k);
+      // A membership-bounded resource (never persisted) loads at its
+      // descriptor's default params — e.g. a windowed resource's default
+      // window — so the snapshot value lands on the SAME (key, paramsKey)
+      // tuple the client hydrates and later subscribes to. Read generically
+      // off the shared descriptor registry, never by resource name; a plain
+      // global resource has no defaultParams and keeps the `{}` tuple.
+      const v = await loadResourceByKey(k, resourceDescriptorByKey(k)?.defaultParams);
       return [k, v, performance.now() - s];
     }),
   );

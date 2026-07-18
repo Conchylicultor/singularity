@@ -18,6 +18,13 @@ export interface ResolvedIdentity {
   pkColumn: PgColumn;
   keyField: string;
   selectMap?: SelectMap;
+  /**
+   * The relation's full column record (JS property name → column) — the wire
+   * field namespace when no projection is declared. Lets consumers resolve
+   * OTHER columns' wire fields with `wireFieldFor` (compile-window's
+   * order-signature derivation) without re-deriving the source shape.
+   */
+  columns: Record<string, PgColumn>;
 }
 
 // Structural entity detection — an `infra/entities` Entity is the only source
@@ -64,23 +71,39 @@ function singlePrimary(
   return primaries[0]!;
 }
 
-// The JS/alias key under which `pkColumn` is projected. Matched by column NAME
-// (view columns are distinct objects from the base table's, so object identity
-// is unreliable across the view boundary; the DB column name is stable). With a
-// select projection, the alias key of the pk column is returned (so the client
-// keyOf reads the alias). Without one, the JS property name off the relation.
+/**
+ * The JS/alias key under which `column` is projected, or undefined when it is
+ * not projected. Matched by column identity OR DB column NAME (view columns are
+ * distinct objects from the base table's, so object identity is unreliable
+ * across the view boundary; the DB column name is stable). With a select
+ * projection, the alias key is returned; without one, the JS property name off
+ * the relation's column record. Shared by the pk keyField derivation below and
+ * compile-window's order-signature field resolution.
+ */
+export function wireFieldFor(
+  selectMap: SelectMap | undefined,
+  columns: Record<string, PgColumn>,
+  column: PgColumn,
+): string | undefined {
+  const map: Record<string, unknown> = selectMap ?? columns;
+  for (const [key, value] of Object.entries(map)) {
+    if (value === column || (is(value, Column) && value.name === column.name)) {
+      return key;
+    }
+  }
+  return undefined;
+}
+
+// The pk's wire field, or a loud throw — a keyed resource must project its
+// identity column so the client keyOf can read it.
 function keyFieldFor(
   selectMap: SelectMap | undefined,
   columns: Record<string, PgColumn>,
   pkColumn: PgColumn,
   label: string,
 ): string {
-  const map: Record<string, unknown> = selectMap ?? columns;
-  for (const [key, value] of Object.entries(map)) {
-    if (value === pkColumn || (is(value, Column) && value.name === pkColumn.name)) {
-      return key;
-    }
-  }
+  const field = wireFieldFor(selectMap, columns, pkColumn);
+  if (field !== undefined) return field;
   throw new Error(
     `queryResource: ${label} — the primary-key column "${pkColumn.name}" is not ` +
       `present in the ${selectMap ? "select projection" : "column set"}. A keyed ` +
@@ -140,6 +163,7 @@ export function resolveIdentity(
       pkColumn: identity.pk,
       keyField: keyFieldFor(select, columns, identity.pk, label),
       selectMap: select,
+      columns,
     };
   }
 
@@ -153,6 +177,7 @@ export function resolveIdentity(
       pkColumn,
       keyField: keyFieldFor(select, columns, pkColumn, label),
       selectMap: select,
+      columns,
     };
   }
 
@@ -167,6 +192,7 @@ export function resolveIdentity(
       pkColumn,
       keyField: keyFieldFor(selectMap, columns, pkColumn, label),
       selectMap,
+      columns,
     };
   }
 

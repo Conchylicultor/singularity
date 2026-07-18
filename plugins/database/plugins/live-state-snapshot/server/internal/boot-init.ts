@@ -1,12 +1,17 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { setLiveStateSnapshotHooks } from "@plugins/framework/plugins/server-core/core";
+import {
+  setLiveStateSnapshotHooks,
+  boundedMembershipKeys,
+} from "@plugins/framework/plugins/server-core/core";
 import { seedReadSetIndex } from "@plugins/infra/plugins/runtime-profiler/core";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   shouldPersist,
+  bootCriticalKeys,
   captureWatermark,
   persistSnapshot,
   readPersistedReadSets,
+  clearSnapshotsExceptKeys,
 } from "./persist";
 import { snapshotLog as log } from "./log-sink";
 
@@ -27,6 +32,20 @@ import { snapshotLog as log } from "./log-sink";
 export async function initSnapshotSubsystem(db: NodePgDatabase): Promise<void> {
   try {
     await ensureSnapshotTable(db);
+    // Sweep stale snapshots BEFORE seeding the read-set index or serving a boot
+    // snapshot: evict every persisted row whose key is no longer persistable, so a
+    // leftover from a prior boot (a resource migrated to a bounded window/point, or
+    // one whose `bootCritical` was dropped) can't be served as a stale value via the
+    // L2 fast path. The persistable set is exactly the runtime's own persist gate —
+    // bootCritical AND NOT membership-bounded (read off the definition-derived
+    // predicates, never a hardcoded name). One bounded DELETE; a no-op when clean.
+    const keepKeys = [...bootCriticalKeys()].filter(
+      (k) => !new Set(boundedMembershipKeys()).has(k),
+    );
+    const swept = await clearSnapshotsExceptKeys(db, keepKeys);
+    if (swept > 0) {
+      log.publish(`swept ${swept} stale snapshot row(s) for non-persistable key(s)`, "stdout");
+    }
     setLiveStateSnapshotHooks({
       shouldPersist,
       captureWatermark: () => captureWatermark(db),

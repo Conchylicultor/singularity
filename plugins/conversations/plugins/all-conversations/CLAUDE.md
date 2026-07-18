@@ -12,7 +12,7 @@
   - Exports: Values: `allConversationsPane`, `conversationFieldDefs`
 - Server:
   - Contributes: `resource.declare` "conversations-revision"
-  - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `tasks/tasks-core.conversationsView`
+  - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/keyset.buildSortKeys`, `primitives/keyset.keyValuesOf`, `primitives/keyset.orderByClauses`, `primitives/keyset.seekPredicate`, `tasks/tasks-core.conversationsView`
   - Exports: Values: `conversationsRevisionResource`, `handleQuery`
   - Resources: `conversations-revision` (push)
 - Core:

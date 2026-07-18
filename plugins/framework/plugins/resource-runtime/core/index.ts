@@ -14,6 +14,7 @@ export type {
   ResourceParams,
   DependsOnEntry,
   RecomputeIntent,
+  KeyedMembership,
 } from "./runtime";
 export {
   buildSnapshot,

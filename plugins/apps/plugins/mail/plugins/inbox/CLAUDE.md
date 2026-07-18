@@ -64,7 +64,7 @@ string only.
   - Exports: Values: `inboxPane`
 - Server:
   - Contributes: `resource.declare` "mail-inbox-revision"
-  - Uses: `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`
+  - Uses: `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/keyset.buildSortKeys`, `primitives/keyset.keyValuesOf`, `primitives/keyset.orderByClauses`, `primitives/keyset.seekPredicate`
   - Exports: Values: `handleQuery`, `inboxRevisionServerResource`
   - Resources: `mail-inbox-revision` (push)
   - Routes: `POST /api/mail/inbox/query`

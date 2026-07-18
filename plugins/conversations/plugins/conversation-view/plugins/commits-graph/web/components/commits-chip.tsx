@@ -3,7 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { commitDeltaResource } from "../../shared/resources";
 import { convCommitsGraphPane } from "../panes";
 
@@ -13,7 +13,9 @@ export function CommitsChip() {
   const deltaResult = useResource(commitDeltaResource, {
     attemptId: conversation?.attemptId ?? "",
   });
-  const pushesResult = useResource(pushesResource);
+  const pushesResult = useResource(pushesByAttemptResource, {
+    attemptId: conversation?.attemptId ?? "",
+  });
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({});
 
   if (deltaResult.pending) return null;
@@ -40,7 +42,7 @@ export function CommitsChip() {
   }
   if (delta.value.mergeBase === null) return null;
 
-  const pushCount = pushesResult.data.filter((p) => p.attemptId === conversation?.attemptId).length;
+  const pushCount = pushesResult.data.length;
   const ahead = delta.value.ahead;
   const behind = delta.value.behind;
   const branch = delta.value.branch;

@@ -6,18 +6,20 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   augmentServerQuery,
-  buildSortKeys,
   compileWhere,
+  type OperatorSqlResolver,
+} from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
+import {
+  buildSortKeys,
   keyValuesOf,
   orderByClauses,
   seekPredicate,
-  type OperatorSqlResolver,
-} from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
+} from "@plugins/primitives/plugins/keyset/server";
 import {
   decodeCursor,
   encodeCursor,
   sortSignature,
-} from "@plugins/primitives/plugins/data-view/plugins/server-query/core";
+} from "@plugins/primitives/plugins/keyset/core";
 import { conversationsView as conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { queryConversations } from "../../core";
 import { COLUMN_MAP } from "./column-map";

@@ -62,46 +62,95 @@ See `research/2026-06-08-global-unify-live-state-resource-runtime.md` for the
 unification rationale and `plugins/primitives/plugins/live-state/CLAUDE.md` for
 the client side and the keyed/scoped delta semantics.
 
-## Opt-in scoped membership (`scopedMembership`, M5)
+## Bounded membership (`membership`) and the `scopedMembership` alias
 
-A keyed resource may pass `scopedMembership: { orderOf }` (only on the two-arg
-keyed form, which supplies the required `identityTable`; `createResource` throws
-otherwise). It makes an INSERT / DELETE / where-flip on the identity table ship an
-incremental delta instead of a FULL recompute — the runtime refills only the
-changed rows and reconciles membership against the per-pk snapshot via
+A keyed own-identity resource may declare a **membership selector** (only on the
+two-arg keyed form, which supplies the required `identityTable`; `createResource`
+throws otherwise). It makes an INSERT / DELETE / where-flip on the identity table
+ship an incremental delta instead of a FULL recompute — the runtime refills only
+the changed rows and reconciles membership against the per-pk snapshot via
 `diffKeyedScopedMembership`. Absent ⇒ byte-identical to the pre-M5
-FULL-on-membership-change behavior (every legacy path untouched). See
-`research/2026-07-03-global-scoped-membership-m5.md`.
+FULL-on-membership-change behavior. Three shapes, folded into one internal
+record (see `research/2026-07-03-global-scoped-membership-m5.md` and
+`research/2026-07-18-global-bounded-working-set-resource-contract.md`):
 
-The membership path (`drainMembershipScoped`, `drainEntry` branch 4):
+- **`membership: { kind: "window", windowIdsOf }`** — the params tuple names a
+  **bounded ordered window** (`WHERE … ORDER BY … LIMIT n`). `windowIdsOf(params)`
+  is the ids-only bounded ordered id list; the entry's loader at the same params
+  MUST be the matching windowed query — so the FULL branch (no snapshot,
+  sticky-FULL, self-heal after a short-circuited resub) is **bounded by
+  construction**: "FULL" means the window loader, never a whole-collection sweep.
+  A membership change costs O(changed) + O(window), never O(collection).
+- **`membership: { kind: "point", idsOf }`** — the params tuple names an
+  **explicit id set** (`idsOf(params)` decodes it; pure, sync, cheap — it runs
+  per subscribed tuple on the feed-routing path). `applyDbChange` routes a change
+  to a tuple **iff the changed ids intersect its set** (empty intersection = no
+  notify, no version bump); no ids query ever runs; entrants append (point sets
+  are unordered); never fans out to the `{}` fallback tuple.
+- **`scopedMembership: { orderOf }`** — the legacy M5 alias ≡ an **unbounded
+  window** (`windowIdsOf = orderOf`, no LIMIT). Byte-identical to M5, including
+  the L2 persisted-reconstruction path. Mutually exclusive with `membership`.
 
-- **DELETE** → delete + full `order` with **zero DB queries**: no loader (a
-  deleted row can't be refilled) and no `orderOf` (the order is the prior snapshot
-  minus the id). Carried via `PendingNotify.deleted`, the op-D channel that rides
-  alongside a scoped `affected` (FULL absorbs it exactly like `affected`).
-- **INSERT / where-flip entry** (a refilled id absent from the snapshot) → upsert
-  + `order`; `orderOf` runs **exactly once** to place the entrant.
-- **where-flip exit** (the refill omits a requested id) → delete + `order`, one
-  scoped refill, no `orderOf`.
-- **in-place flip** → one upsert, `order` omitted.
+The window path (`drainMembershipScoped`, `drainEntry` branch 4) classifies each
+flush against the prior snapshot — *entered* (a refilled id not already a member)
+/ *exited* (a requested id the refill omitted, or a deleted member):
+
+- **Bounded window**: any entered-or-exited runs `windowIdsOf` once (O(window) —
+  it is both the entrant arbiter and the tail-pull source), then **backfills**
+  window ids whose bytes neither the client base nor the refill holds (the new
+  tail row after a leaver) with one extra scoped refill. An entrant sorting past
+  the tail diffs to empty → no frame, no version bump. A DELETE of an id outside
+  the snapshot is a total no-op (a window is a prefix of the total order).
+- **Alias (unbounded)**: `orderOf` runs **only on an entry**; an exit-only change
+  derives its order from the prior snapshot (zero queries for a pure DELETE); no
+  backfill. Exactly M5.
+- **Both**: a pure in-place change (all refilled ids already members, no order
+  impact) never runs the ids query — one upsert, `order` omitted.
+- **Order signature** (`membership.window.orderSignatureOf?`, optional): a pure
+  cheap encoding of exactly the fields the window's ORDER BY reads. When
+  declared, the runtime keeps a per-member signature map beside the per-pk
+  snapshot (window-sized; seeded/evicted in lockstep with it) and treats a
+  refilled MEMBER row whose signature moved as membership-affecting: one
+  `windowIdsOf` re-derive, delta with the fresh bounded `order` — so an UPDATE
+  that bumps an order column (a `createdAt` resurface) reorders the wire window
+  instead of going stale. Unchanged-signature refills keep the in-place path
+  (no ids query — the M5 cost model for content-only bumps). A re-derive whose
+  window comes back in the same sequence ships in-place (`order` omitted — the
+  diff mirrors `diffKeyedFull`'s unchanged-order omission), and `order`
+  presence alone marks a frame as changed (a member moved past the tail leaves
+  purely via `order`, with no upsert and no `deletes` entry). A missing/failed
+  signature is treated as moved (fail-safe: one extra bounded ids query, never
+  a stale order). Absent ⇒ an in-place UPDATE never reorders the window until
+  the next membership delta, so the ORDER BY must then be update-stable; the
+  compiler layer (query-resource) always derives one for compiled windows,
+  downgrading that stability rule to a cost note (each order-column update
+  costs one O(window) ids query).
 
 A **membership delta always ships the full `order`** — the client rebuilds the
 keyed array purely from `order`, so an incremental membership change must assert
-it. `diffKeyedScopedMembership` rebuilds `nextSnapshot` FROM the wire `order`
-(snapshot ≡ order) and sanitizes upserts/order to surviving ids, so an
-`orderedIds` disagreement or concurrent delete drops out with no client
+it (this is also how a squeezed-out tail row leaves the client without a
+`deletes` entry). `diffKeyedScopedMembership` rebuilds `nextSnapshot` FROM the
+wire `order` (snapshot ≡ order) and sanitizes upserts/order to surviving ids, so
+an `orderedIds` disagreement or concurrent delete drops out with no client
 drift-resub. It **throws** if a refill id entered membership but no `orderedIds`
-was supplied (the caller must run `orderOf` on any entry).
+was supplied.
 
-Persisted (`bootCritical`) scopedMembership entries reconstruct the FULL value
-from the post-diff snapshot (`JSON.parse` of each stored canonical-JSON entry →
-byte-identical jsonb to a FULL persist) and persist it with a watermark captured
-**before** the refill/`orderOf` reads. Their snapshot is **kept across N→0 subs**
-(they recompute on every change regardless of subscribers and need the diff base);
-branch 2/3 (`drainMembershipFull`) seeds/replaces the snapshot even with zero subs
-so the next incremental diff has a base. A DELETE cascades downstream FULL (a
-vanished row has no value for an `affectedMap` to translate); inserts/updates
-cascade scoped.
+**Persistence: bounded entries are structurally excluded.** `drainEntry`'s
+`persisted` gate is `!externalSource && !membershipBounded(entry) &&
+shouldPersist(key)` — a bounded window or point entry is never L2-persisted
+(read off the definition, never by resource name), never keeps its snapshot
+across N→0, and uses the hash snapshot encoder. Only the **alias** keeps the M5
+persisted behavior: persisted (`bootCritical`) scopedMembership entries
+reconstruct the FULL value from the post-diff snapshot (`JSON.parse` of each
+stored canonical-JSON entry → byte-identical jsonb to a FULL persist), persist it
+with a watermark captured **before** the refill/`orderOf` reads, and keep their
+snapshot across N→0 (they recompute on every change regardless of subscribers
+and need the diff base); branch 2/3 (`drainMembershipFull`) seeds/replaces the
+snapshot even with zero subs so the next incremental diff has a base. A DELETE
+cascades downstream FULL (a vanished row has no value for an `affectedMap` to
+translate); inserts/updates cascade scoped (backfilled tail ids do NOT join the
+cascade set — they did not change in the DB, they only entered this window's
+view).
 
 ## Keyed snapshot representation (`SnapEntry` / `SnapEncoder`)
 
@@ -117,12 +166,13 @@ representation is per-resource, decided statically by `snapEncoderFor`
   The accepted trade — a 64-bit collision silently masks one row update, at
   ~n²/2⁶⁵ per pk — is documented on the encoder and pinned by a
   collision-injection test in `keyed-diff.test.ts`.
-- **`scopedMembership` entries (`retainSnapEncoder`)**: keep the full canonical
-  JSON string — their persisted-incremental path (above) `JSON.parse`s the
-  stored entries to reconstruct the FULL value, so the bytes must be there. The
-  choice keys off the *definition* (not `shouldPersist`) so it can never flip
-  between seeding and consumption; the reconstruction site throws loudly if it
-  ever meets a hashed entry.
+- **`scopedMembership` (unbounded-window alias) entries (`retainSnapEncoder`)**:
+  keep the full canonical JSON string — their persisted-incremental path (above)
+  `JSON.parse`s the stored entries to reconstruct the FULL value, so the bytes
+  must be there. The choice keys off the *definition* (not `shouldPersist`) so it
+  can never flip between seeding and consumption; the reconstruction site throws
+  loudly if it ever meets a hashed entry. Bounded `membership` entries (window /
+  point) are never persisted, so they stay on the hash encoder.
 
 `keyed-diff.ts` stays pure: every diff function takes the encoder as a
 parameter, and a resource's prior snapshots must have been built with the same
@@ -322,7 +372,7 @@ and those plugins' `CLAUDE.md`.
 
 - Core:
   - Uses: `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
-  - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedMembershipInput`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`, `SnapEncoder`, `SnapEntry`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`, `diffKeyedScopedMembership`, `hashSnapEncoder`, `retainSnapEncoder`
+  - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedMembership`, `KeyedMembershipInput`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`, `SnapEncoder`, `SnapEntry`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`, `diffKeyedScopedMembership`, `hashSnapEncoder`, `retainSnapEncoder`
 - Cross-plugin:
   - Imported by: `framework/central-core`, `framework/server-core`
 

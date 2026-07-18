@@ -12,6 +12,7 @@ import {
   readPersistedReadSets,
   readPersistedSnapshots,
   clearPersistedSnapshots,
+  clearSnapshotsExceptKeys,
   reconcileReadSetTable,
 } from "./persist";
 import {
@@ -187,6 +188,39 @@ describe("clearPersistedSnapshots", () => {
   test("empty keys → returns 0, no delete", async () => {
     await persistSnapshot(t.db, "a", "{}", {}, "1", []);
     const deleted = await clearPersistedSnapshots(t.db, []);
+    expect(deleted).toBe(0);
+    expect(await countRows()).toBe(1);
+  });
+});
+
+describe("clearSnapshotsExceptKeys (non-persistable boot sweep)", () => {
+  test("deletes rows for keys NOT in the persistable set (ANY params_key), keeps the rest", async () => {
+    // `pushes` — bootCritical dropped: a stale '{}' row from the prior boot must go.
+    await persistSnapshot(t.db, "pushes", "{}", {}, "1", []);
+    // Belt-and-suspenders: a leftover non-'{}' row for a swept key must go too.
+    await persistSnapshot(t.db, "pushes", '{"limit":"100"}', {}, "1", []);
+    // `conversation-categories` — migrated to a point resource (never persisted).
+    await persistSnapshot(t.db, "conversation-categories", "{}", {}, "1", []);
+    // A key that no longer exists at all — swept as harmless cleanup.
+    await persistSnapshot(t.db, "removed-resource", "{}", {}, "1", []);
+    // Still-persistable resources (bootCritical, not bounded) must be left intact.
+    await persistSnapshot(t.db, "attempts", "{}", {}, "1", []);
+    await persistSnapshot(t.db, "tasks", "{}", {}, "1", []);
+
+    const deleted = await clearSnapshotsExceptKeys(t.db, ["attempts", "tasks"]);
+    expect(deleted).toBe(4); // pushes×2 + categories + removed-resource
+
+    expect(await selectRow("pushes", "{}")).toBeUndefined();
+    expect(await selectRow("pushes", '{"limit":"100"}')).toBeUndefined();
+    expect(await selectRow("conversation-categories", "{}")).toBeUndefined();
+    expect(await selectRow("removed-resource", "{}")).toBeUndefined();
+    expect(await selectRow("attempts", "{}")).toBeDefined(); // persistable, kept
+    expect(await selectRow("tasks", "{}")).toBeDefined(); // persistable, kept
+  });
+
+  test("empty keepKeys → returns 0, no delete (never nuke everything)", async () => {
+    await persistSnapshot(t.db, "a", "{}", {}, "1", []);
+    const deleted = await clearSnapshotsExceptKeys(t.db, []);
     expect(deleted).toBe(0);
     expect(await countRows()).toBe(1);
   });

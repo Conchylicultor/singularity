@@ -306,4 +306,8 @@ export const {
   // Scoped keyed resources ({ key, identityTable }) — the change-feed cross-checks
   // these against its ExcludeFromChangeFeed set at boot to reject dead scope policy.
   scopedResourceIdentities,
+  // Bounded-membership keys (window/point) — the live-state-snapshot boot sweep
+  // deletes leftover persisted rows for these (they are never persisted going
+  // forward, so any snapshot row is stale from a pre-migration boot).
+  boundedMembershipKeys,
 } = runtime;

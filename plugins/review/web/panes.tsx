@@ -5,7 +5,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { Review } from "./slots";
 import { type Source, SourceTabs, groupPushes } from "./source";
 
@@ -23,13 +23,14 @@ function ConvReviewBody() {
   const conversation = useConversationById(convId ?? null);
   const [source, setSource] = useState<Source>({ kind: "working" });
 
-  const pushesQ = useResource(pushesResource);
+  // Per-attempt bounded sub — correct for arbitrarily old attempts, unlike
+  // filtering the global recent-push window (which dropped an old attempt's pushes).
+  const pushesQ = useResource(pushesByAttemptResource, {
+    attemptId: conversation?.attemptId ?? "",
+  });
   const pushGroups = useMemo(() => {
     if (pushesQ.pending || !conversation) return [];
-    const rows = pushesQ.data.filter(
-      (p) => p.attemptId === conversation.attemptId,
-    );
-    return groupPushes(rows);
+    return groupPushes(pushesQ.data);
   }, [pushesQ, conversation]);
 
   if (!convId) return null;

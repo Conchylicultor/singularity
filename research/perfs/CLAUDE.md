@@ -185,6 +185,23 @@ gateway's blue-green hot restart **worked** (the "main down 11.5 min" claim is r
 `gateway.log`); a failed hot restart is silent in the gateway log (observability gap, owned by the
 debug-surface consolidation workstream). Full doc →
 **[`2026-07-18-bounded-working-set-architecture.md`](./2026-07-18-bounded-working-set-architecture.md)**.
+**2026-07-18 — the contract is DESIGNED + Phases 0/1 BUILT (worktree `att-1784331173-klc4`,
+awaiting merge + live re-validation):** the bounded-membership keyed resource (window `{limit}` /
+point `{ids}` selectors on the existing keyed wire; M5 generalized to a bounded `windowIdsOf` +
+an order-signature seam so order-column updates re-derive the window), `windowQueryResource`
+compiler, `primitives/keyset` leaf, and the pilot trio — `pushes` (per-attempt resource +
+de-persisted cascade carrier), `notifications` (window 200/500 — kills the measured ~2 GB/day
+FULL-recompute+persist churn from 14 k count-bump updates/day, the top rate×cost offender),
+`conversation-categories` (point; the O(n) per-row `.find` gone). Migrated resources are no
+longer persisted (generic boot sweep deletes stale snapshot rows); boot-snapshot serves bounded
+default windows. Design corrections vs the architecture doc (the offenders are unbounded flat
+collections, NOT read-time aggregations; the wire was already row-shaped; rank by SERIALIZED
+boot-payload size, not `pg_column_size`) + implementation log + phased end-state (delete
+live-state-snapshot + the changelog write once trees migrate) →
+**[`../2026-07-18-global-bounded-working-set-resource-contract.md`](../2026-07-18-global-bounded-working-set-resource-contract.md)**.
+Follow-up task chain filed (flat sweep → trees → commits-graph id-routing → legacy deletion →
+squeezed-backend acceptance run). NEW resources must use the bounded contract — rule recorded in
+the root `CLAUDE.md` Coding Style section; a burndown-style enforcement check is a filed task.
 
 ### Read-admission wedge — nested heavy-read slots deadlock the warmup drain (Completed)
 

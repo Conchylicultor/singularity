@@ -25,6 +25,7 @@ export {
   onResourcePush,
   recomputeResource,
   scopedResourceIdentities,
+  boundedMembershipKeys,
   setRelationResolver,
   setFeedExemptTables,
   setLiveStateSnapshotHooks,

@@ -145,3 +145,70 @@ export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 }
+
+/**
+ * One key of a bounded window's total order.
+ *
+ * RULE: the column MUST be UPDATE-STABLE (immutable post-insert — `createdAt`,
+ * the pk, a fixed discriminator). The runtime's in-place path deliberately
+ * skips `windowIdsOf` (a pure UPDATE ships one upsert, `order` omitted), so an
+ * ORDER BY over a mutable column would leave the window's order stale until
+ * the next membership delta — a correctness bug, not a staleness nit. Declared
+ * as `{ col, dir }` pairs rather than raw `SQL` so the compiler can append the
+ * pk tiebreaker (a strict total order — a window must be a prefix of it) and a
+ * future cursor can derive its keyset seek from the same keys.
+ */
+export interface WindowOrderKey {
+  col: PgColumn;
+  /** Default `"asc"`. */
+  dir?: "asc" | "desc";
+  /** Nullable column → symmetric NULLS LAST handling (see `primitives/keyset`). Default `false`. */
+  nullable?: boolean;
+}
+
+/**
+ * The declarative input to `compileWindowQuery` / `windowQueryResource` — the
+ * bounded-membership (window / point) sibling of `QueryResourceSpec`. Exactly
+ * ONE of `window` / `point` must be declared, and it must match the descriptor
+ * kind (`windowQueryResourceDescriptor` / `pointQueryResourceDescriptor`).
+ * There is deliberately NO `limit` / `recompute` / `scopedMembership` here:
+ * the bound comes from the subscription params (clamped to `maxLimit`), and
+ * membership is always incremental.
+ */
+export interface WindowQueryResourceSpec<P extends ResourceParams = ResourceParams> {
+  /** The relation to read: a base table, a 1:1 identity view, or an entity. */
+  from: QuerySource;
+  /** Same derivation rules as `QueryResourceSpec.identity`. For `point`, `point.by` IS the identity pk. */
+  identity?: { table?: string; pk: PgColumn };
+  /** Projection. Default: an entity's `wireColumns`, or all columns (table/view). */
+  select?: SelectMap;
+  /**
+   * Server-fixed scope predicate (e.g. `dismissed = false`). Unlike the plain
+   * `QueryResourceSpec`, a mutable-column `where` is FINE here: a where-flip is
+   * detected as a membership exit/entry by the runtime's window path.
+   */
+  where?: SQL | ((params: P) => SQL | undefined);
+  /** Window total order — REQUIRED for `window`, forbidden for `point` (point sets are unordered). */
+  orderBy?: WindowOrderKey | WindowOrderKey[];
+  /**
+   * Ordered-window kind. `maxLimit` clamps every subscription's decoded
+   * `limit` (the loader AND `windowIdsOf`, identically). The default limit
+   * lives ONLY on the descriptor (`windowQueryResourceDescriptor`'s
+   * `defaultLimit`) — the single source both the client hook and the boot
+   * path read; the compiler asserts `defaultLimit <= maxLimit` at module eval.
+   */
+  window?: { maxLimit: number };
+  /**
+   * Explicit point-set kind. `by` is the column the subscribed id set matches —
+   * it IS the resource's identity pk (the change-feed routes by intersecting
+   * changed identity ids with each tuple's set, so any other column could
+   * never intersect). Redundant `identity.pk`, if given, must equal it.
+   */
+  point?: { by: PgColumn };
+  /** `rel()` cascade edges — compiled into `dependsOn` (see `Edge`). */
+  edges?: Edge[];
+  /** Fixed-window trailing debounce (ms) for this resource's flushes. */
+  debounceMs?: number;
+  /** Test seam. Defaults to the real per-worktree drizzle `db`. */
+  db?: QueryDb;
+}

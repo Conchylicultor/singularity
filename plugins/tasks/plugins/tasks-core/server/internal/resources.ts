@@ -17,6 +17,7 @@ import {
   taskDetailResource as taskDetailDescriptor,
   attemptsResource as attemptsDescriptor,
   pushesResource as pushesDescriptor,
+  pushesByAttemptResource as pushesByAttemptDescriptor,
   conversationsActiveResource as conversationsActiveDescriptor,
   conversationsSystemResource as conversationsSystemDescriptor,
   conversationsGoneResource as conversationsGoneDescriptor,
@@ -105,10 +106,39 @@ export const conversationsGoneStatsResource = defineResource(conversationsGoneSt
   loader: async () => ({ totalGoneCount: await countGoneConversations() }),
 });
 
+// Global push-mode carrier for the SERVER cascade only (attempts status +
+// commits-graph refresh). No web subscriber — attempt-scoped surfaces read
+// `pushesByAttemptResource`. Kept push-mode + param-less because the commits-graph
+// downstream is a value-aware `map` (it reads the whole pushes value), which a
+// bounded window cannot serve on the zero-subscriber `{}` cascade tuple. Not
+// bootCritical (descriptor) ⇒ no L2 persist and no boot payload — the 525 KB
+// churn is gone even though the loader still runs per push for the value `map`.
 export const pushesResource = defineResource(pushesDescriptor, {
   mode: "push",
-  loader: async () =>
-    db.select().from(pushes).orderBy(desc(pushes.createdAt)),
+  loader: async () => db.select().from(pushes).orderBy(desc(pushes.createdAt)),
+});
+
+// Per-attempt bounded push list (keyed, params `{ attemptId }`, identityTable
+// "pushes"). Hand-written like page-block-doc: the identityTable scopes recompute,
+// and a push change is delivered to every subscribed attempt tuple — the scoped
+// refill (`WHERE attempt_id = X AND id IN affectedIds`) returns the row only for
+// the owning attempt, so other tuples no-op. FULL load = one attempt's pushes
+// (bounded), desc(createdAt) to match the former global order. Correct for
+// arbitrarily old attempts; it queries by attemptId directly, never a global
+// window. This is what every attempt-scoped push consumer subscribes to.
+export const pushesByAttemptResource = defineResource(pushesByAttemptDescriptor, {
+  identityTable: "pushes",
+  loader: async ({ attemptId }, ctx) =>
+    ctx?.affectedIds
+      ? db
+          .select()
+          .from(pushes)
+          .where(and(eq(pushes.attemptId, attemptId), inArray(pushes.id, [...ctx.affectedIds])))
+      : db
+          .select()
+          .from(pushes)
+          .where(eq(pushes.attemptId, attemptId))
+          .orderBy(desc(pushes.createdAt)),
 });
 
 export const attemptsResource = defineResource(attemptsDescriptor, {

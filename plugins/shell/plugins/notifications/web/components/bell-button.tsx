@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MdNotifications, MdNotificationsNone } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useWindowResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -121,7 +121,7 @@ function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (i
 export function BellButton() {
   const [open, setOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const notificationsResult = useResource(notificationsResource);
+  const notificationsResult = useWindowResource(notificationsResource);
 
   // prevIdsRef must always run — it tracks new-notification arrivals for toasts.
   const prevIdsRef = useRef<Set<string> | null>(null);

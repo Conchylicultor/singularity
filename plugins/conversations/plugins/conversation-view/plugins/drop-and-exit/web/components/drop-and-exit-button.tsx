@@ -6,7 +6,7 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import { useConversation, useHasActiveSiblings } from "@plugins/conversations/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { dropAndExit } from "../../core";
 
 export function DropAndExitItem({
@@ -15,7 +15,12 @@ export function DropAndExitItem({
   conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const pushesResult = useResource(pushesResource);
+  // Per-attempt bounded sub — correct for arbitrarily old attempts; gating a
+  // destructive Drop-vs-Complete default on the global recent window could mis-read
+  // an idle-open conversation whose only push fell outside it.
+  const pushesResult = useResource(pushesByAttemptResource, {
+    attemptId: conversation.attemptId,
+  });
   const siblingsResult = useHasActiveSiblings(conversation.taskId, conversation.id);
   // The label/destructiveness decision reads TWO independently-arriving
   // resources; gate on both so the destructive "Drop & Exit" default can never
@@ -30,10 +35,8 @@ export function DropAndExitItem({
   // decision is one the server vouches for (there is no `.error` on the settled
   // arm to consult). No separate error guard needed.
   const hasPush = useMemo(
-    () =>
-      !decision.pending &&
-      decision.data.pushes.some((p) => p.attemptId === conversation.attemptId),
-    [decision, conversation.attemptId],
+    () => !decision.pending && decision.data.pushes.length > 0,
+    [decision],
   );
 
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {

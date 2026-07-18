@@ -3,7 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useConfig } from "@plugins/config_v2/web";
-import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
@@ -26,7 +26,10 @@ export function CodeReviewSummary({
   const safePaths = config.safePaths.map((p) => p.path);
   const carefulPaths = config.carefulPaths.map((p) => p.path);
 
-  const pushesQ = useResource(pushesResource);
+  // Per-attempt bounded sub — correct for arbitrarily old attempts.
+  const pushesQ = useResource(pushesByAttemptResource, {
+    attemptId: conversation?.attemptId ?? "",
+  });
 
   // Gate: render nothing while pushes are loading so hasPastPushes is never
   // incorrectly false (which would hide the file-stats row on a past-push conversation).
@@ -39,9 +42,8 @@ export function CodeReviewSummary({
   if (!filesResult.data.resolved) return null;
   const files = filesResult.data.value;
 
-  const hasPastPushes = conversation
-    ? pushesQ.data.some((p) => p.attemptId === conversation.attemptId)
-    : false;
+  // The sub is already scoped to this conversation's attempt, so any row means a past push.
+  const hasPastPushes = pushesQ.data.length > 0;
 
   const count = files.length;
   const additions = files.reduce((sum, f) => sum + f.additions, 0);

@@ -16,6 +16,9 @@ export type { HttpStaleDropReport } from "./stale-drop-reporter";
 export type { ResourceKey, ChannelStatuses, LiveStateSocketKind, DebugSub, DebugSnapshot, LeaderInfo, MissedFrame } from "./notifications-client";
 export { resourceDescriptor, keyedResourceDescriptor, centralResourceDescriptor, resourceDescriptorByKey } from "../core/resource";
 export type { ResourceDescriptor, ResourceOrigin } from "../core/resource";
+export { windowResourceDescriptor, pointResourceDescriptor } from "../core/window";
+export type { WindowResourceDescriptor, PointResourceDescriptor, WindowParams, PointParams, WindowSelector } from "../core/window";
+export { useWindowResource, usePointResource, usePointResources } from "./window-hooks";
 
 export default {
   description:

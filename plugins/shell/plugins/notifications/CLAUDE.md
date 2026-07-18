@@ -7,15 +7,18 @@
 - Description: Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
 - Web:
   - Contributes: `ActionBar.Item` → `BellButton`
-  - Uses: `apps-core/tabs.navigate`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
+  - Uses: `apps-core/tabs.navigate`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/icon-button.IconButton`, `primitives/live-state.useWindowResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
   - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
 - Server:
   - Contributes: `resource.declare` "notifications"
+<<<<<<< .merge_file_o9V1vz
   - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `primitives/log-channels.defineLogSink`
+=======
+  - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.windowQueryResource`, `primitives/log-channels.Log`
+>>>>>>> .merge_file_jIycAi
   - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
   - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`, `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`
-  - Resources: `notifications` (keyed)
   - Routes: `POST /api/notifications`, `POST /api/notifications/dismiss-all`, `POST /api/notifications/mark-all-read`, `POST /api/notifications/:id/dismiss`
 - Cross-plugin:
   - Imported by: `apps/prototypes/gallery`, `apps/studio/compositions/release/release-logs`, `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `database/fork`, `debug/boot-profile`, `debug/queue`, `debug/reports`, `history/dialog`, `infra/events-test`, `page/inline-date`, `reports`, `reports/launch-fix`, `reports/mutation-errors`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-preprompt`

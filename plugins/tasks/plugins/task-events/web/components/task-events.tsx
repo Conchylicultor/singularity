@@ -1,5 +1,5 @@
 import { MdOpenInNew } from "react-icons/md";
-import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -14,7 +14,8 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import {
   getRepoInfo,
 } from "@plugins/tasks/core";
-import { attemptsResource, pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { attemptsResource, pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
+import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -35,9 +36,51 @@ function formatDate(value: Date | string): string {
   });
 }
 
+function PushRow({ push, githubBase }: { push: Push; githubBase: string | null }) {
+  const short = push.sha.slice(0, 7);
+  const url = githubBase ? `${githubBase}/commit/${push.sha}` : null;
+  return (
+    <li>
+      <Row
+        href={url ?? undefined}
+        target={url ? "_blank" : undefined}
+        rel={url ? "noreferrer" : undefined}
+        bordered
+        className="gap-md"
+      >
+        <Text as="code" variant="caption" tone="muted" className="shrink-0 font-mono">
+          {short}
+        </Text>
+        <Text as="span" variant="body" className="flex-1 truncate">{push.message}</Text>
+        <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+          {formatDate(push.createdAt)}
+        </Text>
+        {url ? <MdOpenInNew className="text-muted-foreground size-4 shrink-0" /> : null}
+      </Row>
+    </li>
+  );
+}
+
+// One attempt's pushes, subscribed per-attempt (bounded, correct for arbitrarily
+// old attempts). Rendered once per attempt so a task's push history is grouped by
+// attempt (attempts already sorted newest-first; pushes within an attempt too).
+function AttemptPushList({ attemptId, githubBase }: { attemptId: string; githubBase: string | null }) {
+  const pushesQ = useResource(pushesByAttemptResource, { attemptId });
+  if (pushesQ.pending) return null;
+  const pushes = [...pushesQ.data].sort(
+    (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+  );
+  return (
+    <>
+      {pushes.map((push) => (
+        <PushRow key={push.id} push={push} githubBase={githubBase} />
+      ))}
+    </>
+  );
+}
+
 export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
-  const pushesQ = useResource(pushesResource);
   const githubBase = useGithubBase();
   const openPane = useOpenPane();
   // Find the last conversationPane in the chain — if there are multiple
@@ -48,17 +91,10 @@ export function TaskEvents({ taskId }: { taskId: string }) {
     : null;
   const activeConvId = activeConvEntry?.params.convId;
 
-  // Gate both resources together so the lists never paint from a half-loaded
-  // snapshot (e.g. a confident "No pushes yet." while pushes are in-flight).
-  const all = useCombinedResources({ attempts: attemptsQ, pushes: pushesQ });
-  if (all.pending) return <Loading variant="rows" />;
+  if (attemptsQ.pending) return <Loading variant="rows" />;
 
-  const attempts = all.data.attempts
+  const attempts = attemptsQ.data
     .filter((a) => a.taskId === taskId)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  const attemptIds = new Set(attempts.map((a) => a.id));
-  const pushes = all.data.pushes
-    .filter((p) => attemptIds.has(p.attemptId))
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
@@ -68,38 +104,13 @@ export function TaskEvents({ taskId }: { taskId: string }) {
         <SectionHeaderRow variant="eyebrow">Pushes</SectionHeaderRow>
         <CollapsibleContent>
         <Stack gap="sm">
-        {pushes.length === 0 ? (
+        {attempts.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No pushes yet.</Text>
         ) : (
           <Stack as="ul" gap="xs">
-            {pushes.map((push) => {
-              const short = push.sha.slice(0, 7);
-              const url = githubBase
-                ? `${githubBase}/commit/${push.sha}`
-                : null;
-              return (
-                <li key={push.id}>
-                  <Row
-                    href={url ?? undefined}
-                    target={url ? "_blank" : undefined}
-                    rel={url ? "noreferrer" : undefined}
-                    bordered
-                    className="gap-md"
-                  >
-                    <Text as="code" variant="caption" tone="muted" className="shrink-0 font-mono">
-                      {short}
-                    </Text>
-                    <Text as="span" variant="body" className="flex-1 truncate">{push.message}</Text>
-                    <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
-                      {formatDate(push.createdAt)}
-                    </Text>
-                    {url ? (
-                      <MdOpenInNew className="text-muted-foreground size-4 shrink-0" />
-                    ) : null}
-                  </Row>
-                </li>
-              );
-            })}
+            {attempts.map((a) => (
+              <AttemptPushList key={a.id} attemptId={a.id} githubBase={githubBase} />
+            ))}
           </Stack>
         )}
         </Stack>

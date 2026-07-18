@@ -1,4 +1,4 @@
-import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
+import type { KeysetSortRule } from "./sort-rule";
 
 /**
  * The decoded keyset cursor: the last-seen row's sort-key tuple (`v`, in key
@@ -17,12 +17,12 @@ export interface CursorPayload {
 }
 
 /**
- * Stable, order-sensitive string identity of a sort. Two `SortRule[]`s produce
- * the same signature iff they are the same fields in the same order with the
- * same directions — so it doubles as the keyset-validity token stamped into the
- * cursor.
+ * Stable, order-sensitive string identity of a sort. Two `KeysetSortRule[]`s
+ * produce the same signature iff they are the same fields in the same order with
+ * the same directions — so it doubles as the keyset-validity token stamped into
+ * the cursor.
  */
-export function sortSignature(sort: SortRule[]): string {
+export function sortSignature(sort: KeysetSortRule[]): string {
   return sort.map((r) => `${r.fieldId}:${r.direction}`).join(",");
 }
 

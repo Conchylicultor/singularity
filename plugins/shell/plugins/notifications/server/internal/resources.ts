@@ -1,18 +1,20 @@
-import { desc, eq } from "drizzle-orm";
-import { queryResource } from "@plugins/infra/plugins/query-resource/server";
+import { eq } from "drizzle-orm";
+import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
 import { _notifications } from "./tables";
 import { notificationsResource as notificationsDescriptor } from "../../shared/resources";
 
-// Compiled keyed query-resource, declared K/FULL (`recompute`), NOT
-// identityTable-scoped: the `dismissed = false` filter is a MUTABLE-membership
-// `where`. Dismissing flips `dismissed` via UPDATE — under a scoped refill the
-// row would simply not be returned, and `diffKeyedScoped` never emits deletes,
-// so the dismissed row would sit stale in every client snapshot until the next
-// FULL. The FULL recompute re-runs the whole query and diffs keyed
-// (`diffKeyedFull`), so a dismissal ships as a proper per-row delete — and the
-// in-place read/mute flips still ship as single-row upserts instead of the
-// whole array (the Layer-1 keyed-diff win this migration is after).
-export const notificationsResource = queryResource(notificationsDescriptor, {
+// Bounded ordered window (desc createdAt, default 200 / max 500). Window
+// membership + the order-signature seam cover BOTH mutable behaviors that used to
+// mandate a FULL recompute: a dismiss (where-flip on the mutable `dismissed`
+// column) is detected as a membership EXIT and shipped as a real delete + order,
+// and a resurface (which bumps the `createdAt` order column via UPDATE) is
+// detected as an order-column change and re-floated to the window top via one
+// bounded ids query + a membership delta with fresh order. A count/lastSeenAt-only
+// dedup bump changes no order column, so it stays a single in-place upsert (no ids
+// query). `createdAt` is projected in the select below — the compiler derives the
+// order signature from the wire row and throws at module eval if an order column
+// is unprojected.
+export const notificationsResource = windowQueryResource(notificationsDescriptor, {
   from: _notifications,
   // Explicit columns: dedupKey is a server-internal dedup mechanism and must
   // not leak into the client wire payload (NotificationSchema).
@@ -32,10 +34,6 @@ export const notificationsResource = queryResource(notificationsDescriptor, {
     createdAt: _notifications.createdAt,
   },
   where: eq(_notifications.dismissed, false),
-  orderBy: desc(_notifications.createdAt),
-  recompute: {
-    kind: "full",
-    reason:
-      "where-filtered membership: dismiss/dismiss-all flip `dismissed` via UPDATE, removing rows from the result set — a scoped refill cannot delete (diffKeyedScoped never emits deletes)",
-  },
+  orderBy: { col: _notifications.createdAt, dir: "desc" },
+  window: { maxLimit: 500 },
 });

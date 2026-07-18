@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   useNotificationsChannelStatuses,
   useResource,
+  useWindowResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { frontendHashResource } from "@plugins/build/core";
 import { notificationsResource } from "@plugins/shell/plugins/notifications/web";
@@ -47,7 +48,7 @@ export function useActionBarStatus(): ActionBarStatus {
   // Unread error/warning notifications (same filter as the bell button).
   // No hook calls after this point, so we can gate with an early return
   // to prevent attentionCount=0 from producing a false "all ok" tone.
-  const notifResult = useResource(notificationsResource);
+  const notifResult = useWindowResource(notificationsResource);
 
   const disconnected = worktree === "closed" || central === "closed";
   const reconnecting =

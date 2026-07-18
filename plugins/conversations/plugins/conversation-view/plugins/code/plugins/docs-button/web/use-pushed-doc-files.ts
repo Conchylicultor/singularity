@@ -2,23 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPushFiles } from "@plugins/code-explorer/plugins/code-api/core";
-import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { isDocFile } from "./panes";
 
 /** Returns all .md/.mdx files changed in any push for the given attempt, deduped by path. Null while loading. */
 export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
-  const pushesQ = useResource(pushesResource);
+  // Per-attempt bounded sub — the rows are already this attempt's pushes.
+  const pushesQ = useResource(pushesByAttemptResource, { attemptId });
   const [result, setResult] = useState<{ key: string; files: EditedFile[] } | null>(null);
 
   const pushIdsKey = useMemo(() => {
     if (pushesQ.pending) return null;
     const ids = new Set<string>();
-    for (const r of pushesQ.data) {
-      if (r.attemptId === attemptId) ids.add(r.pushId);
-    }
+    for (const r of pushesQ.data) ids.add(r.pushId);
     return [...ids].sort().join(",");
-  }, [pushesQ, attemptId]);
+  }, [pushesQ]);
 
   useEffect(() => {
     if (pushIdsKey === null) return;

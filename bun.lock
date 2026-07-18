@@ -3578,6 +3578,10 @@
       "name": "@singularity/plugin-primitives-inline-text",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/keyset": {
+      "name": "@singularity/plugin-primitives-keyset",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/latest-ref": {
       "name": "@singularity/plugin-primitives-latest-ref",
       "version": "0.0.1",
@@ -6692,6 +6696,8 @@
     "@singularity/plugin-primitives-imperative-dialog": ["@singularity/plugin-primitives-imperative-dialog@workspace:plugins/primitives/plugins/imperative-dialog"],
 
     "@singularity/plugin-primitives-inline-text": ["@singularity/plugin-primitives-inline-text@workspace:plugins/primitives/plugins/inline-text"],
+
+    "@singularity/plugin-primitives-keyset": ["@singularity/plugin-primitives-keyset@workspace:plugins/primitives/plugins/keyset"],
 
     "@singularity/plugin-primitives-latest-ref": ["@singularity/plugin-primitives-latest-ref@workspace:plugins/primitives/plugins/latest-ref"],
 

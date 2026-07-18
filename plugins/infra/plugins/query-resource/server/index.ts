@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { compileQuery, compileEdges, queryResource } from "./internal/compile";
 export type { CompiledQuery } from "./internal/compile";
+export { compileWindowQuery, windowQueryResource } from "./internal/compile-window";
 export { rel } from "./internal/rel";
 export type {
   Edge,
@@ -11,6 +12,8 @@ export type {
   QueryResourceSpec,
   QuerySource,
   SelectMap,
+  WindowOrderKey,
+  WindowQueryResourceSpec,
 } from "./internal/spec";
 
 export default {

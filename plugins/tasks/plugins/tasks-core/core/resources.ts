@@ -56,9 +56,35 @@ export const attemptsResource = keyedResourceDescriptor<AttemptWithConversations
   (r) => (r as AttemptWithConversations).id,
   { bootCritical: true },
 );
-export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema), [], {
-  bootCritical: true,
-});
+// Global push resource — a param-less push-mode carrier whose ONLY role now is
+// the SERVER cascade: the `attempts` status invalidation (`rel(pushesResource,…)`,
+// id-based) and the commits-graph refresh (a value-aware `map` reading the whole
+// pushes value). No web consumer subscribes anymore — every attempt-scoped push
+// surface reads the bounded `pushesByAttemptResource` below instead. It is NOT
+// bootCritical: nothing subscribes, so persisting/boot-shipping the full table
+// (the measured 525 KB churn) is pure waste. A window here is impossible — a
+// value-aware `map` downstream forces the loader to run on every change, and the
+// zero-subscriber cascade fans to the param-less `{}` tuple, which a windowed
+// loader cannot decode.
+export const pushesResource = resourceDescriptor<Push[]>(
+  "pushes",
+  z.array(PushSchema),
+  [],
+);
+
+// Per-attempt bounded push list — a keyed resource parametrized by `{ attemptId }`
+// so each consumer subscribes to exactly ONE attempt's pushes, bounded by that
+// attempt and CORRECT for arbitrarily old attempts. This is the source every
+// attempt-scoped push consumer reads: filtering the global `pushes` window by
+// attemptId silently dropped an old attempt's pushes once they fell outside the
+// recent global window (a wrong "No pushes yet" / a destructive drop-vs-complete
+// mis-gate). NOT bootCritical — route-scoped, hydrates post-mount via its sub-ack
+// (the page-block-doc precedent). The server half is a hand-written keyed
+// `defineResource` with `identityTable: "pushes"`.
+export const pushesByAttemptResource = keyedResourceDescriptor<
+  Push[],
+  { attemptId: string }
+>("pushes-by-attempt", z.array(PushSchema), [], (r) => (r as Push).id);
 
 // Conversation list, decomposed into keyed delta-sync sub-resources + one scalar
 // stats resource (replaces the old aggregate `conversationsResource`). Keyed

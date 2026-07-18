@@ -36,6 +36,7 @@ export {
   taskDetailResource,
   attemptsResource,
   pushesResource,
+  pushesByAttemptResource,
   conversationsActiveResource,
   conversationsSystemResource,
   conversationsGoneResource,

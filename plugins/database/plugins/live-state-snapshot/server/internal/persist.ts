@@ -216,6 +216,39 @@ export async function readPersistedSnapshots(
   return out;
 }
 
+// Boot sweep: DELETE every persisted row whose `resource_key` is NOT in the
+// currently-PERSISTABLE set, returning the number of rows removed. This evicts
+// stale snapshots that a prior boot wrote for a key that is no longer persisted —
+// a resource migrated to the bounded working-set contract (window / point, which
+// the runtime NEVER persists) or one whose `bootCritical` flag was dropped. Served
+// via the L2 boot fast path (`readPersistedSnapshots`), such a leftover would
+// hydrate the client with a stale, possibly-unbounded value under a key whose
+// loader now returns something else. Rows for keys that don't exist at all are
+// swept too (harmless cleanup). The exclusion form needs no memory of the OLD
+// state — "not persistable now" is the whole predicate. Empty `keepKeys` is a
+// no-op guard (never nuke everything): at a real boot the persistable set is
+// non-empty, and persistence is a graceful-degradation accelerator anyway. Unlike
+// `clearPersistedSnapshots` this is NOT scoped to `params_key = '{}'`. `RETURNING`
+// makes the count robust regardless of the driver's `rowCount` typing.
+export async function clearSnapshotsExceptKeys(
+  db: NodePgDatabase,
+  keepKeys: readonly string[],
+): Promise<number> {
+  if (keepKeys.length === 0) return 0;
+  const keepArray = drizzleSql`ARRAY[${drizzleSql.join(
+    keepKeys.map((k) => drizzleSql`${k}`),
+    drizzleSql`, `,
+  )}]::text[]`;
+  const res = await db.execute<{ resource_key: string }>(
+    drizzleSql`
+      DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE resource_key <> ALL(${keepArray})
+      RETURNING resource_key
+    `,
+  );
+  return res.rows.length;
+}
+
 // Cold-boot benchmark hook: DELETE the param-less ("{}") persisted rows for the
 // given resource keys, returning the number of rows removed. Forces a truly cold
 // boot-snapshot read on the next request (the L2 fast path misses → falls back to

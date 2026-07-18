@@ -138,6 +138,92 @@ Absent ⇒ byte-identical to the pre-M5 FULL-on-membership-change behavior. See
 `research/2026-07-03-global-scoped-membership-m5.md` and the runtime section in
 `plugins/framework/plugins/resource-runtime/CLAUDE.md`.
 
+## Bounded membership: `windowQueryResource` (window / point)
+
+> **DEFAULT for new resources.** A NEW DB-backed collection resource is declared with
+> `windowQueryResource` (window or point membership) — the unbounded `queryResource` form and
+> hand-written unbounded keyed/push collections above are **legacy pending migration**; do not
+> use them as precedent for new work. Reach for plain `queryResource` only for a set that is
+> provably small and bounded by the domain itself (and say why in a comment). Migration state +
+> rationale: `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
+
+The bounded-working-set sibling of `queryResource`
+(`research/2026-07-18-global-bounded-working-set-resource-contract.md`): the
+subscription's params tuple names a **bounded selector**, so a change costs
+O(changed) + O(window), never O(collection), and the value is never the whole
+table. Two kinds, one compiler — exactly ONE of `window` / `point` per spec,
+matching the descriptor factory:
+
+```ts
+// shared/core — the descriptor carries the selector CODEC both sides share:
+export const pushesResource = windowQueryResourceDescriptor(
+  "pushes", PushSchema, "id", { defaultLimit: 100, bootCritical: true });
+export const categoriesResource = pointQueryResourceDescriptor(
+  "conversation-categories", CategorySchema, "conversationId");
+
+// server:
+windowQueryResource(pushesResource, {
+  from: pushes,
+  orderBy: { col: pushes.createdAt, dir: "desc" },  // order-column updates re-derive the window (cost note below)
+  window: { maxLimit: 500 },
+});
+windowQueryResource(categoriesResource, {
+  from: categories,
+  select: { conversationId: categories.parentId, /* … */ },
+  point: { by: categories.parentId },               // IS the identity pk
+});
+
+// web:
+useWindowResource(pushesResource)              // El[] at the default window
+usePointResource(categoriesResource, convId)   // El | null — O(1), no .find()
+```
+
+What the compiler derives per kind:
+
+- **window** — the windowed FULL loader (`where → ORDER BY → LIMIT`, the limit
+  decoded from the params via the descriptor codec and clamped to `maxLimit`),
+  the Layer-2 scoped refill (`pk IN affectedIds`, no order/limit), and
+  `windowIdsOf` (the ids-only windowed query — same where/order/limit as the
+  loader, so the membership authority cannot drift from it), and
+  `orderSignatureOf` (derived from the declared order columns — see the
+  order-column note below), emitted as
+  `membership: { kind: "window", windowIdsOf, orderSignatureOf }`. `orderBy` is
+  `{ col, dir }` pairs, not raw
+  SQL: the compiler appends the pk tiebreaker (a window must be a prefix of a
+  strict total order) and renders explicit `NULLS LAST`, and a future cursor
+  derives its keyset seek (`primitives/keyset`) from the same keys.
+- **point** — the loader as a scoped read over `ctx?.affectedIds ??
+  point.decode(params)` (an empty set short-circuits to `[]`, no query),
+  emitted as `membership: { kind: "point", idsOf: point.decode }`. `point.by`
+  **is** the identity pk — the change-feed routes by intersecting changed
+  identity ids with each tuple's set, so any other column could never
+  intersect (declaring both `identity.pk` and a different `by` throws).
+
+**Order-column updates are HANDLED.** The compiler always derives an
+`orderSignatureOf` for the window kind — the canonical join of the declared
+order columns' wire values (the auto pk tiebreaker is excluded; every declared
+order column must be projected, or module eval throws). The runtime compares it
+per refilled member row and re-derives the window via `windowIdsOf` when it
+moved, so an UPDATE that bumps an order column (a `createdAt` resurface)
+reorders the wire window instead of leaving it stale. What remains of the old
+update-stability rule is a **cost note**: each order-column update costs one
+O(window) ids query (content-only updates stay on the zero-ids-query in-place
+path), so prefer mostly-stable order columns for very hot rows. The
+mutable-`where` rule above does NOT apply here either way: a where-flip is a
+detected membership exit/entry.
+
+Structural differences from `queryResource`: no `limit` / `recompute` /
+`scopedMembership` fields exist on the spec (the bound comes from the params;
+membership is always incremental); bounded resources are never L2-persisted
+(runtime-enforced), so a `bootCritical` window loads via boot-snapshot's
+fallback loader at the descriptor's `defaultParams` — the identical tuple
+`useWindowResource` subscribes to. `defaultLimit` lives ONLY on the descriptor
+(the client default and the boot default must be one number); the spec carries
+only `maxLimit`, and `defaultLimit > maxLimit` throws at module eval. Misuse
+(window+point, missing `orderBy`, kind/descriptor drift, `point.by` ≠
+identity pk, `queryPk` ≠ derived keyField) all throw at module eval — a bad
+spec is a boot crash, never a silent misbehavior.
+
 ## Ordering-staleness caveat
 
 A scoped keyed delta omits `order` (it asserts only in-place row upserts, never
@@ -216,11 +302,11 @@ env shim needed. `compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(.
 
 - Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
 - Server:
-  - Uses: `database.db`
-  - Exports: Types: `CompiledQuery`, `Edge`, `EntitySource`, `Hop`, `QueryDb`, `QueryResourceSpec`, `QuerySource`, `SelectMap`; Values: `compileEdges`, `compileQuery`, `queryResource`, `rel`
+  - Uses: `database.db`, `primitives/keyset.orderByClauses`, `primitives/keyset.SortKey`
+  - Exports: Types: `CompiledQuery`, `Edge`, `EntitySource`, `Hop`, `QueryDb`, `QueryResourceSpec`, `QuerySource`, `SelectMap`, `WindowOrderKey`, `WindowQueryResourceSpec`; Values: `compileEdges`, `compileQuery`, `compileWindowQuery`, `queryResource`, `rel`, `windowQueryResource`
 - Core:
-  - Uses: `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.ResourceDescriptor`
-  - Exports: Types: `QueryResourceContract`; Values: `queryResourceDescriptor`
+  - Uses: `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.pointResourceDescriptor`, `primitives/live-state.PointResourceDescriptor`, `primitives/live-state.ResourceDescriptor`, `primitives/live-state.windowResourceDescriptor`, `primitives/live-state.WindowResourceDescriptor`
+  - Exports: Types: `PointQueryResourceContract`, `QueryResourceContract`, `WindowQueryResourceContract`; Values: `pointQueryResourceDescriptor`, `queryResourceDescriptor`, `windowQueryResourceDescriptor`
 - Cross-plugin:
   - Imported by: `apps/browser/bookmarks`, `apps/mail/reading-pane`, `apps/pages/starred`, `apps/story/generation`, `build`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-progress`, `plugin-meta/plugin-health`, `shell/notifications`, `tasks/auto-start`, `tasks/tasks-core`
 

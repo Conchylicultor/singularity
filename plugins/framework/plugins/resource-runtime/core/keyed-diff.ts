@@ -178,11 +178,15 @@ export function diffKeyedScoped(
  *   mutable-`where` flipped to false, or it was concurrently deleted).
  * - `deletedIds` — op-D ids. Never queried (a deleted row can't be refilled); an
  *   id here that is in `prev` is an EXIT, listed in `deletes`.
- * - `orderedIds` — the full ORDER BY'd id list from the resource's `orderOf`,
- *   supplied ONLY when the refill ENTERED at least one id not already in `prev`
- *   (an entry needs an authoritative placement). Absent for an exit-only or
+ * - `orderedIds` — the full ORDER BY'd id list from the resource's order
+ *   authority (`orderOf` / `windowIdsOf`), supplied when the refill ENTERED at
+ *   least one id not already in `prev` (an entry needs an authoritative
+ *   placement) — or whenever the caller re-derived the order for another reason
+ *   (a bounded window's leaver/tail-pull, or a member row whose order signature
+ *   moved). Supplied WITHOUT any entry/exit, the diff ships `order` only if it
+ *   actually differs from the prior snapshot order. Absent for an exit-only or
  *   in-place change: the order is then derived from the prior snapshot minus the
- *   exits, so no `orderOf` query runs.
+ *   exits, so no ids query runs.
  */
 export interface KeyedMembershipInput {
   requestedIds: ReadonlySet<string>;
@@ -270,14 +274,17 @@ export function diffKeyedScopedMembership(
     }
   }
 
-  // Case A: no membership change — identical shape to `diffKeyedScoped`. `merged`
-  // preserves prev's key order (no add/remove), so `order` is correctly omitted.
-  if (!entered && deletes.length === 0) {
+  // Case A: no membership change AND no order authority supplied — identical
+  // shape to `diffKeyedScoped`. `merged` preserves prev's key order (no
+  // add/remove), so `order` is correctly omitted. When the caller DID supply
+  // `orderedIds` without any entry/exit (a window re-derived because a member
+  // row's order signature moved), fall through: the order may have changed.
+  if (!entered && deletes.length === 0 && orderedIds === undefined) {
     return { upserts, deletes: [], order: undefined, nextSnapshot: merged };
   }
 
-  // (4) Membership changed. Order source = the caller's authoritative list when an
-  // entry happened (needs placement), else prev order minus exits (exit-only).
+  // (4) Membership (or order) changed. Order source = the caller's authoritative
+  // list when supplied, else prev order minus exits (exit-only).
   // An entry WITHOUT `orderedIds` is a caller-contract violation: falling back to
   // the prior order would silently drop the entering row from both the wire and
   // the snapshot — an invisible data loss. Fail loudly instead.
@@ -291,11 +298,27 @@ export function diffKeyedScopedMembership(
   const orderSource = orderedIds ?? [...prev.keys()];
   const finalOrder = orderSource.filter((id) => merged.has(id));
   // Rebuild the snapshot FROM finalOrder so snapshot ≡ wire order. Any merged id
-  // not in finalOrder (an `orderedIds` disagreement / concurrent delete) drops out
-  // — its own feed event later becomes a no-op.
+  // not in finalOrder (a non-surviving entrant sorted past the window tail, an
+  // `orderedIds` disagreement, a concurrent delete) drops out — its own feed
+  // event later becomes a no-op.
   const survivors = new Set(finalOrder);
   const nextSnapshot = new Map<string, SnapEntry>();
   for (const id of finalOrder) nextSnapshot.set(id, merged.get(id)!);
   const survivingUpserts = upserts.filter(([id]) => survivors.has(id));
-  return { upserts: survivingUpserts, deletes, order: finalOrder, nextSnapshot };
+  // Omit `order` when the final id sequence is element-for-element identical to
+  // the prior snapshot order — mirroring `diffKeyedFull`'s omission. Reachable
+  // when the caller supplied `orderedIds` but the membership/order did not
+  // actually change: a non-surviving entrant, or an order re-derive (signature
+  // move) whose window came back in the same sequence. The rebuilt snapshot is
+  // still returned (it may have shed a non-survivor the wire never carried).
+  const prevOrder = [...prev.keys()];
+  const orderUnchanged =
+    finalOrder.length === prevOrder.length &&
+    finalOrder.every((id, i) => id === prevOrder[i]);
+  return {
+    upserts: survivingUpserts,
+    deletes,
+    order: orderUnchanged ? undefined : finalOrder,
+    nextSnapshot,
+  };
 }

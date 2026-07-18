@@ -39,16 +39,15 @@ unless the user clicks "Re-classify with Haiku".
 - Description: Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
 - Web:
   - Contributes: `Conversation.Header` → `CategoryChipToolbar`, `ConfigV2.WebRegister`, `Item.Avatar` → `CategoryAvatarRow`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigPopoverHeader`, `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.fetchEndpoint`, `primitives/avatar.Avatar`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `shell/notifications.toast`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigPopoverHeader`, `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.fetchEndpoint`, `primitives/avatar.Avatar`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/live-state.usePointResource`, `primitives/popover.InlinePopover`, `shell/notifications.toast`
   - Exports: Types: `ColorKey`; Values: `autoColorKey`, `useCategoryAvatars`
 - Server:
   - Contributes: `ConfigV2.Register` "config", `resource.declare` "conversation-categories", `trigger` "conversation-category.classify"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `conversations.Turn`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `conversations.Turn`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/query-resource.windowQueryResource`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
   - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
   - Register: `defineJob('conversation-category.classify')`
-  - Resources: `conversation-categories` (keyed)
   - Routes: `POST /api/conversation-category/:conversationId/classify`, `POST /api/conversation-category/:conversationId`, `DELETE /api/conversation-category/:conversationId`
 - Cross-plugin:
   - Imported by: `stats/commits`

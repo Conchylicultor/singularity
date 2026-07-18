@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-keyset",
+  "description": "Field-agnostic keyset (cursor) pagination machinery. core: cursor codec + sort signature (browser-safe); server: null-aware keyset seek/order-by compiler over drizzle SQL. No data-view dependency, so any server-delegated windowed query can reuse it.",
+  "private": true,
+  "version": "0.0.1"
+}

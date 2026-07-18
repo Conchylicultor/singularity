@@ -389,6 +389,60 @@ membership delta uses), and `deletes` stays informational. See
 `research/2026-07-03-global-scoped-membership-m5.md`. The
 `conversations-active`/`conversations-system` scans are the first adopters.
 
+### Bounded windows and point reads (`windowResourceDescriptor` / `pointResourceDescriptor`)
+
+> **DEFAULT for new resources.** New DB-backed collection descriptors use these bounded
+> factories (window / point); `keyedResourceDescriptor` over an unbounded collection is legacy
+> pending migration — don't copy existing unbounded resources as precedent. See
+> `research/2026-07-18-global-bounded-working-set-resource-contract.md`.
+
+The bounded working-set contract
+(`research/2026-07-18-global-bounded-working-set-resource-contract.md`) rides
+the SAME keyed wire — **a window is just a params tuple**. Two descriptor
+factories in `core/window.ts` declare a keyed resource whose membership is a
+bounded selector carried in the sub params:
+
+- `windowResourceDescriptor(key, elementSchema, keyOf, { defaultLimit,
+  bootCritical? })` — an ordered window; params are `{ limit: "100" }`.
+- `pointResourceDescriptor(key, elementSchema, keyOf)` — an explicit id set;
+  params are `{ ids: "a,b" }` (sorted, deduped, comma-joined). Never
+  `bootCritical` (post-mount hydration is the recorded decision).
+
+The descriptor **carries the selector codec** (`.window.encode/decode`,
+`.point.encode/decode`), so the client hooks, the boot paths, and the server
+compiler (`windowQueryResource` in `infra/query-resource`) all derive params
+from one encode/decode pair. Encode is canonical and decode is STRICT
+(malformed params throw): the SAME logical selector must always produce the
+SAME params object, because paramsKey identity is what makes boot hydration,
+the subscription, and the server land on ONE per-tuple state. A future cursor
+rides as an additional `cursor` key (absent field = absent key), so cursor-less
+windows keep their paramsKey.
+
+`defaultParams` (a generic optional `ResourceDescriptor` field, set by the
+window factory to the encoded default window) is how boot-snapshot serves a
+windowed `bootCritical` resource: the server's fallback loader runs at
+`resourceDescriptorByKey(key)?.defaultParams` and the client hydrates at
+`d.defaultParams` — the identical tuple a bare `useWindowResource(r)`
+subscribes to.
+
+Web hooks (`web/window-hooks.ts`):
+
+- `useWindowResource(resource, { limit? })` → `ResourceResult<El[]>`, default
+  = the descriptor's default window.
+- `usePointResource(resource, id)` → `ResourceResult<El | null>` — the O(1)
+  replacement for an O(n) `.find()` over a whole-collection resource. Built on
+  the documented select/gate mechanics (`select` narrows the 0-or-1-element
+  payload to row-or-null; `gate: true` keeps the pending→settled flip reliable
+  when the slice is `null` on both sides of the boundary). `null` on the
+  settled arm is determinate: the server answered, the row does not exist.
+- `usePointResources(resource, ids)` — one coalesced tuple for an explicit
+  set; per-row `usePointResource` subs are the decided default.
+
+The server runtime half (membership routing, bounded deltas, the
+never-persisted rule) lives in
+`plugins/framework/plugins/resource-runtime/CLAUDE.md`; the compiler in
+`plugins/infra/plugins/query-resource/CLAUDE.md`.
+
 ### Future escape hatch (NOT yet implemented)
 
 Some hot-path resources may eventually be large enough that Zod-parsing every
@@ -594,10 +648,10 @@ reaching for a heavier entity cache.
 - Load-bearing: yes
 - Web:
   - Uses: `infra/endpoints.endpointQueryKey`, `primitives/css/placeholder.Placeholder`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
-  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `HttpStaleDropReport`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`; Values: `centralResourceDescriptor`, `combineResources`, `ensureNotificationsClient`, `getNotificationsClient`, `getResourceWatermark`, `httpStaleDropReportSink`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `noteResourceWatermark`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceStaleReadError`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
+  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `HttpStaleDropReport`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `PointParams`, `PointResourceDescriptor`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`, `WindowParams`, `WindowResourceDescriptor`, `WindowSelector`; Values: `centralResourceDescriptor`, `combineResources`, `ensureNotificationsClient`, `getNotificationsClient`, `getResourceWatermark`, `httpStaleDropReportSink`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `noteResourceWatermark`, `NotificationsClient`, `NotificationsProvider`, `pointResourceDescriptor`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceStaleReadError`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `usePointResource`, `usePointResources`, `useResource`, `useWindowResource`, `windowResourceDescriptor`
 - Cross-plugin:
   - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/trash`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/compositions/release`, `apps/studio/compositions/release/release-artifact`, `apps/studio/compositions/release/release-info`, `apps/studio/compositions/release/release-logs`, `apps/website/blog/pages-integration`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `infra/query-resource`, `infra/trash`, `page/editor`, `page/editor-collab`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/data-view/view-order`, `primitives/optimistic-mutation`, `release`, `reports`, `reports/live-state-stale-drop`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-deps-tree`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
 - Core:
-  - Exports: Types: `Resolvable`, `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `compareTxWatermark`, `keyedResourceDescriptor`, `resolvableSchema`, `resolved`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`, `unresolved`
+  - Exports: Types: `PointParams`, `PointResourceDescriptor`, `Resolvable`, `ResourceDescriptor`, `ResourceOrigin`, `WindowParams`, `WindowResourceDescriptor`, `WindowSelector`; Values: `centralResourceDescriptor`, `compareTxWatermark`, `keyedResourceDescriptor`, `pointResourceDescriptor`, `resolvableSchema`, `resolved`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`, `unresolved`, `windowResourceDescriptor`
 
 <!-- AUTOGENERATED:END -->

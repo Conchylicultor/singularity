@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { decodeCursor, encodeCursor, sortSignature } from "./cursor";
-import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
+import type { KeysetSortRule } from "./sort-rule";
 
 describe("sortSignature", () => {
   it("is order-sensitive and direction-sensitive", () => {
-    const a: SortRule[] = [
+    const a: KeysetSortRule[] = [
       { fieldId: "createdAt", direction: "desc" },
       { fieldId: "title", direction: "asc" },
     ];
-    const b: SortRule[] = [
+    const b: KeysetSortRule[] = [
       { fieldId: "title", direction: "asc" },
       { fieldId: "createdAt", direction: "desc" },
     ];

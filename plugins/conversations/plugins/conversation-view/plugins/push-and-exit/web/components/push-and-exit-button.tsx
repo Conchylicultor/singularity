@@ -14,7 +14,7 @@ import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/pl
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
-import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { deriveExitMode, type Mode } from "./exit-mode";
@@ -92,7 +92,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const draftRef = useLatestRef(draft);
 
   const filesResult = useEditedFiles(convId);
-  const pushesResult = useResource(pushesResource);
+  // Per-attempt bounded sub — correct for arbitrarily old attempts; gating the
+  // destructive Drop-vs-Push default on the global recent window could mis-read an
+  // idle-open conversation whose only push fell outside it.
+  const pushesResult = useResource(pushesByAttemptResource, {
+    attemptId: conversation?.attemptId ?? "",
+  });
   // Derived slice: only re-renders when this worktree's sibling-active answer
   // flips, not on every conversations push. `conversation` may be null on first
   // render — the value is only consumed below after the `!conversation` guard.

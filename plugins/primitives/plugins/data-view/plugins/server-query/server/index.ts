@@ -5,16 +5,8 @@ export type {
   FieldColumnMap,
   OperatorSqlBuilder,
   OperatorSqlResolver,
-  SortKey,
-  Tiebreaker,
 } from "./internal/compile";
-export {
-  compileWhere,
-  buildSortKeys,
-  orderByClauses,
-  seekPredicate,
-  keyValuesOf,
-} from "./internal/compile";
+export { compileWhere } from "./internal/compile";
 
 export type {
   QueryAugmentorContext,
@@ -26,7 +18,7 @@ export { DataViewServer, augmentServerQuery } from "./internal/augment";
 
 export default {
   description:
-    "Generic FilterGroup/SortRule → SQL compiler + null-aware keyset (cursor) seek for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the seek correctness, not any field type.",
+    "Generic FilterGroup → SQL compiler for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the filter compilation, not any field type. The field-agnostic keyset seek + cursor codec now live in primitives/keyset.",
   // Owns the QueryAugmentor registry token but registers no contribution itself.
   contributions: [],
 } satisfies ServerPluginDefinition;

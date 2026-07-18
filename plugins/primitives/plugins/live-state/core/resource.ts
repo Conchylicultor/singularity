@@ -42,6 +42,16 @@ export interface ResourceDescriptor<T, P extends Record<string, string> = Record
    * source of truth: the server no longer restates it in `Declare` opts.
    */
   bootCritical?: true;
+  /**
+   * Default params tuple boot paths use when a caller names none — e.g. a
+   * windowed resource's default window (`windowResourceDescriptor` sets it to
+   * the encoded `defaultLimit`). Read generically by boot-snapshot on BOTH
+   * sides, so the server's fallback load and the client's pre-paint hydration
+   * land on the IDENTICAL `(key, paramsKey)` tuple that `useWindowResource`
+   * later subscribes to. Absent ⇒ the param-less `{}` tuple (every plain
+   * global resource).
+   */
+  defaultParams?: P;
   /** Phantom — exists only at the type level so `useResource` can infer `P`. */
   readonly __params?: P;
 }

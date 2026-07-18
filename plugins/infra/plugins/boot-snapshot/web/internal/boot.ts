@@ -46,7 +46,11 @@ export const bootSnapshotTask = Core.Boot({
         missing.push(key);
         continue;
       }
-      hydrateResource(d, undefined, resources[key]);
+      // A descriptor with defaultParams (a windowed resource's default window)
+      // hydrates at that tuple — the same one the server's fallback loader used
+      // and the one useWindowResource subscribes to by default. Plain global
+      // resources keep the param-less tuple.
+      hydrateResource(d, d.defaultParams, resources[key]);
     }
     if (missing.length) {
       // The crash collector's window error listener is NOT mounted yet during the boot
