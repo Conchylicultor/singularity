@@ -4,11 +4,13 @@ import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { currentScanView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { splitTopLevelStatements } from "./parse";
 import { collectForeignReexports } from "./reexport-provenance";
+import { recordBoundaryReadSet } from "./read-set";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
@@ -72,7 +74,22 @@ const check: Check = {
   id: "plugin-boundaries",
   description:
     "Plugin module boundaries: barrel purity, cross-plugin import grammar, DAG, package naming, directory structure",
+  // INPUT-KEYED via validate-by-replay (Stage 3). run() records EVERY input its
+  // verdict depends on — membership of the whole plugins/ file set (H3/H9: a NEW
+  // source file or plugin dir) + the content of every .ts/.tsx source and every
+  // package.json — into the recording FileSystemView. On the next run those facts
+  // replay against the fresh snapshot, so a change touching NONE of them (an
+  // unrelated docs/asset edit, most push-rebases) is a HIT that skips the whole
+  // tree walk. See ./read-set for the completeness argument and the sourceHash
+  // widening that pins buildPluginTree's own logic.
+  inputKeyed: true,
   async run(): Promise<CheckResult> {
+    // Record the read-set (no-op on the legacy whole-tree path, where the view is
+    // null). Pure snapshot projection — spawns nothing, reads no bytes — so it is
+    // cheap even though it runs on the MISS path before the walk.
+    const view = currentScanView();
+    if (view) recordBoundaryReadSet(view);
+
     const root = await getRoot();
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };

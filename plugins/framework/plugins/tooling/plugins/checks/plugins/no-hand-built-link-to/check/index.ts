@@ -1,7 +1,7 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -13,6 +13,8 @@ async function getRoot(): Promise<string> {
 
 const check: Check = {
   id: "no-hand-built-link-to",
+  // INPUT-KEYED (Stage 1). Pure `grepCode` — see no-raw-websocket for rationale.
+  inputKeyed: true,
   description:
     "Notification/toast `linkTo` must be built from a route (`<route>.link(app, params)`), never a hand-written app-rooted path literal",
   async run() {

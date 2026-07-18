@@ -1,6 +1,6 @@
 import { join } from "path";
 import { findImports, lineAt, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { currentScanTree } from "./scan-context";
+import { currentScanTree, currentScanView } from "./scan-context";
 
 export interface CodeMatch {
   /** File path relative to `root` (as reported by `git grep`). */
@@ -168,7 +168,18 @@ async function readCandidates(
   pathspecs: string[],
 ): Promise<Array<{ rel: string; src: string }>> {
   const tree = currentScanTree();
-  const candidates = await listCandidates(root, grepArg, fixed, pathspecs, tree);
+  const view = currentScanView();
+  const candidates = await gitGrepList(root, grepArg, fixed, pathspecs, tree);
+
+  // Record this `git grep -l` selection + its pathspec fingerprint into the
+  // ambient recording view (no-op when null — the legacy path). Recorded even
+  // when the selection is EMPTY, which is the load-bearing case: a check that
+  // PASSes today with zero matches (e.g. no-raw-websocket) must still invalidate
+  // when the FIRST offender appears in a brand-new file — the empty query's
+  // pathspec fingerprint changes, so `validate` re-runs `git grep -l` and sees
+  // the new matcher (hazard H9). Recording only on non-empty selections would
+  // leave the passing case with no guard → a stale PASS.
+  view?.recordQuery(grepArg, fixed, pathspecs, candidates);
   if (candidates.length === 0) return [];
 
   const blobs = tree ? await readTreeBlobs(root, tree, candidates) : null;
@@ -179,12 +190,29 @@ async function readCandidates(
       ? blobs.get(rel) ?? null
       : await Bun.file(join(root, rel)).text().catch(() => null);
     if (src == null) continue;
+    // Record a per-candidate CONTENT fact (its blobSha, taken from the snapshot —
+    // no extra read; the BATCH `readTreeBlobs` above already loaded the bytes).
+    // CRITICAL and non-obvious: a grepCode verdict depends on WHERE in each file
+    // the token sits, not merely that the file matched `git grep -l`. A file that
+    // matches in an ALLOWED location (PASS) can be edited so the token moves to a
+    // DISALLOWED one — the match SET is unchanged, but the verdict must flip.
+    // Only the recorded blobSha catches that; recording just the query match-set
+    // would stale-PASS.
+    view?.recordFile(rel);
     out.push({ rel, src });
   }
   return out;
 }
 
-async function listCandidates(
+/**
+ * Run `git grep -l` to narrow the candidate file set — the SINGLE source of the
+ * grep plumbing, shared by `readCandidates` (the scan choke-point) and the
+ * runner's `validate` replay hook (which re-runs a recorded query against the
+ * fresh snapshot tree). Keeping one implementation guarantees the recorded and
+ * replayed selections are computed identically (same flags, same pathspec
+ * framing, same `<tree>:`-prefix stripping).
+ */
+export async function gitGrepList(
   root: string,
   grepArg: string,
   fixed: boolean,

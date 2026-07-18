@@ -1,7 +1,7 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -30,6 +30,10 @@ const COLOR_ALTERNATION = COLOR_PATTERNS.map((p) => `(${p})`).join("|");
 
 const check: Check = {
   id: "no-hardcoded-colors",
+  // INPUT-KEYED (Stage 1). Pure `grepCode` (with a `:(glob)plugins/**` pathspec,
+  // which read-set.ts's superset-safe pathspecToRegex handles). See
+  // no-raw-websocket for rationale.
+  inputKeyed: true,
   description:
     "Hardcoded colors are banned: use semantic tokens (success/warning/info/destructive) or the categorical palette",
   async run() {

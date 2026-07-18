@@ -84,6 +84,23 @@ export function globalConfigFingerprint(root: string): string {
 }
 
 /**
+ * The full list of global-trigger files (the SAME set `globalConfigFingerprint`
+ * folds into its single hash: eslint.config.ts, plugins/**\/lint/**,
+ * tsconfig*.json, package.json, bun.lock(b), *.d.ts, *.lint.generated.ts). For
+ * callers that must record each trigger as an INDIVIDUAL input fact rather than
+ * one opaque hash — type-check's outer input-keyed read-set records a per-file
+ * `(path, blobSha)` fact for each, so a compiler-version bump (package.json /
+ * bun.lock) or a tsconfig/eslint edit invalidates. Reuses `walkGlobalTriggers` /
+ * `isGlobalTrigger`, so the recorded set can never drift from what the
+ * fingerprint covers. Deduped + sorted for determinism.
+ */
+export function findGlobalTriggerFiles(root: string): string[] {
+  const out: string[] = [];
+  walkGlobalTriggers(root, root, out);
+  return [...new Set(out)].sort();
+}
+
+/**
  * Compute the closure fingerprint for each candidate file:
  *
  *   closure(f) = { f } ∪ transitive forward-closure of f over graphs.forward

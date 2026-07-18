@@ -99,6 +99,42 @@ export interface Check {
    * Must be cheap and side-effect-free.
    */
   cacheSignature?(): string | null;
+  /**
+   * Cache-invalidation strategy — how a recorded PASS is decided still valid on
+   * the next run:
+   *   - absent (default) → LEGACY whole-tree keying. The PASS is keyed on the
+   *     entire working-tree hash (`computeTreeHash`), so ANY tree change re-runs
+   *     the check. Unchanged, always-sound, and the behaviour of every check
+   *     today.
+   *   - `true` → INPUT-KEYED via validate-by-replay. The check runs against a
+   *     recording `FileSystemView` (see `checks/core/read-set.ts`) that logs the
+   *     exact tree facts its verdict depended on (file contents, existence,
+   *     directory membership, glob/pathspec expansion, grep selection). On the
+   *     next run those facts are replayed against the fresh snapshot; a PASS
+   *     survives a tree change that cannot affect the verdict. A check may set
+   *     this ONLY once its ENTIRE transitive read surface routes through the
+   *     view — otherwise a read via an un-instrumented path is unrecorded and a
+   *     stale PASS becomes possible. Any snapshot/view/validation doubt is
+   *     treated as a MISS (run), so the cache can never CAUSE a stale PASS.
+   *   - `"declared"` → INPUT-KEYED via an explicit `declaredInputs()` spec rather
+   *     than record-then-replay, for OPAQUE checks whose reads happen inside a
+   *     subprocess the view cannot observe (e.g. `migrations-in-sync` spawning
+   *     `drizzle-kit`). Wired in a later stage.
+   *
+   * Consumers (the runner) read this GENERICALLY and never name check ids
+   * (collection-consumer rule). STAGE 0: no check sets this — the input-keyed
+   * path is fully built but dormant, so every check takes the legacy path and
+   * behaviour is unchanged.
+   */
+  inputKeyed?: boolean | "declared";
+  /**
+   * For `inputKeyed: "declared"` checks only: the explicit input spec (globs +
+   * files, incl. tool-version inputs like `bun.lock`) whose contents/membership
+   * key the PASS, since a record-then-replay view cannot observe the check's
+   * opaque subprocess reads. Optional and NOT yet consumed — reserved for the
+   * declared-inputs stage.
+   */
+  declaredInputs?(): { globs?: string[]; files?: string[] };
 }
 
 export type CheckResult =

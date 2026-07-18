@@ -1,7 +1,7 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -16,6 +16,8 @@ const CAST_PATTERN =
 
 const check: Check = {
   id: "no-use-resource-cast",
+  // INPUT-KEYED (Stage 1). Pure `grepCode` — see no-raw-websocket for rationale.
+  inputKeyed: true,
   description:
     "useResource is generic — casting its `data` result hides type mismatches and is never necessary",
   async run() {

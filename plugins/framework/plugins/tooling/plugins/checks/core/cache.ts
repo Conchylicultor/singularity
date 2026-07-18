@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   statSync,
@@ -10,6 +11,7 @@ import {
 } from "fs";
 import { join } from "path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import type { ReadSet } from "./read-set";
 
 // Global (not per-worktree) + content-keyed: the main-worktree auto-build can
 // reuse passes recorded by an agent worktree for the identical (ff-merged) tree.
@@ -29,11 +31,30 @@ function entryFile(checkId: string, treeHash: string, sig: string): string {
   return join(CACHE_DIR, `${sha256(key)}.json`);
 }
 
+// Input-keyed read-set slot: a SINGLE slot per (checkId, sig) — NOT keyed on
+// treeHash — holding the latest recorded read-set. Validate-by-replay
+// (`read-set.ts` `validate`) checks it against a fresh snapshot, so one slot
+// serves the monotonic-forward push-rebase path. Suffixed `.readset.json` so it
+// still ends in `.json` and is swept by the same `prune()` as the legacy slots,
+// while never colliding with a legacy `${sha256(key)}.json` name.
+function readSetFile(checkId: string, sig: string): string {
+  const key = `${checkId}:${sha256(sig)}`;
+  return join(CACHE_DIR, `${sha256(key)}.readset.json`);
+}
+
 export interface CheckCache {
   /** True iff a PASS was recorded for this (check, tree, sig). */
   has(checkId: string, treeHash: string, sig: string): boolean;
   /** Record a PASS. Atomic (write-then-rename). */
   record(checkId: string, treeHash: string, sig: string): void;
+  /**
+   * Load the latest recorded read-set for (check, sig), or null if none / on any
+   * read/parse error (fail-open — a corrupt slot must degrade to a cache MISS,
+   * never a false HIT). Validated by `read-set.ts` `validate` before use.
+   */
+  loadReadSet(checkId: string, sig: string): ReadSet | null;
+  /** Record (overwrite) the read-set for a PASS. Atomic (write-then-rename). */
+  recordReadSet(checkId: string, sig: string, readSet: ReadSet): void;
 }
 
 /** Open (and lazily create) the global check-result cache. */
@@ -55,12 +76,29 @@ export function openCheckCache(): CheckCache {
       );
       renameSync(tmp, file); // atomic on the same filesystem
     },
+    loadReadSet(checkId, sig) {
+      const file = readSetFile(checkId, sig);
+      if (!existsSync(file)) return null;
+      try {
+        return JSON.parse(readFileSync(file, "utf8")) as ReadSet;
+      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- fail-open: a corrupt/half-written slot must degrade to a cache MISS (run the check), never a false HIT; null here means "no usable read-set", which the caller treats exactly as absent
+      } catch {
+        return null;
+      }
+    },
+    recordReadSet(checkId, sig, readSet) {
+      const file = readSetFile(checkId, sig);
+      const tmp = join(CACHE_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
+      writeFileSync(tmp, JSON.stringify(readSet));
+      renameSync(tmp, file); // atomic on the same filesystem
+    },
   };
 }
 
 // Opportunistic pruning: age-out stale entries, then cap total count. Cheap
 // stat-based pass; tolerates the readdir/stat race (a concurrent writer may
-// delete an entry between listing and stat).
+// delete an entry between listing and stat). Both legacy `.json` slots and the
+// input-keyed `.readset.json` slots end in `.json`, so one sweep ages/caps both.
 function prune(): void {
   const names = readdirSync(CACHE_DIR).filter((n) => n.endsWith(".json"));
   const now = Date.now();

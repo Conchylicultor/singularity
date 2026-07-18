@@ -1,7 +1,7 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -19,6 +19,10 @@ const ALLOWED_PATHS = [
 
 const check: Check = {
   id: "no-raw-websocket",
+  // INPUT-KEYED (Stage 1). The verdict is a pure function of `grepCode` — the
+  // only fs/tree access — so its entire read surface routes through the recording
+  // view (query selection + per-candidate content). See read-set.ts / runner.ts.
+  inputKeyed: true,
   description:
     "WebSocket clients must go through the shared `SharedWebSocket` primitive (not raw `new WebSocket`)",
   async run() {

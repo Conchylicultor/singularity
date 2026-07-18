@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { grepCode } from "./grep-code";
-import { withScanTree } from "./scan-context";
+import { withScanView } from "./scan-context";
 import { computeTreeHash } from "./tree-hash";
 
 let root = "";
@@ -87,7 +87,7 @@ test("grepCode scans the ambient scan tree — incl. files untracked when it was
   // Mutate the working copy so a working-tree grep would see DIFFERENT content.
   writeFileSync(f, "const x = 1;\n");
   try {
-    const matches = await withScanTree(tree, () =>
+    const matches = await withScanView(tree, null, () =>
       grepCode({ root, pattern: /new WebSocket\(/, grepArg: "new WebSocket(", fixed: true }),
     );
     // Found via the tree blob (its untracked-at-write-time content), proving the

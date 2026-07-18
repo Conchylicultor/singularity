@@ -6,7 +6,20 @@ export type { TscTarget } from "./discover";
 export { computeTreeHash } from "./tree-hash";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
-export { grepCode, grepImports, listCandidateSources } from "./grep-code";
+export { loadTreeSnapshot, validate, fingerprint, computeCheckSourceHash } from "./read-set";
+export type {
+  TreeSnapshot,
+  FileSystemView,
+  ReadSet,
+  FileFact,
+  DirFact,
+  GlobFact,
+  QueryFact,
+  ValidateResult,
+  ValidateOptions,
+} from "./read-set";
+export { currentScanView } from "./scan-context";
+export { grepCode, grepImports, listCandidateSources, gitGrepList } from "./grep-code";
 export { isBuildInProgress, markBuildInProgress } from "./run-context";
 export type { CodeMatch, ImportMatch, CandidateSource, ListCandidateSourcesOptions } from "./grep-code";
 // NOTE: token-group-vars.generated.ts is intentionally NOT re-exported. Checks

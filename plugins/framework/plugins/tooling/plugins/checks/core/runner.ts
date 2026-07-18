@@ -5,7 +5,9 @@ import type { Check, CheckContext, CheckResult, CheckScope } from "@plugins/fram
 import type { Grant } from "@plugins/infra/plugins/host-admission/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
-import { withScanTree } from "./scan-context";
+import { withScanView } from "./scan-context";
+import { loadTreeSnapshot, validate, type TreeSnapshot, type QueryFact, type ValidateResult } from "./read-set";
+import { gitGrepList } from "./grep-code";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -139,8 +141,26 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   }
 
   const noCache = options?.noCache || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
-  const treeHash = noCache ? null : await computeTreeHash(await getRoot());
+  // Root is only needed when caching (tree hash + snapshot); skipping it in
+  // no-cache mode preserves today's behaviour of not touching git at all.
+  const root = noCache ? null : await getRoot();
+  const treeHash = root ? await computeTreeHash(root) : null;
   const cache = treeHash ? openCheckCache() : null;
+  // The shared, content-addressed tree snapshot — loaded ONCE per run (one
+  // `git ls-tree -r`) and reused by every input-keyed check's validate/record.
+  // Loaded ONLY when some selected check is actually input-keyed, so the extra
+  // spawn is never paid while the feature is unused. Fail-open: null → those
+  // checks fall back to running under a null view (still keyed via the legacy
+  // `has()/record()` path). STAGE 0: no check is input-keyed, so this is null.
+  const anyInputKeyed = selected.some((c) => c.inputKeyed === true);
+  const snapshot: TreeSnapshot | null =
+    anyInputKeyed && root && treeHash ? await loadTreeSnapshot(root, treeHash) : null;
+
+  // Shadow-mode scaffold (dormant): when enabled, an input-keyed check logs the
+  // old-vs-new decision so a divergence (old MISS/new HIT, or the validate
+  // reason) is visible before a check is trusted. Never changes the verdict or
+  // the default output. No check is input-keyed in Stage 0, so this never fires.
+  const shadow = process.env.SINGULARITY_CHECK_SHADOW === "1";
 
   const results = await Promise.all(
     selected.map(async (check) => {
@@ -156,14 +176,6 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
         } catch {
           sig = null;
         }
-      }
-      // Narrow inline (not via a stored boolean) so TS sees cache/treeHash/sig
-      // as non-null in the guarded branches.
-      if (cache !== null && treeHash !== null && sig !== null && cache.has(check.id, treeHash, sig)) {
-        const result: CheckResult = { ok: true };
-        // A cache hit runs nothing, so it observes nothing.
-        const observations: { line: string; stream: "stdout" | "stderr" }[] = [];
-        return { check, result, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true, observations };
       }
 
       // Non-fatal observations (measurements, capacity notes) a check emits via
@@ -181,7 +193,63 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
         grant: options.grant,
         log: (line, stream) => observations.push({ line, stream }),
       };
-      const result = await withScanTree(treeHash, () => check.run(ctx));
+
+      // INPUT-KEYED path (validate-by-replay). Selected GENERICALLY on the
+      // `inputKeyed` flag — the runner never names check ids. Dormant in Stage 0
+      // (no check sets the flag). A boolean `true` uses record-then-replay; the
+      // `"declared"` variant (opaque checks) is not wired yet and falls through
+      // to the legacy path until its stage lands. Narrow inline (not via a stored
+      // boolean) so TS sees cache/treeHash/sig as non-null in this branch.
+      if (
+        cache !== null &&
+        treeHash !== null &&
+        sig !== null &&
+        snapshot !== null &&
+        check.inputKeyed === true
+      ) {
+        const stored = cache.loadReadSet(check.id, sig);
+        if (stored !== null) {
+          // Replay a recorded `git grep -l` query against the CURRENT snapshot
+          // tree — called by `validate` ONLY when a query's pathspec fingerprint
+          // changed (the cheap in-memory gate runs first). Re-runs the SAME grep
+          // plumbing `readCandidates` used (via the shared `gitGrepList`), over
+          // the fresh tree, so a brand-new matching file is seen (H9).
+          //
+          // FAIL-OPEN: any error thrown by validate (a grep-replay spawn failure,
+          // a malformed snapshot) degrades to a MISS (run the body), never a
+          // crash and never a false HIT — the cache can only ever cause an
+          // unnecessary re-run, not a stale PASS.
+          let verdict: ValidateResult;
+          try {
+            verdict = await validate(stored, snapshot, {
+              replayQuery: (q: QueryFact) =>
+                gitGrepList(snapshot.root, q.grepArg, q.fixed, q.pathspecs, snapshot.treeHash),
+            });
+          // eslint-disable-next-line promise-safety/no-bare-catch -- fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
+          } catch (err) {
+            verdict = { hit: false, reason: `validate threw (fail-open → run): ${String(err)}` };
+          }
+          if (verdict.hit) {
+            if (shadow) observations.push({ line: `shadow: ${check.id} input-keyed HIT`, stream: "stdout" });
+            return { check, result: { ok: true } as CheckResult, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true, observations };
+          }
+          if (shadow) observations.push({ line: `shadow: ${check.id} input-keyed MISS — ${verdict.reason}`, stream: "stdout" });
+        }
+        // MISS → run under a fresh recording view, capturing the read-set.
+        const view = snapshot.createRecordingView();
+        const result = await withScanView(treeHash, view, () => check.run(ctx));
+        const durationMs = Math.round(performance.now() - wallStart);
+        if (result.ok) cache.recordReadSet(check.id, sig, view.readSet());
+        return { check, result, durationMs, wallStart, cached: false, observations };
+      }
+
+      // LEGACY whole-tree path (unchanged). Narrow inline (not via a stored
+      // boolean) so TS sees cache/treeHash/sig as non-null in the guarded branch.
+      if (cache !== null && treeHash !== null && sig !== null && cache.has(check.id, treeHash, sig)) {
+        // A cache hit runs nothing, so it observes nothing.
+        return { check, result: { ok: true } as CheckResult, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true, observations };
+      }
+      const result = await withScanView(treeHash, null, () => check.run(ctx));
       const durationMs = Math.round(performance.now() - wallStart);
       // Cache PASSES only — failures must always re-run with full output.
       if (cache !== null && treeHash !== null && sig !== null && result.ok) {

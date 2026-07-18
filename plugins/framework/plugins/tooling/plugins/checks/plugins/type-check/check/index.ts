@@ -22,16 +22,15 @@ import ts from "typescript";
 import {
   discoverTscTargets,
   tsBuildInfoPath,
+  currentScanView,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
-import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import type { Check, CheckContext } from "@plugins/framework/plugins/tooling/core";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(ctx: CheckContext): Promise<CheckResult> };
+import { recordOuterReadSet } from "./outer-read-set";
 
 /** The worker's JSON stdout contract (see `../shared/worker.ts`). */
 interface WorkerOutput {
@@ -183,12 +182,30 @@ function maxRssLine(label: string, maxRssBytes: number | undefined): string | nu
 const check: Check = {
   id: "type-check",
   description: "TypeScript types and type-aware ESLint pass (one shared program per tsconfig target)",
+  // OUTER input-keyed via validate-by-replay (Stage 2). run() records EVERY input
+  // its verdict depends on (lintable-file membership + contents + the global-
+  // trigger set) into the recording FileSystemView; on the next run those facts
+  // replay against the fresh snapshot, so a change touching NO typecheckable input
+  // (e.g. docs-only) is an outer HIT with zero tsc workers. The INNER per-file
+  // closure cache (fingerprint.ts / closure-cache.ts) is untouched and orthogonal.
+  inputKeyed: true,
   async run(ctx: CheckContext) {
     const root = await getRoot();
     const targets = discoverTscTargets(root);
 
     // Lint universe + per-file closure fingerprints (the warm-path file filter).
     const graphs = buildImportGraphs(root);
+
+    // OUTER input-keyed read-set (Stage 2). Only runs on a cache MISS: the runner
+    // reaches run() only when validate-by-replay missed (or nothing was recorded
+    // yet). On a HIT it short-circuits before run(), so recording — and every
+    // getRoot/graph/worker cost below — is skipped entirely (zero workers). The
+    // view is null on the legacy whole-tree path (fail-open: a null snapshot in
+    // the runner falls back to that path), in which case nothing is recorded and
+    // behaviour is unchanged. See ./outer-read-set for what each fact guards.
+    const view = currentScanView();
+    if (view) recordOuterReadSet(view, root, graphs);
+
     const lintable = new Set(graphs.files);
     const { perFile } = computeClosureFingerprints(root, graphs, graphs.files);
 
