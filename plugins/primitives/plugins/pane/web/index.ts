@@ -59,6 +59,13 @@ export type {
   PaneHeaderZones,
   PaneToolbarItem,
 } from "./pane";
+export { setHistoryAdapter, defaultHistoryAdapter } from "./history-sink";
+export type {
+  HistoryAdapter,
+  LocationChange,
+  PaneHistoryState,
+  SerializedSlot,
+} from "./history-sink";
 export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
 export { ToolbarItem } from "./components/pane-header-item";
 export { PaneScroll, type PaneScrollProps } from "./components/pane-scroll";

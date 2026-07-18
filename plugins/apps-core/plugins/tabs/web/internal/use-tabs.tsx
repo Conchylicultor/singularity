@@ -14,6 +14,8 @@ import {
   createPaneStore,
   parseUrl,
   setLiveStore,
+  setHistoryAdapter,
+  defaultHistoryAdapter,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -25,7 +27,12 @@ import {
   useActiveApp,
   defaultApp,
   resolveAppForPath,
+  setFocusedApp,
 } from "@plugins/apps-core/web";
+import {
+  makeShellHistoryAdapter,
+  serializePaneState,
+} from "./shell-history-adapter";
 import {
   getDefaultPlacement,
   usePlacementCapabilities,
@@ -423,23 +430,52 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
    * URL, NOT `setRoute([])` an empty resolved route over it (which would wipe the
    * pending state and jump the address bar to the bare app root).
    */
-  const activate = useCallback((next: Tab, target?: ActivateTarget) => {
+  const activate = useCallback(
+    (next: Tab, target?: ActivateTarget, mode: "push" | "replace" = "push") => {
+      const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+      if (current && current.tabId !== next.tabId) current.store.live = false;
+      next.store.setBasePath(appPathFor(next.appId, appsRef.current));
+      // Seed the target while still background (in-memory only, no history op).
+      if (target?.kind === "route") next.store.setRoute(target.route);
+      else if (target?.kind === "pending") next.store.seedPending(target.rawPath);
+      next.store.live = true;
+      setLiveStore(next.store);
+      // Point the focused-tab ref at `next` BEFORE mirroring: the shell adapter's
+      // commit stamps the FOCUSED tab's `{ tabId, appId }` into the new history
+      // entry, so the ref must already name `next`, not the outgoing tab. This is
+      // the imperative half of the hybrid ref — callers also set it +
+      // `setFocusedTabId` for the React re-render (a redundant, identical write).
+      focusedRef.current = next.tabId;
+      // Mirror the (now possibly seeded) in-memory route into the URL so it
+      // matches the focused tab. `mode` decides push vs replace: user-initiated
+      // tab/app switches PUSH (a new snapshot Back can return to — the headline
+      // fix, cross-app nav used to hard-replace); boot + close-tab refocus
+      // REPLACE (a correction that must not be independently reachable).
+      const state = next.store.getRouteState();
+      const replace = mode === "replace";
+      if (state.kind === "unresolved") {
+        next.store.navigatePending(state.rawPath, replace);
+      } else {
+        next.store.setRoute(state.slots, replace);
+      }
+    },
+    [],
+  );
+
+  // Focus-flip WITHOUT mirroring to history — the back/forward restore path,
+  // where the browser has ALREADY advanced URL + history.state. The caller
+  // restores the route from history.state via `handleLocationChange`, so this
+  // never seeds a target and never writes history: restoration is a pure read
+  // of the snapshot, never a new entry.
+  const activateWithoutMirror = useCallback((next: Tab) => {
     const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (current && current.tabId !== next.tabId) current.store.live = false;
     next.store.setBasePath(appPathFor(next.appId, appsRef.current));
-    // Seed the target while still background (in-memory only, no history op).
-    if (target?.kind === "route") next.store.setRoute(target.route);
-    else if (target?.kind === "pending") next.store.seedPending(target.rawPath);
     next.store.live = true;
     setLiveStore(next.store);
-    // Mirror the (now possibly seeded) in-memory route into the URL so it matches
-    // the focused tab and `useActiveApp` (URL-driven) resolves to it.
-    const state = next.store.getRouteState();
-    if (state.kind === "unresolved") {
-      next.store.navigatePending(state.rawPath, /* replace */ true);
-    } else {
-      next.store.setRoute(state.slots, /* replace */ true);
-    }
+    // Point the focused-tab ref at `next` so the adapter's subsequent
+    // `restoreLiveRoute()` resolves the live store as `next`'s.
+    focusedRef.current = next.tabId;
   }, []);
 
   const focusTab = useCallback(
@@ -476,12 +512,22 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [activate, persist],
   );
 
-  // Swap a tab's app in place (keeps the tabId + position), seeding `route` into
-  // the fresh store before it goes live. The launcher (Home) tab and the rail
-  // navigate INTO the picked app instead of spawning a tab beside it; a
-  // cross-app deep-link lands the focused tab directly on its target route.
-  const replaceTabAppWithRoute = useCallback(
-    (tabId: string, appId: string, route: PaneSlot[]) => {
+  // Swap a tab's app in place (keeps the tabId + position), rebinding a fresh
+  // store to the new app. `mirror` decides how liveness lands:
+  //   • mirror=true  — author-initiated (rail click, cross-app navigate, Home
+  //     launch): seed `target` and PUSH a new composite entry, so the focused
+  //     tab's appId always matches the URL and Back can return to the prior app.
+  //   • mirror=false — back/forward restoration: make the new store live WITHOUT
+  //     writing history; the shell adapter restores the route from history.state.
+  // Shared by `replaceTabAppWith*` (mirror=true) and the shell adapter's restore
+  // path (mirror=false) so the app-swap mechanics live in exactly one place.
+  const rebuildTabApp = useCallback(
+    (
+      tabId: string,
+      appId: string,
+      target: ActivateTarget | undefined,
+      opts: { mirror: boolean },
+    ) => {
       const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
       if (idx < 0) return;
       tabsRef.current[idx]!.store.live = false;
@@ -491,41 +537,52 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
-      activate(tab, { kind: "route", route });
+      if (opts.mirror) activate(tab, target, "push");
+      else activateWithoutMirror(tab);
       focusedRef.current = tabId;
       setFocusedTabId(tabId);
+      setFocusedApp(appId);
       persist();
     },
-    [activate, persist],
+    [activate, activateWithoutMirror, persist],
+  );
+
+  // The launcher (Home) tab and the rail navigate INTO the picked app instead of
+  // spawning a tab beside it; a cross-app deep-link lands the focused tab
+  // directly on its target route.
+  const replaceTabAppWithRoute = useCallback(
+    (tabId: string, appId: string, route: PaneSlot[]) =>
+      rebuildTabApp(tabId, appId, { kind: "route", route }, { mirror: true }),
+    [rebuildTabApp],
   );
 
   // Cross-app twin of `replaceTabAppWithRoute` for a not-yet-resolvable deep
   // link: swap the focused tab to `appId` and seed a PENDING route (rawPath) so
   // the URL is preserved and the fallback surface shows a spinner until the
-  // target pane's plugin loads. Same fresh-background-store → activate → focus
-  // shape, so the focused tab's appId never drifts from the URL.
+  // target pane's plugin loads.
   const replaceTabAppWithPending = useCallback(
-    (tabId: string, appId: string, rawPath: string) => {
-      const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
-      if (idx < 0) return;
-      tabsRef.current[idx]!.store.live = false;
-      const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store };
-      const nextTabs = [...tabsRef.current];
-      nextTabs[idx] = tab;
-      tabsRef.current = nextTabs;
-      setTabs(nextTabs);
-      activate(tab, { kind: "pending", rawPath });
-      focusedRef.current = tabId;
-      setFocusedTabId(tabId);
-      persist();
-    },
-    [activate, persist],
+    (tabId: string, appId: string, rawPath: string) =>
+      rebuildTabApp(tabId, appId, { kind: "pending", rawPath }, { mirror: true }),
+    [rebuildTabApp],
   );
 
   const replaceTabApp = useCallback(
     (tabId: string, appId: string) => replaceTabAppWithRoute(tabId, appId, []),
     [replaceTabAppWithRoute],
+  );
+
+  // Refocus an EXISTING tab by id WITHOUT writing history — the shell adapter's
+  // restore path when a back/forward lands on a tab whose app already matches
+  // the snapshot (no store rebuild, just a liveness flip + focus-state update).
+  const refocusForRestore = useCallback(
+    (tabId: string) => {
+      const next = tabsRef.current.find((t) => t.tabId === tabId);
+      if (!next) return;
+      activateWithoutMirror(next);
+      focusedRef.current = tabId;
+      setFocusedTabId(tabId);
+    },
+    [activateWithoutMirror],
   );
 
   const navigate = useCallback(
@@ -592,6 +649,18 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     setFocusedSurfaceId(focusedTabId);
   }, [focusedTabId]);
 
+  // Publish the focused tab's app to the chrome-identity module store on every
+  // focus/app change (and on boot). Chrome rendered OUTSIDE a surface (rail, tab
+  // bar, theme scope) reads this via `useActiveApp` → `useFocusedAppId`, so it
+  // tracks the focused tab's app rather than parsing the URL — the theme can
+  // never diverge from what the focused surface actually shows. The shell
+  // adapter also publishes synchronously during a back/forward restore; this
+  // steady-state effect covers every other focus/app transition.
+  const focusedAppId = tabs.find((t) => t.tabId === focusedTabId)?.appId;
+  useEffect(() => {
+    setFocusedApp(focusedAppId);
+  }, [focusedAppId]);
+
   // Publish the cross-app navigator at module scope so out-of-provider callers
   // (the floating bar, a sibling Core.Root) can reach it via the free
   // `navigate()` export. Mirrors the pane primitive's `setLiveStore` handle.
@@ -624,7 +693,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         };
         tabsRef.current = [seed];
         setTabs([seed]);
-        activate(seed);
+        // Replace: the top entry pointed at the tab we just destroyed — this is
+        // a correction, not an independently-reachable navigation.
+        activate(seed, undefined, "replace");
         focusedRef.current = seedId;
         setFocusedTabId(seedId);
         persist();
@@ -638,7 +709,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         // Focus a neighbor: the tab that shifted into this index, else the new
         // last one.
         const neighbor = remaining[Math.min(idx, remaining.length - 1)]!;
-        activate(neighbor);
+        // Replace: the top entry points at the tab we just closed, so refocusing
+        // the neighbor is a correction, not a new Back target.
+        activate(neighbor, undefined, "replace");
         focusedRef.current = neighbor.tabId;
         setFocusedTabId(neighbor.tabId);
       }
@@ -689,6 +762,49 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     const prev = previousModeRef.current;
     setMode(prev && prev !== modeRef.current ? prev : getDefaultPlacement());
   }, [setMode]);
+
+  // Install the shell (app-aware) history adapter so the pane store's push/
+  // replace intents stamp `{ tabId, appId }` and browser back/forward restores
+  // the whole snapshot. Built INSIDE the effect (ref reads are effect-only, not
+  // render) over the stable mutation callbacks; every read goes through the
+  // hybrid refs so `restore()` always sees the latest tabs/focus — matching the
+  // refs contract above. The mutation deps expose only the history-free variants:
+  // restoration must never re-enter the commit path.
+  //
+  // Replace-stamp the initial composite so `history.state` carries the focused
+  // tab's identity from the very FIRST entry — back/forward works immediately,
+  // and survives reload (tabIds are sessionStorage-stable, so a stamp written
+  // before a reload still matches after it). Teardown restores the default
+  // (standalone) adapter. The dep callbacks are stable, so this runs once.
+  useEffect(() => {
+    const adapter = makeShellHistoryAdapter({
+      focused: () => {
+        const t = tabsRef.current.find((x) => x.tabId === focusedRef.current);
+        return t ? { tabId: t.tabId, appId: t.appId } : null;
+      },
+      tabs: () => tabsRef.current,
+      apps: () => appsRef.current,
+      refocus: refocusForRestore,
+      rebuildAppInPlace: (tabId, appId) =>
+        rebuildTabApp(tabId, appId, undefined, { mirror: false }),
+      restoreLiveRoute: () => {
+        const t = tabsRef.current.find((x) => x.tabId === focusedRef.current);
+        t?.store.handleLocationChange();
+      },
+      setFocusedApp,
+      persist,
+    });
+    setHistoryAdapter(adapter);
+    const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+    if (focused) {
+      adapter.commit({
+        url: window.location.pathname,
+        state: serializePaneState(focused.store.getRouteState()),
+        mode: "replace",
+      });
+    }
+    return () => setHistoryAdapter(defaultHistoryAdapter);
+  }, [refocusForRestore, rebuildTabApp, persist]);
 
   const api = useMemo<TabsApi>(
     () => ({ tabs, focusedTabId, titles, mode, setMode, exitToPreviousMode, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab }),

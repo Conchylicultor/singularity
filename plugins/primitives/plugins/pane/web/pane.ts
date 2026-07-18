@@ -20,6 +20,11 @@ import {
 } from "../core";
 import { Pane as PaneSlots } from "./slots";
 import { useRenderSync } from "./use-render-sync";
+import {
+  getHistoryAdapter,
+  setLiveStoreAccessor,
+  type SerializedSlot,
+} from "./history-sink";
 import type { PaneHeaderZones } from "./components/pane-header-item";
 
 export type { PaneHeaderZones, PaneToolbarItem } from "./components/pane-header-item";
@@ -600,13 +605,19 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // state must not outlive the navigation that created it, or it comes back as
     // stale data on the very paths (reload, back/forward) that have no opener to
     // vouch for it. Rebuilt routes carry `hint = {}` and read canonical instead.
-    const serialized = route.map(s => ({ paneId: s.paneId, params: s.params, options: s.options, uuid: s.uuid }));
+    const serialized: SerializedSlot[] = route.map(s => ({ paneId: s.paneId, params: s.params, options: s.options, uuid: s.uuid }));
     const fullUrl = applyBasePath(url);
     if (fullUrl === window.location.pathname && replace) return;
-    const method = replace ? "replaceState" : "pushState";
-    window.history[method]({ route: serialized }, "", fullUrl);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-    window.dispatchEvent(new CustomEvent("shell:navigate"));
+    // Emit a push/replace INTENT through the installed history adapter — the
+    // pane primitive never touches `window.history` itself. The default adapter
+    // writes `{ route }` verbatim; the shell adapter stamps `{ tabId, appId }`
+    // into the entry so back/forward restores the full snapshot. Either way it
+    // announces `shell:navigate` (never a synthetic popstate).
+    getHistoryAdapter().commit({
+      url: fullUrl,
+      state: { route: serialized },
+      mode: replace ? "replace" : "push",
+    });
   }
 
   function reorderRoute(fromIndex: number, toIndex: number): void {
@@ -644,10 +655,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     notifyRouteListeners();
     if (!store.live) return;
     const fullUrl = applyBasePath("/" + rawPath);
-    const method = replace ? "replaceState" : "pushState";
-    window.history[method]({ pending: rawPath }, "", fullUrl);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-    window.dispatchEvent(new CustomEvent("shell:navigate"));
+    getHistoryAdapter().commit({
+      url: fullUrl,
+      state: { pending: rawPath },
+      mode: replace ? "replace" : "push",
+    });
   }
 
   function syncRouteFromUrl(pathname: string): void {
@@ -743,10 +755,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       pending?: string;
     } | null;
     if (state?.route) {
-      // No `hint`: history.state never carries one (see `setRoute`). `routesEqual`
-      // compares options only, so the synthetic popstate `setRoute` dispatches
-      // right after a hint-carrying open bails out here and leaves the in-memory
-      // hint intact — only a genuine back/forward rebuilds the slot without it.
+      // No `hint`: history.state never carries one (see `setRoute`). Extra
+      // `{ tabId, appId }` keys a shell adapter stamped in are ignored — this
+      // reads only `route`/`pending`. `routesEqual` compares options only, so a
+      // no-op rebuild leaves an in-memory hint intact; only a genuine
+      // back/forward rebuilds the slot without it.
       const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid));
       if (currentState.kind === "resolved" && routesEqual(currentState.slots, newRoute)) return;
       currentState = { kind: "resolved", slots: newRoute };
@@ -894,17 +907,21 @@ export function setLiveStore(store: PaneStore): void {
   liveStore = store;
 }
 
-// Exactly ONE module-level window listener for the whole app. It forwards to
-// whichever store is currently live (set via `setLiveStore`). Since
-// `liveStore === defaultStore` until the tab manager repoints it, Phase 1
-// behavior is unchanged; in tab mode browser back/forward drives the focused
-// tab's store. The tab provider must NOT add a second listener.
+// Exactly ONE module-level window listener for the whole app, and it listens to
+// REAL browser back/forward ONLY. `popstate` is the single place URL +
+// `history.state` are read back — it delegates to the installed history
+// adapter's `restore()` (default: rebuild the live store from `history.state`;
+// shell: restore the whole tab/app/route snapshot). Programmatic navigation
+// announces `shell:navigate` instead, so it never reaches here — a hard event
+// contract that replaces the old synthetic-popstate / `routesEqual`-bail dance.
+// The tab provider must NOT add a second `popstate` listener.
 if (typeof window !== "undefined") {
-  const forwardToLiveStore = () => {
-    liveStore.handleLocationChange();
-  };
-  window.addEventListener("popstate", forwardToLiveStore);
-  window.addEventListener("shell:navigate", forwardToLiveStore);
+  // Inject the live-store accessor so the default adapter's `restore()` can
+  // reach the focused store without importing this module back (see history-sink).
+  setLiveStoreAccessor(() => liveStore);
+  window.addEventListener("popstate", () => {
+    getHistoryAdapter().restore();
+  });
 }
 
 export { createPaneStore, defaultStore };
@@ -1065,12 +1082,12 @@ function sameOptions(a: PaneOptions, b: PaneOptions): boolean {
 }
 
 /**
- * Slot identity for the popstate bail-out: `(paneId, params, options)`.
+ * Slot identity for the `handleLocationChange` bail-out: `(paneId, params, options)`.
  *
- * `hint` is excluded, and that is load-bearing. `setRoute` writes a hint-less
- * `history.state` and then dispatches a synthetic `popstate`; if the hint counted
- * here, `handleLocationChange` would rebuild the route from that hint-less state
- * and wipe the very hint the open just painted with.
+ * `hint` is excluded, and that is load-bearing. `history.state` is written
+ * hint-less (see `setRoute`); on a browser back/forward that lands on a route
+ * equal-but-for-the-hint, counting the hint here would rebuild the slot from the
+ * hint-less state and wipe the very hint the open painted with.
  */
 function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   if (a.length !== b.length) return false;
@@ -1143,10 +1160,11 @@ export function stripBasePath(pathname: string, basePath: string): string {
   return pathname;
 }
 
-// The `popstate` / `shell:navigate` window listeners are wired exactly once at
-// module load (near `setLiveStore` above) and forward to the current live
-// store. Phase 2's tab manager owns liveness (via `setLiveStore`); browser
-// events are routed to whichever store is focused.
+// The single `popstate` listener is wired once at module load (near
+// `setLiveStore` above) and delegates to the installed history adapter's
+// `restore()`. `usePathname` below keeps its OWN `popstate` + `shell:navigate`
+// subscription — it only needs to re-read `window.location.pathname` on any
+// navigation, programmatic or browser-driven, and never drives the store.
 
 // ---------------------------------------------------------------------------
 // Navigation + location hook.

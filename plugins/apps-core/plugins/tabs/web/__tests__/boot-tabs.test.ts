@@ -141,6 +141,47 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
   });
 });
 
+describe("bootTabs — snapshot-stable focus across reload", () => {
+  // The shell-history-snapshot model relies on a stamped `history.state.tabId`
+  // still matching an open tab after a reload. bootTabs rebuilds tabs with their
+  // PERSISTED ids, so the focused tab keeps its id when the URL's app matches —
+  // this is what makes back/forward keep working across reloads.
+  const APPS2 = [
+    { id: "pages", path: "/pages" },
+    { id: "story", path: "/story" },
+  ] as unknown as AppList;
+
+  it("reuses the persisted focused tabId when the URL's app matches (no phantom mint)", () => {
+    persist({
+      tabs: [{ tabId: "t1", appId: "pages", route: [], rawPath: "" }],
+      focusedTabId: "t1",
+      mode: "",
+    });
+    setPath("/pages");
+
+    const boot = bootTabs(APPS2, "pages");
+    expect(boot.focusedTabId).toBe("t1");
+    expect(boot.tabs.map((t) => t.tabId)).toEqual(["t1"]);
+  });
+
+  it("keeps other apps' tabs alive and mints a fresh focused tab for a genuine cross-app deep-link", () => {
+    persist({
+      tabs: [{ tabId: "t-story", appId: "story", route: [], rawPath: "" }],
+      focusedTabId: "t-story",
+      mode: "",
+    });
+    setPath("/pages");
+
+    const boot = bootTabs(APPS2, "pages");
+    // The story tab survives (keep-alive), and a fresh pages tab is focused —
+    // the genuine deep-link fallback, not a desync-driven phantom.
+    expect(boot.tabs.some((t) => t.tabId === "t-story")).toBe(true);
+    const focused = boot.tabs.find((t) => t.tabId === boot.focusedTabId)!;
+    expect(focused.appId).toBe("pages");
+    expect(boot.focusedTabId).not.toBe("t-story");
+  });
+});
+
 describe("isDeadUnresolvedLink — the navigate() dead-link gate", () => {
   const PREFIX = "apps/plugins/pages/";
 

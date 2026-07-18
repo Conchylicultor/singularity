@@ -18,6 +18,11 @@ export {
   type ResolvedApp,
 } from "./internal/resolve-app";
 export { useCurrentAppId } from "./use-current-app-id";
+export {
+  setFocusedApp,
+  getFocusedAppId,
+  useFocusedAppId,
+} from "./internal/focused-app-store";
 export type { Placement } from "../core";
 
 export default {

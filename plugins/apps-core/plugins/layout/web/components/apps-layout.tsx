@@ -21,6 +21,7 @@ import {
   useActiveApp,
   usePathname,
   defaultApp,
+  matchAppForPath,
 } from "@plugins/apps-core/web";
 import { TabsProvider, useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
@@ -84,7 +85,14 @@ export function AppsLayout() {
   // safe failure direction — preserve the URL, show the error surface.
   const anyAppShellLoadError = useHasLoadErrorUnder("apps/plugins/");
 
-  const matchedId = activeApp?.id;
+  // The canonicalization redirect must stay URL-driven: it rewrites the address
+  // bar to a real app when the URL matches none, so its "matched" signal is
+  // whether the URL resolves to an app — `matchAppForPath(pathname)`. NOT
+  // `useActiveApp()`, which now derives from the FOCUSED TAB's app (the snapshot
+  // model) and would report a match even on an unmatched URL, defeating the
+  // redirect. Chrome identity (theme/rail) legitimately follows the focused tab
+  // via `activeApp`; canonicalization legitimately follows the URL — kept apart.
+  const urlMatchedId = matchAppForPath(pathname, apps)?.id;
   const defaultPath = defaultApp(apps)?.path;
 
   // Canonicalize a path that matches no app to the default app (the one declaring
@@ -102,7 +110,7 @@ export function AppsLayout() {
   useEffect(() => {
     if (
       shouldRedirectToDefaultApp({
-        matched: !!matchedId,
+        matched: !!urlMatchedId,
         hasDefault: !!defaultPath,
         isBareRoot: pathname === "/",
         deferredComplete,
@@ -111,12 +119,12 @@ export function AppsLayout() {
     ) {
       redirectTo(defaultPath!);
     }
-  }, [pathname, matchedId, defaultPath, deferredComplete, anyAppShellLoadError]);
+  }, [pathname, urlMatchedId, defaultPath, deferredComplete, anyAppShellLoadError]);
 
   // While the redirect is suppressed for a non-bare unmatched path, show a
   // loading (still settling) or error (a shell failed) surface in the tabs area
   // instead of letting the seed tab paint the default app at the wrong URL.
-  const suppressed = !matchedId && !!defaultPath && pathname !== "/";
+  const suppressed = !urlMatchedId && !!defaultPath && pathname !== "/";
   const showLoadError = suppressed && deferredComplete && anyAppShellLoadError;
   const showLoading = suppressed && !deferredComplete;
 

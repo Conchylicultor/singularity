@@ -32,6 +32,9 @@ export function AppRail() {
           <WithTooltip content={app.tooltip} side="right">
             <Center
               as="button"
+              // Icon-only button: the tooltip is invisible to the a11y tree, so
+              // the app name must ALSO be the accessible name.
+              aria-label={app.tooltip}
               onClick={app.onClick ?? (() => replaceTabApp(focusedTabId, app.id))}
               className={cn(
                 "relative size-8 rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
