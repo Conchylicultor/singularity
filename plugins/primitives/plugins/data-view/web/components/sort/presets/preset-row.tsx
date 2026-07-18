@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { MdCheck, MdClose } from "react-icons/md";
+import { MdCheck, MdDelete } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -40,7 +40,7 @@ export function PresetRow<TRow>(props: {
       actions={
         <ControlSizeProvider size="sm">
           <IconButton
-            icon={MdClose}
+            icon={MdDelete}
             label="Delete preset"
             onClick={() => props.onDelete(preset.id)}
           />

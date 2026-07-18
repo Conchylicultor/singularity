@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { MdDelete } from "react-icons/md";
+import { MdClose } from "react-icons/md";
 import {
   Button,
   DropdownMenuSeparator,
@@ -31,7 +31,7 @@ import { SavePresetAffordance } from "./presets/save-preset-affordance";
  * Popover body. With no rules yet it IS the search-first `FieldSearchList`
  * ("Filter by…" typeahead over the schema fields) — picking a field adds a rule
  * in one click. Once populated it hosts the recursive `FilterGroupEditor` plus an
- * `Add filter` affordance and a `Delete filter` footer (clears the whole tree).
+ * `Add filter` affordance and a `Clear filter` footer (clears the whole tree).
  * The tree lazily materializes from a transient empty root on the first edit, so
  * opening with no filter shows the picker and nothing is committed until the user
  * actually adds something.
@@ -115,7 +115,7 @@ export function FilterBuilderPopover<TRow>(props: {
             onAddGroup={() => ctx.addGroup(root.id)}
           />
           <DropdownMenuSeparator />
-          {/* Footer: Save preset packs left, Delete filter pins right. */}
+          {/* Footer: Save preset packs left, Clear filter pins right. */}
           <Stack direction="row" gap="sm" align="center" justify="between">
             <SavePresetAffordance
               disabled={controller.filter === null}
@@ -130,8 +130,8 @@ export function FilterBuilderPopover<TRow>(props: {
                 props.onClose();
               }}
             >
-              <MdDelete />
-              Delete filter
+              <MdClose />
+              Clear filter
             </Button>
           </Stack>
         </>

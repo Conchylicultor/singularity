@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MdDelete } from "react-icons/md";
+import { MdClose } from "react-icons/md";
 import {
   Button,
   DropdownMenuSeparator,
@@ -22,7 +22,7 @@ import { SavePresetAffordance } from "./presets/save-preset-affordance";
  * ("Sort by…" typeahead over the sortable fields) preceded by a one-line guide —
  * picking a field adds the first sort level in one click. Once populated it hosts
  * the reorderable rule list (drag = change priority), an `Add sort` affordance
- * over the fields not yet used, and a `Delete sort` footer (clears every level).
+ * over the fields not yet used, and a `Clear sort` footer (clears every level).
  * A field can be sorted at most once, so each row's picker offers only the fields
  * not used by OTHER rows.
  */
@@ -105,7 +105,7 @@ export function SortBuilderPopover<TRow>(props: {
           ) : null}
           <DropdownMenuSeparator />
           {/* `flex … justify-between` so the footer buttons hug their content:
-              Save preset packs left, Delete sort pins right. */}
+              Save preset packs left, Clear sort pins right. */}
           <div className="flex items-center justify-between gap-sm">
             <SavePresetAffordance
               onSave={(label) => presets.savePreset(label, controller.rules)}
@@ -117,8 +117,8 @@ export function SortBuilderPopover<TRow>(props: {
                 props.onClose();
               }}
             >
-              <MdDelete />
-              Delete sort
+              <MdClose />
+              Clear sort
             </Button>
           </div>
         </>
