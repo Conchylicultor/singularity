@@ -34,4 +34,7 @@ export const toDoBlock = defineBlock({
   // merges); Enter on an empty to-do exits the list to a paragraph.
   resetToOnBackspaceAtStart: "text",
   breakOutOnEmptyEnter: "text",
+  // Splitting a checked to-do yields an UNCHECKED tail (the new line is a fresh
+  // task). The intent layer applies this only when the tail is itself a to-do.
+  dataOnSplit: (d) => ({ ...d, checked: false }),
 });

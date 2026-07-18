@@ -28,7 +28,20 @@ export type KeystrokeKey =
  *   sibling must not move focus or insert a tab).
  */
 export type KeyIntent =
-  | { type: "split"; position: number; asChild: boolean; childType?: string; siblingType?: string }
+  | {
+      type: "split";
+      position: number;
+      asChild: boolean;
+      childType?: string;
+      siblingType?: string;
+      /**
+       * Per-type-transformed `data` for the tail block when the split produces a
+       * tail of the SAME type (e.g. a checked to-do splits into an unchecked one).
+       * Resolved here via the block's `dataOnSplit` and carried through the op as
+       * `tailData`; the reducer overwrites `.text` regardless. Absent = inherit.
+       */
+      tailData?: unknown;
+    }
   | { type: "convertTo"; to: string } // reset block type (Backspace-at-start / empty-Enter)
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
   | { type: "outdent" } // backspace at start when indented, or shift+tab
@@ -59,6 +72,13 @@ export interface IntentContext {
     splitInto?: string;
     resetToOnBackspaceAtStart?: string;
     breakOutOnEmptyEnter?: string;
+    /**
+     * Transform the tail block's `data` when a split produces a tail of the SAME
+     * type (resolved from the block handle's `dataOnSplit`). Applied only when the
+     * tail type equals the origin type — a heading→text end-split must not run the
+     * heading's transform against the text schema.
+     */
+    dataOnSplit?: (data: unknown) => unknown;
   };
 }
 
@@ -91,17 +111,18 @@ export function resolveKeystroke(
       if (mods.shift) return { type: "passthrough" };
       const p = ctx.editPolicy;
       const position = caret.offset;
-      // Enter on an EMPTY formatted block exits to its break-out type (e.g. an
-      // empty bullet/quote becomes a paragraph) instead of spawning another empty
-      // formatted block. Empty == the caret is at both the start and the end.
-      // Already-the-target blocks fall through to split.
-      if (
-        caret.atStart &&
-        caret.atEnd &&
-        p?.breakOutOnEmptyEnter &&
-        node.type !== p.breakOutOnEmptyEnter
-      )
-        return { type: "convertTo", to: p.breakOutOnEmptyEnter };
+      // Empty-Enter escapes one structural level per press: indentation first
+      // (outdent, keeping the type), then the type (convertTo), then ordinary
+      // split. Note the convertTo/outdent order is deliberately OPPOSITE to
+      // Backspace's — Backspace strips what's visually nearest the caret;
+      // empty-Enter escapes nesting outward. Empty == the caret is at both the
+      // start and the end. Blocks without the policy fall straight through to split.
+      if (caret.atStart && caret.atEnd && p?.breakOutOnEmptyEnter) {
+        if (isIndented(node, ctx.pageId)) return { type: "outdent" };
+        if (node.type !== p.breakOutOnEmptyEnter)
+          return { type: "convertTo", to: p.breakOutOnEmptyEnter };
+        // Already top-level and already the target type: fall through to split.
+      }
       // Every "is the caret at the end of the block?" decision gates on the live
       // caret edge (`caret.atEnd`), never the reducer node length: the latter lags
       // a just-applied markdown conversion (`### ` → heading) by one keystroke,
@@ -115,18 +136,29 @@ export function resolveKeystroke(
       // Enter at the END of a block can produce a sibling of a different type
       // (e.g. a heading yields a body paragraph). Mid-block splits keep the type.
       const siblingType = !asChild && caret.atEnd ? p?.splitInto : undefined;
-      return { type: "split", position, asChild, childType: p?.childType, siblingType };
+      // Resolve the tail's `data` transform (e.g. a checked to-do → unchecked
+      // tail) HERE, where block handles are visible. Guarded to the same-type case:
+      // the tail's type is `childType` when nesting, `siblingType` when the end-
+      // split swaps type, else the origin type. Running the origin's transform on a
+      // tail validated against a DIFFERENT schema would corrupt it — so apply only
+      // when the tail type equals the origin type.
+      const tailType = asChild ? (p?.childType ?? node.type) : (siblingType ?? node.type);
+      const tailData =
+        p?.dataOnSplit && tailType === node.type ? p.dataOnSplit(node.data) : undefined;
+      return { type: "split", position, asChild, childType: p?.childType, siblingType, tailData };
     }
     case "Backspace": {
       // Only a collapsed caret at the very start triggers structural intent;
       // anything else is ordinary text deletion (native).
       if (!caret.atStart || !caret.collapsed) return { type: "passthrough" };
-      // Order matches Notion: an indented formatted block outdents first; at top
-      // level it resets to plain text; only then does Backspace merge.
-      if (isIndented(node, ctx.pageId)) return { type: "outdent" };
+      // Backspace deletes the nearest visible thing to the LEFT of the caret: a
+      // type marker (bullet, checkbox, …) is visually nearest → reset the type;
+      // indentation is next → outdent one level; then the line break above → merge
+      // into the previous visible line; nothing left → step out (same as ArrowLeft).
       const p = ctx.editPolicy;
       if (p?.resetToOnBackspaceAtStart && node.type !== p.resetToOnBackspaceAtStart)
         return { type: "convertTo", to: p.resetToOnBackspaceAtStart };
+      if (isIndented(node, ctx.pageId)) return { type: "outdent" };
       if (hasPrevSibling(ctx.nodes, node)) return { type: "merge" };
       // First block at top level: no block to merge into. Backspace here means
       // exactly what ArrowLeft means — step backwards out of the block list, into

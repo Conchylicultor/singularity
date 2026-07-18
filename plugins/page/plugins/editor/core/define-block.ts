@@ -149,6 +149,17 @@ export interface BlockHandle<T> {
   /** Sibling block type produced when Enter splits this block at the END of its text (defaults to same type). */
   splitInto?: string;
   /**
+   * Transform the data payload the TAIL inherits when a split produces a tail of
+   * the SAME type (e.g. a checked to-do splits into an unchecked one). Resolved at
+   * the intent layer and carried through the op as `tailData` — the pure reducer
+   * cannot see handles. `text` is overwritten with the after-runs regardless.
+   *
+   * Declared in METHOD syntax deliberately (same trap `text` documents above): a
+   * property-typed function is contravariant in `data` and breaks the registries'
+   * `BlockHandle<unknown>` assignability.
+   */
+  dataOnSplit?(data: T): T;
+  /**
    * For text block types with a boolean state: the shared text renderer renders
    * an interactive checkbox marker bound to `data[field]`, and applies
    * `doneClassName` (default: strikethrough + muted) to the text content when the
@@ -199,6 +210,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   textVariant?: BlockTextVariant;
   gutterFirstLineCenter?: string;
   splitInto?: string;
+  dataOnSplit?(data: z.infer<S>): z.infer<S>;
   toggle?: { field: string; doneClassName?: string };
   collapsible?: "always";
   splitChildWhenExpanded?: { childType: string };
@@ -231,6 +243,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     textVariant: opts.textVariant,
     gutterFirstLineCenter: opts.gutterFirstLineCenter,
     splitInto: opts.splitInto,
+    dataOnSplit: opts.dataOnSplit,
     toggle: opts.toggle,
     collapsible: opts.collapsible,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,

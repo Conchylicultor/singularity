@@ -81,6 +81,7 @@ export function KeyboardPlugin({
             asChild: intent.asChild,
             childType: intent.childType,
             siblingType: intent.siblingType,
+            tailData: intent.tailData,
             runs,
           });
           return true;
@@ -148,6 +149,9 @@ export function KeyboardPlugin({
         splitInto: handle?.splitInto,
         resetToOnBackspaceAtStart: handle?.resetToOnBackspaceAtStart,
         breakOutOnEmptyEnter: handle?.breakOutOnEmptyEnter,
+        // The tail's `data` transform (e.g. checked to-do → unchecked tail),
+        // bound to its handle so the resolver can invoke it without the handle.
+        dataOnSplit: handle?.dataOnSplit?.bind(handle),
       };
       const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
         nodes,

@@ -25,10 +25,18 @@ export interface BlockEditorAPI {
    * `opts.asChild`/`opts.childType` to force nesting (and the child's type).
    * `opts.runs` carries the editor's authoritative current rich-text so the
    * reducer splits the live content rather than the (possibly stale) stored one.
+   * `opts.tailData` is the resolved per-type-transformed `data` for the tail
+   * (e.g. a checked to-do splits into an unchecked one), carried onto the op.
    */
   split(
     position: number,
-    opts?: { asChild?: boolean; childType?: string; siblingType?: string; runs?: RichText },
+    opts?: {
+      asChild?: boolean;
+      childType?: string;
+      siblingType?: string;
+      tailData?: unknown;
+      runs?: RichText;
+    },
   ): void;
   /**
    * Backspace-at-start intent. If this block is indented (its parent is a normal

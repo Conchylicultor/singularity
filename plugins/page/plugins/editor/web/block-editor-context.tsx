@@ -984,7 +984,13 @@ function BlockEditorProviderInner({
       },
       split(
         position: number,
-        opts?: { asChild?: boolean; childType?: string; siblingType?: string; runs?: RichText },
+        opts?: {
+          asChild?: boolean;
+          childType?: string;
+          siblingType?: string;
+          tailData?: unknown;
+          runs?: RichText;
+        },
       ) {
         // Thin executor: the asChild decision is owned by `resolveKeystroke`
         // (the single intent step) and passed in explicitly. The new block's id
@@ -999,6 +1005,7 @@ function BlockEditorProviderInner({
           asChild: opts?.asChild ?? false,
           childType: opts?.childType,
           siblingType: opts?.siblingType,
+          tailData: opts?.tailData,
           runs: opts?.runs,
         };
         // The reducer left the HEAD in this block's row, but the bound editor

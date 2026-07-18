@@ -131,6 +131,79 @@ Two rules keep this from leaking:
   "Backspace goes back to the title" needed no new intent, no new op, and no new
   branch in the resolver.
 
+## Visible-line invariants (Enter / Backspace)
+
+Split, merge, and the two keystroke ladders are all restatements of one fact
+the codebase already derives everywhere else (`prevVisibleLeaf`, the
+indent/outdent folds, `pasteAnchorId`) but split and the ladders hadn't caught
+up to: the user's mental model, and the caret's, is the **visible line
+sequence**, not sibling space (`parentId`+`rank`).
+
+> Split turns one visible line into two adjacent visible lines: the tail
+> becomes the immediately-next visible line; no other line changes position or
+> depth. Merge is its exact inverse.
+
+**Adoption rule** (`applySplit`'s non-`asChild` arm, `core/block-ops.ts`): when
+the origin has *visible* children (`block.expanded && childrenOf(...).length >
+0`), the tail adopts all of them — reparented to the new id, ranks preserved
+byte-for-byte (the whole sibling set moves together) — and the tail is opened
+(`expanded: true`). Collapsed children are not visible lines, so they stay with
+the head, which deliberately keeps its own `expanded: true` even with zero
+children afterward (harmless — no chevron without children — pinned by test as
+a decision, not an oversight).
+
+Adoption is **derived inside the reducer from the current forest state**,
+never carried on the op as a flag minted at intent time: ops apply against the
+CURRENT forest — the optimistic overlay replays onto a refreshed base, and the
+server applies against its own load — so a flag frozen when the keystroke fired
+could contradict the forest by the time the op actually applies (e.g. a racing
+collapse). Deriving keeps the invariant true *at the moment of application*,
+byte-identical whether the caller is the keyboard, the memory store, or the
+fuzzer. It mirrors `applyMerge`'s own children-adoption exactly: after an
+adoption-split the head is childless, so `prevVisibleLeaf(tail)` resolves back
+to the head, and a following merge re-adopts — which is what makes split and
+merge round-trip. `split ∘ merge round-trip`'s "split a random content block
+then merge the tail restores the forest structurally (~500 seeds)" is the
+executable spec; equality there is **structural** (canonical `{parentId, type,
+expanded, childIds order, coalesced runs}` per id) — merge mints fresh ranks on
+every adoption, so comparing rank strings would fail even on a correct
+round-trip.
+
+The two keystroke ladders (`web/internal/keystroke-intent.ts`) apply the same
+visible-line idea to deletion and to escaping structure:
+
+> **Backspace** deletes the nearest visible thing to the LEFT of the caret:
+> marker glyph (convertTo) → indentation (outdent) → line break (merge) →
+> boundary (nav-left).
+>
+> **Empty-Enter** escapes one structural level per press: indentation first
+> (outdent, keeping the type), then the type (convertTo), then ordinary split.
+
+The two ladders order `convertTo`/`outdent` **oppositely, deliberately**:
+Backspace strips what's visually nearest the caret (the marker sits right
+there), while empty-Enter escapes nesting outward (the type is the outer
+layer). The `Backspace` and `Enter` describes in `keystroke-intent.test.ts` pin
+every rung; `trajectories` re-resolves a fixture across repeated keystrokes as
+the multi-step spec (`Backspace: formatted nested block → [convertTo, outdent,
+merge]`, `empty-Enter: empty bullet nested two deep → [outdent, outdent,
+convertTo, split]`, etc.).
+
+**`dataOnSplit` seam** (checked to-do → unchecked tail, generalized): declared
+on the block handle in **method syntax** — the same bivariance trap `text`
+documents in `define-block.ts` (a property-typed function is contravariant in
+`data` and breaks `BlockHandle<unknown>` registry assignability). Resolved in
+the **resolver**, not the reducer or the executor, because only the resolver
+sees block handles; guarded to `tailType === node.type` — a heading→text
+end-split must never run the heading's transform against the text schema. The
+result is carried as `op.tailData` because the pure reducer cannot see handles
+at all; absent means inherit (today's behavior). Bad payloads are still caught
+at the write boundary by the existing strict `parseBlockData` — the seam adds
+no new validation surface.
+
+`opBlockIds`' split case stays `[blockId, newId]`, deliberately omitting
+adopted children — the same documented under-approximation as merge's
+rewritten target: less cascade-confirmation coverage, but never a wrong drop.
+
 ## Block-selection mode: the container handles only keys it originated
 
 Block selection lives on `internal/use-block-selection.ts` — the range state, the

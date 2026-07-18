@@ -47,6 +47,17 @@ export type BlockOp =
        */
       siblingType?: string;
       /**
+       * Authoritative per-type-transformed `data` payload for the tail block —
+       * e.g. a checked to-do splits into an UNCHECKED tail. Absent = inherit the
+       * origin's `data` (today's behavior). It is resolved at the INTENT layer
+       * (via a block handle's `dataOnSplit`), not here, because the pure reducer
+       * cannot see block handles; a bad payload is caught by the strict
+       * `parseBlockData` normalizer at the server write boundary (loud 400). The
+       * reducer always overwrites `.text` with `afterRuns`, so only the
+       * non-text fields of `tailData` survive.
+       */
+      tailData?: unknown;
+      /**
        * Authoritative current rich-text runs from the editor; falls back to the
        * stored block runs (`runsOfNode`) when absent. Lets the reducer split the
        * live (doc-fresh, projection may lag ~1s) content rather than the lagged
@@ -105,6 +116,7 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     asChild: z.boolean().optional(),
     childType: z.string().optional(),
     siblingType: z.string().optional(),
+    tailData: z.unknown().optional(),
     runs: z.array(TextRunSchema).optional(),
   }),
   z.object({ kind: z.literal("merge"), blockId: z.string(), runs: z.array(TextRunSchema).optional() }),
@@ -361,6 +373,9 @@ function applySplit(
   let newParentId: string | null;
   let newType: string;
   let newRank: Rank;
+  // Visible children the tail adopts (non-asChild arm only; empty otherwise).
+  let adopted: BlockNode[] = [];
+  let tailExpanded = false;
   if (op.asChild) {
     // Nest the split-off content as the original's FIRST child, before any
     // existing child, and force the original open so the new child is visible.
@@ -375,11 +390,41 @@ function applySplit(
     newParentId = block.parentId;
     newType = op.siblingType ?? block.type;
     newRank = Rank.between(Rank.from(block.rank), next0 ? Rank.from(next0.rank) : null);
+
+    // Visible-line invariant: a split turns one visible line into two ADJACENT
+    // visible lines — the tail is the immediately-next visible line, and no
+    // other line changes position or depth. A plain sibling insert satisfies
+    // that only when the origin has no visible children; otherwise the tail
+    // would render AFTER the whole subtree. So when the origin has VISIBLE
+    // children (`expanded` with a non-empty child set) the tail ADOPTS them
+    // all: each child is reparented to `op.newId` keeping its rank string
+    // byte-for-byte (the whole sibling set moves together, so uniqueness/order
+    // carry), and the tail inherits the subtree by opening (`expanded: true`).
+    // Collapsed children are not visible lines, so they stay with the head.
+    //
+    // This is DERIVED from the current forest inside the reducer, not carried on
+    // the op, because ops apply against the CURRENT forest — overlay replays
+    // onto a refreshed base, and the server applies against its own load — so a
+    // flag frozen at intent time could contradict the forest at application
+    // time (e.g. a racing collapse). Deriving keeps the invariant true at the
+    // moment the op is applied. It is the exact mirror of `applyMerge`'s
+    // adoption below: after this split the head is childless, so
+    // `prevVisibleLeaf(tail)` resolves to the head and a following merge
+    // re-adopts — which is what makes split∘merge round-trip.
+    const visibleChildren = block.expanded ? childrenOf(blocks, block.id) : [];
+    if (visibleChildren.length > 0) {
+      adopted = visibleChildren;
+      tailExpanded = true;
+    }
   }
 
   next = replace(next, updatedBlock);
 
-  const newData = { ...asObject(block.data), text: afterRuns };
+  // Tail data: `op.tailData` is the authoritative per-type-transformed payload
+  // (e.g. a checked to-do → unchecked tail), resolved at the intent layer;
+  // absent = inherit the origin's data (today's behavior). `.text` is always
+  // overwritten with the split-off `afterRuns`.
+  const newData = { ...asObject(op.tailData !== undefined ? op.tailData : block.data), text: afterRuns };
   const newNode: BlockNode = {
     id: op.newId,
     pageId: block.pageId,
@@ -387,9 +432,15 @@ function applySplit(
     type: newType,
     data: newData,
     rank: newRank.toJSON(),
-    expanded: false,
+    expanded: tailExpanded,
   };
-  return add(next, newNode);
+  next = add(next, newNode);
+
+  // Reparent the adopted children to the tail, rank strings preserved.
+  for (const child of adopted) {
+    next = replace(next, { ...child, parentId: op.newId });
+  }
+  return next;
 }
 
 function applyMerge(

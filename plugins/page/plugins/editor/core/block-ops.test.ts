@@ -25,7 +25,7 @@ import {
   type BlockNode,
   type BlockOp,
 } from "./block-ops";
-import type { RichText } from "./rich-text";
+import { coalesce, mergeRuns, runsLength, splitRuns, type RichText } from "./rich-text";
 
 // ---------------------------------------------------------------------------
 // Test factory + invariant helpers
@@ -277,6 +277,164 @@ describe("split", () => {
     const blocks = [mk("H", null, a, { text: "Title", type: "heading-1" })];
     const out = run(blocks, { kind: "split", blockId: "H", position: 5, newId: "NEW" });
     expect(out.find((x) => x.id === "NEW")!.type).toBe("heading-1");
+  });
+
+  // --- Visible-line adoption: the tail becomes the immediately-next visible
+  // line, so an expanded parent's visible subtree moves to the tail (mirror of
+  // `applyMerge`'s adoption). ---
+
+  test("adoption: mid-text split of an expanded parent moves its visible children under the tail, ranks byte-equal", () => {
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      mk("P", null, a, { text: "helloworld", expanded: true }),
+      mk("K1", "P", k1),
+      mk("K2", "P", k2),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+
+    // Tail is the immediate next sibling of the head, at the head's own depth.
+    expect(ids(out, null)).toEqual(["P", "NEW"]);
+
+    // Head kept its text, lost every child, but DELIBERATELY keeps expanded=true
+    // (a childless block renders no chevron; this also makes `prevVisibleLeaf`
+    // of the tail resolve to the head, so merge-after-split round-trips).
+    const head = out.find((b) => b.id === "P")!;
+    expect(textOf(head)).toBe("hello");
+    expect(ids(out, "P")).toEqual([]);
+    expect(head.expanded).toBe(true);
+
+    // Tail carries the trailing text, adopts both children IN ORDER, is expanded.
+    const tail = out.find((b) => b.id === "NEW")!;
+    expect(textOf(tail)).toBe("world");
+    expect(ids(out, "NEW")).toEqual(["K1", "K2"]);
+    expect(tail.expanded).toBe(true);
+
+    // Rank strings preserved byte-for-byte (the whole sibling set moves together).
+    expect(out.find((b) => b.id === "K1")!.rank).toBe(k1);
+    expect(out.find((b) => b.id === "K2")!.rank).toBe(k2);
+  });
+
+  test("adoption: a COLLAPSED parent's children are not visible lines, so they stay with the head", () => {
+    const k1 = a;
+    const blocks = [
+      mk("P", null, a, { text: "helloworld", expanded: false }),
+      mk("K1", "P", k1),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    expect(ids(out, "P")).toEqual(["K1"]);
+    const tail = out.find((b) => b.id === "NEW")!;
+    expect(ids(out, "NEW")).toEqual([]);
+    expect(tail.expanded).toBe(false);
+  });
+
+  test("adoption predicate needs BOTH: expanded but zero children → plain sibling split", () => {
+    const blocks = [mk("P", null, a, { text: "helloworld", expanded: true })];
+    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    expect(ids(out, null)).toEqual(["P", "NEW"]);
+    const tail = out.find((b) => b.id === "NEW")!;
+    expect(ids(out, "NEW")).toEqual([]);
+    expect(tail.expanded).toBe(false);
+  });
+
+  test("adoption: position-0 split leaves an empty head above; the tail carries the full text AND the children", () => {
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      mk("P", null, a, { text: "helloworld", expanded: true }),
+      mk("K1", "P", k1),
+      mk("K2", "P", k2),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "P", position: 0, newId: "NEW" });
+    expect(textOf(out.find((b) => b.id === "P")!)).toBe("");
+    const tail = out.find((b) => b.id === "NEW")!;
+    expect(textOf(tail)).toBe("helloworld");
+    expect(ids(out, "NEW")).toEqual(["K1", "K2"]);
+    expect(ids(out, "P")).toEqual([]);
+  });
+
+  test("adoption + siblingType (pure-reducer combo, UI-unreachable): tail takes the type AND adopts", () => {
+    const k1 = a;
+    const blocks = [
+      mk("P", null, a, { text: "Title", type: "heading-1", expanded: true }),
+      mk("K1", "P", k1),
+    ];
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 5,
+      newId: "NEW",
+      siblingType: "text",
+    });
+    const tail = out.find((b) => b.id === "NEW")!;
+    expect(tail.type).toBe("text");
+    expect(ids(out, "NEW")).toEqual(["K1"]);
+    expect(tail.expanded).toBe(true);
+    // Origin keeps its heading type.
+    expect(out.find((b) => b.id === "P")!.type).toBe("heading-1");
+  });
+
+  test("asChild split with expanded children is unchanged: NEW is the first child, no sibling adoption", () => {
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      mk("P", null, a, { text: "hello", expanded: true }),
+      mk("K1", "P", k1),
+      mk("K2", "P", k2),
+    ];
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 5,
+      newId: "NEW",
+      asChild: true,
+    });
+    expect(ids(out, "P")).toEqual(["NEW", "K1", "K2"]);
+    expect(ids(out, "NEW")).toEqual([]);
+    expect(out.find((b) => b.id === "P")!.expanded).toBe(true);
+  });
+
+  test("adoption: a sub-page (page row) child moves under the tail with its pageId unchanged, staying a leaf", () => {
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      content("P", PAGE, a, "helloworld"),
+      content("K1", "P", k1),
+      subPage("S1", "P", k2),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    // Both children (including the sub-page) reparent to the tail, order preserved.
+    expect(ids(out, "NEW")).toEqual(["K1", "S1"]);
+    const s1 = out.find((b) => b.id === "S1")!;
+    expect(s1.parentId).toBe("NEW");
+    expect(s1.pageId).toBe(PAGE);
+    // Page rows never gain a child.
+    for (const [, kids] of pageRowChildren(out)) expect(kids).toEqual([]);
+  });
+
+  test("tailData present → tail data = tailData spread + afterRuns text; head data untouched", () => {
+    const blocks: BlockNode[] = [
+      { id: "A", pageId: "page-1", parentId: null, type: "to-do", data: { checked: true, text: "helloworld" }, rank: a, expanded: false },
+    ];
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "A",
+      position: 5,
+      newId: "NEW",
+      tailData: { checked: false },
+    });
+    // The tail gets the per-type-transformed payload; `.text` is always afterRuns.
+    expect(out.find((b) => b.id === "NEW")!.data).toEqual({ checked: false, text: [{ text: "world" }] });
+    // Head keeps its own data (still checked), text truncated to the head runs.
+    expect(out.find((b) => b.id === "A")!.data).toEqual({ checked: true, text: [{ text: "hello" }] });
+  });
+
+  test("tailData absent → the tail INHERITS the origin's data (checked:true carries — today's fallback, now explicit)", () => {
+    const blocks: BlockNode[] = [
+      { id: "A", pageId: "page-1", parentId: null, type: "to-do", data: { checked: true, text: "helloworld" }, rank: a, expanded: false },
+    ];
+    const out = run(blocks, { kind: "split", blockId: "A", position: 5, newId: "NEW" });
+    expect(out.find((b) => b.id === "NEW")!.data).toEqual({ checked: true, text: [{ text: "world" }] });
   });
 });
 
@@ -978,6 +1136,31 @@ function pageRowChildren(blocks: BlockNode[]): Map<string, string[]> {
   return out;
 }
 
+/**
+ * Structure-only canonical form of a forest: per id, its parent, type, expanded
+ * flag, child ids in document order, and coalesced runs. Deliberately EXCLUDES
+ * rank strings — merge mints fresh ranks, so a split∘merge round-trip is
+ * structurally (not byte-) identical. Used to assert that invariant.
+ */
+function canonicalForest(
+  blocks: BlockNode[],
+): Record<string, { parentId: string | null; type: string; expanded: boolean; childIds: string[]; runs: RichText }> {
+  const out: Record<
+    string,
+    { parentId: string | null; type: string; expanded: boolean; childIds: string[]; runs: RichText }
+  > = {};
+  for (const b of blocks) {
+    out[b.id] = {
+      parentId: b.parentId,
+      type: b.type,
+      expanded: b.expanded,
+      childIds: childrenOf(blocks, b.id).map((c) => c.id),
+      runs: coalesce(runsOfNode(b)),
+    };
+  }
+  return out;
+}
+
 /** One op of every kind, instantiated against a random node of `rows`. */
 function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp {
   const kinds = ["split", "merge", "indent", "outdent", "insert", "delete", "move"] as const;
@@ -987,7 +1170,15 @@ function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp
 
   switch (kind) {
     case "split":
-      return { kind: "split", blockId: target.id, position: Math.floor(rand() * 4), newId };
+      // Sometimes carry a small tailData payload — free coverage that adoption /
+      // rank / pageId / no-mutation invariants hold with a non-inherited tail.
+      return {
+        kind: "split",
+        blockId: target.id,
+        position: Math.floor(rand() * 4),
+        newId,
+        ...(rand() < 0.5 ? { tailData: { checked: rand() < 0.5 } } : {}),
+      };
     case "merge":
       return { kind: "merge", blockId: target.id };
     case "indent":
@@ -1121,5 +1312,62 @@ describe("page rows — op-sequence simulation", () => {
         assertRankOrdering(rows);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// split ∘ merge round-trip — the visible-line invariant, executable
+// ---------------------------------------------------------------------------
+
+/**
+ * Split turns one visible line into two adjacent visible lines; merge is its
+ * exact inverse. The adoption rule (tail adopts the origin's visible children)
+ * is what makes it provable: after an adoption-split the head is childless, so
+ * `prevVisibleLeaf(tail)` resolves to the head and the merge re-adopts.
+ */
+describe("split ∘ merge round-trip", () => {
+  test("mergeRuns(...splitRuns(runs, p)) equals the coalesced original runs at every position", () => {
+    const runs: RichText = [
+      { text: "foo", marks: ["bold"] },
+      { text: "barbaz", color: "red" },
+    ];
+    for (let p = 0; p <= runsLength(runs); p++) {
+      expect(mergeRuns(...splitRuns(runs, p))).toEqual(coalesce(runs));
+    }
+  });
+
+  test("split a random content block then merge the tail restores the forest structurally (~500 seeds)", () => {
+    let rounds = 0;
+    for (let seed = 1; seed <= 500; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 15));
+      // Content blocks only — a page row is not a legal split target (guarded).
+      const contentBlocks = rows.filter((b) => b.type !== PAGE_BLOCK_TYPE);
+      if (contentBlocks.length === 0) continue;
+      const target = contentBlocks[Math.floor(rand() * contentBlocks.length)]!;
+      const len = runsLength(runsOfNode(target));
+      const position = Math.floor(rand() * (len + 1));
+
+      const split = applyBlockOp(rows, {
+        kind: "split",
+        blockId: target.id,
+        position,
+        newId: "RT",
+      });
+      // The tail's previous visible leaf MUST be the head — that is exactly what
+      // makes the merge re-adopt what the split moved. If it ever isn't, the
+      // invariant is broken; fail loudly (never skip silently).
+      const tail = split.find((b) => b.id === "RT")!;
+      expect(prevVisibleLeaf(split, tail)?.id).toBe(target.id);
+
+      const merged = applyBlockOp(split, { kind: "merge", blockId: "RT" });
+      // The tail is gone and the forest is structurally identical to the original
+      // (rank strings excluded — merge mints fresh ranks).
+      expect(merged.find((b) => b.id === "RT")).toBeUndefined();
+      expect(canonicalForest(merged)).toEqual(canonicalForest(rows));
+      rounds++;
+    }
+    // Non-vacuity: the vast majority of seeds yielded a real round-trip.
+    expect(rounds).toBeGreaterThan(400);
   });
 });
