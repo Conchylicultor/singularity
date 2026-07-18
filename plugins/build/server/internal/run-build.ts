@@ -48,8 +48,9 @@ async function isAnyBuildAlive(): Promise<boolean> {
 }
 
 /**
- * Recover the *true* terminal exit code of an orphaned build from the durable
- * per-build log the detached `./singularity build` writes (build-logs-<id>.json).
+ * Recover the *true* terminal state (exit code + finish instant) of an orphaned
+ * build from the durable per-build log the detached `./singularity build` writes
+ * (build-logs-<id>.json).
  *
  * An auto-build from main restarts *this very backend* mid-build, so the process
  * that spawned the build (and `await`s `proc.exited`) is routinely SIGTERM-killed
@@ -58,41 +59,56 @@ async function isAnyBuildAlive(): Promise<boolean> {
  * stamp every such row exit=-1, turning a fully successful deploy into a phantom
  * "Build failed" (the build button then shows red even though the app updated).
  *
+ * The `finishedAt` in the same artifact is the build's *real* terminal instant.
+ * Reusing `new Date()` at reconcile time instead would inflate the row's Duration
+ * by the entire gap between the CLI exiting and the next reconcile pass noticing
+ * the dead pid (often many minutes), so Duration would disagree with the build
+ * profile. We prefer the recorded instant and only fall back to `now` when the
+ * artifact carries none.
+ *
  * The CLI writes this file on both terminal paths: full success (every step
  * green) and a checks/vite step failure (the failing step carries success=false).
  * A dead owner pid guarantees the CLI is past its log-writing point, so there is
  * no read/write race. Absent file ⇒ no clean terminal signal (a hard SIGKILL, or
  * a post-publish boot/health-probe failure that exits before the log is written)
- * ⇒ keep the -1 failure sentinel.
+ * ⇒ keep the -1 failure sentinel and `now` as the finish instant.
  */
-function resolveOrphanExitCode(buildId: string): number {
+function resolveOrphanTerminal(
+  buildId: string,
+  now: Date,
+): { exitCode: number; finishedAt: Date } {
   const name = currentWorktreeName();
   const path = worktreeArtifacts.buildLogs(name, buildId);
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
       steps?: Array<{ success: boolean }>;
+      finishedAt?: number;
     };
     const steps = parsed.steps ?? [];
-    if (steps.length === 0) return -1;
-    return steps.every((s) => s.success) ? 0 : 1;
+    if (steps.length === 0) return { exitCode: -1, finishedAt: now };
+    const exitCode = steps.every((s) => s.success) ? 0 : 1;
+    const finishedAt = parsed.finishedAt != null ? new Date(parsed.finishedAt) : now;
+    return { exitCode, finishedAt };
   } catch (err) {
     if (
       (err as NodeJS.ErrnoException).code !== "ENOENT" &&
       !(err instanceof SyntaxError)
     )
       throw err;
-    return -1;
+    return { exitCode: -1, finishedAt: now };
   }
 }
 
 /**
  * Close any unfinished build_runs rows for this namespace whose owning process is
- * dead, stamping the build's recovered exit code (see resolveOrphanExitCode — a
- * successful build whose tracking backend was killed by its own restart must NOT
- * be recorded as failed). Scoped to this namespace: a worktree DB forks main's
- * rows, and reaping those inherited (foreign-pid) builds would surface a phantom
- * "Build failed" in every worktree. Runs on boot and before each claim so a
- * crashed owner never permanently wedges the build_runs_inflight_uniq lock.
+ * dead, stamping the build's recovered exit code and finish instant (see
+ * resolveOrphanTerminal — a successful build whose tracking backend was killed by
+ * its own restart must NOT be recorded as failed, and its Duration must reflect
+ * the real finish rather than this reconcile pass). Scoped to this namespace: a
+ * worktree DB forks main's rows, and reaping those inherited (foreign-pid) builds
+ * would surface a phantom "Build failed" in every worktree. Runs on boot and
+ * before each claim so a crashed owner never permanently wedges the
+ * build_runs_inflight_uniq lock.
  */
 export async function reconcileOrphanBuilds(): Promise<void> {
   const unfinished = await db
@@ -101,11 +117,12 @@ export async function reconcileOrphanBuilds(): Promise<void> {
     .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
   const orphans = unfinished.filter((r) => !isPidAlive(r.pid));
   if (orphans.length === 0) return;
-  const finishedAt = new Date();
+  const now = new Date();
   for (const orphan of orphans) {
+    const { exitCode, finishedAt } = resolveOrphanTerminal(orphan.id, now);
     await db
       .update(_buildRuns)
-      .set({ finishedAt, exitCode: resolveOrphanExitCode(orphan.id) })
+      .set({ finishedAt, exitCode })
       .where(eq(_buildRuns.id, orphan.id));
   }
 }
@@ -241,6 +258,9 @@ async function doRunBuild(
             durationMs: Date.now() - buildStartMs,
             success: false,
           }],
+          // Terminal instant, so a later reconcile pass reading this fallback
+          // artifact recovers the real finish rather than its own `now`.
+          finishedAt: Date.now(),
         };
         writeFileSync(tmp, JSON.stringify(logs) + "\n");
         renameSync(tmp, logPath);

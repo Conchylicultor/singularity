@@ -12,6 +12,14 @@ export interface BuildStepLog {
 
 export interface BuildLogs {
   steps: BuildStepLog[];
+  /**
+   * Wall-clock instant (epoch ms) the build reached its terminal state. An
+   * auto-build restarts the very backend that spawned it, so the tracking
+   * process is SIGTERM-killed before it can stamp build_runs.finished_at at the
+   * true exit — the row is instead closed later by reconcileOrphanBuilds, which
+   * reads this field so Duration reflects the real finish, not the reconcile.
+   */
+  finishedAt: number;
 }
 
 const steps: BuildStepLog[] = [];
@@ -43,7 +51,7 @@ function writeAtomic(path: string, contents: string): void {
  * `tail`.
  */
 export function writeBuildLogs(name: string, trailer?: string): string {
-  const logs: BuildLogs = { steps };
+  const logs: BuildLogs = { steps, finishedAt: Date.now() };
   const dir = worktreeDataDir(name);
   mkdirSync(dir, { recursive: true });
   const buildId = process.env.SINGULARITY_BUILD_ID;
