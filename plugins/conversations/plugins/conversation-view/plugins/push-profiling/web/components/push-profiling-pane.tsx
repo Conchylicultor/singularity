@@ -2,11 +2,11 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
 import {
   getOpProfiling,
   useOpClick,
-} from "@plugins/debug/plugins/profiling/plugins/push/web";
+} from "@plugins/debug/plugins/profiling/plugins/ops/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 

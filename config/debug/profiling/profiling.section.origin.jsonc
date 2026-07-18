@@ -1,4 +1,4 @@
-// @hash 7df73fc0ddc7
+// @hash a008d981d6b1
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,7 +6,7 @@
   "items": [
     "debug.profiling.boot:boot",
     "debug.profiling.build:build",
-    "debug.profiling.push:push",
+    "debug.profiling.ops:ops",
     "debug.profiling.runtime:runtime",
     "debug.profiling.stats:stats"
   ]

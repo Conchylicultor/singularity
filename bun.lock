@@ -1744,12 +1744,12 @@
       "name": "@singularity/plugin-debug-profiling-op-log",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/profiling/plugins/push": {
-      "name": "@singularity/plugin-debug-profiling-push",
+    "plugins/debug/plugins/profiling/plugins/ops": {
+      "name": "@singularity/plugin-debug-profiling-ops",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt": {
-      "name": "@singularity/plugin-debug-profiling-push-push-gantt",
+    "plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt": {
+      "name": "@singularity/plugin-debug-profiling-ops-op-gantt",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/profiling/plugins/runtime": {
@@ -5821,9 +5821,9 @@
 
     "@singularity/plugin-debug-profiling-op-log": ["@singularity/plugin-debug-profiling-op-log@workspace:plugins/debug/plugins/profiling/plugins/op-log"],
 
-    "@singularity/plugin-debug-profiling-push": ["@singularity/plugin-debug-profiling-push@workspace:plugins/debug/plugins/profiling/plugins/push"],
+    "@singularity/plugin-debug-profiling-ops": ["@singularity/plugin-debug-profiling-ops@workspace:plugins/debug/plugins/profiling/plugins/ops"],
 
-    "@singularity/plugin-debug-profiling-push-push-gantt": ["@singularity/plugin-debug-profiling-push-push-gantt@workspace:plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt"],
+    "@singularity/plugin-debug-profiling-ops-op-gantt": ["@singularity/plugin-debug-profiling-ops-op-gantt@workspace:plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt"],
 
     "@singularity/plugin-debug-profiling-runtime": ["@singularity/plugin-debug-profiling-runtime@workspace:plugins/debug/plugins/profiling/plugins/runtime"],
 

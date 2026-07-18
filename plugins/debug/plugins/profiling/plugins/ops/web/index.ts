@@ -13,7 +13,7 @@ export default {
     "Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt.",
   contributions: [
     Profiling.Section({
-      id: "push",
+      id: "ops",
       order: 3,
       component: OpSection,
     }),

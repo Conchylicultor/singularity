@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
-import type { OpEntry } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+import type { OpEntry } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
 import { opDetailPane } from "../panes";
 
 /**

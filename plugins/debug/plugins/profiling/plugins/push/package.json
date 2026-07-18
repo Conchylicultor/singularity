@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-debug-profiling-push",
-  "private": true,
-  "version": "0.0.1",
-  "description": "Push contention profiling for the Gantt debug pane."
-}

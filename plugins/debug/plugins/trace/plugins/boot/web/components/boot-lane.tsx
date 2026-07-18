@@ -22,7 +22,7 @@ import type {
   TraceSelection,
 } from "@plugins/debug/plugins/trace/plugins/engine/web";
 
-// Categorical color per boot phase (fill = "what", never state — the push-gantt
+// Categorical color per boot phase (fill = "what", never state — the op-gantt
 // convention). Every literal appears here so Tailwind extracts them all; an
 // unknown phase (a newer backend's addition) hashes into the same palette.
 const PHASE_COLORS: Record<string, string> = {

@@ -14,7 +14,7 @@
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/debug/profiling/build`, `GET /api/debug/profiling/build/:worktree/:buildId`
 - Cross-plugin:
-  - Imported by: `debug/profiling/push`
+  - Imported by: `debug/profiling/ops`
 - Shared:
   - Exports: Values: `getBuildProfiling`
 

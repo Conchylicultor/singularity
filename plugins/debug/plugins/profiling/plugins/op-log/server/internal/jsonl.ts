@@ -7,7 +7,7 @@ export const OP_LOG_FILE = join(SINGULARITY_DIR, "op-log.jsonl");
 
 /**
  * The two pre-op-log formats. READ-ONLY — nothing in this plugin ever appends to
- * them. Their own readers/reconcilers (debug/profiling/push) still own writes.
+ * them. Their own readers/reconcilers (debug/profiling/ops) still own writes.
  */
 export const LEGACY_PUSH_FILE = join(SINGULARITY_DIR, "push-contention.jsonl");
 export const LEGACY_BUILD_FILE = join(SINGULARITY_DIR, "build-log.jsonl");

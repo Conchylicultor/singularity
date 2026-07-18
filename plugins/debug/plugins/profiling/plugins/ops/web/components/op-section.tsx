@@ -3,7 +3,7 @@ import { useProfilingContext } from "@plugins/debug/plugins/profiling/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpClick } from "../internal/use-op-click";
 import { getOpProfiling } from "../../shared/endpoints";

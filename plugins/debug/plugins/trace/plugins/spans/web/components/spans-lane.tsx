@@ -25,7 +25,7 @@ import {
   type SpanNode,
 } from "../internal/build-tree";
 
-// Categorical color per span kind (fill = "what", never state — the push-gantt
+// Categorical color per span kind (fill = "what", never state — the op-gantt
 // convention). The kind is now a per-row dot rather than a lane grouping: the rows
 // are ordered by the call tree, not bucketed by kind.
 const KIND_CONFIG: Record<SpanKind, { label: string; bar: string; dot: string }> = {

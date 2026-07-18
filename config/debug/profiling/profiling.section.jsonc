@@ -1,9 +1,9 @@
-// @hash 7df73fc0ddc7
+// @hash a008d981d6b1
 {
   "items": [
     "debug.profiling.boot:boot",
     "debug.profiling.build:build",
-    "debug.profiling.push:push",
+    "debug.profiling.ops:ops",
     "debug.profiling.stats:stats",
     "debug.profiling.runtime:runtime"
   ]

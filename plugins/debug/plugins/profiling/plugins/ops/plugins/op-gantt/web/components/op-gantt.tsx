@@ -27,7 +27,7 @@ import {
 
 /**
  * One op on the Gantt — structurally the wire's `OpEntry`
- * (`debug/profiling/push`'s `shared/endpoints.ts`), restated here because
+ * (`debug/profiling/ops`'s `shared/endpoints.ts`), restated here because
  * `shared/` is plugin-private and a Gantt must stay renderable from any source.
  * The two enums are IMPORTED from op-log's `core` rather than re-typed, so the
  * fill maps below are exhaustive by construction.

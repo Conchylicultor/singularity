@@ -6,7 +6,7 @@ import { useGanttContainerContext } from "./gantt-container";
 /**
  * One bar on a MultiSpanLane track. Fill (`colorClass`) answers "what is this?"
  * and never changes with state; `treatment` layers status on top (pulse = open /
- * in-flight), mirroring push-gantt's fill=type / treatment=state convention.
+ * in-flight), mirroring op-gantt's fill=type / treatment=state convention.
  * `overlays` paint on TOP of the full-extent work bar at their own absolute
  * bar-relative offsets — so they may gap (idle stretches between waits) and even
  * overlap (two layers blocked at the same instant), which a consecutive segment
@@ -27,7 +27,7 @@ export interface SpanBar {
  * A generic Gantt lane hosting N absolute bars on one track. Mirrors SpanRow's
  * three-column layout (w-40 label · flex-1 track · w-16 duration) so it aligns
  * with the TimeAxis and the macro-phase rows, and generalizes the multi-bar-per-
- * row pattern hand-rolled in push-gantt. Bars are positioned via the ambient
+ * row pattern hand-rolled in op-gantt. Bars are positioned via the ambient
  * GanttContainer px-mapping; a click fires onBarClick(id) (the pointerdown is
  * stopped so it never falls through to the container's drag-zoom capture).
  */
@@ -98,7 +98,7 @@ function Bar({
           width: toWidthPct(bar.durationMs, totalMs),
         }}
         // Stop the pointerdown reaching GanttContainer's drag-zoom, which would
-        // setPointerCapture and retarget the click off this bar (push-gantt precedent).
+        // setPointerCapture and retarget the click off this bar (op-gantt precedent).
         onPointerDown={clickable ? (e) => e.stopPropagation() : undefined}
         onClick={
           clickable

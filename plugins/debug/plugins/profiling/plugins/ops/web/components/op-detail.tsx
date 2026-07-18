@@ -11,7 +11,7 @@ import {
 import {
   opFillClass,
   waitFillClass,
-} from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+} from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text, SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
