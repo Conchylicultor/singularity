@@ -6,7 +6,7 @@
 
 - Description: Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).
 - Web:
-  - Uses: `infra/endpoints.useEndpoint`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Dialog`, `primitives/css/ui-kit.DialogContent`, `primitives/css/ui-kit.ScrollArea`, `primitives/loading.Loading`, `primitives/search.SearchInput`
+  - Uses: `infra/endpoints.useEndpoint`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Dialog`, `primitives/css/ui-kit.DialogContent`, `primitives/css/ui-kit.ScrollArea`, `primitives/loading.Loading`, `primitives/scroll-reveal.revealElement`, `primitives/search.SearchInput`
   - Exports: Types: `QuickFindDialogProps`, `UseSearchOptions`; Values: `QuickFindDialog`, `useSearch`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`

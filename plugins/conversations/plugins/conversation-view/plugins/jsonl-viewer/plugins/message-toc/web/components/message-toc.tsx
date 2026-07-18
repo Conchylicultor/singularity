@@ -4,6 +4,7 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -68,7 +69,7 @@ export function MessageToc() {
   const scrollTo = (eventIndex: number, from: Element) => {
     const scroll = paneScrollFrom(from);
     const el = scroll?.querySelector(`[data-event-index="${eventIndex}"]`);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    revealElement(el, { behavior: "smooth", block: "start" });
   };
 
   return (

@@ -2527,6 +2527,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-reveal-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-trigger-render-safety",
       "version": "0.0.1",
@@ -3676,6 +3680,10 @@
     },
     "plugins/primitives/plugins/scoped-store": {
       "name": "@singularity/plugin-primitives-scoped-store",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/scroll-reveal": {
+      "name": "@singularity/plugin-primitives-scroll-reveal",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/search": {
@@ -6201,6 +6209,8 @@
 
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
 
+    "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety": ["@singularity/plugin-framework-tooling-lint-scroll-reveal-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-reveal-safety"],
+
     "@singularity/plugin-framework-tooling-lint-trigger-render-safety": ["@singularity/plugin-framework-tooling-lint-trigger-render-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety"],
 
     "@singularity/plugin-framework-tooling-lint-watcher-safety": ["@singularity/plugin-framework-tooling-lint-watcher-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety"],
@@ -6720,6 +6730,8 @@
     "@singularity/plugin-primitives-row-actions": ["@singularity/plugin-primitives-row-actions@workspace:plugins/primitives/plugins/row-actions"],
 
     "@singularity/plugin-primitives-scoped-store": ["@singularity/plugin-primitives-scoped-store@workspace:plugins/primitives/plugins/scoped-store"],
+
+    "@singularity/plugin-primitives-scroll-reveal": ["@singularity/plugin-primitives-scroll-reveal@workspace:plugins/primitives/plugins/scroll-reveal"],
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
 

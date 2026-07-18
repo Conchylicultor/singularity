@@ -2,8 +2,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -12,6 +10,7 @@ import {
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
 import type { TreeNode } from "../../core";
 import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
@@ -29,6 +28,13 @@ export type TreeListContextValue<T extends TreeItem> = {
     afterId?: string;
   }) => Promise<string | null | undefined>;
   Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
+  /**
+   * One-shot per TreeList instance: returns `true` the first time it is called
+   * (the tree's initial mount) and `false` forever after. Drives the row's
+   * mount-time reveal so a deep-linked selection below the fold is scrolled into
+   * view exactly once, while incidental row REmounts stay inert.
+   */
+  takeInitialReveal: () => boolean;
   /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
   multiSelect: boolean;
   /** True when `onCreate` is wired → RowChrome renders root + per-node Add. */
@@ -122,20 +128,20 @@ export function useTreeRow<T extends TreeItem>(
     data: { zone: "child" as const, targetId: node.id },
   });
 
-  const scrollRef = useRef<HTMLElement | null>(null);
+  // Reveal the row on a false→true selection transition only — never on a
+  // remount that happens to be already-selected (background live-state churn).
+  // The one legitimate mount-reveal (a tree first appearing with a deep-linked
+  // selection below the fold) is preserved via the per-instance one-shot.
+  const setRevealRef = useRevealOnActive(isSelected, {
+    revealOnMount: ctx.takeInitialReveal,
+  });
   const wrappedChildRef = useCallback(
     (el: HTMLElement | null) => {
-      scrollRef.current = el;
+      setRevealRef(el);
       setChildRef(el);
     },
-    [setChildRef],
+    [setRevealRef, setChildRef],
   );
-
-  useEffect(() => {
-    if (isSelected && scrollRef.current) {
-      scrollRef.current.scrollIntoView({ block: "nearest" });
-    }
-  }, [isSelected]);
 
   const select = useCallback(() => ctx.onSelect(node.id), [ctx, node.id]);
   const toggleExpanded = useCallback(

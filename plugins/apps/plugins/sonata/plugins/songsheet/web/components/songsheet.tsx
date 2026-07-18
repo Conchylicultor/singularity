@@ -15,6 +15,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { SongsheetLine, type ActiveChord } from "./songsheet-line";
 
 /** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
@@ -130,7 +131,7 @@ function SongsheetInner({ score }: SongsheetProps) {
   // playing, so a paused user can scroll and browse freely.
   useEffect(() => {
     if (!isPlaying || activeLine < 0) return;
-    lineRefs.current[activeLine]?.scrollIntoView({
+    revealElement(lineRefs.current[activeLine], {
       behavior: "smooth",
       block: "center",
     });

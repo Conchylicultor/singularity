@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import type { ComponentType, ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -20,8 +20,15 @@ export function PaneResolveGuard({ pane, params }: Props) {
     const Component = pane.component;
     return <Component />;
   }
+  // Key the sticky guard on the resolved identity (pane + params). A `swap`
+  // re-roots a pane in place — new params, SAME mounted guard — so without the
+  // key the sticky-found memory would leak from one resource to the next. The
+  // key gives React a fresh guard instance (fresh `sawFound`) per identity,
+  // making that leak structurally impossible; a transient `pending` flip keeps
+  // the identity stable, so the instance — and its stickiness — survives.
   return (
-    <ResolveGuardInner
+    <StickyResolveGuard
+      key={resolveIdentity(pane.id, params)}
       pane={pane}
       resolve={pane.resolve}
       component={pane.component}
@@ -30,7 +37,28 @@ export function PaneResolveGuard({ pane, params }: Props) {
   );
 }
 
-function ResolveGuardInner({
+/** Stable per-(pane, params) key so identity changes remount the guard. */
+function resolveIdentity(paneId: string, params: Record<string, string>): string {
+  const parts = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`);
+  return `${paneId}\u0000${parts.join("\u0000")}`;
+}
+
+/**
+ * Sticky-found resolve gate. Once the resource has resolved (`found`) for this
+ * identity, the real pane stays mounted through any later transient `pending`
+ * flip — e.g. an HTTP-fallback refetch failing under host memory pressure flips
+ * a long-settled resource back to `pending`. Swapping in the loading fallback
+ * there would unmount the pane and destroy the user's scroll, focus, and
+ * unsaved editor draft (the debounce timer is cleared on unmount without
+ * flushing), then remount cold on recovery.
+ *
+ * The gate only downgrades on a SETTLED miss (`!pending && !found`): a resource
+ * genuinely deleted while its pane is open still surfaces Not Found — stickiness
+ * masks transient errors, never real deletion.
+ */
+function StickyResolveGuard({
   pane,
   resolve,
   component: Component,
@@ -43,7 +71,13 @@ function ResolveGuardInner({
 }) {
   const { pending, found } = resolve(params);
 
-  if (found) return <Component />;
+  // `sawFound` latches true the first time this identity resolves. Adjusting
+  // state during render (guarded by `!sawFound`) is React's sanctioned pattern
+  // for deriving state from props without an effect — no flash, no extra frame.
+  const [sawFound, setSawFound] = useState(false);
+  if (found && !sawFound) setSawFound(true);
+
+  if (found || (sawFound && pending)) return <Component />;
 
   if (pending) {
     return (

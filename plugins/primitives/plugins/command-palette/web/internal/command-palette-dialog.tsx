@@ -1,7 +1,8 @@
 import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { MdSearch } from "react-icons/md";
+import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -99,7 +100,6 @@ function CommandPaletteBody({
 }) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
-  const activeRef = useRef<HTMLDivElement>(null);
 
   const { filtered, groups } = useMemo(() => {
     if (!query) {
@@ -143,10 +143,6 @@ function CommandPaletteBody({
     },
     [flatList, activeIdx, select],
   );
-
-  useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "nearest" });
-  }, [activeIdx]);
 
   let flatIdx = 0;
 
@@ -199,7 +195,6 @@ function CommandPaletteBody({
                             key={item.id}
                             item={item}
                             isActive={idx === activeIdx}
-                            ref={idx === activeIdx ? activeRef : undefined}
                             onMouseEnter={() => setActiveIdx(idx)}
                             onClick={() => select(item)}
                           />
@@ -214,7 +209,6 @@ function CommandPaletteBody({
                         key={item.id}
                         item={item}
                         isActive={idx === activeIdx}
-                        ref={idx === activeIdx ? activeRef : undefined}
                         onMouseEnter={() => setActiveIdx(idx)}
                         onClick={() => select(item)}
                       />
@@ -254,19 +248,22 @@ function CommandPaletteBody({
   );
 }
 
-const CommandRow = forwardRef<
-  HTMLDivElement,
-  {
-    item: ScoredItem;
-    isActive: boolean;
-    onMouseEnter: () => void;
-    onClick: () => void;
-  }
->(function CommandRow({ item, isActive, onMouseEnter, onClick }, ref) {
+function CommandRow({
+  item,
+  isActive,
+  onMouseEnter,
+  onClick,
+}: {
+  item: ScoredItem;
+  isActive: boolean;
+  onMouseEnter: () => void;
+  onClick: () => void;
+}) {
+  const revealRef = useRevealOnActive(isActive);
   const Icon = item.icon;
   return (
     <div
-      ref={ref}
+      ref={revealRef}
       role="option"
       aria-selected={isActive}
       className={cn(
@@ -290,4 +287,4 @@ const CommandRow = forwardRef<
       )}
     </div>
   );
-});
+}

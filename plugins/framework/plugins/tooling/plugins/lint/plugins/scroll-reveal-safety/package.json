@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "scroll-reveal-safety lint rule: no-adhoc-scroll-into-view"
+}

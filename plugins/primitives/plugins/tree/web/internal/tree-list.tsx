@@ -117,6 +117,16 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   );
   const clearPendingFocus = useCallback(() => setPendingFocusId(null), []);
 
+  // One-shot per TreeList mount: the first row to read it (the initially
+  // selected one) gets its mount-reveal; every later reader — incidental row
+  // remounts from live-state churn — reads false and stays put.
+  const initialReveal = useRef(true);
+  const takeInitialReveal = useCallback(() => {
+    const v = initialReveal.current;
+    initialReveal.current = false;
+    return v;
+  }, []);
+
   const [optimisticExpanded, setOptimisticExpanded] = useState<
     Map<string, boolean>
   >(() => new Map());
@@ -318,6 +328,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onToggleExpanded: wrappedOnToggleExpanded,
       onCreate,
       Row,
+      takeInitialReveal,
       multiSelect: !!multiSelect,
       canCreate: canCreate && !!onCreate,
       canReorder: !!onMove,
@@ -331,10 +342,11 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onSelect,
       wrappedOnToggleExpanded,
       onCreate,
-      onMove,
       Row,
+      takeInitialReveal,
       multiSelect,
       canCreate,
+      onMove,
       windowed,
     ],
   );

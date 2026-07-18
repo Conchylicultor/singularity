@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useReorderedEntries } from "@plugins/reorder/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -111,12 +112,8 @@ function BlockTypeRow({
   onCommit?: () => void;
   onHover: () => void;
 }) {
-  const ref = useRef<HTMLElement>(null);
+  const revealRef = useRevealOnActive(active);
   const Icon = block.icon;
-
-  useEffect(() => {
-    if (active) ref.current?.scrollIntoView({ block: "nearest" });
-  }, [active]);
 
   const pressProps = onCommit
     ? {
@@ -134,7 +131,7 @@ function BlockTypeRow({
 
   return (
     <Row
-      ref={ref}
+      ref={revealRef}
       selected={active}
       icon={Icon ? <Icon className="text-muted-foreground size-4" /> : undefined}
       onMouseEnter={onHover}

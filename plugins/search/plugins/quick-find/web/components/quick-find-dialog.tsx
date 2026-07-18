@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -119,7 +120,7 @@ function QuickFindDialogBody({
   );
 
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "nearest" });
+    revealElement(activeRef.current, { block: "nearest" });
   }, [safeActiveIdx]);
 
   const hasQuery = query.trim().length > 0;

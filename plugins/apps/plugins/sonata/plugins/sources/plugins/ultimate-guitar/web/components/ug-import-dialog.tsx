@@ -24,6 +24,7 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   beatToSeconds,
@@ -166,7 +167,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
   // type filter toggles (in its onChange below) — so no setState-in-effect is
   // needed to mirror `filtered`.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "nearest" });
+    revealElement(activeRef.current, { block: "nearest" });
   }, [activeIdx]);
 
   // `Button` auto-pends on a promise-returning onClick (spinner + double-click

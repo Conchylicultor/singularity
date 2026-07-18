@@ -7,6 +7,7 @@ import {
   useHighlightedHtml,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
@@ -74,7 +75,7 @@ export function RawView({
   useEffect(() => {
     if (line == null || !containerRef.current) return;
     const el = containerRef.current.querySelector<HTMLElement>("[data-highlighted]");
-    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    revealElement(el, { block: "center", behavior: "smooth" });
   }, [line, html]);
 
   if (state.kind === "loading") {

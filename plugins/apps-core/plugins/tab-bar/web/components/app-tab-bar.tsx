@@ -1,9 +1,6 @@
-import {
-  useEffect,
-  useRef,
-  type ComponentType,
-} from "react";
+import { type ComponentType } from "react";
 import { MdAdd } from "react-icons/md";
+import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
 import {
   cn,
   ControlSizeProvider,
@@ -235,13 +232,16 @@ interface TabChipProps {
  * straight through to the variant.
  */
 function TabChip({ appId, fillHeight, ...props }: TabChipProps) {
-  const ref = useRef<HTMLDivElement>(null);
   const { active } = props;
-  useEffect(() => {
-    if (active) {
-      ref.current?.scrollIntoView({ inline: "nearest", block: "nearest" });
-    }
-  }, [active]);
+  // A newly focused tab reveals itself in the strip — on mount (a tab spawned
+  // already-active) and on the false→true focus transition. Base UI's tooltip
+  // trigger composes its own ref into `Line` via `render`, so this callback ref
+  // is the DOM handle scrollIntoView needs.
+  const revealRef = useRevealOnActive(active, {
+    revealOnMount: true,
+    inline: "nearest",
+    block: "nearest",
+  });
   return (
     <WithTooltip content={props.label}>
       {/* h-full lets the inner variant fill the full-height strip down to the
@@ -249,7 +249,7 @@ function TabChip({ appId, fillHeight, ...props }: TabChipProps) {
           and is never forwarded onto the variant (would leak to the DOM). */}
       <Line
         as="div"
-        ref={ref}
+        ref={revealRef}
         data-app-tab={appId}
         className={fillHeight ? "h-full" : undefined}
       >

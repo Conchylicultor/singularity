@@ -15,6 +15,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
@@ -90,7 +91,7 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   // the `active` prop on a single stable element (never by swapping element
   // types), so the subtree never remounts.
   useLayoutEffect(() => {
-    if (expanded) ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (expanded) revealElement(ref.current, { behavior: "smooth", block: "start" });
   }, [expanded]);
   return (
     <SectionExpandProvider value={value}>
