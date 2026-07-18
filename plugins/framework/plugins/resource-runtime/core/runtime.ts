@@ -68,7 +68,7 @@ export type ResourceParams = Record<string, string>;
 export type RecomputeIntent = {
   resource: string;
   key: ResourceParams;
-  delta: { table: string; ids: string[]; op: "I" | "U" | "D" } | "FULL";
+  delta: { table: string; ids: string[]; op: "I" | "U" | "D"; xid?: string } | "FULL";
 };
 
 // Upstream edge: when `resource` notifies, this resource is cascaded.
@@ -356,6 +356,21 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * only lets `Resource.Declare` derive the flag instead of restating it.
    */
   bootCritical?: true;
+  /**
+   * Opt into STANDALONE mutation-ack frames (`{ kind: "ack" }`). Every
+   * feed-driven value frame (`update` / `delta`) carries `ackTx` — the source
+   * transaction ids folded into the recompute — unconditionally (free bytes, no
+   * extra frames). But a recompute that produces NO value change (an empty
+   * scoped diff, a membership net-zero / window-boundary skip, a point
+   * empty-intersection) normally ships nothing, which would leave an optimistic
+   * client's exact-ack confirmation hanging until an unrelated frame. Declaring
+   * `ackChannel: true` makes those paths broadcast a version-less
+   * `{ kind: "ack", key, params, ackTx }` frame instead: no cache write, no
+   * version bump, no snapshot touch, no cascade — pure ack delivery. Opt-in
+   * per resource because only optimistic-mutation consumers need it. See
+   * research/2026-07-18-global-bounded-working-set-phase2.md Part C.
+   */
+  ackChannel?: true;
 }
 
 /**
@@ -474,6 +489,8 @@ export interface ServerResourceOptions<T, P extends ResourceParams = ResourcePar
   revalidate?: ResourceDefinition<T, P>["revalidate"];
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
+  /** Standalone mutation-ack frames — see `ResourceDefinition.ackChannel`. */
+  ackChannel?: ResourceDefinition<T, P>["ackChannel"];
 }
 
 // Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
@@ -504,6 +521,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     onLastUnsubscribe: opts.onLastUnsubscribe,
     revalidate: opts.revalidate,
     authorize: opts.authorize,
+    ackChannel: opts.ackChannel,
   };
 }
 
@@ -588,6 +606,23 @@ interface PendingNotify {
    * in `flushNotifies` to compute `onDelivered` latency.
    */
   enqueuedAt: number;
+  /**
+   * Source transaction ids (`pg_current_xact_id()::text` from the change-feed
+   * NOTIFY) of the DB changes coalesced into this pending — the mutation-ack
+   * attribution (`ackTx`) the drain stamps on the frames this recompute
+   * produces. Unioned on EVERY merge branch, INCLUDING the FULL absorb/degrade
+   * (a FULL recompute reads post-commit, so the "W's rows have been re-read"
+   * claim survives the scope degrade — contrast `deleted`, which FULL drops).
+   * Absent for hand-`notify()` / synthetic pendings (no HTTP mutation
+   * corresponds), so those frames are structurally ack-less.
+   */
+  sourceTx?: Set<string>;
+  /**
+   * The union above crossed `SOURCE_TX_CAP` — ship NO ackTx this cycle (the set
+   * is cleared: a missing ack is safe, degrading to the client's watermark
+   * backstop; a torn set could confirm an op whose rows were never re-read).
+   */
+  sourceTxOverflow?: boolean;
 }
 
 interface RegistryEntry {
@@ -701,6 +736,12 @@ interface RegistryEntry {
    * if it resolves falsy.
    */
   authorize?: (params: ResourceParams) => boolean | Promise<boolean>;
+  /**
+   * Standalone mutation-ack frames opt-in (see `ResourceDefinition.ackChannel`).
+   * Undefined ⇒ no-value-change recomputes ship nothing (today's behavior);
+   * value-frame `ackTx` stamping is unconditional either way.
+   */
+  ackChannel?: true;
 }
 
 /**
@@ -1002,6 +1043,8 @@ export interface ResourceRuntime {
     ids: string[] | null;
     origin: string;
     identityBase: string;
+    /** Source transaction id (xid8 text) — mutation-ack attribution (`ackTx`). */
+    xid?: string;
   }) => void;
   /**
    * Force a FULL recompute of a single registered resource by key (param-less →
@@ -1329,18 +1372,37 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // never a wrong causal denial. A SCOPED load (ctx) is a partial re-read of
   // only the affected rows, so it NEVER carries a watermark: stamping one would
   // let a client treat a partial value as full server truth at that floor.
+  // THE ackTx IS CO-PRODUCED BY THE SAME FLIGHT (the third co-production, after
+  // the etag and the watermark). `seedAckTx` is the pending's source-transaction
+  // ids the CALLER (a feed-driven drain) wants stamped on the frames this value
+  // feeds; the resolved `ackTx` is the seed of the flight that ACTUALLY produced
+  // the value. A drain that JOINS a read flight whose SELECT may have run
+  // pre-commit adopts the starter's (typically undefined) seed and ships NO
+  // ackTx — a missed ack degrades to the client's watermark backstop, while
+  // stamping its own seed on a pre-commit value would be a FALSE ack (the one
+  // soundness hazard the co-production closes). Read-path callers (sub-ack /
+  // HTTP / loadResourceByKey) never seed and never stamp ackTx (their snapshot
+  // watermark subsumes it). A SCOPED (ctx) load never coalesces (ctx loads
+  // bypass the inflight), so returning the seed directly is safe.
   async function getResourceValue(
     entry: RegistryEntry,
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
     seedEtag?: string,
     gated = false,
-  ): Promise<{ value: unknown; etag: string | undefined; watermark: string | undefined }> {
+    seedAckTx?: readonly string[],
+  ): Promise<{
+    value: unknown;
+    etag: string | undefined;
+    watermark: string | undefined;
+    ackTx: readonly string[] | undefined;
+  }> {
     if (ctx) {
       return {
         value: await timedLoad(entry, params, ctx),
         etag: undefined,
         watermark: undefined,
+        ackTx: seedAckTx,
       };
     }
     // Gate-after-dedup: when `gated` (the read path), the read-admission slot is
@@ -1363,6 +1425,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       value: unknown;
       etag: string | undefined;
       watermark: string | undefined;
+      ackTx: readonly string[] | undefined;
     }> => {
       let watermark: string | undefined;
       if (opts.captureWatermark) {
@@ -1374,7 +1437,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           reportLoaderError(`watermark capture failed for ${entry.key}`, err);
         }
       }
-      return { value: await timedLoad(entry, params), etag: seedEtag, watermark };
+      // `ackTx: seedAckTx` — the STARTER's seed; joiners adopt it wholesale
+      // (like the etag/watermark), so a stamped ackTx always describes the
+      // flight that produced the value it rides with.
+      return { value: await timedLoad(entry, params), etag: seedEtag, watermark, ackTx: seedAckTx };
     };
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
@@ -1405,6 +1471,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     params: ResourceParams,
     seedEtag?: string,
   ): Promise<{ value: unknown; etag: string | undefined; watermark: string | undefined }> {
+    // No ackTx seed and the resolved ackTx is discarded: read-path frames
+    // (sub-ack / HTTP body) never carry one — their snapshot watermark subsumes
+    // it (Rule B).
     const run = () => getResourceValue(entry, params, undefined, seedEtag, true);
     return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
   }
@@ -1489,6 +1558,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // B′ — a full value-carrying frame may carry one; see `getResourceValue`).
   // Passed by value, so the no-`revalidate` path keeps its no-await-before-send
   // property (H5a) untouched.
+  // `ackTx` is the flight-resolved mutation-ack attribution (feed-driven
+  // recomputes only — the read paths never pass one). Passed by value like
+  // `watermark`, so the no-`revalidate` path keeps its no-await-before-send
+  // property (H5a) untouched.
   function sendUpdate(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -1496,6 +1569,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     version: number,
     subs: SocketState[],
     watermark?: string,
+    ackTx?: readonly string[],
   ): void | Promise<void> {
     const broadcast = (etag?: string): void => {
       const msg = {
@@ -1506,6 +1580,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         version,
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
+        ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
       };
       broadcastJson(subs, msg);
     };
@@ -1532,17 +1607,35 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   //   scoped   | Set A    | Set D   | union both
   //
   // Omitting `deleted` (every legacy caller) is byte-identical to the pre-M5 merge.
+  //
+  // `sourceTx` (mutation-ack attribution) is unioned on EVERY branch — including
+  // FULL absorb and the degrade-to-FULL — because a FULL recompute reads
+  // post-commit, so the ackTx claim ("W's rows have been re-read") survives the
+  // scope degrade. Contrast `deleted`, which FULL drops (a FULL recompute
+  // resolves membership wholesale). Capped at SOURCE_TX_CAP: overflow suppresses
+  // the whole set for the cycle (a missing ack is safe; a torn set is not).
+  const SOURCE_TX_CAP = 64;
+  function unionSourceTx(pending: PendingNotify, sourceTx?: ReadonlySet<string>): void {
+    if (!sourceTx || sourceTx.size === 0 || pending.sourceTxOverflow) return;
+    const set = (pending.sourceTx ??= new Set<string>());
+    for (const id of sourceTx) set.add(id);
+    if (set.size > SOURCE_TX_CAP) {
+      pending.sourceTxOverflow = true;
+      pending.sourceTx = undefined;
+    }
+  }
   function mergePending(
     map: Map<string, PendingNotify>,
     pk: string,
     params: ResourceParams,
     incoming: Set<string> | null,
     deleted?: Set<string>,
+    sourceTx?: ReadonlySet<string>,
   ): void {
     const existing = map.get(pk);
     if (!existing) {
       // First merge: stamp the staleness-window start. Never overwritten below.
-      map.set(pk, {
+      const created: PendingNotify = {
         params,
         affected: incoming === null ? null : new Set(incoming),
         // A FULL first-merge carries no deleted set (FULL recomputes wholesale).
@@ -1550,9 +1643,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           ? { deleted: new Set(deleted) }
           : {}),
         enqueuedAt: performance.now(),
-      });
+      };
+      unionSourceTx(created, sourceTx);
+      map.set(pk, created);
       return;
     }
+    // FULL absorbs the scope but NOT the ack attribution — union first.
+    unionSourceTx(existing, sourceTx);
     if (existing.affected === null) return; // FULL absorbs everything (incl. deleted)
     if (incoming === null) {
       existing.affected = null; // degrade to FULL
@@ -1564,6 +1661,42 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const d = (existing.deleted ??= new Set<string>());
       for (const id of deleted) d.add(id);
     }
+  }
+
+  // The pending's shippable ackTx: undefined when absent, empty, or overflowed
+  // (suppression — see `PendingNotify.sourceTxOverflow`).
+  function pendingAckTx(pending: PendingNotify): string[] | undefined {
+    if (pending.sourceTxOverflow || !pending.sourceTx || pending.sourceTx.size === 0) {
+      return undefined;
+    }
+    return [...pending.sourceTx];
+  }
+
+  // The pending's sourceTx as threaded DOWNSTREAM through the cascade (a
+  // downstream recompute reads post-commit too, so the claim propagates).
+  // Overflow propagates as suppression (undefined).
+  function cascadeSourceTx(pending: PendingNotify): ReadonlySet<string> | undefined {
+    return pending.sourceTxOverflow ? undefined : pending.sourceTx;
+  }
+
+  // Broadcast a standalone `{ kind: "ack" }` frame for a recompute that produced
+  // NO value change — gated on the entry's `ackChannel` opt-in, a non-empty
+  // (non-overflowed) sourceTx, and live subscribers. Version-less and
+  // cache-less by design: it MUST NOT bump the per-pk version counter, touch
+  // the snapshot, or cascade — it exists purely so an optimistic client's
+  // exact-ack confirmation never hangs on a no-op recompute.
+  function broadcastAckOnly(entry: RegistryEntry, pendingEntry: PendingNotify): void {
+    if (!entry.ackChannel) return;
+    const ackTx = pendingAckTx(pendingEntry);
+    if (ackTx === undefined) return;
+    const subs = subscribersFor(entry.key, paramsKey(pendingEntry.params));
+    if (subs.length === 0) return;
+    broadcastJson(subs, {
+      kind: "ack" as const,
+      key: entry.key,
+      params: pendingEntry.params,
+      ackTx,
+    });
   }
 
   // Single internal builder. Produces the full runtime object (with a working
@@ -1717,6 +1850,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       authorize: def.authorize as
         | ((params: ResourceParams) => boolean | Promise<boolean>)
         | undefined,
+      ackChannel: def.ackChannel,
     };
     registry.set(def.key, entry);
 
@@ -1932,7 +2066,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     entry: RegistryEntry,
     params: ResourceParams,
     affected: Set<string> | null,
-    opts?: { source?: "hand" | "feed" | "synthetic"; deleted?: Set<string> },
+    opts?: {
+      source?: "hand" | "feed" | "synthetic";
+      deleted?: Set<string>;
+      /** Source txid (feed only) — mutation-ack attribution. Hand/synthetic
+       *  notifies never carry one, so their frames are structurally ack-less. */
+      sourceTx?: string;
+    },
   ): void {
     const pk = paramsKey(params);
     // Self-verification recorder (cascade is byte-identical regardless of source).
@@ -1963,7 +2103,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         }
       }
     }
-    mergePending(entry.pendingNotifies, pk, params, affected, opts?.deleted);
+    mergePending(
+      entry.pendingNotifies,
+      pk,
+      params,
+      affected,
+      opts?.deleted,
+      opts?.sourceTx !== undefined ? new Set([opts.sourceTx]) : undefined,
+    );
     if (batchDepth > 0) return;
     // Debounced entries do not ride the immediate flush: arm a per-entry
     // fixed-window timer (only if not already armed — never re-armed within a
@@ -2184,12 +2331,18 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // relevance-signature gate + `affectedMap`. `value`/`valueComputed` feed a
   // value-aware downstream `map`. Extracted verbatim from `drainEntry`'s original
   // inline loop so both callers route through one implementation.
+  // `sourceTx` (the upstream pending's mutation-ack attribution, minus overflow)
+  // threads into every downstream `mergePending`, because a downstream recompute
+  // triggered by this cascade also reads post-commit — the ackTx claim holds
+  // transitively. A `SKIP_EDGE` relevance skip drops it (vacuously irrelevant
+  // downstream; a missing ack is safe).
   async function cascadeDownstream(
     entry: RegistryEntry,
     params: ResourceParams,
     affected: Set<string> | null,
     value: unknown,
     valueComputed: boolean,
+    sourceTx?: ReadonlySet<string>,
   ): Promise<void> {
     for (const edge of entry.downstream) {
       const down = registry.get(edge.downstreamKey);
@@ -2285,7 +2438,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         downAffected = result;
       }
       for (const dp of derived) {
-        mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
+        mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected, undefined, sourceTx);
       }
     }
   }
@@ -2323,6 +2476,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // persist watermark: that one must floor the persisted row, this one rides
     // the wire with the value it describes.
     let flightWatermark: string | undefined;
+    // Flight-resolved mutation-ack attribution: the pending's sourceTx SEEDS the
+    // flight; a joined stale flight resolves the STARTER's (typically absent)
+    // seed instead, so a pre-commit value is never stamped with this pending's
+    // claim (missed ack safe, false ack structurally impossible).
+    let flightAckTx: readonly string[] | undefined;
     let valueComputed = false;
     if (needValue) {
       let watermark: string | undefined;
@@ -2334,14 +2492,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           watermark = undefined;
         }
       }
+      const seedAckTx = pendingAckTx(pendingEntry);
       try {
-        ({ value, watermark: flightWatermark } = await (opts.wrapOrigin
-          ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
-          : getResourceValue(entry, params, undefined)));
+        ({ value, watermark: flightWatermark, ackTx: flightAckTx } = await (opts.wrapOrigin
+          ? opts.wrapOrigin("push", entry.key, () =>
+              getResourceValue(entry, params, undefined, undefined, false, seedAckTx))
+          : getResourceValue(entry, params, undefined, undefined, false, seedAckTx)));
         valueComputed = true;
       } catch (err) {
         reportLoaderError(`loader failed for ${entry.key}`, err);
-        return; // never ship or cascade a torn read; snapshot untouched
+        return; // never ship or cascade a torn read; snapshot untouched — and no ack (no false ack on failure)
       }
       if (persisted && watermark !== undefined && opts.persistSnapshot) {
         const tablesRead = persistReadSet(entry.key);
@@ -2357,11 +2517,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const hadSnapshot = entry.snapshots?.has(pk) ?? false;
       const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
       if (!hadSnapshot) {
-        await sendUpdate(entry, params, value, version, subs, flightWatermark);
+        await sendUpdate(entry, params, value, version, subs, flightWatermark, flightAckTx);
         opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
       } else {
         // A FULL-recompute keyed delta fully reconciles the client, so it may
-        // carry the flight watermark (Rule B′). Scoped deltas never do.
+        // carry the flight watermark (Rule B′). Scoped deltas never do. The
+        // flight-resolved ackTx rides too (a FULL read is post-commit).
         const msg = {
           kind: "delta" as const,
           key: entry.key,
@@ -2371,6 +2532,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           order,
           version,
           ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
+          ...(flightAckTx !== undefined && flightAckTx.length > 0 ? { ackTx: flightAckTx } : {}),
         };
         broadcastJson(subs, msg);
         opts.onPush?.(entry.key, {
@@ -2390,7 +2552,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (valueComputed) reseedOrderSigs(entry, pk, value);
 
     // A FULL recompute cascades FULL (clears edge signatures inside the helper).
-    await cascadeDownstream(entry, params, null, value, valueComputed);
+    await cascadeDownstream(entry, params, null, value, valueComputed, cascadeSourceTx(pendingEntry));
   }
 
   // Membership incremental path (drainEntry branch 4): a membership entry
@@ -2416,8 +2578,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const requestedIds = pendingEntry.affected ?? new Set<string>();
     const deletedIds = pendingEntry.deleted ?? new Set<string>();
     // Nothing actually changed (an empty scoped set with no deletes) → skip
-    // entirely: no version bump, no frame, no cascade.
-    if (requestedIds.size === 0 && deletedIds.size === 0) return;
+    // entirely: no version bump, no frame, no cascade. This is also the ACK-ONLY
+    // pending a point empty-intersection routes here (the change's ids missed
+    // this tuple's set, but the writer still deserves its ack) — an opted-in
+    // `ackChannel` entry broadcasts the standalone ack frame, version-less.
+    if (requestedIds.size === 0 && deletedIds.size === 0) {
+      broadcastAckOnly(entry, pendingEntry);
+      return;
+    }
 
     const snapshots = (entry.snapshots ??= new Map());
     const prev = snapshots.get(pk)!; // caller only routes here when a snapshot exists
@@ -2660,6 +2828,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       if (subs.length > 0) {
+        // Membership-scoped deltas stamp the PENDING's sourceTx directly:
+        // scoped/backfill refills are ctx loads, which never coalesce (they
+        // bypass the read inflight), so no stale-flight adoption is needed —
+        // and Rule B′ is untouched (still no watermark; ackTx claims only "the
+        // listed transactions' rows were re-read", never snapshot completeness).
+        const ackTx = pendingAckTx(pendingEntry);
         const msg = {
           kind: "delta" as const,
           key: entry.key,
@@ -2668,10 +2842,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           deletes,
           order,
           version,
+          ...(ackTx !== undefined ? { ackTx } : {}),
         };
         broadcastJson(subs, msg);
         opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
       }
+    } else {
+      // Net-zero recompute (an entrant sorting past the tail, a window-boundary
+      // skip): no frame, no version bump — but the writer's ack must not hang
+      // on it. Opted-in entries broadcast the standalone ack frame.
+      broadcastAckOnly(entry, pendingEntry);
     }
     // Mirror the legacy scoped path's accounting: an empty diff is a recorded
     // no-op push (changed:false) to any subscriber.
@@ -2683,7 +2863,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // affectedMap to translate) and clears edge signatures; otherwise the requested
     // ids (incl. where-flip exits, whose rows still exist) flow through the gate.
     const cascadeAffected = deletedIds.size > 0 ? null : requestedIds;
-    await cascadeDownstream(entry, params, cascadeAffected, refillRows, loaderRan);
+    await cascadeDownstream(
+      entry,
+      params,
+      cascadeAffected,
+      refillRows,
+      loaderRan,
+      cascadeSourceTx(pendingEntry),
+    );
   }
 
   // Drain one entry's pending notifies: load (await), send frames, cascade.
@@ -2772,6 +2959,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // flight (ctx) always resolves it undefined, so the scoped delta below is
       // structurally tokenless.
       let flightWatermark: string | undefined;
+      // Flight-resolved mutation-ack attribution: the pending's sourceTx seeds
+      // the flight; a joined stale (pre-commit) flight resolves the STARTER's
+      // seed instead — missed ack safe, false ack impossible. A ctx (scoped)
+      // load returns the seed directly (ctx loads never coalesce).
+      let flightAckTx: readonly string[] | undefined;
+      const seedAckTx = pendingAckTx(pendingEntry);
       let valueComputed = false;
       if (needValue) {
         // L2: capture the durable position BEFORE the loader's first read, so any
@@ -2794,15 +2987,17 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
-          ({ value, watermark: flightWatermark } = await (opts.wrapOrigin
-            ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
-            : getResourceValue(entry, params, ctx)));
+          ({ value, watermark: flightWatermark, ackTx: flightAckTx } = await (opts.wrapOrigin
+            ? opts.wrapOrigin("push", entry.key, () =>
+                getResourceValue(entry, params, ctx, undefined, false, seedAckTx))
+            : getResourceValue(entry, params, ctx, undefined, false, seedAckTx)));
           valueComputed = true;
         } catch (err) {
           reportLoaderError(`loader failed for ${entry.key}`, err);
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read. Never persist on
-          // the failure path (the snapshot stays untouched).
+          // the failure path (the snapshot stays untouched). No ack either — a
+          // failed recompute never proved anything was re-read.
           continue;
         }
 
@@ -2837,9 +3032,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // unsafe for diffKeyed — reload the FULL value and diff that.
             let full: unknown;
             try {
-              ({ value: full, watermark: flightWatermark } = await (opts.wrapOrigin
-                ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
-                : getResourceValue(entry, params, undefined)));
+              ({ value: full, watermark: flightWatermark, ackTx: flightAckTx } = await (opts.wrapOrigin
+                ? opts.wrapOrigin("push", entry.key, () =>
+                    getResourceValue(entry, params, undefined, undefined, false, seedAckTx))
+                : getResourceValue(entry, params, undefined, undefined, false, seedAckTx)));
             } catch (err) {
               reportLoaderError(`loader failed for ${entry.key}`, err);
               continue;
@@ -2847,12 +3043,17 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
             // serves only to (re)seed the snapshot from the full value.
             diffKeyed(entry, pk, full);
-            await sendUpdate(entry, params, full, version, subs, flightWatermark);
+            await sendUpdate(entry, params, full, version, subs, flightWatermark, flightAckTx);
             opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
           } else if (scoped) {
             // Scoped path: merge the partial recompute into the snapshot and
             // ship only the changed rows. `deletes:[]`, `order:undefined` —
             // a scoped notify never asserts membership/order (those stay FULL).
+            // The delta stamps the PENDING's sourceTx directly: a ctx load
+            // never coalesces, so no stale-flight adoption is needed — and Rule
+            // B′ is untouched (still watermark-less; ackTx claims only that the
+            // listed transactions' rows were re-read, nothing about membership
+            // or snapshot completeness).
             const { upserts } = diffKeyedScoped(entry, pk, value as unknown[]);
             if (upserts.length) {
               const msg = {
@@ -2863,8 +3064,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 deletes: [] as string[],
                 order: undefined,
                 version,
+                ...(seedAckTx !== undefined ? { ackTx: seedAckTx } : {}),
               };
               broadcastJson(subs, msg);
+            } else {
+              // Empty scoped diff: the recompute proved the bytes unchanged —
+              // no value frame, but an opted-in entry still delivers the
+              // writer's ack (a no-byte-change write must not hang it).
+              broadcastAckOnly(entry, pendingEntry);
             }
             // Emit regardless of whether a frame was sent: the recompute happened,
             // so an empty scoped diff (upserts.length === 0) is a recorded no-op push.
@@ -2877,12 +3084,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             if (!hadSnapshot) {
               // First notify for this pk: ship a full update so brand-new
               // subscribers get a complete base to merge subsequent deltas onto.
-              await sendUpdate(entry, params, value, version, subs, flightWatermark);
+              await sendUpdate(entry, params, value, version, subs, flightWatermark, flightAckTx);
               opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
             } else {
               // A FULL-recompute keyed delta fully reconciles the client, so it
-              // may carry the flight watermark (Rule B′). The scoped delta
-              // branch above never does (partial re-read).
+              // may carry the flight watermark (Rule B′) and the flight-resolved
+              // ackTx. The scoped delta branch above stamps the pending's set.
               const msg = {
                 kind: "delta" as const,
                 key: entry.key,
@@ -2892,6 +3099,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 order,
                 version,
                 ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
+                ...(flightAckTx !== undefined && flightAckTx.length > 0
+                  ? { ackTx: flightAckTx }
+                  : {}),
               };
               broadcastJson(subs, msg);
               opts.onPush?.(entry.key, {
@@ -2901,7 +3111,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             }
           }
         } else {
-          await sendUpdate(entry, params, value, version, subs, flightWatermark);
+          await sendUpdate(entry, params, value, version, subs, flightWatermark, flightAckTx);
         }
       }
 
@@ -2912,7 +3122,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
       }
 
-      await cascadeDownstream(entry, params, affected, value, valueComputed);
+      await cascadeDownstream(
+        entry,
+        params,
+        affected,
+        value,
+        valueComputed,
+        cascadeSourceTx(pendingEntry),
+      );
     }
   }
 
@@ -3784,6 +4001,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     ids: string[] | null;
     origin: string;
     identityBase: string;
+    xid?: string;
   }): void {
     try {
       const affectedKeys = tableToResources().get(change.table);
@@ -3880,6 +4098,20 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               tupleAffected.size === 0 &&
               (tupleDeleted === undefined || tupleDeleted.size === 0)
             ) {
+              // Empty intersection: the tuple's value is untouched — but an
+              // opted-in ackChannel entry still owes the writer its ack (an
+              // optimistic client subscribed to THIS tuple may hold a pending
+              // op whose write landed outside the tuple's id set — e.g. a
+              // reorder that only moved OTHER rows' ranks). Schedule an
+              // ACK-ONLY pending: an empty scoped set carrying only sourceTx,
+              // which the membership drain resolves to a standalone ack frame
+              // (no version bump, no frame otherwise, no cascade).
+              if (entry.ackChannel && change.xid !== undefined) {
+                scheduleNotify(entry, params, new Set<string>(), {
+                  source: "feed",
+                  sourceTx: change.xid,
+                });
+              }
               continue;
             }
           }
@@ -3896,12 +4128,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                   table: change.table,
                   ids: [...(tupleDeleted ?? tupleAffected)],
                   op: change.op,
+                  ...(change.xid !== undefined ? { xid: change.xid } : {}),
                 };
           const intent: RecomputeIntent = { resource: key, key: params, delta };
           void intent;
           scheduleNotify(entry, params, tupleAffected, {
             source: "feed",
             deleted: tupleDeleted,
+            sourceTx: change.xid,
           });
         }
       }

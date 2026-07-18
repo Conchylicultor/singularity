@@ -1,15 +1,14 @@
-import { asc } from "drizzle-orm";
-import { queryResource } from "@plugins/infra/plugins/query-resource/server";
+import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
 import { conversationProgressResource as conversationProgressDescriptor } from "../../shared/schemas";
 import { conversationProgress } from "./tables";
 
-// Compiled keyed query-resource: the loader, Layer-2 scoped loader, and
-// identityTable ("conversations_ext_progress") all derive from this one
-// declaration. The PK column `parent_id` is projected under the ALIAS
-// `conversationId` — the compiler keys the resource on the alias (matching the
-// descriptor's pkField) while the scoped refill still filters on the real
-// column. A phase reclassification is an UPDATE → one scoped keyed delta.
-export const conversationProgressResource = queryResource(conversationProgressDescriptor, {
+// Compiled bounded POINT resource: the loader reads only the subscribed id set
+// (`WHERE parent_id IN (ids)`), and the change-feed routes a progress
+// insert/reclassify to a tuple iff the changed conversation ids intersect its
+// set — so a phase change never sweeps the whole table. The PK column
+// `parent_id` is projected under the ALIAS `conversationId` (the point identity);
+// `point.by` IS that identity pk. No orderBy — point sets are unordered.
+export const conversationProgressResource = windowQueryResource(conversationProgressDescriptor, {
   from: conversationProgress.table,
   select: {
     conversationId: conversationProgress.table.parentId,
@@ -17,5 +16,5 @@ export const conversationProgressResource = queryResource(conversationProgressDe
     source: conversationProgress.table.source,
     updatedAt: conversationProgress.table.updatedAt,
   },
-  orderBy: asc(conversationProgress.table.parentId),
+  point: { by: conversationProgress.table.parentId },
 });

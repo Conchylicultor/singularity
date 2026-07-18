@@ -100,6 +100,69 @@ describe("cascade edge-read attribution", () => {
     expect(downLoads).toEqual(["d"]);
   });
 
+  test("a scoped cascade forwards the upstream sourceTx onto the downstream's frames; SKIP_EDGE drops it", async () => {
+    // The mutation-ack attribution threads through the cascade: the downstream
+    // recompute this edge triggers also reads post-commit, so its delta carries
+    // the upstream change's ackTx. A relevance-gate SKIP_EDGE (nothing relevant
+    // changed downstream) drops the claim with the cascade — vacuously
+    // irrelevant, missing ack safe.
+    const origins: Array<{ kind: string; key: string }> = [];
+    const wrapOrigin: ResourceRuntimeOptions["wrapOrigin"] = (kind, key, fn) => {
+      origins.push({ kind, key });
+      return fn();
+    };
+    const h = createHarness({
+      wrapOrigin,
+      readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]),
+    });
+    const up = h.runtime.defineResource({
+      key: "up",
+      mode: "push",
+      identityTable: "up_t",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    // A CONSTANT signature: the first change has no stored entry (passes), the
+    // second compares equal → relevance empty → SKIP_EDGE.
+    let n = 0;
+    h.runtime.defineResource(
+      { key: "down", schema: rowsSchema, keyed: { keyOf } },
+      {
+        identityTable: "down_t",
+        dependsOn: [
+          {
+            resource: up,
+            signature: (ids) => new Map([...ids].map((id) => [id, "constant"])),
+            affectedMap: () => ["d"],
+          },
+        ],
+        loader: () => [{ id: "d", n: ++n }],
+      },
+    );
+    await h.subscribe("up");
+    await h.subscribe("down");
+
+    const feed = (xid: string) =>
+      h.runtime.applyDbChange({
+        table: "up_t",
+        op: "U",
+        ids: ["u1"],
+        origin: "up_t",
+        identityBase: "up_t",
+        xid,
+      });
+
+    feed("42"); // fresh signature → cascades scoped; downstream delta carries the xid
+    await tick();
+    const downDeltas = () => h.pushesFor("down").filter((f) => f.kind === "delta");
+    expect(downDeltas()).toHaveLength(1);
+    expect((downDeltas()[0] as { ackTx?: string[] }).ackTx).toEqual(["42"]);
+
+    feed("43"); // unchanged signature → SKIP_EDGE: no downstream frame, claim dropped
+    await tick();
+    expect(downDeltas()).toHaveLength(1);
+  });
+
   test("a FULL cascade opens NO cascade entry (it runs no edge query)", async () => {
     const { h, cascadeOrigins, sigCalls, mapCalls, downLoads } = cascadeHarness();
     await h.subscribe("up");

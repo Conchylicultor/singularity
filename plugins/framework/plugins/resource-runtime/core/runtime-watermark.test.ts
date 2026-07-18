@@ -171,6 +171,38 @@ describe("watermark — full frames carry it", () => {
     expect("watermark" in entry).toBe(false);
   });
 
+  test("ackTx and watermark are independent: a scoped delta carries ackTx yet NEVER a watermark", async () => {
+    // Rule B′ untouched by the ack channel: the scoped delta is still a partial
+    // re-read (no snapshot-completeness claim, so no watermark), while ackTx —
+    // a strictly narrower claim ("these transactions' rows were re-read") —
+    // rides it fine.
+    const cap = makeCapture();
+    const h = createHarness({ readSet: () => ["row_table"], captureWatermark: cap.fn });
+    let truth = [{ id: "a", n: 1 }];
+    h.runtime.defineResource(
+      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        identityTable: "row_table",
+        loader: (_p, c) => (c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth),
+      },
+    );
+    await h.subscribe("rows");
+
+    truth = [{ id: "a", n: 2 }];
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+      xid: "77",
+    });
+    await tick();
+    const scoped = h.frames.filter((f) => f.kind === "delta").at(-1)!;
+    expect((scoped as { ackTx?: string[] }).ackTx).toEqual(["77"]);
+    expect("watermark" in scoped).toBe(false);
+  });
+
   test("HTTP body carries { value, version, epoch, watermark }", async () => {
     const cap = makeCapture();
     const h = createHarness({ captureWatermark: cap.fn });

@@ -22,7 +22,18 @@ import { dependentViews } from "./view-deps";
 // construction and can never drift from the live path. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 export function routeChange(change: DbChange): void {
-  applyDbChange({ ...change, origin: change.table, identityBase: change.table });
+  // `xid` (the source transaction — mutation-ack attribution) forwards on BOTH
+  // applies: even a view-fanout FULL recompute reads post-commit, so the ackTx
+  // claim survives the scope degrade. null (pre-upgrade NOTIFY) → omitted.
+  const xid = change.xid !== null ? { xid: change.xid } : {};
+  applyDbChange({
+    table: change.table,
+    op: change.op,
+    ids: change.ids,
+    origin: change.table,
+    identityBase: change.table,
+    ...xid,
+  });
   for (const view of dependentViews(change.table)) {
     const identityBase = relationIdentityBase(view);
     const forwardScoped = identityBase === change.table;
@@ -32,6 +43,7 @@ export function routeChange(change: DbChange): void {
       ids: forwardScoped ? change.ids : null,
       origin: change.table,
       identityBase,
+      ...xid,
     });
   }
 }

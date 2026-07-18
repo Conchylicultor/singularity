@@ -26,7 +26,10 @@ type ChangelogRow = {
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 function replayChange(row: ChangelogRow, route: (change: DbChange) => void): void {
   const ids = row.op === "D" ? null : row.ids;
-  route({ table: row.t, op: row.op, ids });
+  // `xid: null` — catch-up replays run at boot, before any client subscribes, so
+  // ack attribution has no consumer here; a missing ack is safe by design (the
+  // client's resub snapshot watermark backstops any op the downtime absorbed).
+  route({ table: row.t, op: row.op, ids, xid: null });
 }
 
 // Bounded cold-boot catch-up: replay only the changelog rows committed at or after

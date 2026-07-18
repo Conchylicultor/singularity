@@ -95,9 +95,9 @@ describe("runCatchUp", () => {
     await runCatchUp(t.db, route);
 
     expect(routed).toEqual([
-      { table: "tb", op: "I", ids: ["2"] },
-      { table: "tc", op: "D", ids: null }, // DELETE forced FULL (ids null)
-      { table: "td", op: "U", ids: null },
+      { table: "tb", op: "I", ids: ["2"], xid: null },
+      { table: "tc", op: "D", ids: null, xid: null }, // DELETE forced FULL (ids null)
+      { table: "td", op: "U", ids: null, xid: null },
     ]);
   });
 
@@ -109,7 +109,7 @@ describe("runCatchUp", () => {
     const { routed, route } = recorder();
     await runCatchUp(t.db, route);
 
-    expect(routed).toEqual([{ table: "at", op: "U", ids: null }]);
+    expect(routed).toEqual([{ table: "at", op: "U", ids: null, xid: null }]);
   });
 
   test("backstop: min(xid) > floor → one FULL per DISTINCT table, no per-row replay", async () => {

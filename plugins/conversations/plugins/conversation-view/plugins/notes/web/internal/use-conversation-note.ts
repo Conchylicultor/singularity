@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { usePointResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEditableField,
   type EditableField,
@@ -18,13 +18,14 @@ export interface ConversationNoteState extends EditableField<string> {
 export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
-  const notesResult = useResource(conversationNotesResource);
+  const notesResult = usePointResource(conversationNotesResource, conversationId);
   // While pending, serverNote stays "" so useEditableField (which must run
   // unconditionally) has a valid initial value. Consumers gate on `pending`
-  // to avoid showing a blank note before the resource settles.
+  // to avoid showing a blank note before the resource settles. On the settled
+  // arm `data` is the row or `null` (this conversation has no note).
   let serverNote = "";
   if (!notesResult.pending) {
-    serverNote = notesResult.data[conversationId]?.notes ?? "";
+    serverNote = notesResult.data?.notes ?? "";
   }
   const noteExists = !notesResult.pending && serverNote.trim().length > 0;
   const isManuallyOpen = useIsOpen(conversationId);

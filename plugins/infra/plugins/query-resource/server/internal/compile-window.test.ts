@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { eq, type SQL } from "drizzle-orm";
-import { PgDialect, QueryBuilder, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { PgDialect, QueryBuilder, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
@@ -23,6 +23,7 @@ const rows = pgTable("rows", {
   parentId: text("parent_id"),
   n: integer("n").notNull(),
   dismissed: integer("dismissed").notNull(),
+  icon: jsonb("icon").$type<{ color: string } | null>(),
 });
 
 const rowSchema = z.object({ id: z.string(), n: z.number() });
@@ -296,9 +297,51 @@ describe("compileWindowQuery — point", () => {
     });
     await serverOpts.loader({ ids: "a" });
     expect(calls[0]!.sql).toBe(
-      `select "id", "parent_id", "n", "dismissed" from "rows" ` +
+      `select "id", "parent_id", "n", "dismissed", "icon" from "rows" ` +
         `where ("rows"."dismissed" = $1 and "rows"."id" in ($2))`,
     );
+  });
+
+  test("a jsonb column projected with an aliased pk compiles; keyField targets the alias", async () => {
+    const { db, calls } = fakeDb();
+    const descriptor = ptDescriptor();
+    // Mirrors conversation-preprompt: the parent-FK pk is projected under the
+    // wire ALIAS `conversationId`, and a jsonb `icon` (AvatarSpec) rides along
+    // as a plain projected column — no special handling, no keyField drift.
+    const { serverOpts, keyField } = compileWindowQuery(descriptor, {
+      from: rows,
+      identity: { pk: rows.parentId },
+      select: { conversationId: rows.parentId, icon: rows.icon, n: rows.n },
+      point: { by: rows.parentId },
+      db,
+    });
+    expect(keyField).toBe("conversationId");
+    await serverOpts.loader({ ids: "c1,c2" });
+    expect(calls[0]!.sql).toBe(
+      `select "parent_id", "icon", "n" from "rows" where "rows"."parent_id" in ($1, $2)`,
+    );
+    expect(calls[0]!.params).toEqual(["c1", "c2"]);
+  });
+
+  test("ackChannel passes through verbatim into serverOpts (both kinds); absent stays absent", () => {
+    const { db } = fakeDb();
+    const pt = compileWindowQuery(ptDescriptor(), {
+      from: rows,
+      point: { by: rows.id },
+      ackChannel: true,
+      db,
+    });
+    expect(pt.serverOpts.ackChannel).toBe(true);
+    const win = compileWindowQuery(winDescriptor(), {
+      from: rows,
+      orderBy: { col: rows.n },
+      window: { maxLimit: 500 },
+      ackChannel: true,
+      db,
+    });
+    expect(win.serverOpts.ackChannel).toBe(true);
+    const off = compileWindowQuery(ptDescriptor(), { from: rows, point: { by: rows.id }, db });
+    expect("ackChannel" in off.serverOpts).toBe(false);
   });
 });
 

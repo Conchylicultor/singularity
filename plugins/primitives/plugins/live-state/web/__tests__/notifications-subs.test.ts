@@ -38,6 +38,7 @@ import { z } from "zod";
 import { createTransportHub, type FakeWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { NotificationsClient } from "../notifications-client";
 import { getResourceWatermark } from "../watermark-registry";
+import { hasResourceTxAck } from "../tx-ack-registry";
 
 // SUB_KEEPALIVE_MS is not exported; keep the literal in sync with
 // notifications-client.ts (the deferred-teardown gc window).
@@ -358,6 +359,76 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       socket.serverSend({ kind: "update", key: "wm-d", params: {}, value: { status: "stale" }, version: 5, watermark: "999" });
       expect(qc.getQueryData(["wm-d"])).toEqual({ status: "s0" });
       expect(getResourceWatermark("wm-d", {})).toBe("300");
+    });
+
+    test("a standalone ack frame is gated on the local sub; noted with NO version adoption and NO cache write", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("ack-a", {}, undefined, pushSchema);
+
+      // Version-less standalone ack for a held sub: acks noted, nothing else —
+      // the sub's version baseline stays -1 and the cache stays untouched.
+      socket.serverSend({ kind: "ack", key: "ack-a", params: {}, ackTx: ["700", "701"] });
+      expect(hasResourceTxAck("ack-a", {}, "700")).toBe(true);
+      expect(hasResourceTxAck("ack-a", {}, "701")).toBe(true);
+      expect(qc.getQueryData(["ack-a"])).toBeUndefined();
+      expect(client.debugSnapshot().subs.find((s) => s.key === "ack-a")!.version).toBe(-1);
+
+      // A never-observed key's ack is dropped by the broadcast gate (the shared
+      // socket fans every frame to every tab).
+      socket.serverSend({ kind: "ack", key: "ack-ghost", params: {}, ackTx: ["702"] });
+      expect(hasResourceTxAck("ack-ghost", {}, "702")).toBe(false);
+    });
+
+    test("delta acks are noted BEFORE setQueryData — a QueryCache listener reads them synchronously", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("ack-k", {}, undefined, keyedSchema, keyOf);
+      socket.serverSend({ kind: "sub-ack", key: "ack-k", params: {}, value: [{ id: "a", n: 1 }], version: 1 });
+
+      // The optimistic hook's confirm pass runs inside the QueryCache event —
+      // the ack must already be readable there (same load-bearing order as the
+      // watermark registry).
+      const observed: boolean[] = [];
+      const unsubscribe = qc.getQueryCache().subscribe((event) => {
+        if (event.type !== "updated") return;
+        observed.push(hasResourceTxAck("ack-k", {}, "800"));
+      });
+      socket.serverSend({
+        kind: "delta",
+        key: "ack-k",
+        params: {},
+        upserts: [["a", { id: "a", n: 2 }]],
+        deletes: [],
+        version: 2,
+        ackTx: ["800"],
+      });
+      unsubscribe();
+      expect(qc.getQueryData(["ack-k"])).toEqual([{ id: "a", n: 2 }]);
+      expect(observed).toContain(true);
+      // An update frame's ackTx notes too.
+      socket.serverSend({ kind: "update", key: "ack-k", params: {}, value: [{ id: "a", n: 3 }], version: 3, ackTx: ["801"] });
+      expect(hasResourceTxAck("ack-k", {}, "801")).toBe(true);
+    });
+
+    test("a delta that dead-ends in a forced resub (no base) does NOT note its acks", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("ack-nb", {}, undefined, keyedSchema, keyOf);
+
+      // FULL delta with ackTx but no cached base: the client resubs and must
+      // note NOTHING — the cache never received this truth, so confirming an op
+      // against it would be a false ack. The recovery sub-ack's watermark is
+      // the sanctioned confirmation path.
+      socket.serverSend({
+        kind: "delta",
+        key: "ack-nb",
+        params: {},
+        upserts: [["a", { id: "a", n: 1 }]],
+        deletes: [],
+        order: ["a"],
+        version: 1,
+        ackTx: ["900"],
+      });
+      expect(qc.getQueryData(["ack-nb"])).toBeUndefined();
+      expect(hasResourceTxAck("ack-nb", {}, "900")).toBe(false);
     });
 
     test("a delta that cannot apply (no base → forced resub) does NOT adopt its watermark", async () => {

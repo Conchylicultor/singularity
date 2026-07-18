@@ -21,6 +21,7 @@ import { useEffect, type ReactNode } from "react";
 import { z } from "zod";
 import {
   NotificationsProvider,
+  noteResourceTxAcks,
   noteResourceWatermark,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -433,6 +434,121 @@ describe("useOptimisticResource", () => {
     });
     expect(mutate).toHaveBeenCalledTimes(1); // untouched
     expect(result.current.failed).toHaveLength(1);
+  });
+
+  it("exact ack: an ackTx that landed BEFORE the response confirms at the resolve edge (no snapshot needed)", async () => {
+    // The delta-before-HTTP-response race, closed by the registry: the frame
+    // carrying this commit's ackTx was noted before the mutate resolved, so the
+    // resolve edge's hasAck probe confirms immediately — even though no
+    // authoritative snapshot ever landed on this tuple.
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.ack-race",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, release } = deferredMutate();
+    const { result } = mountHook(client, mutate, true, resource);
+
+    act(() => {
+      result.current.dispatch(2);
+    });
+    // The ack arrives first (a scoped delta / standalone ack frame noted it).
+    act(() => {
+      noteResourceTxAcks(resource.key, undefined, ["77"]);
+    });
+    expect(result.current.pendingOps).toHaveLength(1); // still unresolved — untouched
+
+    await act(async () => {
+      release({ watermark: "77" });
+    });
+    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
+    expect(result.current.saving).toBe(false);
+  });
+
+  it("standalone ack: a registry note with NO cache event confirms a resolved op; sync-status is untouched by the ack edge", async () => {
+    const reports: OptimisticDivergenceReport[] = [];
+    optimisticDivergenceReportSink.register((r) => {
+      reports.push(r);
+    });
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.ack-standalone",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, release } = deferredMutate();
+    const { result } = mountHook(client, mutate, true, resource);
+
+    act(() => {
+      result.current.dispatch(2);
+    });
+    await act(async () => {
+      release({ watermark: "88" });
+    });
+    // Resolved with its token; no snapshot, no ack yet — it survives.
+    await waitFor(() => expect(result.current.saving).toBe(false));
+    expect(result.current.pendingOps).toHaveLength(1);
+
+    // The standalone ack frame: a no-value-change recompute acked the commit.
+    // NO setQueryData fires — the registry subscription is the delivery channel.
+    act(() => {
+      noteResourceTxAcks(resource.key, undefined, ["88"]);
+    });
+    expect(result.current.pendingOps).toEqual([]);
+    // The ack edge is not a sync-status event: nothing failed, nothing saving,
+    // and an ack is a confirmation — never a divergence report.
+    expect(result.current.saving).toBe(false);
+    expect(result.current.failed).toEqual([]);
+    expect(reports).toEqual([]);
+  });
+
+  it("params re-baseline: old-tuple acks cannot confirm the new tuple; the new tuple's snapshot watermark backstops", async () => {
+    // The registry is namespaced per (key, paramsKey), and the hook probes it
+    // at `paramsRef.current` — so after a params change, an ack noted under the
+    // OLD tuple is invisible, and the op converges via Rule B on the NEW
+    // tuple's watermark-carrying snapshot instead.
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.ack-rebase",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, release } = deferredMutate();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+    );
+    const { result, rerender } = renderHook(
+      ({ p }: { p: Record<string, string> }) =>
+        useOptimisticResource<number[], number>({ resource, params: p, apply, mutate }),
+      { wrapper, initialProps: { p: { v: "1" } } },
+    );
+
+    act(() => {
+      result.current.dispatch(2);
+    });
+    await act(async () => {
+      release({ watermark: "100" });
+    });
+    await waitFor(() => expect(result.current.saving).toBe(false));
+    expect(result.current.pendingOps).toHaveLength(1); // resolved, unconfirmed
+
+    // Params re-baseline mid-flight.
+    rerender({ p: { v: "2" } });
+
+    // The commit's ack lands under the OLD tuple — namespaced away: no confirm.
+    act(() => {
+      noteResourceTxAcks(resource.key, { v: "1" }, ["100"]);
+    });
+    expect(result.current.pendingOps).toHaveLength(1);
+
+    // The NEW tuple's first watermark-carrying snapshot (its sub-ack) is
+    // causally past the commit — the coarse+token Rule B backstop confirms.
+    act(() => {
+      noteResourceWatermark(resource.key, { v: "2" }, "150");
+      client.setQueryData(queryKeyFor(resource.key, { v: "2" }), [1, 2]);
+    });
+    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
   });
 
   it("causal denial: a snapshot past the ack token that lacks the op drops it as superseded", async () => {

@@ -300,10 +300,19 @@ export function confirmPass<Data, Vars>(
   serverData: Data,
   snapshotWatermark: string | undefined,
   confirmation?: Confirmation<Data, Vars>,
+  hasAck?: (txid: string) => boolean,
 ): ReconcileResult<Vars> {
+  // Exact-ack confirmation (both modes): the server broadcast the op's own
+  // commit txid in a frame's `ackTx` — the strongest possible proof its rows
+  // were re-read post-commit. Confirms exactly; never denies (denial stays
+  // snapshot-watermark-only). Feeds the same-target cascade in content mode
+  // like any other confirmation.
+  const acked = (op: PendingOp<Vars>): boolean =>
+    op.resolved && op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true;
   if (!confirmation) {
     const confirmed = pending.map((op) => {
       if (!op.resolved) return false;
+      if (acked(op)) return true;
       if (op.ackWatermark !== undefined) {
         return (
           snapshotWatermark !== undefined &&
@@ -315,7 +324,9 @@ export function confirmPass<Data, Vars>(
     return reconcile(pending, confirmed, undefined, true, undefined);
   }
   const { isConfirmedBy, sameTarget } = confirmation;
-  const confirmed = pending.map((op) => op.resolved && isConfirmedBy(serverData, op.vars));
+  const confirmed = pending.map(
+    (op) => (op.resolved && isConfirmedBy(serverData, op.vars)) || acked(op),
+  );
   // Denial is content-mode-only: coarse has no isConfirmedBy to say "the
   // snapshot lacks my effect", so a causally-later snapshot simply confirms.
   return reconcile(pending, confirmed, sameTarget, true, snapshotWatermark);
@@ -364,10 +375,16 @@ export function resolvePass<Data, Vars>(
   snapshotWatermark: string | undefined,
   ackWatermark: string | undefined,
   confirmation?: Confirmation<Data, Vars>,
+  hasAck?: (txid: string) => boolean,
 ): ReconcileResult<Vars> {
   const resolved = markResolved(pending, opId, ackWatermark);
   const confirmed = resolved.map((op) => {
     if (op.opId !== opId) return false;
+    // Exact ack (both modes): the delta-before-HTTP-response race — the frame
+    // carrying this commit's ackTx landed before its own response, so the
+    // registry already remembers it. Checked first: it is strictly more precise
+    // than the content/watermark/gen checks below.
+    if (op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true) return true;
     if (confirmation) {
       return serverData !== undefined && confirmation.isConfirmedBy(serverData, op.vars);
     }
@@ -380,6 +397,27 @@ export function resolvePass<Data, Vars>(
     return gen > op.dispatchGen;
   });
   return reconcile(resolved, confirmed, confirmation?.sameTarget, false, undefined);
+}
+
+/**
+ * The ACK edge: a standalone `{ kind: "ack" }` frame (or any ack note) landed
+ * in the tx-ack registry for this tuple — a recompute that produced NO value
+ * change acknowledged one or more commits. Drops every RESOLVED op whose ack
+ * token the registry now remembers (running the same-target cascade in content
+ * mode, like any confirmation), and NOTHING else: no miss is counted (no new
+ * snapshot arrived — a non-ack carries no evidence) and no denial ever runs
+ * (`ackTx` can only confirm). Returns the input `pending` BY IDENTITY when
+ * nothing changed, so the React shell skips the state write.
+ */
+export function ackPass<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  hasAck: (txid: string) => boolean,
+  sameTarget?: (a: Vars, b: Vars) => boolean,
+): ReconcileResult<Vars> {
+  const confirmed = pending.map(
+    (op) => op.resolved && op.ackWatermark !== undefined && hasAck(op.ackWatermark),
+  );
+  return reconcile(pending, confirmed, sameTarget, false, undefined);
 }
 
 /**

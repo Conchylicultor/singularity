@@ -134,6 +134,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       membership,
       ...(dependsOn ? { dependsOn } : {}),
       ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
+      ...(spec.ackChannel ? { ackChannel: true as const } : {}),
     } as ServerResourceOptions<Row[], P> & ScopePolicy;
     return { serverOpts, keyField, identityTableName: tableName };
   }
@@ -264,6 +265,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     membership,
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
+    ...(spec.ackChannel ? { ackChannel: true as const } : {}),
   } as ServerResourceOptions<Row[], P> & ScopePolicy;
   return { serverOpts, keyField, identityTableName: tableName };
 }

@@ -5,6 +5,8 @@ import {
   queryKeyFor,
   liveStateSocketKind,
   getResourceWatermark,
+  hasResourceTxAck,
+  subscribeResourceTxAcks,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
@@ -13,6 +15,7 @@ import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { optimisticDivergenceReportSink } from "../reporter";
 import {
+  ackPass,
   clearFailure,
   confirmPass,
   markFailed,
@@ -22,6 +25,17 @@ import {
   type PendingOp,
   type ReconcileResult,
 } from "./overlay";
+
+// Canonical params serialization for the ack-edge tuple match — byte-identical
+// to the registries' `paramsKey` (sorted-key JSON), so the subscription fires
+// ackPass only for exactly this hook's (key, params) tuple.
+function ackParamsKey(params: Record<string, string> | undefined): string {
+  if (!params) return "{}";
+  const keys = Object.keys(params).sort();
+  const obj: Record<string, string> = {};
+  for (const k of keys) obj[k] = params[k]!;
+  return JSON.stringify(obj);
+}
 
 interface OptimisticBaseArgs<
   Data,
@@ -234,6 +248,18 @@ export function useOptimisticResource<
     [reportDivergence],
   );
 
+  // Exact-ack membership probe against the module-level tx-ack registry,
+  // namespaced to THIS hook's live tuple (`paramsRef.current`, so a params
+  // re-baseline swaps the namespace with it — a wrong-tuple confirmation is
+  // impossible in either direction). Passed into every confirmation edge; a
+  // registry hit on an op's ack token is the exact "your commit's rows were
+  // re-read" proof, strictly more precise than the watermark compare.
+  const hasAck = useCallback(
+    (txid: string) => hasResourceTxAck(resource.key, paramsRef.current, txid),
+    // paramsRef is a stable latest-ref handle; only the key participates.
+    [resource.key],
+  );
+
   // Last `dataUpdateCount` this hook has already reconciled against. See the
   // subscription below — the gate that turns "the cache changed" into "a new
   // authoritative snapshot landed".
@@ -277,6 +303,7 @@ export function useOptimisticResource<
         serverData,
         getResourceWatermark(resource.key, paramsRef.current),
         confirmationRef.current,
+        hasAck,
       );
       reportOutcomes(next);
       // `confirmPass` returns the input BY IDENTITY when nothing changed.
@@ -284,7 +311,25 @@ export function useOptimisticResource<
     });
     // The subscription stays mounted for the resource's lifetime and reads the
     // freshest confirmation off the stable `confirmationRef.current` at call time.
-  }, [queryClient, targetKey, resource.key, commitPending, reportOutcomes]);
+  }, [queryClient, targetKey, resource.key, commitPending, reportOutcomes, hasAck]);
+
+  // The ACK edge: a standalone `{ kind: "ack" }` frame produces NO cache event
+  // (nothing changed byte-wise), so the QueryCache subscription above never
+  // fires for it — this registry subscription is its delivery channel. Runs
+  // `ackPass` only on a tuple match with ops pending; drops acked resolved ops
+  // (cascading in content mode), counts no miss, denies nothing — so nothing to
+  // report. Value-frame ack notes fire this too; that second pass is an
+  // identity no-op after the cache edge handled them.
+  useEffect(() => {
+    return subscribeResourceTxAcks((key, params) => {
+      if (key !== resource.key) return;
+      if (ackParamsKey(params) !== ackParamsKey(paramsRef.current)) return;
+      if (pendingRef.current.length === 0) return;
+      const next = ackPass(pendingRef.current, hasAck, confirmationRef.current?.sameTarget);
+      // Identity when nothing changed — skip the state write.
+      if (next.pending !== pendingRef.current) commitPending(next.pending);
+    });
+  }, [resource.key, hasAck, commitPending]);
 
   const data = useMemo(
     // `applyRef` (stable useLatestRef handle) is read through `.current` at
@@ -325,6 +370,10 @@ export function useOptimisticResource<
             getResourceWatermark(resource.key, paramsRef.current),
             res ? res.watermark : undefined,
             confirmationRef.current,
+            // The exact-ack probe closes the delta-before-HTTP-response race:
+            // the frame carrying this commit's ackTx may have landed (and been
+            // noted) before this response — the registry remembers it.
+            hasAck,
           );
           reportOutcomes(next);
           commitPending(next.pending);
@@ -356,7 +405,7 @@ export function useOptimisticResource<
       );
     },
     // The latest-ref handles are stable; only these participate.
-    [queryClient, resource.key, commitPending, reportOutcomes],
+    [queryClient, resource.key, commitPending, reportOutcomes, hasAck],
   );
 
   const dispatch = useCallback(

@@ -231,6 +231,34 @@ watermark-newer-than-value is structurally excluded. A throwing capture reports
 via `reportLoaderError` and the frame ships watermark-less (never blocked).
 `runtime-watermark.test.ts` pins all of this.
 
+**The mutation-ack channel (`ackTx`) rides feed-driven frames.** A change-feed
+NOTIFY carries its source transaction id (`x`, `pg_current_xact_id()::text`);
+the pending coalesces those into `sourceTx` (unioned on every merge branch,
+INCLUDING the FULL absorb/degrade — a FULL recompute reads post-commit, so the
+claim survives; contrast `deleted`, which FULL drops; capped at 64 with
+overflow suppressing the whole cycle), threads them through the cascade
+(`SKIP_EDGE` drops them), and the drain stamps `ackTx` on the `update`/`delta`
+frames the recompute produces. The claim is deliberately NARROW: *"for each
+W ∈ ackTx, every row of this tuple's view that W wrote has been re-read
+post-commit and is reflected in this frame's base"* — nothing about
+membership/order completeness, nothing about other transactions. So a SCOPED
+delta may carry `ackTx` while still never carrying a watermark (Rule B′
+coexists unchanged): the ack can CONFIRM exactly the optimistic op whose token
+equals W, and can never deny. FULL paths stamp the FLIGHT-resolved set (the
+pending's ids seed `getResourceValue`; a drain that joins an in-flight read —
+whose SELECT may predate the commit — adopts the starter's absent seed and
+ships un-acked, the same co-production idiom as the etag/watermark); scoped and
+membership paths stamp the pending's set directly (ctx loads never coalesce).
+Hand-`notify()`/synthetic pushes and `invalidate`/`sub-ack`/HTTP frames never
+carry one. A recompute producing NO value change (empty scoped diff, membership
+net-zero / window-boundary skip, point empty-intersection) broadcasts a
+standalone version-less `{ kind: "ack", key, params, ackTx }` frame instead —
+gated on the per-resource `ackChannel: true` opt-in, never bumping the version
+counter, snapshot, or cascade. Loader failure drops the frame and the acks
+together (no false ack). The client half (registry + confirmation rule) is
+`optimistic-mutation/CLAUDE.md`; `runtime-ack-channel.test.ts` pins all of
+this. Design: `research/2026-07-18-global-bounded-working-set-phase2.md` Part C.
+
 **The HTTP body's ETag is paired with `Cache-Control: no-store`.**
 `handleResourceHttp` emits an `ETag` on both the 200 and the 304 branch, and MUST
 set `cache-control: no-store` alongside it on both. The invariant: *the handler

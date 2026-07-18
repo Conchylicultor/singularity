@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 // Snapshot of the chosen preprompt avatar (icon key + color + rendered svg
 // nodes). Mirrors config_v2's AvatarSpec; kept self-contained so this shared
@@ -35,17 +35,16 @@ export const ConversationPrepromptSchema = z.object({
 });
 export type ConversationPreprompt = z.infer<typeof ConversationPrepromptSchema>;
 
-export const ConversationPrepromptsPayloadSchema = z.record(
-  z.string(),
-  ConversationPrepromptSchema,
-);
-export type ConversationPrepromptsPayload = z.infer<
-  typeof ConversationPrepromptsPayloadSchema
->;
-
-export const conversationPrepromptsResource = resourceDescriptor<ConversationPrepromptsPayload>(
-  "conversation-preprompts",
-  ConversationPrepromptsPayloadSchema,
-  {},
-  { bootCritical: true },
-);
+// Bounded POINT resource: a consumer subscribes by an explicit conversation-id
+// set (`usePointResource(resource, convId)` → one row-or-null), so a preprompt
+// read costs O(1) instead of an O(n) lookup over the whole `{convId → row}`
+// record. Rows key on `conversationId` — the ALIAS the server projection
+// exposes the side-table's `parent_id` PK under (which IS the point identity).
+// NOT bootCritical: point resources hydrate post-mount (the recorded decision),
+// and the chip/sidebar icons stay unrendered for the one round-trip.
+export const conversationPrepromptsResource =
+  pointQueryResourceDescriptor<ConversationPreprompt>(
+    "conversation-preprompts",
+    ConversationPrepromptSchema,
+    "conversationId",
+  );

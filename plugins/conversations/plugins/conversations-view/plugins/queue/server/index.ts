@@ -15,7 +15,8 @@ import { seedRankJob } from "./internal/seed-rank-job";
 import { pinRevalidateJob } from "./internal/pin-revalidate-job";
 import { advancePinJob } from "./internal/advance-pin-job";
 import { taskStatusPinJob } from "./internal/task-status-pin-job";
-import { queueRanksResource } from "./internal/resource";
+import { sweepGoneRanksJob } from "./internal/sweep-gone-ranks-job";
+import { queueRanksResource, queuePinResource } from "./internal/resource";
 import { repairBlockedOrder } from "./internal/repair-blocked-order";
 import {
   reorderQueue,
@@ -26,7 +27,7 @@ import {
 } from "../core/endpoints";
 
 export { conversationsQueue } from "./internal/tables";
-export { queueRanksResource } from "./internal/resource";
+export { queueRanksResource, queuePinResource } from "./internal/resource";
 export { seedRankJob } from "./internal/seed-rank-job";
 export { lockDeck, rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, rankAfterBlockers, endRank, findTaskIdForConversation, reseatGroupMembers, upsertRank, rankJoiningGroup } from "./internal/queue-ranks";
 
@@ -35,6 +36,7 @@ export default {
     "Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.",
   contributions: [
     Resource.Declare(queueRanksResource),
+    Resource.Declare(queuePinResource),
     Trigger({ on: conversationCreated, do: seedRankJob, with: {}, oneShot: false }),
     // Authoritative pin revalidation on any conversation status change. Replaces
     // both the old conversationTurnCompleted→validatePinJob trigger and the
@@ -48,7 +50,7 @@ export default {
     // conversation status change, so it is not covered by conversationStatusChanged.
     Trigger({ on: taskStatusChanged, do: taskStatusPinJob, with: {}, oneShot: false }),
   ],
-  register: [seedRankJob, pinRevalidateJob, advancePinJob, taskStatusPinJob],
+  register: [seedRankJob, pinRevalidateJob, advancePinJob, taskStatusPinJob, sweepGoneRanksJob],
   httpRoutes: {
     [reorderQueue.route]:  handleReorder,
     [promoteQueue.route]:  handlePromote,

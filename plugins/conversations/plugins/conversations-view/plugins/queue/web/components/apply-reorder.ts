@@ -1,6 +1,6 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import type { QueueData } from "../../core/resources";
+import type { QueueRankRow } from "../../core/resources";
 
 export interface ReorderVars {
   conversationId: string;
@@ -13,46 +13,49 @@ export interface ReorderVars {
 //   1. compute a rank adjacent to the target (between target and its neighbor on
 //      the drop side), and
 //   2. reseat the dragged conversation's whole group to that rank. Group members
-//      already share a rank in QueueData, so "the group" is every row sharing the
-//      dragged row's current rank.
-// Throws OpNoLongerApplies when the dragged or target row is missing a rank
-// (the snapshot moved under the drop — e.g. a row was removed between drag-start
-// and drop). The overlay drops such a stale op, so the authoritative push still
-// reconciles. Any other throw would be a real bug and propagates loudly.
-export function applyReorder(data: QueueData, vars: ReorderVars): QueueData {
+//      already share a rank, so "the group" is every row sharing the dragged
+//      row's current rank.
+// Operates on the LIVE ranks the point resource subscribes to (only conversations
+// in the queue's live set), so adjacency computes over exactly the rows the
+// server's live-filtered `rankAdjacentTo` sees — fixing the latent mismatch where
+// the old whole-collection value predicted against stale ranks of gone
+// conversations.
+// Throws OpNoLongerApplies when the dragged or target row is missing (the snapshot
+// moved under the drop — a row was removed, or the target left the live set,
+// between drag-start and drop). The overlay drops such a stale op, so the
+// authoritative push still reconciles. Any other throw would be a real bug and
+// propagates loudly.
+export function applyReorder(rows: QueueRankRow[], vars: ReorderVars): QueueRankRow[] {
   const { conversationId, targetId, zone } = vars;
-  if (conversationId === targetId) return data;
+  if (conversationId === targetId) return rows;
 
-  const dragged = data.ranks.find((r) => r.conversationId === conversationId);
-  const target = data.ranks.find((r) => r.conversationId === targetId);
+  const dragged = rows.find((r) => r.conversationId === conversationId);
+  const target = rows.find((r) => r.conversationId === targetId);
   if (!dragged || !target) {
     throw new OpNoLongerApplies("applyReorder: dragged or target rank gone");
   }
 
   // Sorted live ranks excluding the dragged group (its members move together).
   const draggedGroupIds = new Set(
-    data.ranks
+    rows
       .filter((r) => Rank.equals(r.rank, dragged.rank))
       .map((r) => r.conversationId),
   );
-  const others = data.ranks
+  const others = rows
     .filter((r) => !draggedGroupIds.has(r.conversationId))
     .sort((a, b) => Rank.compare(a.rank, b.rank));
 
   const targetIdx = others.findIndex((r) => r.conversationId === targetId);
   if (targetIdx === -1) {
     // Target was in the dragged group (shouldn't happen for a real drop). No-op.
-    return data;
+    return rows;
   }
 
   const newRank = rankAdjacentTo(others, targetIdx, zone);
 
-  return {
-    ...data,
-    ranks: data.ranks.map((r) =>
-      draggedGroupIds.has(r.conversationId) ? { ...r, rank: newRank } : r,
-    ),
-  };
+  return rows.map((r) =>
+    draggedGroupIds.has(r.conversationId) ? { ...r, rank: newRank } : r,
+  );
 }
 
 // Mirror of server rankAdjacentTo + safeBetween over the already-sorted,

@@ -117,6 +117,22 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   code of its own — and the indicator's Retry button re-sends exactly this hook's
   failures. Outside a `<SyncStatusProvider>` (unit tests, non-surface mounts) the
   report is a no-op.
+- **Exact-ack confirmation (`ackTx`).** Feed-driven live-state frames carry
+  `ackTx` — the source-transaction ids the recompute folded in — and
+  `ackChannel`-opted resources additionally broadcast standalone
+  `{ kind: "ack" }` frames for no-value-change recomputes. The client notes
+  them into a module-level tx-ack registry (`hasResourceTxAck` /
+  `subscribeResourceTxAcks` from `live-state/web`, namespaced per
+  `(key, paramsKey)`, 256-entry ring). The claim is narrow and sound: a
+  registry hit on an op's `ackWatermark` proves *that commit's rows were
+  re-read post-commit for this tuple* — so it CONFIRMS the op exactly (feeding
+  the same-target cascade in content mode, on all three edges: push, resolve,
+  and the ack edge's `ackPass`) and can NEVER deny; denial stays
+  snapshot-watermark-only (Rule B). This is what keeps confirmation exact once
+  scoped/point deltas stop shipping snapshot watermarks: an evicted or lost ack
+  degrades safely to the Rule B watermark backstop on the next full frame /
+  resub. See `research/2026-07-18-global-bounded-working-set-phase2.md` Part C
+  (C4 is the precise confirmation rule).
 - **Confirmation runs on TWO edges**, because the confirming push routinely
   arrives *before* the mutation's own HTTP response:
   - **The push edge** (`confirmPass`) — the QueryCache subscription on
@@ -276,7 +292,7 @@ auto-retry, and the registry-watermark denial — is pinned by the jsdom suite i
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, and keep-rendered failures with reconnect auto-retry.
 - Web:
-  - Uses: `infra/endpoints.EndpointError`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.getResourceWatermark`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.queryKeyFor`, `primitives/live-state.useResource`, `primitives/networking.subscribeWsStatus`, `primitives/sync-status.useReportSync`
+  - Uses: `infra/endpoints.EndpointError`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.getResourceWatermark`, `primitives/live-state.hasResourceTxAck`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.queryKeyFor`, `primitives/live-state.subscribeResourceTxAcks`, `primitives/live-state.useResource`, `primitives/networking.subscribeWsStatus`, `primitives/sync-status.useReportSync`
   - Exports: Types: `OptimisticDivergenceReport`, `UseOptimisticResourceArgs`, `UseOptimisticResourceResult`; Values: `OpNoLongerApplies`, `optimisticDivergenceReportSink`, `useOptimisticResource`
 - Cross-plugin:
   - Imported by: `config_v2/staging`, `conversations/conversations-view/data-view/queue`, `conversations/conversations-view/queue`, `page/editor`, `reports/optimistic-divergence`

@@ -140,7 +140,11 @@ BEGIN
     ids := NULL;
   END IF;
 
-  payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', ids)::text;
+  -- 'x' is the source transaction id (pg_current_xact_id(), the same xid8 the
+  -- changelog row below stores) — the mutation-ack attribution the live-state
+  -- runtime threads onto its recompute frames (ackTx). Kept on the over-cap
+  -- re-emit too: dropping the ids degrades scope, not attribution.
+  payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', ids, 'x', pg_current_xact_id()::text)::text;
 
   -- NOTIFY payloads are capped at ~8 KB. Over the cap, drop the id list and let
   -- the consumer recompute the whole table (FULL-for-table) instead of losing
@@ -148,7 +152,7 @@ BEGIN
   -- row below (NULL ids → FULL on catch-up), so re-derive ids once here.
   IF octet_length(payload) > 7000 THEN
     ids := NULL;
-    payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', NULL)::text;
+    payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', NULL, 'x', pg_current_xact_id()::text)::text;
   END IF;
 
   PERFORM pg_notify('live_state', payload);

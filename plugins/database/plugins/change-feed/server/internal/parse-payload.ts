@@ -2,9 +2,14 @@
 // so it can be unit-tested without a DB socket.
 //
 // The payload is the JSON emitted by `live_state_notify()`:
-//   { "t": "<table>", "op": "I" | "U" | "D", "ids": string[] | null }
+//   { "t": "<table>", "op": "I" | "U" | "D", "ids": string[] | null, "x": "<xid8>" }
 // `op` is the first letter of TG_OP. `ids` is an array of PK values as strings,
-// or null (composite/no PK, or an over-cap statement → FULL-for-table).
+// or null (composite/no PK, or an over-cap statement → FULL-for-table). `x` is
+// the source transaction id (`pg_current_xact_id()::text` — the same xid8 the
+// changelog row stores), threaded through the recompute cascade as the
+// mutation-ack attribution (`ackTx`). Parsed TOLERANTLY: absent or malformed
+// `x` (a pre-upgrade NOTIFY) yields `xid: null` — a missing ack is safe, a
+// dropped change is not.
 //
 // Parsing is intentionally strict on shape but never throws: a malformed payload
 // returns null so the listener can log + skip rather than crash. The change-feed
@@ -14,6 +19,7 @@ export type DbChange = {
   table: string;
   op: "I" | "U" | "D";
   ids: string[] | null;
+  xid: string | null;
 };
 
 export function parseLiveStatePayload(raw: string): DbChange | null {
@@ -47,5 +53,10 @@ export function parseLiveStatePayload(raw: string): DbChange | null {
     return null;
   }
 
-  return { table, op, ids: normalizedIds };
+  // Tolerant: a pre-upgrade NOTIFY has no `x`; a malformed one degrades to null
+  // (missing ack attribution is safe) rather than rejecting the change.
+  const x = obj.x;
+  const xid = typeof x === "string" && x.length > 0 ? x : null;
+
+  return { table, op, ids: normalizedIds, xid };
 }

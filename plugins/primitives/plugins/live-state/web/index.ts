@@ -11,6 +11,7 @@ export { matchResource, ResourceView } from "./components/resource-view";
 export type { MatchResourceHandlers, ResourceViewProps } from "./components/resource-view";
 export { NotificationsClient, queryKeyFor, liveStateSocketKind, ResourceStaleReadError } from "./notifications-client";
 export { noteResourceWatermark, getResourceWatermark } from "./watermark-registry";
+export { noteResourceTxAcks, hasResourceTxAck, subscribeResourceTxAcks } from "./tx-ack-registry";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";
 export type { HttpStaleDropReport } from "./stale-drop-reporter";
 export type { ResourceKey, ChannelStatuses, LiveStateSocketKind, DebugSub, DebugSnapshot, LeaderInfo, MissedFrame } from "./notifications-client";

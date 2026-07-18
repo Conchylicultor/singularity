@@ -209,6 +209,14 @@ export interface WindowQueryResourceSpec<P extends ResourceParams = ResourcePara
   edges?: Edge[];
   /** Fixed-window trailing debounce (ms) for this resource's flushes. */
   debounceMs?: number;
+  /**
+   * Standalone mutation-ack frames opt-in — passed through verbatim to the
+   * runtime's `ackChannel` (see `ResourceDefinition.ackChannel`): a recompute
+   * that produces no value change (empty scoped diff, net-zero membership,
+   * point empty-intersection) then broadcasts a version-less `{ kind: "ack" }`
+   * frame so an optimistic client's exact-ack confirmation never hangs.
+   */
+  ackChannel?: true;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 }

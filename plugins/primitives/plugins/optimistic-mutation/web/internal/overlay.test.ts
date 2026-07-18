@@ -13,6 +13,7 @@
 
 import { test, expect, describe } from "bun:test";
 import {
+  ackPass,
   clearFailure,
   confirmPass,
   DIVERGENCE_REPORT_MISSES,
@@ -614,6 +615,96 @@ describe("stalled reporting (miss counting — report-only, never evicts)", () =
     const next = resolvePass(pending, "b", [1], 1, undefined, undefined, content);
     expect(next.stalled).toEqual([]);
     expect(next.pending[0]!.misses).toBe(DIVERGENCE_REPORT_MISSES - 1);
+  });
+});
+
+describe("exact-ack confirmation (the ackTx registry probe)", () => {
+  // `hasAck` is the registry-membership probe: "did the server broadcast this
+  // op's commit txid in a frame's ackTx for my tuple?". It CONFIRMS exactly and
+  // NEVER denies — denial stays snapshot-watermark-only (Rule B′ untouched).
+  const ackOf = (...txids: string[]) => (txid: string) => txids.includes(txid);
+
+  test("confirmPass coarse: an acked resolved op confirms even with NO snapshot watermark and an unreflected snapshot", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" })];
+    // Without the ack: kept (no causal floor), one miss.
+    const unacked = confirmPass(pending, [1], undefined, undefined, ackOf());
+    expect(ids(unacked.pending)).toEqual(["a"]);
+    // With the ack: confirmed (dropped from pending, NOT into `dropped`).
+    const acked = confirmPass(pending, [1], undefined, undefined, ackOf("100"));
+    expect(acked.pending).toEqual([]);
+    expect(acked.dropped).toEqual([]);
+  });
+
+  test("confirmPass content: the ack confirms an op isConfirmedBy rejects, and feeds the same-target cascade", () => {
+    // The stuck-inverse shape, resolved via the ack instead of content: "redo"
+    // is acked; "undo" (same target, older, resolved, never content-matched) is
+    // cascade-absorbed by the confirmed redo.
+    const pending = [
+      op("undo", { kind: "remove", n: 9 }, true),
+      op("redo", { kind: "push", n: 9 }, true, { ackWatermark: "200" }),
+    ];
+    // Snapshot reflects NEITHER op's content ([1] has no 9 present for redo).
+    const next = confirmPass(pending, [1], undefined, content, ackOf("200"));
+    expect(next.pending).toEqual([]);
+    expect(next.dropped).toEqual([]);
+    expect(next.stalled).toEqual([]);
+  });
+
+  test("resolvePass (both modes): the just-stamped token confirms when the registry already remembers it (delta-before-response race)", () => {
+    // The frame carrying this commit's ackTx landed BEFORE the HTTP response —
+    // the resolve edge probes the registry with the freshly-stamped token.
+    const pending = [op("a", { kind: "push", n: 2 })];
+    const contentNext = resolvePass(pending, "a", [1], 1, undefined, "300", content, ackOf("300"));
+    expect(contentNext.pending).toEqual([]);
+    const coarseNext = resolvePass(pending, "a", [1], 1, undefined, "300", undefined, ackOf("300"));
+    expect(coarseNext.pending).toEqual([]);
+    // Registry miss: unchanged from before (content: kept resolved, no miss).
+    const missNext = resolvePass(pending, "a", [1], 1, undefined, "300", content, ackOf());
+    expect(ids(missNext.pending)).toEqual(["a"]);
+  });
+
+  test("ackPass drops acked resolved ops, counts NO miss, never denies, and returns the input by identity when nothing changed", () => {
+    const pending = [
+      op("acked", { kind: "push", n: 2 }, true, { ackWatermark: "400", misses: 1 }),
+      op("other", { kind: "push", n: 3 }, true, { ackWatermark: "401", misses: 1 }),
+      op("inflight", { kind: "push", n: 4 }, false, { ackWatermark: "400" }), // unresolved — untouchable
+    ];
+    const next = ackPass(pending, ackOf("400"), sameN);
+    expect(ids(next.pending)).toEqual(["other", "inflight"]);
+    expect(next.dropped).toEqual([]); // an ack never denies
+    expect(next.stalled).toEqual([]);
+    expect(next.pending[0]!.misses).toBe(1); // no miss counted on the ack edge
+
+    // Nothing acked ⇒ the SAME array reference (the React shell's bail-out).
+    const idle = ackPass(pending, ackOf(), sameN);
+    expect(idle.pending).toBe(pending);
+  });
+
+  test("ackPass cascades same-target older resolved ops with the acked one", () => {
+    const pending = [
+      op("undo", { kind: "remove", n: 9 }, true), // older, same target, tokenless
+      op("redo", { kind: "push", n: 9 }, true, { ackWatermark: "500" }),
+    ];
+    const next = ackPass(pending, ackOf("500"), sameN);
+    expect(next.pending).toEqual([]);
+    expect(next.dropped).toEqual([]);
+  });
+
+  test("tokenless ops are unaffected by every ack edge", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true)]; // no ackWatermark
+    expect(ackPass(pending, () => true).pending).toBe(pending);
+    // …and the confirm passes don't consult hasAck for them either (content
+    // mode: unreflected snapshot keeps the op with a miss, exactly as before).
+    const next = confirmPass(pending, [1], undefined, content, () => true);
+    expect(ids(next.pending)).toEqual(["a"]);
+    expect(next.pending[0]!.misses).toBe(1);
+  });
+
+  test("denial stays watermark-only: an UN-acked op is denied by a causally-past snapshot exactly as before", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "600" })];
+    const next = confirmPass(pending, [1], "601", content, ackOf());
+    expect(next.pending).toEqual([]);
+    expect(ids(next.dropped)).toEqual(["a"]); // superseded — the ack registry played no part
   });
 });
 

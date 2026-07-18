@@ -12,6 +12,7 @@ import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { ResourceOrigin } from "../core/resource";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { noteResourceWatermark } from "./watermark-registry";
+import { noteResourceTxAcks } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
 
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
@@ -151,10 +152,21 @@ type ServerMsg =
   // re-read and never carries one). Adopted into the module-level watermark
   // registry immediately before the cache write it describes, so the optimistic
   // hook can causally compare mutation ack tokens against it.
+  // `ackTx` (mutation-ack attribution): the source-transaction ids the frame's
+  // recompute folded in — noted into the tx-ack registry immediately before the
+  // cache write (value frames), so the optimistic hook's exact-ack confirmation
+  // reads them synchronously. Feed-driven frames only; sub-ack/HTTP bodies never
+  // carry one (their snapshot watermark subsumes it).
   | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; epoch?: string; watermark?: string }
-  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; watermark?: string }
-  | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number; watermark?: string }
+  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; watermark?: string; ackTx?: string[] }
+  | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number; watermark?: string; ackTx?: string[] }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
+  // Standalone mutation-ack frame (per-resource `ackChannel` opt-in): a
+  // recompute produced NO value change (empty scoped diff, net-zero membership,
+  // point empty-intersection) but the writer's ack must not hang on it.
+  // Version-less, cache-less, idempotent — handled BEFORE the version-guard
+  // block, gated on the local sub entry like `sub-error`.
+  | { kind: "ack"; key: string; params: ResourceParams; ackTx: string[] }
   // "your cached value is still current" — the WS analogue of HTTP 304. Carries no
   // value: the client keeps its cached value and only adopts `version` (so a later
   // real update isn't stale-dropped), treating the (re)subscribe as acked.
@@ -1146,6 +1158,23 @@ export class NotificationsClient {
       this.applyInvalidate(msg.key, msg.params);
       return;
     }
+    if (msg.kind === "ack") {
+      // Standalone mutation-ack frame: version-less and cache-less, so it must
+      // be handled BEFORE the version-guard block below (it carries no version
+      // to compare). Gated on the local sub entry exactly like `sub-error`
+      // (the shared socket broadcasts every frame to every tab). Notes the acks
+      // into the module registry — which fires the registry's subscribers after
+      // noting — and does NOTHING else: no cache write, no markApplied, no
+      // version/epoch adoption.
+      const pk = paramsKey(msg.params);
+      const entry = channel.subs.get(`${msg.key}\0${pk}`);
+      if (!entry) {
+        trace(`drop key=${msg.key} params=${pk} reason=no-sub source=ack`);
+        return;
+      }
+      noteResourceTxAcks(msg.key, msg.params, msg.ackTx);
+      return;
+    }
     // Learn the server's boot epoch from any ack frame carrying one — BEFORE the
     // per-sub gates below, since the epoch is channel-level server identity (an
     // ack for another tab's sub teaches it just as well). The next replay echoes
@@ -1229,11 +1258,18 @@ export class NotificationsClient {
     }
 
     if (msg.kind === "sub-ack" || msg.kind === "update") {
-      this.applyUpdate(entry, msg.key, msg.params, msg.value, msg.watermark);
+      this.applyUpdate(
+        entry,
+        msg.key,
+        msg.params,
+        msg.value,
+        msg.watermark,
+        msg.kind === "update" ? msg.ackTx : undefined,
+      );
       return;
     }
     if (msg.kind === "delta") {
-      this.applyDelta(channel, entry, msg.key, msg.params, msg.upserts, msg.order, msg.watermark);
+      this.applyDelta(channel, entry, msg.key, msg.params, msg.upserts, msg.order, msg.watermark, msg.ackTx);
       return;
     }
     // Only remaining case: "invalidate"
@@ -1246,6 +1282,7 @@ export class NotificationsClient {
     params: ResourceParams,
     value: unknown,
     watermark?: string,
+    ackTx?: string[],
   ): void {
     // Invariant: handleServerMessage only reaches here for a (key) this tab
     // observes, and observe() registers the schema alongside the sub entry — so
@@ -1259,12 +1296,14 @@ export class NotificationsClient {
       );
     }
     const parsed = schema.parse(value);
-    // Adopt the frame's commit watermark IMMEDIATELY BEFORE the cache write it
-    // describes (load-bearing order: QueryCache listeners — the optimistic
-    // hook's confirm pass — read the registry synchronously inside setQueryData
-    // dispatch). After the parse, so a frame that never lands (schema throw)
-    // never advances the causal floor past the cache content.
+    // Adopt the frame's commit watermark — and note its mutation acks —
+    // IMMEDIATELY BEFORE the cache write they describe (load-bearing order:
+    // QueryCache listeners — the optimistic hook's confirm pass — read the
+    // registries synchronously inside setQueryData dispatch). After the parse,
+    // so a frame that never lands (schema throw) never advances the causal
+    // floor / acks past the cache content.
     if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
+    if (ackTx !== undefined && ackTx.length > 0) noteResourceTxAcks(key, params, ackTx);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     this.markApplied(entry, key);
   }
@@ -1297,6 +1336,7 @@ export class NotificationsClient {
     upserts: [string, unknown][],
     order: string[] | undefined,
     watermark?: string,
+    ackTx?: string[],
   ): void {
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing
@@ -1350,13 +1390,17 @@ export class NotificationsClient {
       this.forceFullResub(channel, entry, key, params);
       return;
     }
-    // Adopt the FULL delta's commit watermark IMMEDIATELY BEFORE the cache write
-    // it describes (same load-bearing order as applyUpdate). After the merge
-    // succeeded, so a delta that never lands (no-base / drift resub above) never
-    // advances the causal floor past the cache content — the recovery sub-ack
+    // Adopt the FULL delta's commit watermark — and note the delta's mutation
+    // acks — IMMEDIATELY BEFORE the cache write they describe (same load-bearing
+    // order as applyUpdate). After the merge succeeded, so a delta that
+    // dead-ends in a forced resub (no-base / drift above) never advances the
+    // causal floor OR the acks past the cache content — the recovery sub-ack
     // brings its own watermark with its own full value. Scoped deltas arrive
-    // watermark-less by construction (Rule B′), so this is a no-op for them.
+    // watermark-less by construction (Rule B′) but DO carry ackTx: the ack
+    // claims only "these transactions' rows were re-read", never snapshot
+    // completeness, so it composes with a partial re-read.
     if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
+    if (ackTx !== undefined && ackTx.length > 0) noteResourceTxAcks(key, params, ackTx);
     this.queryClient.setQueryData(queryKey, result.rows);
     this.markApplied(entry, key);
   }
