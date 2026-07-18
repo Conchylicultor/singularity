@@ -39,6 +39,13 @@ export interface OpProfilerOptions {
   mode?: "worktree" | "from-main";
   /** build only — joins the record to its `build-profile-<id>.json` spans. */
   buildId?: string | null;
+  /**
+   * Where each record lands. Defaults to appending to the real `OP_LOG_FILE`.
+   * Injectable so a test can drive the profiler against an in-memory sink and
+   * assert the record shape — the clock-pairing invariant `markGranted` /
+   * `recordStep` maintain in particular — without touching the user's real log.
+   */
+  sink?: (record: RawOpRecord) => void;
 }
 
 export interface OpProfiler<K extends OpKind> {
@@ -100,6 +107,7 @@ export function createOpProfiler<K extends OpKind>(
 ): OpProfiler<K> {
   const conversationId = process.env.SINGULARITY_CONVERSATION_ID ?? null;
   const worktree = process.env.SINGULARITY_WORKTREE ?? null;
+  const sink = opts.sink ?? ((record: RawOpRecord) => appendJsonl(OP_LOG_FILE, record));
 
   const requestedAt = new Date();
   const requestedMs = requestedAt.getTime();
@@ -165,7 +173,7 @@ export function createOpProfiler<K extends OpKind>(
   // re-stamped, because the reader can only attribute an in-flight op's wait
   // from what is already on disk.
   const stampRequested = (): void => {
-    appendJsonl(OP_LOG_FILE, identity());
+    sink(identity());
   };
 
   const closeOpenWait = (): void => {
@@ -242,7 +250,7 @@ export function createOpProfiler<K extends OpKind>(
       // Minimal: identity already landed on the `requested` record. This is what
       // flips the synthesized row from "waiting" to "running" and freezes the
       // wait list at its final value.
-      appendJsonl(OP_LOG_FILE, {
+      sink({
         phase: "granted",
         opId: opts.opId,
         grantedAt: grantedAt.toISOString(),
@@ -286,7 +294,7 @@ export function createOpProfiler<K extends OpKind>(
       const granted = grantedAt ?? requestedAt;
       const completed = completedAt ?? new Date();
 
-      appendJsonl(OP_LOG_FILE, {
+      sink({
         ...identity(),
         phase: "completed",
         grantedAt: granted.toISOString(),
