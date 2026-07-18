@@ -3,7 +3,7 @@ import { Pool, type PoolClient } from "pg";
 import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { recordSpan, chargeWait, currentCallerKind, currentOriginClass, recordReadTables, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
@@ -165,7 +165,15 @@ const queryRetryDelay = withJitter(exponential({ initial: 10, max: 250 }));
 // lock-order bug — surfaces here as a steady stream of lines even while it keeps
 // succeeding within the cap, instead of vanishing. Grep `db.jsonl` for
 // `[deadlock-retry]`; a rising rate is the signal to fix the source, not the cap.
-const dbLog = Log.channel("db", { persist: true });
+// Durable "db" retry log. `defineLogSink` registers the channel env-free and
+// defers the file-sink (its per-worktree path resolution) to first publish, so
+// importing @plugins/database/server stays import-safe (never reads
+// SINGULARITY_WORKTREE at module eval; see database/CLAUDE.md).
+const dbLog = defineLogSink({
+  id: "db",
+  description:
+    "Database client retry log: transient-contention SQL retries ([deadlock-retry]), read via db.jsonl.",
+});
 
 function retryableSqlState(err: unknown): string | null {
   if (!err || typeof err !== "object") return null;

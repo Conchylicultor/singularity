@@ -225,10 +225,10 @@ silent**. No engine edit, no `*-in-sync` codegen: the snapshot is self-describin
   - Exports: Types: `TraceLaneProps`, `TraceListItem`, `TraceSelection`, `TraceSelectionField`, `TraceTriggerSummaryProps`; Values: `getTrace`, `listTraces`, `Trace`
 - Server:
   - Contributes: `ConfigV2.Register` "trace", `change-feed-exclusion` "traces"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `reports.recordReport`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/paths.currentWorktreeName`, `infra/retention.defineRetention`, `reports.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
   - Exports: Types: `TraceEventClassHandle`, `TraceEventClassSpec`; Values: `_traces`, `captureTrace`, `defineTraceEventClass`, `TraceEventClass`
-  - Register: `defineJob('debug.trace-cleanup')`
+  - Register: `defineJob('retention.traces')`
   - Routes: `GET /api/traces`, `GET /api/traces/:id`, `POST /api/debug/trace/test-trigger`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `primitives/pane.defineRoute`

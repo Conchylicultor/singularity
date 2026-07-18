@@ -1,9 +1,9 @@
-// The classification of every PERSISTED log channel (`Log.channel(id, { persist:
-// true })`) in the repo. Local to this check ON PURPOSE: a low-level channel
-// primitive (log-channels) must never name reports or the timeline (dependency
-// inversion), and a `definePersistedChannel` registry refactor was rejected as
-// disproportionate (~18 channels for a guardrail). So the classification lives
-// here, and the check enforces that every persisted channel is a CONSCIOUS,
+// The classification of every DURABLE log channel (`defineLogSink({ id })`) in
+// the repo. Local to this check ON PURPOSE: a low-level channel primitive
+// (log-channels) must never name reports or the timeline (dependency
+// inversion), and a registry refactor onto `defineLogSink` itself was rejected
+// as disproportionate (~18 channels for a guardrail). So the classification
+// lives here, and the check enforces that every durable channel is a CONSCIOUS,
 // REVIEWED choice — not that every channel must be a report (health is
 // continuous), only that a new durable signal cannot appear un-classified.
 //
@@ -108,5 +108,9 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
   migrations: {
     consumer: "internal",
     note: "Migration runner diagnostics (database/migrations).",
+  },
+  "mail-sync": {
+    consumer: "internal",
+    note: "Gmail sync engine ops log — bootstrap / backfill / delta / attachment-scan caps and recoveries (apps/mail/sync tick, backfill, attachment-scan jobs). Diagnostic prose; no durable failure funnel.",
   },
 };

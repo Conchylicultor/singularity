@@ -11,13 +11,13 @@ import {
   _mailSyncState,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   BACKFILL_WINDOW_DAYS,
   MAX_BACKFILL_MESSAGES,
 } from "../../core";
 import { upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
+import { mailSyncLog } from "./sink";
 import { applyHistorySince } from "./history-sync";
 import { attachmentScanJob } from "./attachment-scan";
 import { classifyMailSyncError } from "./classify-error";
@@ -117,8 +117,7 @@ export const backfillJob = defineJob({
       }
 
       if (capReached && list.nextPageToken) {
-        Log.emit(
-          "mail-sync",
+        mailSyncLog.publish(
           `backfill hit the ${MAX_BACKFILL_MESSAGES}-envelope cap for ` +
             `${accountId}; older mail loads on-demand.`,
           "stdout",
@@ -189,8 +188,7 @@ async function renewWatermark(
   } catch (err) {
     if (!(err instanceof GmailHistoryExpiredError)) throw err;
     const profile = await getProfile(token);
-    Log.emit(
-      "mail-sync",
+    mailSyncLog.publish(
       `backfill watermark expired mid-backfill for ${accountId}; ` +
         `re-armed from profile historyId ${profile.historyId}`,
       "stderr",

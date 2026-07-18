@@ -4,7 +4,7 @@ export { defineRetention } from "./internal/define-retention";
 export type { RetentionSpec, RetentionJob } from "./internal/define-retention";
 export { markCascadeBounded } from "./internal/assert-cascade";
 export { getGrowthBounds } from "./internal/growth-bounds";
-export type { GrowthBound } from "./internal/growth-bounds";
+export type { GrowthBound, SinkKey } from "./internal/growth-bounds";
 
 export default {
   description:

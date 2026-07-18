@@ -3,13 +3,10 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  Log,
-  type LogChannel,
-} from "@plugins/primitives/plugins/log-channels/server";
 import { sentinelConfig } from "../../core";
 import type { ClusterSample } from "../../core";
 import { clusterClass } from "./cluster-class";
+import { sentinelLog } from "./log-sink";
 import { handleClearFrame, handleTripFrame } from "./onset";
 import { startSentinelWorker, stopSentinelWorker } from "./worker-host";
 
@@ -34,7 +31,6 @@ import { startSentinelWorker, stopSentinelWorker } from "./worker-host";
 // (the recorded exception to the no-polling rule).
 
 let running = false;
-let channel: LogChannel | null = null;
 
 // The onset detector consumed this registry when it lived on main; it now
 // feeds any main-side consumer of the per-tick samples. Kept so the sample
@@ -51,7 +47,6 @@ export function startSentinelSampler(): void {
   const cfg = getConfig(sentinelConfig);
   if (!cfg.enabled) return;
   running = true;
-  channel = Log.channel("sentinel", { persist: true });
   startSentinelWorker({
     // Re-emits run under the background lane with profiling suppressed, like
     // the old in-loop tick: the sentinel's own mirroring must never feed the
@@ -71,7 +66,7 @@ export function startSentinelSampler(): void {
       runInBackgroundLane(() => runWithoutProfiling(() => handleClearFrame(frame)));
     },
     onLog: (line, stream) => {
-      channel?.publish(line, stream);
+      sentinelLog.publish(line, stream);
     },
   });
 }

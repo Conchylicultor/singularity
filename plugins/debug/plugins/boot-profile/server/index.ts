@@ -9,7 +9,7 @@ import {
   handleGetSavedBootTrace,
   handleListBootTraces,
 } from "./internal/handlers";
-import { bootTraceCleanupJob } from "./internal/cleanup-job";
+import { bootTraceRetention } from "./internal/retention";
 
 export { _bootTraces } from "./internal/tables";
 
@@ -21,5 +21,5 @@ export default {
     [getSavedBootTrace.route]: handleGetSavedBootTrace,
     [listBootTraces.route]: handleListBootTraces,
   },
-  register: [bootTraceCleanupJob],
+  register: [bootTraceRetention],
 } satisfies ServerPluginDefinition;

@@ -1,15 +1,15 @@
 # durable-signals-accounted
 
-Every **durable** (`persist: true`) log channel must be a conscious, reviewed
-classification — so a new durable failure signal can never again reach no alert
-funnel silently.
+Every **durable** (`defineLogSink`-declared) log channel must be a conscious,
+reviewed classification — so a new durable failure signal can never again reach
+no alert funnel silently.
 
 The 2026-07-17 incident's root cause was exactly that: an 11.5-minute never-ready
-boot of main sat on the persisted `boot` channel, consumed by nothing — the
+boot of main sat on the durable `boot` channel, consumed by nothing — the
 timeline drew it as an open bar, but it reached no report and no bell (see
 `research/2026-07-17-global-debug-surface-consolidation.md`). This check makes the
-gap structural: adding a persisted channel, or regressing a report/timeline
-wiring, fails the build.
+gap structural: adding a durable sink, or regressing a report/timeline wiring,
+fails the build.
 
 ## What it enforces
 
@@ -19,13 +19,15 @@ primitive must never name reports/timeline (dependency inversion), and a
 `definePersistedChannel` registry refactor was rejected as disproportionate
 (~18 channels for a guardrail). The check:
 
-1. **Every persisted channel is classified.** `grepCode` finds every
-   `Log.channel(<id>, { persist: true })` call site (string- and comment-safe via
-   masking); literal ids resolve directly, `export const NAME = "…"` ids are
-   resolved by grep. An unresolvable id (a computed expression, or a const with
-   no live declaration) is a LOUD failure — the check cannot classify what it
-   cannot name. A found id missing from the allowlist fails with the
-   classification obligation.
+1. **Every durable channel is classified.** `findMarkerCalls` finds every
+   `defineLogSink({ id, description })` call site (string- and comment-safe via
+   full masking, scan-tree + untracked aware via `listCandidateSources`);
+   `parseStringField` reads the `id` field back from the original — a string
+   literal resolves directly, an `export const NAME = "…"` reference is resolved
+   by grep. An unresolvable id (a computed expression, or a const with no live
+   declaration) is a LOUD failure — the check cannot classify what it cannot
+   name. A found id missing from the allowlist fails with the classification
+   obligation.
 2. **Report/timeline classifications are coherent.** A `report` entry's
    `reportKind` must resolve to a live `ReportKind({ kind })` call site; a
    `timeline` entry's `timelineSource` must be in `TIMELINE_SOURCES` (imported
@@ -37,12 +39,15 @@ It does NOT force every channel to be a report — `health` is continuous, so it
 a timeline heat strip; most channels are `internal` diagnostics. It forces every
 durable channel to be a **reviewed decision**.
 
-## Single-line assumption
+## Detection is AST-shaped, not line-based
 
-Detection is line-based (every persisted call in the repo writes `persist: true`
-on the same line as `Log.channel(`). A hypothetical multi-line persisted call is
-the only way a channel escapes the sweep — an acceptable under-enforcement; if one
-is ever written, this note is the place that documents why the check missed it.
+A `defineLogSink({ id, description })` call spans multiple lines (the `id:` field
+sits on its own line), so detection cannot be a line-based grep. It runs through
+`findMarkerCalls(src, "defineLogSink")` over fully-masked source, slicing each
+call's args from the original and reading the `id` field with `parseStringField`
+— so the whole call is matched regardless of line layout, and a `defineLogSink`
+written inside a comment or string literal never matches. There is no multi-line
+escape hatch to under-enforce.
 
 ## Plugin reference
 

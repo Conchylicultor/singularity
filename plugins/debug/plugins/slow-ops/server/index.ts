@@ -9,6 +9,7 @@ import { slowOpsResource } from "./internal/resources";
 import { slowOpKind } from "./internal/slow-op-kind";
 import { handleClientSlowOp } from "./internal/handle-client-slow-op";
 import { installSlowSpanHook } from "./internal/install-slow-span";
+import { slowOpsRetention } from "./internal/retention";
 
 export { _slowOps } from "./internal/tables";
 export { slowOpsResource } from "./internal/resources";
@@ -38,6 +39,7 @@ export default {
   httpRoutes: {
     [submitClientSlowOp.route]: handleClientSlowOp,
   },
+  register: [slowOpsRetention],
   // watchConfig fires the callback IMMEDIATELY on registration AND on every
   // change, so the first call performs the initial install and subsequent calls
   // reinstall the hook with the new thresholds. installSlowSpanHook disposes the

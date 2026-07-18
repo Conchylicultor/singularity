@@ -1,8 +1,12 @@
 import { db } from "@plugins/database/server";
 import { reconcileReadSetTable } from "@plugins/database/plugins/live-state-snapshot/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 
-const log = Log.channel("notifications", { persist: true });
+const log = defineLogSink({
+  id: "notifications",
+  description:
+    "Notifications ops log: boot-time read-set reconciliation (stale live-state reader eviction).",
+});
 
 // The `notifications` table has exactly one live-state reader — the
 // `notifications` resource. Assert that invariant on boot: evict any stale

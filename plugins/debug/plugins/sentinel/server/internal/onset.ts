@@ -1,6 +1,6 @@
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { recordReport } from "@plugins/reports/server";
+import { sentinelLog } from "./log-sink";
 import type { WorkerToMainFrame } from "./worker/protocol";
 
 // Main's best-effort re-emitter for the worker's onset transitions (Stage 5:
@@ -13,8 +13,6 @@ import type { WorkerToMainFrame } from "./worker/protocol";
 
 /** Extra lookback added to the run-up so the trace window shows the prologue. */
 const ONSET_WINDOW_PAD_MS = 60_000;
-
-const channel = Log.channel("sentinel", { persist: true });
 
 export function handleTripFrame(
   frame: Extract<WorkerToMainFrame, { type: "trip" }>,
@@ -30,7 +28,7 @@ export function handleTripFrame(
     thresholdMs: 0,
     detail: { signals: frame.signals, elevated: frame.elevated },
   });
-  channel.publish(
+  sentinelLog.publish(
     `onset TRIP (${frame.elevated.join(", ")}) trace=${trace?.id ?? "rate-limited"}`,
   );
 }
@@ -38,7 +36,7 @@ export function handleTripFrame(
 export function handleClearFrame(
   frame: Extract<WorkerToMainFrame, { type: "clear" }>,
 ): void {
-  channel.publish(
+  sentinelLog.publish(
     frame.forced ? "onset CLEAR (max-episode-hold forced)" : "onset CLEAR",
   );
 

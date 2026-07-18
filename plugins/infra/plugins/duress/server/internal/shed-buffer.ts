@@ -7,7 +7,7 @@ import {
   duressEpisode,
   isUnderDuress,
 } from "@plugins/infra/plugins/duress/plugins/latch/server";
-import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { duressConfig } from "../../core";
 
 // The duress shed engine. Observability choke points (trace capture, slow-op
@@ -194,9 +194,15 @@ let flushTimer: FlushTimer = realTimer;
 
 let configOverride: ShedConfigValues | null = null;
 
-let channel: LogChannel | null = null;
+// Declared once at module eval (`defineLogSink` throws on a duplicate id): the
+// shed buffer's own accounting log. The durable shed record is the duress-shed
+// report; this is the buffer's diagnostic log.
+const channel = defineLogSink({
+  id: "duress",
+  description:
+    "Shed-buffer accounting prose (infra/duress). The durable shed record is the duress-shed report; this is the buffer's own log.",
+});
 function log(line: string): void {
-  channel ??= Log.channel("duress", { persist: true });
   channel.publish(line);
 }
 

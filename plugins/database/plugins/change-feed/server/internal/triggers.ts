@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
@@ -11,8 +10,7 @@ import {
 } from "@plugins/database/plugins/derived-views/core";
 import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
 import { excludedTableNames } from "./exclusion";
-
-const log = Log.channel("change-feed", { persist: true });
+import { changeFeedLog as log } from "./log-sink";
 
 // Infrastructure tables the change-feed must NEVER trigger on — its own plumbing,
 // independent of any feature plugin's opt-out. Keep this minimal.

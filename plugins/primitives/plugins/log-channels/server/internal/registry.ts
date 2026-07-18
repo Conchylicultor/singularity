@@ -1,4 +1,4 @@
-import { appendEntry } from "./persist";
+import type { FileSink } from "@plugins/infra/plugins/file-sink/core";
 
 export type LogStream = "stdout" | "stderr";
 
@@ -14,7 +14,15 @@ interface InternalChannel {
   entries: LogEntry[];
   listeners: Set<(entry: LogEntry) => void>;
   nextSeq: number;
-  persist: boolean;
+  // A durable channel resolves its bounded-append file sink LAZILY on first
+  // publish: `makeSink` builds it (its path needs the per-worktree logs dir, whose
+  // resolution reads SINGULARITY_WORKTREE and must NOT run at module import — the
+  // log-channels/server barrel is imported nearly everywhere, incl. inside the
+  // import-safe @plugins/database/server graph). An ephemeral channel has
+  // `makeSink === null` and stays memory-only. Durability is a declaration
+  // (`defineLogSink` / the client-ingress family), never a flag.
+  makeSink: (() => FileSink) | null;
+  sink: FileSink | null;
 }
 
 export interface LogChannel {
@@ -36,11 +44,25 @@ function makePublisher(internal: InternalChannel): LogChannel["publish"] {
     internal.entries.push(entry);
     if (internal.entries.length > MAX_HISTORY) internal.entries.shift();
     for (const fn of internal.listeners) fn(entry);
-    if (internal.persist) appendEntry(internal.id, { t, stream, line });
+    // Resolve the durable sink on first publish (deferred so declaration is
+    // import-safe — see InternalChannel.makeSink). The JSON envelope lives HERE:
+    // file-sink is a generic bounded-append primitive that writes a plain string
+    // verbatim, so log-channels owns the `{t,stream,line}` wire format the read
+    // path parses back.
+    if (!internal.sink && internal.makeSink) internal.sink = internal.makeSink();
+    if (internal.sink) internal.sink.append(JSON.stringify({ t, stream, line }));
   };
 }
 
-export function createChannel(id: string): LogChannel {
+/**
+ * Register a channel exactly once (throws on a duplicate id). `makeSink` is the
+ * deferred factory for the channel's durable backing store (built on first
+ * publish), or `null` for an ephemeral memory-only channel.
+ */
+export function createChannel(
+  id: string,
+  makeSink: (() => FileSink) | null = null,
+): LogChannel {
   if (registry.has(id)) throw new Error(`Log channel "${id}" already exists`);
 
   const internal: InternalChannel = {
@@ -48,16 +70,22 @@ export function createChannel(id: string): LogChannel {
     entries: [],
     listeners: new Set(),
     nextSeq: 1,
-    persist: false,
+    makeSink,
+    sink: null,
   };
   registry.set(id, internal);
 
   return { publish: makePublisher(internal) };
 }
 
+/**
+ * Idempotent channel accessor for the client-log ingress, whose channel ids are
+ * browser-supplied and unbounded. `makeSink` is stored (not invoked) on first
+ * sight and resolved on the channel's first publish.
+ */
 export function getOrCreateChannel(
   id: string,
-  opts?: { persist?: boolean },
+  makeSink?: () => FileSink,
 ): LogChannel {
   let internal = registry.get(id);
   if (!internal) {
@@ -66,12 +94,10 @@ export function getOrCreateChannel(
       entries: [],
       listeners: new Set(),
       nextSeq: 1,
-      persist: opts?.persist ?? false,
+      makeSink: makeSink ?? null,
+      sink: null,
     };
     registry.set(id, internal);
-  } else if (opts?.persist) {
-    // Upgrading an existing channel to persist is one-way (never disabled).
-    internal.persist = true;
   }
 
   return { publish: makePublisher(internal) };

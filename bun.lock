@@ -2531,6 +2531,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-sink-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-trigger-render-safety",
       "version": "0.0.1",
@@ -2661,6 +2665,10 @@
     },
     "plugins/infra/plugins/events-test": {
       "name": "@singularity/plugin-infra-events-test",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/file-sink": {
+      "name": "@singularity/plugin-infra-file-sink",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/file-watcher": {
@@ -6211,6 +6219,8 @@
 
     "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety": ["@singularity/plugin-framework-tooling-lint-scroll-reveal-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-reveal-safety"],
 
+    "@singularity/plugin-framework-tooling-lint-sink-safety": ["@singularity/plugin-framework-tooling-lint-sink-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety"],
+
     "@singularity/plugin-framework-tooling-lint-trigger-render-safety": ["@singularity/plugin-framework-tooling-lint-trigger-render-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety"],
 
     "@singularity/plugin-framework-tooling-lint-watcher-safety": ["@singularity/plugin-framework-tooling-lint-watcher-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety"],
@@ -6262,6 +6272,8 @@
     "@singularity/plugin-infra-events": ["@singularity/plugin-infra-events@workspace:plugins/infra/plugins/events"],
 
     "@singularity/plugin-infra-events-test": ["@singularity/plugin-infra-events-test@workspace:plugins/infra/plugins/events-test"],
+
+    "@singularity/plugin-infra-file-sink": ["@singularity/plugin-infra-file-sink@workspace:plugins/infra/plugins/file-sink"],
 
     "@singularity/plugin-infra-file-watcher": ["@singularity/plugin-infra-file-watcher@workspace:plugins/infra/plugins/file-watcher"],
 

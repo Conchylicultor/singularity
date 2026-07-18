@@ -5,7 +5,7 @@
 // esbuild `keepNames`. NO `@tailwindcss/vite` here — utilities come from the
 // single global pass (see `global-css.ts`).
 
-import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync, appendFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
@@ -211,7 +211,12 @@ export async function buildArtifact(
     const cssFiles = readdirSync(tmpDir).filter((f) => f.endsWith(".css"));
     if (cssFiles.length > 0) {
       const css = cssFiles.map((f) => readFileSync(join(tmpDir, f), "utf8")).join("\n");
-      appendFileSync(join(tmpDir, "index.js"), cssInjectionSnippet(css, target.dirName));
+      // Whole-file rewrite (read + concatenate + write), not an append: this is
+      // build-artifact ASSEMBLY of a freshly-emitted index.js, not a durable
+      // growing log — so it stays on the sanctioned whole-file writer.
+      const indexJsPath = join(tmpDir, "index.js");
+      const emitted = readFileSync(indexJsPath, "utf8");
+      writeFileSync(indexJsPath, emitted + cssInjectionSnippet(css, target.dirName));
       for (const f of cssFiles) unlinkSync(join(tmpDir, f));
     }
 

@@ -54,7 +54,7 @@ describe("findCascadeFk (pure)", () => {
 describe("markCascadeBounded", () => {
   test("records a cascade bound on a valid cascading FK", () => {
     markCascadeBounded(cascadingChild, owner);
-    expect(getGrowthBounds().get("ac_cascading_child")).toEqual({
+    expect(getGrowthBounds().get("table:ac_cascading_child")).toEqual({
       kind: "cascade",
       owner: "ac_owner",
     });

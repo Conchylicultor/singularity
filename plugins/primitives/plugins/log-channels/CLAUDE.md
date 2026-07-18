@@ -5,21 +5,42 @@ lines that persist to disk per worktree, decoupled from the live-state WebSocket
 (the emitter flushes over plain HTTP), so logs still get through even when the
 live-state pipeline is wedged. `debug/logs` is the read-only viewer on top of this.
 
-## Persistent log channels
+## Durable vs ephemeral channels
 
-Browser and server code can emit named log lines that persist to disk per worktree:
+Durability is a **declaration**, not a flag. There is no `persist` option: a
+channel either declares a durable file sink or it doesn't.
 
-- **Browser:** `clientLog(channel, line)` from `@plugins/primitives/plugins/log-channels/web` → `POST /api/logs/emit`.
-- **Server:** `Log.channel(id, { persist: true }).publish(line, stream?, t?)` from `@plugins/primitives/plugins/log-channels/server`.
+- **Durable (server):** `defineLogSink({ id, description }).publish(line, stream?, t?)`
+  from `@plugins/primitives/plugins/log-channels/server`. This registers the
+  channel AND (lazily, on first publish) a `defineFileSink` under the per-worktree
+  logs dir — one declared, enumerable, 128 MB × 3-rotation growth bound
+  (`@plugins/infra/plugins/file-sink`, merged into `retention.getGrowthBounds()` as
+  `file:<id>`). The `description` is what makes a perf sink (`health`,
+  `health-host`, `slow-op-markers`) distinguishable from an ops log in
+  `getFileSinks()`. Declared **exactly once** per id — a channel written from two
+  modules hoists ONE `defineLogSink` into a shared module and imports it from both
+  (a duplicate id throws). The sink is built lazily so declaring one is
+  **import-safe** (no `SINGULARITY_WORKTREE` read at module eval — the barrel is
+  imported inside the import-safe `@plugins/database/server` graph).
+- **Ephemeral (server):** `Log.channel(id).publish(...)` — in-memory ring buffer
+  only, no disk.
+- **Browser:** `clientLog(channel, line)` from
+  `@plugins/primitives/plugins/log-channels/web` → `POST /api/logs/emit`. The
+  ingress persists via `openDynamicSink` (the one open-ended, browser-supplied
+  channel family, covered by the single declared `client-log` family bound). The
+  route-internal `emitClientLog` is the ONLY persist-from-arbitrary-input path; it
+  is **not** exported from the barrel.
 
-Both append to `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl`, one JSON object
-per line: `{"t":<ms>,"stream":"stdout"|"stderr","line":"..."}`. The file survives the
-backend restart that `./singularity build` performs mid-build; the in-memory ring
-buffer only backs the live UI pane.
+Durable channels append to `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl`,
+one JSON object per line: `{"t":<ms>,"stream":"stdout"|"stderr","line":"..."}`. The
+file survives the backend restart that `./singularity build` performs mid-build;
+the in-memory ring buffer only backs the live UI pane.
 
 ### Reading logs
 
-`tail`/`cat` the `.jsonl` file directly.
+`tail`/`cat` the `.jsonl` file directly. This plugin owns only the **read** path
+(`readChannelEntries`, `listChannels`); the **write/rotation** half lives in
+`@plugins/infra/plugins/file-sink`.
 
 Server-side, `readChannelEntries(worktree, channel, tail)` returns the last
 `tail` envelope rows (`{ t, stream, line }`), or `null` for a missing channel.
@@ -34,7 +55,7 @@ window/cutoff/pairing.)
 
 ### Rotation
 
-`appendEntry` rotates each channel's live file at a **128 MB** cap, gated on an
+The file sink rotates each channel's live file at a **128 MB** cap, gated on an
 in-memory per-file byte counter (no `statSync` per append). It keeps **3** rotated
 files named `channel.jsonl.N` (suffix appended *after* `.jsonl`, so `listChannels`
 excludes them); the oldest is unlinked. `readChannelEntries` currently reads **only**
@@ -52,8 +73,8 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
   - Exports: Values: `clientLog`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/paths.worktreeDataDir`
-  - Exports: Types: `LogChannel`, `LogStream`; Values: `listChannels`, `Log`, `logsDirFor`, `readChannelEntries`, `readChannelJson`
+  - Uses: `infra/endpoints.implement`, `infra/file-sink.defineFileSink`, `infra/file-sink.openDynamicSink`, `infra/paths.worktreeDataDir`
+  - Exports: Types: `LogChannel`, `LogStream`; Values: `defineLogSink`, `listChannels`, `Log`, `logsDirFor`, `readChannelEntries`, `readChannelJson`
   - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

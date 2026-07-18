@@ -2,19 +2,20 @@ import {
   grepCode,
   listCandidateSources,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { findMarkerCalls, parseStringField } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { findMarkerCalls, lineAt, parseStringField } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { TIMELINE_SOURCES } from "@plugins/debug/plugins/timeline/core";
 import { ACCOUNTING } from "./accounting";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-// Every DURABLE (`persist: true`) log channel must be a conscious, reviewed
-// classification in `accounting.ts`. The 2026-07-17 incident's root cause was a
-// durable failure signal (an 11.5-minute never-ready boot on the `boot` channel)
-// that reached NO alert funnel — it was persisted and then consumed by nothing.
-// This check makes that structurally impossible to reintroduce silently: adding a
-// new persisted channel, or regressing a report/timeline wiring, fails the build.
+// Every DURABLE (`defineLogSink`-declared) log channel must be a conscious,
+// reviewed classification in `accounting.ts`. The 2026-07-17 incident's root
+// cause was a durable failure signal (an 11.5-minute never-ready boot on the
+// `boot` channel) that reached NO alert funnel — it was persisted and then
+// consumed by nothing. This check makes that structurally impossible to
+// reintroduce silently: adding a new durable sink, or regressing a
+// report/timeline wiring, fails the build.
 //
 // It does NOT force every channel to be a report (health is continuous). It
 // forces every persisted channel to be CLASSIFIED, and every report/timeline
@@ -23,24 +24,6 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 interface CallSite {
   path: string;
   line: number;
-}
-
-type ChannelArg =
-  | { kind: "literal"; value: string }
-  | { kind: "const"; value: string }
-  | null;
-
-// Parse the first argument of a `Log.channel(<arg>, …)` call from the ORIGINAL
-// line text. A quoted literal resolves directly; a bare identifier is a const
-// that must be resolved to its string value; anything else (a computed
-// expression) is unresolvable and fails the check loudly.
-function extractChannelArg(text: string): ChannelArg {
-  const m = /Log\.channel\s*\(\s*(?:"([^"]+)"|'([^']+)'|([A-Za-z_$][\w$]*))/.exec(text);
-  if (!m) return null;
-  if (m[1] !== undefined) return { kind: "literal", value: m[1] };
-  if (m[2] !== undefined) return { kind: "literal", value: m[2] };
-  if (m[3] !== undefined) return { kind: "const", value: m[3] };
-  return null;
 }
 
 function escapeRegExp(s: string): string {
@@ -91,43 +74,49 @@ async function registeredReportKinds(root: string): Promise<Set<string>> {
   return kinds;
 }
 
-// Discover every persisted-channel call site. Returns the id → first-call-site
-// map plus any unresolvable call sites (a computed id, or a const with no live
-// declaration). Single-line detection: every `Log.channel(id, { persist: true })`
-// in the repo writes the persist flag on the same line as the call, so a
-// line-based masked scan (grepCode) sees them all; a hypothetical multi-line
-// persisted call is the only escape, an acceptable under-enforcement documented
-// in the plugin CLAUDE.md.
+// Discover every durable-sink declaration. Returns the id → first-call-site map
+// plus any unresolvable call sites (a computed id, or a const with no live
+// declaration). A `defineLogSink({ id, description })` call is multi-line (the
+// `id:` field sits on its own line), so detection is AST-shaped, NOT line-based:
+// listCandidateSources is scan-tree + untracked aware (a just-added sink is
+// seen), findMarkerCalls full-masks (a `defineLogSink(...)` written in a comment
+// or string never matches) and slices the args from the ORIGINAL, so the `id`
+// field is read back intact via parseStringField. A string-literal id resolves
+// directly; a bare `const` reference (`id: DURESS_EPISODES_CHANNEL`) is resolved
+// to its declared string value.
 async function findPersistedChannels(
   root: string,
 ): Promise<{ found: Map<string, CallSite>; unresolvable: CallSite[] }> {
-  const matches = await grepCode({
-    root,
-    grepArg: "Log.channel",
-    fixed: true,
-    // Structure on the masked line: the call head through `{ persist: true`.
-    // `persist`/`true` are code (survive masking); the id string is masked (so a
-    // Log.channel written inside a string literal cannot match — string-safe).
-    pattern: /Log\.channel\s*\([^)]*persist\s*:\s*true/,
-    maskStrings: true,
-  });
+  const sources = await listCandidateSources({ root, grepArg: "defineLogSink", fixed: true });
 
   const found = new Map<string, CallSite>();
   const unresolvable: CallSite[] = [];
-  for (const m of matches) {
-    const site: CallSite = { path: m.path, line: m.line };
-    const arg = extractChannelArg(m.text);
-    if (arg === null) {
-      unresolvable.push(site);
-      continue;
+  for (const { rel, src } of sources) {
+    for (const call of findMarkerCalls(src, "defineLogSink")) {
+      // Skip the primitive's OWN definition (`export function defineLogSink(spec:
+      // { id: string; … })`): a real declaration passes an inline object literal,
+      // so its args begin with `{`; the function signature's begin with `spec:`.
+      // Any non-literal arg cannot carry a static id anyway, so this is safe.
+      if (!/^\s*\{/.test(call.argsText)) continue;
+      const site: CallSite = { path: rel, line: lineAt(src, call.index) };
+      const res = parseStringField(call.argsText, "id");
+      let id: string | null;
+      if (res.kind === "value") {
+        id = res.value;
+      } else if (res.kind === "dynamic") {
+        // A `const`-named id (`id: DURESS_EPISODES_CHANNEL`): resolve the
+        // identifier to its declared string value; unresolvable if no live decl.
+        id = await resolveConst(root, res.expr);
+      } else {
+        // No static `id` field at all — cannot be classified.
+        id = null;
+      }
+      if (id === null) {
+        unresolvable.push(site);
+        continue;
+      }
+      if (!found.has(id)) found.set(id, site);
     }
-    const id =
-      arg.kind === "literal" ? arg.value : await resolveConst(root, arg.value);
-    if (id === null) {
-      unresolvable.push(site);
-      continue;
-    }
-    if (!found.has(id)) found.set(id, site);
   }
   return { found, unresolvable };
 }
@@ -146,7 +135,7 @@ const check: Check = {
       return {
         ok: false,
         message:
-          `Persisted Log.channel call site(s) with an unresolvable channel id ` +
+          `Durable defineLogSink call site(s) with an unresolvable channel id ` +
           `in ${unresolvable.length} place(s):\n    ` +
           unresolvable.map((s) => `${s.path}:${s.line}`).join("\n    "),
         hint: "Use a string literal or an `export const NAME = \"…\"` for the channel id so durable-signals-accounted can classify it in accounting.ts.",
@@ -173,7 +162,7 @@ const check: Check = {
     if (stale.length > 0) {
       return {
         ok: false,
-        message: `accounting.ts entr(y/ies) with no live persisted Log.channel call site: ${stale.map((id) => `"${id}"`).join(", ")}`,
+        message: `accounting.ts entr(y/ies) with no live defineLogSink call site: ${stale.map((id) => `"${id}"`).join(", ")}`,
         hint: "The channel was removed or renamed. Delete (or update) the stale accounting.ts entry.",
       };
     }

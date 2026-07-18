@@ -9,7 +9,7 @@ import {
   type RawOpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
-  appendJsonl,
+  appendOpLog,
   LEGACY_BUILD_FILE,
   LEGACY_PUSH_FILE,
   OP_LOG_FILE,
@@ -69,7 +69,7 @@ export async function finalizeOrphanedOps(
     if (!base) continue;
     if (await isActive(base.opSlug ?? "")) continue;
 
-    appendJsonl(OP_LOG_FILE, {
+    appendOpLog({
       ...base,
       phase: "completed",
       grantedAt: g.granted?.grantedAt ?? base.requestedAt,

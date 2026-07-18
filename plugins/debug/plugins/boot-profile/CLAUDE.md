@@ -71,10 +71,10 @@ unbounded.
   - Uses: `apps/debug/shell.DebugApp`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.PhaseConfig`, `debug/profiling.PhaseGroup`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.WaitWorkRow`, `infra/endpoints.EndpointError`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/perfs/boot-trace.BootPhase`, `primitives/perfs/boot-trace.BootSpan`, `primitives/perfs/boot-trace.BootTrace`, `primitives/perfs/boot-trace.bootWindowEnd`, `primitives/perfs/boot-trace.getBootTrace`, `primitives/perfs/boot-trace.refreshBootTrace`, `primitives/perfs/boot-trace.useBootTrace`, `primitives/relative-time.RelativeTime`, `shell/notifications.toast`
   - Exports: Values: `BootProfileGantt`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/retention.defineRetention`
   - DB schema: `plugins/debug/plugins/boot-profile/server/internal/tables.ts`
   - Exports: Values: `_bootTraces`
-  - Register: `defineJob('debug.boot-trace-cleanup')`
+  - Register: `defineJob('retention.boot_traces')`
   - Routes: `POST /api/boot-traces`, `GET /api/boot-traces/:id`, `GET /api/boot-traces`
 - Core:
   - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`

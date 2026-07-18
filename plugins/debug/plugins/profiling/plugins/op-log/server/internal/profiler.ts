@@ -8,7 +8,7 @@ import type {
   RawOpRecord,
   WaitKind,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import { appendJsonl, OP_LOG_FILE } from "./jsonl";
+import { appendOpLog } from "./jsonl";
 
 // The writer. Generalizes `cli/bin/push-profiler.ts` (whose shape this copies:
 // same three phases, same `steps` bracketing, same env-sourced identity, same
@@ -107,7 +107,7 @@ export function createOpProfiler<K extends OpKind>(
 ): OpProfiler<K> {
   const conversationId = process.env.SINGULARITY_CONVERSATION_ID ?? null;
   const worktree = process.env.SINGULARITY_WORKTREE ?? null;
-  const sink = opts.sink ?? ((record: RawOpRecord) => appendJsonl(OP_LOG_FILE, record));
+  const sink = opts.sink ?? ((record: RawOpRecord) => appendOpLog(record));
 
   const requestedAt = new Date();
   const requestedMs = requestedAt.getTime();

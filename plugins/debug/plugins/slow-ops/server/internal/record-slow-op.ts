@@ -7,7 +7,7 @@ import {
   type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   getContentionSnapshot,
   type ContentionSnapshot,
@@ -33,12 +33,16 @@ type SlowOpSource = Extract<
   "server-slow-op" | "client-slow-op" | "server-boot-monitor"
 >;
 
-// A slim overlay marker per recorded slow op, dual-written to a persisted log
-// channel. Mirrors the health sampler's `Log.channel("health", { persist: true })`
-// — each worktree backend writes to its own logs/slow-op-markers.jsonl, read
-// from disk by the health-monitor endpoint to draw spike lines on the charts.
-// Uncapped (one line per slow op), unlike the 10-entry DB recentSamples ring.
-const markerChannel = Log.channel("slow-op-markers", { persist: true });
+// A slim overlay marker per recorded slow op, dual-written to a durable log
+// channel. Mirrors the health sampler's `defineLogSink({ id: "health" })` — each
+// worktree backend writes to its own logs/slow-op-markers.jsonl, read from disk by
+// the health-monitor endpoint to draw spike lines on the charts. Uncapped (one
+// line per slow op), unlike the 10-entry DB recentSamples ring.
+const markerChannel = defineLogSink({
+  id: "slow-op-markers",
+  description:
+    "PERF sink: one marker line per recorded slow op, read from disk to draw spike lines on the Debug → Health charts.",
+});
 
 export interface RecordSlowOpInput {
   operationKind: string;

@@ -318,7 +318,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`sync`** — Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
           - Server:
             - Contributes: `resource.declare` "mail-sync-state"
-            - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
+            - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.defineLogSink`
             - Exports: Values: `mailSyncStateServerResource`
             - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`, `defineJob('mail.attachment-scan')`
             - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`, `GET /api/mail/search`
@@ -2585,7 +2585,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
-    - Uses: `database/derived-tables.rebuildDerivedTables`, `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`, `primitives/log-channels.Log`
+    - Uses: `database/derived-tables.rebuildDerivedTables`, `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`, `primitives/log-channels.defineLogSink`
     - Exports: Types: `DbExecutor`; Values: `awaitDbReady`, `currentTxId`, `db`, `isTransientDbError`
   - Core:
     - Uses: `infra/paths.SINGULARITY_DIR`
@@ -2601,7 +2601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/studio/compositions/auto-serve`, `backup/sources/databases`, `database/change-feed`, `database/db-test-fixture`, `database/fork`, `database/query`, `database/zero/cache-service`, `debug/profiling/ops`, `debug/slow-ops/cluster`, `debug/timeline`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
-        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.defineLogSink`
         - Exports: Types: `DbChange`; Values: `ensureChangelogTable`, `ExcludeFromChangeFeed`, `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
       - Cross-plugin:
         - Imported by: `database/live-state-snapshot`, `debug/slow-ops`, `debug/trace/engine`, `reports`
@@ -2611,7 +2611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CreateTestDbOptions`, `TestDb`; Values: `createTestDb`
     - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
       - Server:
-        - Uses: `primitives/log-channels.Log`
+        - Uses: `primitives/log-channels.defineLogSink`
         - Exports: Values: `DerivedTable`, `feedExemptTables`, `rebuildDerivedTables`
       - Cross-plugin:
         - Imported by: `conversations/agents`, `database`, `database/change-feed`, `tasks/tasks-core`
@@ -2619,7 +2619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DerivedRollupSpec`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
-        - Uses: `primitives/log-channels.Log`
+        - Uses: `primitives/log-channels.defineLogSink`
         - Exports: Values: `rebuildDerivedViews`, `relationIdentityBase`, `View`
       - Cross-plugin:
         - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
@@ -2641,7 +2641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
       - Server:
-        - Uses: `database.db`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
         - Exports: Types: `ReadSetShrinkEvent`; Values: `clearPersistedSnapshots`, `onReadSetShrink`, `readPersistedSnapshots`, `reconcileReadSetTable`
         - Register: `defineJob('database.live-state-changelog-prune')`
@@ -2649,7 +2649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `debug/profiling/boot-bench`, `debug/read-set-shrink`, `infra/boot-snapshot`, `shell/notifications`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
-        - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
+        - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.defineLogSink`
         - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
       - Cross-plugin:
         - Imported by: `database`
@@ -2703,7 +2703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `BootBudgetPayload`; Values: `bootBudgetConfig`, `BootBudgetPayloadSchema`
     - **`boot-events`** — Durable per-boot event lines: a `start` line at the register phase (so a backend wedged during migrations/boot is visible as an open-ended bar) and a `ready` line from the onReady hook, paired by processStartedAt into the wall-clock interval readBootEvents(worktree, windowMs) returns — so deploy-restart bursts render on cross-worktree timelines, with no DB table (survives re-forks, readable while a backend is wedged).
       - Server:
-        - Uses: `infra/paths.currentWorktreeName`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelJson`
+        - Uses: `infra/paths.currentWorktreeName`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.readChannelJson`
         - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
         - Exports: Types: `BootEvent`, `BootLine`; Values: `BootLineSchema`, `readBootEvents`
       - Cross-plugin:
@@ -2726,10 +2726,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.PhaseConfig`, `debug/profiling.PhaseGroup`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.WaitWorkRow`, `infra/endpoints.EndpointError`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/perfs/boot-trace.BootPhase`, `primitives/perfs/boot-trace.BootSpan`, `primitives/perfs/boot-trace.BootTrace`, `primitives/perfs/boot-trace.bootWindowEnd`, `primitives/perfs/boot-trace.getBootTrace`, `primitives/perfs/boot-trace.refreshBootTrace`, `primitives/perfs/boot-trace.useBootTrace`, `primitives/relative-time.RelativeTime`, `shell/notifications.toast`
         - Exports: Values: `BootProfileGantt`
       - Server:
-        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`
+        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/retention.defineRetention`
         - DB schema: `plugins/debug/plugins/boot-profile/server/internal/tables.ts`
         - Exports: Values: `_bootTraces`
-        - Register: `defineJob('debug.boot-trace-cleanup')`
+        - Register: `defineJob('retention.boot_traces')`
         - Routes: `POST /api/boot-traces`, `GET /api/boot-traces/:id`, `GET /api/boot-traces`
       - Core:
         - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`
@@ -2782,7 +2782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
         - Exports: Values: `healthMonitorPane`
       - Server:
-        - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelJson`
+        - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.readChannelJson`
         - Exports: Types: `HealthSample`, `HostSample`; Values: `HealthSampleSchema`, `HostSampleSchema`
         - Routes: `GET /api/debug/health-monitor`
       - Cross-plugin:
@@ -2862,7 +2862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "paging-probe"
-        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.worktreeDataDir`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.LogChannel`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
         - Exports: Types: `ProbeSample`, `ProbeVariant`; Values: `pagingProbeConfig`, `PROBE_VARIANTS`, `ProbeSampleSchema`
@@ -2904,7 +2904,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBuildProfiling`
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader (incl. read-only legacy adapters), and the single orphan reconciler.
           - Server:
-            - Uses: `infra/paths.SINGULARITY_DIR`
+            - Uses: `infra/file-sink.defineFileSink`, `infra/paths.SINGULARITY_DIR`
             - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `LEGACY_BUILD_FILE`, `LEGACY_PUSH_FILE`, `OP_LOG_FILE`, `readOpRecords`
           - Cross-plugin:
             - Imported by: `debug/profiling/ops`, `stats/pushes`
@@ -3002,7 +3002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
       - Server:
         - Contributes: `trace-event-class` "cluster", `trace-event-class` "fleet-flights", `report-kind` "duress-episode", `ConfigV2.Register` "sentinel"
-        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.readChannelEntries`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
         - Exports: Values: `readDuressEpisodes`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/float/config.floatField`, `fields/int/config.intField`
@@ -3026,9 +3026,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.registerSlowResourceReporter`, `primitives/perfs/boot-trace.getBootTrace`, `reports.Reports`
       - Server:
         - Contributes: `resource.declare` "slow-ops", `ConfigV2.Register` "slow-op", `report-kind` "slow-op", `change-feed-exclusion` "slow_ops"
-        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `debug/trace/engine.captureTrace`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.getJobSlowThresholdMs`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
+        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `debug/trace/engine.captureTrace`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.getJobSlowThresholdMs`, `infra/retention.defineRetention`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
         - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
+        - Register: `defineJob('retention.slow_ops')`
         - Resources: `slow-ops` (push)
         - Routes: `POST /api/slow-ops/client`
       - Core:
@@ -3109,10 +3110,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `TraceLaneProps`, `TraceListItem`, `TraceSelection`, `TraceSelectionField`, `TraceTriggerSummaryProps`; Values: `getTrace`, `listTraces`, `Trace`
           - Server:
             - Contributes: `ConfigV2.Register` "trace", `change-feed-exclusion` "traces"
-            - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `reports.recordReport`
+            - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/paths.currentWorktreeName`, `infra/retention.defineRetention`, `reports.recordReport`
             - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
             - Exports: Types: `TraceEventClassHandle`, `TraceEventClassSpec`; Values: `_traces`, `captureTrace`, `defineTraceEventClass`, `TraceEventClass`
-            - Register: `defineJob('debug.trace-cleanup')`
+            - Register: `defineJob('retention.traces')`
             - Routes: `GET /api/traces`, `GET /api/traces/:id`, `POST /api/debug/trace/test-trigger`
           - Core:
             - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `primitives/pane.defineRoute`
@@ -3159,7 +3160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `infra/ndjson-stream.readNdjson`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
         - Exports: Values: `worktreeCleanupPane`
       - Server:
-        - Uses: `database/admin.databaseExists`, `database/admin.dropDatabase`, `database/admin.listDatabases`, `database/zero/cache-service.dropZeroReplicationArtifacts`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/ndjson-stream.ndjsonResponse`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `infra/worktree.removeWorktree`, `infra/worktree.removeWorktreeSpec`, `infra/worktree.worktreePathFor`, `infra/worktree.worktreesDir`, `primitives/log-channels.Log`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listTasks`
+        - Uses: `database/admin.databaseExists`, `database/admin.dropDatabase`, `database/admin.listDatabases`, `database/zero/cache-service.dropZeroReplicationArtifacts`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/ndjson-stream.ndjsonResponse`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `infra/worktree.removeWorktree`, `infra/worktree.removeWorktreeSpec`, `infra/worktree.worktreePathFor`, `infra/worktree.worktreesDir`, `primitives/log-channels.defineLogSink`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listTasks`
         - Register: `defineJob('worktree-cleanup.reap-stale')`
         - Routes: `GET /api/debug/worktrees`, `POST /api/debug/worktrees/bulk-delete`, `DELETE /api/debug/worktrees/:id`
       - Shared:
@@ -3897,6 +3898,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`scroll-reveal-safety`** — scroll-reveal-safety lint rule: no-adhoc-scroll-into-view
+            - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
@@ -4046,7 +4048,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "duress"
-        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/duress/latch.duressEpisode`, `infra/duress/latch.isUnderDuress`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/duress/latch.duressEpisode`, `infra/duress/latch.isUnderDuress`, `primitives/log-channels.defineLogSink`
         - Exports: Types: `ShedBuffer`, `ShedBufferOptions`, `ShedCascadeStats`, `ShedSummary`; Values: `createShedBuffer`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
@@ -4114,6 +4116,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/events-test/subscribe`, `POST /api/events-test/emit`, `POST /api/events-test/direct-enqueue`, `GET /api/events-test/log`, `POST /api/events-test/reset`, `DELETE /api/events-test/trigger/:id`, `POST /api/events-test/delete-targeting`, `GET /api/events-test/triggers`, `GET /api/events-test/wait-idle`, `POST /api/events-test/crash-recovery`
       - Shared:
         - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
+    - **`file-sink`** — Bounded-append file sink primitive: defineFileSink declares an absolute-path sink that rotates at a byte cap (default 128 MB × 3), true by construction because append() IS the rotation. Node-only (no db/jobs) so a CLI process can import it. getFileSinks exposes the registered set; openDynamicSink covers the open-ended browser clientLog family under one declared bound.
+      - Cross-plugin:
+        - Imported by: `debug/profiling/op-log`, `infra/retention`, `primitives/log-channels`
+      - Server:
+        - Exports: Values: `defineFileSink`, `getFileSinks`, `openDynamicSink`
+      - Core:
+        - Exports: Types: `FileSink`, `FileSinkSpec`, `RotateBound`
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/code`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/corpus-index`, `infra/git-watcher`, `plugin-meta/plugin-tree`
@@ -4174,7 +4183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
         - Exports: Types: `DeadJobRow`, `DeadJobsPayload`, `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `DeadJobRowSchema`, `DeadJobsPayloadSchema`, `deadJobsResource`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listDeadJobs`, `listJobs`, `retryJob`
       - Cross-plugin:
-        - Imported by: `apps/mail/sync`, `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `database/live-state-snapshot`, `database/zero/cache-service`, `debug/boot-budget`, `debug/boot-monitor`, `debug/boot-profile`, `debug/boot-watchdog`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/session-divergence`, `debug/slow-ops`, `debug/trace/engine`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `infra/retention`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
+        - Imported by: `apps/mail/sync`, `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `database/live-state-snapshot`, `database/zero/cache-service`, `debug/boot-budget`, `debug/boot-monitor`, `debug/boot-watchdog`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/session-divergence`, `debug/slow-ops`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `infra/retention`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
     - **`launcher`**
       - Server:
         - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/asset-mirror.seedAssetMirrorCache`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`, `infra/worktree.ZeroCacheSpec`
@@ -4215,10 +4224,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/browser/bookmarks`, `apps/mail/reading-pane`, `apps/pages/starred`, `apps/story/generation`, `build`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-progress`, `plugin-meta/plugin-health`, `shell/notifications`, `tasks/auto-start`, `tasks/tasks-core`
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
-        - Uses: `database.db`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
-        - Exports: Types: `GrowthBound`, `RetentionJob`, `RetentionSpec`; Values: `defineRetention`, `getGrowthBounds`, `markCascadeBounded`
+        - Uses: `database.db`, `infra/file-sink.getFileSinks`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
+        - Exports: Types: `GrowthBound`, `RetentionJob`, `RetentionSpec`, `SinkKey`; Values: `defineRetention`, `getGrowthBounds`, `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: `history/engine`, `infra/trash`, `reports`
+        - Imported by: `debug/boot-profile`, `debug/slow-ops`, `debug/trace/engine`, `history/engine`, `infra/trash`, `reports`
     - **`runtime-profiler`**
       - Cross-plugin:
         - Imported by: `infra/endpoints`
@@ -5526,8 +5535,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
         - Exports: Values: `clientLog`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/paths.worktreeDataDir`
-        - Exports: Types: `LogChannel`, `LogStream`; Values: `listChannels`, `Log`, `logsDirFor`, `readChannelEntries`, `readChannelJson`
+        - Uses: `infra/endpoints.implement`, `infra/file-sink.defineFileSink`, `infra/file-sink.openDynamicSink`, `infra/paths.worktreeDataDir`
+        - Exports: Types: `LogChannel`, `LogStream`; Values: `defineLogSink`, `listChannels`, `Log`, `logsDirFor`, `readChannelEntries`, `readChannelJson`
         - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -5801,7 +5810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`release`** — Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
   - Server:
     - Contributes: `resource.declare` "release.run", `resource.declare` "release.history-revision", `resource.declare` "release.previews"
-    - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.FieldColumnMap`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `primitives/log-channels.Log`
+    - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.FieldColumnMap`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `primitives/log-channels.defineLogSink`
     - DB schema: `plugins/release/server/internal/tables.ts`
     - Exports: Values: `_releaseRuns`, `collectReleaseEnv`, `newReleaseRunId`, `Release`, `releaseOutDir`, `triggerRelease`
     - Resources: `release.history-revision` (push), `release.previews` (push), `release.run` (push)
@@ -6053,7 +6062,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
       - Server:
         - Contributes: `resource.declare` "notifications"
-        - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`, `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`

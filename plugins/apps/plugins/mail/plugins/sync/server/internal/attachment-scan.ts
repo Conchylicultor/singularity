@@ -2,9 +2,9 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { listMessages } from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
 import { requireGmailToken } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { MAX_ATTACHMENT_SCAN_PAGES } from "../../core";
 import { markMessagesWithAttachments } from "./store";
+import { mailSyncLog } from "./sink";
 
 // Pre-populate the attachment (paperclip) indicator WITHOUT a body fetch. Gmail's
 // `has:attachment` search operator is the authoritative metadata-only signal —
@@ -36,8 +36,7 @@ export async function scanAttachmentFlags(
     pageToken = list.nextPageToken;
     pages += 1;
     if (pages >= MAX_ATTACHMENT_SCAN_PAGES && pageToken) {
-      Log.emit(
-        "mail-sync",
+      mailSyncLog.publish(
         `attachment scan hit the ${MAX_ATTACHMENT_SCAN_PAGES}-page cap for ` +
           `${accountId}; remaining attachment flags fill on open.`,
         "stdout",

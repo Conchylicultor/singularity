@@ -5,7 +5,7 @@ import {
   PerformanceObserver,
   type IntervalHistogram,
 } from "node:perf_hooks";
-import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { procMemory } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
 import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -48,7 +48,13 @@ const STALL_ARM_MAX_MS = 1_000;
 
 let histogram: IntervalHistogram | null = null;
 let interval: ReturnType<typeof setInterval> | null = null;
-let channel: LogChannel | null = null;
+// Declared exactly once at module eval (not in start): the sampler can be stopped
+// and restarted, and `defineLogSink` throws on a duplicate id. PERF sink.
+const channel = defineLogSink({
+  id: "health",
+  description:
+    "PERF sink: per-backend health samples (event-loop lag, GC/heap pressure, phys_footprint), read from disk to draw the Debug → Health charts.",
+});
 let gcObserver: PerformanceObserver | null = null;
 let gcCount = 0;
 let gcTotalMs = 0;
@@ -145,7 +151,7 @@ function tick(): void {
     // so the arming moment is auditable against later stall traces.
     startStallProfiler();
     stallArmed = true;
-    channel?.publish(
+    channel.publish(
       `stall profiler armed (eventLoopP99Ms=${sample.eventLoopP99Ms.toFixed(1)}, eventLoopMaxMs=${sample.eventLoopMaxMs.toFixed(1)})`,
     );
   }
@@ -157,12 +163,11 @@ function tick(): void {
   lastMonitorOps = meter.count;
   lastMonitorMs = meter.totalMs;
   rotateIfNeeded();
-  channel?.publish(JSON.stringify(sample));
+  channel.publish(JSON.stringify(sample));
 }
 
 export function startProcessSampler(): void {
   if (interval) return;
-  channel = Log.channel("health", { persist: true });
   histogram = monitorEventLoopDelay({ resolution: 10 });
   histogram.enable();
   // Precise GC timing only when the runtime exposes 'gc' performance entries.

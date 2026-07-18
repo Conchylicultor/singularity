@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { collectReapable, type ReapTarget } from "./reap-policy";
 import { reapAttempt } from "./reap";
 
-const log = Log.channel("worktree-cleanup", { persist: true });
+const log = defineLogSink({
+  id: "worktree-cleanup",
+  description:
+    "Worktree-cleanup reaper ops log: stale git worktree + Postgres DB-fork removals.",
+});
 
 // Run `fn` over `items` with at most `limit` concurrent executions.
 async function pMap<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {

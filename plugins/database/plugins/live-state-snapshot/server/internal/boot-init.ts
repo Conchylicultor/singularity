@@ -1,7 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { setLiveStateSnapshotHooks } from "@plugins/framework/plugins/server-core/core";
 import { seedReadSetIndex } from "@plugins/infra/plugins/runtime-profiler/core";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   shouldPersist,
@@ -9,8 +8,7 @@ import {
   persistSnapshot,
   readPersistedReadSets,
 } from "./persist";
-
-const log = Log.channel("live-state-snapshot", { persist: true });
+import { snapshotLog as log } from "./log-sink";
 
 // Install the L2 snapshot subsystem during the `onReadyBlocking` barrier: create
 // the snapshot table, inject the persist hooks into the resource runtime, and seed

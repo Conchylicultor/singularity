@@ -1,12 +1,10 @@
 import { Client } from "pg";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { connectionString } from "@plugins/database/plugins/admin/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { parseLiveStatePayload, type DbChange } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
 import { routeChange } from "./route-change";
-
-const log = Log.channel("change-feed", { persist: true });
+import { changeFeedLog as log } from "./log-sink";
 
 // How often the liveness timer re-checks the socket. This is NOT change-polling
 // (changes arrive push-style via NOTIFY); it is a reconnect watchdog that

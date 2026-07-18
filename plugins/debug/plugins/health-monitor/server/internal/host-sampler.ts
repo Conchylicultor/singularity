@@ -1,5 +1,5 @@
 import { freemem, loadavg, totalmem } from "node:os";
-import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import type { HostSample } from "../../shared/schema";
 import { parseVmStat, type VmStat } from "./vm-stat";
 import { detectWallJumpMs } from "./wall-jump";
@@ -11,7 +11,13 @@ import { detectWallJumpMs } from "./wall-jump";
 const SAMPLE_INTERVAL_MS = 10_000;
 
 let interval: ReturnType<typeof setInterval> | null = null;
-let channel: LogChannel | null = null;
+// Declared once at module eval (not in start): the sampler can be stopped and
+// restarted, and `defineLogSink` throws on a duplicate id. PERF sink.
+const channel = defineLogSink({
+  id: "health-host",
+  description:
+    "PERF sink: host-level health samples (load average, memory, swap) for the Debug → Health charts.",
+});
 // Wall-time of the previous tick: the true denominator for the vm_stat rate
 // deltas (a late tick divided by the nominal cadence would inflate the rates —
 // after a sleep, catastrophically so), and the wall-jump detection baseline.
@@ -84,12 +90,11 @@ async function tick(): Promise<void> {
     compressorMb,
     wallJumpMs,
   };
-  channel?.publish(JSON.stringify(sample));
+  channel.publish(JSON.stringify(sample));
 }
 
 export function startHostSampler(): void {
   if (interval) return;
-  channel = Log.channel("health-host", { persist: true });
   lastTickAt = Date.now();
   // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability sampler: host metrics tick; must stay profiler-invisible or it re-feeds the profiler it measures
   interval = setInterval(() => {

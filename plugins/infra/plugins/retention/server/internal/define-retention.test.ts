@@ -20,16 +20,16 @@ describe("defineRetention — coverage ⇔ mounted (G1 regression)", () => {
     defineRetention({ table: definedNotMounted, ttlDays: 7 });
     // The policy is defined but never mounted (register() not called) → the
     // registry must not list it. Recording at define time would be the G1 lie.
-    expect(getGrowthBounds().has("dr_defined_not_mounted")).toBe(false);
+    expect(getGrowthBounds().has("table:dr_defined_not_mounted")).toBe(false);
   });
 
   test("calling .register() records a {kind:'ttl'} bound", async () => {
     const job = defineRetention({ table: definedAndMounted, ttlDays: 7 });
-    expect(getGrowthBounds().has("dr_defined_and_mounted")).toBe(false);
+    expect(getGrowthBounds().has("table:dr_defined_and_mounted")).toBe(false);
 
     await job.register();
 
-    expect(getGrowthBounds().get("dr_defined_and_mounted")).toEqual({
+    expect(getGrowthBounds().get("table:dr_defined_and_mounted")).toEqual({
       kind: "ttl",
       ttlDays: 7,
     });

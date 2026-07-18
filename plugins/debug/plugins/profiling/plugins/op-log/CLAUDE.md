@@ -131,7 +131,7 @@ a `SyntaxError` is skipped, anything else rethrows.
 
 - Description: Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader (incl. read-only legacy adapters), and the single orphan reconciler.
 - Server:
-  - Uses: `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/file-sink.defineFileSink`, `infra/paths.SINGULARITY_DIR`
   - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `LEGACY_BUILD_FILE`, `LEGACY_PUSH_FILE`, `OP_LOG_FILE`, `readOpRecords`
 - Cross-plugin:
   - Imported by: `debug/profiling/ops`, `stats/pushes`

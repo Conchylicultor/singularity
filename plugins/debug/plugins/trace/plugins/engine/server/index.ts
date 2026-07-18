@@ -5,7 +5,7 @@ import { traceConfig } from "../core";
 import { listTraces, getTrace, testTrigger } from "../shared/endpoints";
 import { handleListTraces, handleGetTrace } from "./internal/handlers";
 import { handleTestTrigger } from "./internal/handle-test-trigger";
-import { traceCleanupJob } from "./internal/cleanup-job";
+import { traceRetention } from "./internal/retention";
 import { _traces } from "./internal/tables";
 
 // The generic perf-event trace registry + captureTrace entry point.
@@ -42,5 +42,5 @@ export default {
     [getTrace.route]: handleGetTrace,
     [testTrigger.route]: handleTestTrigger,
   },
-  register: [traceCleanupJob],
+  register: [traceRetention],
 } satisfies ServerPluginDefinition;

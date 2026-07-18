@@ -2,11 +2,15 @@ import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 
-const log = Log.channel("migrations", { persist: true });
+const log = defineLogSink({
+  id: "migrations",
+  description:
+    "DB migration runner ops log: DDL/data migrations applied in timestamp order on boot.",
+});
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 

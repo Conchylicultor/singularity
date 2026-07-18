@@ -2,13 +2,11 @@ import { sql as drizzleSql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { routeChange } from "@plugins/database/plugins/change-feed/server";
 import type { DbChange } from "@plugins/database/plugins/change-feed/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
-
-const log = Log.channel("live-state-snapshot", { persist: true });
+import { snapshotLog as log } from "./log-sink";
 
 // `db.execute<T>` constrains `T extends Record<string, unknown>`, so this carries
 // an index signature. The fields are the changelog columns the catch-up reads.

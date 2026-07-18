@@ -2,9 +2,22 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
 import { currentWorktreeName, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
-import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import {
+  defineLogSink,
+  type LogChannel,
+} from "@plugins/primitives/plugins/log-channels/server";
 import { pagingProbeConfig } from "../../core";
 import { PROBE_VARIANTS, type ProbeVariant } from "../../core/probe-logic";
+
+// The paging-probe child-stderr drain channel. Declared once at module eval
+// (`defineLogSink` throws on a duplicate id); the supervisor drains each child's
+// stderr into it. Config-gated OFF by default — the probe MEASUREMENTS go to the
+// paging-probe-<variant>.jsonl files, not this channel.
+const channel = defineLogSink({
+  id: "paging-probe",
+  description:
+    "Config-gated (OFF by default) twin-probe child stderr drain (paging-probe). The probe measurements go to paging-probe-<variant>.jsonl, not this channel.",
+});
 
 // Main-side supervisor for the twin probes: one child process per variant,
 // respawned with capped backoff and a rapid-failure give-up. Mirrors
@@ -155,7 +168,7 @@ function spawnChild(host: HostState, child: ChildState): void {
 export function startPagingProbes(): void {
   if (state) return;
   const host: HostState = {
-    channel: Log.channel("paging-probe", { persist: true }),
+    channel,
     children: PROBE_VARIANTS.map((variant) => ({
       variant,
       proc: null,

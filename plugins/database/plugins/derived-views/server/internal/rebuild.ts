@@ -8,10 +8,14 @@ import {
   DERIVED_VIEW_STATE_TABLE_NAME,
   type RegisteredView,
 } from "@plugins/database/plugins/derived-views/core";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { View } from "./contribution";
 
-const log = Log.channel("derived-views", { persist: true });
+const log = defineLogSink({
+  id: "derived-views",
+  description:
+    "Derived-views rebuild ops log: plain DB view drops/creates in dependency order on boot.",
+});
 
 // Rebuilds the entire plain-derived-view layer from source on every boot.
 //

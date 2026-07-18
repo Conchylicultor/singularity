@@ -57,7 +57,7 @@ waits for a 2nd case — measure first.
 
 - Description: Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
 - Server:
-  - Uses: `primitives/log-channels.Log`
+  - Uses: `primitives/log-channels.defineLogSink`
   - Exports: Values: `DerivedTable`, `feedExemptTables`, `rebuildDerivedTables`
 - Cross-plugin:
   - Imported by: `conversations/agents`, `database`, `database/change-feed`, `tasks/tasks-core`

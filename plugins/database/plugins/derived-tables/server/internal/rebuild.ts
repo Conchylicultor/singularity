@@ -1,9 +1,13 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { DerivedTable } from "./contribution";
 
-const log = Log.channel("derived-tables", { persist: true });
+const log = defineLogSink({
+  id: "derived-tables",
+  description:
+    "Derived-tables rebuild ops log: materialized rollup (hand-rolled IVM) rebuilds on boot.",
+});
 
 // Rebuilds the entire trigger-maintained materialized-rollup layer from source.
 //

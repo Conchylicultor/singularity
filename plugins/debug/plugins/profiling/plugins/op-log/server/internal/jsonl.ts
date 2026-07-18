@@ -1,5 +1,6 @@
-import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { defineFileSink } from "@plugins/infra/plugins/file-sink/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 /** The new unified log. Append-only; every op kind writes here. */
@@ -44,8 +45,20 @@ export function readJsonlLines<T>(file: string): T[] {
   return records;
 }
 
-/** Append one record to the op log, creating `~/.singularity` if needed. */
-export function appendJsonl(file: string, record: unknown): void {
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
-  appendFileSync(file, JSON.stringify(record) + "\n");
+// The op log is the ONE writable durable artifact here — the two legacy files
+// are read-only history. It is declared as a bounded file sink so it is
+// enumerable in `getFileSinks()` and rotates at the 128 MB × 3 cap instead of
+// growing without bound (the durable-sink invariant — see infra/file-sink).
+// `append` IS the rotation, and the sink creates `~/.singularity` and appends the
+// trailing newline itself.
+const opLogSink = defineFileSink({
+  id: "op-log",
+  description:
+    "Unified op log: one record per host-contending op (build / push / check) — the requested/granted/completed phases with their per-resource wait lists. Read by the Debug → Profiling op Gantt and stats/pushes.",
+  path: OP_LOG_FILE,
+});
+
+/** Append one record to the op log through its bounded sink. */
+export function appendOpLog(record: unknown): void {
+  opLogSink.append(JSON.stringify(record));
 }

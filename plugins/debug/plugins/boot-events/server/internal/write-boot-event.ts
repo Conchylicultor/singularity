@@ -1,4 +1,4 @@
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { BootLine } from "./schema";
@@ -12,12 +12,18 @@ import type { BootLine } from "./schema";
 //
 // A log-channel line, not a DB table: no migration, survives DB re-forks, and
 // stays readable from the main backend's disk scan even while this backend is
-// wedged. Bounding: log-channels' appendEntry already rotates every channel
-// file at a 128 MB cap — at two ~140-byte lines per boot that is effectively
-// unbounded history, so no custom rotation here.
+// wedged. Bounding: the file sink already rotates every channel file at a
+// 128 MB cap — at two ~140-byte lines per boot that is effectively unbounded
+// history, so no custom rotation here.
+
+const channel = defineLogSink({
+  id: "boot",
+  description:
+    "Per-boot start/ready lines (boot-events): a start line at the register phase and a ready line at onReady, so a wedged-mid-boot backend is visible on cross-worktree timelines.",
+});
 
 function publish(line: BootLine): void {
-  Log.channel("boot", { persist: true }).publish(JSON.stringify(line));
+  channel.publish(JSON.stringify(line));
 }
 
 // The register phase is documented "no I/O" — this token is the deliberate,

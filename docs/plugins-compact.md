@@ -273,6 +273,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`scroll-reveal-safety`** — scroll-reveal-safety lint rule: no-adhoc-scroll-into-view
+            - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
@@ -308,6 +309,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`entity-extensions`** [load-bearing] — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
+    - **`file-sink`** — Bounded-append file sink primitive: defineFileSink declares an absolute-path sink that rotates at a byte cap (default 128 MB × 3), true by construction because append() IS the rotation. Node-only (no db/jobs) so a CLI process can import it. getFileSinks exposes the registered set; openDynamicSink covers the open-ended browser clientLog family under one declared bound.
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
     - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
     - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.

@@ -5,7 +5,7 @@ import {
   refreshDuress,
   setDuress,
 } from "@plugins/infra/plugins/duress/plugins/latch/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   DURESS_EPISODES_CHANNEL,
   type ClusterSample,
@@ -67,7 +67,14 @@ let syntheticSample: ClusterSample | null = null;
 // The worker is the sole writer of the duress-episodes channel file (single
 // writer per channel file); the sentinel is main-only, so the lines land on
 // main's log dir. Lazy: created on first transition, not at module eval.
-let episodesChannel: ReturnType<typeof Log.channel> | null = null;
+// The worker is the sole writer of the durable duress-episodes channel. Declared
+// once at module eval (`defineLogSink` throws on a duplicate id); import-safe
+// because the file sink is built lazily on first publish.
+const episodesChannel = defineLogSink({
+  id: DURESS_EPISODES_CHANNEL,
+  description:
+    "Sentinel duress trip/clear lines (one per episode transition). Each episode files the duress-episode report and renders as a timeline duress band.",
+});
 
 function emit(frame: WorkerToMainFrame): void {
   self.postMessage(frame);
@@ -82,7 +89,6 @@ function writeEpisodeLine(
   reason: string,
   episodeSetAt: number,
 ): void {
-  episodesChannel ??= Log.channel(DURESS_EPISODES_CHANNEL, { persist: true });
   const event: DuressEpisodeEvent = {
     atMs: Date.now(),
     kind,

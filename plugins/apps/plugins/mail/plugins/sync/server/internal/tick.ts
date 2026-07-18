@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { isGmailEnabled } from "@plugins/integrations/plugins/gmail/server";
 import {
   _mailAccounts,
@@ -11,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { ensureAccount } from "./bootstrap";
 import { deltaJob } from "./delta";
 import { recordSyncError } from "./record-error";
+import { mailSyncLog } from "./sink";
 
 // Steady-state driver: the documented no-polling exception. Gmail push
 // (users.watch → Pub/Sub) needs a public inbound HTTPS endpoint that a
@@ -47,8 +47,7 @@ export const syncTickJob = defineJob({
       try {
         await ensureAccount();
       } catch (err) {
-        Log.emit(
-          "mail-sync",
+        mailSyncLog.publish(
           `first-connect bootstrap failed: ${err instanceof Error ? err.message : String(err)}`,
           "stderr",
         );
