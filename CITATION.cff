@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: Singularity
+message: >-
+  If you use this software, please cite it using the metadata from this file.
+type: software
+authors:
+  - given-names: Etienne
+    family-names: Pot
+    email: etiennefg.pot@gmail.com
+    orcid: 'https://orcid.org/0009-0003-1982-6611'
+repository-code: 'https://github.com/Conchylicultor/singularity'
+license: Apache-2.0

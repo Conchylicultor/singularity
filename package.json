@@ -1,6 +1,7 @@
 {
   "name": "singularity",
   "private": true,
+  "license": "Apache-2.0",
   "workspaces": ["plugins/**"],
   "scripts": {
     "playwright": "playwright",
