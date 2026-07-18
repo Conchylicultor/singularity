@@ -1,5 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
@@ -37,25 +36,6 @@ export function isCanonicalWorktreePath(path: string, repoRoot: string): boolean
   return dirname(path) === join(repoRoot, ".claude", "worktrees");
 }
 
-// Seed the worktree's incremental TypeScript caches from main so the first
-// build type-checks only its own diff instead of the whole tree. One file per
-// tsc target; `.tsbuildinfo` embeds absolute source paths, so rewrite the
-// embedded absolute paths to the worktree root. A version/options mismatch just
-// makes tsc fall back to a full check — best-effort, never wrong.
-async function copyTsBuildInfoToWorktree(repoRoot: string, wtPath: string): Promise<void> {
-  const sourceDir = join(repoRoot, ".cache", "tsbuildinfo");
-  if (!existsSync(sourceDir)) return;
-
-  const destDir = join(wtPath, ".cache", "tsbuildinfo");
-  await mkdir(destDir, { recursive: true });
-  for (const entry of readdirSync(sourceDir)) {
-    if (!entry.endsWith(".tsbuildinfo")) continue;
-    const raw = await Bun.file(join(sourceDir, entry)).text();
-    const rewritten = raw.split(repoRoot).join(wtPath);
-    await Bun.write(join(destDir, entry), rewritten);
-  }
-}
-
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   // Idempotent: an already-present worktree dir means the checkout already
   // landed, so a durable-job retry (or a caller reusing an existing worktree) is
@@ -66,8 +46,8 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
   const branch = `claude-web/${id}`;
   // Gate ONLY the heavy checkout subprocess host-wide (the 77 MB / 8385-file disk
-  // offender). The idempotent existsSync early-return, tsbuildinfo copy, and `mise
-  // trust` stay outside the gate — they are cheap and must not hold a slot.
+  // offender). The idempotent existsSync early-return and `mise trust` stay
+  // outside the gate — they are cheap and must not hold a slot.
   await withWorktreeMutateSlot(async () => {
     // Demoted (darwinbg): the checkout runs in the deferred spawn job — always
     // background work relative to the interactive backends.
@@ -90,10 +70,6 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
       );
     }
   });
-  try {
-    await copyTsBuildInfoToWorktree(repoRoot, wtPath);
-  // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch {}
   // Trust the mise config so agents can run build commands without hitting
   // "config file is not trusted" errors. No-op if mise is not installed.
   try {

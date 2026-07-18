@@ -22,6 +22,8 @@ import ts from "typescript";
 import {
   discoverTscTargets,
   tsBuildInfoPath,
+  materializeWarmBase,
+  publishWarmBase,
   currentScanView,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -246,6 +248,13 @@ const check: Check = {
     const crashes: { name: string; error: string }[] = [];
     const demote = await workerDemotion();
 
+    // Warm any target that has NO local base yet from the host-global pool.
+    // That is the fresh-worktree case, which used to be seeded from main's
+    // `.cache/tsbuildinfo` — and main's copy goes stale precisely because its
+    // auto-build keeps hitting the check-result cache, so the check never runs
+    // and never rewrites it. A target that already has a local base keeps it.
+    for (const t of targets) materializeWarmBase(root, t.name);
+
     // Fan out at exactly `grant.units` concurrency, spending one unit per worker
     // via `grant.run`. A reduced grant (`units < targets.length`) simply runs the
     // fleet at lower concurrency — surfaced as ONE observation line through the
@@ -282,6 +291,14 @@ const check: Check = {
       const line = maxRssLine(`type-check worker ${t.name}`, byName.get(t.name)?.maxRssBytes);
       if (line !== null) ctx.log?.(line, "stderr");
     }
+
+    // Publish each worker's buildinfo as a warm base for whoever runs next.
+    // Publish even when the check FAILED with diagnostics: the buildinfo records
+    // program STATE, which is valid regardless of the verdict — a run that found
+    // type errors is still a perfectly good incremental base. `results` holds
+    // only workers that returned, so a target in `crashes[]` is already excluded
+    // here, which is what we want: a crashed worker may have left torn state.
+    for (const r of results) publishWarmBase(root, r.name);
 
     // Record per-file lint PASSes for every file we sent that did NOT fail.
     // (Conservative: a crashed worker records nothing — re-lints next time.)

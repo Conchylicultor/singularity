@@ -354,10 +354,20 @@ export async function ensureVendorSet(opts: {
   return meta;
 }
 
-/** Prune aged vendor sets (same policy as the artifact store). */
+// Pruning bounds — same policy as the artifact store (age, then count). A vendor
+// set is one esbuild split build of every external package, so it is BIG (~48 MB
+// measured) while the live population is tiny (13 sets in 14 days). Age is the
+// evictor that matters; the count is a disk backstop sized well clear of the
+// working set, bounding the dir at ~2.3 GB worst case.
+const VENDORS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const VENDORS_MAX_ENTRIES = 48;
+const VENDORS_TRIM_TO = 32;
+
+/** Prune aged vendor sets, then cap total count (same policy as the artifact store). */
 export function pruneVendorSets(): void {
   if (!existsSync(VENDORS_ROOT)) return;
   const now = Date.now();
+  const live: { path: string; mtimeMs: number }[] = [];
   for (const name of readdirSync(VENDORS_ROOT)) {
     const p = join(VENDORS_ROOT, name);
     let mtimeMs: number;
@@ -367,7 +377,18 @@ export function pruneVendorSets(): void {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue;
     }
-    const maxAge = name.startsWith(".tmp.") ? 60 * 60 * 1000 : 14 * 24 * 60 * 60 * 1000;
-    if (now - mtimeMs > maxAge) rmSync(p, { recursive: true, force: true });
+    // Leftover temp dirs from crashed builds age out at 1h regardless.
+    const maxAge = name.startsWith(".tmp.") ? 60 * 60 * 1000 : VENDORS_MAX_AGE_MS;
+    if (now - mtimeMs > maxAge) {
+      rmSync(p, { recursive: true, force: true });
+    } else if (!name.startsWith(".tmp.")) {
+      live.push({ path: p, mtimeMs });
+    }
+  }
+  if (live.length > VENDORS_MAX_ENTRIES) {
+    live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
+    for (const { path } of live.slice(0, live.length - VENDORS_TRIM_TO)) {
+      rmSync(path, { recursive: true, force: true });
+    }
   }
 }

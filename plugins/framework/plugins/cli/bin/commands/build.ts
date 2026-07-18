@@ -19,7 +19,7 @@ import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/rout
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath, materializeWarmBase, publishWarmBase, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { listDatabases, forkTempPrefix } from "@plugins/database/plugins/admin/server";
 import {
@@ -1189,6 +1189,10 @@ export function registerBuild(program: Command) {
                 // Identical flags to the `typescript` check so both share one
                 // `.tsbuildinfo` per target without options-hash churn.
                 const buildInfo = tsBuildInfoPath(root, target.name);
+                // Feed and read the same host-global warm-base pool the
+                // `type-check` check uses, so the fast path is not a second,
+                // divergent incremental lineage.
+                materializeWarmBase(root, target.name);
                 // Spend a grant unit per runtime tsc — a heavy child like a
                 // type-check worker — so the fast-path (--skip-checks) fan-out
                 // is bounded by the same grant as everything else.
@@ -1199,6 +1203,11 @@ export function registerBuild(program: Command) {
                   ),
                 );
                 end({ maxRssBytes: output.maxRssBytes });
+                // Only a clean exit is a trustworthy base here: unlike the
+                // check's workers, a nonzero tsc exit covers crashes and bad
+                // invocations as well as plain diagnostics, so we cannot tell a
+                // valid program state from a torn one.
+                if (output.exitCode === 0) publishWarmBase(root, target.name);
                 const rss = maxRssLine(`tsc ${target.name}`, output.maxRssBytes);
                 if (rss) output.lines.push({ text: rss, stream: "stdout" });
                 return {

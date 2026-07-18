@@ -18,9 +18,21 @@ import type { ReadSet } from "./read-set";
 const CACHE_DIR = join(SINGULARITY_DIR, "check-cache");
 
 // Pruning bounds — keep the dir from growing unbounded across weeks of trees.
+// AGE is the intended evictor; the count is only a disk backstop, so it must sit
+// far above a busy day's working set. The previous 5000/4000 did not: the dir was
+// measured at 4682 live entries, i.e. one busy day of agent worktrees was already
+// pressing the cap, and a trim to 4000 evicts entries recorded hours earlier —
+// which is exactly what makes the cross-day (and cross-worktree) reuse this cache
+// exists for impossible. 4× headroom at ~4.5 KB/entry bounds the dir at ~90 MB.
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-const MAX_ENTRIES = 5000;
-const TRIM_TO = 4000;
+const MAX_ENTRIES = 20000;
+const TRIM_TO = 16000;
+// How often the age sweep is allowed to run. `prune()` is called eagerly on every
+// open, and its per-entry `statSync` pass dominates the cost (~95%; the readdir
+// itself is a rounding error). Against a 14-day age bound an hourly sweep is
+// plenty, so the common path stops after the readdir. See `prune()`.
+const PRUNE_INTERVAL_MS = 60 * 60 * 1000;
+const MARKER_FILE = ".last-prune";
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -95,13 +107,33 @@ export function openCheckCache(): CheckCache {
   };
 }
 
+// True iff the age sweep is due (marker absent or older than the interval). The
+// marker is `.last-prune`, which does not end in `.json` and so is never itself
+// listed as an entry.
+function ageSweepDue(now: number): boolean {
+  try {
+    return now - statSync(join(CACHE_DIR, MARKER_FILE)).mtimeMs > PRUNE_INTERVAL_MS;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return true; // never swept
+  }
+}
+
 // Opportunistic pruning: age-out stale entries, then cap total count. Cheap
 // stat-based pass; tolerates the readdir/stat race (a concurrent writer may
 // delete an entry between listing and stat). Both legacy `.json` slots and the
 // input-keyed `.readset.json` slots end in `.json`, so one sweep ages/caps both.
+//
+// The readdir is cheap but the per-entry stat pass is not, so the sweep runs only
+// when it can actually do something: either the count backstop is genuinely
+// breached (checked straight off the readdir, so it still triggers the instant it
+// must) or the hourly age sweep is due. Both bounds are preserved exactly; only
+// the cadence of the age sweep changes.
 function prune(): void {
   const names = readdirSync(CACHE_DIR).filter((n) => n.endsWith(".json"));
   const now = Date.now();
+  if (names.length <= MAX_ENTRIES && !ageSweepDue(now)) return;
+  writeFileSync(join(CACHE_DIR, MARKER_FILE), "");
   const live: { path: string; mtimeMs: number }[] = [];
   for (const name of names) {
     const path = join(CACHE_DIR, name);

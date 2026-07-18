@@ -69,8 +69,9 @@ export function discoverTscTargets(root: string): TscTarget[] {
 
 // Stable per-target `.tsbuildinfo` location for incremental type-checking.
 // Lives under `.cache/` (gitignored) — OUTSIDE `node_modules`, so it survives
-// the `bun install` that every build runs — and is seeded from main into fresh
-// worktrees by `setupWorktree` so the first build type-checks only its own diff.
+// the `bun install` that every build runs. Warmed before each run from the
+// host-global pool in `./warm-base.ts`, so a fresh worktree's first check
+// starts from whatever any worktree checked most recently.
 export function tsBuildInfoPath(root: string, targetName: string): string {
   return join(root, ".cache", "tsbuildinfo", `${targetName}.tsbuildinfo`);
 }

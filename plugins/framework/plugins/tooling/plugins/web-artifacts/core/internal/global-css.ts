@@ -281,10 +281,19 @@ export async function ensureGlobalCss(opts: {
   }
 }
 
-/** Prune aged css cache entries (same policy as the vendor sets). */
+// Pruning bounds — same policy as the vendor sets (age, then count). An entry is
+// one built stylesheet plus its font assets (~0.6 MB measured, 134 live in 14
+// days). Age is the evictor that matters; the count is a disk backstop sized 4×
+// clear of the working set, bounding the dir at ~360 MB worst case.
+const CSS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const CSS_MAX_ENTRIES = 600;
+const CSS_TRIM_TO = 450;
+
+/** Prune aged css cache entries, then cap total count (same policy as the vendor sets). */
 export function pruneGlobalCssCache(): void {
   if (!existsSync(CSS_ROOT)) return;
   const now = Date.now();
+  const live: { path: string; mtimeMs: number }[] = [];
   for (const name of readdirSync(CSS_ROOT)) {
     const p = join(CSS_ROOT, name);
     let mtimeMs: number;
@@ -294,7 +303,18 @@ export function pruneGlobalCssCache(): void {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue;
     }
-    const maxAge = name.startsWith(".tmp.") ? 60 * 60 * 1000 : 14 * 24 * 60 * 60 * 1000;
-    if (now - mtimeMs > maxAge) rmSync(p, { recursive: true, force: true });
+    // Leftover temp dirs from crashed builds age out at 1h regardless.
+    const maxAge = name.startsWith(".tmp.") ? 60 * 60 * 1000 : CSS_MAX_AGE_MS;
+    if (now - mtimeMs > maxAge) {
+      rmSync(p, { recursive: true, force: true });
+    } else if (!name.startsWith(".tmp.")) {
+      live.push({ path: p, mtimeMs });
+    }
+  }
+  if (live.length > CSS_MAX_ENTRIES) {
+    live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
+    for (const { path } of live.slice(0, live.length - CSS_TRIM_TO)) {
+      rmSync(path, { recursive: true, force: true });
+    }
   }
 }
