@@ -95,7 +95,7 @@ export default createRule({
         "ALERT, use recordReport() (@plugins/reports/server). If it is a genuine " +
         "durable log or artifact, declare it with defineLogSink() " +
         "(@plugins/primitives/plugins/log-channels/server) or defineFileSink() " +
-        "(@plugins/infra/plugins/file-sink/server) — both register a rotate bound " +
+        "(@plugins/infra/plugins/file-sink/core) — both register a rotate bound " +
         "so the sink is enumerable in getFileSinks(). Whole-file writes " +
         "(writeFileSync/Bun.write) are fine; appends are not. Type-only imports are allowed.",
     },

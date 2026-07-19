@@ -1,6 +1,11 @@
 import { appendFileSync, mkdirSync, renameSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { FileSink, FileSinkSpec, RotateBound } from "@plugins/infra/plugins/file-sink/core";
+// Relative sibling import, not the `@plugins/infra/plugins/file-sink/core` alias:
+// this file now lives INSIDE that barrel's plugin, so the alias form would cycle
+// back through the barrel that re-exports it.
+import type { FileSink, FileSinkSpec, RotateBound } from "./types";
+import type { JsonlTailResult, TailOptions, TailResult } from "./read";
+import { readJsonlTail, readTail } from "./read";
 
 // The bounded-append / rotation primitive, extracted from
 // log-channels/server/internal/persist.ts. Node-only: `node:fs` + `node:path`,
@@ -101,6 +106,15 @@ function makeSink(id: string, path: string, maxBytes: number, keep: number): Fil
     bound,
     append(line: string): void {
       appendLine(path, line, maxBytes, keep);
+    },
+    // The read budget is deliberately NOT derived from `maxBytes`: a default sink
+    // is 128 MB × 3, so `bound`-derived defaults would mean a 512 MB read. The
+    // reader carries its own 8 MB default; a caller that wants more says so.
+    readTail(opts?: TailOptions): TailResult {
+      return readTail(path, opts);
+    },
+    readJsonlTail<T>(opts?: TailOptions): JsonlTailResult<T> {
+      return readJsonlTail<T>(path, opts);
     },
   };
 }

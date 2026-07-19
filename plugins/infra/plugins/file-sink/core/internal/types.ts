@@ -1,6 +1,9 @@
-// The shared shape of a bounded-append file sink. Web-safe (no node:fs), so the
-// types can be named from either runtime; the impl (which touches node:fs) lives
-// in server/.
+// The shared shape of a bounded-append file sink.
+//
+// `core/` here means RUNTIME-NEUTRAL NODE, not web-safe: the impl next door owns
+// `node:fs`. This plugin must never be imported from `web/`.
+
+import type { JsonlTailResult, TailOptions, TailResult } from "./read";
 
 /** Declaration of a file sink. `path` is an ABSOLUTE live-file path the caller owns. */
 export interface FileSinkSpec {
@@ -34,4 +37,13 @@ export interface FileSink {
   path: string;
   bound: RotateBound;
   append(line: string): void;
+  /**
+   * Bounded tail read of this sink's own file — the read counterpart of `append`.
+   * Binding it to the sink removes the chance of reading a sink from the wrong
+   * path. Same semantics as the free `readTail(path, opts)`; the read budget comes
+   * from `opts` (8 MB default), NOT from `bound.maxBytes`.
+   */
+  readTail(opts?: TailOptions): TailResult;
+  /** `readTail` with each line tolerantly `JSON.parse`d into a `T`. */
+  readJsonlTail<T>(opts?: TailOptions): JsonlTailResult<T>;
 }

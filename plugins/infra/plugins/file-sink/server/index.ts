@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { defineFileSink, getFileSinks, openDynamicSink } from "./internal/file-sink";
+// The impl lives in `core/` (reachable from every runtime, incl. the CLI check
+// runner). This barrel is the plugin's server-runtime presence ONLY — it carries
+// no re-exports; import the symbols from `@plugins/infra/plugins/file-sink/core`.
 
 export default {
   description:

@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { WORKTREES_DIR } from "@plugins/infra/plugins/paths/server";
-import { logsDirFor, readChannelJson, sanitizeChannel } from "./persist";
+import { logsDirFor, readChannelJson } from "./persist";
 
 // Hermetic: a throwaway worktree name under the real SINGULARITY_DIR (mirrors
 // host-semaphore's test precedent), removed in afterEach. The WRITE/rotation

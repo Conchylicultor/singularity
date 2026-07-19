@@ -2905,7 +2905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBuildProfiling`
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader (incl. read-only legacy adapters), and the single orphan reconciler.
           - Server:
-            - Uses: `infra/file-sink.defineFileSink`, `infra/paths.SINGULARITY_DIR`
+            - Uses: `infra/paths.SINGULARITY_DIR`
             - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `LEGACY_BUILD_FILE`, `LEGACY_PUSH_FILE`, `OP_LOG_FILE`, `readOpRecords`
           - Cross-plugin:
             - Imported by: `debug/profiling/ops`, `stats/pushes`
@@ -3816,8 +3816,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Loose top-level files: `boundary-config.ts`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
-            - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-            - Exports: Types: `CandidateSource`, `CheckCache`, `CodeMatch`, `DirFact`, `FileFact`, `FileSystemView`, `GlobFact`, `ImportMatch`, `ListCandidateSourcesOptions`, `QueryFact`, `ReadSet`, `RunChecksOptions`, `TreeSnapshot`, `TscTarget`, `ValidateOptions`, `ValidateResult`; Values: `checkCollectedDir`, `computeCheckSourceHash`, `computeTreeHash`, `currentScanView`, `discoverTscTargets`, `fingerprint`, `gitGrepList`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `loadTreeSnapshot`, `markBuildInProgress`, `materializeWarmBase`, `openCheckCache`, `publishWarmBase`, `runChecks`, `scopeOf`, `tsBuildInfoPath`, `validate`
+            - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/file-sink.defineFileSink`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
+            - Exports: Types: `CandidateSource`, `CheckCache`, `CheckRunProgress`, `CodeMatch`, `DirFact`, `FileFact`, `FileSystemView`, `GlobFact`, `ImportMatch`, `ListCandidateSourcesOptions`, `OutstandingCheck`, `ProgressRecord`, `QueryFact`, `ReadSet`, `RunChecksOptions`, `TreeSnapshot`, `TscTarget`, `ValidateOptions`, `ValidateResult`; Values: `checkCollectedDir`, `computeCheckSourceHash`, `computeTreeHash`, `currentScanView`, `discoverTscTargets`, `fingerprint`, `gitGrepList`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `loadTreeSnapshot`, `markBuildInProgress`, `materializeWarmBase`, `openCheckCache`, `publishWarmBase`, `readCheckProgress`, `runChecks`, `scopeOf`, `tsBuildInfoPath`, `validate`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`apps-paths-from-app-ref`**
@@ -4119,11 +4119,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
     - **`file-sink`** — Bounded-append file sink primitive: defineFileSink declares an absolute-path sink that rotates at a byte cap (default 128 MB × 3), true by construction because append() IS the rotation. Node-only (no db/jobs) so a CLI process can import it. getFileSinks exposes the registered set; openDynamicSink covers the open-ended browser clientLog family under one declared bound.
       - Cross-plugin:
-        - Imported by: `debug/profiling/op-log`, `infra/retention`, `primitives/log-channels`
-      - Server:
-        - Exports: Values: `defineFileSink`, `getFileSinks`, `openDynamicSink`
+        - Imported by: `framework/tooling/checks`
       - Core:
-        - Exports: Types: `FileSink`, `FileSinkSpec`, `RotateBound`
+        - Exports: Types: `FileSink`, `FileSinkSpec`, `JsonlTailResult`, `RotateBound`, `TailOptions`, `TailResult`; Values: `defineFileSink`, `getFileSinks`, `openDynamicSink`, `readJsonlTail`, `readTail`, `sanitizeChannel`
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/code`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/corpus-index`, `infra/git-watcher`, `plugin-meta/plugin-tree`
@@ -4225,7 +4223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/browser/bookmarks`, `apps/mail/reading-pane`, `apps/pages/starred`, `apps/story/generation`, `build`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversations-view/queue`, `plugin-meta/plugin-health`, `shell/notifications`, `tasks/auto-start`, `tasks/tasks-core`
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
-        - Uses: `database.db`, `infra/file-sink.getFileSinks`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
+        - Uses: `database.db`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
         - Exports: Types: `GrowthBound`, `RetentionJob`, `RetentionSpec`, `SinkKey`; Values: `defineRetention`, `getGrowthBounds`, `markCascadeBounded`
       - Cross-plugin:
         - Imported by: `debug/boot-profile`, `debug/slow-ops`, `debug/trace/engine`, `history/engine`, `infra/trash`, `reports`
@@ -5541,7 +5539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
         - Exports: Values: `clientLog`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/file-sink.defineFileSink`, `infra/file-sink.openDynamicSink`, `infra/paths.worktreeDataDir`
+        - Uses: `infra/endpoints.implement`, `infra/paths.worktreeDataDir`
         - Exports: Types: `LogChannel`, `LogStream`; Values: `defineLogSink`, `listChannels`, `Log`, `logsDirFor`, `readChannelEntries`, `readChannelJson`
         - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
       - Core:

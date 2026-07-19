@@ -1,6 +1,7 @@
 import { closeSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
 import { join } from "node:path";
 import type { ZodType } from "zod";
+import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import type { LogStream } from "./registry";
 
@@ -8,15 +9,6 @@ import type { LogStream } from "./registry";
 // now lives in `@plugins/infra/plugins/file-sink` — durable channels back
 // themselves with a `defineFileSink` (see `log.ts` / `client-ingress.ts`), which
 // owns the bounded-append + rotation the agent reads back here with `tail`/`cat`.
-
-// Replace any char outside [A-Za-z0-9_-] with "_" so a browser-supplied channel
-// id can never escape the logs dir (path-traversal guard). Security-load-bearing.
-// file-sink has its own copy for `openDynamicSink`; it does NOT export one, so the
-// read path (and `defineLogSink`'s path derivation) keep this local copy — the two
-// must agree on the on-disk filename, which they do (same regex).
-export function sanitizeChannel(channel: string): string {
-  return channel.replace(/[^A-Za-z0-9_-]/g, "_");
-}
 
 export function logsDirFor(worktree: string): string {
   return join(worktreeDataDir(worktree), "logs");

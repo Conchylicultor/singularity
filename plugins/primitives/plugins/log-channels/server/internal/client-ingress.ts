@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { defineFileSink, openDynamicSink } from "@plugins/infra/plugins/file-sink/server";
+import { defineFileSink, openDynamicSink } from "@plugins/infra/plugins/file-sink/core";
 import { getOrCreateChannel } from "./registry";
 import type { LogStream } from "./registry";
 import { logsDir } from "./persist";

@@ -73,7 +73,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
   - Exports: Values: `clientLog`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/file-sink.defineFileSink`, `infra/file-sink.openDynamicSink`, `infra/paths.worktreeDataDir`
+  - Uses: `infra/endpoints.implement`, `infra/paths.worktreeDataDir`
   - Exports: Types: `LogChannel`, `LogStream`; Values: `defineLogSink`, `listChannels`, `Log`, `logsDirFor`, `readChannelEntries`, `readChannelJson`
   - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
 - Core:

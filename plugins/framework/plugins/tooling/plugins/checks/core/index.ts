@@ -7,6 +7,8 @@ export { materializeWarmBase, publishWarmBase } from "./warm-base";
 export { computeTreeHash } from "./tree-hash";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
+export { readCheckProgress } from "./progress-log";
+export type { CheckRunProgress, OutstandingCheck, ProgressRecord } from "./progress-log";
 export { loadTreeSnapshot, validate, fingerprint, computeCheckSourceHash } from "./read-set";
 export type {
   TreeSnapshot,

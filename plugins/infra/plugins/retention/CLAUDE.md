@@ -20,7 +20,7 @@ without colliding.
   row reclaims the children), then records a `{kind:"cascade", owner}` bound. If
   the cascade does not exist it **throws at boot**.
 - **`rotate` (files)** — a file sink's own `bound` (`{kind:"rotate",maxBytes,keep}`
-  from `@plugins/infra/plugins/file-sink/server`). It is NOT declared here at all:
+  from `@plugins/infra/plugins/file-sink/core`). It is NOT declared here at all:
   `append()` IS the rotation (see `../file-sink/CLAUDE.md`), so a *registered* sink
   is a *rotated* (bounded) sink — true by construction exactly like the other two.
   `getGrowthBounds` MERGES these in from `getFileSinks()` on read rather than
@@ -133,7 +133,7 @@ check would have been a patch on a footgun.
 
 - Description: Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
 - Server:
-  - Uses: `database.db`, `infra/file-sink.getFileSinks`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
+  - Uses: `database.db`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
   - Exports: Types: `GrowthBound`, `RetentionJob`, `RetentionSpec`, `SinkKey`; Values: `defineRetention`, `getGrowthBounds`, `markCascadeBounded`
 - Cross-plugin:
   - Imported by: `debug/boot-profile`, `debug/slow-ops`, `debug/trace/engine`, `history/engine`, `infra/trash`, `reports`

@@ -1,8 +1,11 @@
 import { join } from "node:path";
-import { defineFileSink } from "@plugins/infra/plugins/file-sink/server";
+import {
+  defineFileSink,
+  sanitizeChannel,
+} from "@plugins/infra/plugins/file-sink/core";
 import { createChannel } from "./registry";
 import type { LogChannel, LogStream } from "./registry";
-import { logsDir, sanitizeChannel } from "./persist";
+import { logsDir } from "./persist";
 
 export type { LogChannel, LogStream };
 

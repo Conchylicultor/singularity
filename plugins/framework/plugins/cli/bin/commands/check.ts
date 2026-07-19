@@ -5,7 +5,7 @@ import { withHostGrant, inheritedGrant } from "@plugins/infra/plugins/host-admis
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
 import { publishLane } from "../lane";
-import { listAllChecks, runChecks, scopeOf, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { listAllChecks, readCheckProgress, runChecks, scopeOf, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { CHECK_SCOPES, type CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
@@ -34,12 +34,68 @@ async function getWorktreeIdentity(): Promise<{ slug: string; branch: string }> 
   return { slug: basename(root), branch };
 }
 
+/**
+ * Render the durable check-progress log: every run that never wrote its `done`
+ * record, newest first, with the checks that started and never settled.
+ *
+ * This is the whole point of the progress log — a hung run prints NOTHING to
+ * its own console (the runner's print loop only reaches stdout after
+ * `Promise.all` resolves), so the only way to name the culprit is to read the
+ * records from outside the wedged process.
+ */
+function printProgress(): void {
+  const runs = readCheckProgress();
+  const open = runs.filter((r) => r.done === null);
+  if (open.length === 0) {
+    const newest = runs[0];
+    console.log(
+      newest
+        ? `No check run in flight. Last run finished ${newest.done?.at} (${newest.worktree}, ${newest.endedCount} checks, ${newest.done?.allOk ? "all ok" : "FAILED"}).`
+        : "No check runs recorded yet.",
+    );
+    return;
+  }
+  for (const run of open) {
+    console.log(
+      `run ${run.runId} — ${run.worktree} (pid ${run.pid}, scope ${run.scope ?? "all"})\n` +
+        `  started ${run.startedAt}, last activity ${run.lastActivityAt}`,
+    );
+    // A run with no `selected` record yet never got past bootstrap — it has zero
+    // outstanding CHECKS, which without this branch would print as a healthy
+    // "0/0 settled" and say nothing about the git spawn it is actually stuck in.
+    // Report the phase instead; that is the whole reason bootstrap is
+    // instrumented at all.
+    if (run.selected === null) {
+      const phases = [...run.outstandingBootstrap].sort((a, b) => b.elapsedMs - a.elapsedMs);
+      console.log(
+        phases.length > 0
+          ? `  in bootstrap: ${phases.map((p) => `${p.checkId} (${Math.round(p.elapsedMs / 1000)}s)`).join(", ")}`
+          : "  in bootstrap: between phases (no phase outstanding)",
+      );
+      continue;
+    }
+    console.log(
+      `  ${run.endedCount}/${run.selected.length} settled, ${run.outstanding.length} outstanding`,
+    );
+    // Longest-running first: under a hang that is the suspect, by construction.
+    for (const o of [...run.outstanding].sort((a, b) => b.elapsedMs - a.elapsedMs)) {
+      console.log(`    • ${o.checkId} — running ${Math.round(o.elapsedMs / 1000)}s (since ${o.startedAt})`);
+    }
+  }
+}
+
 export function registerCheck(program: Command) {
   program
     .command("check")
     .description("Run repo validation checks")
     .argument("[checks...]", "Check IDs to run (default: all)")
     .option("--list", "List available checks and exit")
+    .option(
+      "--status",
+      "Print in-flight check runs from the durable progress log and exit. A pure read: " +
+        "acquires no host grant and runs no check, so it answers from a second shell while " +
+        "a run is wedged — naming the check(s) that started and never settled.",
+    )
     .option("--no-cache", "Bypass the tree-hash check-result cache")
     .option(
       "--scope <scope>",
@@ -48,7 +104,7 @@ export function registerCheck(program: Command) {
         "`deploy` = it verifies the local gitignored dist/artifact store `build` produces. " +
         "`--scope tree` reproduces the pass `./singularity push` runs.",
     )
-    .action(async (checks: string[], opts: { list?: boolean; cache?: boolean; scope?: string }) => {
+    .action(async (checks: string[], opts: { list?: boolean; status?: boolean; cache?: boolean; scope?: string }) => {
       // Validate before anything else: an unrecognized scope must NOT fall
       // through to `scope: undefined`, which means "every scope" — a typo would
       // then silently run MORE than asked and report a pass.
@@ -66,6 +122,10 @@ export function registerCheck(program: Command) {
         // Print the scope: it decides whether `push` asserts a check at all, so
         // the classification has to be auditable without reading every barrel.
         for (const c of all) console.log(`  [${scopeOf(c)}] ${c.id} — ${c.description}`);
+        return;
+      }
+      if (opts.status) {
+        printProgress();
         return;
       }
       await checkBroadcasts("check");

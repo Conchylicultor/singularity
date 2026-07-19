@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { defineFileSink } from "@plugins/infra/plugins/file-sink/server";
+import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { declareGrowthBound, getGrowthBounds } from "./growth-bounds";
 
 // The registry is process-global, so every test uses a UNIQUE name to avoid

@@ -1,4 +1,4 @@
-import { getFileSinks } from "@plugins/infra/plugins/file-sink/server";
+import { getFileSinks } from "@plugins/infra/plugins/file-sink/core";
 
 // The growth-bound registry: the closed set of bounds on unbounded-growth
 // ("firehose") sinks — DB tables AND files. Keyed by `SinkKey`, so a table and a
