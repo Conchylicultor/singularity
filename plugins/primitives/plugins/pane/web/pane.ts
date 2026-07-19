@@ -927,15 +927,57 @@ if (typeof window !== "undefined") {
 export { createPaneStore, defaultStore };
 
 // ---------------------------------------------------------------------------
-// PaneStore React context. `usePaneStore()` reads the context, falling back to
-// the module-level `defaultStore` when no provider is present — this preserves
-// today's behavior everywhere not yet wrapped in a `PaneSurfaceProvider`.
+// PaneStore React context. There is deliberately NO default store: the context
+// is `null` until a `PaneSurfaceProvider` binds the surface's own store.
+//
+// It used to default to the module-level `defaultStore`, which read as a
+// harmless "preserve pre-tabs behavior" fallback but became a silent trap the
+// moment `TabsProvider` started calling `setLiveStore(focused.store)`: from
+// that instant `defaultStore` is orphaned — still `live: true`, so its commits
+// keep writing the URL, but no renderer ever reads it. A component rendered
+// outside every surface (global chrome: the action bar at `Core.Root` or
+// `Apps.TabBarActions`) therefore got a store that swallowed navigation and
+// left only a URL change behind. `defaultStore.basePath` compounds it: the free
+// `setBasePath()` in apps-layout runs during render while `TabsProvider` is
+// still unmounted, so the FIRST app rendered freezes into it forever, and those
+// dead URLs carry the boot app's prefix regardless of which app you are in.
+//
+// Global chrome must use the cross-app `navigate()` from apps-core/tabs; making
+// this `null` turns that mistake into a loud throw at first render instead of a
+// click that silently does nothing.
 // ---------------------------------------------------------------------------
 
-export const PaneStoreContext = createContext<PaneStore>(defaultStore);
+export const PaneStoreContext = createContext<PaneStore | null>(null);
 
 export function usePaneStore(): PaneStore {
-  return useContext(PaneStoreContext);
+  const store = useContext(PaneStoreContext);
+  if (!store) {
+    throw new Error(
+      "usePaneStore(): no <PaneSurfaceProvider> in the tree. This component " +
+        "renders outside every pane surface (global chrome such as the action " +
+        "bar), so it has no pane store to navigate. Use the cross-app " +
+        "navigate() from @plugins/apps-core/plugins/tabs/web instead of " +
+        "useOpenPane()/pane.useToggle().",
+    );
+  }
+  return store;
+}
+
+/**
+ * Store read for the few callers that legitimately render OUTSIDE every
+ * surface: the apps root, which syncs the global pane registry and the base
+ * path on behalf of the focused tab. They perform a global imperative op on
+ * whichever store currently owns the URL — the surface store when there is one,
+ * otherwise the LIVE (focused-tab) store, mirroring the free `setBasePath()` /
+ * `getRoute()` functions they sit beside.
+ *
+ * Deliberately NOT the public `usePaneStore()`: this is a non-reactive
+ * imperative read, so a component that needs to re-render on route changes must
+ * still be inside a surface. And deliberately not `defaultStore` — that is the
+ * orphan whose silent commits caused global chrome to write dead URLs.
+ */
+function useStoreOrLive(): PaneStore {
+  return useContext(PaneStoreContext) ?? liveStore;
 }
 
 // ---------------------------------------------------------------------------
@@ -1697,7 +1739,11 @@ export const Pane = { define, Register: PaneSlots.Register };
 // ---------------------------------------------------------------------------
 
 export function useSyncPaneRegistry(): void {
-  const store = usePaneStore();
+  // Mounted BOTH at the apps root (outside every surface — the registry is a
+  // global invariant, see apps-layout) and by each layout renderer inside its
+  // surface, so it takes the surface store when there is one and the live store
+  // at the root. See {@link useStoreOrLive}.
+  const store = useStoreOrLive();
   const contributions = PaneSlots.Register.useContributions();
   useRenderSync(() => {
     registry.clear();

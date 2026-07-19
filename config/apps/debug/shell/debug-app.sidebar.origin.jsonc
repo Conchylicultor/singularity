@@ -1,10 +1,11 @@
-// @hash 4b398d3931c6
+// @hash d2adb780cf14
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "backup:backup",
+    "build:build",
     "conversations.recover:conversations-recover",
     "debug.boot-profile:boot-profile",
     "debug.boot-profile:boot-profiles-list",

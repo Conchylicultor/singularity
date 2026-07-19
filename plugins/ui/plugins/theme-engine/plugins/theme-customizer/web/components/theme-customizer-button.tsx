@@ -1,24 +1,31 @@
 import { MdPalette } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { usePathname } from "@plugins/primitives/plugins/pane/web";
 import { useActiveApp } from "@plugins/apps-core/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
-import { themeCustomizerPane } from "../panes";
+import { themeCustomizerRoute } from "../panes";
 
 /**
  * Toolbar entry point for the theme customizer, surfaced in every app via
- * `ActionBar.Item` (the agent-manager toolbar and the floating bar). Opens the
- * customizer as a root pane (matching the prior sidebar behavior); closing
- * navigates back to the active app's default view, which clears the pane chain
- * — the same navigation the app rail performs. This works uniformly across
- * pane-hosting apps and Sonata's overlay host alike.
+ * `ActionBar.Item` (the docked tab-bar strip and the floating bar).
+ *
+ * Both of those mount points render OUTSIDE every `<PaneSurfaceProvider>`, so
+ * this component has no pane store — `useOpenPane()`/`useToggle()` would throw.
+ * (They used to silently resolve to the orphaned module-level `defaultStore`,
+ * which wrote a URL nobody rendered: the click changed the address bar and
+ * nothing else.) Global chrome navigates through the cross-app `navigate()`
+ * and derives its own state from the URL via `usePathname()`.
+ *
+ * The customizer opens in the ACTIVE app (it styles that app's theme scope),
+ * so the link is the active app's base path plus the route's own segment.
  */
 export function ThemeCustomizerButton() {
-  // `useToggle` reads the chain store directly, so `isOpen` is correct even
-  // though this button renders outside any pane (no PaneMatchContext).
-  const { isOpen } = themeCustomizerPane.useToggle({}, { mode: "root" });
+  const pathname = usePathname();
   const activeApp = useActiveApp();
-  const openPane = useOpenPane();
+
+  const appPath = activeApp?.path ?? "";
+  const customizerPath = `${appPath}${themeCustomizerRoute.path({})}`;
+  const isOpen = pathname === customizerPath;
 
   const handleClick = () => {
     if (isOpen) {
@@ -27,7 +34,7 @@ export function ThemeCustomizerButton() {
         navigate(path);
       }
     } else {
-      openPane(themeCustomizerPane, {}, { mode: "root" });
+      navigate(customizerPath);
     }
   };
 

@@ -5,27 +5,26 @@ import { useResource, useNotificationsChannelStatuses } from "@plugins/primitive
 import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import { buildRoute, buildDetailRoute } from "@plugins/build/core";
 import { buildHistoryResource, type BuildRun } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
-import { buildPane, buildDetailPane } from "../panes";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
 function BuildButtonInner({
   open,
   setOpen,
-  openPane,
   staleTab,
   wsStatus,
   historyData,
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
-  openPane: ReturnType<typeof useOpenPane>;
   staleTab: boolean;
   wsStatus: string;
   historyData: BuildRun[];
@@ -110,7 +109,7 @@ function BuildButtonInner({
             variant="ghost"
             onClick={() => {
               setOpen(false);
-              openPane(buildPane, {}, { mode: "root" });
+              navigate(buildRoute.link(debugApp, {}));
             }}
           />
         </ControlSizeProvider>
@@ -119,8 +118,12 @@ function BuildButtonInner({
         variant="popover"
         onRunClick={(runId) => {
           setOpen(false);
-          openPane(buildPane, {}, { mode: "root" });
-          openPane(buildDetailPane, { runId }, { mode: "push" });
+          // ONE navigation to the full chain — `buildDetailRoute` already
+          // carries `buildRoute` as its parent, so this lands on
+          // `/debug/build/r/<runId>` with both panes in the route. The old
+          // root-then-push pair went through `useOpenPane`, which this button
+          // (global chrome, outside every pane surface) has no store for.
+          navigate(buildDetailRoute.link(debugApp, { runId }));
         }}
       />
     </InlinePopover>
@@ -129,7 +132,6 @@ function BuildButtonInner({
 
 export function BuildButton() {
   const [open, setOpen] = useState(false);
-  const openPane = useOpenPane();
 
   // --- Stale-tab detection (baked build id vs server's current build id) ---
   const { stale: staleTab } = useStaleFrontend();
@@ -158,7 +160,6 @@ export function BuildButton() {
     <BuildButtonInner
       open={open}
       setOpen={setOpen}
-      openPane={openPane}
       staleTab={staleTab}
       wsStatus={wsStatus}
       historyData={historyResult.data}
