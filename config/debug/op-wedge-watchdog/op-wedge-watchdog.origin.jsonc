@@ -1,0 +1,9 @@
+// @hash 6a241019e2c1
+{
+  // When off, the monitor job returns early and files no cli-op-wedge reports.
+  "enabled": true,
+  // File a cli-op-wedge report when a live `./singularity {build,check,push}` op marker is older than this. The default 15 min is well past any legitimate build or check on this box, and well under the 8-17h wedges actually observed — so it trips on a wedge and never on a slow-but-progressing op.
+  "budgetMs": 900000,
+  // Run the forensic capture (`sample`, the recursive child-process tree, `lsof`, and the twice-sampled CPU delta) against the wedged process before filing. Turning this off still files the report — with a 'capture skipped' note — but throws away the evidence the report exists to collect. Off is for a box already in so much trouble that a `sample` would make it worse.
+  "capture": true
+}

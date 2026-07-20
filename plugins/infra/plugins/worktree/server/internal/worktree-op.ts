@@ -40,6 +40,13 @@ export type WorktreeOpPhase = "waiting-for-lock" | "running";
 export interface WorktreeOpInfo {
   slug: string;
   op: WorktreeOp;
+  // The CLI process running the op. Every marker already carries it (it is the
+  // liveness key markerInfoFromParsed probes), and it is the ONLY stable handle
+  // on the running process — so it is surfaced rather than dropped. Without it a
+  // consumer that needs process identity (the op-wedge watchdog, which must
+  // `sample`/`ps` the wedged process and dedupe per pid) would have to re-parse
+  // the marker files by hand, re-deriving paths this module owns.
+  pid: number;
   startedAt: string;
   phase: WorktreeOpPhase;
   // The instant this op's "running" phase began — i.e. when waiting ended and
@@ -165,6 +172,7 @@ function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo 
   return {
     slug,
     op: KNOWN_OPS.includes(parsed.op as WorktreeOp) ? (parsed.op as WorktreeOp) : "build",
+    pid: parsed.pid,
     startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : new Date(0).toISOString(),
     // Back-compat: markers written before the phase field default to "running".
     phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",

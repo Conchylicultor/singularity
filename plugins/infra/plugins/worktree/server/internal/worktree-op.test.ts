@@ -32,13 +32,13 @@ import {
 // --- helpers ---------------------------------------------------------------
 
 function pushMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "push", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return { slug, op: "push", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
 }
 function buildMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "build", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return { slug, op: "build", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
 }
 function checkMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "check", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return { slug, op: "check", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
 }
 function holder(slug: string, pid = 1234, pushId = "p-1"): PushHolder {
   return { slug, pid, pushId, acquiredAt: "2026-06-07T00:00:00.000Z" };
@@ -298,6 +298,7 @@ test("derivePushPhases overrides a push marker's stored runningAt from the holde
   const stale: WorktreeOpInfo = {
     slug: "A",
     op: "push",
+    pid: 1234,
     startedAt: "2026-06-07T00:00:00.000Z",
     phase: "running",
     runningAt: "1999-01-01T00:00:00.000Z",

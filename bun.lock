@@ -1724,6 +1724,10 @@
       "name": "@singularity/plugin-debug-op-rate",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/op-wedge-watchdog": {
+      "name": "@singularity/plugin-debug-op-wedge-watchdog",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/paging-probe": {
       "name": "@singularity/plugin-debug-paging-probe",
       "version": "0.0.1",
@@ -5834,6 +5838,8 @@
     "@singularity/plugin-debug-memory": ["@singularity/plugin-debug-memory@workspace:plugins/debug/plugins/memory"],
 
     "@singularity/plugin-debug-op-rate": ["@singularity/plugin-debug-op-rate@workspace:plugins/debug/plugins/op-rate"],
+
+    "@singularity/plugin-debug-op-wedge-watchdog": ["@singularity/plugin-debug-op-wedge-watchdog@workspace:plugins/debug/plugins/op-wedge-watchdog"],
 
     "@singularity/plugin-debug-paging-probe": ["@singularity/plugin-debug-paging-probe@workspace:plugins/debug/plugins/paging-probe"],
 

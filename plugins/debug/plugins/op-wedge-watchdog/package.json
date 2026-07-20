@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-debug-op-wedge-watchdog",
+  "description": "Op-wedge watchdog: a main-only scheduled job that sweeps every worktree's CLI op markers and, for a `./singularity {build,check,push}` still alive past its budget, captures forensics from the LIVE wedged process and files one deduped Debug → Reports signal per (worktree, op, pid). Includes the cli-op-wedge report-kind renderer and the budget/capture config.",
+  "private": true,
+  "version": "0.0.1"
+}

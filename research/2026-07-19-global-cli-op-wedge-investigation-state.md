@@ -1,5 +1,23 @@
 # CLI ops (build / check) wedge and never exit — investigation state
 
+> **SUPERSEDED IN PART — read
+> [`2026-07-20-global-cli-op-wedge-capture-watchdog.md`](./2026-07-20-global-cli-op-wedge-capture-watchdog.md)
+> FIRST.** Three corrections to this document, each backed by evidence:
+>
+> 1. **The process is NOT spinning.** Three preserved `sample` captures of real
+>    occurrences (`/tmp/spin-sample.txt` is pid 63550 = occurrence B) show *every*
+>    thread parked in a blocking syscall, with no CPU burn anywhere. The
+>    "Process signature" section below reads `kevent64` as "the event loop is
+>    alive and turning" — that is backwards; `kevent64` **is** the blocking wait.
+>    This is an **idle hang**, not a spin. Do not look for a busy loop.
+> 2. **The instrumentation section below is stale.** The check progress log is
+>    **committed** as `9e337217f` and is in `main` — not "kept, uncommitted", and
+>    not undeployed.
+> 3. **Two more hypotheses are dead**, plus a fourth occurrence was found. See
+>    the newer doc.
+>
+> The bare "root cause NOT found" verdict below still stands.
+
 **Status: root cause NOT found.** This document records what is proven, what is
 disproven, and where the strongest lead points, so the next session does not
 re-walk two dead ends.
