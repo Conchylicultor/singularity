@@ -21,7 +21,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { pendingFocus } from "./pending-focus";
-import { TreeListProvider } from "./use-tree-row";
+import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
 import type { TreeItem } from "./types";
 
 /** Above this many *visible* (expanded) rows the tree windows its rows via
@@ -405,10 +405,10 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                   // and dnd-kit cancels the drop.
                   keepMounted={activeId ? [activeId] : undefined}
                 >
-                  {(item) => <Row node={item.node} depth={item.depth} />}
+                  {(item) => <TreeRowSlot node={item.node} depth={item.depth} />}
                 </VirtualRows>
               ) : (
-                visibleTree.map((node) => <Row key={node.id} node={node} depth={0} />)
+                visibleTree.map((node) => <TreeRowSlot key={node.id} node={node} depth={0} />)
               )}
               {showRootAdd && (
                 <Button

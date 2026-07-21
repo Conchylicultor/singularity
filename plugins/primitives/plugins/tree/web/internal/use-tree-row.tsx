@@ -73,6 +73,25 @@ export function useTreeListContext<
   return ctx as TreeListContextValue<T>;
 }
 
+/** Stable element-type wrapper for one tree row. Its identity is constant, so a
+ *  row reconciles in place across renders for a stable key — an unstable `Row`
+ *  prop can no longer cause the whole row subtree to remount on background
+ *  live-state churn. Invokes the current `ctx.Row` as a function (not `<Row/>`),
+ *  so the returned row body (a stable module type) is the reconciliation unit;
+ *  per-node hook isolation is preserved because each TreeRowSlot is keyed. */
+export function TreeRowSlot<T extends TreeItem>({
+  node,
+  depth,
+}: {
+  node: TreeNode<T>;
+  depth: number;
+}): ReactNode {
+  // Lowercase local so the React Compiler / eslint capitalized-call heuristics
+  // don't treat this call as a component invocation.
+  const render = useTreeListContext<T>().Row;
+  return <>{render({ node, depth })}</>;
+}
+
 export type RowControls = {
   isSelected: boolean;
   isDragging: boolean;

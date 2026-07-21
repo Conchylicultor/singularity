@@ -8,7 +8,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
-import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
+import { TreeRowSlot, useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
 import { TreeRowChrome } from "./tree-row-chrome";
 
 export type RowMenuItem = {
@@ -66,7 +66,6 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   const { ref: dragRef, attributes: dragAttributes, listeners: dragListeners } =
     dragSource;
   const ctx = useTreeListContext<T>();
-  const Row = ctx.Row;
 
   const menuItems =
     typeof menu === "function"
@@ -193,7 +192,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       {!ctx.windowed && isOpen && (
         <div>
           {node.children.map((child) => (
-            <Row
+            <TreeRowSlot
               key={child.id}
               node={child as TreeNode<T>}
               depth={depth + 1}
