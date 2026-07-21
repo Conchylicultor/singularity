@@ -96,9 +96,22 @@ export function markWorktreeOpStart(
   phase: WorktreeOpPhase = "running",
 ): void {
   mkdirSync(opsDir(slug), { recursive: true });
+  // CLI ops launch pre-armed with `bun --inspect=localhost:<port>/<token>`
+  // (cli/bin/inspect.ts). Recording the ws URL here is what makes a live wedge
+  // capturable: the op-wedge watchdog dumps this marker verbatim, so the
+  // forensics name where to point the inspector client. Absent when the
+  // kill-switch disabled arming (or for a non-CLI writer).
+  const inspect =
+    process.execArgv.find((a) => a.startsWith("--inspect="))?.slice("--inspect=".length) ?? null;
   writeFileSync(
     opFile(slug, op),
-    JSON.stringify({ op, pid: process.pid, startedAt: new Date().toISOString(), phase }),
+    JSON.stringify({
+      op,
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      phase,
+      ...(inspect !== null ? { inspect } : {}),
+    }),
   );
 }
 

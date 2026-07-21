@@ -15,6 +15,11 @@ const ALLOWED_PATHS = [
   "plugins/primitives/plugins/networking/",
   "cli/",
   "plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-websocket/check/index.ts",
+  // Standalone bun forensics script dialing a bun --inspect debug socket — a
+  // process-to-process debugger connection, not a browser tab. SharedWebSocket
+  // (cross-tab connection sharing) is structurally inapplicable, same category
+  // as the cli/ exemption above.
+  "plugins/debug/plugins/op-wedge-watchdog/scripts/",
 ];
 
 const check: Check = {
