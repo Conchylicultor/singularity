@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { MdClose } from "react-icons/md";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import {
   UNSAFE_unsealSlotComponent,
   type SealContributions,
@@ -93,6 +94,11 @@ export class ActiveDataInlineNode extends DecoratorNode<ReactNode> {
 // node, so they never get the × (mirrors paste-images' ImageNode).
 function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKey }) {
   const [editor] = useLexicalComposerContext();
+  // Treat the chip as one atomic token: when a selection spans it, Lexical marks
+  // the whole decorator selected — we paint a ring on the entire chip (and
+  // suppress the native text highlight on its label below) so it reads as "the
+  // chip is grabbed as an object", never "its inner characters are selected".
+  const [isSelected] = useLexicalNodeSelection(nodeKey);
   const contributions = ActiveData.Tag.useContributions();
   const inline = contributions.filter(
     (c): c is SealContributions<ActiveDataInlineContribution> =>
@@ -112,7 +118,14 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
   return (
     <Inline
       gap="none"
-      className={cn(hoverRevealGroup, "relative align-middle")}
+      className={cn(
+        hoverRevealGroup,
+        "relative align-middle rounded-md",
+        // Never let the browser paint a per-character text highlight inside the
+        // chip; the whole-chip ring below is the only selection affordance.
+        "select-none",
+        isSelected && "ring-2 ring-ring ring-offset-1 ring-offset-background",
+      )}
       contentEditable={false}
     >
       {chip}
