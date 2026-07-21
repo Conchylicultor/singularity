@@ -31,6 +31,7 @@ import {
   SINGULARITY_DIR,
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
+import { openBuildProgress, finishBuildProgress } from "../build-progress";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
@@ -764,6 +765,13 @@ export function registerBuild(program: Command) {
       const root = await getWorktreeRoot();
       const name = basename(root);
 
+      // Open the durable, crash-safe build-progress log now that `name` (the same
+      // basename(root) key the op marker and writeBuildProfile use) is known. Every
+      // buildProfilerStart span from here on records an enter/leave + RSS to
+      // ~/.singularity/build-progress.jsonl, so a wedged build names its phase and
+      // heap trend even after SIGKILL. See research/2026-07-21-global-cli-op-wedge-gc-sink.md.
+      openBuildProgress(name, process.env.SINGULARITY_BUILD_ID ?? null);
+
       // --serve-composition preflight. The compose-serve stage composes over
       // main's artifact fleet (vendor set + store), so it needs the MAIN
       // checkout in artifact mode — fail before any work, not after the build.
@@ -852,6 +860,11 @@ export function registerBuild(program: Command) {
         if (buildFinalized) return;
         buildFinalized = true;
         clearWorktreeOp(name, "build");
+        // Close the durable build-progress run. A wedge is exactly the build that
+        // never reaches this hook, so no `done` line + a live pid = wedged mid-phase
+        // (outstanding span names it); a `done` line + a live pid = the
+        // "hung on exit after finishing" case (occ. C).
+        finishBuildProgress(success);
         profiler.complete(success ? "success" : "failed");
         profiler.write();
       };

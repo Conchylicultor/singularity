@@ -1,5 +1,6 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "./paths";
+import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
 
 export interface BuildSpan {
   id: string;
@@ -23,21 +24,34 @@ export interface BuildProfile {
 const t0 = performance.now();
 const spans: BuildSpan[] = [];
 
+// Per-span unique token feeding the durable build-progress log. The human `id`
+// can repeat across concurrent spans (web artifacts / checks run in parallel), so
+// the progress log is keyed on this monotonic counter, never on `id`.
+let spanSeq = 0;
+
 export function buildProfilerStart(
   id: string,
   phase: string,
   label: string,
 ): (extra?: { maxRssBytes?: number }) => void {
   const start = performance.now();
+  // Durable, synchronous `enter` marker — on disk before the span body runs, so a
+  // build that wedges inside it is named even after SIGKILL. The in-memory `spans`
+  // array below is flushed only by writeBuildProfile() at the very end, which a
+  // wedged build never reaches; this is the crash-durable twin.
+  const token = ++spanSeq;
+  buildProgressSpanStart(token, id, phase, label);
   return (extra) => {
+    const durationMs = Math.round(performance.now() - start);
     spans.push({
       id,
       phase,
       label,
       startMs: Math.round(start - t0),
-      durationMs: Math.round(performance.now() - start),
+      durationMs,
       ...(extra?.maxRssBytes != null ? { maxRssBytes: extra.maxRssBytes } : {}),
     });
+    buildProgressSpanEnd(token, id, durationMs);
   };
 }
 
