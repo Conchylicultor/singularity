@@ -5144,7 +5144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `FillAxis`, `FillProps`; Values: `Fill`, `fillClasses`
           - Cross-plugin:
-            - Imported by: `apps/mail/inbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/sonata/library`, `apps/sonata/sources/ultimate-guitar`, `apps/studio/compositions/auto-serve`, `apps/studio/compositions/contributors`, `apps/studio/compositions/release/release-logs`, `apps/website/demos/release-switcher`, `apps/website/landing/pillars`, `apps/website/shell`, `apps/workflows/editor`, `auth/apple-signing/setup-wizard`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `debug/timeline`, `debug/trace/pane`, `debug/trace/spans`, `debug/trace/stall`, `primitives/data-view`
+            - Imported by: `apps/mail/inbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/sonata/library`, `apps/sonata/sources/ultimate-guitar`, `apps/studio/compositions/auto-serve`, `apps/studio/compositions/contributors`, `apps/studio/compositions/release/release-logs`, `apps/website/demos/release-switcher`, `apps/website/landing/pillars`, `apps/website/shell`, `apps/workflows/editor`, `auth/apple-signing/setup-wizard`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `debug/timeline`, `debug/trace/pane`, `debug/trace/spans`, `debug/trace/stall`, `primitives/data-view`, `primitives/error-boundary`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -5172,7 +5172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
             - Exports: Types: `LineProps`; Values: `Line`
           - Cross-plugin:
-            - Imported by: `apps-core/tab-bar`, `apps/mail/inbox`, `apps/mail/search`, `apps/mail/thread-list`, `apps/sonata/library`, `apps/studio/compositions/release/release-logs`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `debug/timeline`, `primitives/bar`, `primitives/css/row`, `ui/tab-bar/chip`, `ui/tab-bar/connected`, `ui/tab-bar/underline`
+            - Imported by: `apps-core/tab-bar`, `apps/mail/inbox`, `apps/mail/search`, `apps/mail/thread-list`, `apps/sonata/library`, `apps/studio/compositions/release/release-logs`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `debug/timeline`, `primitives/bar`, `primitives/css/row`, `primitives/error-boundary`, `ui/tab-bar/chip`, `ui/tab-bar/connected`, `ui/tab-bar/underline`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
           - Web:
             - Uses: `primitives/css/badge.Badge`
@@ -5422,7 +5422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
-        - Uses: `primitives/css/text.Text`, `primitives/slot-render.registerSlotItemMiddleware`
+        - Uses: `primitives/css/fill.Fill`, `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/slot-render.registerSlotItemMiddleware`
         - Exports: Types: `BoundaryErrorReport`; Values: `boundaryReportSink`, `ErrorBoundary`, `PluginErrorBoundary`
       - Cross-plugin:
         - Imported by: `apps/workflows/editor`, `apps/workflows/executions`, `framework/web-core`, `layouts/full-pane`, `layouts/miller`, `reports/crash`, `reports/launch-fix`
