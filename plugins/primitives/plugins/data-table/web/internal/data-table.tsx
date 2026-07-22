@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from "react";
 import {
   cn,
   ControlSizeProvider,
+  SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
@@ -283,15 +284,26 @@ function DataTableRow<TRow>({
       }
       {...decorationProps}
     >
-      {columns.map((col) => (
-        <Text as="div" key={col.id} className={alignClass(col.align)}>
-          {col.cell
-            ? col.cell(row)
-            : col.value
-              ? String(col.value(row) ?? "")
-              : null}
-        </Text>
-      ))}
+      {/* A cell is a `<Text as="div">`, so wrapping the row's cells in a
+          SingleLine context makes each one pick up Text's sanctioned
+          `inline-block max-w-full min-w-0 truncate` leaf recipe (the single home
+          of `min-w-0`). Blockified as a grid item to `block`, that `min-w-0` lets
+          the cell shrink to its track — so a `minmax(0,1fr)` column with a long
+          value ellipsizes instead of bleeding over its neighbors (the behavior
+          `ColumnDef.width` documents), while `alignClass` still positions the
+          content. Scoped to the cells only — the trailing rowActions cluster
+          keeps its own flow layout. */}
+      <SingleLineProvider value={true}>
+        {columns.map((col) => (
+          <Text as="div" key={col.id} className={alignClass(col.align)}>
+            {col.cell
+              ? col.cell(row)
+              : col.value
+                ? String(col.value(row) ?? "")
+                : null}
+          </Text>
+        ))}
+      </SingleLineProvider>
       {rowActions && (
         <Stack
           direction="row"
