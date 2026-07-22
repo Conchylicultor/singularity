@@ -1,25 +1,18 @@
 import {
-  foldLegacyBuildRecords,
-  foldLegacyPushRecords,
   foldOpRecords,
   orphanedOps,
   type OpRecord,
-  type RawLegacyBuildRecord,
-  type RawLegacyPushRecord,
   type RawOpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import { readJsonlTail } from "@plugins/infra/plugins/file-sink/core";
-import { appendOpLog, LEGACY_BUILD_FILE, LEGACY_PUSH_FILE, opLogSink } from "./jsonl";
+import { appendOpLog, opLogSink } from "./jsonl";
 
 /**
  * Read the live op log through its own sink's bounded reader.
  *
  * BOUND: the reader's 8 MB default byte budget, and `includeRotated` deliberately
  * NOT set — this is a recent-ops view (the Gantt / stats window), so stitching
- * `op-log.jsonl.1`/`.2` back in would put the memory straight back. Together with
- * the two legacy files below, the worst case per request drops from ~384 MB
- * materialized (three whole-file `readFileSync`s, one of them a 128 MB × 3 sink)
- * to 24 MB.
+ * `op-log.jsonl.1`/`.2` back in would put the memory straight back. With the one
+ * sink left, that 8 MB budget is the whole per-request bound.
  *
  * `missing` is folded to `[]` HERE, as one visible line rather than absorbed by
  * the reader: on a fresh host nothing has ever run, which is a legitimate empty
@@ -32,31 +25,15 @@ function readRawOpRecords(): RawOpRecord[] {
 }
 
 /**
- * Every op the host knows about, from the new log AND the two frozen legacy
- * files, as one merged list. The legacy files are mapped through the read-only
- * adapters and never written — this is a cutover, not a migration.
+ * Every op the host knows about, folded from the live op log into read-model
+ * records.
  *
- * They are read with the FREE `readJsonlTail(path)` because they have no sink and
- * must never get one: a `rotate` bound declared for a file nothing rotates would
- * be a false entry in the growth-bound registry (see `jsonl.ts`).
- *
- * `Date.now()` is read ONCE here and injected into every fold, so all in-flight
- * bars on one read share a single clock (and so the folds stay pure/testable).
+ * `Date.now()` is read ONCE here and injected into the fold, so all in-flight
+ * bars on one read share a single clock (and so the fold stays pure/testable).
  * That clock is what makes the bars grow on refresh — no polling is added.
  */
 export function readOpRecords(): OpRecord[] {
-  const now = Date.now();
-
-  const legacyPush = readJsonlTail<RawLegacyPushRecord>(LEGACY_PUSH_FILE);
-  const legacyBuild = readJsonlTail<RawLegacyBuildRecord>(LEGACY_BUILD_FILE);
-
-  return [
-    ...foldOpRecords(readRawOpRecords(), now),
-    // A legacy file legitimately may not exist on a fresh host — fold to empty
-    // explicitly at each site rather than letting the reader absorb it.
-    ...foldLegacyPushRecords(legacyPush.kind === "missing" ? [] : legacyPush.records, now),
-    ...foldLegacyBuildRecords(legacyBuild.kind === "missing" ? [] : legacyBuild.records),
-  ];
+  return foldOpRecords(readRawOpRecords(), Date.now());
 }
 
 /**
@@ -78,8 +55,8 @@ export function readOpRecords(): OpRecord[] {
  * so a rewrite would race them. Callers must still ensure a single reconciler
  * (gate on the main backend).
  *
- * Scope is the NEW log only. The legacy files keep their own reconcilers, so
- * closing their orphans from here would double-write them.
+ * There is exactly one log to reconcile — the op log — and this is its only
+ * reconciler.
  *
  * Returns the number of records finalized.
  *

@@ -136,7 +136,7 @@ export interface RawOpRecord {
 /**
  * The READ model: one folded record per op. Total by construction — every field
  * is resolved, so a consumer never re-derives a default. Produced only by
- * `foldOpRecords` and the legacy adapters.
+ * `foldOpRecords`.
  */
 export interface OpRecord {
   opId: string;

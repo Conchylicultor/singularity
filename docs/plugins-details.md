@@ -2914,14 +2914,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `debug/profiling/ops`
           - Shared:
             - Exports: Values: `getBuildProfiling`
-        - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader (incl. read-only legacy adapters), and the single orphan reconciler.
+        - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.
           - Server:
             - Uses: `infra/paths.SINGULARITY_DIR`
-            - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `LEGACY_BUILD_FILE`, `LEGACY_PUSH_FILE`, `OP_LOG_FILE`, `readOpRecords`
+            - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `OP_LOG_FILE`, `readOpRecords`
           - Cross-plugin:
             - Imported by: `debug/profiling/ops`, `stats/pushes`
           - Core:
-            - Exports: Types: `OpenWait`, `OpGroup`, `OpKind`, `OpOutcome`, `OpRecord`, `OpStep`, `OpWait`, `OutcomeByKind`, `RawLegacyBuildRecord`, `RawLegacyPushRecord`, `RawOpRecord`, `TerminalOutcome`, `WaitKind`; Values: `foldLegacyBuildRecords`, `foldLegacyPushRecords`, `foldOpRecords`, `groupByOpId`, `orphanedOps`, `sumWaits`
+            - Exports: Types: `OpenWait`, `OpGroup`, `OpKind`, `OpOutcome`, `OpRecord`, `OpStep`, `OpWait`, `OutcomeByKind`, `RawOpRecord`, `TerminalOutcome`, `WaitKind`; Values: `foldOpRecords`, `groupByOpId`, `orphanedOps`, `sumWaits`
         - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
           - Web:
             - Slots: `opDetailPane.Actions`

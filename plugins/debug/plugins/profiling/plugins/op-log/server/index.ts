@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { LEGACY_BUILD_FILE, LEGACY_PUSH_FILE, OP_LOG_FILE } from "./internal/jsonl";
+export { OP_LOG_FILE } from "./internal/jsonl";
 export { createOpProfiler } from "./internal/profiler";
 export type { OpProfiler, OpProfilerOptions } from "./internal/profiler";
 export { finalizeOrphanedOps, readOpRecords } from "./internal/read";
@@ -10,5 +10,5 @@ export { finalizeOrphanedOps, readOpRecords } from "./internal/read";
 
 export default {
   description:
-    "Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader (incl. read-only legacy adapters), and the single orphan reconciler.",
+    "Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.",
 } satisfies ServerPluginDefinition;
