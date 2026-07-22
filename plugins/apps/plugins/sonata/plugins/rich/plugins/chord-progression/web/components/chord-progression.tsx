@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { scrollChildIntoView } from "@plugins/primitives/plugins/auto-scroll/web";
 import {
   bars,
   effectiveKeyAt,
@@ -140,11 +140,25 @@ export function ChordProgression() {
     [barLines],
   );
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Re-centre the active bar within the strip container ONLY when the active
+  // bar changes (the playhead crosses a bar boundary) — a container-scoped
+  // scroll that never touches the surrounding pane.
+  useEffect(() => {
+    scrollChildIntoView(containerRef.current, rowRefs.current[activeBar] ?? null, {
+      block: "center",
+      behavior: "smooth",
+    });
+  }, [activeBar]);
+
   return (
     // Bounded, self-scrolling lead sheet. Inline overflow/maxHeight + the
-    // relative positioning context bound the reveal: `useRevealOnActive` on the
-    // active bar scrolls this container only, never the page.
+    // relative positioning context bound the scroll: `scrollChildIntoView`
+    // re-centres the active bar within this container only, never the page.
     <div
+      ref={containerRef}
       style={{
         position: "relative",
         maxHeight: "18rem",
@@ -155,7 +169,9 @@ export function ChordProgression() {
         {barLines.map((line, i) => (
           <BarRow
             key={i}
-            isActiveBar={i === activeBar}
+            rowRef={(el) => {
+              rowRefs.current[i] = el;
+            }}
             line={line}
             active={active}
             labelByChord={labelByChord}
@@ -167,32 +183,28 @@ export function ChordProgression() {
   );
 }
 
-/** One bar on its own line: a rigid bar-number gutter plus the chord slices. */
+/** One bar on its own line: a rigid bar-number gutter plus the chord slices.
+ *  The active bar is re-centred within the bounded strip container only
+ *  (container-scoped, never scrolls the surrounding pane) by the parent, which
+ *  reads each row via `rowRef`. */
 function BarRow({
   line,
   active,
   labelByChord,
   onSeek,
-  isActiveBar,
+  rowRef,
 }: {
   line: BarLine;
   active: ChordAnn | undefined;
   labelByChord: Map<ChordAnn, string>;
   onSeek: (beat: number) => void;
-  isActiveBar: boolean;
+  rowRef?: (el: HTMLDivElement | null) => void;
 }) {
-  // Reveal (centre) this bar in the bounded scroll container only when it
-  // TRANSITIONS to being the active bar (playhead crosses the boundary) — never
-  // on remount, so background churn can't fight the user's scroll.
-  const revealRef = useRevealOnActive(isActiveBar, {
-    block: "center",
-    behavior: "smooth",
-  });
   return (
     // `auto minmax(0,1fr)`: rigid number gutter + a flexible chip track that
     // owns the full bar width, so the per-chip `fr` weights map to real bar time.
     <div
-      ref={revealRef}
+      ref={rowRef}
       style={{
         display: "grid",
         gridTemplateColumns: "auto minmax(0, 1fr)",

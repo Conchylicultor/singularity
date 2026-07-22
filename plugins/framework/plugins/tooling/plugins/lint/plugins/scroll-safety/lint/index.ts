@@ -16,6 +16,7 @@ export default {
     "no-adhoc-scroll-write": [
       "plugins/primitives/plugins/auto-scroll/web/use-sticky-scroll.ts",
       "plugins/primitives/plugins/auto-scroll/web/scroll-to-bottom.ts",
+      "plugins/primitives/plugins/auto-scroll/web/scroll-child-into-view.ts",
     ],
   },
 };

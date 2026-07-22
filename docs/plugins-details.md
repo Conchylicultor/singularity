@@ -706,7 +706,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-progression`** — Sonata Section: a rhythm-aware chord-progression strip of chips, laid out bar-by-bar and sized by duration, highlighting the chord under the playhead and seeking on click.
               - Web:
                 - Contributes: `Sonata.Section` "Progression" → `ChordProgression`
-                - Uses: `apps/sonata/rich/chord-label.useChordDisplayMode`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useHasChords`, `apps/sonata/shell.useSonata`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`
+                - Uses: `apps/sonata/rich/chord-label.useChordDisplayMode`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useHasChords`, `apps/sonata/shell.useSonata`, `primitives/auto-scroll.scrollChildIntoView`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
@@ -2192,7 +2192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "message-toc" → `MessageToc`
-                - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/text.Text`, `primitives/floating-action.FloatingAction`, `primitives/floating-action.FloatingActionFadeIn`, `primitives/live-state.useResource`, `primitives/scroll-reveal.revealElement`
+                - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `primitives/auto-scroll.scrollToBottom`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/text.Text`, `primitives/floating-action.FloatingAction`, `primitives/floating-action.FloatingActionFadeIn`, `primitives/live-state.useResource`, `primitives/scroll-reveal.revealElement`
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
@@ -2833,7 +2833,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `logChannelPane.Actions`, `logsPane.Actions`
         - Contributes: `Pane.Register` "logs", `Pane.Register` "logs-channel", `DebugApp.Sidebar` "Logs" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/latest-ref.useLatestRef`, `primitives/networking.ReconnectingEventSource`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+        - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/auto-scroll.useStickyScroll`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/latest-ref.useLatestRef`, `primitives/networking.ReconnectingEventSource`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
         - Exports: Values: `logChannelPane`, `logsPane`
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
       - Web:
@@ -3909,7 +3909,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
-            - **`scroll-reveal-safety`** — scroll-reveal-safety lint rule: no-adhoc-scroll-into-view
+            - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
@@ -4325,7 +4325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: `layouts/route-fallback.DeferredRouteFallback`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.PortalForwardProvider`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/latest-ref.useLatestRef`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRenderSync`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/surface-id.useSurfaceTabId`
+        - Uses: `layouts/route-fallback.DeferredRouteFallback`, `primitives/auto-scroll.scrollChildIntoView`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.PortalForwardProvider`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/latest-ref.useLatestRef`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRenderSync`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/surface-id.useSurfaceTabId`
         - Exports: Values: `MillerColumns`, `PaneOverlayHost`
       - Cross-plugin:
         - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/mail/shell`, `apps/pages/shell`, `apps/prototypes/shell`, `apps/settings/shell`, `apps/studio/shell`, `apps/workflows/shell`, `layouts/host`
@@ -5024,9 +5024,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
       - Web:
         - Uses: `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`
-        - Exports: Types: `JumpToBottomButtonProps`, `JumpToBottomView`, `StickyScrollHandle`, `UseStickyScrollOptions`; Values: `JumpToBottomButton`, `useStickyScroll`
+        - Exports: Types: `JumpToBottomButtonProps`, `JumpToBottomView`, `ScrollAlign`, `ScrollChildIntoViewOptions`, `ScrollToBottomOptions`, `StickyScrollHandle`, `UseStickyScrollOptions`; Values: `JumpToBottomButton`, `scrollChildIntoView`, `scrollToBottom`, `useStickyScroll`
       - Cross-plugin:
-        - Imported by: `apps/studio/compositions/release/release-logs`, `build`, `build/build-logs`, `conversations/conversation-view/jsonl-viewer`
+        - Imported by: `apps/sonata/rich/chord-progression`, `apps/studio/compositions/release/release-logs`, `build`, `build/build-logs`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/message-toc`, `debug/logs`, `layouts/miller`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
         - Uses: `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.DensityControlled`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/css/ui-kit.useControlSize`, `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`

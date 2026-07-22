@@ -12,6 +12,11 @@ export type {
 } from "./jump-to-bottom-button";
 export { scrollToBottom } from "./scroll-to-bottom";
 export type { ScrollToBottomOptions } from "./scroll-to-bottom";
+export { scrollChildIntoView } from "./scroll-child-into-view";
+export type {
+  ScrollAlign,
+  ScrollChildIntoViewOptions,
+} from "./scroll-child-into-view";
 
 export default {
   description:

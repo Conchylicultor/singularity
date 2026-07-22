@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
-import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { scrollChildIntoView } from "@plugins/primitives/plugins/auto-scroll/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   type PaneMatch,
@@ -32,11 +32,12 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   useLayoutEffect(() => {
     const len = match?.panes.length ?? 0;
     if (ref.current && len > lastLength.current) {
-      // Reveal the newest (rightmost) column by aligning its end with the
-      // container's; `block: "nearest"` avoids any vertical movement.
-      revealElement(ref.current.lastElementChild, {
+      // Bring the newest (rightmost) column into view by scrolling only this
+      // horizontal container to align its end — a container-scoped scroll that
+      // never touches any ancestor's scroll position. Omitting `block` leaves
+      // the vertical offset untouched.
+      scrollChildIntoView(ref.current, ref.current.lastElementChild as HTMLElement | null, {
         inline: "end",
-        block: "nearest",
       });
     }
     lastLength.current = len;
