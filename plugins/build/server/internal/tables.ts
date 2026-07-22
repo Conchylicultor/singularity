@@ -26,7 +26,7 @@ export const _buildRuns = pgTable(
   },
   (t) => [
     // At most one in-flight build per namespace, enforced atomically by the DB.
-    // The durable lock (isAnyBuildAlive) is a check-then-act fast path with a
+    // The durable lock (hasLiveInflightBuild) is a check-then-act fast path with a
     // TOCTOU window: two triggers racing across backend processes (where the
     // in-process `inflight` flag gives no protection) can both pass the liveness
     // check before either inserts, then both spawn `./singularity build` and the

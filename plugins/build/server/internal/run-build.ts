@@ -11,7 +11,7 @@ import { frontendHashResource } from "./frontend-hash-resource";
 import { buildLog } from "./build-log";
 
 // In-process re-entry guard only. The authoritative, restart-durable lock lives
-// in the DB (see isAnyBuildAlive) — `./singularity build` restarts this very
+// in the DB (see hasLiveInflightBuild) — `./singularity build` restarts this very
 // backend, so a boolean held in memory is wiped mid-build and the freshly-booted
 // process would happily start a second, overlapping build.
 let inflight = false;
@@ -38,8 +38,11 @@ export function isPidAlive(pid: number | null): boolean {
  * is routinely killed mid-build; without this the new backend (and its on-boot
  * re-enqueue) would start a second build that races the first, and whichever
  * owner dies before finalizing leaves a phantom null-exit "failed" row.
+ *
+ * Also read by the boot-adopted watch (watch-inflight-build) to know when the
+ * build it adopted has finished and the watcher may self-dispose.
  */
-async function isAnyBuildAlive(): Promise<boolean> {
+export async function hasLiveInflightBuild(): Promise<boolean> {
   const rows = await db
     .select({ pid: _buildRuns.pid })
     .from(_buildRuns)
@@ -48,9 +51,9 @@ async function isAnyBuildAlive(): Promise<boolean> {
 }
 
 /**
- * Recover the *true* terminal state (exit code + finish instant) of an orphaned
- * build from the durable per-build log the detached `./singularity build` writes
- * (build-logs-<id>.json).
+ * Read the *true* terminal record (exit code + finish instant) of a build from
+ * the durable per-build log the detached `./singularity build` writes
+ * (build-logs-<id>.json), or `null` when no terminal signal exists yet.
  *
  * An auto-build from main restarts *this very backend* mid-build, so the process
  * that spawned the build (and `await`s `proc.exited`) is routinely SIGTERM-killed
@@ -63,20 +66,24 @@ async function isAnyBuildAlive(): Promise<boolean> {
  * Reusing `new Date()` at reconcile time instead would inflate the row's Duration
  * by the entire gap between the CLI exiting and the next reconcile pass noticing
  * the dead pid (often many minutes), so Duration would disagree with the build
- * profile. We prefer the recorded instant and only fall back to `now` when the
- * artifact carries none.
+ * profile. We prefer the recorded instant; the caller supplies its own fallback
+ * when the artifact carries none.
  *
- * The CLI writes this file on both terminal paths: full success (every step
- * green) and a checks/vite step failure (the failing step carries success=false).
- * A dead owner pid guarantees the CLI is past its log-writing point, so there is
- * no read/write race. Absent file ⇒ no clean terminal signal (a hard SIGKILL, or
- * a post-publish boot/health-probe failure that exits before the log is written)
- * ⇒ keep the -1 failure sentinel and `now` as the finish instant.
+ * The CLI writes this file — atomically (tmp + rename), exactly once — on both
+ * terminal paths: full success (every step green) and a checks/vite step failure
+ * (the failing step carries success=false), and never mid-build. So a non-null
+ * return is a race-free "build finished" push signal: reconcileOrphanBuilds uses
+ * it both to recover the exit code AND as the terminal-detection condition, even
+ * while the CLI pid may still be alive for the moment before it reaps.
+ *
+ * Returns `null` when the artifact is absent (ENOENT — a hard SIGKILL, or a
+ * post-publish boot/health-probe failure that exits before the log is written),
+ * unparseable (SyntaxError), or carries no terminal step / no `finishedAt` — i.e.
+ * no clean terminal signal. Any other read error is a genuine fault and rethrows.
  */
-function resolveOrphanTerminal(
+export function readBuildTerminal(
   buildId: string,
-  now: Date,
-): { exitCode: number; finishedAt: Date } {
+): { exitCode: number; finishedAt: Date } | null {
   const name = currentWorktreeName();
   const path = worktreeArtifacts.buildLogs(name, buildId);
   try {
@@ -85,29 +92,35 @@ function resolveOrphanTerminal(
       finishedAt?: number;
     };
     const steps = parsed.steps ?? [];
-    if (steps.length === 0) return { exitCode: -1, finishedAt: now };
+    // The artifact always carries at least the terminal step on both success and
+    // step-failure paths, and always carries `finishedAt`. Absent either ⇒ no
+    // recorded terminal ⇒ null, so the caller supplies its own -1/now sentinel.
+    if (steps.length === 0 || parsed.finishedAt == null) return null;
     const exitCode = steps.every((s) => s.success) ? 0 : 1;
-    const finishedAt = parsed.finishedAt != null ? new Date(parsed.finishedAt) : now;
-    return { exitCode, finishedAt };
+    return { exitCode, finishedAt: new Date(parsed.finishedAt) };
   } catch (err) {
     if (
       (err as NodeJS.ErrnoException).code !== "ENOENT" &&
       !(err instanceof SyntaxError)
     )
       throw err;
-    return { exitCode: -1, finishedAt: now };
+    return null;
   }
 }
 
 /**
- * Close any unfinished build_runs rows for this namespace whose owning process is
- * dead, stamping the build's recovered exit code and finish instant (see
- * resolveOrphanTerminal — a successful build whose tracking backend was killed by
- * its own restart must NOT be recorded as failed, and its Duration must reflect
- * the real finish rather than this reconcile pass). Scoped to this namespace: a
- * worktree DB forks main's rows, and reaping those inherited (foreign-pid) builds
- * would surface a phantom "Build failed" in every worktree. Runs on boot and
- * before each claim so a crashed owner never permanently wedges the
+ * Close any unfinished build_runs rows for this namespace that have reached
+ * terminal — either the build's atomic-once log artifact is present (⇒ finished:
+ * it is written exactly once, at terminal, never mid-build, so this can never
+ * false-positive a still-running build) OR the owning process is dead. Stamp the
+ * artifact's recovered exit code + finish instant when present, else the -1/now
+ * sentinel for a hard-killed owner (see readBuildTerminal — a successful build
+ * whose tracking backend was killed by its own restart must NOT be recorded as
+ * failed, and its Duration must reflect the real finish rather than this
+ * reconcile pass). Scoped to this namespace: a worktree DB forks main's rows, and
+ * reaping those inherited (foreign-pid) builds would surface a phantom "Build
+ * failed" in every worktree. Runs on boot, before each claim, and from the
+ * boot-adopted watch so a finished-or-crashed owner never wedges the
  * build_runs_inflight_uniq lock.
  */
 export async function reconcileOrphanBuilds(): Promise<void> {
@@ -115,15 +128,18 @@ export async function reconcileOrphanBuilds(): Promise<void> {
     .select({ id: _buildRuns.id, pid: _buildRuns.pid })
     .from(_buildRuns)
     .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
-  const orphans = unfinished.filter((r) => !isPidAlive(r.pid));
-  if (orphans.length === 0) return;
+  if (unfinished.length === 0) return;
   const now = new Date();
-  for (const orphan of orphans) {
-    const { exitCode, finishedAt } = resolveOrphanTerminal(orphan.id, now);
+  for (const row of unfinished) {
+    const terminal = readBuildTerminal(row.id);
+    // Leave a genuinely-running build open: no terminal artifact yet AND its
+    // owner is still alive.
+    if (terminal == null && isPidAlive(row.pid)) continue;
+    const { exitCode, finishedAt } = terminal ?? { exitCode: -1, finishedAt: now };
     await db
       .update(_buildRuns)
       .set({ finishedAt, exitCode })
-      .where(eq(_buildRuns.id, orphan.id));
+      .where(eq(_buildRuns.id, row.id));
   }
 }
 
@@ -142,7 +158,7 @@ export function triggerBuild(
   inflight = true;
   void runTracked("build:run", async () => {
     try {
-      if (await isAnyBuildAlive()) return;
+      if (await hasLiveInflightBuild()) return;
       await doRunBuild(trigger, opts);
     } catch (err) {
       buildLog.publish(
