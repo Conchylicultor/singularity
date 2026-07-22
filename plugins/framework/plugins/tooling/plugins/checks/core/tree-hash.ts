@@ -1,20 +1,18 @@
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 async function git(
   root: string,
   args: string[],
   env?: Record<string, string>,
 ): Promise<{ code: number; stdout: string }> {
-  const proc = Bun.spawn(["git", ...args], {
+  const result = await spawnCaptured(["git", ...args], {
     cwd: root,
     env: env ?? process.env,
-    stdout: "pipe",
-    stderr: "pipe",
   });
-  const stdout = await new Response(proc.stdout).text();
-  return { code: await proc.exited, stdout: stdout.trim() };
+  return { code: result.exitCode, stdout: result.stdout.trim() };
 }
 
 /**

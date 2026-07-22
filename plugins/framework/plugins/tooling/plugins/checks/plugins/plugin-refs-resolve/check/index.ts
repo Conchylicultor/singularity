@@ -2,6 +2,7 @@ import { join } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { parse as parseJsonc } from "jsonc-parser";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -12,15 +13,9 @@ interface Violation {
   detail: string;
 }
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], { stdout: "pipe", stderr: "pipe" });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 async function gitLsFiles(root: string, pathspec: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", pathspec], { cwd: root, stdout: "pipe", stderr: "pipe" });
-  const out = (await new Response(proc.stdout).text()).trim();
-  await proc.exited;
+  const result = await spawnCaptured(["git", "ls-files", pathspec], { cwd: root });
+  const out = result.stdout.trim();
   return out ? out.split("\n").filter((l) => l.length > 0) : [];
 }
 
@@ -83,7 +78,7 @@ const check: Check = {
   description:
     "plugin path/id string literals (resolveFrom, lint/check allowlists, reorder overrides) resolve to a real plugin",
   async run(): Promise<CheckResult> {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
     const pathSet = new Set(tree.byPath.keys());
     const idSet = new Set([...tree.byDir.values()].map((n) => n.id as string));

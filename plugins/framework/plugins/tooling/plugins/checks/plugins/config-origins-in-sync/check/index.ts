@@ -7,6 +7,7 @@ import {
 import { computeHash, APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its // @hash and schema anchor to the BASE origin
@@ -20,14 +21,6 @@ function stripScopeSegment(p: string): string {
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
@@ -62,7 +55,7 @@ const check: Check = {
   description:
     "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const configDir = join(root, "config");
     // `renderConfigOriginContent` resolves origin annotations through codegen's
     // shared default provider (see `setDefaultOriginAnnotations`), so the check
@@ -98,15 +91,10 @@ const check: Check = {
 
     if (!existsSync(configDir)) return { ok: true };
 
-    const proc = Bun.spawn(["git", "ls-files", "--others", "--cached", "--", "config/"], {
+    const result = await spawnCaptured(["git", "ls-files", "--others", "--cached", "--", "config/"], {
       cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
     });
-    const allConfigFiles = (await new Response(proc.stdout).text())
-      .trim()
-      .split("\n")
-      .filter(Boolean);
+    const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
 
     // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that
     // `renderConfigOriginContent` did not produce is no longer backed by a

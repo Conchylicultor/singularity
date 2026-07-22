@@ -5,6 +5,7 @@ import { isListFieldDef } from "@plugins/fields/plugins/list/plugins/config/core
 import { APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { FieldDef } from "@plugins/fields/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its schema anchors to the BASE origin (config/<hier>/<name>.origin.jsonc).
@@ -19,14 +20,6 @@ function stripScopeSegment(p: string): string {
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
 const HINT =
@@ -38,7 +31,7 @@ const check: Check = {
   description:
     'Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id',
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const configDir = join(root, "config");
     if (!existsSync(configDir)) return { ok: true };
 
@@ -46,15 +39,10 @@ const check: Check = {
     // sibling check reuses.
     const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({ root });
 
-    const proc = Bun.spawn(["git", "ls-files", "--others", "--cached", "--", "config/"], {
+    const result = await spawnCaptured(["git", "ls-files", "--others", "--cached", "--", "config/"], {
       cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
     });
-    const allConfigFiles = (await new Response(proc.stdout).text())
-      .trim()
-      .split("\n")
-      .filter(Boolean);
+    const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
 
     for (const relFromRoot of allConfigFiles) {
       if (!relFromRoot.endsWith(".jsonc")) continue;

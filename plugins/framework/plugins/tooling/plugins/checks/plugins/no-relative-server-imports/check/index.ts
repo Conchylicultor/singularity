@@ -1,22 +1,15 @@
 import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const check: Check = {
   id: "no-relative-server-imports",
   description:
     "Plugin server files must import from `@server/` alias, not relative `../../server/src/` paths",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     // grepImports is string-safe by construction: findImports masks strings
     // fully, so an import written inside a string/fixture can never match. The
     // filter runs on the bare specifier (no leading `from "`), anchored at `^`.

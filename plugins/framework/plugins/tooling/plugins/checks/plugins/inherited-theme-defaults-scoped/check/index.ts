@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -39,21 +40,9 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  *    color).
  */
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 async function gitLsFiles(root: string, glob: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", glob], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = (await new Response(proc.stdout).text()).trim();
+  const result = await spawnCaptured(["git", "ls-files", glob], { cwd: root });
+  const out = result.stdout.trim();
   return out ? out.split("\n") : [];
 }
 
@@ -158,7 +147,7 @@ const check: Check = {
   description:
     "Inherited themed CSS defaults (font-family, text color, …) and derived custom-property helpers (--chrome-mask, …) are consumed at a theme-scope root (:root, [data-theme-scope]), never on a bare html/body above the scope boundary",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // Fresh token-group vars (the live descriptors, not the committed manifest —
     // see collectTokenGroupVars). Used to tell a themed `var()` / utility apart

@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { basename } from "node:path";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
-import { getWorktreeRoot } from "../git/worktree-root";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 export function registerDb(program: Command) {
   const db = program.command("db").description("Worktree database operations");

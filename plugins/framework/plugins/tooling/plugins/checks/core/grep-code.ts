@@ -1,5 +1,6 @@
 import { join } from "path";
 import { findImports, lineAt, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { currentScanTree, currentScanView } from "./scan-context";
 
 export interface CodeMatch {
@@ -139,16 +140,8 @@ export interface ListCandidateSourcesOptions {
 export async function listCandidateSources(
   opts: ListCandidateSourcesOptions,
 ): Promise<CandidateSource[]> {
-  const root = opts.root ?? (await getRoot());
+  const root = opts.root ?? (await getWorktreeRoot());
   return readCandidates(root, opts.grepArg, opts.fixed ?? false, opts.pathspecs ?? ["*.ts", "*.tsx"]);
-}
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
 }
 
 /**
@@ -229,11 +222,10 @@ export async function gitGrepList(
   if (tree) args.push(tree);
   args.push("--", ...pathspecs);
 
-  const proc = Bun.spawn(args, { cwd: root, stdout: "pipe", stderr: "pipe" });
-  const stdout = (await new Response(proc.stdout).text()).trim();
-  const code = await proc.exited;
+  const result = await spawnCaptured(args, { cwd: root });
+  const stdout = result.stdout.trim();
   // `git grep` exits 1 with no output when there are no matches — that's success.
-  if (code !== 0 && stdout === "") return [];
+  if (result.exitCode !== 0 && stdout === "") return [];
   if (stdout === "") return [];
 
   const prefix = tree ? `${tree}:` : "";
@@ -249,14 +241,14 @@ export async function gitGrepList(
 // `<spec> missing\n`; outputs come back in request order.
 async function readTreeBlobs(root: string, tree: string, paths: string[]): Promise<Map<string, string>> {
   const requests = paths.map((p) => `${tree}:${p}`).join("\n") + "\n";
-  const proc = Bun.spawn(["git", "cat-file", "--batch"], {
+  // Whole-buffer stdin + after-exit stdoutBytes: the parser below already walks
+  // a fully-buffered Uint8Array, so the batch framing is unchanged by the move
+  // off piped stdio.
+  const result = await spawnCaptured(["git", "cat-file", "--batch"], {
     cwd: root,
-    stdin: Buffer.from(requests),
-    stdout: "pipe",
-    stderr: "pipe",
+    stdin: requests,
   });
-  const buf = new Uint8Array(await new Response(proc.stdout).arrayBuffer());
-  await proc.exited;
+  const buf = result.stdoutBytes;
 
   const decoder = new TextDecoder();
   const out = new Map<string, string>();

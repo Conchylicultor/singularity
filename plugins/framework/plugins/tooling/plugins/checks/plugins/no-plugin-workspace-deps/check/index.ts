@@ -1,13 +1,7 @@
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 interface Offender {
   file: string;
@@ -20,14 +14,12 @@ const check: Check = {
   description:
     "Plugin package.jsons must not declare `workspace:*` deps — cross-plugin imports go through `@plugins/*` path aliases, not npm workspaces",
   async run() {
-    const root = await getRoot();
-    const lsFiles = Bun.spawn(
+    const root = await getWorktreeRoot();
+    const lsFiles = await spawnCaptured(
       ["git", "ls-files", "plugins/**/package.json"],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
+      { cwd: root },
     );
-    const fileList = (await new Response(lsFiles.stdout).text())
-      .split("\n")
-      .filter(Boolean);
+    const fileList = lsFiles.stdout.split("\n").filter(Boolean);
 
     const offenders: Offender[] = [];
     for (const file of fileList) {

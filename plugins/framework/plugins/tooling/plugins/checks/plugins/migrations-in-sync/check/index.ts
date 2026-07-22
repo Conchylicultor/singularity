@@ -1,6 +1,7 @@
 import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { basename, join, relative, resolve } from "path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -26,14 +27,6 @@ function libpqEnv(): Record<string, string> {
   };
 }
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 function listSql(dir: string): string[] {
   return readdirSync(dir)
     .filter((f) => f.endsWith(".sql"))
@@ -44,7 +37,7 @@ const check: Check = {
   id: "migrations-in-sync",
   description: "plugin schema files match committed migration files",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const migrationsPluginDir = resolve(root, "plugins/database/plugins/migrations");
     const committed = resolve(migrationsPluginDir, "data");
 
@@ -61,7 +54,11 @@ const check: Check = {
       );
 
       const before = listSql(tmpOut);
-      const proc = Bun.spawn(
+      // 20 buffered Enter keystrokes: enough to auto-advance any create-vs-rename
+      // prompts drizzle shows (each defaults to "create"); the PROMPT_RE check
+      // below still fails the run when prompts appeared. Delivered as whole-buffer
+      // stdin — the prompts need no live parsing here, unlike migrations-interactive.
+      const result = await spawnCaptured(
         [
           process.execPath,
           "x",
@@ -72,26 +69,18 @@ const check: Check = {
         ],
         {
           cwd: migrationsPluginDir,
-          stdin: "pipe",
-          stdout: "pipe",
-          stderr: "pipe",
+          stdin: new Uint8Array(20).fill(0x0d),
           env: { ...process.env, ...libpqEnv(), NO_COLOR: "1", SINGULARITY_WORKTREE: basename(root) },
         },
       );
-      void proc.stdin.write(new Uint8Array(20).fill(0x0d));
-      void proc.stdin.end();
-
-      const stdout = await new Response(proc.stdout).text();
-      const stderr = await new Response(proc.stderr).text();
-      const exitCode = await proc.exited;
-      if (exitCode !== 0) {
+      if (result.exitCode !== 0) {
         return {
           ok: false,
-          message: `drizzle-kit generate failed:\n${stderr}`,
+          message: `drizzle-kit generate failed:\n${result.stderr}`,
         };
       }
 
-      if (PROMPT_RE.test(stdout)) {
+      if (PROMPT_RE.test(result.stdout)) {
         return {
           ok: false,
           message:

@@ -9,6 +9,7 @@ import { buildConnectionString, readDatabaseConfig } from "@plugins/database/cor
 // The imperative-public-table allowlist lives in the derived-views core leaf
 // (the shared sink) — see that module for why it is NOT in @plugins/database/core.
 import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling migration-applies-clean check)
 // to avoid a cross-plugin import of the framework Check type from a check file.
@@ -70,23 +71,10 @@ function loadDeclaredTables(): Set<string> {
   return declaredTablesFromSnapshot(parsed);
 }
 
-async function git(args: string[]): Promise<string> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd: process.cwd(),
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) {
-    throw new Error(`git ${args.join(" ")} failed`);
-  }
-  return out.trim();
-}
-
 // The worktree DB name = the git worktree dir basename (SINGULARITY_WORKTREE is
 // not set in a check subprocess), mirroring getWorktreeSlug in the check CLI.
 async function getWorktreeName(): Promise<string> {
-  return basename(await git(["rev-parse", "--show-toplevel"]));
+  return basename(await getWorktreeRoot());
 }
 
 const check: Check = {

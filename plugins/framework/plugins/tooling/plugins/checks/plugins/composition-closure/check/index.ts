@@ -21,14 +21,10 @@ import type { ConfigProxy, JsonValue } from "@plugins/config_v2/core";
 import { assertServableCompositionNamespace } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], { stdout: "pipe", stderr: "pipe" });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
@@ -80,7 +76,7 @@ const check: Check = {
   description:
     "Every declared composition is valid: unique name, all entry/contributor ids resolve, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
     const graph = classifyEdges(tree);
     const allIds = new Set<PluginId>([...tree.byDir.values()].map((n) => n.id));

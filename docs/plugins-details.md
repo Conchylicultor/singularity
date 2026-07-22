@@ -3821,13 +3821,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: `plugin-meta/parse-utils.findImports`, `plugin-meta/plugin-tree.buildPluginTree`
+            - Uses: `infra/spawn.getWorktreeRoot`, `plugin-meta/parse-utils.findImports`, `plugin-meta/plugin-tree.buildPluginTree`
             - Exports: Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`; Values: `allow`, `boundaryRulesCheck`, `compositionRoots`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `runtimeNames`, `zone`
           - Structure:
             - Loose top-level files: `boundary-config.ts`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
-            - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/file-sink.defineFileSink`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
+            - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/file-sink.defineFileSink`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/spawn.getWorktreeRoot`, `infra/spawn.spawnCaptured`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
             - Exports: Types: `CandidateSource`, `CheckCache`, `CheckRunProgress`, `CodeMatch`, `DirFact`, `FileFact`, `FileSystemView`, `GlobFact`, `ImportMatch`, `ListCandidateSourcesOptions`, `OutstandingCheck`, `ProgressRecord`, `QueryFact`, `ReadSet`, `RunChecksOptions`, `TreeSnapshot`, `TscTarget`, `ValidateOptions`, `ValidateResult`; Values: `checkCollectedDir`, `computeCheckSourceHash`, `computeTreeHash`, `currentScanView`, `discoverTscTargets`, `fingerprint`, `gitGrepList`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `loadTreeSnapshot`, `markBuildInProgress`, `materializeWarmBase`, `openCheckCache`, `publishWarmBase`, `readCheckProgress`, `runChecks`, `scopeOf`, `tsBuildInfoPath`, `validate`
           - Plugins:
             - **`app-css-utilities-in-sync`**
@@ -4259,6 +4259,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Central:
         - Exports: Types: `SecretMetadata`, `SecretRef`; Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
+    - **`spawn`** — Wedge-proof child-process primitive: spawnCaptured/spawnExpectOk capture stdout/stderr via temp-file fds (no piped stdio, so bun 1.3.13's exit-during-stream-pull race has nothing to wedge), spawnPassthrough inherits the parent's streams, and getWorktreeRoot/getMainRepoRoot are the memoized canonical git-root helpers. Node-only (no db/jobs) so a CLI process can import it; the spawn-safety lint rule routes every raw Bun.spawn here.
+      - Core:
+        - Uses: `packages/spawn-priority.backgroundArgv`
+        - Exports: Types: `SpawnedChild`, `SpawnOptions`, `SpawnPassthroughOptions`, `SpawnPassthroughResult`, `SpawnResult`; Values: `getMainRepoRoot`, `getWorktreeRoot`, `spawnCaptured`, `spawnExpectOk`, `SpawnFailedError`, `spawnPassthrough`
+      - Cross-plugin:
+        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`
     - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
       - Server:
         - Contributes: `resource.declare` "trash-entries"
@@ -4353,9 +4359,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `Semaphore`; Values: `createSemaphore`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
-        - Imported by: `conversations/runtime-tmux`, `database/admin`, `infra/worktree`
+        - Imported by: `conversations/runtime-tmux`, `database/admin`, `infra/spawn`, `infra/worktree`
       - Server:
         - Exports: Values: `backgroundArgv`, `backgroundPrefix`, `boostInteractiveQos`
+      - Core:
+        - Exports: Values: `backgroundArgv`, `backgroundPrefix`
 
 - **`page`** — Block-based page editor.
   - Plugins:

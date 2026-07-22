@@ -27,7 +27,7 @@ import {
   currentScanView,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { Check, CheckContext } from "@plugins/framework/plugins/tooling/core";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints } from "./fingerprint";
@@ -53,11 +53,6 @@ interface WorkerResult extends WorkerOutput {
 
 const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], { stdout: "pipe", stderr: "pipe" });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 // Priority isolation at the spawn site: workers for a non-main branch run
 // darwinbg (E-cores + background IO tier) so N concurrent agent fleets can't
 // starve the interactive main backend — regardless of whether the parent
@@ -65,11 +60,11 @@ async function getRoot(): Promise<string> {
 // workers ran undemoted on 2026-07-08 (see
 // research/perfs/2026-07-08-host-saturation-agent-checks-starve-main.md).
 // Main-branch runs stay undemoted — the user is waiting on them (same rule as
-// build.ts's `branch === "main"` slot exemption).
-async function workerDemotion(): Promise<(argv: string[]) => string[]> {
-  const proc = Bun.spawn(["git", "rev-parse", "--abbrev-ref", "HEAD"], { stdout: "pipe", stderr: "pipe" });
-  const branch = (await new Response(proc.stdout).text()).trim();
-  return branch === "main" ? (argv) => argv : backgroundArgv;
+// build.ts's `branch === "main"` slot exemption). The demotion itself is
+// spawnCaptured's `background` option (spawn-priority's backgroundArgv).
+async function workerBackground(): Promise<boolean> {
+  const result = await spawnCaptured(["git", "rev-parse", "--abbrev-ref", "HEAD"]);
+  return result.stdout.trim() !== "main";
 }
 
 const toRel = (root: string, abs: string): string => relative(root, abs).split("\\").join("/");
@@ -134,7 +129,7 @@ async function runWorker(
   root: string,
   target: TscTarget,
   lintFiles: string[],
-  demote: (argv: string[]) => string[],
+  background: boolean,
 ): Promise<WorkerResult> {
   const jobPath = join(os.tmpdir(), `type-check-${target.name}-${process.pid}.json`);
   writeFileSync(jobPath, JSON.stringify({
@@ -144,18 +139,13 @@ async function runWorker(
     buildInfoPath: tsBuildInfoPath(root, target.name),
     lintFiles,
   }));
-  const proc = Bun.spawn(demote([process.execPath, WORKER, jobPath]), { cwd: root, stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  if (exitCode !== 0) {
-    throw new Error(`type-check worker for "${target.name}" exited ${exitCode}:\n${stderr.trim() || stdout.trim()}`);
+  const result = await spawnCaptured([process.execPath, WORKER, jobPath], { cwd: root, background });
+  if (result.exitCode !== 0) {
+    throw new Error(`type-check worker for "${target.name}" exited ${result.exitCode}:\n${result.stderr.trim() || result.stdout.trim()}`);
   }
-  // Read AFTER exit: rusage is only final once the child is reaped, and it is a
-  // free read (no sampling loop) — getrusage reports the TRUE peak of the run.
-  return { ...(JSON.parse(stdout) as WorkerOutput), maxRssBytes: proc.resourceUsage()?.maxRSS };
+  // rusage is only final once the child is reaped, and it is a free read (no
+  // sampling loop) — getrusage reports the TRUE peak of the run.
+  return { ...(JSON.parse(result.stdout) as WorkerOutput), maxRssBytes: result.resourceUsage.maxRssBytes };
 }
 
 // One greppable line per worker, e.g. "type-check worker web-core: maxRSS 2.4 GB".
@@ -192,7 +182,7 @@ const check: Check = {
   // closure cache (fingerprint.ts / closure-cache.ts) is untouched and orthogonal.
   inputKeyed: true,
   async run(ctx: CheckContext) {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const targets = discoverTscTargets(root);
 
     // Lint universe + per-file closure fingerprints (the warm-path file filter).
@@ -201,7 +191,7 @@ const check: Check = {
     // OUTER input-keyed read-set (Stage 2). Only runs on a cache MISS: the runner
     // reaches run() only when validate-by-replay missed (or nothing was recorded
     // yet). On a HIT it short-circuits before run(), so recording — and every
-    // getRoot/graph/worker cost below — is skipped entirely (zero workers). The
+    // root/graph/worker cost below — is skipped entirely (zero workers). The
     // view is null on the legacy whole-tree path (fail-open: a null snapshot in
     // the runner falls back to that path), in which case nothing is recorded and
     // behaviour is unchanged. See ./outer-read-set for what each fact guards.
@@ -246,7 +236,7 @@ const check: Check = {
     // host ceiling is `B` workers total, subdivided across every build's fan-out.
     const results: WorkerResult[] = [];
     const crashes: { name: string; error: string }[] = [];
-    const demote = await workerDemotion();
+    const background = await workerBackground();
 
     // Warm any target that has NO local base yet from the host-global pool.
     // That is the fresh-worktree case, which used to be seeded from main's
@@ -271,7 +261,7 @@ const check: Check = {
     await mapConcurrent(targets, units, (t) =>
       ctx.grant.run(async () => {
         try {
-          results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? [], demote));
+          results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? [], background));
         } catch (err) {
           crashes.push({ name: t.name, error: (err as Error).message });
         }

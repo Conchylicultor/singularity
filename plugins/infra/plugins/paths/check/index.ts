@@ -1,18 +1,11 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
 }
 
 // Canonical files where these patterns are intentionally allowed.
@@ -50,7 +43,7 @@ const noHardcodedPathsCheck: Check = {
   description:
     "Filesystem paths must come from @plugins/infra/plugins/paths/{core,server}; no homedir() calls or hardcoded path strings in TS",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const seen = new Set<string>();
     const offenders: string[] = [];
 
@@ -123,7 +116,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
   description:
     "The per-worktree artifact layout (the worktrees/<name> data dir and the build/release artifact filenames) must come from worktreeDataDir()/worktreeArtifacts in @plugins/infra/plugins/paths; never re-inline the base dir or a raw artifact filename.",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const seen = new Set<string>();
     const offenders: string[] = [];
 

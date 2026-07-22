@@ -8,27 +8,20 @@ import { publishLane } from "../lane";
 import { listAllChecks, readCheckProgress, runChecks, scopeOf, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { CHECK_SCOPES, type CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 
-// This worktree's identity, from ONE `git rev-parse`: the op-marker slug (the
-// root's basename, matching what `build` / `push` write — see worktree-op.ts)
-// and the branch the op record carries. `rev-parse` takes both requests in one
-// invocation and answers in order, so there is no reason to pay for a second
-// process launch. Mirrors the local `getWorktreeRoot()` helpers in build.ts /
-// push.ts.
+// This worktree's identity: the op-marker slug (the root's basename, matching
+// what `build` / `push` write — see worktree-op.ts) and the branch the op
+// record carries. `getWorktreeRoot()` is the shared, process-memoized git-root
+// helper (one spawn regardless of caller count); the branch is one more
+// `git rev-parse`. Mirrors the same two facts build.ts / push.ts read.
 async function getWorktreeIdentity(): Promise<{ slug: string; branch: string }> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const output = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) {
-    console.error("Not in a git repository");
-    process.exit(1);
-  }
-  const [root, branch] = output.trim().split("\n");
-  if (!root || !branch) {
-    console.error(`Could not determine the worktree root and branch (git rev-parse said: ${output.trim()})`);
+  const root = await getWorktreeRoot();
+  const branchResult = await spawnCaptured(["git", "rev-parse", "--abbrev-ref", "HEAD"]);
+  const branch = branchResult.stdout.trim();
+  if (branchResult.exitCode !== 0 || !branch) {
+    console.error(`Could not determine the current branch (git rev-parse said: ${branchResult.stdout.trim()})`);
     process.exit(1);
   }
   return { slug: basename(root), branch };

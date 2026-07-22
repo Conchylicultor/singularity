@@ -17,6 +17,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 
 const DRY_RUN = !process.argv.includes("--write");
 
@@ -43,18 +44,8 @@ const pushes = pgTable(
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 async function git(args: string[], cwd?: string): Promise<string> {
-  const proc = Bun.spawn([GIT, ...args], {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const text = await new Response(proc.stdout).text();
-  const code = await proc.exited;
-  if (code !== 0) {
-    const err = await new Response(proc.stderr).text();
-    throw new Error(`git ${args.join(" ")} failed: ${err.trim()}`);
-  }
-  return text.trim();
+  const result = await spawnExpectOk([GIT, ...args], { cwd });
+  return result.stdout.trim();
 }
 
 interface CommitInfo {

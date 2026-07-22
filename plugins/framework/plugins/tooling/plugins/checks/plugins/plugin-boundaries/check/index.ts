@@ -5,6 +5,7 @@ import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/c
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { currentScanView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { splitTopLevelStatements } from "./parse";
 import { collectForeignReexports } from "./reexport-provenance";
 import { recordBoundaryReadSet } from "./read-set";
@@ -44,14 +45,6 @@ const PUSH_BACK_HINT =
 // Entry point
 // ============================================================================
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 interface PluginDir {
   /** Relative path from `plugins/` root, e.g. "conversations/plugins/conversation-view". */
   relPath: string;
@@ -90,7 +83,7 @@ const check: Check = {
     const view = currentScanView();
     if (view) recordBoundaryReadSet(view);
 
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 

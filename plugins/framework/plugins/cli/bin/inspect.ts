@@ -27,6 +27,7 @@
 // the wedge (heisenbug) or slowing ops — and say so in the wedge research doc.
 
 import { installOrphanGuard, ORPHAN_EXIT_CODE } from "./orphan-guard";
+import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 
 export const CLI_INSPECT_ENABLED = true;
 
@@ -70,9 +71,15 @@ export async function maybeReexecUnderInspector(): Promise<boolean> {
   // Random path token: only a reader of the op marker (same user) knows the ws
   // URL. The inspector listens on localhost only.
   const url = `localhost:${pickFreePort()}/${crypto.randomUUID().slice(0, 8)}`;
-  const child = Bun.spawn(
+  // `onSpawn` runs synchronously inside spawnPassthrough (before its first
+  // await), so `childKill` is populated by the time this call returns — in place
+  // for the signal handlers and orphan guard below. The returned promise is
+  // awaited twice (the orphan-guard race and the final exit-code read); a
+  // promise memoizes its result, so both awaits see the same resolution.
+  let childKill: ((signal?: number | NodeJS.Signals) => void) | undefined;
+  const exited = spawnPassthrough(
     [process.execPath, `--inspect=${url}`, process.argv[1]!, ...process.argv.slice(2)],
-    { stdin: "inherit", stdout: "inherit", stderr: "inherit" },
+    { onSpawn: (c) => { childKill = c.kill; } },
   );
 
   // Terminal-generated signals reach the whole foreground group (both
@@ -80,7 +87,7 @@ export async function maybeReexecUnderInspector(): Promise<boolean> {
   // forward the catchable terminals. The child's own handlers (build.ts) turn
   // them into a graceful exit; its ppid-poll covers a SIGKILLed parent.
   for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT"] as const) {
-    process.on(sig, () => child.kill(sig));
+    process.on(sig, () => childKill?.(sig));
   }
 
   // The wrapper is the process whose ppid is the shell, so it is the one that
@@ -99,17 +106,17 @@ export async function maybeReexecUnderInspector(): Promise<boolean> {
     // latch so the escalation runs once.
     if (orphanHandled) return;
     orphanHandled = true;
-    child.kill("SIGTERM");
+    childKill?.("SIGTERM");
     void (async () => {
-      const exited = await Promise.race([
-        child.exited,
+      const raced = await Promise.race([
+        exited,
         Bun.sleep(5_000).then(() => "timeout" as const),
       ]);
-      if (exited === "timeout") child.kill("SIGKILL");
+      if (raced === "timeout") childKill?.("SIGKILL");
       process.exit(ORPHAN_EXIT_CODE);
     })();
   });
 
-  process.exitCode = await child.exited;
+  process.exitCode = (await exited).exitCode;
   return true;
 }

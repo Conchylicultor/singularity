@@ -11,14 +11,7 @@
 import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "fs";
 import { dirname, join, relative, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
@@ -55,7 +48,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 }
 
 const dryRun = process.argv.includes("--dry-run");
-const root = await getRoot();
+const root = await getWorktreeRoot();
 const pluginsRoot = join(root, "plugins");
 const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
 const pluginSet = new Set(Array.from(tree.byDir.values()).map((n) => n.path));

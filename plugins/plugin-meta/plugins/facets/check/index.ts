@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -37,20 +38,12 @@ const RENDER_SURFACES = [
   },
 ];
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const check: Check = {
   id: "facets:render-complete",
   description:
     "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, contributions) with a matching facet id",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");
     const facetIds = (await loadFacets()).map((f) => f.def.id).sort();
     const facetIdSet = new Set(facetIds);

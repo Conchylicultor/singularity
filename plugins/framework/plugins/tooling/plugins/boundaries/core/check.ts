@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, relative, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import type { BoundaryConfig } from "./types";
@@ -19,14 +20,6 @@ interface Violation {
   file: string;
   message: string;
   fix?: string;
-}
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
 }
 
 function findSourceFiles(root: string): string[] {
@@ -111,7 +104,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
     description:
       "Zone-DAG boundary rules: runtime isolation + zone-level default-deny import restrictions",
     async run(): Promise<CheckResult> {
-      const root = await getRoot();
+      const root = await getWorktreeRoot();
       const pluginsRoot = join(root, "plugins");
 
       const pluginTree = existsSync(pluginsRoot) ? await buildPluginTree(pluginsRoot, { skipBarrelImport: true }) : null;

@@ -1,6 +1,7 @@
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   registerBarrelStubs,
@@ -24,14 +25,6 @@ function storePathFor(
   return `${asPath(asPluginId(override ?? fallbackId))}/${descriptorName}.jsonc`;
 }
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 type BarrelContribution = Record<string, unknown> & {
   _slotId?: string;
   _kind?: symbol;
@@ -44,7 +37,7 @@ const check: Check = {
   description:
     "Every ConfigV2.Register (server) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");
 
     const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });

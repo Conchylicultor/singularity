@@ -17,7 +17,7 @@ import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
-import { getMainRepoRoot } from "../git/main-repo-root";
+import { getMainRepoRoot, getWorktreeRoot, spawnCaptured, spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath, materializeWarmBase, publishWarmBase, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
@@ -37,7 +37,6 @@ import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-ad
 import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
 import { createValveDeps, holdThroughValve, shouldRequeue, valveGates, type ValveDeps } from "../admission-valve";
 import { laneFor, publishLane } from "../lane";
-import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { renderStepBlock, orderStepsForDisplay, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
@@ -139,17 +138,14 @@ async function exec(
   cwd: string,
   env?: Record<string, string>,
 ): Promise<{ maxRssBytes: number | undefined }> {
-  const proc = Bun.spawn(cmd, {
+  const { exitCode, resourceUsage } = await spawnPassthrough(cmd, {
     cwd,
-    stdout: "inherit",
-    stderr: "inherit",
     env: env ? { ...process.env, ...env } : undefined,
   });
-  const exitCode = await proc.exited;
   if (exitCode !== 0) {
     process.exit(1);
   }
-  return { maxRssBytes: proc.resourceUsage()?.maxRSS };
+  return { maxRssBytes: resourceUsage.maxRssBytes };
 }
 
 
@@ -160,43 +156,28 @@ interface StepOutput {
   maxRssBytes: number | undefined;
 }
 
+// Lines are rebuilt AFTER exit as stdout-lines then stderr-lines. The old piped
+// version interleaved the two streams in arrival order, but that order was a
+// nondeterministic pipe race anyway — grouping per stream is the honest framing.
 async function execBuffered(
   cmd: string[],
   cwd: string,
   env?: Record<string, string>,
+  background = false,
 ): Promise<StepOutput> {
-  const lines: StepOutput["lines"] = [];
-  const proc = Bun.spawn(cmd, {
+  const result = await spawnCaptured(cmd, {
     cwd,
-    stdout: "pipe",
-    stderr: "pipe",
     env: env ? { ...process.env, ...env } : undefined,
+    background,
   });
-
-  async function collect(
-    stream: ReadableStream<Uint8Array> | null,
-    type: "stdout" | "stderr",
-  ) {
-    if (!stream) return;
-    const decoder = new TextDecoder();
-    let partial = "";
-    for await (const chunk of stream) {
-      const text = partial + decoder.decode(chunk, { stream: true });
-      const parts = text.split("\n");
-      partial = parts.pop()!;
-      for (const line of parts) {
-        if (line) lines.push({ text: line, stream: type });
-      }
-    }
-    if (partial) lines.push({ text: partial, stream: type });
+  const lines: StepOutput["lines"] = [];
+  for (const line of result.stdout.split("\n")) {
+    if (line) lines.push({ text: line, stream: "stdout" });
   }
-
-  await Promise.all([
-    collect(proc.stdout, "stdout"),
-    collect(proc.stderr, "stderr"),
-  ]);
-  const exitCode = await proc.exited;
-  return { lines, exitCode, maxRssBytes: proc.resourceUsage()?.maxRSS };
+  for (const line of result.stderr.split("\n")) {
+    if (line) lines.push({ text: line, stream: "stderr" });
+  }
+  return { lines, exitCode: result.exitCode, maxRssBytes: result.resourceUsage.maxRssBytes };
 }
 
 // One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
@@ -240,32 +221,13 @@ function printStepResults(results: StepResult[]): void {
   }
 }
 
-async function getWorktreeRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const output = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    console.error("Not in a git repository");
-    process.exit(1);
-  }
-  return output.trim();
-}
-
 async function getCurrentBranch(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--abbrev-ref", "HEAD"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const output = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
+  const result = await spawnCaptured(["git", "rev-parse", "--abbrev-ref", "HEAD"]);
+  if (result.exitCode !== 0) {
     console.error("Could not determine current branch");
     process.exit(1);
   }
-  return output.trim();
+  return result.stdout.trim();
 }
 
 // Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
@@ -274,19 +236,12 @@ async function getCurrentBranch(): Promise<string> {
 // is silent — no error, just orphaned pushes — so check on every build and
 // reset to the tracked value.
 async function ensureHooksPath(): Promise<void> {
-  const read = Bun.spawn(["git", "config", "--get", "core.hooksPath"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const current = (await new Response(read.stdout).text()).trim();
-  await read.exited;
+  const read = await spawnCaptured(["git", "config", "--get", "core.hooksPath"]);
+  const current = read.stdout.trim();
   if (current === ".githooks") return;
-  const write = Bun.spawn(["git", "config", "core.hooksPath", ".githooks"], {
-    stdout: "pipe",
-    stderr: "inherit",
-  });
-  const exitCode = await write.exited;
-  if (exitCode !== 0) {
+  const write = await spawnCaptured(["git", "config", "core.hooksPath", ".githooks"]);
+  if (write.exitCode !== 0) {
+    if (write.stderr.trim()) console.error(write.stderr.trim());
     console.error(
       `Failed to set core.hooksPath=.githooks (was ${current ? `"${current}"` : "unset"}).`,
     );
@@ -1104,8 +1059,9 @@ export function registerBuild(program: Command) {
       // waiting on them. The checks runner's type-check workers apply the same
       // branch rule at their own spawn site (type-check/check/index.ts), so
       // they are covered on every path (build, standalone check, push) without
-      // relying on session inheritance.
-      const demote = branch === "main" ? (argv: string[]) => argv : backgroundArgv;
+      // relying on session inheritance. Demotion rides spawnCaptured's
+      // `background` option (spawn-priority's backgroundArgv under the hood).
+      const backgroundBuild = branch !== "main";
 
       // The heavy section itself: everything the host CPU grant covers (checks +
       // tsc + vite), running on the grant it is handed. Extracted so the acquire
@@ -1200,8 +1156,10 @@ export function registerBuild(program: Command) {
                 // is bounded by the same grant as everything else.
                 const output = await grant.run(() =>
                   execBuffered(
-                    demote([process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo]),
+                    [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
                     target.dir,
+                    undefined,
+                    backgroundBuild,
                   ),
                 );
                 end({ maxRssBytes: output.maxRssBytes });
@@ -1288,7 +1246,7 @@ export function registerBuild(program: Command) {
               // for it so it shares the build's CPU budget with the type-check
               // workers rather than running on top of it.
               const output = await grant.run(() =>
-                execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
+                execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }, backgroundBuild),
               );
               end({ maxRssBytes: output.maxRssBytes });
               const rss = maxRssLine("vite build", output.maxRssBytes);

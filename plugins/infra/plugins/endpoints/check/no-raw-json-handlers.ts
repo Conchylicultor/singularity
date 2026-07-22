@@ -1,15 +1,8 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // Server/central handlers must build JSON responses through implement(), which
 // calls Response.json() for you (200 for a returned object, 204 for void). A raw
@@ -39,7 +32,7 @@ const check: Check = {
   description:
     "Server/central JSON responses must go through implement(); raw Response.json() in a handler is forbidden",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     const matches = await grepCode({
       root,

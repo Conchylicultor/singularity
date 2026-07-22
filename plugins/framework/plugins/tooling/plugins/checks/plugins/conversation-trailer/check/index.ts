@@ -1,3 +1,5 @@
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
   id: string;
@@ -12,10 +14,8 @@ const STOP_MESSAGE =
 async function run(
   cmd: string[],
 ): Promise<{ stdout: string; exitCode: number }> {
-  const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
-  const stdout = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
-  return { stdout: stdout.trim(), exitCode };
+  const result = await spawnCaptured(cmd);
+  return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }
 
 async function currentBranch(): Promise<string> {

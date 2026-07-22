@@ -6,55 +6,38 @@ import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profil
 import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant } from "@plugins/infra/plugins/host-admission/core";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder } from "@plugins/infra/plugins/worktree/server";
+import { spawnCaptured, spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 
-// Throws-by-default spawn: a non-zero exit prints the command + captured
+// Exits-by-default spawn: a non-zero exit prints the command + captured
 // stderr and exits(1) like `exec`, so a caller can never read a failed git
 // call's empty stdout as real data (e.g. a failed `git status` absorbed as a
 // "clean tree" and pushed over uncommitted changes). Returns trimmed stdout.
 // For the sites that genuinely branch on the exit code, use `runAllowFail`.
 async function run(cmd: string[], cwd?: string): Promise<string> {
-  const proc = Bun.spawn(cmd, {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    console.error(`Command failed (exit ${exitCode}): ${cmd.join(" ")}`);
-    if (stderr.trim()) console.error(stderr.trim());
+  const result = await spawnCaptured(cmd, { cwd });
+  if (result.exitCode !== 0) {
+    console.error(`Command failed (exit ${result.exitCode}): ${cmd.join(" ")}`);
+    if (result.stderr.trim()) console.error(result.stderr.trim());
     process.exit(1);
   }
-  return stdout.trim();
+  return result.stdout.trim();
 }
 
 // Old behavior — returns both stdout and exitCode without throwing. Only for
 // the sites that branch on the exit code themselves (a git command whose
 // non-zero exit is an expected, handled outcome, e.g. a conflicting rebase).
+// stderr now prints once after exit (it used to stream via "inherit").
 async function runAllowFail(
   cmd: string[],
   cwd?: string,
 ): Promise<{ stdout: string; exitCode: number }> {
-  const proc = Bun.spawn(cmd, {
-    cwd,
-    stdout: "pipe",
-    stderr: "inherit",
-  });
-  const stdout = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
-  return { stdout: stdout.trim(), exitCode };
+  const result = await spawnCaptured(cmd, { cwd });
+  if (result.stderr) process.stderr.write(result.stderr);
+  return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }
 
 async function exec(cmd: string[], cwd?: string): Promise<void> {
-  const proc = Bun.spawn(cmd, {
-    cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  const exitCode = await proc.exited;
+  const { exitCode } = await spawnPassthrough(cmd, { cwd });
   if (exitCode !== 0) {
     process.exit(1);
   }
@@ -79,15 +62,16 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 // read the pre-rebase module cache. It is by property, never by id, and
 // hand-reproducible as `./singularity check --scope tree`.
 async function runChecksSubprocess(root: string, grant: Grant): Promise<boolean> {
-  const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check", "--scope", "tree"], {
-    cwd: root,
-    // `process.env` values are `string | undefined`; the inferred spread type is
-    // exactly what Bun.spawn's `env` accepts (same pattern as build.ts's exec()).
-    env: { ...process.env, ...grant.env() },
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  return (await proc.exited) === 0;
+  const { exitCode } = await spawnPassthrough(
+    ["bun", "plugins/framework/plugins/cli/bin/index.ts", "check", "--scope", "tree"],
+    {
+      cwd: root,
+      // `process.env` values are `string | undefined`; the inferred spread type
+      // is exactly what the spawn `env` contract accepts.
+      env: { ...process.env, ...grant.env() },
+    },
+  );
+  return exitCode === 0;
 }
 
 // Run the rebased-tree checks. A push is human-blocking, so it takes an

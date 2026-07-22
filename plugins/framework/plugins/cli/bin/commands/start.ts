@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { join } from "path";
-import { getMainRepoRoot } from "../git/main-repo-root";
+import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { SINGULARITY_DIR } from "../paths";
 import {
   readPid,

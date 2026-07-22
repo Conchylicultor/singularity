@@ -9,6 +9,7 @@ import { Pool } from "pg";
 import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { classifyMigrationSql } from "@plugins/database/plugins/migrations/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 // Inlined minimal Check shape (mirrors the sibling checks in this folder, e.g.
@@ -27,23 +28,6 @@ const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
 // Filename → sha8 regex, inlined from the runner (server/internal/runner.ts) so
 // this check never imports a server-plugin internal.
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
-
-async function git(
-  root: string,
-  args: string[],
-): Promise<{ code: number; out: string }> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  return { code: await proc.exited, out };
-}
-
-async function getRoot(): Promise<string> {
-  return (await git(process.cwd(), ["rev-parse", "--show-toplevel"])).out.trim();
-}
 
 // Every migration filename under `dir` (matching MIGRATION_RE).
 function migrationFileSet(dir: string): Set<string> {
@@ -86,7 +70,7 @@ const check: Check = {
     }
   },
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const mainRoot = await ensureMainWorktreeRoot();
     const branchDataDir = resolve(root, MIGRATIONS_SUBDIR);
     const mainDataDir = join(mainRoot, MIGRATIONS_SUBDIR);

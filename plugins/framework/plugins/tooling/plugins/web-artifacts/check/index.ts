@@ -36,6 +36,7 @@ import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "n
 import { join } from "node:path";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import { isBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { INLINE_PACKAGES } from "../core/constants";
 import { diffImportMaps } from "../core/import-map";
@@ -55,14 +56,6 @@ import {
 
 const MARKER_NAME = ".web-artifacts.json";
 const BUILD_HINT = "Run `./singularity build` to recompose the dist from the current tree.";
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 function rootSync(): string {
   const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
@@ -134,7 +127,7 @@ const mapInSync: Check = {
     // that changes source. Push/standalone runs verify for real.
     if (isBuildInProgress()) return { ok: true };
 
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const dist = distDir(root);
     const markerRaw = readIfExists(join(dist, MARKER_NAME));
     // No marker ⇒ a monolith dist (or nothing deployed yet): a genuine pass —
@@ -276,7 +269,7 @@ const noVendoredStateInlined: Check = {
   async run(): Promise<CheckResult> {
     if (!existsSync(WEB_ARTIFACTS_STORE_DIR)) return { ok: true }; // nothing composed yet
 
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const markerRaw = readIfExists(join(distDir(root), MARKER_NAME));
     const minify = markerRaw === null ? true : markerMinify(markerRaw);
 

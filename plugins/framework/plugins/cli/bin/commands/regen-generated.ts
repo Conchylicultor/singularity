@@ -3,19 +3,7 @@ import {
   regenerateRegistryCodegen,
   regenerateManifestCodegen,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-
-async function getWorktreeRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) {
-    console.error("Not in a git repository");
-    process.exit(1);
-  }
-  return out.trim();
-}
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 export function registerRegenGenerated(program: Command) {
   program

@@ -1,15 +1,8 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const check: Check = {
   id: "no-hand-built-link-to",
@@ -18,7 +11,7 @@ const check: Check = {
   description:
     "Notification/toast `linkTo` must be built from a route (`<route>.link(app, params)`), never a hand-written app-rooted path literal",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     // Flags a hand-built app-rooted link literal: `linkTo: "/…"` or
     // `` linkTo: `/…` ``. A `.link(...)` call, `null`, or a variable does not
     // match (it isn't a string literal opening with `/`). `maskStrings: false`

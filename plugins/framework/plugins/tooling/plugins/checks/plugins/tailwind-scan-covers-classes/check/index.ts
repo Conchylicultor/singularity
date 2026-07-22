@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 async function git(args: string[], cwd?: string): Promise<string> {
-  const proc = Bun.spawn(["git", ...args], { stdout: "pipe", stderr: "pipe", cwd });
-  return await new Response(proc.stdout).text();
+  const result = await spawnCaptured(["git", ...args], { cwd });
+  return result.stdout;
 }
 
 const APP_CSS = "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
@@ -65,7 +66,7 @@ const check: Check = {
   description:
     "Every file that authors a utility class must lie within Tailwind's resolved @source scan scope in app.css (else the class is silently never generated)",
   async run() {
-    const root = (await git(["rev-parse", "--show-toplevel"])).trim();
+    const root = await getWorktreeRoot();
     const cssPath = join(root, APP_CSS);
     const cssDir = dirname(cssPath);
     const css = readFileSync(cssPath, "utf8");

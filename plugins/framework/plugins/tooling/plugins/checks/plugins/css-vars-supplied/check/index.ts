@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -23,21 +24,9 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * names against custom-utilities.ts) — complementary, no overlap.
  */
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 async function gitLsFiles(root: string, glob: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", glob], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = (await new Response(proc.stdout).text()).trim();
+  const result = await spawnCaptured(["git", "ls-files", glob], { cwd: root });
+  const out = result.stdout.trim();
   return out ? out.split("\n") : [];
 }
 
@@ -50,7 +39,7 @@ const check: Check = {
   description:
     "Every fallback-less var(--x) in repo CSS must reference a token supplied by a token-group schema or a CSS declaration",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     const cssFiles = await gitLsFiles(root, "plugins/**/*.css");
 

@@ -1,4 +1,5 @@
 import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -31,14 +32,6 @@ function allowed(path: string): boolean {
   );
 }
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const check: Check = {
   id: "host-pools-declared",
   description:
@@ -48,7 +41,7 @@ const check: Check = {
     // barrel path written inside a string/fixture can never match. Match on the
     // exact barrel specifier.
     const matches = await grepImports({
-      root: await getRoot(),
+      root: await getWorktreeRoot(),
       grepArg: BARREL,
       fixed: true,
       filter: (s) => s === BARREL,

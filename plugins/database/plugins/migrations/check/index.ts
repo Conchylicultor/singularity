@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 // helpers for non-backend consumers and is import-safe by design.
 import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import orphanedTablesCheck from "./orphaned-tables";
 import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-allowlisted";
 import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
@@ -36,17 +37,8 @@ async function git(
   root: string,
   args: string[],
 ): Promise<{ code: number; out: string }> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  return { code: await proc.exited, out };
-}
-
-async function getRoot(): Promise<string> {
-  return (await git(process.cwd(), ["rev-parse", "--show-toplevel"])).out.trim();
+  const result = await spawnCaptured(["git", ...args], { cwd: root });
+  return { code: result.exitCode, out: result.stdout };
 }
 
 const check: Check = {
@@ -81,7 +73,7 @@ const check: Check = {
     }
   },
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // FAST PATH: if this branch changes no migration file vs origin/main there
     // is nothing to apply — pass without ever touching the DB. This is the ~99%

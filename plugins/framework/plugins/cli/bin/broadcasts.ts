@@ -1,3 +1,5 @@
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
 type BroadcastCommand = "build" | "push" | "check";
 
 interface Broadcast {
@@ -10,13 +12,8 @@ interface Broadcast {
 
 async function gitOutput(args: string[]): Promise<string | null> {
   try {
-    const proc = Bun.spawn(["git", ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const out = await new Response(proc.stdout).text();
-    const code = await proc.exited;
-    return code === 0 ? out.trim() : null;
+    const result = await spawnCaptured(["git", ...args]);
+    return result.exitCode === 0 ? result.stdout.trim() : null;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
     return null;
@@ -28,11 +25,8 @@ async function isAncestor(
   descendant: string,
 ): Promise<boolean> {
   try {
-    const proc = Bun.spawn(
-      ["git", "merge-base", "--is-ancestor", ancestor, descendant],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    return (await proc.exited) === 0;
+    const result = await spawnCaptured(["git", "merge-base", "--is-ancestor", ancestor, descendant]);
+    return result.exitCode === 0;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
     return false;

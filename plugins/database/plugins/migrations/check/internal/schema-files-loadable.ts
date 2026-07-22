@@ -1,5 +1,6 @@
 import { basename, resolve } from "path";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling migration checks) to avoid a
 // cross-plugin import of the framework Check type from a check file.
@@ -13,14 +14,6 @@ type Check = {
 
 const MIGRATIONS_PLUGIN_DIR = "plugins/database/plugins/migrations";
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const schemaFilesLoadableCheck: Check = {
   id: "schema-files-loadable",
   description:
@@ -28,13 +21,13 @@ const schemaFilesLoadableCheck: Check = {
   // Cheap structural invariant: guard even `./singularity build --skip-checks`.
   alwaysRun: true,
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const absFiles = schemaGlobFiles(root).map((f) => resolve(root, f));
 
     // One subprocess replicating drizzle-kit's synchronous require() load, run
     // from the migrations plugin dir (matching drizzle-kit's module/tsconfig
     // resolution) with SINGULARITY_WORKTREE set as `migrations-in-sync` does.
-    const proc = Bun.spawn(
+    const result = await spawnCaptured(
       [
         process.execPath,
         "--bun",
@@ -43,14 +36,12 @@ const schemaFilesLoadableCheck: Check = {
       ],
       {
         cwd: resolve(root, MIGRATIONS_PLUGIN_DIR),
-        stdout: "pipe",
-        stderr: "pipe",
         env: { ...process.env, SINGULARITY_WORKTREE: basename(root), NO_COLOR: "1" },
       },
     );
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    const exitCode = await proc.exited;
+    const stdout = result.stdout;
+    const stderr = result.stderr;
+    const exitCode = result.exitCode;
 
     let failures: { file: string; error: string }[];
     try {

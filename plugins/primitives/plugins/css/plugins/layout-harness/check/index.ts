@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { Check, CheckContext, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import { classifyFailure } from "./classify";
 
@@ -41,14 +42,6 @@ const browserPool = defineHostPool({ id: "layout-geometry", size: 1, cost: { cpu
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
-}
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
 }
 
 // sha256 over the WORKING-TREE content of every input file (tracked + untracked
@@ -111,7 +104,7 @@ const check: Check = {
     return computeSig(rootSync());
   },
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const sig = computeSig(root);
 
     // Steady state: an unchanged css subtree ⇒ the sidecar marker exists ⇒ return
@@ -154,16 +147,10 @@ const check: Check = {
       // historical "hook timed out / launch timeout" flake. The flag raises the
       // default for every hook AND test in the suite (the measures themselves stay
       // sub-second), so a slow-but-healthy setup never trips the gate.
-      const proc = Bun.spawn(["bun", "test", "--timeout", "120000", resolve(root, SUITE_REL)], {
-        cwd: root,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-        proc.exited,
-      ]);
+      const { stdout, stderr, exitCode } = await spawnCaptured(
+        ["bun", "test", "--timeout", "120000", resolve(root, SUITE_REL)],
+        { cwd: root },
+      );
 
       if (exitCode === 0) {
         // Record the pass atomically (write-temp + rename on the same fs).

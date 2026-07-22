@@ -1,18 +1,11 @@
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const NULL_UUID = "00000000-0000-0000-0000-000000000000";
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 interface Snapshot {
   file: string;
@@ -34,7 +27,7 @@ const check: Check = {
   id: "snapshot-chain-intact",
   description: "drizzle migration snapshots form a single linear chain",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const metaDir = resolve(root, "plugins/database/plugins/migrations/data/meta");
 
     const snapshots = readSnapshots(metaDir);

@@ -1,16 +1,9 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { maskSource, markerCallSpans, lineAt } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // Legitimate, documented exceptions: resources that read a Postgres schema the
 // change-feed DELIBERATELY excludes (only the `public` schema gets triggers).
@@ -27,7 +20,7 @@ const check: Check = {
   description:
     "Resources that read the DB must not use `defineExternalResource` (which exposes hand-`notify`) — the DB change-feed is their only invalidation path.",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // Fast pre-filter: candidate files mentioning the bare identifier. We match
     // `\bdefineExternalResource\b` — NOT a `(`-anchored token — because the

@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -51,17 +52,8 @@ export function classifyCollisions(groups: MigrationGroup[]): FlaggedCollision[]
 }
 
 async function git(root: string, args: string[]): Promise<{ code: number; out: string }> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  return { code: await proc.exited, out };
-}
-
-async function getRoot(): Promise<string> {
-  return (await git(process.cwd(), ["rev-parse", "--show-toplevel"])).out.trim();
+  const result = await spawnCaptured(["git", ...args], { cwd: root });
+  return { code: result.exitCode, out: result.stdout };
 }
 
 // Basenames present on origin/main (or local main). A file tracked there is
@@ -95,7 +87,7 @@ const check: Check = {
   // is byte-identical. Never cache.
   cacheSignature: () => null,
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const dir = resolve(root, MIGRATIONS_SUBDIR);
     const tracked = await trackedBasenames(root);
 

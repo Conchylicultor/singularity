@@ -1,24 +1,17 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import typedWebFetches from "./typed-web-fetches";
 import noRawJsonHandlers from "./no-raw-json-handlers";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const typedHandlers: Check = {
   id: "endpoints:typed-handlers",
   description:
     "HTTP route handlers must use defineEndpoint + implement(); literal route strings in httpRoutes are forbidden for new plugins",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     const matches = await grepCode({
       root,

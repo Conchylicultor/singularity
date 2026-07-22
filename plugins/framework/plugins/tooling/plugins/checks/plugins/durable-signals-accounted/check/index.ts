@@ -3,6 +3,7 @@ import {
   listCandidateSources,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { findMarkerCalls, lineAt, parseStringField } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { TIMELINE_SOURCES } from "@plugins/debug/plugins/timeline/core";
 import { ACCOUNTING } from "./accounting";
 
@@ -28,14 +29,6 @@ interface CallSite {
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
 }
 
 // Resolve a const-named channel id (`export const NAME = "value"`) to its string
@@ -126,7 +119,7 @@ const check: Check = {
   description:
     "Every persisted (durable) log channel is a reviewed classification in accounting.ts, and every report/timeline classification points at a live ReportKind / TimelineSource",
   async run(): Promise<CheckResult> {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const { found, unresolvable } = await findPersistedChannels(root);
 
     // Loud failure: a persisted channel whose id we cannot resolve. The check

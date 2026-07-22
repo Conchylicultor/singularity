@@ -2750,6 +2750,10 @@
         "@napi-rs/keyring": "^1.1.6",
       },
     },
+    "plugins/infra/plugins/spawn": {
+      "name": "@singularity/plugin-infra-spawn",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/trash": {
       "name": "@singularity/plugin-infra-trash",
       "version": "0.0.1",
@@ -6322,6 +6326,8 @@
     "@singularity/plugin-infra-safe-fetch": ["@singularity/plugin-infra-safe-fetch@workspace:plugins/infra/plugins/safe-fetch"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
+
+    "@singularity/plugin-infra-spawn": ["@singularity/plugin-infra-spawn@workspace:plugins/infra/plugins/spawn"],
 
     "@singularity/plugin-infra-trash": ["@singularity/plugin-infra-trash@workspace:plugins/infra/plugins/trash"],
 

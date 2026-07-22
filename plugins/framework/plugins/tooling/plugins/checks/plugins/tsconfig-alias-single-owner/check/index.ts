@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -9,21 +10,9 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 // target silently rots when files move or a new config is added).
 const BASE = "tsconfig.base.json";
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 async function listTsconfigs(root: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", "*tsconfig*.json"], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = (await new Response(proc.stdout).text()).trim();
+  const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], { cwd: root });
+  const out = result.stdout.trim();
   if (!out) return [];
   return out
     .split("\n")
@@ -45,7 +34,7 @@ const check: Check = {
   description:
     "Path aliases (e.g. @plugins/*) must be declared once in tsconfig.base.json and inherited via `extends` — no tsconfig may redeclare a base-owned alias",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const owned = new Set(declaredPathAliases(root, BASE));
     if (owned.size === 0) {
       return {

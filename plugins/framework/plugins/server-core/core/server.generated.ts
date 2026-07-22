@@ -236,6 +236,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/runtime-profiler", id: "infra.runtime-profiler", loader: () => import("@plugins/infra/plugins/runtime-profiler/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/safe-fetch", id: "infra.safe-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/server"), dependsOn: [] },
+  { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/trash", id: "infra.trash", loader: () => import("@plugins/infra/plugins/trash/server"), dependsOn: ["database", "database/plugins/db-test-fixture", "database/plugins/migrations", "infra/plugins/endpoints", "infra/plugins/retention"] },
   { pluginPath: "infra/plugins/warmup", id: "infra.warmup", loader: () => import("@plugins/infra/plugins/warmup/server"), dependsOn: ["infra/plugins/host-read-pool", "infra/plugins/paths", "infra/plugins/runtime-profiler"] },
   { pluginPath: "infra/plugins/worktree", id: "infra.worktree", loader: () => import("@plugins/infra/plugins/worktree/server"), dependsOn: ["infra/plugins/host-admission", "infra/plugins/paths", "infra/plugins/runtime-profiler", "packages/plugins/spawn-priority"] },

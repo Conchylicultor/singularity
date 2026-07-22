@@ -1,4 +1,5 @@
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { dataViews } from "../shared/data-views.generated";
 
@@ -9,14 +10,6 @@ import { dataViews } from "../shared/data-views.generated";
 // exactly: convert the pluginId through `asPath`, keep the id verbatim.
 function overridePathFor(pluginId: string, id: string): string {
   return `config/${asPath(asPluginId(pluginId))}/${id}.jsonc`;
-}
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
 }
 
 const check: Check = {
@@ -34,19 +27,19 @@ const check: Check = {
   // check is cheap, so always re-running it is the correct trade.
   cacheSignature: () => null,
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // The set of config files present in the worktree. `--cached` covers
     // tracked/staged files and `--others --exclude-standard` covers freshly
     // written-but-unstaged ones, so `./singularity build` (which runs before a
     // commit) doesn't fail the instant an agent writes a config. Push's
     // dirty-tree gate guarantees committed-ness at merge time.
-    const proc = Bun.spawn(
+    const result = await spawnCaptured(
       ["git", "ls-files", "--others", "--cached", "--exclude-standard", "--", "config/"],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
+      { cwd: root },
     );
     const present = new Set(
-      (await new Response(proc.stdout).text()).trim().split("\n").filter(Boolean),
+      result.stdout.trim().split("\n").filter(Boolean),
     );
 
     const missing: string[] = [];

@@ -30,6 +30,7 @@ import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/ser
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
 import { propagateConfigToUser } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -125,15 +126,12 @@ async function run(
   opts: { cwd?: string; env?: Record<string, string> } = {},
 ): Promise<void> {
   console.log(`  $ ${cmd.join(" ")}`);
-  const proc = Bun.spawn(cmd, {
+  const { exitCode } = await spawnPassthrough(cmd, {
     cwd: opts.cwd,
-    stdout: "inherit",
-    stderr: "inherit",
     env: opts.env ? { ...process.env, ...opts.env } : undefined,
   });
-  const code = await proc.exited;
-  if (code !== 0) {
-    throw new Error(`Command failed (exit ${code}): ${cmd.join(" ")}`);
+  if (exitCode !== 0) {
+    throw new Error(`Command failed (exit ${exitCode}): ${cmd.join(" ")}`);
   }
 }
 

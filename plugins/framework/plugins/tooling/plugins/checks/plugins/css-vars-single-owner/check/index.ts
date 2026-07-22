@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -22,21 +23,9 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  *      conflict).
  */
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 async function gitLsFiles(root: string, glob: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", glob], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = (await new Response(proc.stdout).text()).trim();
+  const result = await spawnCaptured(["git", "ls-files", glob], { cwd: root });
+  const out = result.stdout.trim();
   return out ? out.split("\n") : [];
 }
 
@@ -73,7 +62,7 @@ const check: Check = {
   description:
     "Every token-group CSS var has exactly one declaring owner (no cross-group collision; no static-CSS re-declaration outside @theme)",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // Fresh from the real `defineTokenGroup` descriptors — NOT the committed
     // manifest, whose static import is frozen in the ESM cache before codegen

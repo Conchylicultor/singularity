@@ -1,15 +1,8 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const CAST_PATTERN =
   "(\\b[a-z][a-zA-Z]*[Dd]ata\\b as [A-Z]|\\([^)]*[Dd]ata[^)]*\\?\\?[^)]*\\) as [A-Z])";
@@ -21,7 +14,7 @@ const check: Check = {
   description:
     "useResource is generic — casting its `data` result hides type mismatches and is never necessary",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     // strings: true — this detects a code construct (an `as T` cast) that must
     // never be matched inside a string literal.
     const matches = await grepCode({

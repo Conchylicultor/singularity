@@ -29,6 +29,7 @@
 // fact from the fresh snapshot.
 
 import { createHash } from "node:crypto";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -133,9 +134,8 @@ export interface TreeSnapshot {
 }
 
 async function gitStdout(root: string, args: string[]): Promise<{ code: number; bytes: Uint8Array }> {
-  const proc = Bun.spawn(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
-  const bytes = new Uint8Array(await new Response(proc.stdout).arrayBuffer());
-  return { code: await proc.exited, bytes };
+  const result = await spawnCaptured(["git", ...args], { cwd: root });
+  return { code: result.exitCode, bytes: result.stdoutBytes };
 }
 
 /**

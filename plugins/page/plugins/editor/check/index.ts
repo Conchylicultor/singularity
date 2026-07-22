@@ -1,6 +1,7 @@
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 
 // Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
@@ -17,14 +18,6 @@ const SERVER_BLOCK_DATA_SLOT = "page.block-data"; // Editor.BlockData (server _k
 // server scan silently degraded. Used as a health canary, not a hardcoded rule.
 const CANARY_SERVER_TYPE = "page";
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 // Server `Editor.BlockData` contributions are now read off the SAME contributions
 // facet as the web `Editor.Block` half (see the loop below). The facet's runtime
 // extractor captures server registrations — `defineServerContribution` marks each
@@ -37,7 +30,7 @@ const check: Check = {
   description:
     "every block TYPE rendered on the web (`Editor.Block`) also has a server-side `data` schema (`Editor.BlockData`), so the write boundary can validate its data",
   async run(): Promise<CheckResult> {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // The barrel-imported ("enriched") tree — the same tree docgen renders the
     // `Contributes: Editor.Block "<type>" → …` lines from. Its contributions

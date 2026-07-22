@@ -1,3 +1,5 @@
+import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+
 interface Driver {
   name: string;
   script: string;
@@ -12,25 +14,12 @@ const DRIVERS: Driver[] = [
 const STALE_DRIVERS = ["regen-docs"];
 
 async function gitConfigGet(key: string, cwd: string): Promise<string | null> {
-  const proc = Bun.spawn(["git", "config", "--local", "--get", key], {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  const code = await proc.exited;
-  return code === 0 ? out.trim() : null;
+  const result = await spawnCaptured(["git", "config", "--local", "--get", key], { cwd });
+  return result.exitCode === 0 ? result.stdout.trim() : null;
 }
 
 async function gitConfigSet(key: string, value: string, cwd: string): Promise<void> {
-  const proc = Bun.spawn(["git", "config", "--local", key, value], {
-    cwd,
-    stdout: "pipe",
-    stderr: "inherit",
-  });
-  if ((await proc.exited) !== 0) {
-    throw new Error(`Failed to set git config ${key}`);
-  }
+  await spawnExpectOk(["git", "config", "--local", key, value], { cwd });
 }
 
 /**
@@ -55,8 +44,7 @@ export async function registerMergeDrivers(root: string): Promise<void> {
   for (const name of STALE_DRIVERS) {
     const key = `merge.${name}.driver`;
     if (await gitConfigGet(key, root)) {
-      const proc = Bun.spawn(["git", "config", "--local", "--unset", key], { cwd: root, stdout: "pipe", stderr: "pipe" });
-      await proc.exited;
+      await spawnExpectOk(["git", "config", "--local", "--unset", key], { cwd: root });
       console.log(`Removed stale merge driver: ${name}`);
     }
   }

@@ -1,15 +1,8 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // Tailwind color-scale names that have a semantic/categorical token replacement.
 const SCALE_NAMES =
@@ -37,7 +30,7 @@ const check: Check = {
   description:
     "Hardcoded colors are banned: use semantic tokens (success/warning/info/destructive) or the categorical palette",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const matches = await grepCode({
       root,
       pattern: new RegExp(COLOR_ALTERNATION),

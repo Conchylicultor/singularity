@@ -2,23 +2,16 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { pluginClaudeMdPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const check: Check = {
   id: "plugins-have-claudemd",
   description: "every plugin has a CLAUDE.md (auto-generated, optionally with hand-written prose above the AUTOGEN fence)",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
     const missing: string[] = [];
     for (const info of tree.byDir.values()) {

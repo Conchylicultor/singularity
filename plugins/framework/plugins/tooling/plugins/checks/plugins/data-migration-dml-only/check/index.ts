@@ -1,16 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // Statements a data/backfill migration may contain. DEFAULT-DENY: a statement is
 // rejected unless it begins with one of these (after comment stripping). This is
@@ -129,7 +122,7 @@ const check: Check = {
   description:
     "snapshot-less data migrations contain only DML (no schema changes)",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const dir = resolve(root, "plugins/database/plugins/migrations/data");
     const metaDir = join(dir, "meta");
 

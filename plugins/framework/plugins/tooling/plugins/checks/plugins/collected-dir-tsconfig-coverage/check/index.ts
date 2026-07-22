@@ -3,25 +3,14 @@ import {
   discoverCollectedDirs,
   type DiscoveredCollectedDir,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 async function listTsconfigs(root: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "ls-files", "*tsconfig*.json"], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = (await new Response(proc.stdout).text()).trim();
+  const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], { cwd: root });
+  const out = result.stdout.trim();
   if (!out) return [];
   return out
     .split("\n")
@@ -47,7 +36,7 @@ const check: Check = {
   description:
     "Every collected-dir runtime folder (web, server, check, facet, composition, …) must be covered by some tsconfig `include`, so its files type-check instead of being orphaned",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // Single source of truth: the same scan codegen, plugin-boundaries, and
     // plugins-registry-in-sync derive from. Keep one declarer per dir for the

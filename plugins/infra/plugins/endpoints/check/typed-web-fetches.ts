@@ -1,22 +1,15 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const check: Check = {
   id: "endpoints:typed-web-fetches",
   description:
     'Web code must use fetchEndpoint/useEndpoint instead of raw fetch("/api/...")',
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // Match direct fetch() calls and local wrappers (jsonFetch, postJson)
     // with a literal /api/ URL. The (<[^>]*>)? handles TS generic params

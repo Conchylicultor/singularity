@@ -3,6 +3,7 @@ import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -25,20 +26,12 @@ interface Offender {
   reason: string;
 }
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const check: Check = {
   id: "apps-paths-from-app-ref",
   description:
     "every `Apps.App` contribution derives its `id`/`path` from a named `AppRef` (`<app>.id` / `<app>.basePath`), never from string/const literals — one source of truth for the typed link builder",
   async run(): Promise<CheckResult> {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // 1. The set of registered AppRef binding names: `export const <NAME> =
     //    defineApp(`. Only named exports can be referenced by a contribution, so

@@ -2,19 +2,12 @@ import { existsSync, readFileSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const RUNTIMES = ["web", "server", "central"] as const;
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const INLINE_DEFAULT_RE = /(^|\n)\s*export\s+default\s+\{/;
 const REEXPORT_DEFAULT_RE = /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}\s*from\b/;
@@ -26,7 +19,7 @@ const check: Check = {
   description:
     "Every plugin barrel (web|server|central)/index.ts must use inline `export default { ... } satisfies *PluginDefinition` — no re-exports, no missing defaults",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 

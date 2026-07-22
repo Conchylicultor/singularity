@@ -1,5 +1,6 @@
 import { join } from "path";
 import { grepCode, type CodeMatch } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling orphaned-tables check) to
 // avoid a cross-plugin import of the framework Check type from a check file.
@@ -128,17 +129,6 @@ export function findOffenders(
     .map((m) => `${m.path}:${m.line}:${m.text.trim()}`);
 }
 
-async function gitRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    cwd: process.cwd(),
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) throw new Error("git rev-parse --show-toplevel failed");
-  return out.trim();
-}
-
 const check: Check = {
   id: "imperative-create-table-allowlisted",
   description:
@@ -147,7 +137,7 @@ const check: Check = {
   // Never cache: a stale PASS on a correctness gate is worse than re-scanning.
   cacheSignature: () => null,
   async run() {
-    const root = await gitRoot();
+    const root = await getWorktreeRoot();
     const allowlistIds = parseAllowlistIdentifiers(
       await Bun.file(join(root, ALLOWLIST_SRC_REL)).text(),
     );

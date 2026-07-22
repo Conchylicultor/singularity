@@ -2,17 +2,10 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 /**
  * Table factories — functions that wrap `pgTable()` with a dynamic name and
@@ -99,7 +92,7 @@ const check: Check = {
   description:
     "Every concrete table definition (pgTable / table-factory call) must live in a drizzle schema-glob file, or it silently vanishes from migration generation",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // 1. Glob-matched file set — derived from drizzle.config.ts (single source),
     // enumerated by the shared migrations/core helper (fails loud if unparseable).

@@ -1,4 +1,5 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -34,20 +35,12 @@ interface Offender {
   reason: string;
 }
 
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
-
 const check: Check = {
   id: "app-icon:key-in-sync",
   description:
     "every app shell's core `defineApp({ iconKey })` matches the `mdAppIcon(MdXxx)` in its web barrel and resolves to a real MD icon",
   async run(): Promise<CheckResult> {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // 1. Authoritative icon source: every `mdAppIcon(MdXxx)` in a web barrel,
     //    indexed by its owning shell plugin dir.

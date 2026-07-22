@@ -1,16 +1,9 @@
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // ---------------------------------------------------------------------------
 // Pure classifier (no fs/git) — exported for unit testing.
@@ -53,7 +46,7 @@ const check: Check = {
   description:
     "journal entries, .sql files, and meta snapshots cross-reference each other",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const dir = resolve(root, "plugins/database/plugins/migrations/data");
     const metaDir = join(dir, "meta");
 

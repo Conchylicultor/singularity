@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check, CheckContext, CheckResult, CheckScope } from "@plugins/framework/plugins/tooling/core";
 import type { Grant } from "@plugins/infra/plugins/host-admission/core";
 import { computeTreeHash } from "./tree-hash";
@@ -9,14 +10,6 @@ import { withScanView } from "./scan-context";
 import { loadTreeSnapshot, validate, type TreeSnapshot, type QueryFact, type ValidateResult } from "./read-set";
 import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 function isCheck(value: unknown): value is Check {
   return (
@@ -169,7 +162,7 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // or walk the cache dir, so any one of them can be where a run wedges — and
   // the diagnostic has to name WHICH, exactly as it names a hung check. Wrapping
   // costs one appended line per phase.
-  const root = noCache ? null : await progress.bootstrap("root", () => getRoot());
+  const root = noCache ? null : await progress.bootstrap("root", () => getWorktreeRoot());
   const treeHash = root ? await progress.bootstrap("tree-hash", () => computeTreeHash(root)) : null;
   const cache = treeHash ? await progress.bootstrap("open-cache", () => openCheckCache()) : null;
   // The shared, content-addressed tree snapshot — loaded ONCE per run (one

@@ -1,15 +1,8 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const ALLOWED_PATHS = [
   "plugins/conversations/plugins/model-provider/core/registry.ts",
@@ -21,7 +14,7 @@ const check: Check = {
   description:
     "Claude model CLI flags (claude-opus-*, claude-sonnet-*, claude-haiku-*) must be resolved through the model-provider registry, never hardcoded",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     const matches = await grepCode({
       root,
       pattern: /claude-(opus|sonnet|haiku)-[0-9]/,

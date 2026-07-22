@@ -5,24 +5,17 @@ import {
   markerCallSpans,
   lineAt,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 const check: Check = {
   id: "keyed-resource-scope",
   description:
     "A keyed live-state resource MUST be declared via a CLIENT-SHARED `keyedResourceDescriptor(...)` plus the two-arg `defineResource(descriptor, opts)` form, so `keyOf` is declared once and the server can never drift from the client. This static BACKSTOP forbids the two ways keyed-ness can be smuggled into the server without a shared descriptor: (1) the flat `mode: \"keyed\"` form (banned at the type level via `ServerResourceOptions` rejecting `mode:\"keyed\"`, so any textual `mode:\"keyed\"` is a type bypass — `as any`, `// @ts-expect-error`, a local wrapper), and (2) an inline `keyed:` contract literal as the FIRST argument (the sanctioned form passes an imported descriptor IDENTIFIER, so `keyed:` never appears in a real call). Both let server keyed-ness drift from the client and crash the browser (\"no keyOf registered for keyed resource\") with no compile-time signal. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
 
     // Fast pre-filter: candidate files that mention the identifier at all. The
     // per-line `pattern` here intentionally matches only the bare identifier

@@ -1,16 +1,9 @@
 import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { compositionRoots } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // A plugin-runtime specifier: contains `/plugins/`, or starts with the
 // workspace-name (`@singularity/plugin-`) or `@plugins/` alias forms.
@@ -29,7 +22,7 @@ const check: Check = {
   description:
     "Non-plugin code may only import from `@plugins/*/core` (public API). Other plugin runtimes (web, server, shared) are off-limits.",
   async run() {
-    const root = await getRoot();
+    const root = await getWorktreeRoot();
     // git grep narrows candidate files (broad import shape); then grepImports
     // structurally scans each via findImports and keeps only plugin-runtime
     // specifiers. String-safe by construction — an import written inside a

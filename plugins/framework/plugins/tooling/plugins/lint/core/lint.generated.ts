@@ -38,6 +38,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/watcher-safety", id: "framework.tooling.lint.watcher-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/bar", id: "primitives.bar", loader: () => import("@plugins/primitives/plugins/bar/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css", id: "primitives.css", loader: () => import("@plugins/primitives/plugins/css/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/badge", id: "primitives.css.badge", loader: () => import("@plugins/primitives/plugins/css/plugins/badge/lint"), dependsOn: [] },

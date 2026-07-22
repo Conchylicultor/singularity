@@ -7,19 +7,7 @@ import {
   listTrackedMigrationBasenames,
   resolveMainRef,
 } from "../migrations";
-
-async function getWorktreeRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) {
-    console.error("Not in a git repository");
-    process.exit(1);
-  }
-  return out.trim();
-}
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Each migration filename embeds the sha256 prefix of its SQL content
 // (see renameMigrations in migrations.ts). If the on-disk content of a
