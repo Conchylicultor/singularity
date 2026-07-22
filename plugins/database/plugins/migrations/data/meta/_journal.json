@@ -1408,6 +1408,13 @@
       "tag": "20260717_224129_ce69db4d__release_runs_composition_history_index",
       "hash": "ce69db4d",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784720595000,
+      "tag": "20260722_114315_df6689fd__add_server_console_url",
+      "hash": "df6689fd",
+      "breakpoints": true
     }
   ]
 }

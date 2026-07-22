@@ -48,6 +48,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug-app.sidebar", pluginId: "apps.debug.shell" },
   { slotId: "debug-app.toolbar", pluginId: "apps.debug.shell" },
   { slotId: "deploy.section", pluginId: "apps.deploy.shell" },
+  { slotId: "deploy.servers.item-actions", pluginId: "apps.deploy.servers" },
   { slotId: "file-explorer.sidebar", pluginId: "apps.file-explorer.shell" },
   { slotId: "file-explorer.toolbar", pluginId: "apps.file-explorer.shell" },
   { slotId: "home.section", pluginId: "apps.home.shell" },

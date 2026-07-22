@@ -17,6 +17,7 @@ export const handleCreate = implement(createServer, async ({ body }) => {
       host: body.host,
       port: body.port ?? 22,
       sshUser: body.sshUser ?? "root",
+      consoleUrl: body.consoleUrl || null,
     })
     .returning();
   if (!row) throw new HttpError(500, "insert returned no row");

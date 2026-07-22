@@ -11,6 +11,7 @@ export const handleUpdate = implement(updateServer, async ({ params, body }) => 
   if (body.host !== undefined) updates.host = body.host;
   if (body.port !== undefined) updates.port = body.port;
   if (body.sshUser !== undefined) updates.sshUser = body.sshUser;
+  if (body.consoleUrl !== undefined) updates.consoleUrl = body.consoleUrl || null;
 
   const [row] = await db
     .update(_deployServers)

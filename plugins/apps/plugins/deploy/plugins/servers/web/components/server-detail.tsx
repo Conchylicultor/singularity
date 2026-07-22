@@ -39,6 +39,19 @@ export function ServerDetail({ server }: { server: Server }) {
             {server.sshKeyConfigured ? "Configured" : "Not set"}
           </span>
         </Text>
+        {server.consoleUrl && (
+          <Text as="div" variant="caption">
+            <span className="text-muted-foreground">Console: </span>
+            <a
+              href={server.consoleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Open console
+            </a>
+          </Text>
+        )}
       </Stack>
     </Stack>
   );

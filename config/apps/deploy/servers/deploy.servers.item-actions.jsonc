@@ -1,0 +1,9 @@
+// @hash c80ae71e2bd3
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.deploy.servers:open-console"
+  ]
+}

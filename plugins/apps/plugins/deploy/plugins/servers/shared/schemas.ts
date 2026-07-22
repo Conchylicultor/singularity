@@ -9,6 +9,7 @@ export const ServerSchema = z.object({
   host: z.string(),
   port: z.number(),
   sshUser: z.string(),
+  consoleUrl: z.string().nullable(),
   status: ServerStatusSchema,
   sshKeyConfigured: z.boolean(),
   createdAt: z.string(),

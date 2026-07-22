@@ -10,6 +10,7 @@ import {
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
+import { ServerItemActions } from "./server-item-actions";
 
 const SERVERS_VIEW = defineDataView("deploy.servers");
 
@@ -56,6 +57,7 @@ export function ServersList() {
       defaultView="list"
       storageKey={SERVERS_VIEW}
       loading={loading}
+      itemActions={ServerItemActions}
       selectedRowId={selectedId}
       onRowActivate={(s) => openPane(serverDetailPane, { serverId: s.id }, { mode: "push" })}
       actions={

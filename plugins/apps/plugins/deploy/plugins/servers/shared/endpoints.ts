@@ -9,6 +9,7 @@ export const CreateServerBodySchema = z.object({
   host: z.string(),
   port: z.number().optional(),
   sshUser: z.string().optional(),
+  consoleUrl: z.string().optional(),
   sshPrivateKey: z.string().optional(),
 });
 export type CreateServerBody = z.infer<typeof CreateServerBodySchema>;
@@ -18,6 +19,7 @@ export const UpdateServerBodySchema = z.object({
   host: z.string().optional(),
   port: z.number().optional(),
   sshUser: z.string().optional(),
+  consoleUrl: z.string().nullable().optional(),
   sshPrivateKey: z.string().optional(),
 });
 export type UpdateServerBody = z.infer<typeof UpdateServerBodySchema>;

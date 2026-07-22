@@ -1,0 +1,1 @@
+ALTER TABLE "deploy_servers" ADD COLUMN "console_url" text;

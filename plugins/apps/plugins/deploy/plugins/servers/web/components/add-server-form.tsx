@@ -9,6 +9,7 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
   const [sshUser, setSshUser] = useState("root");
+  const [consoleUrl, setConsoleUrl] = useState("");
   const [sshPrivateKey, setSshPrivateKey] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -23,6 +24,7 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
           host,
           port: Number(port) || 22,
           sshUser: sshUser || "root",
+          consoleUrl: consoleUrl || undefined,
           sshPrivateKey: sshPrivateKey || undefined,
         },
       });
@@ -75,6 +77,19 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
           />
         </label>
       </div>
+      <Stack as="label" gap="xs">
+        <Text as="span" variant="label">Console URL</Text>
+        <input
+          className="bg-input rounded-md border px-sm py-xs text-body"
+          type="url"
+          placeholder="e.g. https://console.hetzner.com/projects/…/servers/…"
+          value={consoleUrl}
+          onChange={(e) => setConsoleUrl(e.target.value)}
+        />
+        <Text as="span" variant="caption" className="text-muted-foreground">
+          Link to the provider's management console for this server.
+        </Text>
+      </Stack>
       <Stack as="label" gap="xs">
         <Text as="span" variant="label">SSH Private Key</Text>
         <textarea
