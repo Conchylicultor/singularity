@@ -193,6 +193,17 @@ export function registerCheck(program: Command) {
           // the truth about it.
           profiler?.write();
         });
+
+        // Catchable fatal signals → graceful exit so the exit handler above
+        // (clearWorktreeOp) runs — e.g. the wrapper's orphan SIGTERM tears this
+        // worker down cleanly. Like the `process.exit(1)` path, this skips the
+        // `finally`, whose only cleanup is the same clearWorktreeOp. SIGKILL is
+        // uncatchable; the marker's pid-liveness check is the self-heal there.
+        for (const [sig, code] of [
+          ["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129], ["SIGQUIT", 131],
+        ] as const) {
+          process.on(sig, () => process.exit(code));
+        }
       }
       try {
         const runUnder = (grant: Grant): Promise<boolean> => {

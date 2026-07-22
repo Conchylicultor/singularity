@@ -363,6 +363,16 @@ export function registerPush(program: Command) {
         // against a late-firing exit handler deleting the next holder's file).
         clearPushHolder(pushId);
       });
+
+      // Catchable fatal signals → graceful exit so the exit handler above
+      // (clearWorktreeOp + clearPushHolder) runs — e.g. the wrapper's orphan
+      // SIGTERM tears this worker down cleanly. SIGKILL is uncatchable; the
+      // holder's pid-liveness check is the self-heal there.
+      for (const [sig, code] of [
+        ["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129], ["SIGQUIT", 131],
+      ] as const) {
+        process.on(sig, () => process.exit(code));
+      }
       // Fires immediately BEFORE `pushPool.run` (see withPushLock), so a push
       // blocked on the mutex lands on disk as a live "waiting" row before it
       // ever holds the lock. A failure BEFORE this point writes no record at

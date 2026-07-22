@@ -1,5 +1,6 @@
 import { program } from "commander";
-import { maybeReexecUnderInspector } from "./inspect";
+import { isOpCommand, maybeReexecUnderInspector } from "./inspect";
+import { installOrphanGuard, ORPHAN_EXIT_CODE } from "./orphan-guard";
 import { registerApplyMigrations } from "./commands/apply-migrations";
 import { registerBuild } from "./commands/build";
 import { registerCheck } from "./commands/check";
@@ -17,6 +18,14 @@ import { runCli } from "./run-cli";
 // command; this process only mirrors its exit code.
 if (await maybeReexecUnderInspector()) {
   process.exit(process.exitCode ?? 0);
+}
+
+// Past the re-exec block only when THIS process runs the command: the inspected
+// worker (backstop if the wrapper is SIGKILLed and the worker reparents to 1),
+// or the direct op when the inspector is disabled (its ppid is the shell — the
+// primary guard there).
+if (isOpCommand(process.argv[2])) {
+  installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
 }
 
 program.name("singularity").description("Singularity agent CLI");

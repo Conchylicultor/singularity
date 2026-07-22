@@ -889,17 +889,6 @@ export function registerBuild(program: Command) {
         process.on(sig, () => process.exit(code));
       }
 
-      // A foreground `./singularity build` dies with its invoker so an orphaned
-      // build never holds the build lock indefinitely. macOS has no PDEATHSIG, so
-      // poll ppid (reparented orphans get ppid 1); unref so it never keeps the
-      // process alive. The detached self-restart build (run-build.ts) opts out via
-      // SINGULARITY_BUILD_DETACHED — it intends to outlive the backend it restarts.
-      if (process.ppid !== 1 && !process.env.SINGULARITY_BUILD_DETACHED) {
-        setInterval(() => {
-          if (process.ppid === 1) process.exit(140); // 128+12: orphaned
-        }, 2000).unref();
-      }
-
       endSpan = buildProfilerStart("nameValidation", "build:preflight", "name validation");
       if (!NAME_REGEX.test(name)) {
         console.error(

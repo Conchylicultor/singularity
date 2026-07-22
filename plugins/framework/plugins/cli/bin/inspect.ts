@@ -26,11 +26,19 @@
 // without a code change. Disable if the inspector is ever suspected of masking
 // the wedge (heisenbug) or slowing ops — and say so in the wedge research doc.
 
+import { installOrphanGuard, ORPHAN_EXIT_CODE } from "./orphan-guard";
+
 export const CLI_INSPECT_ENABLED = true;
 
 // Only the long-running ops worth capturing. Trivial commands (regen-*, db, …)
 // stay uninspected: they finish in seconds and the extra process is pure noise.
 const INSPECTED_COMMANDS: ReadonlySet<string> = new Set(["build", "check", "push"]);
+
+// Single source for "is this an op command" — reused by the orphan-guard wiring
+// in index.ts so the op set stays defined in one place.
+export function isOpCommand(command: string | undefined): boolean {
+  return command !== undefined && INSPECTED_COMMANDS.has(command);
+}
 
 function alreadyInspected(): boolean {
   return process.execArgv.some((a) => a === "--inspect" || a.startsWith("--inspect="));
@@ -56,7 +64,7 @@ export async function maybeReexecUnderInspector(): Promise<boolean> {
   if (!CLI_INSPECT_ENABLED) return false;
   if (process.env.SINGULARITY_CLI_INSPECT === "0") return false;
   const command = process.argv[2];
-  if (command === undefined || !INSPECTED_COMMANDS.has(command)) return false;
+  if (!isOpCommand(command)) return false;
   if (alreadyInspected()) return false;
 
   // Random path token: only a reader of the op marker (same user) knows the ws
@@ -74,6 +82,15 @@ export async function maybeReexecUnderInspector(): Promise<boolean> {
   for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT"] as const) {
     process.on(sig, () => child.kill(sig));
   }
+
+  // The wrapper is the process whose ppid is the shell, so it is the one that
+  // actually observes orphaning; the worker's ppid stays pointed at this living
+  // wrapper and never becomes 1. Detect the reparent here and tear down the
+  // inspected child (its graceful exit releases the lock).
+  installOrphanGuard(() => {
+    child.kill("SIGTERM");
+    process.exit(ORPHAN_EXIT_CODE);
+  });
 
   process.exitCode = await child.exited;
   return true;
