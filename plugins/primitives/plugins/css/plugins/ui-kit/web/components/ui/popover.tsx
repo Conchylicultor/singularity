@@ -10,6 +10,7 @@ import {
   type PopoverPadding,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
@@ -71,9 +72,11 @@ function PopoverContent({
               single-line contract so content opened from a line container
               (Bar/Row) wraps/pretty-prints instead of collapsing onto one
               line. Line containers inside re-assert `true` locally. */}
-          <SingleLineProvider value={false}>
-            <ContentScope fill={false}>{children}</ContentScope>
-          </SingleLineProvider>
+          <OverlayBoundary kind="popover">
+            <SingleLineProvider value={false}>
+              <ContentScope fill={false}>{children}</ContentScope>
+            </SingleLineProvider>
+          </OverlayBoundary>
         </PopoverPrimitive.Popup>
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>

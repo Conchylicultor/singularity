@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
@@ -56,9 +57,11 @@ function DialogContent({
         {/* Floating panel = fresh flow root: reset the ambient single-line
             contract so content opened from a line container wraps instead of
             collapsing onto one line. */}
-        <SingleLineProvider value={false}>
-          <ContentScope fill={false}>{children}</ContentScope>
-        </SingleLineProvider>
+        <OverlayBoundary kind="dialog">
+          <SingleLineProvider value={false}>
+            <ContentScope fill={false}>{children}</ContentScope>
+          </SingleLineProvider>
+        </OverlayBoundary>
       </DialogPrimitive.Popup>
     </DialogPortal>
   )

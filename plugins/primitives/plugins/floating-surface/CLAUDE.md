@@ -52,7 +52,7 @@ needs the surface element.
 
 - Description: Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), reusing ViewportOverlay + Surface, without ever taking focus. A sibling to InlinePopover for transient caret menus.
 - Web:
-  - Uses: `primitives/css/surface.Surface`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.POPOVER_MAX_HEIGHT`, `primitives/css/ui-kit.POPOVER_PADDING`, `primitives/css/ui-kit.POPOVER_WIDTH`, `primitives/css/ui-kit.PopoverMaxHeight`, `primitives/css/ui-kit.PopoverPadding`, `primitives/css/ui-kit.PopoverWidth`, `primitives/css/viewport-overlay.ViewportOverlay`
+  - Uses: `primitives/css/surface.Surface`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.POPOVER_MAX_HEIGHT`, `primitives/css/ui-kit.POPOVER_PADDING`, `primitives/css/ui-kit.POPOVER_WIDTH`, `primitives/css/ui-kit.PopoverMaxHeight`, `primitives/css/ui-kit.PopoverPadding`, `primitives/css/ui-kit.PopoverWidth`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/overlay-boundary.OverlayBoundary`
   - Exports: Types: `FloatingSurfaceProps`; Values: `FloatingSurface`
 - Cross-plugin:
   - Imported by: `page/url-paste`, `primitives/text-editor/caret-trigger`

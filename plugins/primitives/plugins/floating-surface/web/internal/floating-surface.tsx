@@ -19,6 +19,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web";
 
 /**
  * A FOCUS-LESS, caret-anchored floating surface.
@@ -184,7 +185,7 @@ export function FloatingSurface({
           POPOVER_MAX_HEIGHT[maxHeight],
         )}
       >
-        {children}
+        <OverlayBoundary kind="floating">{children}</OverlayBoundary>
       </Surface>
     </ViewportOverlay>
   );

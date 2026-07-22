@@ -3,6 +3,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md"
 
 const Select = SelectPrimitive.Root
@@ -98,7 +99,9 @@ function SelectContent({
               {header}
             </div>
           )}
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          <SelectPrimitive.List>
+            <OverlayBoundary kind="select">{children}</OverlayBoundary>
+          </SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>

@@ -5,6 +5,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { MdChevronRight, MdCheck } from "react-icons/md"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
@@ -57,14 +58,16 @@ function DropdownMenuContent({
               inherit its trigger's single-line row context. Item rows re-assert
               their own single-line layout locally. */}
           <SingleLineProvider value={false}>
-            {header != null && (
-              // -mx-1 / -mt-1 full-bleed the header through the Popup's p-xs padding.
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- negative-margin bleed past the menu's own p-xs has no named utility
-              <div className="sticky top-0 z-raised -mx-1 -mt-1 mb-xs border-b bg-popover px-xs py-xs">
-                {header}
-              </div>
-            )}
-            {children}
+            <OverlayBoundary kind="dropdown">
+              {header != null && (
+                // -mx-1 / -mt-1 full-bleed the header through the Popup's p-xs padding.
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- negative-margin bleed past the menu's own p-xs has no named utility
+                <div className="sticky top-0 z-raised -mx-1 -mt-1 mb-xs border-b bg-popover px-xs py-xs">
+                  {header}
+                </div>
+              )}
+              {children}
+            </OverlayBoundary>
           </SingleLineProvider>
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>

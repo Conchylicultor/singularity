@@ -3638,6 +3638,10 @@
       "name": "@singularity/plugin-primitives-overflow-menu",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/overlay-boundary": {
+      "name": "@singularity/plugin-primitives-overlay-boundary",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/overscroll-hint": {
       "name": "@singularity/plugin-primitives-overscroll-hint",
       "version": "0.0.1",
@@ -6742,6 +6746,8 @@
     "@singularity/plugin-primitives-optimistic-mutation": ["@singularity/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
 
     "@singularity/plugin-primitives-overflow-menu": ["@singularity/plugin-primitives-overflow-menu@workspace:plugins/primitives/plugins/overflow-menu"],
+
+    "@singularity/plugin-primitives-overlay-boundary": ["@singularity/plugin-primitives-overlay-boundary@workspace:plugins/primitives/plugins/overlay-boundary"],
 
     "@singularity/plugin-primitives-overscroll-hint": ["@singularity/plugin-primitives-overscroll-hint@workspace:plugins/primitives/plugins/overscroll-hint"],
 
