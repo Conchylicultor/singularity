@@ -23,7 +23,7 @@
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
   - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
-  - **`scroll-reveal-safety`** — scroll-reveal-safety lint rule: no-adhoc-scroll-into-view
+  - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
   - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
   - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
   - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher

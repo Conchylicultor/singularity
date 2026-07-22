@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { scrollToBottom } from "./scroll-to-bottom";
 
 export interface UseStickyScrollOptions {
   /** Distance from bottom (px) within which the view is considered "pinned". */
@@ -93,7 +94,7 @@ export function useStickyScroll(
   const jumpToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    scrollToBottom(el, { behavior: "smooth" });
     setHasUnread(false);
   }, []);
 

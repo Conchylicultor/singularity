@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/floating-action/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { scrollToBottom } from "@plugins/primitives/plugins/auto-scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -117,7 +118,7 @@ export function MessageToc() {
               type="button"
               onClick={(e) => {
                 const container = paneScrollFrom(e.currentTarget);
-                container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+                scrollToBottom(container, { behavior: "smooth" });
               }}
               className="w-full border-t border-border/40 py-xs text-muted-foreground hover:bg-accent hover:text-foreground"
             >

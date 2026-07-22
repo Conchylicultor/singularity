@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useStickyScroll } from "@plugins/primitives/plugins/auto-scroll/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
@@ -107,31 +108,14 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 // without any in-component reset effect.
 function LogChannelView({ selected }: { selected: ChannelRef }) {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const stickToBottomRef = useRef(true);
   const lastSeqRef = useRef<number>(0);
 
   const selectedRef = useLatestRef(selected);
 
+  const { scrollRef, scrollIfPinned } = useStickyScroll({ threshold: 32 });
   useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const handleScroll = () => {
-      const distance = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-      stickToBottomRef.current = distance < 32;
-    };
-
-    viewport.addEventListener("scroll", handleScroll, { passive: true });
-    return () => viewport.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!stickToBottomRef.current) return;
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
-  }, [entries]);
+    scrollIfPinned();
+  }, [entries, scrollIfPinned]);
 
   const isBackendSource = selected.source === "backend";
   const isGatewaySource = selected.source === "gateway";
@@ -207,7 +191,7 @@ function LogChannelView({ selected }: { selected: ChannelRef }) {
   return (
     <Scroll
       fill
-      ref={viewportRef}
+      ref={scrollRef}
       className="rounded-md border bg-muted/30 p-lg font-mono text-caption"
     >
       {entries.map((entry) => (

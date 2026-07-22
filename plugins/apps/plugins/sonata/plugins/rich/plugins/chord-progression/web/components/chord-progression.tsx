@@ -1,8 +1,9 @@
-import { forwardRef, useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
 import {
   bars,
   effectiveKeyAt,
@@ -139,27 +140,11 @@ export function ChordProgression() {
     [barLines],
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Keep the active bar centred in the scroll viewport as the song plays. The
-  // container is `position: relative`, so each row's `offsetTop` is measured from
-  // it directly; we scroll the container only, never the page.
-  useEffect(() => {
-    const container = scrollRef.current;
-    const row = rowRefs.current[activeBar];
-    if (!container || !row) return;
-    const top =
-      row.offsetTop - (container.clientHeight - row.clientHeight) / 2;
-    container.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-  }, [activeBar]);
-
   return (
     // Bounded, self-scrolling lead sheet. Inline overflow/maxHeight + the
-    // relative positioning context drive the playhead-follow scroll; no layout
-    // primitive covers a runtime-tracked scroll viewport.
+    // relative positioning context bound the reveal: `useRevealOnActive` on the
+    // active bar scrolls this container only, never the page.
     <div
-      ref={scrollRef}
       style={{
         position: "relative",
         maxHeight: "18rem",
@@ -170,9 +155,7 @@ export function ChordProgression() {
         {barLines.map((line, i) => (
           <BarRow
             key={i}
-            ref={(el) => {
-              rowRefs.current[i] = el;
-            }}
+            isActiveBar={i === activeBar}
             line={line}
             active={active}
             labelByChord={labelByChord}
@@ -185,20 +168,31 @@ export function ChordProgression() {
 }
 
 /** One bar on its own line: a rigid bar-number gutter plus the chord slices. */
-const BarRow = forwardRef<
-  HTMLDivElement,
-  {
-    line: BarLine;
-    active: ChordAnn | undefined;
-    labelByChord: Map<ChordAnn, string>;
-    onSeek: (beat: number) => void;
-  }
->(function BarRow({ line, active, labelByChord, onSeek }, ref) {
+function BarRow({
+  line,
+  active,
+  labelByChord,
+  onSeek,
+  isActiveBar,
+}: {
+  line: BarLine;
+  active: ChordAnn | undefined;
+  labelByChord: Map<ChordAnn, string>;
+  onSeek: (beat: number) => void;
+  isActiveBar: boolean;
+}) {
+  // Reveal (centre) this bar in the bounded scroll container only when it
+  // TRANSITIONS to being the active bar (playhead crosses the boundary) — never
+  // on remount, so background churn can't fight the user's scroll.
+  const revealRef = useRevealOnActive(isActiveBar, {
+    block: "center",
+    behavior: "smooth",
+  });
   return (
     // `auto minmax(0,1fr)`: rigid number gutter + a flexible chip track that
     // owns the full bar width, so the per-chip `fr` weights map to real bar time.
     <div
-      ref={ref}
+      ref={revealRef}
       style={{
         display: "grid",
         gridTemplateColumns: "auto minmax(0, 1fr)",
@@ -217,7 +211,7 @@ const BarRow = forwardRef<
       />
     </div>
   );
-});
+}
 
 /** A bar's chord slices as `minmax(0, fr)`-weighted chips — or a rest box. */
 function BarBody({

@@ -10,6 +10,8 @@ export type {
   JumpToBottomButtonProps,
   JumpToBottomView,
 } from "./jump-to-bottom-button";
+export { scrollToBottom } from "./scroll-to-bottom";
+export type { ScrollToBottomOptions } from "./scroll-to-bottom";
 
 export default {
   description:

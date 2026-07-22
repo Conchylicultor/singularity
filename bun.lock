@@ -2535,8 +2535,8 @@
       "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-reveal-safety": {
-      "name": "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety",
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-scroll-safety",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety": {
@@ -6237,7 +6237,7 @@
 
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
 
-    "@singularity/plugin-framework-tooling-lint-scroll-reveal-safety": ["@singularity/plugin-framework-tooling-lint-scroll-reveal-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-reveal-safety"],
+    "@singularity/plugin-framework-tooling-lint-scroll-safety": ["@singularity/plugin-framework-tooling-lint-scroll-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-safety"],
 
     "@singularity/plugin-framework-tooling-lint-sink-safety": ["@singularity/plugin-framework-tooling-lint-sink-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety"],
 

@@ -1,5 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
+import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   type PaneMatch,
@@ -31,7 +32,12 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   useLayoutEffect(() => {
     const len = match?.panes.length ?? 0;
     if (ref.current && len > lastLength.current) {
-      ref.current.scrollLeft = ref.current.scrollWidth;
+      // Reveal the newest (rightmost) column by aligning its end with the
+      // container's; `block: "nearest"` avoids any vertical movement.
+      revealElement(ref.current.lastElementChild, {
+        inline: "end",
+        block: "nearest",
+      });
     }
     lastLength.current = len;
   }, [match?.panes.length]);
@@ -62,9 +68,9 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   const body = (
     <PluginErrorBoundary slot="layouts.miller" label={basePath}>
       {/* The horizontal flex row IS the x-scroll container: the SortableItem
-          columns are its direct flex children, and the scroll-into-view effect
-          reads this element's `scrollLeft`/`scrollWidth` to reveal the newest
-          column. flex-row + scroll-container can't be split without breaking the
+          columns are its direct flex children, and the growth effect reveals
+          this element's `lastElementChild` (the newest column) into view.
+          flex-row + scroll-container can't be split without breaking the
           direct-child flex relationship dnd-kit relies on. */}
       {/* eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children */}
       <div ref={ref} className="flex h-full overflow-x-auto">
