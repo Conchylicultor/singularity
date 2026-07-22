@@ -766,11 +766,15 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       notifyRouteListeners();
     } else if (typeof state?.pending === "string") {
       // A pending (unresolved) route round-trips through back/forward via
-      // `history.state.pending` — restore it without re-parsing the URL, just as
-      // the `state.route` branch restores a resolved route.
-      if (currentState.kind === "unresolved" && currentState.rawPath === state.pending) return;
-      currentState = { kind: "unresolved", rawPath: state.pending };
-      notifyRouteListeners();
+      // `history.state.pending`. Re-parse the URL rather than blindly restoring
+      // the pending state: a deferred pane may have registered since this entry
+      // was committed (the cold-deep-link case — the pending entry is stamped at
+      // boot, before the target's plugin loads). `syncRouteFromUrl` upgrades the
+      // route to `resolved` the instant the URL matches a registered pane, and
+      // otherwise keeps it `unresolved` (same rawPath ⇒ no-op) — so a genuine
+      // back/forward to a still-pending entry is unaffected, but a late
+      // registration is no longer permanently shut out.
+      syncRouteFromUrl(stripBasePath(window.location.pathname, currentBasePath));
     } else {
       const pathname = stripBasePath(window.location.pathname, currentBasePath);
       syncRouteFromUrl(pathname);
