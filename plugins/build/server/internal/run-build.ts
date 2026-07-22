@@ -6,7 +6,7 @@ import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts, pru
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute } from "@plugins/build/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { _buildRuns } from "./tables";
+import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { frontendHashResource } from "./frontend-hash-resource";
 import { buildLog } from "./build-log";
 
@@ -136,10 +136,14 @@ export async function reconcileOrphanBuilds(): Promise<void> {
     // owner is still alive.
     if (terminal == null && isPidAlive(row.pid)) continue;
     const { exitCode, finishedAt } = terminal ?? { exitCode: -1, finishedAt: now };
+    // `isNull(finishedAt)` re-checks the row is still open: the CLI stamps its own
+    // rows authoritatively at deploy/compose-serve, so a row it closed between the
+    // scan above and this write must not be overwritten here. This reconcile is
+    // the fallback for rows no live CLI stamp will ever reach.
     await db
       .update(_buildRuns)
       .set({ finishedAt, exitCode })
-      .where(eq(_buildRuns.id, row.id));
+      .where(and(eq(_buildRuns.id, row.id), isNull(_buildRuns.finishedAt)));
   }
 }
 
@@ -257,6 +261,12 @@ async function doRunBuild(
 
   const exitCode = await proc.exited;
   buildLog.publish(exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`);
+  // On a main deploy the CLI now stamps main's row itself right after the health
+  // probe (before the ~100s compose-serve tail), so by the time this backend
+  // observes proc.exited the row is usually already closed. This UPDATE is the
+  // fallback for the paths the CLI stamp doesn't cover (a worktree build, or a
+  // CLI that died before stamping); the `isNull(finishedAt)` guard below makes it
+  // first-writer-wins so it never overwrites the CLI's authoritative close.
 
   if (exitCode !== 0 && allLines.length > 0) {
     const worktreeName = process.env.SINGULARITY_WORKTREE;
@@ -290,7 +300,7 @@ async function doRunBuild(
   await db
     .update(_buildRuns)
     .set({ finishedAt: new Date(), exitCode })
-    .where(eq(_buildRuns.id, buildId));
+    .where(and(eq(_buildRuns.id, buildId), isNull(_buildRuns.finishedAt)));
   frontendHashResource.notify();
   const linkTo = buildDetailRoute.link(agentManagerApp, { runId: buildId });
   if (exitCode === 0) {

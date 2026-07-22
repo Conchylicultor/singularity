@@ -307,6 +307,20 @@ function BuildHistoryDataView({
         filterable: true,
       },
       {
+        id: "target",
+        label: "Target",
+        // Free-text, not an enum: composition ids are an open-ended set, so we
+        // can't enumerate `options`.
+        type: "text",
+        value: (r) => r.target,
+        cell: (r) => (
+          <Badge variant={r.target === "main" ? "muted" : "info"}>{r.target}</Badge>
+        ),
+        sortable: true,
+        filterable: true,
+        width: "9rem",
+      },
+      {
         id: "duration",
         label: "Duration",
         type: "int",
@@ -394,6 +408,7 @@ function BuildHistoryExcerpt({
             <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
               {run.trigger}
             </Badge>
+            {run.target !== "main" && <Badge variant="info">{run.target}</Badge>}
           </Row>
         ))}
       </Stack>

@@ -14,7 +14,6 @@ import { getMainAhead } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { frontendHashResource } from "./internal/frontend-hash-resource";
-export { _buildRuns } from "./internal/tables";
 import { buildConfig } from "../shared";
 import { triggerBuildEndpoint, serveCompositionEndpoint } from "../core/endpoints";
 

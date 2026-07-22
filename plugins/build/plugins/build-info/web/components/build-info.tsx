@@ -72,6 +72,9 @@ export function BuildInfo({ runId }: { runId: string }) {
       </Stack>
 
       <Stack gap="sm">
+        <Row label="Target">
+          <Badge variant={run.target === "main" ? "muted" : "info"}>{run.target}</Badge>
+        </Row>
         {run.commitHash && (
           <Row label="Commit">
             {/* eslint-disable-next-line text/no-adhoc-typography -- mono commit-hash chip, intentional inline-code size */}

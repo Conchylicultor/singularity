@@ -1075,6 +1075,10 @@
       "name": "@singularity/plugin-build-build-profiling",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/run-ledger": {
+      "name": "@singularity/plugin-build-run-ledger",
+      "version": "0.0.1",
+    },
     "plugins/build/plugins/server-build-id": {
       "name": "@singularity/plugin-build-server-build-id",
       "version": "0.0.1",
@@ -5532,6 +5536,8 @@
     "@singularity/plugin-build-build-logs": ["@singularity/plugin-build-build-logs@workspace:plugins/build/plugins/build-logs"],
 
     "@singularity/plugin-build-build-profiling": ["@singularity/plugin-build-build-profiling@workspace:plugins/build/plugins/build-profiling"],
+
+    "@singularity/plugin-build-run-ledger": ["@singularity/plugin-build-run-ledger@workspace:plugins/build/plugins/run-ledger"],
 
     "@singularity/plugin-build-server-build-id": ["@singularity/plugin-build-server-build-id@workspace:plugins/build/plugins/server-build-id"],
 

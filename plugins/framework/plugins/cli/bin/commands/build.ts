@@ -30,18 +30,19 @@ import {
   PG_LOG_FILE,
   SINGULARITY_DIR,
 } from "../paths";
-import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
+import { buildProfilerStart, pushBuildSpan, writeBuildProfile, createSpanCollector } from "../profiler";
 import { openBuildProgress, finishBuildProgress } from "../build-progress";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
 import { createValveDeps, holdThroughValve, shouldRequeue, valveGates, type ValveDeps } from "../admission-valve";
 import { laneFor, publishLane } from "../lane";
-import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
+import { pushBuildStepLog, writeBuildLogs, createStepLogCollector } from "../build-logs-writer";
 import { renderStepBlock, orderStepsForDisplay, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
+import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 
 // Worktree names are gateway namespaces — same rule as composition ids (the
 // canonical TS copy lives in codegen's plugin-registry-gen.ts).
@@ -450,7 +451,7 @@ async function probeHealth(
   name: string,
   previousStartedAt: number | null,
   restartError: string | null,
-  onDeployFailure: (reason: string[]) => never,
+  onDeployFailure: (reason: string[]) => Promise<never>,
 ): Promise<string | null> {
   const isRestart = previousStartedAt != null;
   const deadline = adaptiveTimeoutMs(20_000, 120_000);
@@ -499,7 +500,7 @@ async function probeHealth(
         // build. finalizeBuild runs via the process.on("exit") handler.
         if (isRestart) {
           const detail = restartError ? `Gateway restart error: ${restartError}` : "";
-          onDeployFailure([
+          await onDeployFailure([
             `NOT DEPLOYED. ${site} still serves the previous backend (stale code).`,
             `The freshly-built backend never became ready within ${Math.round(deadline / 1000)}s — ` +
               `it failed its onReadyBlocking ready barrier (last: ${lastStatus}).`,
@@ -519,7 +520,7 @@ async function probeHealth(
         }
         switch (info.state) {
           case "broken":
-            return onDeployFailure([
+            return await onDeployFailure([
               `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}.`,
               `NOT DEPLOYED. ${site} still serves the previous build.`,
               `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
@@ -761,6 +762,11 @@ export function registerBuild(program: Command) {
         stdout: "pipe",
       });
       const shortCommit = shortCommitProc.stdout.toString().trim();
+      // A UI/auto build's backend minted the build_runs row before spawning this
+      // CLI (SINGULARITY_BUILD_ID is that row's id); a manual `./singularity
+      // build` has no such id yet. Captured BEFORE the env is overwritten below,
+      // so the CLI knows whether it must mint main's row itself (decision 3).
+      const uiTriggered = process.env.SINGULARITY_BUILD_ID != null;
       const buildId =
         process.env.SINGULARITY_BUILD_ID ?? `${shortCommit || "nocommit"}-${Date.now()}`;
       process.env.SINGULARITY_BUILD_ID = buildId;
@@ -792,6 +798,14 @@ export function registerBuild(program: Command) {
       });
       profiler.markRequested();
 
+      // The CLI-side build_runs ledger writer. It targets main's DB (compose-serve
+      // is main-only) and is used to mint/close main's own row (decisions 1 + 3)
+      // and each composition child row in the compose-serve stage. The pool is
+      // opened lazily on the first write, so this is free for agent worktree
+      // builds — they never write through it. Released in finalizeBuild so every
+      // graceful exit drops the pool.
+      const recorder = createBuildRunRecorder();
+
       // Mark this worktree as having a build in flight so the conversation
       // status poller keeps the agent's pane reading as "working" while the
       // CLI "shell" status persists (see worktree-op.ts). Written up-front as
@@ -811,7 +825,7 @@ export function registerBuild(program: Command) {
       // the orphans `finalizeOrphanedOps` closes as "interrupted".
       // Mirrors the on-exit lock release in acquireBuildLock above.
       let buildFinalized = false;
-      const finalizeBuild = (success: boolean): void => {
+      const finalizeBuild = async (success: boolean): Promise<void> => {
         if (buildFinalized) return;
         buildFinalized = true;
         clearWorktreeOp(name, "build");
@@ -822,8 +836,17 @@ export function registerBuild(program: Command) {
         finishBuildProgress(success);
         profiler.complete(success ? "success" : "failed");
         profiler.write();
+        // Release the build_runs recorder pool LAST, after every synchronous
+        // durable write above. The process.on("exit") backstop below can run this
+        // sync body but cannot await — that's fine: the profile / log / op record
+        // is already flushed by the sync writes, and the pool's sockets are
+        // OS-reaped on process exit.
+        await recorder.close();
       };
-      process.on("exit", () => finalizeBuild(false));
+      // The exit backstop can only run synchronous work; the recorder.close()
+      // await inside finalizeBuild is abandoned here (see the comment above), so
+      // discard the returned promise rather than float it.
+      process.on("exit", () => void finalizeBuild(false));
 
       // The build cannot terminate without printing its own verdict. Registered
       // after finalizeBuild's exit hook so handlers run in order and the
@@ -971,6 +994,11 @@ export function registerBuild(program: Command) {
       // builds — same content every time.
       endSpan = buildProfilerStart("centralJson", "build:codegen", "central.json");
       const mainRoot = await getMainRepoRoot();
+      // Only the main checkout owns a build_runs row (the CLI ledger is
+      // main-only, same gating as the central restart + compose-serve stages
+      // below). Reused by the row mint just below and every closeRun on the
+      // deploy / failure paths.
+      const isMainBuild = root === mainRoot;
       const centralDir = resolve(mainRoot, "plugins/framework/plugins/central-core");
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
         writeWorktreeSpec({ name: "central", server: centralDir });
@@ -989,6 +1017,30 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("waitForDatabase", "build:database", "wait for DB fork");
       await waitForWorktreeDatabase(name);
       endSpan();
+
+      // Soft-degrade notes folded into the final OK verdict headline (server
+      // still booting under host load, gateway starting, a lost build-runs
+      // claim). Declared here so the row mint just below can report a lost claim.
+      const softNotes: string[] = [];
+
+      // Mint main's build_runs row for a manual terminal build (decision 3): a
+      // UI/auto build's backend already minted it (uiTriggered), and only the
+      // main checkout owns a row. Deferred to here — NOT right after the build
+      // lock — on purpose: the recorder writes to main's DB, so the mint must
+      // land after waitForPg above, or a cold manual build would race Postgres
+      // startup. The row is closed at main's deploy below (decision 1), which
+      // fixes the eternal "Building…" spinner.
+      if (!uiTriggered && isMainBuild) {
+        const claim = await recorder.insertMainRun({
+          id: buildId,
+          trigger: "manual",
+          commitHash: shortCommit || null,
+          pid: process.pid,
+        });
+        if (claim === "lost") {
+          softNotes.push("build-runs: main slot already held — no ledger row minted");
+        }
+      }
 
       // 3. Regenerate DB migrations from plugin schema files
       endSpan = buildProfilerStart("generateMigration", "build:database", "generate migrations");
@@ -1340,11 +1392,6 @@ export function registerBuild(program: Command) {
       printStepResults(stepResults);
 
       const buildUrl = `http://${name}.localhost:9000`;
-      // Soft-degrade notes threaded out of the deploy-phase probes (server still
-      // booting under host load, gateway still starting). Folded into the OK
-      // verdict's headline so the reader's last impression is the truth, not an
-      // out-of-context warning.
-      const softNotes: string[] = [];
 
       const stepRoster = (): Verdict["steps"] =>
         stepResults.map((r) => ({ label: r.label, success: r.success }));
@@ -1355,7 +1402,7 @@ export function registerBuild(program: Command) {
       // last lines — is the terminal output on both console and build.log. The
       // verdict's pointers name build.log's own path, so that path is computed
       // (pure helper) and the verdict rendered BEFORE build.log is written.
-      const failBuild = (reason: string[], failedLabels: string[]): never => {
+      const failBuild = async (reason: string[], failedLabels: string[]): Promise<never> => {
         flushFootprint();
         const buildLogPath = worktreeArtifacts.buildLogText(name, buildId);
         const pointers = [`Full output: ${buildLogPath}`];
@@ -1370,7 +1417,15 @@ export function registerBuild(program: Command) {
           steps: stepRoster(),
         };
         writeBuildLogs(name, renderVerdict(v));
-        finalizeBuild(false);
+        // Close main's build_runs row as failed, BEFORE finalizeBuild releases the
+        // recorder pool. Main-target only: an agent worktree's row lives in its
+        // own DB (the recorder always targets main's), so this is scoped to avoid
+        // a pointless cross-DB write. The compose-serve failBuild — which fires
+        // only after main's row was already closed 0 at deploy — hits closeRun's
+        // isNull(finishedAt) guard as a no-op, so main's row keeps reflecting the
+        // successful main deploy (decision 1).
+        if (isMainBuild) await recorder.closeRun(buildId, 1);
+        await finalizeBuild(false);
         emitVerdict(v);
         process.exit(1);
       };
@@ -1388,7 +1443,7 @@ export function registerBuild(program: Command) {
 
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
-        failBuild(
+        await failBuild(
           [
             `NOT DEPLOYED. Nothing was published; ${buildUrl} still serves the previous build.`,
             `The frontend compiled, but the artifact was discarded.`,
@@ -1497,6 +1552,14 @@ export function registerBuild(program: Command) {
             buildId,
             buildCommit,
             force: opts.serveComposition,
+            // Per-composition build_runs rows + their own profile / step-log
+            // artifacts are owned by the stage. parentBuildId ties each child row
+            // to main's row; the collector factories give each composition a
+            // fresh SpanCollector / StepLogCollector re-based to its own start.
+            recorder,
+            parentBuildId: buildId,
+            createProfile: createSpanCollector,
+            createLogs: createStepLogCollector,
             log: (line) => console.log(line),
             onStage: async (sid, label, run) => {
               const end = buildProfilerStart(sid, "build:deploy", label);
@@ -1511,7 +1574,13 @@ export function registerBuild(program: Command) {
           endSpan();
         }
         if (result.failures.length > 0) {
-          failBuild(
+          // Main is already deployed (row closed 0 at the health probe above), so
+          // failBuild's closeRun(buildId, 1) here is an intended no-op via the
+          // isNull(finishedAt) guard — main's row keeps reflecting the successful
+          // main deploy. Each failed composition's OWN row was already closed 1 by
+          // the stage. This failBuild exists to surface the failure as the build's
+          // verdict, not to re-stamp main's row.
+          await failBuild(
             [
               `Compose-serve failed for: ${result.failures.map((f) => f.id).join(", ")}.`,
               `Main itself IS deployed — ${buildUrl} serves the new build; each failed composition keeps serving its previous dist.`,
@@ -1524,13 +1593,16 @@ export function registerBuild(program: Command) {
 
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
+        // Main's artifacts are published — close its build_runs row before the
+        // compose-serve tail (decision 1), same as the restart path below.
+        if (isMainBuild) await recorder.closeRun(buildId, 0);
         await runComposeServe();
         softNotes.push("restart skipped");
         flushFootprint();
         writeBuildProfile(name);
         const okV = buildOkVerdict();
         writeBuildLogs(name, renderVerdict(okV));
-        finalizeBuild(true);
+        await finalizeBuild(true);
         emitVerdict(okV);
         return;
       }
@@ -1559,7 +1631,7 @@ export function registerBuild(program: Command) {
           restartError = (await resp.text().catch(() => "")).trim() || null;
           const info = await getWorktreeState(name);
           if (info?.state === "broken") {
-            failBuild(
+            await failBuild(
               [
                 `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}` +
                   `${restartError ? `: ${restartError}` : ""}.`,
@@ -1596,6 +1668,14 @@ export function registerBuild(program: Command) {
         endSpan();
       }
 
+      // Main is deployed and (when the gateway is up) verified healthy — close
+      // its build_runs row NOW (decision 1), before the long compose-serve tail.
+      // This is the spinner fix: main's row previously stayed open until a later
+      // reconcile because the CLI pid outlives the restarted backend through
+      // compose-serve. Fires on both the gateway-up and gateway-unreachable
+      // success paths; guarded + main-only like the failure closes.
+      if (isMainBuild) await recorder.closeRun(buildId, 0);
+
       // Compositions AFTER main is verified healthy — a broken main build must
       // never half-update composition namespaces.
       await runComposeServe();
@@ -1604,7 +1684,7 @@ export function registerBuild(program: Command) {
       writeBuildProfile(name);
       const okV = buildOkVerdict();
       writeBuildLogs(name, renderVerdict(okV));
-      finalizeBuild(true);
+      await finalizeBuild(true);
       emitVerdict(okV);
     });
 }

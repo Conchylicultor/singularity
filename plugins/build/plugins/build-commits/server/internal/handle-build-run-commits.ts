@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { runGit, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
 import { getBuildRunCommits } from "../../shared";
-import { _buildRuns } from "@plugins/build/server";
+import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 
 export const handleBuildRunCommits = implement(getBuildRunCommits, async ({ params }) => {
   const buildId = params.id;

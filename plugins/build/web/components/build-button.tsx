@@ -46,9 +46,12 @@ function BuildButtonInner({
           ? "failed"
           : "idle";
 
+  // During the compose-serve tail the latest open row is a composition child
+  // (target !== "main"), so name it: "Building sonata…".
+  const buildingComposition = building && latestRun != null && latestRun.target !== "main";
   const label = {
     idle: "Builds",
-    building: "Building…",
+    building: buildingComposition ? `Building ${latestRun!.target}…` : "Building…",
     restarting: "Server restarting…",
     updated: "Server updated",
     failed: "Build failed",
@@ -61,9 +64,16 @@ function BuildButtonInner({
   useEffect(() => {
     clientLog(
       "build-btn",
-      JSON.stringify({ status, building, wsStatus, staleTab, finishedAt: latestRun?.finishedAt }),
+      JSON.stringify({
+        status,
+        building,
+        wsStatus,
+        staleTab,
+        target: latestRun?.target,
+        finishedAt: latestRun?.finishedAt,
+      }),
     );
-  }, [status, building, wsStatus, staleTab, latestRun?.finishedAt]);
+  }, [status, building, wsStatus, staleTab, latestRun?.target, latestRun?.finishedAt]);
 
   return (
     <InlinePopover

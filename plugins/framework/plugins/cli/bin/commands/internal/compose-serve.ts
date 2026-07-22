@@ -49,7 +49,10 @@ import {
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
 import { ensureDatabase, getAdminPool } from "@plugins/database/plugins/admin/server";
+import type { BuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import { SINGULARITY_DIR, WORKTREES_DIR, MAIN_WORKTREE_NAME } from "../../paths";
+import type { SpanCollector } from "../../profiler";
+import type { StepLogCollector } from "../../build-logs-writer";
 import { distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./dist-publish";
 
 // The `compositions` config's owning plugin — where its jsonc files live under
@@ -69,8 +72,25 @@ export interface ComposeServeOptions {
    */
   force?: string;
   log: (line: string) => void;
-  /** Stage wrapper — the caller records profiler spans here. */
+  /**
+   * Stage wrapper — the caller records profiler spans here. Now used for exactly
+   * ONE summary bar per composition (`compose:<id>`) plus `compose:prepare` in
+   * MAIN's profile; each composition's own sub-stages go to its own collectors
+   * (see `createProfile`/`createLogs`), not here.
+   */
   onStage: <T>(id: string, label: string, run: () => Promise<T>) => Promise<T>;
+  /**
+   * Records each composition build as its own `build_runs` row (child of
+   * `parentBuildId`), with its own profile / step-log artifacts. Main-only, so
+   * the recorder targets main's DB — which is exactly where compose-serve runs.
+   */
+  recorder: BuildRunRecorder;
+  /** The parent (main) build's id; each composition row's run-id derives from it. */
+  parentBuildId: string;
+  /** Fresh per-composition span collector — its own `t0`, its own profile file. */
+  createProfile: () => SpanCollector;
+  /** Fresh per-composition step-log collector — its own steps, its own log files. */
+  createLogs: () => StepLogCollector;
 }
 
 export interface ComposeServeResult {
@@ -129,66 +149,141 @@ async function serveOne(opts: {
   const id = item.id;
   const { root, log } = stage;
 
-  assertServableCompositionNamespace(id);
-  const collision = namespaceCollision(id, probeNamespace(root, id));
-  if (collision !== null) throw new Error(`compose-serve "${id}": ${collision}`);
-
-  const specDir = join(WORKTREES_DIR, id);
-  // Marker FIRST (right after the guard): from the moment we start writing into
-  // the namespace dir it must read as compose-serve-owned, or a crash mid-build
-  // would leave a marker-less dir the guard then refuses forever.
-  writeMarker(specDir, { composition: id, builtAt: new Date().toISOString(), buildId: stage.buildId });
-
-  const flat = flattenManifest(manifestItemToManifest(item), opts.allManifests);
-  const bundle = resolveComposition(opts.graph, flat).bundle;
-  log(`compose-serve "${id}": ${bundle.size} plugins in closure`);
-
-  await generateCompositionRegistry({ root, bundle, name: id, ctx: opts.ctx });
-
-  const distDir = join(specDir, "web");
-  await sweepDistLeftovers(distDir);
-  const stagingPath = distStagingPath(distDir);
-  const source = await compositionFleetSource({ root, name: id });
-  const result = await runWebArtifactsPipeline({
-    root,
-    stagingDir: stagingPath,
-    minify: stage.minify,
-    buildId: stage.buildId,
-    source,
-    vendors: opts.vendors,
-    log: (line) => log(`compose-serve "${id}": ${line}`),
-    onStage: (sid, label, run) => stage.onStage(`compose:${id}:${sid}`, `${id} ${label}`, run),
+  // Deterministic child run-id: route-valid, filename-valid, prune-regex-safe.
+  const compRunId = `${stage.parentBuildId}-c-${id}`;
+  // Open the composition's build_runs row BEFORE any work, so it exists (as
+  // "Building…") for the whole build and a mid-build crash leaves an OPEN row the
+  // reconcile / next-insert sweep can recover. insertCompositionRun sweep-closes
+  // any stale open row for this target first (the file build-lock guarantees no
+  // genuinely-concurrent compose for the same target).
+  await stage.recorder.insertCompositionRun({
+    id: compRunId,
+    target: id,
+    parentId: stage.parentBuildId,
+    pid: process.pid,
   });
-  log(
-    `compose-serve "${id}": ${result.builtArtifacts} built, ${result.reusedArtifacts} reused, ` +
-      `${result.preloads} preloads`,
-  );
 
-  // Same trailer files as main's dist, so the served backend reports drift and
-  // stale tabs identically.
-  if (stage.buildCommit) {
-    writeFileSync(resolve(stagingPath, ".build-commit"), stage.buildCommit + "\n");
+  // This composition's OWN collectors. Each is re-based to its own start (fresh
+  // t0 / empty steps) and its artifacts are written under MAIN's worktree data
+  // dir keyed by compRunId — exactly what the per-run build-logs / build-profiling
+  // detail endpoints read. Main's profile keeps only the one `compose:<id>`
+  // summary bar the caller wraps around this call.
+  const prof = stage.createProfile();
+  const logs = stage.createLogs();
+
+  // Local stage wrapper feeding BOTH the composition profile (one span) and its
+  // step log (one step) per sub-stage — replacing the old prefixing of sub-stages
+  // into main's single profile. `phase` is a real build phase so the composition's
+  // profile renders through the same closed-phase-set Gantt as any build run.
+  const compStage = async <T>(
+    sid: string,
+    phase: string,
+    label: string,
+    run: () => Promise<T>,
+  ): Promise<T> => {
+    const endSpan = prof.start(sid, phase, label);
+    const endStep = logs.beginStep(sid, label);
+    try {
+      const r = await run();
+      endStep(true);
+      return r;
+    } catch (e) {
+      endStep(false);
+      throw e;
+    } finally {
+      endSpan();
+    }
+  };
+
+  // Route this composition's log lines into its own step log (appended to
+  // whatever step compStage currently has open, or an implicit "output" step)
+  // AS WELL AS main's console via `log`, so the composition run's Logs detail
+  // section is populated.
+  const compLog = (line: string): void => {
+    log(line);
+    logs.line(line, "stdout");
+  };
+
+  let ok = false;
+  try {
+    assertServableCompositionNamespace(id);
+    const collision = namespaceCollision(id, probeNamespace(root, id));
+    if (collision !== null) throw new Error(`compose-serve "${id}": ${collision}`);
+
+    const specDir = join(WORKTREES_DIR, id);
+    // Marker FIRST (right after the guard): from the moment we start writing into
+    // the namespace dir it must read as compose-serve-owned, or a crash mid-build
+    // would leave a marker-less dir the guard then refuses forever.
+    writeMarker(specDir, { composition: id, builtAt: new Date().toISOString(), buildId: stage.buildId });
+
+    const flat = flattenManifest(manifestItemToManifest(item), opts.allManifests);
+    const bundle = resolveComposition(opts.graph, flat).bundle;
+    compLog(`compose-serve "${id}": ${bundle.size} plugins in closure`);
+
+    await compStage("registry", "build:codegen", "generate registry", () =>
+      generateCompositionRegistry({ root, bundle, name: id, ctx: opts.ctx }),
+    );
+
+    const distDir = join(specDir, "web");
+    await sweepDistLeftovers(distDir);
+    const stagingPath = distStagingPath(distDir);
+    const source = await compositionFleetSource({ root, name: id });
+    const result = await runWebArtifactsPipeline({
+      root,
+      stagingDir: stagingPath,
+      minify: stage.minify,
+      buildId: stage.buildId,
+      source,
+      vendors: opts.vendors,
+      log: (line) => compLog(`compose-serve "${id}": ${line}`),
+      // Each pipeline sub-stage becomes one span+step in the composition's own
+      // profile/log (phase build:frontend, mirroring main's own web-artifacts
+      // staging), never a span in main's profile.
+      onStage: (sid, label, run) => compStage(sid, "build:frontend", label, run),
+    });
+    compLog(
+      `compose-serve "${id}": ${result.builtArtifacts} built, ${result.reusedArtifacts} reused, ` +
+        `${result.preloads} preloads`,
+    );
+
+    // Same trailer files as main's dist, so the served backend reports drift and
+    // stale tabs identically.
+    if (stage.buildCommit) {
+      writeFileSync(resolve(stagingPath, ".build-commit"), stage.buildCommit + "\n");
+    }
+    writeFileSync(resolve(stagingPath, ".build-id"), stage.buildId + "\n");
+    await publishDistAtomic({ dir: distDir, stagingPath });
+
+    // Empty DB, created race-safely; the backend's boot migrator populates the
+    // schema on first spawn. Never a fork of main's data.
+    await compStage("database", "build:database", "ensure database", () => ensureDatabase(id));
+
+    await compStage("config", "build:codegen", "propagate config", () =>
+      propagateConfigToUser({ root, worktreeName: id, singularityDir: SINGULARITY_DIR }),
+    );
+
+    // Spec LAST — the gateway only discovers the namespace once DB + dist exist.
+    // zeroCache is deliberately omitted in v1: the zero sidecar is an opt-in
+    // (SINGULARITY_ZERO_CACHE) replication accelerator, not required for a
+    // functioning app; per-composition sidecars are a follow-up if ever needed.
+    await compStage("deploy", "build:deploy", "register + restart", async () => {
+      writeWorktreeSpec({
+        name: id,
+        server: resolve(root, "plugins/framework/plugins/server-core"),
+        web: distDir,
+      });
+      await restartNamespace(id, compLog);
+    });
+    ok = true;
+  } finally {
+    // Write this composition's own profile + step-log artifacts (keyed by
+    // compRunId under main's worktree data dir), then close its row. Written on
+    // both success and failure so a failed composition still has a Logs /
+    // Profiling detail to inspect. closeRun is guarded (isNull(finishedAt)).
+    prof.write(MAIN_WORKTREE_NAME, compRunId);
+    logs.write(MAIN_WORKTREE_NAME, compRunId);
+    await stage.recorder.closeRun(compRunId, ok ? 0 : 1);
   }
-  writeFileSync(resolve(stagingPath, ".build-id"), stage.buildId + "\n");
-  await publishDistAtomic({ dir: distDir, stagingPath });
-
-  // Empty DB, created race-safely; the backend's boot migrator populates the
-  // schema on first spawn. Never a fork of main's data.
-  await ensureDatabase(id);
-
-  await propagateConfigToUser({ root, worktreeName: id, singularityDir: SINGULARITY_DIR });
-
-  // Spec LAST — the gateway only discovers the namespace once DB + dist exist.
-  // zeroCache is deliberately omitted in v1: the zero sidecar is an opt-in
-  // (SINGULARITY_ZERO_CACHE) replication accelerator, not required for a
-  // functioning app; per-composition sidecars are a follow-up if ever needed.
-  writeWorktreeSpec({
-    name: id,
-    server: resolve(root, "plugins/framework/plugins/server-core"),
-    web: distDir,
-  });
-
-  await restartNamespace(id, log);
 }
 
 // Mirrors build.ts's gateway-notify tolerance: 404 = not running (spawns on
@@ -273,7 +368,12 @@ export async function runComposeServeStage(
 
       for (const item of buildTargets) {
         try {
-          await serveOne({ item, allManifests, graph, ctx, vendors, stage: opts });
+          // Exactly ONE summary bar per composition in MAIN's profile (its
+          // sub-stages live in the composition's own profile). `compose:prepare`
+          // above is the other compose-phase span main keeps.
+          await opts.onStage(`compose:${item.id}`, item.id, () =>
+            serveOne({ item, allManifests, graph, ctx, vendors, stage: opts }),
+          );
           served.push(item.id);
           log(`compose-serve "${item.id}": serving at http://${item.id}.localhost:9000`);
         } catch (err) {

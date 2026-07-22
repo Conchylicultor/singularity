@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { queryResource } from "@plugins/infra/plugins/query-resource/server";
 import { buildHistoryResource as buildHistoryDescriptor } from "../../shared";
-import { _buildRuns } from "./tables";
+import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 
 // Compiled keyed query-resource, declared K/FULL (`recompute`): this is a
 // windowed `orderBy startedAt desc LIMIT 50` read. A run entering or leaving the
@@ -24,6 +24,8 @@ export const buildHistoryResource = queryResource(buildHistoryDescriptor, {
     id: _buildRuns.id,
     trigger: _buildRuns.trigger,
     commitHash: _buildRuns.commitHash,
+    target: _buildRuns.target,
+    parentId: _buildRuns.parentId,
     startedAt: _buildRuns.startedAt,
     finishedAt: _buildRuns.finishedAt,
     exitCode: _buildRuns.exitCode,
