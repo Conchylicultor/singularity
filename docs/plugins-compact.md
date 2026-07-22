@@ -153,7 +153,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`backup`** [12 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 
-- **`build`** [6 sub-plugins] — Trigger `./singularity build` from the toolbar.
+- **`build`** [7 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Plugins:
