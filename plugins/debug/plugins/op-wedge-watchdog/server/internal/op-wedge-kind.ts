@@ -79,7 +79,7 @@ function renderDescription(row: ReportRow, d: OpWedgePayload): string {
         `this wedge.** Re-enable it before the next occurrence; without the dump ` +
         `this report only records that a wedge happened, not why.`,
     );
-    if (d.reap === undefined || d.reap.outcome === "disabled") {
+    if (reapDisabledOrAbsent(d)) {
       lines.push("");
       lines.push(
         `**The process is still alive and was NOT killed** — attach to pid ${d.pid} ` +
@@ -106,11 +106,28 @@ function renderDescription(row: ReportRow, d: OpWedgePayload): string {
     lines.push(
       `**CPU verdict: \`${c.cpu.verdict}\`** — ${c.cpu.deltaMs}ms of CPU time consumed ` +
         `over a ${c.cpu.wallMs}ms wall window (ratio ${c.cpu.ratio.toFixed(3)}). This is a ` +
-        `DELTA across two samples, not a single \`%CPU\` reading: the prior ` +
-        `investigations' "~95-100% CPU, state R" was a misread of exactly that kind. ` +
-        `\`idle\` means the process is parked in a blocking syscall — look for a handle ` +
-        `or an \`await\` that never settles, not a busy loop.`,
+        `DELTA across two samples of the marker **and every descendant**, not a single ` +
+        `\`%CPU\` reading: the prior investigations' "~95-100% CPU, state R" was a misread ` +
+        `of exactly that kind. \`spinning\` names WHICH pid burns (the specimen below); ` +
+        `\`idle\` means **no pid in the whole tree** crossed the threshold — then look for ` +
+        `a handle or an \`await\` that never settles, not a busy loop.`,
     );
+    if (c.specimen !== undefined) {
+      lines.push("");
+      lines.push(
+        `**Specimen:** pid \`${c.specimen.pid}\` — \`${c.specimen.command}\` ` +
+          `(Δratio ${c.specimen.cpuRatio.toFixed(3)})`,
+      );
+      if (c.specimen.pid !== d.pid) {
+        lines.push("");
+        lines.push(
+          `**The burn is a marker-less DESCENDANT, not the marker pid.** The marker ` +
+            `(pid ${d.pid}) was idle — e.g. a push worker parked on its nested check, which ` +
+            `writes no marker by design. The JS interrogation and the reap below follow the ` +
+            `specimen, not the marker.`,
+        );
+      }
+    }
     lines.push("");
     lines.push(`### Child process tree (${c.children.length})`);
     if (c.children.length === 0) {
@@ -123,10 +140,13 @@ function renderDescription(row: ReportRow, d: OpWedgePayload): string {
     } else {
       lines.push("");
       lines.push("```");
-      lines.push("PID     PPID    STAT  ETIME       COMMAND");
+      lines.push("PID     PPID    STAT  %CPU(life) ΔRATIO  ETIME       COMMAND");
       for (const ch of c.children) {
+        const ratio = ch.cpuRatio == null ? "n/a" : ch.cpuRatio.toFixed(3);
+        const spinMark = ch.cpuRatio != null && ch.cpuRatio > 0.5 ? " ←SPIN" : "";
         lines.push(
-          `${String(ch.pid).padEnd(8)}${String(ch.ppid).padEnd(8)}${ch.state.padEnd(6)}${ch.etime.padEnd(12)}${ch.command}`,
+          `${String(ch.pid).padEnd(8)}${String(ch.ppid).padEnd(8)}${ch.state.padEnd(6)}` +
+            `${(ch.cpuPct ?? "?").padEnd(11)}${ratio.padEnd(8)}${ch.etime.padEnd(12)}${ch.command}${spinMark}`,
         );
       }
       lines.push("```");
@@ -135,10 +155,11 @@ function renderDescription(row: ReportRow, d: OpWedgePayload): string {
         `**A live \`git\` child here is the answer.** It confirms the parent is parked ` +
           `awaiting a child that never EOFs its stdout — the untimed ` +
           `\`await new Response(proc.stdout).text()\` in \`grepCode\`→\`getRoot()\` ` +
-          `(\`checks/core/grep-code.ts\`) and the \`orphaned-db-tables\` \`git()\` helper.`,
+          `(\`checks/core/grep-code.ts\`) and the \`orphaned-db-tables\` \`git()\` helper. ` +
+          `A high-ΔRATIO child is the other answer: the wedge is that descendant, not the marker.`,
       );
     }
-    if (d.reap === undefined || d.reap.outcome === "disabled") {
+    if (reapDisabledOrAbsent(d)) {
       lines.push("");
       lines.push(
         `**The wedged process was NOT killed** (reap disabled) — the live specimen is ` +
@@ -223,38 +244,85 @@ function renderJsProbe(lines: string[], d: OpWedgePayload): void {
   }
 }
 
+/** True when the wedge was left alive: reap absent, legacy `disabled`, or tree `disabled`. */
+function reapDisabledOrAbsent(d: OpWedgePayload): boolean {
+  const r = d.reap;
+  if (r === undefined) return true;
+  return "rollup" in r ? r.rollup === "disabled" : r.outcome === "disabled";
+}
+
 function renderReap(lines: string[], d: OpWedgePayload): void {
   const r = d.reap;
   if (r === undefined) return; // legacy row from before the reap policy
   lines.push("");
   lines.push(`## Reap`);
   lines.push("");
-  switch (r.outcome) {
-    case "disabled":
-      lines.push(
-        `Reap is **disabled** (Settings → Config → op-wedge-watchdog → "Reap after ` +
-          `capture") — pid ${d.pid} was left alive and the fleet stays serialised ` +
-          `behind it until it is reaped by hand.`,
-      );
-      break;
-    case "already-dead":
-      lines.push(`Pid ${d.pid} was already gone before the reap step — nothing to kill.`);
-      break;
-    case "exited-sigterm":
-      lines.push(`Pid ${d.pid} exited on **SIGTERM** (graceful path) — locks and marker self-healed.`);
-      break;
-    case "exited-sigkill":
-      lines.push(
-        `Pid ${d.pid} ignored SIGTERM (matches upstream oven-sh/bun#27766) and was ` +
-          `**SIGKILLed** — flocks auto-released; the marker self-heals on the next read.`,
-      );
-      break;
-    case "survived":
-      lines.push(
-        `⚠️ Pid ${d.pid} is **still alive after SIGKILL** — this should be impossible ` +
-          `(uninterruptible kernel state?). Investigate by hand immediately.`,
-      );
-      break;
+
+  // Legacy single-outcome rows (filed before tree-reap).
+  if (!("rollup" in r)) {
+    switch (r.outcome) {
+      case "disabled":
+        lines.push(
+          `Reap is **disabled** (Settings → Config → op-wedge-watchdog → "Reap after ` +
+            `capture") — pid ${d.pid} was left alive and the fleet stays serialised ` +
+            `behind it until it is reaped by hand.`,
+        );
+        break;
+      case "already-dead":
+        lines.push(`Pid ${d.pid} was already gone before the reap step — nothing to kill.`);
+        break;
+      case "exited-sigterm":
+        lines.push(`Pid ${d.pid} exited on **SIGTERM** (graceful path) — locks and marker self-healed.`);
+        break;
+      case "exited-sigkill":
+        lines.push(
+          `Pid ${d.pid} ignored SIGTERM (matches upstream oven-sh/bun#27766) and was ` +
+            `**SIGKILLed** — flocks auto-released; the marker self-heals on the next read.`,
+        );
+        break;
+      case "survived":
+        lines.push(
+          `⚠️ Pid ${d.pid} is **still alive after SIGKILL** — this should be impossible ` +
+            `(uninterruptible kernel state?). Investigate by hand immediately.`,
+        );
+        break;
+    }
+    for (const f of r.failures) lines.push(`- \`${f.step}\`: ${f.error}`);
+    return;
+  }
+
+  if (r.rollup === "disabled") {
+    lines.push(
+      `Reap is **disabled** (Settings → Config → op-wedge-watchdog → "Reap after ` +
+        `capture") — pid ${d.pid} and its descendants were left alive and the fleet ` +
+        `stays serialised behind them until reaped by hand.`,
+    );
+    return;
+  }
+
+  lines.push(
+    r.rollup === "all-reaped"
+      ? `**All targeted pids reaped** (descendants deepest-first, marker last) — flocks ` +
+          `auto-released; markers self-heal on the next read.`
+      : `⚠️ **Some pids possibly still alive** — a pid either survived SIGKILL or was ` +
+          `skipped because its reap-time identity could not be confirmed. Check by hand.`,
+  );
+  lines.push("");
+  lines.push("| pid | role | outcome |");
+  lines.push("|---|---|---|");
+  for (const o of r.outcomes) {
+    lines.push(`| ${o.pid} | ${o.role} | \`${o.outcome}\` |`);
+  }
+  lines.push("");
+  lines.push(
+    `Outcome legend: \`exited-sigterm\` graceful; \`exited-sigkill\` ignored SIGTERM ` +
+      `(matches oven-sh/bun#27766) and was force-killed; \`already-dead\`/\`vanished\` ` +
+      `gone before/since the capture — nothing signalled; \`identity-mismatch\` the pid's ` +
+      `live ppid/command no longer match the captured row (pid reuse) — deliberately NOT ` +
+      `signalled; \`survived\` ⚠️ alive after SIGKILL — investigate immediately.`,
+  );
+  for (const o of r.outcomes) {
+    for (const f of o.failures) lines.push(`- pid ${o.pid} \`${f.step}\`: ${f.error}`);
   }
   for (const f of r.failures) lines.push(`- \`${f.step}\`: ${f.error}`);
 }

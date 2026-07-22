@@ -42,10 +42,14 @@ export interface JsProbeSummary {
 }
 
 export interface JsProbeRequest {
+  /** The SPECIMEN's pid — the process the capture's CPU evidence names as the
+   * actual burner, which may be a marker-less descendant of the marker pid. */
   pid: number;
   worktree: string;
   op: string;
-  /** Marker's `inspect` field — `localhost:<port>/<token>`, or null when unarmed. */
+  /** The SPECIMEN's inspector URL (`localhost:<port>/<token>`), or null when
+   * unarmed: the marker file's `inspect` when the specimen is the marker pid,
+   * else parsed from the specimen's own argv by the capture. */
   inspect: string | null;
   probeSeconds: number;
   /** The op-wedge capture sink the raw artifacts are appended to. */
@@ -75,7 +79,8 @@ export async function probeWedgeJs(req: JsProbeRequest): Promise<JsProbeSummary>
         {
           step: "armed",
           error:
-            "op marker has no `inspect` ws URL — the op predates the pre-armed inspector " +
+            "the specimen has no inspector ws URL (marker `inspect` absent, or a marker-less " +
+            "descendant without --inspect in its argv) — the op predates the pre-armed inspector " +
             "(worktree branched before 12efa0e37) or arming was disabled; JS interrogation impossible",
         },
       ],

@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
-import { captureOpWedge, parseCpuTimeMs } from "./capture";
+import { captureOpWedge, parseCpuTimeMs, parseInspectFlag } from "./capture";
 
 // A throwaway sink, so the suite never appends fake wedges to the REAL host
 // forensics log — the next person reading it during an actual incident must not
@@ -78,6 +78,14 @@ describe("captureOpWedge", () => {
     expect(cap.cpu.verdict).toBe("idle");
     expect(cap.cpu.ratio).toBeLessThan(0.5);
 
+    // Nothing spins, so the specimen falls back to the marker pid itself — the
+    // regression guard for "specimen targeting must not change the normal case".
+    expect(cap.specimen.pid).toBe(proc.pid);
+    // Per-child CPU is carried, not dropped: the lifetime %CPU for context and
+    // the sampled delta ratio as the verdict-grade number.
+    expect(typeof sleeper!.cpuPct).toBe("string");
+    expect(sleeper!.cpuRatio).not.toBeUndefined();
+
     // The op marker is deliberately absent for this fake worktree, so exactly one
     // failure is expected — and it must be REPORTED, not absorbed.
     expect(cap.failures.map((f) => f.step)).toContain("op-marker");
@@ -94,8 +102,34 @@ describe("captureOpWedge", () => {
     expect(cap.alive).toBe(true);
     expect(cap.cpu.verdict).toBe("spinning");
     expect(cap.cpu.ratio).toBeGreaterThan(0.5);
+    // The marker pid is its own specimen when it is the one burning.
+    expect(cap.specimen.pid).toBe(proc.pid);
+    expect(cap.specimen.cpuRatio).toBeGreaterThan(0.5);
     // A busy shell loop forks nothing — the counterpart to the idle case above.
     expect(cap.children).toEqual([]);
+  }, 60_000);
+
+  test("an idle marker with a spinning descendant names the DESCENDANT as specimen", async () => {
+    // The 2026-07-22 m0gj incident shape: the marker pid (a push worker) parked
+    // in `wait` while a marker-less descendant (nested check worker) burns a
+    // core. The verdict must be tree-aware and the specimen must be the child —
+    // this is what points the JS probe and the reap at the true wedge.
+    const proc = specimen("(while :; do :; done) & wait");
+    await Bun.sleep(300);
+
+    const cap = await captureOpWedge(req(proc.pid), fast);
+
+    expect(cap.alive).toBe(true);
+    expect(cap.cpu.verdict).toBe("spinning");
+    expect(cap.specimen.pid).not.toBe(proc.pid);
+    expect(cap.specimen.cpuRatio).toBeGreaterThan(0.5);
+    // The specimen is one of the captured descendants, and its row carries the
+    // same verdict-grade ratio.
+    const specimenRow = cap.children.find((c) => c.pid === cap.specimen.pid);
+    expect(specimenRow).toBeDefined();
+    expect(specimenRow!.cpuRatio).not.toBeNull();
+    expect(specimenRow!.cpuRatio!).toBeGreaterThan(0.5);
+    expect(cap.specimen.command).toBe(specimenRow!.command);
   }, 60_000);
 
   test("writes a durable dump naming the verdict and the child tree", async () => {
@@ -129,6 +163,19 @@ describe("captureOpWedge", () => {
     expect(steps).toContain("cpu-sample-1");
     expect(steps).toContain("cpu-sample-2");
   }, 60_000);
+});
+
+describe("parseInspectFlag", () => {
+  test("extracts a pre-armed inspector URL from full argv", () => {
+    expect(
+      parseInspectFlag("/usr/bin/bun --inspect=localhost:54791/04a98905 index.ts check --scope tree"),
+    ).toBe("localhost:54791/04a98905");
+  });
+
+  test("returns null for a bare --inspect (nothing to connect to) or no flag", () => {
+    expect(parseInspectFlag("bun --inspect index.ts check")).toBeNull();
+    expect(parseInspectFlag("bun index.ts check")).toBeNull();
+  });
 });
 
 describe("parseCpuTimeMs", () => {

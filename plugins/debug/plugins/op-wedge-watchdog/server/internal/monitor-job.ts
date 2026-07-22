@@ -6,7 +6,7 @@ import { opWedgeWatchdogConfig, type OpWedgePayload } from "../../core";
 import { readWedgedOps } from "./read-fleet";
 import { captureOpWedge, captureSink } from "./capture";
 import { probeWedgeJs } from "./probe";
-import { reapWedge } from "./reap";
+import { reapTree } from "./reap";
 
 // Per-process set of wedges ALREADY captured + filed, keyed on
 // `<worktree>:<op>:<pid>` — the identity of the stuck PROCESS.
@@ -84,20 +84,37 @@ export const opWedgeWatchdogMonitorJob = defineJob({
           })
         : undefined;
 
+      // The probe and the reap chase the SPECIMEN — the pid the capture's CPU
+      // evidence names as the actual burner — not blindly the marker pid. For a
+      // marker-less wedged descendant (a push-nested check writes no marker by
+      // design), the specimen's inspector URL comes from its own argv; when the
+      // specimen IS the marker, the marker file's `inspect` is authoritative
+      // (same value, sturdier provenance — it survives a failed ps-tree read).
+      const specimenPid = capture?.specimen.pid ?? info.pid;
+      const specimenInspect =
+        capture !== undefined && capture.specimen.pid !== info.pid
+          ? capture.specimen.inspect
+          : info.inspect;
+
       const jsProbe = cfg.jsProbe
         ? await probeWedgeJs({
-            pid: info.pid,
+            pid: specimenPid,
             worktree: info.slug,
             op: info.op,
-            inspect: info.inspect,
+            inspect: specimenInspect,
             probeSeconds: cfg.jsProbeSeconds,
             sink: captureSink,
           })
         : undefined;
 
-      const reap: OpWedgePayload["reap"] = cfg.reap
-        ? await reapWedge(info.pid)
-        : { outcome: "disabled", failures: [] };
+      // Tree reap: every captured descendant (deepest-first, identity-verified)
+      // plus the marker. Capture disabled ⇒ no known descendants ⇒ marker-only.
+      // Typed by its own shape, not `OpWedgePayload["reap"]`: that union carries
+      // the legacy single-outcome arm for old rows, and this writer must only
+      // ever produce the tree shape.
+      const reap = cfg.reap
+        ? await reapTree({ pid: info.pid }, capture?.children ?? [])
+        : { outcomes: [], rollup: "disabled" as const, failures: [] };
 
       const data: OpWedgePayload = {
         worktree: info.slug,
@@ -116,6 +133,9 @@ export const opWedgeWatchdogMonitorJob = defineJob({
       let detail = " — capture disabled";
       if (capture) {
         detail = ` — cpu ${capture.cpu.verdict}, ${capture.children.length} live children`;
+        if (capture.specimen.pid !== info.pid) {
+          detail += ` — specimen pid ${capture.specimen.pid}`;
+        }
         if (capture.failures.length > 0) {
           detail += ` — PARTIAL capture (${capture.failures.length} step(s) failed)`;
         }
@@ -124,7 +144,7 @@ export const opWedgeWatchdogMonitorJob = defineJob({
       if (hot !== undefined) {
         detail += ` — hot: ${hot.stack.split(" < ")[0] ?? hot.stack}`;
       }
-      detail += reap.outcome === "disabled" ? " — NOT reaped (disabled)" : ` — reaped (${reap.outcome})`;
+      detail += reap.rollup === "disabled" ? " — NOT reaped (disabled)" : ` — reaped (${reap.rollup})`;
       await recordReport({
         kind: "cli-op-wedge",
         source: "server-op-wedge-watchdog",

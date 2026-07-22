@@ -87,6 +87,18 @@ misread of a single `%CPU` number, and it sent three sessions hunting a busy loo
 that does not exist (every preserved `sample` shows all threads parked in
 blocking syscalls). A verdict derived from a delta cannot be misread the same way.
 
+**The verdict and the specimen are tree-aware.** The cpu-time delta is taken
+from two whole-table `ps` snapshots, so it covers the marker pid AND every
+descendant. The **specimen** — the process the JS interrogation and the reap
+chase — is the max-ratio spinning member of marker∪descendants, falling back to
+the marker when nothing spins. This is the 2026-07-22 m0gj lesson: a push's
+marker pid was an idle push worker while the actual wedge was a *marker-less*
+nested-check grandchild at 99% CPU (a push-nested check deliberately writes no
+marker — `check.ts` gates it on `inheritedGrant()`; that design is kept, the
+watchdog finds the wedge by evidence instead). `verdict: idle` therefore means
+"no pid in the whole tree burns", and a marker-less descendant's own pre-armed
+`--inspect=` URL is recovered from its argv (`parseInspectFlag`).
+
 **Capture first, reap after.** The capture module itself is strictly read-only
 on the specimen; once ALL evidence is banked (native capture + JS
 interrogation), the monitor reaps the process — see "Reap" below.
@@ -113,7 +125,10 @@ whether to open it at all.
 ## JS interrogation — naming the hot function
 
 CLI ops launch pre-armed under `bun --inspect` (cli/bin/inspect.ts); the op
-marker records the ws URL as `inspect`, surfaced on `WorktreeOpInfo`. For an
+marker records the ws URL as `inspect`, surfaced on `WorktreeOpInfo`. **The
+probe targets the SPECIMEN**: the marker file's URL when the specimen is the
+marker pid, else the URL parsed from the specimen's own argv — profiling the
+idle marker while a descendant burns taught nothing (2026-07-22 m0gj). For an
 armed wedge, after the native capture the monitor spawns
 `scripts/js-interrogate.ts` (bounded, deadline-killed — same `runBounded`
 discipline as every other diagnostic child), which runs the protocol that named
@@ -140,20 +155,29 @@ as an empty one.
 
 Once every capture step has banked its evidence — **including when a step was
 partial** (fleet health outranks a second try; the report says PARTIAL either
-way) — the monitor kills the wedged process: SIGTERM, 5 s grace, then SIGKILL
-(`server/internal/reap.ts`). Before this policy one wedge gridlocked every
-build and push on the box for hours; now the fleet unblocks ~2 min after the
-budget trips.
+way) — the monitor reaps **the whole captured tree**: every descendant
+deepest-first, then the marker pid, each SIGTERM → 5 s grace → SIGKILL
+(`server/internal/reap.ts` `reapTree`). Before this policy one wedge gridlocked
+every build and push on the box for hours; now the fleet unblocks ~2 min after
+the budget trips.
+
+Tree-wide because marker-only reaping was falsified on 2026-07-22 (m0gj): the
+marker pid was an idle push worker, and killing only it orphaned the actually
+burning nested-check grandchild at 99% CPU indefinitely. Descendants carry
+weaker provenance than the marker (photographed possibly minutes earlier), so
+each is re-verified against a fresh `ps` read and signalled only when its live
+`{ppid, command}` still match the captured row — `vanished` and
+`identity-mismatch` pids are never signalled. The marker pid's provenance is
+the marker file plus this tick's liveness check, so it is reaped even when the
+re-read fails: releasing the push mutex is the core value.
 
 Reap safety is structural, not hopeful: the push mutex is a kernel flock on
 `push.lock` (auto-released when the holder dies), host-semaphore cpu-slots are
 flock fds with the same auto-release, op markers are reaped by every reader
 once the pid is dead, and a push-nested check dying surfaces to its parent push
-as an ordinary check failure. Only the wedged pid is signalled — never
-descendants (observed culprits have none; any that exist are recorded in the
-capture's child tree). `survived` (alive after SIGKILL) is filed loudly as its
-own finding. The `reap` config toggle restores stakeout behavior when a human
-wants a live specimen.
+as an ordinary check failure. `survived` (alive after SIGKILL) and
+`identity-mismatch` roll up as `some-survived` and are filed loudly. The `reap`
+config toggle restores stakeout behavior when a human wants a live specimen.
 
 ## `duressExempt` — the monitor must not be shed by what it observes
 
@@ -189,7 +213,7 @@ dedup, and the `SERVER_REPORT_SOURCES` union depend on them; do not rename.
 
 ## Plugin reference
 
-- Description: CLI op-wedge report renderer: a one-line Debug → Reports summary for the cli-op-wedge kind (CPU verdict, live-child count, partial-capture marker), plus the op-wedge-watchdog budget/capture config registration. Op-wedge watchdog: a main-only per-minute scheduled job that sweeps every worktree's CLI op markers off shared disk and, for a `./singularity {build,check,push}` whose pid is alive past the budget (default 15 min), runs capture-then-reap: native forensics from the LIVE wedged process (sample, recursive child tree, lsof, twice-sampled CPU delta), then — for pre-armed ops — a JS-level interrogation over the inspector (JSC sampling profiler, heap delta, protected-object histogram, paired lsofs), then reaps the process (SIGTERM→SIGKILL) so one wedge cannot gridlock the fleet, and files ONE deduped cli-op-wedge report per (worktree, op, pid). Duress-exempt, since a wedged op is itself a cause of host duress.
+- Description: CLI op-wedge report renderer: a one-line Debug → Reports summary for the cli-op-wedge kind (CPU verdict, live-child count, partial-capture marker), plus the op-wedge-watchdog budget/capture config registration. Op-wedge watchdog: a main-only per-minute scheduled job that sweeps every worktree's CLI op markers off shared disk and, for a `./singularity {build,check,push}` whose pid is alive past the budget (default 15 min), runs capture-then-reap: native forensics from the LIVE wedged process (sample, recursive child tree with per-pid CPU-delta ratios, lsof, whole-table twice-sampled CPU delta) naming the SPECIMEN — the max-ratio spinning member of marker∪descendants, which for a marker-less nested op is a descendant, not the marker — then a JS-level interrogation over the specimen's own pre-armed inspector, then reaps the whole tree (descendants deepest-first, identity-verified, SIGTERM→SIGKILL; marker last) so one wedge cannot gridlock the fleet nor leave a burning orphan, and files ONE deduped cli-op-wedge report per (worktree, op, pid). Duress-exempt, since a wedged op is itself a cause of host duress.
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `OpWedgeSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`

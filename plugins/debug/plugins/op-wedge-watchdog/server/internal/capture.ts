@@ -52,6 +52,19 @@ export interface WedgeChild {
   state: string;
   etime: string;
   command: string;
+  /**
+   * `ps` lifetime-average %CPU — context only, kept because the row already
+   * carries it. NEVER a verdict input: a process that burned 20 minutes and has
+   * since parked still reports a high number (the misread that derailed a prior
+   * investigation). The verdict-grade number is `cpuRatio`.
+   */
+  cpuPct: string;
+  /**
+   * Sampled cpu-time delta ratio over the capture window, per descendant. Null
+   * when not computable (a cpu table read failed, or the pid spawned/vanished
+   * mid-window) — null and 0 must not collapse, or "unmeasurable" reads "idle".
+   */
+  cpuRatio: number | null;
 }
 
 export interface WedgeCapture {
@@ -59,8 +72,21 @@ export interface WedgeCapture {
   dumpPath: string;
   /** True when the process was still alive for the whole capture. */
   alive: boolean;
-  /** cpu-time delta over the sampling interval, and the derived verdict. */
+  /**
+   * cpu-time delta of the SPECIMEN over the sampling interval, and the derived
+   * tree-aware verdict: `spinning` when ANY of marker∪descendants crossed the
+   * threshold, `idle` only when none did (and the marker was measurable).
+   */
   cpu: { deltaMs: number; wallMs: number; ratio: number; verdict: "spinning" | "idle" | "unknown" };
+  /**
+   * The process the evidence should chase: the max-ratio spinning member of
+   * marker∪descendants, falling back to the marker pid when nothing spins. The
+   * 2026-07-22 m0gj incident is why this exists — the marker pid (an idle push
+   * worker) was NOT the wedge; a marker-less nested-check grandchild burning
+   * 99% CPU was. `inspect` is parsed from the specimen's own argv, so the JS
+   * interrogation and the reap can follow the true wedge.
+   */
+  specimen: { pid: number; command: string; cpuRatio: number; inspect: string | null };
   /** One entry per descendant process, nearest-first. */
   children: WedgeChild[];
   /** Which capture steps failed, empty when all succeeded. Never silently dropped. */
@@ -225,14 +251,42 @@ export function parseCpuTimeMs(raw: string): number | null {
   return ((days * 24 + hours) * 3600 + mins * 60 + secs) * 1000;
 }
 
-/** One cumulative-cpu-time read of a pid, stamped with the wall clock it was taken at. */
-async function readCpuTime(pid: number): Promise<{ cpuMs: number; atMs: number } | { error: string }> {
+/**
+ * Extract a pre-armed `--inspect=<host:port/token>` URL from a process's full
+ * argv (macOS `ps command` prints the complete command line). Returns null for a
+ * bare `--inspect` (nothing to connect to) or no flag.
+ *
+ * Deliberately watchdog-local rather than shared with worktree-op.ts: that
+ * module derives the marker's URL from the *writing process's own*
+ * `process.execArgv`; here we parse a DIFFERENT process's argv — a marker-less
+ * wedged descendant (e.g. a push-nested check, which by design writes no
+ * marker). Same value, different provenance, one-line regex.
+ */
+export function parseInspectFlag(command: string): string | null {
+  const m = /--inspect=(\S+)/.exec(command);
+  return m ? m[1]! : null;
+}
+
+/**
+ * One cumulative-cpu-time snapshot of EVERY pid on the host, stamped with the
+ * wall clock it was taken at. Whole-table rather than per-pid on purpose: the
+ * specimen may turn out to be any member of the marker's descendant tree, whose
+ * membership is only known after the (later) tree read — and two per-instant
+ * table snapshots keep every candidate's delta coherent, at the same spawn count
+ * as the two single-pid reads this replaced.
+ */
+async function readCpuTable(): Promise<{ table: Map<number, number>; atMs: number } | { error: string }> {
   const atMs = Date.now();
-  const res = await runBounded([PS, "-o", "time=", "-p", String(pid)], 5_000);
+  const res = await runBounded([PS, "-axo", "pid=,time="], 10_000);
   if (!res.ok) return { error: res.error };
-  const cpuMs = parseCpuTimeMs(res.stdout);
-  if (cpuMs === null) return { error: `unparseable ps time: ${JSON.stringify(res.stdout.trim())}` };
-  return { cpuMs, atMs };
+  const table = new Map<number, number>();
+  for (const line of res.stdout.split("\n")) {
+    const m = /^\s*(\d+)\s+(\S+)\s*$/.exec(line);
+    if (!m) continue;
+    const cpuMs = parseCpuTimeMs(m[2]!);
+    if (cpuMs !== null) table.set(Number(m[1]), cpuMs);
+  }
+  return { table, atMs };
 }
 
 interface PsRow extends WedgeChild {
@@ -349,8 +403,9 @@ export async function captureOpWedge(
   if (!aliveAtStart) fail("liveness", `pid ${req.pid} was already gone when the capture began`);
 
   // --- cpu read #1, taken FIRST so the expensive `sample` doubles as the wall gap.
-  const cpu1 = await readCpuTime(req.pid);
+  const cpu1 = await readCpuTable();
   if ("error" in cpu1) fail("cpu-sample-1", cpu1.error);
+  else if (!cpu1.table.has(req.pid)) fail("cpu-sample-1", `pid ${req.pid} absent from the process table`);
 
   // --- 1. sample: thread states. Settles spin-vs-block for this occurrence.
   const sampleBin = Bun.which("sample") ?? "sample";
@@ -368,46 +423,55 @@ export async function captureOpWedge(
   if (elapsedSoFar < cpuIntervalMs) {
     await Bun.sleep(cpuIntervalMs - elapsedSoFar);
   }
-  const cpu2 = await readCpuTime(req.pid);
+  const cpu2 = await readCpuTable();
   if ("error" in cpu2) fail("cpu-sample-2", cpu2.error);
+  else if (!cpu2.table.has(req.pid)) fail("cpu-sample-2", `pid ${req.pid} absent from the process table`);
 
-  let cpu: WedgeCapture["cpu"] = { deltaMs: 0, wallMs: 0, ratio: 0, verdict: "unknown" };
-  if (!("error" in cpu1) && !("error" in cpu2)) {
-    const deltaMs = cpu2.cpuMs - cpu1.cpuMs;
-    const wallMs = cpu2.atMs - cpu1.atMs;
-    // A non-positive wall gap cannot yield a ratio; say "unknown" rather than
-    // divide and emit Infinity/NaN dressed up as a verdict.
-    const ratio = wallMs > 0 ? deltaMs / wallMs : 0;
-    cpu = {
-      deltaMs,
-      wallMs,
-      ratio,
-      verdict: wallMs > 0 ? (ratio > 0.5 ? "spinning" : "idle") : "unknown",
-    };
-  }
+  // Per-pid delta ratio over the measured window. Null (not 0) when either table
+  // read failed, the window is degenerate, or the pid was absent from a snapshot
+  // (spawned or died mid-window) — "unmeasurable" and "idle" must not collapse.
+  const bothOk = !("error" in cpu1) && !("error" in cpu2);
+  const wallMs = bothOk ? cpu2.atMs - cpu1.atMs : 0;
+  const ratioOf = (pid: number): number | null => {
+    if (!bothOk || wallMs <= 0) return null;
+    const a = cpu1.table.get(pid);
+    const b = cpu2.table.get(pid);
+    if (a === undefined || b === undefined) return null;
+    return (b - a) / wallMs;
+  };
 
   // --- 2. the descendant process tree. THE decisive datum.
   let children: WedgeChild[] = [];
   let treeText = "(unavailable)";
+  let markerCommand: string | null = null;
   const psRes = await runBounded(
     [PS, "-axo", "pid=,ppid=,stat=,%cpu=,etime=,command="],
     15_000,
   );
+  let descendants: PsRow[] = [];
   if (!psRes.ok) {
     fail("ps-tree", psRes.error);
   } else {
     const rows = parsePsTable(psRes.stdout);
     const self = rows.get(req.pid);
-    const descendants = descendantsOf(rows, req.pid);
-    children = descendants.map(({ pid, ppid, state, etime, command }) => ({
+    markerCommand = self?.command ?? null;
+    descendants = descendantsOf(rows, req.pid);
+    children = descendants.map(({ pid, ppid, state, etime, command, cpuPct }) => ({
       pid,
       ppid,
       state,
       etime,
       command,
+      cpuPct,
+      cpuRatio: ratioOf(pid),
     }));
-    const fmt = (r: PsRow): string =>
-      `  ${r.pid}\tppid=${r.ppid}\tstat=${r.state}\t%cpu=${r.cpuPct}\tetime=${r.etime}\t${r.command}`;
+    const fmt = (r: PsRow): string => {
+      const ratio = ratioOf(r.pid);
+      return (
+        `  ${r.pid}\tppid=${r.ppid}\tstat=${r.state}\t%cpu=${r.cpuPct}` +
+        `\tΔratio=${ratio === null ? "n/a" : ratio.toFixed(3)}\tetime=${r.etime}\t${r.command}`
+      );
+    };
     treeText = [
       self ? `SELF:\n${fmt(self)}` : `SELF: pid ${req.pid} not present in the process table`,
       descendants.length === 0
@@ -415,6 +479,51 @@ export async function captureOpWedge(
         : `DESCENDANTS (${descendants.length}, nearest-first):\n${descendants.map(fmt).join("\n")}`,
     ].join("\n");
   }
+
+  // --- specimen selection + tree-aware verdict. The marker pid is the ENTRY
+  //     POINT, not necessarily the wedge: a push-nested check writes no marker by
+  //     design, so the burning process can be any descendant (2026-07-22 m0gj:
+  //     idle push worker marker, 99%-CPU nested-check grandchild). The specimen —
+  //     the process the JS interrogation and the reap chase — is chosen by
+  //     evidence: the max-ratio spinning member of marker∪descendants, falling
+  //     back to the marker when nothing spins.
+  const candidates = [req.pid, ...descendants.map((d) => d.pid)];
+  let specimenPid = req.pid;
+  let bestRatio = -1;
+  for (const pid of candidates) {
+    const ratio = ratioOf(pid);
+    if (ratio !== null && ratio > 0.5 && ratio > bestRatio) {
+      specimenPid = pid;
+      bestRatio = ratio;
+    }
+  }
+  const anySpinning = bestRatio > -1;
+  const markerRatio = ratioOf(req.pid);
+  const specimenRatio = ratioOf(specimenPid) ?? 0;
+  const specimenCommand =
+    specimenPid === req.pid
+      ? (markerCommand ?? "(ps-tree unavailable)")
+      : (descendants.find((d) => d.pid === specimenPid)?.command ?? "(ps-tree unavailable)");
+  const specimen: WedgeCapture["specimen"] = {
+    pid: specimenPid,
+    command: specimenCommand,
+    cpuRatio: specimenRatio,
+    inspect: parseInspectFlag(specimenCommand),
+  };
+  const specimenDelta = (pid: number): number => {
+    if (!bothOk) return 0;
+    const a = cpu1.table.get(pid);
+    const b = cpu2.table.get(pid);
+    return a === undefined || b === undefined ? 0 : b - a;
+  };
+  const cpu: WedgeCapture["cpu"] = {
+    deltaMs: specimenDelta(specimenPid),
+    wallMs,
+    ratio: specimenRatio,
+    // `idle` is asserted only when the marker was actually measurable; a failed
+    // read must surface as "unknown", never as a confident idle.
+    verdict: anySpinning ? "spinning" : markerRatio !== null ? "idle" : "unknown",
+  };
 
   // --- 3. lsof: what the process still holds.
   const lsofBin = Bun.which("lsof") ?? "lsof";
@@ -449,6 +558,8 @@ export async function captureOpWedge(
     `worktree=${req.worktree} op=${req.op} pid=${req.pid} startedAt=${req.startedAt}`,
     `wedgedForMs=${Date.now() - Date.parse(req.startedAt)}`,
     `alive=${alive}  cpu.verdict=${cpu.verdict} (delta=${cpu.deltaMs}ms / wall=${cpu.wallMs}ms = ${cpu.ratio.toFixed(3)})`,
+    `specimen=pid ${specimen.pid} ratio=${specimen.cpuRatio.toFixed(3)} ` +
+      `(${specimen.pid === req.pid ? "the marker pid itself" : "a marker-less DESCENDANT — probe/reap follow it, not the marker"})`,
     failures.length === 0
       ? "failures: none — this capture is COMPLETE"
       : `failures: ${failures.length} — this capture is PARTIAL:\n${failures.map((f) => `  - ${f.step}: ${f.error}`).join("\n")}`,
@@ -484,5 +595,5 @@ export async function captureOpWedge(
     fail("dump-write", `${sink.path}: ${String(err)}`);
   }
 
-  return { dumpPath: sink.path, alive, cpu, children, failures };
+  return { dumpPath: sink.path, alive, cpu, specimen, children, failures };
 }

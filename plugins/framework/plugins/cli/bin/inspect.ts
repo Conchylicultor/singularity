@@ -87,9 +87,27 @@ export async function maybeReexecUnderInspector(): Promise<boolean> {
   // actually observes orphaning; the worker's ppid stays pointed at this living
   // wrapper and never becomes 1. Detect the reparent here and tear down the
   // inspected child (its graceful exit releases the lock).
+  //
+  // SIGTERM alone is not enough: the native microtask storm (oven-sh/bun#27766)
+  // is reported upstream to ignore it, and a wrapper that exits right after
+  // signalling would leave a SIGTERM-ignoring wedged worker as a permanent
+  // 99%-CPU orphan (observed 2026-07-22). So the wrapper stays alive for a
+  // bounded grace, escalates to SIGKILL, and only then exits.
+  let orphanHandled = false;
   installOrphanGuard(() => {
+    // The guard's 2s poll keeps firing while we wait out the grace window —
+    // latch so the escalation runs once.
+    if (orphanHandled) return;
+    orphanHandled = true;
     child.kill("SIGTERM");
-    process.exit(ORPHAN_EXIT_CODE);
+    void (async () => {
+      const exited = await Promise.race([
+        child.exited,
+        Bun.sleep(5_000).then(() => "timeout" as const),
+      ]);
+      if (exited === "timeout") child.kill("SIGKILL");
+      process.exit(ORPHAN_EXIT_CODE);
+    })();
   });
 
   process.exitCode = await child.exited;

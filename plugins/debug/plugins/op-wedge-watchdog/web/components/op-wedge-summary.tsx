@@ -30,6 +30,13 @@ export function OpWedgeSummary({ report }: { report: Report }) {
     (d.jsProbe !== undefined && d.jsProbe.armed && d.jsProbe.failures.length > 0);
   // Leaf frame of the dominant sampled stack, e.g. "processTicksAndRejections".
   const hotFrame = d.jsProbe?.topStacks[0]?.stack.split(" < ")[0]?.split("|")[0];
+  // `reap` is a union: the tree shape (rollup + per-pid outcomes) since
+  // specimen targeting, or the legacy single-outcome shape on older rows.
+  const r = d.reap;
+  const reapAttempted =
+    r !== undefined && ("rollup" in r ? r.rollup !== "disabled" : r.outcome !== "disabled");
+  const reapFailed =
+    r !== undefined && ("rollup" in r ? r.rollup === "some-survived" : r.outcome === "survived");
 
   return (
     <Inline gap="xs">
@@ -46,14 +53,19 @@ export function OpWedgeSummary({ report }: { report: Report }) {
       ) : (
         <span className="text-muted-foreground">(no capture)</span>
       )}
+      {c?.specimen !== undefined && c.specimen.pid !== d.pid ? (
+        <span className="text-muted-foreground">
+          specimen <span className="font-mono">{c.specimen.pid}</span>
+        </span>
+      ) : null}
       {hotFrame !== undefined && hotFrame !== "" ? (
         <span className="text-muted-foreground">
           hot <span className="font-mono">{hotFrame}</span>
         </span>
       ) : null}
-      {d.reap !== undefined && d.reap.outcome !== "disabled" ? (
-        <Badge variant={d.reap.outcome === "survived" ? "destructive" : "success"}>
-          {d.reap.outcome === "survived" ? "reap FAILED" : "reaped"}
+      {reapAttempted ? (
+        <Badge variant={reapFailed ? "destructive" : "success"}>
+          {reapFailed ? "reap FAILED" : "reaped"}
         </Badge>
       ) : null}
       {partial ? <Badge variant="destructive">partial capture</Badge> : null}
