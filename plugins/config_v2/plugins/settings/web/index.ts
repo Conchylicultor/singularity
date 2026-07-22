@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
 
-export { configNavPane, configDetailPane } from "./internal/panes";
+export { configNavPane, configDetailPane, configDetailRoute } from "./internal/panes";
 export { ConfigNav } from "./components/config-nav";
 export { ConfigSidebarButton } from "./components/config-sidebar-button";
 export { ConfigDetail } from "./internal/detail-action-slot";
