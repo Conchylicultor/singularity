@@ -20,8 +20,18 @@ export const OpWedgePayloadSchema = z.object({
   pid: z.number(),
   // ISO instant the CLI op marker was written (op start).
   startedAt: z.string(),
-  // now − startedAt at file time.
+  // Raw wall age (now − startedAt) at file time — context for the report, NOT
+  // the trip quantity. The decision now runs on `genuineWorkMs` below; a build
+  // parked in host-grant has a large `wedgedMs` but a near-zero `genuineWorkMs`.
   wedgedMs: z.number(),
+  // Genuine non-blocked work time (nowMs − anchor − blockedMs) — the quantity
+  // the trip decision now uses. Optional so rows filed before this change (which
+  // tripped on raw wall age) still parse.
+  genuineWorkMs: z.number().optional(),
+  // Total recorded host-resource wait (build-lock/push-mutex/duress-valve/
+  // host-grant) subtracted from wall age, from the unified op-log. 0 when no
+  // op-log record correlated. Optional so pre-existing rows still parse.
+  blockedMs: z.number().optional(),
   budgetMs: z.number(),
 
   // --- capture ------------------------------------------------------------

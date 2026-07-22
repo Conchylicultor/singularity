@@ -2863,7 +2863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
       - Server:
         - Contributes: `ConfigV2.Register` "op-wedge-watchdog", `report-kind` "cli-op-wedge"
-        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/jobs.defineJob`, `infra/paths.PS`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOpInfo`, `reports.recordReport`, `reports.ReportKind`
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `debug/profiling/op-log.readOpRecords`, `infra/jobs.defineJob`, `infra/paths.PS`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOpInfo`, `reports.recordReport`, `reports.ReportKind`
         - Register: `defineJob('debug.op-wedge-watchdog-monitor')`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
@@ -2919,7 +2919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `infra/paths.SINGULARITY_DIR`
             - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `OP_LOG_FILE`, `readOpRecords`
           - Cross-plugin:
-            - Imported by: `debug/profiling/ops`, `stats/pushes`
+            - Imported by: `debug/op-wedge-watchdog`, `debug/profiling/ops`, `stats/pushes`
           - Core:
             - Exports: Types: `OpenWait`, `OpGroup`, `OpKind`, `OpOutcome`, `OpRecord`, `OpStep`, `OpWait`, `OutcomeByKind`, `RawOpRecord`, `TerminalOutcome`, `WaitKind`; Values: `foldOpRecords`, `groupByOpId`, `orphanedOps`, `sumWaits`
         - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).

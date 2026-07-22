@@ -46,6 +46,14 @@ export function OpWedgeSummary({ report }: { report: Report }) {
       <span>
         {d.op} wedged {humanMs(d.wedgedMs)}
       </span>
+      {d.genuineWorkMs !== undefined ? (
+        // The genuine-work vs blocked split from the unified op-log — the reason
+        // it tripped. Absent on rows filed before this accounting existed.
+        <span className="text-muted-foreground">
+          work {humanMs(d.genuineWorkMs)}
+          {d.blockedMs !== undefined && d.blockedMs > 0 ? ` · blocked ${humanMs(d.blockedMs)}` : null}
+        </span>
+      ) : null}
       {c ? (
         <span className="text-muted-foreground">
           ({c.cpu.verdict}, {c.children.length} child{c.children.length === 1 ? "" : "ren"})

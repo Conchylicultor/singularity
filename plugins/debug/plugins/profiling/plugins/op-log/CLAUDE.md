@@ -120,7 +120,7 @@ a `SyntaxError` is skipped, anything else rethrows.
   - Uses: `infra/paths.SINGULARITY_DIR`
   - Exports: Types: `OpProfiler`, `OpProfilerOptions`; Values: `createOpProfiler`, `finalizeOrphanedOps`, `OP_LOG_FILE`, `readOpRecords`
 - Cross-plugin:
-  - Imported by: `debug/profiling/ops`, `stats/pushes`
+  - Imported by: `debug/op-wedge-watchdog`, `debug/profiling/ops`, `stats/pushes`
 - Core:
   - Exports: Types: `OpenWait`, `OpGroup`, `OpKind`, `OpOutcome`, `OpRecord`, `OpStep`, `OpWait`, `OutcomeByKind`, `RawOpRecord`, `TerminalOutcome`, `WaitKind`; Values: `foldOpRecords`, `groupByOpId`, `orphanedOps`, `sumWaits`
 

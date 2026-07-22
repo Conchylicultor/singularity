@@ -61,7 +61,10 @@ export const opWedgeWatchdogMonitorJob = defineJob({
     if (!cfg.enabled) return;
 
     const now = Date.now();
-    for (const { info, wedgedMs } of await readWedgedOps(now, cfg.budgetMs)) {
+    for (const { info, wedgedMs, blockedMs, genuineWorkMs } of await readWedgedOps(
+      now,
+      cfg.budgetMs,
+    )) {
       const key = `${info.slug}:${info.op}:${info.pid}`;
       if (capturedWedges.has(key)) continue;
       // Mark BEFORE the capture: `sample` takes seconds, and a slow capture must
@@ -122,6 +125,8 @@ export const opWedgeWatchdogMonitorJob = defineJob({
         pid: info.pid,
         startedAt: info.startedAt,
         wedgedMs,
+        blockedMs,
+        genuineWorkMs,
         budgetMs: cfg.budgetMs,
         capture,
         jsProbe,
@@ -145,11 +150,15 @@ export const opWedgeWatchdogMonitorJob = defineJob({
         detail += ` — hot: ${hot.stack.split(" < ")[0] ?? hot.stack}`;
       }
       detail += reap.rollup === "disabled" ? " — NOT reaped (disabled)" : ` — reaped (${reap.rollup})`;
+      // Surface the accounting the trip decision used: raw wall age, then the
+      // genuine-work vs blocked split from the unified op-log — so a reader sees
+      // at a glance that it tripped on real work, not on admission-wait time.
+      const breakdown = `(work ${Math.round(genuineWorkMs / 1000)}s, blocked ${Math.round(blockedMs / 1000)}s)`;
       await recordReport({
         kind: "cli-op-wedge",
         source: "server-op-wedge-watchdog",
         data,
-        message: `${info.slug} ${info.op} (pid ${info.pid}) wedged ${Math.round(wedgedMs / 1000)}s${detail}`,
+        message: `${info.slug} ${info.op} (pid ${info.pid}) wedged ${Math.round(wedgedMs / 1000)}s ${breakdown}${detail}`,
       });
     }
   },

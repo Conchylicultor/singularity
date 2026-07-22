@@ -28,13 +28,51 @@ that is:
   wedge.
 - **running** — `phase === "running"`, with push phases taken from the *derived*
   truth (kernel flock + holder file), never a marker's self-asserted string.
-- **over budget** — `now − startedAt > budgetMs` (default **15 min**: well past
-  any legitimate build on this box, well under the 8-17h wedges observed).
+- **over budget on GENUINE WORK** — `genuineWorkMs ≥ budgetMs` (default **15
+  min**: well past any legitimate build on this box, well under the 8-17h wedges
+  observed), where `genuineWorkMs = now − anchor − blockedMs`.
+
+**Wedge-time is measured from the unified op-log, not from the marker.** The
+marker's coarse two-state phase flips to `running` at the lock grant and then
+never moves again — even while the op sits, for unbounded time, in the
+duress-valve / host-CPU-grant admission wait that *follows*. Measuring
+`now − startedAt` off the marker therefore reported a healthy build merely
+queued for a host CPU grant as wedged, and reaped it. So the two on-disk
+recordings are unified at the timing seam:
+
+- the **op marker** (`infra/worktree`) supplies **process identity** — the pid to
+  sample/reap, the `--inspect` URL for the JS probe, and liveness (`isPidAlive`,
+  flock-derived push phase). That is all it is trusted for now.
+- the **op-log** (`debug/profiling/op-log`, the one durable record) is the
+  **wedge-time authority**: its `waits[]` list carries every host-resource wait
+  (`build-lock`/`push-mutex`/`duress-valve`/`host-grant`) and `waitMs` folds them
+  — including the currently-open wait — to the read clock. It was built to stop
+  "a build parked in host-grant rendering as a motionless running bar."
+
+`read-fleet.ts` reads `readOpRecords()` once per sweep, indexes the in-flight
+records by `(opSlug, kind)`, and computes `genuineWorkMs = now − anchor −
+blockedMs` where `anchor = record?.requestedAt ?? marker.startedAt` and
+`blockedMs = record?.waitMs ?? 0`. So a build **parked** in host-grant has
+`genuineWorkMs ≈ 0` and cannot trip; one **actually burning** for 16 min with no
+waits has `genuineWorkMs ≈ 16 min` and trips. This is a **single uniform
+formula, not a legacy branch**: when no op-log record correlates (a pre-op-log
+CLI, or a parked op whose `requested` head was clipped by the op-log's 8 MB
+bounded tail), `blockedMs = 0` falls out of the same formula and the marker
+supplies the anchor — degrading to `now − startedAt`, which **still catches** the
+wedge. It errs toward still-catching.
 
 Only running ops trip. An op parked in `waiting-for-lock` for hours is a *victim*
 of a wedge, not a wedge; filing on waiters would turn one wedge into a report
-storm of its own queue while burying the culprit. The culprit is always running —
-a leaked push mutex is held by a running push — so this narrowing loses no wedge.
+storm of its own queue while burying the culprit. The `phase === "running"` gate
+is the cheap early-out and the flock-derived push-victim guard; the op-log
+subtraction now makes it belt-and-suspenders (a push queued behind another is
+pure `push-mutex` wait, so `genuineWorkMs ≈ 0` too), not the sole guard. The
+culprit is always running — a leaked push mutex is held by a running push — so
+this narrowing loses no wedge.
+
+The pure trip decision is factored into `classifyOp(marker, record, now, budget)`
+so it is unit-tested (`read-fleet.test.ts`) without stubbing the host's real op
+markers / op-log; `readWedgedOps` is the thin fs-touching wrapper around it.
 
 The marker reader is reused rather than reimplemented; `WorktreeOpInfo` gained a
 `pid` field (the marker always carried it; the reader was simply dropping it) so
@@ -219,7 +257,7 @@ dedup, and the `SERVER_REPORT_SOURCES` union depend on them; do not rename.
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
   - Contributes: `ConfigV2.Register` "op-wedge-watchdog", `report-kind` "cli-op-wedge"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/jobs.defineJob`, `infra/paths.PS`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOpInfo`, `reports.recordReport`, `reports.ReportKind`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `debug/profiling/op-log.readOpRecords`, `infra/jobs.defineJob`, `infra/paths.PS`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOpInfo`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.op-wedge-watchdog-monitor')`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
