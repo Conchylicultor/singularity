@@ -21,7 +21,7 @@ import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
 import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
-import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
+import { blockTextNodes, getBlockTextExtensions, serializeBlockRuns } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
 import { BLOCK_INSET, MARKER_GUTTER } from "../internal/page-column";
 import {
@@ -167,6 +167,14 @@ export function BlockTextEditor({
       appendRunsAtEnd: (runs: RichText) => {
         const ed = lexicalEditorRef.current;
         if (ed) appendRunsAtJoin(ed, runs);
+      },
+      // The read dual of `appendRunsAtEnd`: serialize this block's LIVE runs (the
+      // same call the keyboard plugin makes for split/convertTo/merge), so a
+      // forward-delete in the PREVIOUS block can pull this block's freshly-typed
+      // content up without waiting on the ~1s `data.text` projection.
+      readRuns: () => {
+        const ed = lexicalEditorRef.current;
+        return ed ? serializeBlockRuns(ed) : [];
       },
     });
   }, [block.id, registerFocusHandle]);

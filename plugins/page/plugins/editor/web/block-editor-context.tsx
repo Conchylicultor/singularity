@@ -13,7 +13,8 @@ import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { computeDrop, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
-  prevVisibleLeaf,
+  prevVisibleLine,
+  nextVisibleLine,
   runsOfNode,
   applyBlockOp,
   childrenOf,
@@ -159,6 +160,8 @@ export interface BlockFocusHandle extends CaretSurface {
    * concatenation into the target's content doc with marks/tokens intact).
    */
   appendRunsAtEnd?: (runs: RichText) => void;
+  /** Serialize this block's LIVE runs (the read dual of `appendRunsAtEnd`). */
+  readRuns?: () => RichText;
 }
 
 interface BlockEditorContextValue {
@@ -946,6 +949,98 @@ function BlockEditorProviderInner({
     [pageId, dispatchOp, focusNew],
   );
 
+  // Merge `sourceId`'s content + subtree into the previous VISIBLE line and
+  // delete it — the shared core of Backspace-at-start (`merge`, source = this
+  // block) and Delete-at-end (`mergeNext`, source = the NEXT visible line).
+  // `runs` is the source's authoritative live runs (undefined ⇒ the reducer
+  // falls back to the stored projection). The reducer merges into
+  // `prevVisibleLine(source)`, so we resolve the same target here to land the
+  // caret at the JOIN offset (the target's text length BEFORE the append) and
+  // drive the target's bound editor. Both source blocks flow through ONE
+  // implementation, so the microtask-deferred append-first ordering,
+  // `captureBlockDocEdit`, `recordStructuralWithDocEdit`, and `undoTextOverride`
+  // (keyed to the SOURCE row) are reused unchanged.
+  const mergeBlock = useCallback(
+    (sourceId: string, runs?: RichText) => {
+      const nodes = toNodes(rowsRef.current);
+      const block = nodes.find((b) => b.id === sourceId);
+      if (!block) return;
+      const target = prevVisibleLine(nodes, block);
+      if (!target) return; // defensive: nothing to merge into
+      // The reducer's row-level text concatenation is ignored by bound
+      // editors — the merging block's LIVE runs (may contain unflushed
+      // edits) must land in the TARGET's content doc too. Both variants
+      // record ONE combined stack entry (structural patch + doc edit) so a
+      // single Cmd+Z restores this block's row AND un-appends the target's
+      // doc together. The restored source row's `data.text` is pinned to
+      // the live `mergingRuns` (undoTextOverride): the source doc was
+      // FK-cascade-dropped with the row, so on undo it re-seeds from
+      // `data.text` — which must be exactly what was removed from the
+      // target, not a projection-lagged snapshot.
+      const mergingRuns = runs ?? runsOfNode(block);
+      const targetHandle = focusHandlesRef.current.get(target.id);
+      const op: BlockOp = { kind: "merge", blockId: sourceId, runs };
+      if (targetHandle?.appendRunsAtEnd) {
+        // Mounted target: drive its bound editor (append + caret at the live
+        // join). Append-FIRST ordering (issue #7): the append rides a microtask
+        // (deferred so the current keydown can't act on the newly-focused
+        // block), and the structural delete overlay is dispatched only AFTER the
+        // append lands — so a throwing append leaves BOTH blocks intact (a loud
+        // unhandled rejection, overlay never dispatched), matching the offscreen
+        // branch's guarantee, instead of removing the source row with its text
+        // un-transferred. `before`/`after` are captured up front so they snapshot
+        // the pre-merge rows; the dispatch is kept explicit here (not
+        // `applyOverlay`) precisely because its ordering is deferred.
+        const append = targetHandle.appendRunsAtEnd;
+        const before = rowsRef.current;
+        const after = fromOpResult(before, op);
+        queueMicrotask(() => {
+          // `captureBlockDocEdit` runs `append` synchronously (surgery uses
+          // `discrete: true`), so a throw propagates out of the microtask
+          // BEFORE the dispatch — the source row is never removed.
+          const docEdit = captureBlockDocEdit(target.id, () => append(mergingRuns));
+          store.dispatch(buildOverlayOp(op, before));
+          recordStructuralWithDocEdit(before, after, OP_LABELS.merge, sourceId, docEdit, {
+            blockId: sourceId,
+            runs: mergingRuns,
+          });
+        });
+      } else {
+        // Unmounted target (virtualized offscreen): lossless doc-level
+        // append FIRST, structural delete only after it lands — a failed
+        // append leaves both blocks intact (loud unhandled rejection)
+        // instead of orphaning the text in a row the target's doc would
+        // later overwrite via projection. No caret to place: the target
+        // has no editor. No live undo manager either, so the combined
+        // entry's doc thunks are doc-level: undo truncates the target's
+        // doc back to the returned join offset, redo re-appends. The
+        // target's `data.text` is read at thunk run time (doc-init seeds
+        // from it only if the doc row vanished meanwhile).
+        const targetId = target.id;
+        void appendRunsToBlockDoc(targetId, runsOfNode(target), mergingRuns).then(
+          ({ joinOffset }) => {
+            const { before, after } = applyOverlay(op);
+            const targetDataText = () =>
+              (rowsRef.current.find((b) => b.id === targetId)?.data as
+                | Record<string, unknown>
+                | null)?.text;
+            const docEdit: CapturedBlockDocEdit = {
+              undo: () => truncateBlockDocFrom(targetId, targetDataText(), joinOffset),
+              redo: async () => {
+                await appendRunsToBlockDoc(targetId, targetDataText(), mergingRuns);
+              },
+            };
+            recordStructuralWithDocEdit(before, after, OP_LABELS.merge, sourceId, docEdit, {
+              blockId: sourceId,
+              runs: mergingRuns,
+            });
+          },
+        );
+      }
+    },
+    [store, applyOverlay, recordStructuralWithDocEdit],
+  );
+
   const makeBlockAPI = useCallback(
     (blockId: string): BlockEditorAPI => ({
       update(data: unknown) {
@@ -1038,84 +1133,30 @@ function BlockEditorProviderInner({
       },
       merge(opts?: { runs?: RichText }) {
         // Thin executor: `resolveKeystroke` already decided this is a merge (not
-        // an outdent). The reducer merges into the previous VISIBLE leaf, so we
-        // resolve the same target here to land the caret at the JOIN offset (the
-        // leaf's text length BEFORE the merge appends `block`'s text).
+        // an outdent). Backspace-at-start merges THIS block up into the previous
+        // visible line — the source is this block.
+        mergeBlock(blockId, opts?.runs);
+      },
+      mergeNext() {
+        // Delete-at-end merges the NEXT visible line UP into this block — the
+        // source is that next line, not this one. By the completed visible-line
+        // duality `prevVisibleLine(next) === this block`, so `mergeBlock` appends
+        // into THIS (focused) editor and lands the caret at the join — i.e. the
+        // caret does not move, which is what forward-delete must do.
         const nodes = toNodes(rowsRef.current);
         const block = nodes.find((b) => b.id === blockId);
         if (!block) return;
-        const target = prevVisibleLeaf(nodes, block);
-        if (!target) return; // defensive: nothing to merge into
-        // The reducer's row-level text concatenation is ignored by bound
-        // editors — the merging block's LIVE runs (may contain unflushed
-        // edits) must land in the TARGET's content doc too. Both variants
-        // record ONE combined stack entry (structural patch + doc edit) so a
-        // single Cmd+Z restores this block's row AND un-appends the target's
-        // doc together. The restored source row's `data.text` is pinned to
-        // the live `mergingRuns` (undoTextOverride): the source doc was
-        // FK-cascade-dropped with the row, so on undo it re-seeds from
-        // `data.text` — which must be exactly what was removed from the
-        // target, not a projection-lagged snapshot.
-        const mergingRuns = opts?.runs ?? runsOfNode(block);
-        const targetHandle = focusHandlesRef.current.get(target.id);
-        const op: BlockOp = { kind: "merge", blockId, runs: opts?.runs };
-        if (targetHandle?.appendRunsAtEnd) {
-          // Mounted target: drive its bound editor (append + caret at the live
-          // join). Append-FIRST ordering (issue #7): the append rides a microtask
-          // (deferred so the current keydown can't act on the newly-focused
-          // block), and the structural delete overlay is dispatched only AFTER the
-          // append lands — so a throwing append leaves BOTH blocks intact (a loud
-          // unhandled rejection, overlay never dispatched), matching the offscreen
-          // branch's guarantee, instead of removing the source row with its text
-          // un-transferred. `before`/`after` are captured up front so they snapshot
-          // the pre-merge rows; the dispatch is kept explicit here (not
-          // `applyOverlay`) precisely because its ordering is deferred.
-          const append = targetHandle.appendRunsAtEnd;
-          const before = rowsRef.current;
-          const after = fromOpResult(before, op);
-          queueMicrotask(() => {
-            // `captureBlockDocEdit` runs `append` synchronously (surgery uses
-            // `discrete: true`), so a throw propagates out of the microtask
-            // BEFORE the dispatch — the source row is never removed.
-            const docEdit = captureBlockDocEdit(target.id, () => append(mergingRuns));
-            store.dispatch(buildOverlayOp(op, before));
-            recordStructuralWithDocEdit(before, after, OP_LABELS.merge, blockId, docEdit, {
-              blockId,
-              runs: mergingRuns,
-            });
-          });
-        } else {
-          // Unmounted target (virtualized offscreen): lossless doc-level
-          // append FIRST, structural delete only after it lands — a failed
-          // append leaves both blocks intact (loud unhandled rejection)
-          // instead of orphaning the text in a row the target's doc would
-          // later overwrite via projection. No caret to place: the target
-          // has no editor. No live undo manager either, so the combined
-          // entry's doc thunks are doc-level: undo truncates the target's
-          // doc back to the returned join offset, redo re-appends. The
-          // target's `data.text` is read at thunk run time (doc-init seeds
-          // from it only if the doc row vanished meanwhile).
-          const targetId = target.id;
-          void appendRunsToBlockDoc(targetId, runsOfNode(target), mergingRuns).then(
-            ({ joinOffset }) => {
-              const { before, after } = applyOverlay(op);
-              const targetDataText = () =>
-                (rowsRef.current.find((b) => b.id === targetId)?.data as
-                  | Record<string, unknown>
-                  | null)?.text;
-              const docEdit: CapturedBlockDocEdit = {
-                undo: () => truncateBlockDocFrom(targetId, targetDataText(), joinOffset),
-                redo: async () => {
-                  await appendRunsToBlockDoc(targetId, targetDataText(), mergingRuns);
-                },
-              };
-              recordStructuralWithDocEdit(before, after, OP_LABELS.merge, blockId, docEdit, {
-                blockId,
-                runs: mergingRuns,
-              });
-            },
-          );
-        }
+        const next = nextVisibleLine(nodes, block);
+        if (!next) return; // defensive: nothing below to pull up
+        // Read the next block's LIVE runs from its registered handle — the
+        // authoritative source (its `data.text` projection lags by up to ~1s, so
+        // falling back to it would silently drop text just typed there, an
+        // absorbed failure). Fall back to `runsOfNode` ONLY when the block has no
+        // handle: a text-less block (divider/image/file/embed) registers none,
+        // and its empty runs are the TRUE answer, not a lagged miss.
+        const nextHandle = focusHandlesRef.current.get(next.id);
+        const runs = nextHandle?.readRuns ? nextHandle.readRuns() : runsOfNode(next);
+        mergeBlock(next.id, runs);
       },
       remove() {
         dispatchOp({ kind: "delete", blockId });
@@ -1177,9 +1218,9 @@ function BlockEditorProviderInner({
       focusNew,
       focusBlock,
       commitRow,
-      store,
       applyOverlay,
       recordStructuralWithDocEdit,
+      mergeBlock,
     ],
   );
 

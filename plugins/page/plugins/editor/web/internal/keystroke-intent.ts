@@ -9,12 +9,13 @@
 //
 // Pure module (no React, no Lexical, no DOM): unit-tested directly.
 
-import { childrenOf, type BlockNode } from "../../core";
+import { childrenOf, nextVisibleLine, type BlockNode } from "../../core";
 import type { CaretContext } from "./caret-geometry";
 
 export type KeystrokeKey =
   | "Enter"
   | "Backspace"
+  | "Delete"
   | "Tab"
   | "ArrowUp"
   | "ArrowDown"
@@ -44,6 +45,7 @@ export type KeyIntent =
     }
   | { type: "convertTo"; to: string } // reset block type (Backspace-at-start / empty-Enter)
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
+  | { type: "mergeNext" } // delete at end → merge the next visible line up into this block
   | { type: "outdent" } // backspace at start when indented, or shift+tab
   | { type: "indent" } // tab
   | { type: "nav"; dir: "up" | "down" | "left" | "right" }
@@ -165,6 +167,20 @@ export function resolveKeystroke(
       // whatever caret surface precedes it (the page title). If nothing does, the
       // executor's nav is a no-op and the keystroke is still consumed.
       return { type: "nav", dir: "left" };
+    }
+    case "Delete": {
+      // Only a collapsed caret at the very end triggers structural intent;
+      // anything else is ordinary forward text deletion (native).
+      if (!caret.atEnd || !caret.collapsed) return { type: "passthrough" };
+      // Delete deletes the nearest visible thing to the RIGHT of a caret at end-
+      // of-line: the line break below it — so merge the next visible line up into
+      // this block. Its ladder is deliberately ONE rung: the next block's marker
+      // and indentation sit AFTER that break, not between it and the caret, so
+      // nothing is nearer. Nothing below → step forward out of the block list
+      // (the exact mirror of Backspace's `nav left`); the keystroke is still
+      // consumed even when no caret surface follows.
+      if (!nextVisibleLine(ctx.nodes, node)) return { type: "nav", dir: "right" };
+      return { type: "mergeNext" };
     }
     case "Tab": {
       // Tab/Shift+Tab always consume the event (never move focus / insert a tab).

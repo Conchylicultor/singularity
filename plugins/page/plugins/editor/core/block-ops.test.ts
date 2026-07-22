@@ -19,7 +19,8 @@ import {
   canOutdent,
   childrenOf,
   pasteAnchorId,
-  prevVisibleLeaf,
+  prevVisibleLine,
+  nextVisibleLine,
   runsOfNode,
   textOf,
   type BlockNode,
@@ -297,7 +298,7 @@ describe("split", () => {
     expect(ids(out, null)).toEqual(["P", "NEW"]);
 
     // Head kept its text, lost every child, but DELIBERATELY keeps expanded=true
-    // (a childless block renders no chevron; this also makes `prevVisibleLeaf`
+    // (a childless block renders no chevron; this also makes `prevVisibleLine`
     // of the tail resolve to the head, so merge-after-split round-trips).
     const head = out.find((b) => b.id === "P")!;
     expect(textOf(head)).toBe("hello");
@@ -439,12 +440,12 @@ describe("split", () => {
 });
 
 // ---------------------------------------------------------------------------
-// prevVisibleLeaf
+// prevVisibleLine
 // ---------------------------------------------------------------------------
 
-describe("prevVisibleLeaf", () => {
+describe("prevVisibleLine", () => {
   test("descends to the deepest last expanded child of the prev sibling", () => {
-    // xx (expanded) ├ yy0 └ yy1 ; zz follows xx. zz's prev visible leaf is yy1.
+    // xx (expanded) ├ yy0 └ yy1 ; zz follows xx. zz's prev visible line is yy1.
     const r1 = a;
     const r2 = after(r1);
     const k1 = a;
@@ -455,12 +456,12 @@ describe("prevVisibleLeaf", () => {
       mk("yy0", "xx", k1),
       mk("yy1", "xx", k2),
     ];
-    const leaf = prevVisibleLeaf(blocks, blocks.find((b) => b.id === "zz")!);
+    const leaf = prevVisibleLine(blocks, blocks.find((b) => b.id === "zz")!);
     expect(leaf?.id).toBe("yy1");
   });
 
   test("stops at a collapsed parent (its children aren't visible)", () => {
-    // xx is COLLAPSED → its children are hidden, so the leaf is xx itself.
+    // xx is COLLAPSED → its children are hidden, so the line is xx itself.
     const r1 = a;
     const r2 = after(r1);
     const k1 = a;
@@ -469,14 +470,104 @@ describe("prevVisibleLeaf", () => {
       mk("zz", null, r2),
       mk("yy0", "xx", k1),
     ];
-    const leaf = prevVisibleLeaf(blocks, blocks.find((b) => b.id === "zz")!);
+    const leaf = prevVisibleLine(blocks, blocks.find((b) => b.id === "zz")!);
     expect(leaf?.id).toBe("xx");
   });
 
-  test("no previous sibling → null", () => {
+  test("no previous sibling → the parent (the upward branch), null at the forest root", () => {
+    // P (expanded) ├ C0 (first child) └ C1 ; C0 has no prev sibling, so the
+    // visible line directly above it is its parent P — not null.
+    const r1 = a;
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      mk("P", null, r1, { expanded: true }),
+      mk("C0", "P", k1),
+      mk("C1", "P", k2),
+    ];
+    expect(prevVisibleLine(blocks, blocks.find((b) => b.id === "C0")!)?.id).toBe("P");
+    // A first top-level block has no parent inside the forest → null (root).
+    expect(prevVisibleLine(blocks, blocks.find((b) => b.id === "P")!)).toBe(null);
+  });
+
+  test("a lone top-level block → null", () => {
     const r1 = a;
     const blocks = [mk("first", null, r1)];
-    expect(prevVisibleLeaf(blocks, blocks[0]!)).toBe(null);
+    expect(prevVisibleLine(blocks, blocks[0]!)).toBe(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// nextVisibleLine — the dual of prevVisibleLine
+// ---------------------------------------------------------------------------
+
+describe("nextVisibleLine", () => {
+  test("first visible child of an expanded parent", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      mk("P", null, r1, { expanded: true }),
+      mk("Q", null, r2),
+      mk("C0", "P", k1),
+      mk("C1", "P", k2),
+    ];
+    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "P")!)?.id).toBe("C0");
+  });
+
+  test("a collapsed parent skips its subtree, landing on the next sibling", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const blocks = [
+      mk("P", null, r1, { expanded: false }),
+      mk("Q", null, r2),
+      mk("C0", "P", k1),
+    ];
+    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "P")!)?.id).toBe("Q");
+  });
+
+  test("an expanded-but-childless block falls through to its next sibling", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [
+      mk("P", null, r1, { expanded: true }),
+      mk("Q", null, r2),
+    ];
+    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "P")!)?.id).toBe("Q");
+  });
+
+  test("the next sibling of a leaf", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [mk("A", null, r1), mk("B", null, r2)];
+    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "A")!)?.id).toBe("B");
+  });
+
+  test("a last child resolves to its uncle via the upward walk", () => {
+    // P (expanded) └ C (last child) ; U follows P. nextVisibleLine(C) walks up
+    // past P to U.
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const blocks = [
+      mk("P", null, r1, { expanded: true }),
+      mk("U", null, r2),
+      mk("C", "P", k1),
+    ];
+    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "C")!)?.id).toBe("U");
+  });
+
+  test("the last visible line → null", () => {
+    const r1 = a;
+    const k1 = a;
+    const blocks = [
+      mk("P", null, r1, { expanded: true }),
+      mk("C", "P", k1),
+    ];
+    // C is the deepest last line; nothing follows it anywhere up the tree.
+    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "C")!)).toBe(null);
   });
 });
 
@@ -539,6 +630,43 @@ describe("merge", () => {
     const blocks = [mk("ONLY", null, a, { text: "x" })];
     const out = run(blocks, { kind: "merge", blockId: "ONLY" });
     expect(out).toEqual(blocks);
+  });
+
+  test("into a parent (first child): text joins the parent, adopted grandchildren land BEFORE the merged block's former next siblings", () => {
+    // P (expanded) ├ S (FIRST child, expanded, ├ G1 └ G2) └ T. Merge S — its
+    // previous visible line is its PARENT P (the upward branch), NOT a sibling.
+    // S's text joins into P, and S's children take S's OWN visible slot: before
+    // T, never appended after it (the general adoption rule — adopted children
+    // occupy the position the merged block occupied).
+    const s = a;
+    const t = after(s);
+    const g1 = a;
+    const g2 = after(g1);
+    const blocks = [
+      mk("P", null, a, { text: "P", expanded: true }),
+      mk("S", "P", s, { text: "S", expanded: true }),
+      mk("T", "P", t, { text: "T" }),
+      mk("G1", "S", g1),
+      mk("G2", "S", g2),
+    ];
+    const out = run(blocks, { kind: "merge", blockId: "S" });
+    // S removed; its text merged into the parent P.
+    expect(out.find((b) => b.id === "S")).toBeUndefined();
+    expect(textOf(out.find((b) => b.id === "P")!)).toBe("PS");
+    // Grandchildren occupy S's old slot: BEFORE T, in order (`run` already
+    // asserted the minted ranks are strictly ascending, so this order IS the
+    // rank order).
+    expect(ids(out, "P")).toEqual(["G1", "G2", "T"]);
+    // Collision-safety invariant: the adopted ranks must sort STRICTLY ABOVE the
+    // merged block S's own rank. The server write applies UPDATEs (the reparented
+    // grandchildren) BEFORE the DELETE of S, so S's row is still live under P when
+    // the children are re-ranked; an adopted rank equal to S's would violate the
+    // `(parent_id, rank)` live-unique index. Minting in `(S.rank, T.rank)` — not
+    // `(null, T.rank)` — is what guarantees it.
+    for (const g of ["G1", "G2"]) {
+      const gr = Rank.from(out.find((b) => b.id === g)!.rank);
+      expect(Rank.compare(Rank.from(s), gr)).toBe(-1); // s < g
+    }
   });
 });
 
@@ -1043,7 +1171,7 @@ describe("page rows — merge", () => {
     expect(out.find((b) => b.id === "S1")!.data).toEqual({ title: "S1", icon: null });
   });
 
-  test("the page row is caught as prevVisibleLeaf, not merely as prevSibling", () => {
+  test("the page row is caught as prevVisibleLine, not merely as prevSibling", () => {
     // T1's previous sibling is T0, whose deepest last expanded descendant is the
     // sub-page S1. The guard must inspect the LEAF the caret would land on.
     const r1 = a;
@@ -1254,12 +1382,19 @@ describe("page rows — property (no minted rank collides with a live sibling)",
       for (const b of rows) {
         const sibs = childrenOf(rows, b.parentId);
         const prev = sibs[sibs.findIndex((s) => s.id === b.id) - 1] ?? null;
-        // The previous VISIBLE leaf, computed independently of the reducer.
-        let leaf = prev;
-        while (leaf?.expanded) {
-          const kids = childrenOf(rows, leaf.id);
-          if (kids.length === 0) break;
-          leaf = kids[kids.length - 1]!;
+        // The previous VISIBLE line, computed independently of the reducer: the
+        // prev sibling's deepest last expanded descendant, or — with no prev
+        // sibling — the PARENT (the upward branch `prevVisibleLine` gained).
+        let leaf: BlockNode | null;
+        if (!prev) {
+          leaf = b.parentId ? (rows.find((r) => r.id === b.parentId) ?? null) : null;
+        } else {
+          leaf = prev;
+          while (leaf?.expanded) {
+            const kids = childrenOf(rows, leaf.id);
+            if (kids.length === 0) break;
+            leaf = kids[kids.length - 1]!;
+          }
         }
 
         const split = applyBlockOp(rows, { kind: "split", blockId: b.id, position: 0, newId: "x" });
@@ -1323,7 +1458,7 @@ describe("page rows — op-sequence simulation", () => {
  * Split turns one visible line into two adjacent visible lines; merge is its
  * exact inverse. The adoption rule (tail adopts the origin's visible children)
  * is what makes it provable: after an adoption-split the head is childless, so
- * `prevVisibleLeaf(tail)` resolves to the head and the merge re-adopts.
+ * `prevVisibleLine(tail)` resolves to the head and the merge re-adopts.
  */
 describe("split ∘ merge round-trip", () => {
   test("mergeRuns(...splitRuns(runs, p)) equals the coalesced original runs at every position", () => {
@@ -1354,11 +1489,11 @@ describe("split ∘ merge round-trip", () => {
         position,
         newId: "RT",
       });
-      // The tail's previous visible leaf MUST be the head — that is exactly what
+      // The tail's previous visible line MUST be the head — that is exactly what
       // makes the merge re-adopt what the split moved. If it ever isn't, the
       // invariant is broken; fail loudly (never skip silently).
       const tail = split.find((b) => b.id === "RT")!;
-      expect(prevVisibleLeaf(split, tail)?.id).toBe(target.id);
+      expect(prevVisibleLine(split, tail)?.id).toBe(target.id);
 
       const merged = applyBlockOp(split, { kind: "merge", blockId: "RT" });
       // The tail is gone and the forest is structurally identical to the original
@@ -1369,5 +1504,74 @@ describe("split ∘ merge round-trip", () => {
     }
     // Non-vacuity: the vast majority of seeds yielded a real round-trip.
     expect(rounds).toBeGreaterThan(400);
+  });
+
+  test("split then FORWARD-DELETE at the join restores the forest structurally (~500 seeds)", () => {
+    let rounds = 0;
+    for (let seed = 1; seed <= 500; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 15));
+      const contentBlocks = rows.filter((b) => b.type !== PAGE_BLOCK_TYPE);
+      if (contentBlocks.length === 0) continue;
+      const target = contentBlocks[Math.floor(rand() * contentBlocks.length)]!;
+      const len = runsLength(runsOfNode(target));
+      const position = Math.floor(rand() * (len + 1));
+
+      const split = applyBlockOp(rows, {
+        kind: "split",
+        blockId: target.id,
+        position,
+        newId: "RT",
+      });
+      // Forward-delete (Delete) fired at the END of the HEAD merges the NEXT
+      // visible line UP into it. `mergeNext` resolves that source through
+      // `nextVisibleLine` — which, by the completed duality, is exactly the tail
+      // RT the split just produced. So Delete-at-the-join is the split's inverse,
+      // reached from the OPPOSITE originating block than Backspace's merge.
+      const head = split.find((b) => b.id === target.id)!;
+      const next = nextVisibleLine(split, head);
+      expect(next?.id).toBe("RT");
+      // Its previous visible line is the head — the identity that makes
+      // Delete-at-end of X exactly Backspace-at-start of the next line.
+      expect(prevVisibleLine(split, next!)?.id).toBe(target.id);
+
+      const merged = applyBlockOp(split, { kind: "merge", blockId: next!.id });
+      expect(merged.find((b) => b.id === "RT")).toBeUndefined();
+      expect(canonicalForest(merged)).toEqual(canonicalForest(rows));
+      rounds++;
+    }
+    expect(rounds).toBeGreaterThan(400);
+  });
+
+  test("duality: prevVisibleLine(nextVisibleLine(X)) === X for every VISIBLE X with a next line (over the fuzz forest)", () => {
+    // The load-bearing identity behind `mergeNext` needing no new reducer op:
+    // Delete-at-end of X is Backspace-at-start of the next visible line, and that
+    // is well-defined only because these two helpers are true inverses. It holds
+    // for every X the caret can actually sit on — i.e. every VISIBLE node (all
+    // ancestors expanded); a node hidden inside a collapsed subtree is not part
+    // of the visible sequence, and `nextVisibleLine` from it exits the subtree
+    // without a matching predecessor, so it is correctly excluded.
+    const isVisible = (rows: BlockNode[], node: BlockNode): boolean => {
+      let p = node.parentId ? rows.find((r) => r.id === node.parentId) : undefined;
+      while (p) {
+        if (!p.expanded) return false;
+        p = p.parentId ? rows.find((r) => r.id === p!.parentId) : undefined;
+      }
+      return true;
+    };
+    let checks = 0;
+    for (let seed = 1; seed <= 3000; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 18));
+      for (const x of rows) {
+        if (!isVisible(rows, x)) continue;
+        const next = nextVisibleLine(rows, x);
+        if (!next) continue;
+        expect(prevVisibleLine(rows, next)?.id).toBe(x.id);
+        checks++;
+      }
+    }
+    // Non-vacuity: the forest is dense enough that most nodes have a next line.
+    expect(checks).toBeGreaterThan(3000);
   });
 });

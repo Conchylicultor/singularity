@@ -10,7 +10,7 @@
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { applyBlockOp, type BlockNode } from "../../core";
+import { applyBlockOp, nextVisibleLine, type BlockNode } from "../../core";
 import { resolveKeystroke, type IntentContext, type KeystrokeKey } from "./keystroke-intent";
 import type { CaretContext } from "./caret-geometry";
 
@@ -361,6 +361,35 @@ describe("Backspace", () => {
   });
 });
 
+describe("Delete", () => {
+  test("not at end → passthrough (ordinary forward deletion)", () => {
+    expect(resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: false }), ctx("A"))).toEqual({
+      type: "passthrough",
+    });
+  });
+
+  test("at end but a range is selected → passthrough", () => {
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true, collapsed: false }), ctx("A")),
+    ).toEqual({ type: "passthrough" });
+  });
+
+  test("at end with a next visible line → mergeNext (pull the next line up)", () => {
+    // A is expanded with child A1, so the visible line directly below A is A1.
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), ctx("A")),
+    ).toEqual({ type: "mergeNext" });
+  });
+
+  test("at end of the LAST visible line → nav right (out to the following surface)", () => {
+    // B is the last visible line; nothing follows it anywhere up the tree, so
+    // Delete resolves to `nav right` — the exact mirror of Backspace's `nav left`.
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), ctx("B")),
+    ).toEqual({ type: "nav", dir: "right" });
+  });
+});
+
 describe("Tab", () => {
   test("with a previous sibling → indent", () => {
     expect(resolveKeystroke("Tab", NO_SHIFT, caret(), ctx("B"))).toEqual({ type: "indent" });
@@ -479,6 +508,13 @@ function runTrajectory(
       nodes = applyBlockOp(nodes, { kind: "outdent", blockIds: [blockId] });
     } else if (intent.type === "convertTo") {
       nodes = nodes.map((n) => (n.id === blockId ? { ...n, type: intent.to } : n));
+    } else if (intent.type === "mergeNext") {
+      // Delete pulls the NEXT visible line up: the executor merges that line into
+      // `blockId`, so mirror it here by merging `nextVisibleLine(blockId)` away.
+      const node = nodes.find((n) => n.id === blockId)!;
+      const next = nextVisibleLine(nodes, node);
+      if (!next) break; // unreachable: mergeNext implies a next line exists
+      nodes = applyBlockOp(nodes, { kind: "merge", blockId: next.id });
     } else {
       break; // merge / split / nav / noop — a trajectory ends here
     }
@@ -537,6 +573,23 @@ describe("trajectories", () => {
     ];
     expect(runTrajectory(nodes, "X", "Enter", undefined, { atStart: true, atEnd: true })).toEqual([
       "split",
+    ]);
+  });
+
+  test("Delete: repeated at the end of a block with a subtree flattens it one line per press → [mergeNext, mergeNext, nav]", () => {
+    // page ▸ P (expanded, ├ C1 └ C2). Delete at the end of P pulls each next
+    // visible line up in turn; once P is the only line left it steps out (nav).
+    const c1 = Rank.between(null, null).toJSON();
+    const c2 = Rank.between(Rank.from(c1), null).toJSON();
+    const nodes: BlockNode[] = [
+      mk("P", PAGE, rankA, { text: "p", expanded: true }),
+      mk("C1", "P", c1, { text: "c1" }),
+      mk("C2", "P", c2, { text: "c2" }),
+    ];
+    expect(runTrajectory(nodes, "P", "Delete", undefined, { atEnd: true })).toEqual([
+      "mergeNext",
+      "mergeNext",
+      "nav",
     ]);
   });
 });

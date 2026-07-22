@@ -6,6 +6,7 @@ import {
   KEY_ARROW_RIGHT_COMMAND,
   KEY_ARROW_UP_COMMAND,
   KEY_BACKSPACE_COMMAND,
+  KEY_DELETE_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   KEY_TAB_COMMAND,
@@ -113,6 +114,12 @@ export function KeyboardPlugin({
           api.merge({ runs });
           return true;
         }
+        case "mergeNext":
+          // Forward-delete: the runs come from the NEXT block (read via its own
+          // handle inside `mergeNext`), never this editor — so no serialize here.
+          event.preventDefault();
+          api.mergeNext();
+          return true;
         case "outdent":
           event.preventDefault();
           api.outdent();
@@ -168,6 +175,7 @@ export function KeyboardPlugin({
     const unregister = [
       reg(KEY_ENTER_COMMAND, "Enter"),
       reg(KEY_BACKSPACE_COMMAND, "Backspace"),
+      reg(KEY_DELETE_COMMAND, "Delete"),
       reg(KEY_TAB_COMMAND, "Tab"),
       reg(KEY_ARROW_UP_COMMAND, "ArrowUp"),
       reg(KEY_ARROW_DOWN_COMMAND, "ArrowDown"),

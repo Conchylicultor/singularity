@@ -47,6 +47,15 @@ export interface BlockEditorAPI {
    * content rather than the (possibly stale) stored one.
    */
   merge(opts?: { runs?: RichText }): void;
+  /**
+   * Delete-at-end intent (Backspace's mirror). Merges the NEXT visible line up
+   * into this block — the source is that next line, so its LIVE runs are read
+   * from its own handle. By the visible-line duality the merge target resolves
+   * back to this block, so the join lands in this editor and the caret does not
+   * move. No-op when this is the last visible line. Takes no `runs`: the source
+   * is a different block, read here, not the caller's editor.
+   */
+  mergeNext(): void;
   remove(): void;
   indent(): void;
   outdent(): void;

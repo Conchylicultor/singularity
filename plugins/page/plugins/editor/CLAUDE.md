@@ -131,11 +131,11 @@ Two rules keep this from leaking:
   "Backspace goes back to the title" needed no new intent, no new op, and no new
   branch in the resolver.
 
-## Visible-line invariants (Enter / Backspace)
+## Visible-line invariants (Enter / Backspace / Delete)
 
-Split, merge, and the two keystroke ladders are all restatements of one fact
-the codebase already derives everywhere else (`prevVisibleLeaf`, the
-indent/outdent folds, `pasteAnchorId`) but split and the ladders hadn't caught
+Split, merge, and the keystroke ladders are all restatements of one fact
+the codebase already derives everywhere else (`prevVisibleLine`/`nextVisibleLine`,
+the indent/outdent folds, `pasteAnchorId`) but split and the ladders hadn't caught
 up to: the user's mental model, and the caret's, is the **visible line
 sequence**, not sibling space (`parentId`+`rank`).
 
@@ -160,7 +160,7 @@ could contradict the forest by the time the op actually applies (e.g. a racing
 collapse). Deriving keeps the invariant true *at the moment of application*,
 byte-identical whether the caller is the keyboard, the memory store, or the
 fuzzer. It mirrors `applyMerge`'s own children-adoption exactly: after an
-adoption-split the head is childless, so `prevVisibleLeaf(tail)` resolves back
+adoption-split the head is childless, so `prevVisibleLine(tail)` resolves back
 to the head, and a following merge re-adopts — which is what makes split and
 merge round-trip. `split ∘ merge round-trip`'s "split a random content block
 then merge the tail restores the forest structurally (~500 seeds)" is the
@@ -169,24 +169,64 @@ expanded, childIds order, coalesced runs}` per id) — merge mints fresh ranks o
 every adoption, so comparing rank strings would fail even on a correct
 round-trip.
 
-The two keystroke ladders (`web/internal/keystroke-intent.ts`) apply the same
+The keystroke ladders (`web/internal/keystroke-intent.ts`) apply the same
 visible-line idea to deletion and to escaping structure:
 
 > **Backspace** deletes the nearest visible thing to the LEFT of the caret:
 > marker glyph (convertTo) → indentation (outdent) → line break (merge) →
 > boundary (nav-left).
 >
+> **Delete** deletes the nearest visible thing to the RIGHT of the caret:
+> the line break below (merge the next visible line up) → boundary (nav-right).
+>
 > **Empty-Enter** escapes one structural level per press: indentation first
 > (outdent, keeping the type), then the type (convertTo), then ordinary split.
 
-The two ladders order `convertTo`/`outdent` **oppositely, deliberately**:
-Backspace strips what's visually nearest the caret (the marker sits right
-there), while empty-Enter escapes nesting outward (the type is the outer
-layer). The `Backspace` and `Enter` describes in `keystroke-intent.test.ts` pin
-every rung; `trajectories` re-resolves a fixture across repeated keystrokes as
-the multi-step spec (`Backspace: formatted nested block → [convertTo, outdent,
-merge]`, `empty-Enter: empty bullet nested two deep → [outdent, outdent,
-convertTo, split]`, etc.).
+Backspace's and empty-Enter's ladders order `convertTo`/`outdent`
+**oppositely, deliberately**: Backspace strips what's visually nearest the caret
+(the marker sits right there), while empty-Enter escapes nesting outward (the
+type is the outer layer). The `Backspace`, `Delete`, and `Enter` describes in
+`keystroke-intent.test.ts` pin every rung; `trajectories` re-resolves a fixture
+across repeated keystrokes as the multi-step spec (`Backspace: formatted nested
+block → [convertTo, outdent, merge]`, `empty-Enter: empty bullet nested two deep
+→ [outdent, outdent, convertTo, split]`, `Delete: block with a subtree →
+[mergeNext, mergeNext, nav]`, etc.).
+
+**Delete's ladder is deliberately one rung, and that is not an omission.**
+Backspace's ladder is long only because the *current* block's own marker and
+indentation sit physically between the caret and the line break above it. To the
+right of a caret at end-of-line, nothing sits between it and the line break — the
+next block's marker and indent are *after* that break, so they are not nearer.
+"Completing" Delete's ladder with a `convertTo`/`outdent` rung would make Delete
+take three presses to remove one line break, which no editor does.
+
+**Delete needs no new reducer op — it is Backspace's merge from the opposite
+originating block.** Delete-at-end of X ought to be exactly Backspace-at-start of
+the next visible line, and that identity is well-defined only because
+`prevVisibleLine(nextVisibleLine(X)) === X` for every X with a next line (the
+`duality` property test over the fuzz forest is the executable spec). Completing
+the duality required two things: `prevVisibleLine` (renamed from
+`prevVisibleLeaf` — it can now return a *parent*, not only a leaf) gained the
+**upward branch** — a first child's previous visible line is its parent — and its
+dual `nextVisibleLine` was added (first visible child, else the nearest following
+sibling walking up). With that, the resolver's `mergeNext` intent resolves the
+source to `nextVisibleLine(this)` and merges it up through the SAME `mergeBlock`
+path Backspace uses; the append lands in the currently-focused editor and the
+caret sits at the join — i.e. it does not move, which is what forward-delete must
+do. The source is a *different* block, so its live runs are read through the new
+`BlockFocusHandle.readRuns` (the read dual of `appendRunsAtEnd`); falling back to
+the ~1s-lagged `runsOfNode` projection is reserved for **text-less** blocks
+(divider/image/file/embed) that register no handle, where empty runs are the true
+answer, not an absorbed miss.
+
+**`applyMerge`'s adoption slot follows the same visible-line rule.** Adopted
+children occupy the visible position the merged block occupied: when the target is
+the merged block's own PARENT (the upward `prevVisibleLine` case — the block is
+therefore the first child) they land BEFORE the block's former next siblings
+(`Rank.nBetween(null, nextSibling(source)?.rank ?? null, n)`); otherwise (target
+is a prev sibling's deepest leaf, nothing of the target's follows) they append
+after the target's existing children, as before. Both `PAGE_BLOCK_TYPE` refusals
+still hold, now also covering "the parent is the page row".
 
 **`dataOnSplit` seam** (checked to-do → unchecked tail, generalized): declared
 on the block handle in **method syntax** — the same bivariance trap `text`
@@ -740,7 +780,7 @@ tests). The whole document lives in React state and is discarded on unmount.
   - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/turn-into-page`, `POST /api/pages/:pageId/blocks/op`, `POST /api/pages/:pageId/blocks/patch`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `infra/trash.TrashOutcomeSchema`, `primitives/collab-doc.readYDoc`, `primitives/collab-doc.yDocContent`, `primitives/collab-doc.yDocFromLexical`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.selectionRoots`, `primitives/tree.subtreeIds`
-  - Exports: Types: `Block`, `BlockData`, `BlockDiff`, `BlockHandle`, `BlockMarkdown`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MdParseCtx`, `MdSerializeCtx`, `MoveBlockBody`, `PageCover`, `PageData`, `PageRow`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextBearingSchema`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defaultTextHandle`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `pageBlockHandle`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `PageRowSchema`, `PAGES_TRASH_SOURCE`, `pagesResource`, `parseMarkdownToForest`, `pasteAnchorId`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLeaf`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeForestToMarkdown`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
+  - Exports: Types: `Block`, `BlockData`, `BlockDiff`, `BlockHandle`, `BlockMarkdown`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MdParseCtx`, `MdSerializeCtx`, `MoveBlockBody`, `PageCover`, `PageData`, `PageRow`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextBearingSchema`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defaultTextHandle`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `nextVisibleLine`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `pageBlockHandle`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `PageRowSchema`, `PAGES_TRASH_SOURCE`, `pagesResource`, `parseMarkdownToForest`, `pasteAnchorId`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLine`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeForestToMarkdown`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/story/story-core`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/website/demos/editor-toy`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/sub-page`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
   - Extended by: `apps/website/blog/publish` (table `page_blocks_ext_blog_post`), `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)

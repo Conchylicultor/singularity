@@ -161,19 +161,45 @@ export function prevSibling(blocks: BlockNode[], node: BlockNode): BlockNode | n
 
 /**
  * The previous block in VISIBLE document order: the deepest last expanded
- * descendant of `node`'s previous sibling. Null if there is no previous sibling.
- * Stops descending at a collapsed block (its children aren't visible), so the
- * leaf is exactly the block whose end the caret would land at when crossing up.
+ * descendant of `node`'s previous sibling. When `node` has NO previous sibling,
+ * the visible line directly above it is its PARENT — so walk one step up (null at
+ * the forest root). "Line", not "leaf": with the upward branch it can return a
+ * parent, not only a leaf. Stops descending at a collapsed block (its children
+ * aren't visible), so the result is exactly the block whose end the caret would
+ * land at when crossing up. The exact dual of `nextVisibleLine`, so
+ * `prevVisibleLine(nextVisibleLine(X)) === X` for every X with a next line.
  */
-export function prevVisibleLeaf(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+export function prevVisibleLine(blocks: BlockNode[], node: BlockNode): BlockNode | null {
   let cur = prevSibling(blocks, node);
-  if (!cur) return null;
+  if (!cur) return node.parentId ? (byId(blocks, node.parentId) ?? null) : null;
   while (cur.expanded) {
     const kids = childrenOf(blocks, cur.id);
     if (kids.length === 0) break;
     cur = kids[kids.length - 1]!;
   }
   return cur;
+}
+
+/**
+ * The next block in VISIBLE document order — the exact dual of `prevVisibleLine`:
+ * the first visible child if `node` is expanded with children, else the nearest
+ * following sibling found by walking up through ancestors. Null at the end of the
+ * forest. Like its dual it stops at a page boundary naturally: a sub-page's
+ * subtree lives in another `page_id` partition and is simply absent from `blocks`.
+ */
+export function nextVisibleLine(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+  // first visible child, else the nearest following sibling walking up
+  if (node.expanded) {
+    const kids = childrenOf(blocks, node.id);
+    if (kids[0]) return kids[0];
+  }
+  let cur: BlockNode | null = node;
+  while (cur) {
+    const sib = nextSibling(blocks, cur);
+    if (sib) return sib;
+    cur = cur.parentId ? (byId(blocks, cur.parentId) ?? null) : null;
+  }
+  return null;
 }
 
 /** The rank-immediate next sibling of `node` (null if it is last). */
@@ -409,7 +435,7 @@ function applySplit(
     // time (e.g. a racing collapse). Deriving keeps the invariant true at the
     // moment the op is applied. It is the exact mirror of `applyMerge`'s
     // adoption below: after this split the head is childless, so
-    // `prevVisibleLeaf(tail)` resolves to the head and a following merge
+    // `prevVisibleLine(tail)` resolves to the head and a following merge
     // re-adopts — which is what makes split∘merge round-trip.
     const visibleChildren = block.expanded ? childrenOf(blocks, block.id) : [];
     if (visibleChildren.length > 0) {
@@ -454,10 +480,11 @@ function applyMerge(
   // with it, from a keystroke.
   if (block.type === PAGE_BLOCK_TYPE) return blocks;
 
-  // Merge into the previous VISIBLE block (the deepest last expanded descendant
-  // of the prev sibling), not the immediate sibling — so the caret lands where
-  // the text visually joins, matching document order.
-  const prev = prevVisibleLeaf(blocks, block);
+  // Merge into the previous VISIBLE line (the deepest last expanded descendant
+  // of the prev sibling, or the parent when the block is a first child), not the
+  // immediate sibling — so the caret lands where the text visually joins,
+  // matching document order.
+  const prev = prevVisibleLine(blocks, block);
   if (!prev) return blocks; // no-op
   // Merging into a page row would write a `data.text` onto a `PageDataSchema`
   // payload AND adopt this block's children across the page boundary (under a
@@ -470,16 +497,34 @@ function applyMerge(
   // pure reducer's fallback basis (tests / non-live).
   let mergedPrev = withRuns(prev, mergeRuns(runsOfNode(prev), op.runs ?? runsOfNode(block)));
 
-  // Adopt the block's children under prev, appended after prev's existing
-  // children, order-preserving.
+  // Adopt the block's children under prev, order-preserving. The general rule is
+  // that adopted children occupy the visible position the merged block occupied:
+  //  - `prev` is the merged block's own PARENT (the upward `prevVisibleLine`
+  //    case, so `block` is prev's FIRST child) → the children take `block`'s slot,
+  //    BEFORE `block`'s former next siblings.
+  //  - otherwise `prev` is a previous sibling's deepest leaf, and nothing of
+  //    `prev`'s follows → append after prev's existing children (today's rule).
+  //
+  // In the `intoParent` case the lower bound is `block`'s OWN rank, not `null`.
+  // `block` is being deleted, so its slot `(block.rank, nextSibling)` is vacated
+  // and the adopted children land in it — visually first, since `block` was the
+  // first child. Crucially this also avoids a TRANSIENT unique-constraint
+  // violation on the server: the write applies UPDATEs (the reparented children)
+  // BEFORE the DELETE (of `block`), so an adopted rank of `null..next` could mint
+  // `block`'s own still-live rank and collide on `(parent_id, rank)`. Minting
+  // strictly ABOVE `block.rank` can never equal a live sibling's rank.
   const adopted = childrenOf(blocks, block.id);
+  const intoParent = prev.id === block.parentId;
   const existingPrevKids = childrenOf(blocks, prev.id);
   const lastPrevKid = lastOf(existingPrevKids);
-  const adoptedRanks = Rank.nBetween(
-    lastPrevKid ? Rank.from(lastPrevKid.rank) : null,
-    null,
-    adopted.length,
-  );
+  const nextAfterBlock = nextSibling(blocks, block);
+  const adoptedRanks = intoParent
+    ? Rank.nBetween(
+        Rank.from(block.rank),
+        nextAfterBlock ? Rank.from(nextAfterBlock.rank) : null,
+        adopted.length,
+      )
+    : Rank.nBetween(lastPrevKid ? Rank.from(lastPrevKid.rank) : null, null, adopted.length);
   if (adopted.length > 0) {
     mergedPrev = { ...mergedPrev, expanded: true };
   }
