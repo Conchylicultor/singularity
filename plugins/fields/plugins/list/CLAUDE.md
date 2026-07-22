@@ -1,16 +1,16 @@
 # list
 
-The **list** field type of the unified fields primitive — a sorted collection
-of structured sub-items with stable UUID identity and fractional-index
-ordering.
+The **list** field type of the unified fields primitive — an ordered collection
+of structured sub-items with stable UUID identity, where **array position is the
+canonical order** (no separate ordering field).
 
 This barrel registers ONLY the `FieldIdentity` (label "List", `MdList` icon) in
 the `fields.identity` registry. The value type is `ListItem<F>[]` — each item
-carries an `id` and `rank` (fractional-index string) plus the user-defined
-sub-fields — exported from this core for type-only cross-plugin use.
+carries an `id` plus the user-defined sub-fields — exported from this core for
+type-only cross-plugin use.
 
 The `id` is **not** an auto-injected UUID by default. A row authored without an
-explicit `id` is seeded by the config_v2 registry (`injectCollectionIds`) as
+explicit `id` is seeded by the config_v2 registry (`normalizeCollectionItems`) as
 `auto-<hash([index, content])>` — idempotent per read but **content- and
 position-dependent** (it changes when the row's content or order changes). Only
 the generic Settings-pane "Add item" UI mints a real `crypto.randomUUID()`.

@@ -5,8 +5,8 @@ collection of plain strings (`string[]`).
 
 This barrel registers ONLY the `FieldIdentity` (label "String List",
 `MdFormatListBulleted` icon) in the `fields.identity` registry. Unlike `list`,
-the value carries no per-item `id`/`rank` — it is a bare `string[]` that passes
-through config_v2's collection-id injection untouched (`injectCollectionIds` in
+the value carries no per-item `id` — it is a bare `string[]` that passes
+through config_v2's collection normalization untouched (`normalizeCollectionItems` in
 `config_v2/server/internal/registry.ts` only processes fields that carry
 `itemFields`). Use it when you need an ordered list of plain strings whose exact
 contents and order matter (e.g. reorder directives `order` / `hidden`).

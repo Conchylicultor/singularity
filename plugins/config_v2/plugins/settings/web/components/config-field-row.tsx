@@ -18,7 +18,7 @@ function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown)
     const strip = (arr: unknown[]) =>
       arr.map((item) => {
         if (!item || typeof item !== "object") return item;
-        const { id: _id, rank: _rank, ...rest } = item as Record<string, unknown>;
+        const { id: _id, ...rest } = item as Record<string, unknown>;
         return rest;
       });
     return JSON.stringify(strip(value)) !== JSON.stringify(strip(defaultValue));

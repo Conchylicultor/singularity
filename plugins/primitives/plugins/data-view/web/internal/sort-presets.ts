@@ -20,7 +20,7 @@ function coerceDirection(raw: unknown): "asc" | "desc" {
 /**
  * Read + normalize the raw config `sortPresets` value into `SortPreset[]`.
  *
- * The config listField injects an `id`/`rank` onto each preset row AND each rule
+ * The config listField injects an `id` onto each preset row AND each rule
  * row; we keep the preset `id` (the delete/rename target) but **strip** it from
  * the rules (a `SortRule` is `{ fieldId, direction }` only). Terse/legacy/absent
  * input tolerated: a missing preset `id` falls back to a stable index-derived id,
@@ -53,7 +53,7 @@ export function readSortPresets(raw: unknown): SortPreset[] {
 
 /**
  * Read + normalize the raw config `filterPresets` value into `FilterPreset[]` —
- * the twin of `readSortPresets`. The config listField injects an `id`/`rank` onto
+ * the twin of `readSortPresets`. The config listField injects an `id` onto
  * each preset row; we keep the preset `id` (delete/rename target). The `group`
  * blob is validated as a whole through `FilterGroupSchema` (it is stored opaquely
  * via `jsonField`), so a row with a missing/invalid group is skipped. Terse/

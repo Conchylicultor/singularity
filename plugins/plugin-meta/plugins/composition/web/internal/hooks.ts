@@ -53,7 +53,7 @@ function graphFor(data: CompositionData | undefined): EdgeGraph | null {
  * exactly once per response (module-cached, see {@link graphFor}) and published into
  * the active-composition store so the membership recompute can read it. Manifests
  * are sourced from the `compositions` config_v2 config (not the endpoint) and
- * mapped to the engine's `CompositionManifest[]` (dropping `id` / `rank`). Safe to
+ * mapped to the engine's `CompositionManifest[]` (dropping `id`). Safe to
  * call from many components — `useEndpoint` (TanStack Query) dedupes the network
  * request and the deserialize is shared.
  */

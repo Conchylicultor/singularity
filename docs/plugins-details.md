@@ -5362,7 +5362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `TreeRowNode`, `TreeViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
-            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/rank.Rank`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/view-switcher.useActiveViewId`
+            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/view-switcher.useActiveViewId`
             - Exports: Types: `ResolvedViewInstance`, `ViewActionsCore`, `ViewModelCore`, `ViewsConfigHandle`; Values: `buildInstanceFromRow`, `buildViewConfigContributions`, `buildViewDescriptors`, `EditableViewSwitcher`, `useViewModel`, `useViewsConfig`, `useViewVariants`, `ViewSettingsPopover`
           - Server:
             - Uses: `config_v2.ConfigV2`
@@ -5649,7 +5649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database.db`
         - Exports: Types: `RankExecutor`; Values: `nextRankIn`, `nextRankUnder`, `rankAfterSibling`, `rankText`
       - Cross-plugin:
-        - Imported by: `apps/story/story-core`, `apps/studio/explorer`, `conversations/agents`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `page/editor`, `primitives/data-view/view-core`, `primitives/data-view/view-order`, `primitives/tree`, `tasks`, `tasks/tasks-core`
+        - Imported by: `apps/story/story-core`, `apps/studio/explorer`, `conversations/agents`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `page/editor`, `primitives/data-view/view-order`, `primitives/tree`, `tasks`, `tasks/tasks-core`
       - Web:
         - Exports: Values: `Rank`, `RankSchema`
       - Core:

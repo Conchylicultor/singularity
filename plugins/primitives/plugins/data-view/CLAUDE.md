@@ -76,8 +76,8 @@ checks bracket the choice: `no-adhoc-row-list` fires when you avoid DataView,
 
 **Terse authored rows.** A config row is authored as just `{ name, view }`; the
 resolver (`normalizeRows` in `view-core`'s `use-views-config.ts`) derives `id`
-(explicit `id` ?? slug(name) ?? `view-${index}`) and `rank` (explicit ?? a
-generated `Rank.between` sequence following array order) on read. The `view` blob
+(explicit `id` ?? slug(name) ?? `view-${index}`) on read. **Array position is the
+canonical order** — there is no `rank` field. The `view` blob
 is `{ type, sort?, filter?, …opts }` — `sort` is a `SortRule[]` (an ordered,
 multi-level sort; each rule `{ fieldId, direction }`, priority = list order, `[]` =
 unsorted) and `filter` is a `FilterGroup` tree; both are host-injected keys read via
@@ -122,7 +122,7 @@ localStorage-only for device-local state):
 
 | State | Lives in |
 |---|---|
-| Instance def `{ id, rank, name, view:{ type, sort?, filter?, …opts } }` | `viewsDescriptor` config row (user-global layer) |
+| Instance def `{ id, name, view:{ type, sort?, filter?, …opts } }` (array-ordered) | `viewsDescriptor` config row (user-global layer) |
 | Active instance id | localStorage `${storageKey}:active-view` (per device) |
 | Search query, tree expand map | localStorage `${storageKey}:view-state` (per device) |
 

@@ -9,9 +9,9 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 // codegen, no barrels). Each item is a `CompositionManifest`
 // (`{ name, entryPoints, selectedContributors, extends }`, owned by `closure`)
 // plus a `category` (organisation metadata, NOT consumed by the engine) and the
-// list field's `id` / `rank` identity. Runtime-editable from the Studio
-// compositions pane; `promotableToGit` lets a git-promotion land an edited set
-// as the committed default.
+// list field's `id` identity. Runtime-editable from the Studio compositions
+// pane; `promotableToGit` lets a git-promotion land an edited set as the
+// committed default.
 //
 // ── Categories (the taxonomy the seeds populate) ──────────────────────────────
 //   app        — one per top-level Apps.App: the releasable products. Entry is the
@@ -25,9 +25,8 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 //                `flattenManifest` before closure). `self-improvement` is the pack
 //                the agent-manager profile demonstrates.
 //
-// Code defaults carry an EXPLICIT stable `id` + `rank` (the UI only auto-injects
-// those on "Add"), so seeded rows are editable and ordered. The rank strings are
-// the leading fractional-index keys (`Rank.between` chain: a0, a1, a2, …).
+// Code defaults carry an EXPLICIT stable `id` (the UI only auto-injects one on
+// "Add"), so seeded rows are editable. Order is array position — no `rank`.
 export const compositionsConfig = defineConfig({
   name: "compositions",
   promotableToGit: true,
@@ -69,7 +68,6 @@ export const compositionsConfig = defineConfig({
         // now sourced through the reference rather than duplicated here.
         {
           id: "agent-manager",
-          rank: "a0",
           name: "agent-manager",
           category: "profile",
           entryPoints: ["apps.agent-manager.**"],
@@ -83,7 +81,6 @@ export const compositionsConfig = defineConfig({
         },
         {
           id: "agent-manager-lean",
-          rank: "a1",
           name: "agent-manager-lean",
           category: "profile",
           entryPoints: ["apps.agent-manager.**"],
@@ -97,10 +94,10 @@ export const compositionsConfig = defineConfig({
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
-        app("home", "a2", "apps.home"),
-        app("pages", "a3", "apps.pages"),
-        app("settings", "a4", "apps.settings"),
-        app("studio", "a5", "apps.studio"),
+        app("home", "apps.home"),
+        app("pages", "apps.pages"),
+        app("settings", "apps.settings"),
+        app("studio", "apps.studio"),
         // The linchpin edge is now CUT: infra.health no longer hard-imports
         // reports (its wedge watchdog emits onto a neutral report-sink that
         // reports.crash registers into), so served-baseline no longer drags
@@ -110,12 +107,12 @@ export const compositionsConfig = defineConfig({
         // disjointness. Rolling the same excludes out to the other served apps is
         // a follow-up. The guard mechanism is live; see
         // plugins/.../checks/.../composition-closure.
-        app("sonata", "a6", "apps.sonata", ["data-views"], ["agent-runtime", "auth"]),
-        app("story", "a7", "apps.story"),
-        app("debug", "a8", "apps.debug"),
-        app("deploy", "a9", "apps.deploy"),
-        app("file-explorer", "aA", "apps.file-explorer"),
-        app("workflows", "aB", "apps.workflows"),
+        app("sonata", "apps.sonata", ["data-views"], ["agent-runtime", "auth"]),
+        app("story", "apps.story"),
+        app("debug", "apps.debug"),
+        app("deploy", "apps.deploy"),
+        app("file-explorer", "apps.file-explorer"),
+        app("workflows", "apps.workflows"),
 
         // The public equin site. The entry grammar takes the whole site subtree
         // and then subtracts the two branches that would contaminate it:
@@ -167,7 +164,6 @@ export const compositionsConfig = defineConfig({
         // instruments/keyboard/piano leaves the site bundles.
         {
           id: "website",
-          rank: "aB5",
           name: "website",
           category: "app" as const,
           entryPoints: [
@@ -182,21 +178,21 @@ export const compositionsConfig = defineConfig({
         },
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
-        subsystem("data", "aC", ["database"]),
-        subsystem("jobs-events", "aD", [
+        subsystem("data", ["database"]),
+        subsystem("jobs-events", [
           "infra.jobs",
           "infra.events",
           "infra.secrets",
         ]),
-        subsystem("live-state", "aE", [
+        subsystem("live-state", [
           "primitives.live-state",
           "primitives.networking",
         ]),
-        subsystem("auth", "aF", ["auth"]),
-        subsystem("search", "aG", ["search.engine"]),
-        subsystem("history", "aH", ["history.engine"]),
-        subsystem("conversations", "aI", ["conversations"]),
-        subsystem("tasks-domain", "aJ", ["tasks"]),
+        subsystem("auth", ["auth"]),
+        subsystem("search", ["search.engine"]),
+        subsystem("history", ["history.engine"]),
+        subsystem("conversations", ["conversations"]),
+        subsystem("tasks-domain", ["tasks"]),
         // The agent-runtime infra closure: what a self-contained app must NOT
         // bundle. Reuses the conversations/tasks-domain subsystems via `extends`
         // and adds the deep taproots (worktree / git-watcher / claude-cli) plus
@@ -207,7 +203,6 @@ export const compositionsConfig = defineConfig({
         // taproot it reaches, where it intersects this bundle's containment.
         {
           id: "agent-runtime",
-          rank: "aJ5",
           name: "agent-runtime",
           category: "subsystem" as const,
           entryPoints: [
@@ -221,10 +216,10 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           autoBuild: false,
         },
-        subsystem("page-editor", "aK", ["page"]),
-        subsystem("fields", "aL", ["fields"]),
-        subsystem("design-system", "aM", ["primitives.css"]),
-        subsystem("mcp", "aN", ["infra.mcp"]),
+        subsystem("page-editor", ["page"]),
+        subsystem("fields", ["fields"]),
+        subsystem("design-system", ["primitives.css"]),
+        subsystem("mcp", ["infra.mcp"]),
         // The reusable baseline EVERY gateway-served app composition `extends`:
         // the mandatory Core.Root app SURFACE renderer (apps-core.layout —
         // AppsLayout: the tab bar / rail / tab surface; without it a filtered app
@@ -238,7 +233,7 @@ export const compositionsConfig = defineConfig({
         // unstyled and fails /api/health). Entry points (not contributors) so
         // they're forced into the hard closure unconditionally; the
         // theme-customizer UI stays opt-in/soft.
-        subsystem("served-baseline", "aN5", [
+        subsystem("served-baseline", [
           "apps-core.layout",
           "infra.health",
           "shell.toast",
@@ -253,14 +248,14 @@ export const compositionsConfig = defineConfig({
         ]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
-        pack("self-improvement", "aO", [
+        pack("self-improvement", [
           "improve.element-picker",
           "review",
           "reports.crash",
           "reports.launch-fix",
           "screenshot.draw-on-app",
         ]),
-        pack("theming", "aP", [
+        pack("theming", [
           "ui.theme-toggle",
           "ui.tweakcn",
           "ui.tweakcn.community-browser",
@@ -271,7 +266,7 @@ export const compositionsConfig = defineConfig({
         // served-baseline) renders a chrome-less surface — tabs + tab-surface
         // substrate only — so a composition ships the tab bar / rail / placements
         // only by `extends`-ing this pack (or selecting individual contributors).
-        pack("app-chrome", "aQ", [
+        pack("app-chrome", [
           "apps-core.tab-bar",
           "apps-core.app-rail-framing",
           "apps-core.app-rail-framing.rail",
@@ -300,7 +295,7 @@ export const compositionsConfig = defineConfig({
         // object literal, so `composition-closure` rejected them as "not a genuine
         // soft option"). Carrying them here keeps a released DataView's filtering
         // and typed codecs working instead of fail-soft degrading to identity.
-        pack("data-views", "aR", [
+        pack("data-views", [
           "primitives.data-view.gallery",
           "primitives.data-view.table",
           "primitives.data-view.list",
@@ -343,14 +338,12 @@ export const compositionsConfig = defineConfig({
  */
 function app(
   name: string,
-  rank: string,
   entry: string,
   extraExtends: string[] = [],
   excludes: string[] = [],
 ) {
   return {
     id: name,
-    rank,
     name,
     category: "app" as const,
     entryPoints: [entry + ".**"],
@@ -362,10 +355,9 @@ function app(
 }
 
 /** A subsystem closure: one or more infra umbrellas/plugins as entry points. */
-function subsystem(name: string, rank: string, entries: string[]) {
+function subsystem(name: string, entries: string[]) {
   return {
     id: name,
-    rank,
     name,
     category: "subsystem" as const,
     entryPoints: entries.map((e) => e + ".**"),
@@ -377,10 +369,9 @@ function subsystem(name: string, rank: string, entries: string[]) {
 }
 
 /** A pack: an entry-less contributor SET other compositions reference via `extends`. */
-function pack(name: string, rank: string, contributors: string[]) {
+function pack(name: string, contributors: string[]) {
   return {
     id: name,
-    rank,
     name,
     category: "pack" as const,
     entryPoints: [] as string[],

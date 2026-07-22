@@ -6,15 +6,15 @@ sortable drag-and-drop list renderer contributed to `config-v2.fields.renderer`
 
 The factory builds a config_v2 `FieldDef<ListItem<F>[]>` carrying the canonical
 `fields/` list token (`@plugins/fields/plugins/list/core`, id `"list"`);
-dispatch is by id string. Each item gets an `id` and `rank` (fractional-index
-string) plus the user-defined sub-fields. The list's zod schema wraps each
+dispatch is by id string. Each item gets an `id` plus the user-defined
+sub-fields, ordered by **array position** (no separate rank field). The list's zod schema wraps each
 sub-field via `fieldSchemaWithDefault` so a key added after items were stored
 heals to its default. The `ListItem` value type comes from the identity core;
 `FieldRenderer` (recursion into sub-fields) comes from the slot owner
 (`@plugins/config_v2/plugins/fields/web`).
 
 The item `id` is **not** an auto-injected UUID by default. A row authored without
-an explicit `id` is seeded by the config_v2 registry (`injectCollectionIds`) as
+an explicit `id` is seeded by the config_v2 registry (`normalizeCollectionItems`) as
 `auto-<hash([index, content])>` — idempotent per read but **content- and
 position-dependent**; only the generic Settings-pane "Add item" UI mints a real
 `crypto.randomUUID()`.

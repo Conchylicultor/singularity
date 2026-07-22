@@ -1,9 +1,8 @@
-// @hash 384ddbb247f8
+// @hash d46931c86ea8
 {
   "manifests": [
     {
       "id": "agent-manager",
-      "rank": "a0",
       "name": "agent-manager",
       "category": "profile",
       "entryPoints": [
@@ -22,7 +21,6 @@
     },
     {
       "id": "agent-manager-lean",
-      "rank": "a1",
       "name": "agent-manager-lean",
       "category": "profile",
       "entryPoints": [
@@ -40,7 +38,6 @@
     },
     {
       "id": "home",
-      "rank": "a2",
       "name": "home",
       "category": "app",
       "entryPoints": [
@@ -55,7 +52,6 @@
     },
     {
       "id": "pages",
-      "rank": "a3",
       "name": "pages",
       "category": "app",
       "entryPoints": [
@@ -70,7 +66,6 @@
     },
     {
       "id": "settings",
-      "rank": "a4",
       "name": "settings",
       "category": "app",
       "entryPoints": [
@@ -85,7 +80,6 @@
     },
     {
       "id": "studio",
-      "rank": "a5",
       "name": "studio",
       "category": "app",
       "entryPoints": [
@@ -100,7 +94,6 @@
     },
     {
       "id": "sonata",
-      "rank": "a6",
       "name": "sonata",
       "category": "app",
       "entryPoints": [
@@ -119,7 +112,6 @@
     },
     {
       "id": "story",
-      "rank": "a7",
       "name": "story",
       "category": "app",
       "entryPoints": [
@@ -134,7 +126,6 @@
     },
     {
       "id": "debug",
-      "rank": "a8",
       "name": "debug",
       "category": "app",
       "entryPoints": [
@@ -149,7 +140,6 @@
     },
     {
       "id": "deploy",
-      "rank": "a9",
       "name": "deploy",
       "category": "app",
       "entryPoints": [
@@ -164,7 +154,6 @@
     },
     {
       "id": "file-explorer",
-      "rank": "aA",
       "name": "file-explorer",
       "category": "app",
       "entryPoints": [
@@ -179,7 +168,6 @@
     },
     {
       "id": "workflows",
-      "rank": "aB",
       "name": "workflows",
       "category": "app",
       "entryPoints": [
@@ -194,7 +182,6 @@
     },
     {
       "id": "website",
-      "rank": "aB5",
       "name": "website",
       "category": "app",
       "entryPoints": [
@@ -216,7 +203,6 @@
     },
     {
       "id": "data",
-      "rank": "aC",
       "name": "data",
       "category": "subsystem",
       "entryPoints": [
@@ -229,7 +215,6 @@
     },
     {
       "id": "jobs-events",
-      "rank": "aD",
       "name": "jobs-events",
       "category": "subsystem",
       "entryPoints": [
@@ -244,7 +229,6 @@
     },
     {
       "id": "live-state",
-      "rank": "aE",
       "name": "live-state",
       "category": "subsystem",
       "entryPoints": [
@@ -258,7 +242,6 @@
     },
     {
       "id": "auth",
-      "rank": "aF",
       "name": "auth",
       "category": "subsystem",
       "entryPoints": [
@@ -271,7 +254,6 @@
     },
     {
       "id": "search",
-      "rank": "aG",
       "name": "search",
       "category": "subsystem",
       "entryPoints": [
@@ -284,7 +266,6 @@
     },
     {
       "id": "history",
-      "rank": "aH",
       "name": "history",
       "category": "subsystem",
       "entryPoints": [
@@ -297,7 +278,6 @@
     },
     {
       "id": "conversations",
-      "rank": "aI",
       "name": "conversations",
       "category": "subsystem",
       "entryPoints": [
@@ -310,7 +290,6 @@
     },
     {
       "id": "tasks-domain",
-      "rank": "aJ",
       "name": "tasks-domain",
       "category": "subsystem",
       "entryPoints": [
@@ -323,7 +302,6 @@
     },
     {
       "id": "agent-runtime",
-      "rank": "aJ5",
       "name": "agent-runtime",
       "category": "subsystem",
       "entryPoints": [
@@ -342,7 +320,6 @@
     },
     {
       "id": "page-editor",
-      "rank": "aK",
       "name": "page-editor",
       "category": "subsystem",
       "entryPoints": [
@@ -355,7 +332,6 @@
     },
     {
       "id": "fields",
-      "rank": "aL",
       "name": "fields",
       "category": "subsystem",
       "entryPoints": [
@@ -368,7 +344,6 @@
     },
     {
       "id": "design-system",
-      "rank": "aM",
       "name": "design-system",
       "category": "subsystem",
       "entryPoints": [
@@ -381,7 +356,6 @@
     },
     {
       "id": "mcp",
-      "rank": "aN",
       "name": "mcp",
       "category": "subsystem",
       "entryPoints": [
@@ -394,7 +368,6 @@
     },
     {
       "id": "served-baseline",
-      "rank": "aN5",
       "name": "served-baseline",
       "category": "subsystem",
       "entryPoints": [
@@ -417,7 +390,6 @@
     },
     {
       "id": "self-improvement",
-      "rank": "aO",
       "name": "self-improvement",
       "category": "pack",
       "entryPoints": [],
@@ -434,7 +406,6 @@
     },
     {
       "id": "theming",
-      "rank": "aP",
       "name": "theming",
       "category": "pack",
       "entryPoints": [],
@@ -449,7 +420,6 @@
     },
     {
       "id": "app-chrome",
-      "rank": "aQ",
       "name": "app-chrome",
       "category": "pack",
       "entryPoints": [],
@@ -468,7 +438,6 @@
     },
     {
       "id": "data-views",
-      "rank": "aR",
       "name": "data-views",
       "category": "pack",
       "entryPoints": [],

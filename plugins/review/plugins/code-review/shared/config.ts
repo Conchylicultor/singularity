@@ -47,7 +47,7 @@ export const reviewConfig = defineConfig({
             { pattern: "docs/plugins-compact.md" },
             { pattern: "docs/plugins-details.md" },
             { pattern: "server/src/db/migrations/" },
-          ] as { id: string; rank: string; pattern: string }[],
+          ] as { id: string; pattern: string }[],
         },
       ],
     }),

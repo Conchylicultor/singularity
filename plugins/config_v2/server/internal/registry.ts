@@ -11,6 +11,7 @@ import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
 import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./scope-paths";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { isListFieldDef } from "@plugins/fields/plugins/list/plugins/config/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, configV2ConflictServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, markRegistryReady, refreshConflictPaths, refreshModifiedCount, refreshScopeMembers, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter } from "./resource";
@@ -40,24 +41,46 @@ const subscribersByDescriptor = new WeakMap<ConfigDescriptor, Map<string, Set<(v
 // every currently-un-forked scope (apps tracking base must re-render).
 const knownScopeIds = new Set<string>();
 
-function injectCollectionIds(
+// Normalize every listField collection in a config document: array position is
+// the canonical order, so we drop any legacy `rank` (migrating stored order by
+// it first) and synthesize a stable id for id-less rows of NON-stable lists.
+// Called on read (reloadValues) and on write (setConfig / mergeConflictByPath) —
+// idempotent, and returns a NEW doc object (never mutates the input).
+export function normalizeCollectionItems(
   doc: Record<string, unknown>,
   fields: FieldsRecord,
 ): Record<string, unknown> {
   const result = { ...doc };
   for (const [key, field] of Object.entries(fields)) {
-    if (!("itemFields" in field)) continue;
+    if (!isListFieldDef(field)) continue;
     const arr = result[key];
     if (!Array.isArray(arr)) continue;
-    let lastRank: Rank | null = null;
-    result[key] = arr.map((item: Record<string, unknown>, index: number) => {
+
+    // Legacy-rank migration: a document written before array-order-is-canonical
+    // carries a fractional `rank` string on each item. Sort by it ONCE so array
+    // order becomes authoritative, then the `.map` below drops `rank` from every
+    // item — idempotent (after the first read+write the file is array-ordered and
+    // rank-free). Items without any `rank` keep their array order (stable sort).
+    let items = arr as Record<string, unknown>[];
+    if (items.some((it) => typeof it.rank === "string")) {
+      items = [...items].sort((a, b) => {
+        const ra = typeof a.rank === "string" ? a.rank : null;
+        const rb = typeof b.rank === "string" ? b.rank : null;
+        if (ra === null || rb === null) return 0;
+        return Rank.compare(Rank.from(ra), Rank.from(rb));
+      });
+    }
+
+    result[key] = items.map((item, index) => {
       const out = { ...item };
-      if (!out.rank || typeof out.rank !== "string") {
-        lastRank = Rank.between(lastRank, null);
-        out.rank = lastRank.toString();
-      } else {
-        lastRank = Rank.from(out.rank as string);
-      }
+      // Array position is the canonical order now — the legacy rank is dropped.
+      delete out.rank;
+
+      // A `stableIdentity` list's ids are DURABLE EXTERNAL KEYS owned by the
+      // consumer (e.g. the DataView views list keys per-view saved order), so we
+      // never synthesize them — an id-less row is left exactly as authored.
+      if (field.stableIdentity) return out;
+
       if (!out.id || typeof out.id !== "string") {
         // Deterministic id so repeated reads of the same (override-less) document
         // are idempotent. A random uuid here changes on every read — including the
@@ -65,7 +88,7 @@ function injectCollectionIds(
         // remounts list rows, and wipes any in-progress field edit. Seed the id from
         // the item's stable content + position; once the user edits, the value is
         // persisted to an override and read back verbatim.
-        const { id: _id, rank: _rank, ...content } = out;
+        const { id: _id, ...content } = out;
         out.id = `auto-${computeHash([index, content] as unknown as JsonValue)}`;
       }
       return out;
@@ -93,7 +116,7 @@ async function buildEntry(
     const freshUserOrigin = jsoncConfigProxy(userOriginPath);
     const freshUserOverwrites = jsoncConfigProxy(userOverwritesPath);
     const raw = readTypedConfig(descriptor, freshUserOrigin, freshUserOverwrites);
-    return injectCollectionIds(
+    return normalizeCollectionItems(
       raw as Record<string, unknown>,
       descriptor.fields,
     ) as ConfigValues<FieldsRecord>;
@@ -464,8 +487,8 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
   }
 
   base[key] = value;
-  const injected = injectCollectionIds(base, descriptor.fields);
-  userOverwrites.write(injected as JsonValue, hash);
+  const normalized = normalizeCollectionItems(base, descriptor.fields);
+  userOverwrites.write(normalized as JsonValue, hash);
 }
 
 export async function setConfigByPath(storePath: string, key: string, value: unknown, scopeId?: string): Promise<void> {
@@ -598,11 +621,11 @@ export function mergeConflictByPath(
     ow.content as Record<string, JsonValue>,
     originData.content as Record<string, JsonValue>,
   );
-  const injected = injectCollectionIds(merged, descriptor.fields);
+  const normalized = normalizeCollectionItems(merged, descriptor.fields);
 
   const resolved = conflicts.length === 0;
   const hash = resolved ? computeHash(originData.content) : ow.hash;
-  userOverwrites.write(injected as JsonValue, hash);
+  userOverwrites.write(normalized as JsonValue, hash);
   if (resolved && existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
 
   return { resolved, conflictKeys: conflicts };

@@ -7,6 +7,7 @@ import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view
 import type { FilterGroup, SortRule, ViewState } from "../../core";
 import type { DataViewContribution } from "../slots";
 import { cyclePrimarySort } from "./sort-cycle";
+import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
 import { useViewEphemeral } from "./use-view-ephemeral";
 
@@ -129,9 +130,14 @@ export function useDataViewModel(
 
   const setSortRules = useCallback(
     (id: string, rules: SortRule[]) => {
-      core.updateView(id, { sort: rules } as unknown as VariantValue, {
-        merge: true,
-      });
+      // An empty rule list is semantically "no sort" — omit the key rather than
+      // persist `sort: []`, so the config row stays terse (mergeView drops
+      // undefined keys).
+      core.updateView(
+        id,
+        { sort: rules.length ? rules : undefined } as unknown as VariantValue,
+        { merge: true },
+      );
     },
     [core],
   );
@@ -139,28 +145,44 @@ export function useDataViewModel(
   const setSort = useCallback(
     (id: string, fieldId: string) => {
       // Header shortcut: cycle the PRIMARY rule, preserving secondary rules.
+      // Cycling can empty the rule list (primary desc + no secondary) — omit the
+      // key in that case instead of persisting `sort: []`.
       const next = cyclePrimarySort(readSortRules(core.viewFor(id)), fieldId);
-      core.updateView(id, { sort: next } as unknown as VariantValue, {
-        merge: true,
-      });
+      core.updateView(
+        id,
+        { sort: next.length ? next : undefined } as unknown as VariantValue,
+        { merge: true },
+      );
     },
     [core],
   );
 
   const setVisibleFields = useCallback(
     (id: string, ids: string[] | null) => {
-      core.updateView(id, { visibleFields: ids } as unknown as VariantValue, {
-        merge: true,
-      });
+      // A reset-to-show-all passes `null` (and an empty array is likewise "no
+      // explicit policy") — omit the key so the row falls back to show-all.
+      core.updateView(
+        id,
+        {
+          visibleFields: ids && ids.length ? ids : undefined,
+        } as unknown as VariantValue,
+        { merge: true },
+      );
     },
     [core],
   );
 
   const setFilter = useCallback(
     (id: string, filter: FilterGroup | null) => {
-      core.updateView(id, { filter } as unknown as VariantValue, {
-        merge: true,
-      });
+      // A null filter or an empty group is semantically "no filter" — omit the
+      // key rather than persist `filter: null` / `filter: { children: [] }`.
+      const isEmptyFilter =
+        filter == null || (isFilterGroup(filter) && filter.children.length === 0);
+      core.updateView(
+        id,
+        { filter: isEmptyFilter ? undefined : filter } as unknown as VariantValue,
+        { merge: true },
+      );
     },
     [core],
   );

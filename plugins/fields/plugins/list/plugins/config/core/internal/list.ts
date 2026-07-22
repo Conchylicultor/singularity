@@ -30,10 +30,10 @@ function pickMeta(opts?: FieldMeta): FieldMeta {
 export function listField<const F extends FieldsRecord>(
   opts: FieldMeta & {
     itemFields: F;
-    // Seeded defaults may carry the list item's stable `id` / `rank` identity
-    // (both optional, exactly as the stored schema permits) so a code-authored
-    // default row is editable + ordered without waiting for a UI "Add".
-    default?: Array<InferFieldsObject<F> & { id?: string; rank?: string }>;
+    // Seeded defaults may carry the list item's stable `id` (optional, exactly
+    // as the stored schema permits) so a code-authored default row is editable
+    // without waiting for a UI "Add". Order is array position — no `rank`.
+    default?: Array<InferFieldsObject<F> & { id?: string }>;
     // Opt in when this list's item ids are used as DURABLE EXTERNAL KEYS (e.g. a
     // saved row order keyed by view id): each row must then carry an explicit,
     // content-independent `id` persisted in the config file — enforced by the
@@ -53,6 +53,10 @@ export function listField<const F extends FieldsRecord>(
   const itemSchema = z
     .object({
       id: z.string().optional(),
+      // Legacy-read tolerance only: array position is the canonical order now, so
+      // no `rank` is ever written, but a document stored before that change may
+      // still carry one on disk. Keep it optional so it parses cleanly (the
+      // registry's normalizeCollectionItems migrates then drops it).
       rank: z.string().optional(),
       ...subShape,
     })

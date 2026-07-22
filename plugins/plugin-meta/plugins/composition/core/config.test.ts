@@ -34,11 +34,9 @@ test("the seeded default parses against the descriptor schema", () => {
   expect(parsed.success).toBe(true);
 });
 
-test("every seed carries a distinct id + rank", () => {
+test("every seed carries a distinct id (array position is the order)", () => {
   const ids = seeds.map((s) => s.id);
-  const ranks = seeds.map((s) => s.rank);
   expect(new Set(ids).size).toBe(seeds.length);
-  expect(new Set(ranks).size).toBe(seeds.length);
 });
 
 test("the taxonomy is populated: app, profile, subsystem, and pack seeds all exist", () => {

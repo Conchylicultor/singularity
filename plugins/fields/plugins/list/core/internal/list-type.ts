@@ -8,7 +8,6 @@ import {
 
 export type ListItem<F extends FieldsRecord> = {
   id: string;
-  rank: string;
 } & InferFieldsObject<F>;
 
 export const listFieldType = defineFieldType<ListItem<FieldsRecord>[]>("list");

@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   compositionsConfig,
@@ -8,10 +7,11 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 
 /**
- * The raw stored composition config items — `{ id, rank, name, entryPoints,
+ * The raw stored composition config items — `{ id, name, entryPoints,
  * selectedContributors }[]` — read reactively from the `compositions` config_v2
  * config. The Studio compositions pane lists + edits these; engine consumers go
  * through {@link useCompositionData} (which maps these to `CompositionManifest[]`).
+ * Order is array position.
  */
 export function useManifestItems(): CompositionManifestItem[] {
   return useConfig(compositionsConfig).manifests;
@@ -20,10 +20,10 @@ export function useManifestItems(): CompositionManifestItem[] {
 export interface ManifestActions {
   /**
    * Upsert a manifest. With `editingId` set, replaces that item's `name` /
-   * `entryPoints` / `selectedContributors` in place (preserving its `id` +
-   * `rank`); otherwise appends a NEW item with a fresh `id` + `rank` (the same
-   * generation the `list` field renderer uses — `crypto.randomUUID()` +
-   * `Rank.between(lastRank, null)`).
+   * `entryPoints` / `selectedContributors` in place (preserving its `id`);
+   * otherwise appends a NEW item at the end of the array with a fresh `id`
+   * (`crypto.randomUUID()`, the same the `list` field renderer mints on "Add").
+   * Array position is the order.
    *
    * Returns the upserted item's `id` — `editingId` when replacing, the freshly
    * minted one when appending. The Studio list pane's "New" creates the row and
@@ -65,16 +65,9 @@ export function useManifestActions(): ManifestActions {
           item.id === editingId ? { ...item, ...fields } : item,
         );
       } else {
-        // Rank after the current last (rank-sorted, mirroring the list renderer
-        // — stored order is not guaranteed rank-ascending).
-        const sorted = [...items].sort((a, b) =>
-          Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
-        );
-        const lastRank =
-          sorted.length > 0 ? Rank.from(sorted[sorted.length - 1]!.rank) : null;
+        // Appended at the end — array position is the order (no rank).
         const newItem: CompositionManifestItem = {
           id: newId,
-          rank: Rank.between(lastRank, null).toString(),
           // New drafts default to the `app` category; re-categorise via config edit.
           category: "app",
           // `excludes` (the self-containment guard) isn't part of the editable

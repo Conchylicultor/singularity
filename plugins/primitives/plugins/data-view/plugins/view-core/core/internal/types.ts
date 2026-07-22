@@ -42,14 +42,14 @@ export interface ViewInstance {
 }
 
 /**
- * One config row of `viewsDescriptor.views`: the `listField` auto-injects `id`
- * and `rank`; `name` is the switcher label; `view` is the `variantField` value
- * `{ type, ...options }` where `type` selects the view-type and the rest is that
- * type's saved options (including host-injected keys such as `sort`/`filter`).
+ * One config row of `viewsDescriptor.views`: the `listField` auto-injects `id`;
+ * order is the array position (no `rank`). `name` is the switcher label; `view`
+ * is the `variantField` value `{ type, ...options }` where `type` selects the
+ * view-type and the rest is that type's saved options (including host-injected
+ * keys such as `sort`/`filter`).
  */
 export interface ViewConfigRow {
   id: string;
-  rank: string;
   name: string;
   view: VariantValue;
 }

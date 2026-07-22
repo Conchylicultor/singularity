@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { Rank } from "@plugins/primitives/plugins/rank/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewConfigRow, ViewTypeMeta } from "../../core";
@@ -41,14 +40,13 @@ function newId(): string {
 
 /**
  * A raw config row as authored on disk. Config is the single source of truth and
- * the authored shape is **terse** — only `{ name, view }` is required; `id` and
- * `rank` are optional and derived on read (see `normalizeRows`). This lets an
- * agent hand-write `{ "name": "All", "view": { "type": "table" } }` rows without
- * inventing ids or fractional ranks.
+ * the authored shape is **terse** — only `{ name, view }` is required; `id` is
+ * optional and derived on read (see `normalizeRows`). Array position is the
+ * canonical order — there is no `rank`. This lets an agent hand-write
+ * `{ "name": "All", "view": { "type": "table" } }` rows without inventing ids.
  */
 interface RawViewRow {
   id?: string;
-  rank?: string;
   name: string;
   view: VariantValue;
 }
@@ -64,29 +62,19 @@ function slugify(name: string): string {
 
 /**
  * Normalize raw (possibly terse) config rows into fully-formed `ViewConfigRow`s:
- * derive `id` (explicit `id` ?? slug(name) ?? `view-${index}`) and `rank`
- * (explicit `rank` ?? a generated `Rank.between` sequence following array order).
- * Config is the ONLY source — there is no code synthesis. Duplicate derived ids
- * are disambiguated with an index suffix so each row stays addressable.
+ * derive `id` (explicit `id` ?? slug(name) ?? `view-${index}`). Order is the
+ * array position as authored/read — there is no `rank`. Config is the ONLY
+ * source — there is no code synthesis. Duplicate derived ids are disambiguated
+ * with an index suffix so each row stays addressable.
  */
 function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
   const seenIds = new Set<string>();
-  let prevRank: Rank | null = null;
   return raw.map((row, i) => {
     let id = row.id ?? slugify(row.name) ?? `view-${i}`;
     if (id === "") id = `view-${i}`;
     while (seenIds.has(id)) id = `${id}-${i}`;
     seenIds.add(id);
-    let rank: string;
-    if (row.rank != null) {
-      rank = row.rank;
-      prevRank = Rank.from(row.rank);
-    } else {
-      const next = Rank.between(prevRank, null);
-      prevRank = next;
-      rank = next.toString();
-    }
-    return { id, rank, name: row.name, view: row.view };
+    return { id, name: row.name, view: row.view };
   });
 }
 
@@ -99,7 +87,8 @@ function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
  * **Config is the single source of truth.** There is NO code synthesis of
  * default view-instances: the displayed instances come *only* from the authored
  * `config.views` rows. Authored rows may be **terse** (`{ name, view }`); `id`
- * and `rank` are derived on read (`normalizeRows`). When config has zero rows the
+ * is derived on read (`normalizeRows`) and order is the array position. When
+ * config has zero rows the
  * engine returns an empty instance list and the host renders a placeholder. The
  * build-time `data-view:configs-authored` check is the forcing function that an
  * agent author the config.
@@ -137,8 +126,9 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   const config = useConfig(descriptor);
   const setConfig = useSetConfig(descriptor);
 
-  // Raw (possibly terse) rows straight off the config doc. `id`/`rank` are
-  // derived on read so the authored file can stay terse (`{ name, view }`).
+  // Raw (possibly terse) rows straight off the config doc. `id` is derived on
+  // read so the authored file can stay terse (`{ name, view }`); order is the
+  // array position.
   const configRows = (config.views as RawViewRow[] | undefined) ?? [];
 
   // Optimistic mirror of the normalized persisted rows. Config is the single
@@ -212,12 +202,9 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   // source — no synthesized seed).
   const displayRows = mirror;
 
-  // Sort by rank, then resolve each row through the contribution registry.
+  // Render in array order, resolving each row through the contribution registry.
   const instances = useMemo<ResolvedViewInstance<T>[]>(() => {
-    const sorted = [...displayRows].sort((a, b) =>
-      Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
-    );
-    return sorted
+    return displayRows
       .map((row) =>
         buildInstanceFromRow(row, contributions, hasHierarchy, viewOptions),
       )
@@ -242,7 +229,18 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   const mergeView = useCallback(
     (id: string, patch: (view: VariantValue) => VariantValue) => {
       applyMutation((rows) =>
-        rows.map((r) => (r.id === id ? { ...r, view: patch(r.view) } : r)),
+        rows.map((r) => {
+          if (r.id !== id) return r;
+          const next = patch(r.view);
+          // Drop keys whose value is `undefined` so a host can signal "remove
+          // this key" by passing `undefined`. JSON.stringify already omits
+          // undefined on write, but the in-memory optimistic mirror must match
+          // so the JSON-identity reconcile stays stable.
+          const cleaned = Object.fromEntries(
+            Object.entries(next).filter(([, v]) => v !== undefined),
+          ) as VariantValue;
+          return { ...r, view: cleaned };
+        }),
       );
     },
     [applyMutation],
@@ -273,20 +271,12 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     (type: string): string => {
       const id = newId();
       applyMutation((rows) => {
-        const sorted = [...rows].sort((a, b) =>
-          Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
-        );
-        const last = sorted.at(-1);
-        const rank = Rank.between(
-          last ? Rank.from(last.rank) : null,
-          null,
-        ).toString();
         const contribution = contributions.find((c) => c.type === type);
+        // Append to the end — array position is the order.
         return [
           ...rows,
           {
             id,
-            rank,
             name: contribution?.title ?? type,
             view: { type } as VariantValue,
           },
@@ -301,27 +291,17 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     (id: string): string => {
       const newRowId = newId();
       applyMutation((rows) => {
-        const sorted = [...rows].sort((a, b) =>
-          Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
-        );
-        const idx = sorted.findIndex((r) => r.id === id);
+        const idx = rows.findIndex((r) => r.id === id);
         if (idx < 0) return rows;
-        const src = sorted[idx]!;
-        const next = sorted[idx + 1];
-        const rank = Rank.between(
-          Rank.from(src.rank),
-          next ? Rank.from(next.rank) : null,
-        ).toString();
-        return [
-          ...rows,
-          {
-            id: newRowId,
-            rank,
-            name: `${src.name} copy`,
-            // Deep-ish clone of the variant value (JSON-safe by construction).
-            view: JSON.parse(JSON.stringify(src.view)) as VariantValue,
-          },
-        ];
+        const src = rows[idx]!;
+        const clone: ViewConfigRow = {
+          id: newRowId,
+          name: `${src.name} copy`,
+          // Deep-ish clone of the variant value (JSON-safe by construction).
+          view: JSON.parse(JSON.stringify(src.view)) as VariantValue,
+        };
+        // Insert immediately after the source row — array position is the order.
+        return [...rows.slice(0, idx + 1), clone, ...rows.slice(idx + 1)];
       });
       return newRowId;
     },
@@ -338,21 +318,14 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   const reorderView = useCallback(
     (id: string, toIndex: number) => {
       applyMutation((rows) => {
-        const sorted = [...rows].sort((a, b) =>
-          Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
-        );
-        const fromIndex = sorted.findIndex((r) => r.id === id);
+        const fromIndex = rows.findIndex((r) => r.id === id);
         if (fromIndex < 0 || fromIndex === toIndex) return rows;
-        const moved = sorted[fromIndex]!;
-        const without = sorted.filter((r) => r.id !== id);
+        const moved = rows[fromIndex]!;
+        // Remove from its current slot, then insert at the target index —
+        // array position IS the order (no rank math).
+        const without = rows.filter((r) => r.id !== id);
         const clamped = Math.max(0, Math.min(toIndex, without.length));
-        const before = without[clamped - 1];
-        const after = without[clamped];
-        const rank = Rank.between(
-          before ? Rank.from(before.rank) : null,
-          after ? Rank.from(after.rank) : null,
-        ).toString();
-        return rows.map((r) => (r.id === id ? { ...moved, rank } : r));
+        return [...without.slice(0, clamped), moved, ...without.slice(clamped)];
       });
     },
     [applyMutation],
