@@ -4,7 +4,9 @@ import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/server";
 import { opWedgeWatchdogConfig, type OpWedgePayload } from "../../core";
 import { readWedgedOps } from "./read-fleet";
-import { captureOpWedge } from "./capture";
+import { captureOpWedge, captureSink } from "./capture";
+import { probeWedgeJs } from "./probe";
+import { reapWedge } from "./reap";
 
 // Per-process set of wedges ALREADY captured + filed, keyed on
 // `<worktree>:<op>:<pid>` — the identity of the stuck PROCESS.
@@ -66,10 +68,13 @@ export const opWedgeWatchdogMonitorJob = defineJob({
       // not let the next tick start a second one against the same process.
       capturedWedges.add(key);
 
-      // The capture NEVER kills the process — the live specimen is the entire
-      // point of this watchdog. It reports its own per-step failures rather
-      // than throwing, so a denied `sample` yields a partial capture that the
-      // report explicitly labels partial, never a silently-missing section.
+      // Capture-then-reap, strictly in this order (see
+      // research/2026-07-22-global-op-wedge-capture-then-reap.md):
+      //   1. native capture (read-only on the specimen),
+      //   2. JS interrogation over the pre-armed inspector (armed ops only),
+      //   3. reap — AFTER all evidence is banked, and deliberately even when a
+      //      step was partial: fleet health outranks a second try at evidence,
+      //      and the report is labeled PARTIAL either way.
       const capture = cfg.capture
         ? await captureOpWedge({
             pid: info.pid,
@@ -79,6 +84,21 @@ export const opWedgeWatchdogMonitorJob = defineJob({
           })
         : undefined;
 
+      const jsProbe = cfg.jsProbe
+        ? await probeWedgeJs({
+            pid: info.pid,
+            worktree: info.slug,
+            op: info.op,
+            inspect: info.inspect,
+            probeSeconds: cfg.jsProbeSeconds,
+            sink: captureSink,
+          })
+        : undefined;
+
+      const reap: OpWedgePayload["reap"] = cfg.reap
+        ? await reapWedge(info.pid)
+        : { outcome: "disabled", failures: [] };
+
       const data: OpWedgePayload = {
         worktree: info.slug,
         op: info.op,
@@ -87,6 +107,8 @@ export const opWedgeWatchdogMonitorJob = defineJob({
         wedgedMs,
         budgetMs: cfg.budgetMs,
         capture,
+        jsProbe,
+        reap,
       };
       // The message must never read as a clean capture when it was not one: a
       // partial capture is called out in the one-line message, the summary
@@ -98,6 +120,11 @@ export const opWedgeWatchdogMonitorJob = defineJob({
           detail += ` — PARTIAL capture (${capture.failures.length} step(s) failed)`;
         }
       }
+      const hot = jsProbe?.topStacks[0];
+      if (hot !== undefined) {
+        detail += ` — hot: ${hot.stack.split(" < ")[0] ?? hot.stack}`;
+      }
+      detail += reap.outcome === "disabled" ? " — NOT reaped (disabled)" : ` — reaped (${reap.outcome})`;
       await recordReport({
         kind: "cli-op-wedge",
         source: "server-op-wedge-watchdog",

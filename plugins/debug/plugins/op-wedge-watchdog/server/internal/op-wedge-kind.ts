@@ -79,12 +79,14 @@ function renderDescription(row: ReportRow, d: OpWedgePayload): string {
         `this wedge.** Re-enable it before the next occurrence; without the dump ` +
         `this report only records that a wedge happened, not why.`,
     );
-    lines.push("");
-    lines.push(
-      `**The process is still alive and was NOT killed** — attach to pid ${d.pid} ` +
-        `by hand now (\`sample ${d.pid} 10\`, \`ps -o pid,ppid,stat,%cpu,etime,command\`, ` +
-        `\`lsof -p ${d.pid}\`) while the specimen is intact.`,
-    );
+    if (d.reap === undefined || d.reap.outcome === "disabled") {
+      lines.push("");
+      lines.push(
+        `**The process is still alive and was NOT killed** — attach to pid ${d.pid} ` +
+          `by hand now (\`sample ${d.pid} 10\`, \`ps -o pid,ppid,stat,%cpu,etime,command\`, ` +
+          `\`lsof -p ${d.pid}\`) while the specimen is intact.`,
+      );
+    }
   } else {
     const c = d.capture;
     const partial = c.failures.length > 0;
@@ -136,17 +138,123 @@ function renderDescription(row: ReportRow, d: OpWedgePayload): string {
           `(\`checks/core/grep-code.ts\`) and the \`orphaned-db-tables\` \`git()\` helper.`,
       );
     }
-    lines.push("");
-    lines.push(
-      `**The wedged process was deliberately NOT killed** — the intact live specimen ` +
-        `is the whole point. Read \`${c.dumpPath}\` (thread states, open fds, the op ` +
-        `marker, the \`check-progress.jsonl\` tail) before reaping it.`,
-    );
+    if (d.reap === undefined || d.reap.outcome === "disabled") {
+      lines.push("");
+      lines.push(
+        `**The wedged process was NOT killed** (reap disabled) — the live specimen is ` +
+          `still attached. Read \`${c.dumpPath}\` (thread states, open fds, the op ` +
+          `marker) before reaping it by hand.`,
+      );
+    }
   }
+
+  renderJsProbe(lines, d);
+  renderReap(lines, d);
 
   lines.push("");
   lines.push(`**Occurrences (watchdog sightings):** ${row.count}`);
   lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);
   lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
   return lines.join("\n");
+}
+
+// The known wedge signature: a native microtask storm drained by
+// `processTicksAndRejections` at its `drainMicrotasks()` call site (bc#365 on
+// bun 1.3.13). A dominant stack matching this names THIS bug; anything else is
+// a new specimen worth its own investigation.
+const KNOWN_DRAIN_FRAME = "processTicksAndRejections";
+
+function renderJsProbe(lines: string[], d: OpWedgePayload): void {
+  const p = d.jsProbe;
+  lines.push("");
+  if (p === undefined) {
+    lines.push(
+      `## JS interrogation: SKIPPED\n\nDisabled (Settings → Config → op-wedge-watchdog → ` +
+        `"JS interrogation"). The hot-function evidence this report exists to collect ` +
+        `was not gathered.`,
+    );
+    return;
+  }
+  if (!p.armed) {
+    lines.push(
+      `## JS interrogation: NOT POSSIBLE\n\nThe op marker carries no inspector URL — ` +
+        `the op's worktree predates the pre-armed inspector (12efa0e37) or arming was ` +
+        `disabled. Only native forensics exist for this wedge.`,
+    );
+    return;
+  }
+  const partial = p.failures.length > 0;
+  lines.push(`## JS interrogation${partial ? " — ⚠️ PARTIAL" : ""}`);
+  lines.push("");
+  if (partial) {
+    lines.push(`**${p.failures.length} step(s) FAILED — do not read an absent section as an absent finding.**`);
+    for (const f of p.failures) lines.push(`- \`${f.step}\`: ${f.error}`);
+    lines.push("");
+  }
+  lines.push(
+    `**Sampled JS traces over the probe window: ${p.traceCount ?? "unknown"}.** ` +
+      `(A native microtask storm yields only a handful — the burn is below JS.)`,
+  );
+  if (p.topStacks.length > 0) {
+    lines.push("");
+    lines.push("| count | stack (leaf < caller < …) |");
+    lines.push("|---|---|");
+    for (const s of p.topStacks.slice(0, 10)) {
+      lines.push(`| ${s.count} | \`${s.stack}\` |`);
+    }
+    const dominant = p.topStacks[0];
+    if (dominant !== undefined && dominant.stack.includes(KNOWN_DRAIN_FRAME)) {
+      lines.push("");
+      lines.push(
+        `**Dominant stack matches the KNOWN wedge signature** (native microtask storm ` +
+          `drained by \`processTicksAndRejections\` — the drainMicrotasks() call site). ` +
+          `See \`research/2026-07-22-global-cli-op-wedge-named-function.md\`; the raw ` +
+          `interrogation JSON (incl. protected-object histogram and the paired lsofs) ` +
+          `is in the capture dump.`,
+      );
+    }
+  }
+  if (p.heapDelta !== null) {
+    lines.push("");
+    lines.push(
+      `**Heap delta over ${p.heapDelta.wallMs}ms:** ${p.heapDelta.heapBytes} bytes, ` +
+        `${p.heapDelta.objects} objects. (~zero for the known storm — it allocates nothing.)`,
+    );
+  }
+}
+
+function renderReap(lines: string[], d: OpWedgePayload): void {
+  const r = d.reap;
+  if (r === undefined) return; // legacy row from before the reap policy
+  lines.push("");
+  lines.push(`## Reap`);
+  lines.push("");
+  switch (r.outcome) {
+    case "disabled":
+      lines.push(
+        `Reap is **disabled** (Settings → Config → op-wedge-watchdog → "Reap after ` +
+          `capture") — pid ${d.pid} was left alive and the fleet stays serialised ` +
+          `behind it until it is reaped by hand.`,
+      );
+      break;
+    case "already-dead":
+      lines.push(`Pid ${d.pid} was already gone before the reap step — nothing to kill.`);
+      break;
+    case "exited-sigterm":
+      lines.push(`Pid ${d.pid} exited on **SIGTERM** (graceful path) — locks and marker self-healed.`);
+      break;
+    case "exited-sigkill":
+      lines.push(
+        `Pid ${d.pid} ignored SIGTERM (matches upstream oven-sh/bun#27766) and was ` +
+          `**SIGKILLed** — flocks auto-released; the marker self-heals on the next read.`,
+      );
+      break;
+    case "survived":
+      lines.push(
+        `⚠️ Pid ${d.pid} is **still alive after SIGKILL** — this should be impossible ` +
+          `(uninterruptible kernel state?). Investigate by hand immediately.`,
+      );
+      break;
+  }
+  for (const f of r.failures) lines.push(`- \`${f.step}\`: ${f.error}`);
 }

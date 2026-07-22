@@ -32,13 +32,13 @@ import {
 // --- helpers ---------------------------------------------------------------
 
 function pushMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "push", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return { slug, op: "push", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null, inspect: null };
 }
 function buildMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "build", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return { slug, op: "build", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null, inspect: null };
 }
 function checkMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "check", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return { slug, op: "check", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null, inspect: null };
 }
 function holder(slug: string, pid = 1234, pushId = "p-1"): PushHolder {
   return { slug, pid, pushId, acquiredAt: "2026-06-07T00:00:00.000Z" };
@@ -292,6 +292,34 @@ test("listActiveWorktreeOps surfaces a build's stored runningAt", async () => {
   });
 });
 
+test("listActiveWorktreeOps surfaces the pre-armed inspector URL (and null when unarmed)", async () => {
+  // The `inspect` field is the op-wedge watchdog's only handle on a wedged
+  // process's inspector — dropping it would make every armed wedge read as
+  // unarmed and silently skip the JS interrogation.
+  await withTempSlugAsync(async (slug) => {
+    writeRawMarker(slug, "check", {
+      op: "check",
+      pid: process.pid,
+      startedAt: "2026-06-07T00:00:00.000Z",
+      phase: "running",
+      inspect: "localhost:52657/2ce01c89",
+    });
+    const armed = (await listActiveWorktreeOps()).find((m) => m.slug === slug);
+    expect(armed?.inspect).toBe("localhost:52657/2ce01c89");
+
+    writeRawMarker(slug, "build", {
+      op: "build",
+      pid: process.pid,
+      startedAt: "2026-06-07T00:00:00.000Z",
+      phase: "running",
+    });
+    const unarmed = (await listActiveWorktreeOps()).find(
+      (m) => m.slug === slug && m.op === "build",
+    );
+    expect(unarmed?.inspect).toBeNull();
+  });
+});
+
 test("derivePushPhases overrides a push marker's stored runningAt from the holder", () => {
   // A push marker may carry a stale/self-asserted runningAt; the holder file is
   // the authority, so a running push takes the holder's acquiredAt.
@@ -302,6 +330,7 @@ test("derivePushPhases overrides a push marker's stored runningAt from the holde
     startedAt: "2026-06-07T00:00:00.000Z",
     phase: "running",
     runningAt: "1999-01-01T00:00:00.000Z",
+    inspect: null,
   };
   const out = derivePushPhases([stale], holder("A"), { isAlive: alive, lockHeld: () => true });
   expect(out.find((m) => m.slug === "A")?.runningAt).toBe("2026-06-07T00:00:00.000Z");

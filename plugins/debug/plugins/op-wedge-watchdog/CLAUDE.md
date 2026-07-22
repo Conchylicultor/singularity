@@ -87,8 +87,9 @@ misread of a single `%CPU` number, and it sent three sessions hunting a busy loo
 that does not exist (every preserved `sample` shows all threads parked in
 blocking syscalls). A verdict derived from a delta cannot be misread the same way.
 
-**The wedged process is never killed.** The intact live specimen is the entire
-value; reaping is a separate decision, taken only once the cause is known.
+**Capture first, reap after.** The capture module itself is strictly read-only
+on the specimen; once ALL evidence is banked (native capture + JS
+interrogation), the monitor reaps the process — see "Reap" below.
 
 **The `check-progress.jsonl` tail is deliberately NOT captured.** Reading it means
 calling `readCheckProgress` from `checks/core` — the CLI's check runner. A static
@@ -108,6 +109,51 @@ body (`⚠️ PARTIAL`, with an explicit "do not read an absent section as an ab
 finding"), *and* the Debug → Reports one-liner. A partial capture must never
 render as a complete one — including in the list view, where a reader decides
 whether to open it at all.
+
+## JS interrogation — naming the hot function
+
+CLI ops launch pre-armed under `bun --inspect` (cli/bin/inspect.ts); the op
+marker records the ws URL as `inspect`, surfaced on `WorktreeOpInfo`. For an
+armed wedge, after the native capture the monitor spawns
+`scripts/js-interrogate.ts` (bounded, deadline-killed — same `runBounded`
+discipline as every other diagnostic child), which runs the protocol that named
+the wedge's mechanism on 2026-07-22
+(`research/2026-07-22-global-cli-op-wedge-named-function.md`): stash `bun:jsc`
+via dynamic import, JSC **internal** sampling profiler accumulated over the
+probe window (the inspector's ScriptProfiler records 0 samples against a native
+microtask storm — verified against a control), heap-stats delta, and a
+protected-object **histogram**. A second `lsof` after the window pairs with the
+trip-time one (does a socket vanish while the burn continues?). Raw JSON lands
+in the capture dump; a compact summary (`topStacks`, `traceCount`, `heapDelta`)
+rides the report payload, and the renderer calls out a dominant-stack match
+with the known drain-site signature.
+
+**HARD RULE: never `jscDescribe` / deep-introspect protected objects in a live
+specimen.** That exact probe SIGTRAP-crashed the 2026-07-22 specimen
+(`EXC_BREAKPOINT`; the crash .ips is preserved with that capture). The
+histogram of constructor names is safe; describing the objects is
+specimen-killing. Unarmed wedges (worktree branched before 12efa0e37) skip the
+probe with an explicit `armed: false` marker — an absent probe must never read
+as an empty one.
+
+## Reap — capture-then-reap policy
+
+Once every capture step has banked its evidence — **including when a step was
+partial** (fleet health outranks a second try; the report says PARTIAL either
+way) — the monitor kills the wedged process: SIGTERM, 5 s grace, then SIGKILL
+(`server/internal/reap.ts`). Before this policy one wedge gridlocked every
+build and push on the box for hours; now the fleet unblocks ~2 min after the
+budget trips.
+
+Reap safety is structural, not hopeful: the push mutex is a kernel flock on
+`push.lock` (auto-released when the holder dies), host-semaphore cpu-slots are
+flock fds with the same auto-release, op markers are reaped by every reader
+once the pid is dead, and a push-nested check dying surfaces to its parent push
+as an ordinary check failure. Only the wedged pid is signalled — never
+descendants (observed culprits have none; any that exist are recorded in the
+capture's child tree). `survived` (alive after SIGKILL) is filed loudly as its
+own finding. The `reap` config toggle restores stakeout behavior when a human
+wants a live specimen.
 
 ## `duressExempt` — the monitor must not be shed by what it observes
 
@@ -143,7 +189,7 @@ dedup, and the `SERVER_REPORT_SOURCES` union depend on them; do not rename.
 
 ## Plugin reference
 
-- Description: CLI op-wedge report renderer: a one-line Debug → Reports summary for the cli-op-wedge kind (CPU verdict, live-child count, partial-capture marker), plus the op-wedge-watchdog budget/capture config registration. Op-wedge watchdog: a main-only per-minute scheduled job that sweeps every worktree's CLI op markers off shared disk and, for a `./singularity {build,check,push}` whose pid is alive past the budget (default 15 min), captures forensics from the LIVE wedged process (sample, recursive child tree, lsof, twice-sampled CPU delta) and files ONE deduped cli-op-wedge report per (worktree, op, pid). Never kills the specimen; duress-exempt, since a wedged op is itself a cause of host duress.
+- Description: CLI op-wedge report renderer: a one-line Debug → Reports summary for the cli-op-wedge kind (CPU verdict, live-child count, partial-capture marker), plus the op-wedge-watchdog budget/capture config registration. Op-wedge watchdog: a main-only per-minute scheduled job that sweeps every worktree's CLI op markers off shared disk and, for a `./singularity {build,check,push}` whose pid is alive past the budget (default 15 min), runs capture-then-reap: native forensics from the LIVE wedged process (sample, recursive child tree, lsof, twice-sampled CPU delta), then — for pre-armed ops — a JS-level interrogation over the inspector (JSC sampling profiler, heap delta, protected-object histogram, paired lsofs), then reaps the process (SIGTERM→SIGKILL) so one wedge cannot gridlock the fleet, and files ONE deduped cli-op-wedge report per (worktree, op, pid). Duress-exempt, since a wedged op is itself a cause of host duress.
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `OpWedgeSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`

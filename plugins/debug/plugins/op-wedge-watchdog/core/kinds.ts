@@ -60,5 +60,39 @@ export const OpWedgePayloadSchema = z.object({
       failures: z.array(z.object({ step: z.string(), error: z.string() })),
     })
     .optional(),
+
+  // --- JS interrogation -----------------------------------------------------
+  // Present when the jsProbe config toggle is on. `armed: false` records that
+  // the marker carried no inspector URL (op predates the pre-armed inspector or
+  // arming was disabled) — an absent probe must never read as an empty one.
+  // The raw interrogation JSON + the second lsof land in the capture dump; only
+  // this compact summary rides the payload.
+  jsProbe: z
+    .object({
+      armed: z.boolean(),
+      wsUrl: z.string().nullable(),
+      // Sampled JS stack traces over the probe window. A wedge whose burn is a
+      // native microtask storm shows few traces, dominated by
+      // `processTicksAndRejections` at the drainMicrotasks() call site — see
+      // research/2026-07-22-global-cli-op-wedge-named-function.md.
+      traceCount: z.number().nullable(),
+      topStacks: z.array(z.object({ stack: z.string(), count: z.number() })),
+      // Heap growth across the window; ~zero for the known storm (steady-state).
+      heapDelta: z
+        .object({ wallMs: z.number(), heapBytes: z.number(), objects: z.number() })
+        .nullable(),
+      failures: z.array(z.object({ step: z.string(), error: z.string() })),
+    })
+    .optional(),
+
+  // --- reap -----------------------------------------------------------------
+  // Present when the reap config toggle decided the specimen's fate; "disabled"
+  // is recorded explicitly so the report states the process was left alive.
+  reap: z
+    .object({
+      outcome: z.enum(["exited-sigterm", "exited-sigkill", "survived", "already-dead", "disabled"]),
+      failures: z.array(z.object({ step: z.string(), error: z.string() })),
+    })
+    .optional(),
 });
 export type OpWedgePayload = z.infer<typeof OpWedgePayloadSchema>;

@@ -5,7 +5,9 @@
 // gap is that nobody has ever inspected a wedge while it was still wedged. This
 // module is that inspection. Everything here is READ-ONLY on the specimen — we
 // never signal, never kill, never `clearWorktreeOp`. An intact live wedge is the
-// entire value; reaping it is a separate decision taken once the cause is known.
+// entire value; reaping is a separate module (`reap.ts`), invoked by the monitor
+// only AFTER every capture step (this one and the JS interrogation) has banked
+// its evidence.
 //
 // Two design constraints are load-bearing and easy to get wrong:
 //
@@ -104,7 +106,7 @@ export interface WedgeCaptureOptions {
  * wedged worktree, which by construction is the one you cannot use. Each capture
  * is one `append()` of a multi-line block, so a block is never torn by rotation.
  */
-const captureSink = defineFileSink({
+export const captureSink = defineFileSink({
   id: "op-wedge-capture",
   description:
     "Forensic dumps of live-wedged `./singularity {build,check,push}` processes: " +
@@ -126,7 +128,7 @@ const MAX_SECTION_BYTES = 512 * 1024;
 // Bounded, fully-drained child execution
 // ---------------------------------------------------------------------------
 
-type RunResult =
+export type RunResult =
   | { ok: true; stdout: string; stderr: string; exitCode: number }
   | { ok: false; error: string };
 
@@ -146,7 +148,7 @@ type RunResult =
  * - **Non-zero exit is a FAILURE.** `{ ok: true, exitCode: 1 }` handed back with
  *   empty stdout would read as a successful empty capture.
  */
-async function runBounded(cmd: string[], timeoutMs: number): Promise<RunResult> {
+export async function runBounded(cmd: string[], timeoutMs: number): Promise<RunResult> {
   // Typed with the literal stdio shape rather than `ReturnType<typeof Bun.spawn>`:
   // the latter widens to the union over every stdio option, so `proc.stdout`
   // becomes `number | ReadableStream | undefined` and the reads below stop

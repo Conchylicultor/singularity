@@ -56,6 +56,13 @@ export interface WorktreeOpInfo {
   // whatever the marker carries. Lets the UI clock work time separately from the
   // wait spent queued for the lock.
   runningAt: string | null;
+  // The op's pre-armed inspector ws URL (`localhost:<port>/<token>`), recorded
+  // by markWorktreeOpStart when the CLI launched under `bun --inspect` (see
+  // cli/bin/inspect.ts). Surfaced for the same reason `pid` is: it is the only
+  // handle a consumer (the op-wedge watchdog's JS interrogation) has on the
+  // running process's inspector, and re-parsing marker JSON by hand would fork
+  // the format away from this module. null when the op was not armed.
+  inspect: string | null;
 }
 
 // The root holding every worktree's per-worktree singularity state (the `ops/`
@@ -175,6 +182,7 @@ type MarkerJson = {
   startedAt?: unknown;
   phase?: unknown;
   runningAt?: unknown;
+  inspect?: unknown;
 };
 
 // Pure: turn a parsed marker into its WorktreeOpInfo, or null if it names a dead
@@ -192,6 +200,7 @@ function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo 
     // Builds/checks stamp their own runningAt on the lock grant; for pushes it is
     // overridden by derivePushPhases from the authoritative holder file.
     runningAt: typeof parsed.runningAt === "string" ? parsed.runningAt : null,
+    inspect: typeof parsed.inspect === "string" ? parsed.inspect : null,
   };
 }
 
