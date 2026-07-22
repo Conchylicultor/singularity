@@ -29,9 +29,10 @@ function copyToDraft(conversationId: string, text: string): void {
 
 /**
  * Renders one pending-turn record by state (replace, never duplicate): a card
- * only for `sending | posted | failed-post | unconfirmed`, a text-less 1.5s
- * flash for `sent`, and nothing for `queued` — there the native queue-op row
- * (and for `sent` the real user-text row) has taken over the display.
+ * only for `sending | posted | failed-post | unconfirmed`, and nothing for
+ * `queued`/`sent` — there the native queue-op row / real user-text row has
+ * taken over the display. All feedback lives inside the card itself; a
+ * reconciled message gets no extra indicator.
  */
 export function PendingTurnCard({
   conversationId,
@@ -49,17 +50,7 @@ export function PendingTurnCard({
     savedAt: record.matchedAt ?? null,
   });
 
-  if (record.state === "queued") return null;
-
-  if (record.state === "sent") {
-    // Text-less by design: the real user-text row shows the message, so the
-    // flash can never double it.
-    return (
-      <Text as="div" variant="caption" className="px-xs py-xs text-muted-foreground/60">
-        Sent ✓
-      </Text>
-    );
-  }
+  if (record.state === "queued" || record.state === "sent") return null;
 
   if (inFlight) {
     // Card chrome mirrors UserTextRow in a dimmed "pending" treatment, with the

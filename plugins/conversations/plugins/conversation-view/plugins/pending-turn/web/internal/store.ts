@@ -40,6 +40,8 @@ export type PendingTurnState =
   | "sending"
   | "posted"
   | "queued"
+  // Transient: assigned by the matcher, dropped at reconcile in the same pass —
+  // never committed/persisted. The real user-text row is the only feedback.
   | "sent"
   | "failed-post"
   | "unconfirmed";
@@ -67,7 +69,6 @@ export interface PendingTurnRecord {
 
 const POST_TIMEOUT_MS = 30_000;
 const CONFIRM_DEADLINE_MS = 90_000;
-const SENT_FLASH_MS = 1_500;
 const RECORD_TTL_MS = 7 * 24 * 60 * 60 * 1000; // matches persistent-draft's default
 const MAX_RECORDS_PER_CONV = 10;
 
@@ -93,7 +94,11 @@ function getEntry(conversationId: string): ConvEntry {
   let entry = entries.get(conversationId);
   if (entry) return entry;
   const sKey = pendingTurnsKey(conversationId);
-  const stored = readPendingTurns<PendingTurnRecord[]>(sKey, EMPTY);
+  // `sent` is transient (dropped at reconcile, never re-committed) — filter any
+  // legacy persisted flash records from before that rule.
+  const stored = readPendingTurns<PendingTurnRecord[]>(sKey, EMPTY).filter(
+    (r) => r.state !== "sent",
+  );
   entry = {
     records: stored.length ? stored : EMPTY,
     listeners: new Set(),
@@ -118,7 +123,7 @@ function refreshFromStorage(conversationId: string): void {
   const stored = readPendingTurns<PendingTurnRecord[]>(
     pendingTurnsKey(conversationId),
     EMPTY,
-  );
+  ).filter((r) => r.state !== "sent");
   if (JSON.stringify(stored) === JSON.stringify(entry.records)) return;
   entry.records = stored.length ? stored : EMPTY;
   applyTimers(conversationId, entry);
@@ -153,7 +158,6 @@ function updateRecord(
 
 function isTerminal(rec: PendingTurnRecord): boolean {
   return (
-    rec.state === "sent" ||
     rec.state === "failed-post" ||
     (rec.state === "unconfirmed" && rec.reported === true)
   );
@@ -188,15 +192,11 @@ function toUnconfirmed(
 }
 
 // --- timers ----------------------------------------------------------------
-// One-shot setTimeouts only (no polling): the sent-flash removal (any tab) and
-// the absolute confirmation deadline (owner tab only). Callbacks re-validate
-// against the current records, so a deadline moved by another tab re-arms
-// instead of tripping early.
+// One-shot setTimeouts only (no polling): the absolute confirmation deadline
+// (owner tab only). Callbacks re-validate against the current records, so a
+// deadline moved by another tab re-arms instead of tripping early.
 
 function timerDelayFor(rec: PendingTurnRecord, now: number): number | null {
-  if (rec.state === "sent") {
-    return Math.max(0, (rec.matchedAt ?? now) + SENT_FLASH_MS - now);
-  }
   if (
     (rec.state === "posted" || rec.state === "queued") &&
     rec.deadlineAt != null &&
@@ -240,18 +240,6 @@ function onTimer(conversationId: string, recordId: string): void {
   const rec = entry.records.find((r) => r.id === recordId);
   if (!rec) return;
   const now = Date.now();
-  if (rec.state === "sent") {
-    if (rec.matchedAt == null || now >= rec.matchedAt + SENT_FLASH_MS) {
-      commit(
-        conversationId,
-        entry,
-        entry.records.filter((r) => r.id !== recordId),
-      );
-    } else {
-      applyTimers(conversationId, entry);
-    }
-    return;
-  }
   if (rec.state !== "posted" && rec.state !== "queued") return;
   if (rec.deadlineAt == null) return;
   if (now < rec.deadlineAt) {
@@ -401,6 +389,12 @@ export function reconcilePendingTurns(
   const tabId = getTabId();
   const kept: PendingTurnRecord[] = [];
   for (let rec of matched.records) {
+    if (rec.state === "sent") {
+      // Reconciled: the real user-text row IS the feedback — no extra
+      // indicator, the record is simply dropped.
+      changed = true;
+      continue;
+    }
     if (
       rec.state === "sending" &&
       rec.ownerTabId === tabId &&

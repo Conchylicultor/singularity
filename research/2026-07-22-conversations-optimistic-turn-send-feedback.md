@@ -30,15 +30,15 @@ One record per send; a FIFO list per conversation (`MAX_RECORDS_PER_CONV = 10`) 
 | `sending` | Enter pressed (synchronous, **pre-POST**) | Dimmed card: text + "Sending…" + `BouncingDots` | POST with 30s `AbortSignal.timeout` |
 | `posted` | POST 2xx | Same card, caption "Sent to CLI — confirming…" | one-shot 90s confirmation deadline (`deadlineAt`) |
 | `queued` | a `queue-operation` **enqueue** event text-matches (busy path) | echo removed — the native queue-op row is the display | deadline still armed |
-| `sent` | a new `user-text` event text-matches | text-less "Sent ✓" line for 1.5s, then removed; the real `user-text` row shows the message | `SENT_FLASH_MS` → remove record |
+| `sent` | a new `user-text` event text-matches | nothing — the record is dropped in the same reconcile pass; the real `user-text` row IS the feedback | none (transient state, never persisted) |
 | `failed-post` (`http` \| `network`) | POST threw `EndpointError` / fetch rejected or timed out | Destructive card: error + **Retry** + **Copy to draft** | none |
 | `unconfirmed` | deadline elapsed in `posted`/`queued` with no match; or reload found an in-flight record past deadline | Warning card: "Not confirmed — the agent may not have received this message. Check the terminal." + Retry + Copy to draft | files ONE report on entry |
 
-Transitions: `sending → posted | failed-post`; `posted → queued | sent | unconfirmed`; `queued → sent | unconfirmed`; `failed-post`/`unconfirmed` `→ sending` (manual Retry re-POSTs the same text); `sent →` removed after flash.
+Transitions: `sending → posted | failed-post`; `posted → queued | sent | unconfirmed`; `queued → sent | unconfirmed`; `failed-post`/`unconfirmed` `→ sending` (manual Retry re-POSTs the same text); `sent →` dropped immediately in the same reconcile pass.
 
-Rendering rule (**replace, never duplicate**): the card renders only for `sending | posted | failed-post | unconfirmed`. In `queued`/`sent` the ground-truth row (queue-op row / user-text row) has taken over. The `sent` flash carries no text, so it never doubles the message.
+Rendering rule (**replace, never duplicate; all feedback self-contained in the message card**): the card renders only for `sending | posted | failed-post | unconfirmed`. In `queued`/`sent` the ground-truth row (queue-op row / user-text row) has taken over — a reconciled message gets no extra indicator anywhere (no trailing "Sent ✓" lines detached from their message).
 
-Constants: `POST_TIMEOUT_MS = 30_000`, `CONFIRM_DEADLINE_MS = 90_000`, `SENT_FLASH_MS = 1_500`, `RECORD_TTL_MS = 7d` (matches persistent-draft's default; a stale card from days ago is still shown — and reported — before being swept).
+Constants: `POST_TIMEOUT_MS = 30_000`, `CONFIRM_DEADLINE_MS = 90_000`, `RECORD_TTL_MS = 7d` (matches persistent-draft's default; a stale card from days ago is still shown — and reported — before being swept).
 
 ## Transcript matching (the crux)
 
