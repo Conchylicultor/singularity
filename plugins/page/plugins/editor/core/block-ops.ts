@@ -393,6 +393,32 @@ function applySplit(
   const runs = op.runs ?? runsOfNode(block);
   const [beforeRuns, afterRuns] = splitRuns(runs, op.position);
 
+  // Enter at the START of a NON-EMPTY block: preserve the origin's identity.
+  // Insert a NEW EMPTY sibling immediately ABOVE and leave the origin completely
+  // untouched (id, full text, children subtree, content doc, expanded, data). The
+  // caret stays in the origin at offset 0 (the executor's job). Notion's model —
+  // and it keeps the text's block id stable, so block-id-keyed state never churns.
+  // `afterRuns.length > 0` isolates this from EMPTY-block Enter (position 0 but
+  // nothing after the caret), which must keep spawning a plain empty sibling BELOW
+  // with the caret moving down. asChild and mid/end splits are unaffected.
+  if (!op.asChild && op.position === 0 && afterRuns.length > 0) {
+    const prev = prevSibling(blocks, block);
+    const aboveRank = Rank.between(
+      prev ? Rank.from(prev.rank) : null,
+      Rank.from(block.rank),
+    );
+    const aboveNode: BlockNode = {
+      id: op.newId,
+      pageId: block.pageId,
+      parentId: block.parentId,
+      type: op.siblingType ?? block.type,      // siblingType is never set here; belt-and-braces
+      data: { ...asObject(op.tailData !== undefined ? op.tailData : block.data), text: [] },
+      rank: aboveRank.toJSON(),
+      expanded: false,
+    };
+    return add(blocks, aboveNode);              // origin's object reference returned untouched
+  }
+
   let next = blocks;
   let updatedBlock = withRuns(block, beforeRuns);
 

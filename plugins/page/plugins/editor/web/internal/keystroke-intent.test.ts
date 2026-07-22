@@ -95,6 +95,22 @@ describe("Enter", () => {
     });
   });
 
+  test("Enter at start of a NON-EMPTY block still resolves to a plain position-0 split", () => {
+    // Identity preservation (insert empty ABOVE, keep the origin) is decided
+    // DOWNSTREAM in the reducer/executor from `position === 0 && afterRuns.length > 0`.
+    // The resolver stays oblivious: A has text "hello", caret at the very start
+    // (atStart, not atEnd) → an ordinary split at position 0, not asChild.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 0, atStart: true }), ctx("A"));
+    expect(intent).toEqual({
+      type: "split",
+      position: 0,
+      asChild: false,
+      childType: undefined,
+      siblingType: undefined,
+      tailData: undefined,
+    });
+  });
+
   test("asChild when splitting at the end of a block with expanded children", () => {
     // A is expanded with child A1; the live caret is at the block end.
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 5, atEnd: true }), ctx("A"));

@@ -338,20 +338,69 @@ describe("split", () => {
     expect(tail.expanded).toBe(false);
   });
 
-  test("adoption: position-0 split leaves an empty head above; the tail carries the full text AND the children", () => {
+  test("identity: position-0 split of a NON-EMPTY block inserts an empty sibling ABOVE and leaves the origin untouched", () => {
     const k1 = a;
     const k2 = after(k1);
-    const blocks = [
-      mk("P", null, a, { text: "helloworld", expanded: true }),
-      mk("K1", "P", k1),
-      mk("K2", "P", k2),
-    ];
+    const origin = mk("P", null, a, { text: "helloworld", expanded: true });
+    const blocks = [origin, mk("K1", "P", k1), mk("K2", "P", k2)];
     const out = run(blocks, { kind: "split", blockId: "P", position: 0, newId: "NEW" });
-    expect(textOf(out.find((b) => b.id === "P")!)).toBe("");
-    const tail = out.find((b) => b.id === "NEW")!;
-    expect(textOf(tail)).toBe("helloworld");
-    expect(ids(out, "NEW")).toEqual(["K1", "K2"]);
-    expect(ids(out, "P")).toEqual([]);
+
+    // The empty sibling is minted ABOVE the origin, at the same depth.
+    expect(ids(out, null)).toEqual(["NEW", "P"]);
+    const above = out.find((b) => b.id === "NEW")!;
+    expect(textOf(above)).toBe("");
+    expect(ids(out, "NEW")).toEqual([]); // childless
+    expect(above.expanded).toBe(false);
+    expect(above.parentId).toBe(null);
+    expect(above.pageId).toBe(origin.pageId);
+
+    // The origin is the SAME object reference, completely untouched: full text,
+    // its children subtree, and its expanded state all survive.
+    const head = out.find((b) => b.id === "P")!;
+    expect(head).toBe(origin);
+    expect(textOf(head)).toBe("helloworld");
+    expect(head.expanded).toBe(true);
+    expect(ids(out, "P")).toEqual(["K1", "K2"]);
+  });
+
+  test("identity: EMPTY-block position-0 split keeps the plain empty-sibling-BELOW behavior", () => {
+    const blocks = [mk("P", null, a, { text: "", expanded: false })];
+    const out = run(blocks, { kind: "split", blockId: "P", position: 0, newId: "NEW" });
+    // afterRuns is empty, so the identity branch does not fire: a plain empty
+    // sibling is minted BELOW, as before.
+    expect(ids(out, null)).toEqual(["P", "NEW"]);
+    expect(textOf(out.find((b) => b.id === "NEW")!)).toBe("");
+  });
+
+  test("identity: position-0 split honors tailData → empty UNCHECKED to-do above, origin data literally unchanged", () => {
+    const origin: BlockNode = { id: "A", pageId: "page-1", parentId: null, type: "to-do", data: { checked: true, text: "helloworld" }, rank: a, expanded: false };
+    const out = run([origin], {
+      kind: "split",
+      blockId: "A",
+      position: 0,
+      newId: "NEW",
+      tailData: { checked: false },
+    });
+    // The empty sibling above inherits tailData with an empty text.
+    expect(out.find((b) => b.id === "NEW")!.data).toEqual({ checked: false, text: [] });
+    // The origin keeps its data literally (still checked, full text).
+    expect(out.find((b) => b.id === "A")!.data).toEqual({ checked: true, text: "helloworld" });
+  });
+
+  test("identity: position-0 split of a FIRST child inserts a new first child under the parent", () => {
+    const c1 = a;
+    const c2 = after(c1);
+    const blocks = [
+      mk("P", null, a, { expanded: true }),
+      mk("C1", "P", c1, { text: "helloworld" }),
+      mk("C2", "P", c2),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "C1", position: 0, newId: "NEW" });
+    // NEW lands before C1 as the parent's new first child.
+    expect(ids(out, "P")).toEqual(["NEW", "C1", "C2"]);
+    expect(out.find((b) => b.id === "NEW")!.parentId).toBe("P");
+    expect(textOf(out.find((b) => b.id === "NEW")!)).toBe("");
+    expect(textOf(out.find((b) => b.id === "C1")!)).toBe("helloworld");
   });
 
   test("adoption + siblingType (pure-reducer combo, UI-unreachable): tail takes the type AND adopts", () => {
@@ -1481,7 +1530,10 @@ describe("split ∘ merge round-trip", () => {
       if (contentBlocks.length === 0) continue;
       const target = contentBlocks[Math.floor(rand() * contentBlocks.length)]!;
       const len = runsLength(runsOfNode(target));
-      const position = Math.floor(rand() * (len + 1));
+      // A NON-EMPTY block is never split at 0 — that is the identity-preserving
+      // insert-empty-above case, whose inverse is `delete newId` (its own property
+      // below), NOT the tail-becomes-next-visible-line round-trip this covers.
+      const position = len === 0 ? 0 : 1 + Math.floor(rand() * len);
 
       const split = applyBlockOp(rows, {
         kind: "split",
@@ -1515,7 +1567,10 @@ describe("split ∘ merge round-trip", () => {
       if (contentBlocks.length === 0) continue;
       const target = contentBlocks[Math.floor(rand() * contentBlocks.length)]!;
       const len = runsLength(runsOfNode(target));
-      const position = Math.floor(rand() * (len + 1));
+      // A NON-EMPTY block is never split at 0 — that is the identity-preserving
+      // insert-empty-above case, whose inverse is `delete newId` (its own property
+      // below), NOT the tail-becomes-next-visible-line round-trip this covers.
+      const position = len === 0 ? 0 : 1 + Math.floor(rand() * len);
 
       const split = applyBlockOp(rows, {
         kind: "split",
@@ -1541,6 +1596,35 @@ describe("split ∘ merge round-trip", () => {
       rounds++;
     }
     expect(rounds).toBeGreaterThan(400);
+  });
+
+  test("identity: position-0 split of a non-empty block is inverted by DELETING the new id (~200 seeds)", () => {
+    // The inverse of insert-empty-above is `delete newId`, restoring the forest
+    // byte-for-byte (ranks included — the origin never moved and the empty sibling
+    // is simply removed). A *merge* of newId would NOT invert it: it keeps the
+    // empty block and deletes the origin, the opposite of what the split did.
+    let rounds = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 15));
+      const contentBlocks = rows.filter((b) => b.type !== PAGE_BLOCK_TYPE);
+      if (contentBlocks.length === 0) continue;
+      const origin = contentBlocks[Math.floor(rand() * contentBlocks.length)]!;
+      // randomForest seeds every content block with non-empty text (its id).
+      expect(runsLength(runsOfNode(origin))).toBeGreaterThan(0);
+
+      const split = applyBlockOp(rows, { kind: "split", blockId: origin.id, position: 0, newId: "RT" });
+      // The new sibling is empty and sits immediately ABOVE the untouched origin.
+      const above = split.find((b) => b.id === "RT")!;
+      expect(textOf(above)).toBe("");
+      expect(prevVisibleLine(split, split.find((b) => b.id === origin.id)!)?.id).toBe("RT");
+
+      // Deleting RT restores the original forest exactly.
+      const inverted = applyBlockOp(split, { kind: "delete", blockId: "RT" });
+      expect(inverted).toEqual(rows);
+      rounds++;
+    }
+    expect(rounds).toBeGreaterThan(100);
   });
 
   test("duality: prevVisibleLine(nextVisibleLine(X)) === X for every VISIBLE X with a next line (over the fuzz forest)", () => {

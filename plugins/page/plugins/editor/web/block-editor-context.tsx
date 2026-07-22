@@ -16,6 +16,7 @@ import {
   prevVisibleLine,
   nextVisibleLine,
   runsOfNode,
+  runsLength,
   applyBlockOp,
   childrenOf,
   diffBlocks,
@@ -1090,19 +1091,42 @@ function BlockEditorProviderInner({
         // Thin executor: the asChild decision is owned by `resolveKeystroke`
         // (the single intent step) and passed in explicitly. The new block's id
         // is minted up front so we can focus it without awaiting the response.
+        const asChild = opts?.asChild ?? false;
         const newId = crypto.randomUUID();
-        focusNew(newId);
         const op: BlockOp = {
           kind: "split",
           blockId,
           position,
           newId,
-          asChild: opts?.asChild ?? false,
+          asChild,
           childType: opts?.childType,
           siblingType: opts?.siblingType,
           tailData: opts?.tailData,
           runs: opts?.runs,
         };
+
+        // Enter at the START of a NON-EMPTY block: the reducer inserts an empty
+        // sibling ABOVE and leaves the origin completely untouched (id, full
+        // text, children, content doc, expanded, data). The caret is already at
+        // offset 0 and never lost focus — the Enter keydown was preventDefaulted,
+        // so DOM focus stays in the origin editor. So do NOT `focusNew` (that
+        // would steal focus to the new empty block), do NOT truncate the origin's
+        // live doc (nothing moved out of it — no `captureBlockDocEdit`), and
+        // record a PLAIN structural entry. `derivePatchEntry` sees the empty block
+        // as the sole insert, so with `focusId = blockId` (the ORIGIN) redo re-focuses
+        // the origin and undo (which deletes the empty block) also lands on the origin —
+        // never `<body>`. The empty block seeds a trivially-empty content doc on
+        // mount, exactly like a gutter-`+` insert. `runsLength > 0` isolates this
+        // from empty-block Enter (position 0 but nothing after the caret), which
+        // must keep spawning a plain empty sibling BELOW with the caret moving down.
+        if (!asChild && position === 0 && runsLength(opts?.runs ?? []) > 0) {
+          const { before, after } = applyOverlay(op);
+          recordStructural(before, after, OP_LABELS.split, blockId);
+          return;
+        }
+
+        // --- existing path (mid/end split, empty-block Enter, asChild) ---
+        focusNew(newId);
         // The reducer left the HEAD in this block's row, but the bound editor
         // ignores rows — the LIVE content must be
         // truncated from the caret too. The op's `runs` were captured from the
@@ -1219,6 +1243,7 @@ function BlockEditorProviderInner({
       focusBlock,
       commitRow,
       applyOverlay,
+      recordStructural,
       recordStructuralWithDocEdit,
       mergeBlock,
     ],

@@ -169,6 +169,26 @@ expanded, childIds order, coalesced runs}` per id) — merge mints fresh ranks o
 every adoption, so comparing rank strings would fail even on a correct
 round-trip.
 
+**Enter at the START of a non-empty block preserves the origin's identity.**
+When the caret is at offset 0 and the block has text after it, split does NOT
+empty the origin into a fresh `newId` — it inserts an **empty sibling ABOVE**
+and leaves the origin completely untouched: same id, full text, children
+subtree, content doc, `data`, and `expanded`. The caret stays put in the origin
+(the Enter keydown is `preventDefault`ed, so DOM focus never leaves), so there is
+no `focusNew` and no origin-doc `truncateAt` — the executor records a plain
+structural entry whose undo/redo both land on the origin. The discriminator is
+`op.position === 0 && afterRuns.length > 0` (equivalently `runsLength(runs) > 0`
+at position 0), which distinguishes it from **empty-block Enter** (position 0 but
+nothing after the caret), which keeps spawning a plain empty sibling BELOW and
+moves the caret down. Both the pure reducer (`applySplit`) and the web executor
+(`makeBlockAPI().split`) branch on the *same* condition — the executor branch is
+load-bearing, not cosmetic: it skips the origin's live-doc `truncateAt(0)` that
+would otherwise wipe the whole content doc. Why it matters: the origin's **block
+id never changes**, so every block-id-keyed thing — the content-doc registry
+(`block id ⇒ Y.Doc`), the per-block `Y.UndoManager`, undo focus routing — stays
+stable instead of churning to a new id. Notion's model. See
+[`research/2026-07-22-page-enter-at-start-identity-preservation.md`](../../../../research/2026-07-22-page-enter-at-start-identity-preservation.md).
+
 The keystroke ladders (`web/internal/keystroke-intent.ts`) apply the same
 visible-line idea to deletion and to escaping structure:
 
