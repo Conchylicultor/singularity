@@ -1,11 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { markTurnSent, clearPendingTurn, usePendingTurn } from "./internal/store";
-export type { PendingTurn } from "./internal/store";
-export { PendingTurnEcho } from "./components/pending-turn-echo";
+export {
+  sendPendingTurn,
+  retryPendingTurn,
+  dismissPendingTurn,
+  reconcilePendingTurns,
+  usePendingTurns,
+} from "./internal/store";
+export type { PendingTurnRecord, PendingTurnState } from "./internal/store";
+export { PendingTurnCard } from "./components/pending-turn-card";
 
 export default {
   description:
-    "Pure-web library leaf holding the per-conversation pending-turn store (markTurnSent / clearPendingTurn / usePendingTurn) and the optimistic PendingTurnEcho card. The prompt-input writes on a successful turn POST; the jsonl-viewer echoes a dimmed 'Sending…' card until the real user-text event streams in. No slot contributions.",
+    "Owner of the entire turn-send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that POSTs the turn, verifies delivery against the transcript (normalized-text match), files a report when a 200'd turn never lands, and renders the per-record PendingTurnCard. The prompt-input calls sendPendingTurn on Enter; the jsonl-viewer drives reconcilePendingTurns on every events change. No slot contributions.",
   contributions: [],
 } satisfies PluginDefinition;

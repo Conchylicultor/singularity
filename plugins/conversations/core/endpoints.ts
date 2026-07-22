@@ -85,6 +85,10 @@ export const deleteConversation = defineEndpoint({
 export const postConversationTurn = defineEndpoint({
   route: "POST /api/conversations/:id/turn",
   body: PostTurnBodySchema,
+  // The server's finalText (attachment refs rewritten to @<disk-path>, trimmed).
+  // The pending-turn store matches THIS against the transcript — the raw draft
+  // never appears verbatim in the session JSONL.
+  response: z.object({ resolvedText: z.string() }),
 });
 
 export const stopConversation = defineEndpoint({

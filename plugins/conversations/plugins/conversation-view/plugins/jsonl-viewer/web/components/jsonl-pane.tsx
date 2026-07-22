@@ -22,9 +22,9 @@ import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
 import {
-  usePendingTurn,
-  clearPendingTurn,
-  PendingTurnEcho,
+  usePendingTurns,
+  reconcilePendingTurns,
+  PendingTurnCard,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { SectionExpandProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
@@ -174,11 +174,15 @@ function JsonlPaneInner({
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone" || conversation.status === "done";
 
-  // Optimistic echo of a just-sent turn: bridge the feedback gap between the
-  // turn POST succeeding and the conversation flipping to `working` (and the
-  // real user-text event streaming in). Only shown while idle and live.
-  const pending = usePendingTurn(conversation.id);
-  const showPending = !!pending && !isWorking && !isGone;
+  // Pending-turn feedback: the store owns the send lifecycle; this pane owns
+  // the events array, so it drives the reconcile pass (transcript match,
+  // deadline adoption, TTL) on every events change. Shown while working too —
+  // that is exactly when messages queue.
+  const pendingTurns = usePendingTurns(conversation.id);
+  useEffect(() => {
+    if (pendingTurns.length === 0) return;
+    reconcilePendingTurns(conversation.id, events, isWorking);
+  }, [conversation.id, events, isWorking, pendingTurns]);
 
   const totals = useMemo(() => aggregateUsage(events), [events]);
   // Plugin-contributed hide predicates. Computed over the full `events` so the
@@ -225,26 +229,7 @@ function JsonlPaneInner({
 
   useEffect(() => {
     scrollIfPinned();
-  }, [events.length, pending?.sendId, scrollIfPinned]);
-
-  // Capture the event count at the moment a pending turn was registered, so we
-  // can detect when the real user-text event has streamed in (count grows past
-  // the baseline) without depending on event timestamps.
-  const pendingBaselineRef = useRef<number | null>(null);
-  useEffect(() => {
-    pendingBaselineRef.current = pending ? events.length : null;
-    // Intentionally keyed only on the pending sendId: snapshot the count once
-    // per send, not on every event change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending?.sendId]);
-
-  useEffect(() => {
-    if (!pending) return;
-    const baseline = pendingBaselineRef.current;
-    if (isGone || (baseline != null && events.length > baseline)) {
-      clearPendingTurn(conversation.id);
-    }
-  }, [events.length, pending, isGone, conversation.id]);
+  }, [events.length, pendingTurns.length, scrollIfPinned]);
 
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
@@ -260,7 +245,9 @@ function JsonlPaneInner({
             <Stack gap="none" className="px-md py-sm">
               <span>No transcript yet. Claude may not have written its session log.</span>
               {isWorking && workingStartAt != null && <WorkingIndicator startAt={workingStartAt} />}
-              {showPending && <PendingTurnEcho text={pending!.text} />}
+              {pendingTurns.map((r) => (
+                <PendingTurnCard key={r.id} conversationId={conversation.id} record={r} />
+              ))}
             </Stack>
           </Text>
         ) : (
@@ -273,7 +260,9 @@ function JsonlPaneInner({
                   waitingFor={conversation.waitingFor}
                 />
               )}
-              {showPending && <PendingTurnEcho text={pending!.text} />}
+              {pendingTurns.map((r) => (
+                <PendingTurnCard key={r.id} conversationId={conversation.id} record={r} />
+              ))}
             </EventSections>
           </LastAssistantProvider>
         )}

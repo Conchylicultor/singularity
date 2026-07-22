@@ -295,6 +295,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "reports/plugins/noise-rules", id: "reports.noise-rules", loader: () => import("@plugins/reports/plugins/noise-rules/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/optimistic-divergence", id: "reports.optimistic-divergence", loader: () => import("@plugins/reports/plugins/optimistic-divergence/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/render-loop", id: "reports.render-loop", loader: () => import("@plugins/reports/plugins/render-loop/server"), dependsOn: ["reports"] },
+  { pluginPath: "reports/plugins/turn-unconfirmed", id: "reports.turn-unconfirmed", loader: () => import("@plugins/reports/plugins/turn-unconfirmed/server"), dependsOn: ["reports"] },
   { pluginPath: "reports", id: "reports", loader: () => import("@plugins/reports/server"), dependsOn: ["build/plugins/server-build-id", "database", "database/plugins/change-feed", "database/plugins/db-test-fixture", "database/plugins/migrations", "infra/plugins/duress", "infra/plugins/endpoints", "infra/plugins/paths", "infra/plugins/retention", "infra/plugins/runtime-profiler", "infra/plugins/warmup", "shell/plugins/notifications"] },
   { pluginPath: "review/plugins/code-review", id: "review.code-review", loader: () => import("@plugins/review/plugins/code-review/server"), dependsOn: ["config_v2"] },
   { pluginPath: "screenshot", id: "screenshot", loader: () => import("@plugins/screenshot/server"), dependsOn: ["infra/plugins/endpoints"] },

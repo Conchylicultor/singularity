@@ -157,7 +157,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       case "go":
         return {
           verb: "Go",
-          run: () => fetchEndpoint(postConversationTurn, { id: convId }, { body: { text: "Go" } }),
+          run: async () => {
+            await fetchEndpoint(postConversationTurn, { id: convId }, { body: { text: "Go" } });
+          },
         };
       case "stop":
         return {

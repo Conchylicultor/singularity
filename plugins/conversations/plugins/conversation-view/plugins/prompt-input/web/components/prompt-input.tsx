@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -6,9 +6,7 @@ import {
   usePromptInsert,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
-import { postConversationTurn } from "@plugins/conversations/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { markTurnSent } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import { sendPendingTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -18,7 +16,6 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", {
     scope: conversation.id,
   });
-  const [sending, setSending] = useState(false);
 
   const disabled = live.status === "gone" || live.status === "done" || live.status === "starting" || !!live.waitingFor;
 
@@ -32,25 +29,15 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   // Latest-draft ref so the send handler doesn't capture stale state.
   const draftRef = useLatestRef(draft);
 
-  const send = useCallback(async () => {
+  // The pending-turn store owns the whole send lifecycle (POST, retry,
+  // transcript confirmation); the draft is cleared synchronously so a second
+  // Enter is a no-op and the editor stays typable while the send is in flight.
+  const send = useCallback(() => {
     const current = draftRef.current;
-    if (isDraftEmpty(current) || disabled || sending) return;
-    setSending(true);
-    try {
-      await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text: current } });
-      clearDraft();
-      markTurnSent(conversation.id, current);
-    } catch (err) {
-      toast({
-        type: "conversation",
-        title: "Failed to send",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
-    } finally {
-      setSending(false);
-    }
-  }, [conversation.id, disabled, sending, clearDraft]);
+    if (isDraftEmpty(current) || disabled) return;
+    clearDraft();
+    sendPendingTurn(conversation.id, current);
+  }, [conversation.id, disabled, clearDraft]);
 
   const placeholder = disabled
     ? live.waitingFor
@@ -71,7 +58,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       onSubmit={send}
       submitMode="enter"
       placeholder={placeholder}
-      disabled={disabled || sending}
+      disabled={disabled}
       autoFocus
       minRows={1}
       maxHeight="10rem"

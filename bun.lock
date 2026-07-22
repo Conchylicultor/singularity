@@ -3875,6 +3875,10 @@
       "name": "@singularity/plugin-reports-render-loop",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/turn-unconfirmed": {
+      "name": "@singularity/plugin-reports-turn-unconfirmed",
+      "version": "0.0.1",
+    },
     "plugins/review": {
       "name": "@singularity/plugin-review",
       "version": "0.0.1",
@@ -6842,6 +6846,8 @@
     "@singularity/plugin-reports-plugin-load-errors": ["@singularity/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
 
     "@singularity/plugin-reports-render-loop": ["@singularity/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
+
+    "@singularity/plugin-reports-turn-unconfirmed": ["@singularity/plugin-reports-turn-unconfirmed@workspace:plugins/reports/plugins/turn-unconfirmed"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 
