@@ -15,6 +15,7 @@ import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/serve
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { resolveSessionState, type SessionState } from "./claude-session";
+import { parseInputDraft } from "./input-draft";
 import { captureProcessTree } from "./process-tree";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
@@ -282,59 +283,22 @@ const SUBMIT_TIMEOUT_MS = 5_000;
 // mitigation. Strictly better than firing Enter in the same chunk as the paste.
 const FALLBACK_SUBMIT_DELAY_MS = 150;
 
-const RULE_RE = /^─{10,}$/;
-const PROMPT_GLYPH = "❯";
-// When a turn is sent to a WORKING agent, the CLI queues it: the submitted text
-// moves ABOVE the box into the queued-message list, and the now-empty input box
-// is filled with the dim hint "Press up to edit queued messages" rather than
-// left blank. That hint is NOT a live user draft — it is the box's resting state
-// while a queued message is pending. We must read it as an empty box, otherwise
-// pasteTurn's Phase-2 verification (which waits for the live draft to clear after
-// Enter) would see a perpetually "non-empty" box and throw `draft did not clear`
-// after SUBMIT_TIMEOUT_MS, even though the message was queued successfully.
-// Matched loosely (no anchors) to tolerate leading glyphs / wording drift.
-const INPUT_PLACEHOLDER_RE = /Press up to edit queued messages/i;
-
 /**
- * Extract the current draft text from the pane's idle input box, or null when
- * the box can't be located (unrecognized render). The box is the `❯` prompt
- * line plus any continuation lines, up to the next full-width `─` rule below
- * it. We anchor on the bottom-most `❯` (always the live input prompt; transcript
- * rules/glyphs sit above it) and strip the glyph + surrounding whitespace, so
- * an empty box returns "" and a box holding the pasted draft returns non-empty.
- * A box showing only the queued-message placeholder hint reads as empty (see
- * INPUT_PLACEHOLDER_RE) — that hint marks a submitted/queued turn, not a draft.
+ * Read the pane's current input-box draft, or null when the box can't be located
+ * (unrecognized render). Captured WITH escapes (`-e`) so parseInputDraft can drop
+ * the dim autosuggestion ghost Claude Code pre-fills and the queued-message
+ * placeholder — both rendered faint. A plain capture strips colour and every
+ * ghost would read as a real draft (a false "there is a draft" → spurious C-c in
+ * send()). All parsing is pure and unit-tested in input-draft.test.ts.
  */
 async function captureInputDraft(conversationId: string): Promise<string | null> {
   const proc = Bun.spawn(
-    [TMUX, "capture-pane", "-p", "-S", "-50", "-t", conversationId],
+    [TMUX, "capture-pane", "-e", "-p", "-S", "-50", "-t", conversationId],
     { stdout: "pipe", stderr: "pipe" },
   );
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
-  const lines = stdout.split("\n");
-  let promptIdx = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i]!.includes(PROMPT_GLYPH)) {
-      promptIdx = i;
-      break;
-    }
-  }
-  if (promptIdx === -1) return null;
-  let end = lines.length;
-  for (let i = promptIdx + 1; i < lines.length; i++) {
-    if (RULE_RE.test(lines[i]!.trim())) {
-      end = i;
-      break;
-    }
-  }
-  const draft = lines
-    .slice(promptIdx, end)
-    .join("\n")
-    .split(PROMPT_GLYPH)
-    .join("")
-    .trim();
-  return INPUT_PLACEHOLDER_RE.test(draft) ? "" : draft;
+  return parseInputDraft(stdout);
 }
 
 async function sendEnter(conversationId: string): Promise<void> {
@@ -456,7 +420,7 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
  * FORM_CLEAR_TIMEOUT_MS rather than letting the caller send into a live menu
  * (which would auto-select a wrong option and fabricate an answer).
  *
- * Shared by answerPrompt() (which then C-c + pastes the answer) and
+ * Shared by answerPrompt() (which then pastes the answer) and
  * flushInteractivePrompt() (which stops here, sending no answer).
  */
 async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
@@ -549,37 +513,6 @@ export async function listPanes(): Promise<
     });
   }
   return map;
-}
-
-/**
- * Live working verdict for a single pane, used by send() to decide whether a
- * C-c is safe. Mirrors list()'s core resolution (title + session file + the
- * build/push-in-flight override) for one conversation. On any uncertainty
- * (pane missing its session file, session read fails, status null) it returns
- * true: skipping the C-c only forgoes clearing a partial draft, whereas a wrong
- * C-c interrupts a streaming agent — so we bias toward "working" and let Claude
- * Code queue the turn.
- */
-async function paneIsWorking(conversationId: string): Promise<boolean> {
-  const pane = (await listPanes()).get(conversationId);
-  if (!pane || pane.dead) return false;
-  let state: SessionState;
-  try {
-    state = await resolveSessionState(pane.panePid, await captureProcessTree());
-  } catch (err) {
-    void recordReport({
-      kind: "crash",
-      source: "server-caught",
-      message: `paneIsWorking: resolveSessionState failed for "${conversationId}": ${err instanceof Error ? err.message : String(err)}`,
-      data: { errorType: "SessionStateError", label: "tmux-runtime.paneIsWorking" },
-    });
-    return true; // unknown → treat as working; never C-c into a possibly-streaming agent
-  }
-  const opActive =
-    state.status === "shell" && pane.worktreePath
-      ? await isWorktreeOpActive(basename(pane.worktreePath))
-      : false;
-  return resolvePaneStatus(pane.rawTitle, state, opActive).working;
 }
 
 export const tmuxRuntime: ConversationRuntime = {
@@ -806,15 +739,18 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
-    // When the agent is idle, clear any partial input first. C-c is the
-    // standard "abort current line" signal; at the Claude CLI's idle input
-    // prompt it discards the entire multi-line draft without affecting the
-    // session. But when the agent is WORKING, that same C-c interrupts the
-    // streaming response — so we skip it and let Claude Code queue the pasted
-    // turn (its input box accepts and queues input while busy). Deciding here
-    // from the live pane state keeps "never interrupt a working agent" a server
-    // invariant rather than trusting the caller to guard on !working.
-    if (!(await paneIsWorking(conversationId))) {
+    // Clear a partial draft ONLY when the input box actually holds one, asking
+    // the box directly via captureInputDraft (the same trusted read pasteTurn
+    // uses to verify submission). C-c is the CLI's "abort current line": at an
+    // idle prompt it discards the draft harmlessly, but sent into a WORKING
+    // agent it interrupts the streaming response and STOPS it. So it must never
+    // reach a working agent — and the old `!paneIsWorking()` gate could not
+    // guarantee that: a process-tree heuristic with false-negatives plus a
+    // check→send race would occasionally fire C-c into a live agent (the
+    // regular-prompt "agent stopped" bug). A web-driven send leaves the terminal
+    // input empty, so this reads "" and sends no C-c; C-c fires only for a
+    // genuine hand-typed draft — exactly the text pasteTurn would append to.
+    if (await captureInputDraft(conversationId)) {
       await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
         stdout: "pipe",
         stderr: "pipe",
@@ -837,11 +773,12 @@ export const tmuxRuntime: ConversationRuntime = {
     //    self-healing rationale.
     await escapeUntilPromptCleared(conversationId);
 
-    // 3. Clear any partial input, then paste + Enter (same as send()).
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
+    // 3. Paste + Enter. We deliberately do NOT C-c first: the answer text comes
+    //    from the web form, so the terminal input line is empty (no draft to
+    //    clear), and an unconditional C-c here could interrupt/kill a running
+    //    agent — the same hazard send() avoids by clearing only a genuine draft
+    //    (captureInputDraft). The menu is already dismissed, so pasteTurn writes
+    //    into the idle prompt.
     await pasteTurn(conversationId, text);
   },
 
