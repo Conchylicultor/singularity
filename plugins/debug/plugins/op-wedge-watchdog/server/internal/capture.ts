@@ -289,8 +289,15 @@ async function readCpuTable(): Promise<{ table: Map<number, number>; atMs: numbe
   return { table, atMs };
 }
 
-interface PsRow extends WedgeChild {
+/** One raw `ps` table row. NOT a `WedgeChild`: the public shape additionally
+ * carries the sampled `cpuRatio`, which only exists after both cpu-table reads. */
+interface PsRow {
+  pid: number;
+  ppid: number;
+  state: string;
   cpuPct: string;
+  etime: string;
+  command: string;
 }
 
 /**

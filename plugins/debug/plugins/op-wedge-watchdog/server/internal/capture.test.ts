@@ -168,7 +168,7 @@ describe("captureOpWedge", () => {
 describe("parseInspectFlag", () => {
   test("extracts a pre-armed inspector URL from full argv", () => {
     expect(
-      parseInspectFlag("/usr/bin/bun --inspect=localhost:54791/04a98905 index.ts check --scope tree"),
+      parseInspectFlag("bun --inspect=localhost:54791/04a98905 index.ts check --scope tree"),
     ).toBe("localhost:54791/04a98905");
   });
 
