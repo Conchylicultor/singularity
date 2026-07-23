@@ -12,7 +12,7 @@ export function SidebarNavItem({
   onClick: () => void;
 }) {
   return (
-    <SidebarMenu>
+    <SidebarMenu className="px-sm">
       <SidebarMenuItem>
         <SidebarMenuButton onClick={onClick}>
           <Icon className="size-4" />

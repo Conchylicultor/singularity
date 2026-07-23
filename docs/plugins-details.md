@@ -6729,7 +6729,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/terminal-pane`
       - `conversations/conversation-view/turn-summary`
       - `conversations/conversation-view/vscode`
-      - `conversations/conversations-view`
       - `conversations/conversations-view/queue`
       - `conversations/hibernation`
       - `conversations/recover`
@@ -8836,19 +8835,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneIconAction`
     - **`conversations-view`** — Sidebar list of all conversations.
       - Web:
-        - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
+        - Contributes:
+          - `Shell.Sidebar` "New conversation" → `LaunchSidebarItem`
+          - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
         - Uses:
-          - `conversations.useConversations`
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversations-view/data-view.SidebarDataView`
+          - `conversations/model-provider.useDefaultModel`
           - `conversations/pane-restore.loadRouteForConversation`
           - `conversations/pane-restore.reportCorruptSavedRoute`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.SidebarPaneSection`
-          - `primitives/css/column.Column`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
-          - `primitives/launch.LaunchControl`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/ui-kit.DropdownMenu`
+          - `primitives/css/ui-kit.DropdownMenuTrigger`
+          - `primitives/css/ui-kit.SidebarMenu`
+          - `primitives/css/ui-kit.SidebarMenuButton`
+          - `primitives/css/ui-kit.SidebarMenuItem`
+          - `primitives/icon-button.IconButton`
+          - `primitives/launch.LaunchModelMenuContent`
+          - `primitives/launch.useLaunchConversation`
           - `primitives/pane.useOpenPane`
           - `primitives/pane.usePaneStore`
           - `shell.Shell`
@@ -9115,6 +9121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/launch-prompts`
+          - `conversations/conversations-view`
           - `conversations/runtime-tmux`
           - `debug/claude-cli-calls`
           - `infra/claude-cli`
@@ -17407,7 +17414,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `code-explorer`
           - `conversations/agents`
           - `conversations/all-conversations`
-          - `conversations/conversations-view`
           - `conversations/recover`
           - `debug/boot-profile`
           - `debug/broadcasts`
@@ -18129,7 +18135,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
-              - `conversations/conversations-view`
               - `debug/boot-profile`
               - `debug/profiling`
               - `debug/timeline`
@@ -18166,6 +18171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/editor`
               - `auth/apple-signing/setup-wizard`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversations-view`
               - `debug/timeline`
               - `debug/trace/pane`
               - `debug/trace/spans`
@@ -18328,6 +18334,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/studio/compositions/release/release-logs`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversations-view`
               - `debug/timeline`
               - `primitives/bar`
               - `primitives/css/row`
@@ -18870,7 +18877,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/turn-summary`
-              - `conversations/conversations-view`
               - `conversations/recover`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -19367,7 +19373,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/push-profiling`
               - `conversations/conversation-view/turn-summary`
-              - `conversations/conversations-view`
               - `conversations/recover`
               - `conversations/summary`
               - `debug/boot-profile`
@@ -19810,6 +19815,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/push-profiling`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/terminal-pane`
+              - `conversations/conversations-view`
               - `conversations/effort-provider`
               - `conversations/model-provider`
               - `conversations/preprompts`
@@ -21148,6 +21154,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/terminal-pane`
+          - `conversations/conversations-view`
           - `debug/broadcasts`
           - `debug/memory`
           - `debug/timeline`
@@ -21365,6 +21372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `LaunchAgentPopover`
           - `LaunchControl`
+          - `LaunchModelMenuContent`
           - `useLaunchConversation`
       - Cross-plugin:
         - Imported by:

@@ -68,7 +68,6 @@
     - `code-explorer`
     - `conversations/agents`
     - `conversations/all-conversations`
-    - `conversations/conversations-view`
     - `conversations/recover`
     - `debug/boot-profile`
     - `debug/broadcasts`

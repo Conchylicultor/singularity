@@ -36,6 +36,7 @@
   - Exports (values):
     - `LaunchAgentPopover`
     - `LaunchControl`
+    - `LaunchModelMenuContent`
     - `useLaunchConversation`
 - Cross-plugin:
   - Imported by:

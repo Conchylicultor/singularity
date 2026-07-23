@@ -75,6 +75,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/resume`
     - `conversations/conversation-view/terminal-pane`
+    - `conversations/conversations-view`
     - `debug/broadcasts`
     - `debug/memory`
     - `debug/timeline`

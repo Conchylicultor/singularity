@@ -68,7 +68,6 @@ Only present slots render — an absent slot produces no region and no phantom g
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/jsonl-viewer/message-toc`
-    - `conversations/conversations-view`
     - `debug/boot-profile`
     - `debug/profiling`
     - `debug/timeline`

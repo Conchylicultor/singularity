@@ -300,7 +300,6 @@ fixed raw size escapes per-site via
     - `conversations/conversation-view/pending-turn`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/turn-summary`
-    - `conversations/conversations-view`
     - `conversations/recover`
     - `conversations/summary`
     - `debug/boot-profile`

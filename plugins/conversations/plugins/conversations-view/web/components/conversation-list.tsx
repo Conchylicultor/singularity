@@ -4,11 +4,8 @@ import {
   reportCorruptSavedRoute,
 } from "@plugins/conversations/plugins/pane-restore/web";
 import { useOpenPane, usePaneStore } from "@plugins/primitives/plugins/pane/web";
-import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { closeConversation } from "@plugins/conversations/core";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 
 export function ConversationList() {
@@ -40,27 +37,13 @@ export function ConversationList() {
     }
   };
 
-  // The launch button sits above the DataView tab host in a rigid `px-sm pb-xs`
-  // header block. `scrollBody={false}` lets the host own its single scroll (its
-  // own `Column`/`Scroll`), so the list scrolls internally and the tab switcher
-  // stays rigid.
+  // The tab host is its own `Column fill` (tab switcher header + scrolling
+  // body), so it fills the sidebar column directly — no extra wrapper needed.
   return (
-    <Column
-      fill
-      header={
-        <Stack gap="xs" className="px-sm pb-xs">
-          <LaunchControl variant="outline" fullWidth />
-        </Stack>
-      }
-      scrollBody={false}
-      body={
-        <SidebarDataView.Host
-          activeId={activeId}
-          onNavigate={navigate}
-          onCloseConversation={handleCloseConversation}
-          className="h-full"
-        />
-      }
+    <SidebarDataView.Host
+      activeId={activeId}
+      onNavigate={navigate}
+      onCloseConversation={handleCloseConversation}
     />
   );
 }

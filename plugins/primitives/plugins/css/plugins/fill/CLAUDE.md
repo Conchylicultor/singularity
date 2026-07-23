@@ -59,6 +59,7 @@ composes last.
     - `apps/workflows/editor`
     - `auth/apple-signing/setup-wizard`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+    - `conversations/conversations-view`
     - `debug/timeline`
     - `debug/trace/pane`
     - `debug/trace/spans`

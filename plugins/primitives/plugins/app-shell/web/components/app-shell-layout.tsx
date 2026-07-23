@@ -9,6 +9,7 @@ import {
   renderIsolated,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
+import { PANE_GUTTER_VAR } from "@plugins/primitives/plugins/data-view/core";
 import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
 export type AppShellSidebarItem = {
@@ -217,7 +218,21 @@ export function AppShellLayout({
     // One place covers every framing (flush/floating/inset), which all render
     // the shadcn `bg-sidebar` surface. `display:contents` keeps this wrapper out
     // of the sidebar's flex layout — it only carries the inherited var.
-    <div style={{ display: "contents", "--chrome-mask": "var(--sidebar)" } as React.CSSProperties}>
+    // The sidebar also publishes the pane-gutter rail as its own `--space-sm`
+    // inset (instead of the pane-header default `--chrome-pad-x`), so any
+    // DataView rendered in a sidebar sits on the sidebar's pill rail: band
+    // chrome (toolbar, section headers) at the rail, row pills inset by it —
+    // matching the nav items' `px-sm` wrapper. `--pad-row-x` ≡ `--space-sm` at
+    // every density, so row content lands on the same rail as nav icon/label.
+    <div
+      style={
+        {
+          display: "contents",
+          "--chrome-mask": "var(--sidebar)",
+          [PANE_GUTTER_VAR]: "var(--space-sm)",
+        } as React.CSSProperties
+      }
+    >
       <sidebarSlot.Render>{(item) => <item.component />}</sidebarSlot.Render>
     </div>
   );

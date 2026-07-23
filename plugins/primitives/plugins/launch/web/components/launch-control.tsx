@@ -83,33 +83,19 @@ export function useLaunchConversation({
 }
 
 /**
- * Split [ <model dropdown> | <launch> ] control. The dropdown lists the visible
- * concrete models; clicking a row sets it as the persisted default; the hover
- * launch icon on each row fires that model one-time; the main launch button
- * fires the current default.
+ * The model dropdown menu shared by every launch surface: one row per visible
+ * model (click = persist it as the default), a hover launch icon per row that
+ * fires that model one-time, and mod+N shortcuts launching the Nth model.
+ * Render inside a `DropdownMenu` next to whatever trigger the surface uses.
  */
-export function LaunchControl({
-  getRequest,
-  openAfterLaunch = true,
-  openMode = "push",
-  onLaunched,
-  variant = "default",
-  size = "default",
-  fullWidth = false,
-  disabled,
-  className,
-}: LaunchControlProps) {
-  const { launch, launching } = useLaunchConversation({ getRequest, openAfterLaunch, openMode, onLaunched });
+export function LaunchModelMenuContent({
+  launch,
+}: {
+  launch: (model: ConversationModel, e?: React.MouseEvent) => Promise<void> | void;
+}) {
   const defaultModel = useDefaultModel();
   const visibleModels = useVisibleModels();
   const setDefaultModel = useSetDefaultModel();
-
-  const busy = disabled || launching !== null;
-  const btnVariant = variant;
-  const blue =
-    variant === "default"
-      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-      : "";
 
   const onMenuKeyDown = (e: React.KeyboardEvent) => {
     if (!(e.metaKey || e.ctrlKey)) return;
@@ -119,7 +105,7 @@ export function LaunchControl({
     void launch(visibleModels[n - 1]!);
   };
 
-  const rows = (
+  return (
     <DropdownMenuContent
       align="start"
       className="w-auto min-w-[15rem]"
@@ -155,6 +141,36 @@ export function LaunchControl({
       ))}
     </DropdownMenuContent>
   );
+}
+
+/**
+ * Split [ <model dropdown> | <launch> ] control. The dropdown lists the visible
+ * concrete models; clicking a row sets it as the persisted default; the hover
+ * launch icon on each row fires that model one-time; the main launch button
+ * fires the current default.
+ */
+export function LaunchControl({
+  getRequest,
+  openAfterLaunch = true,
+  openMode = "push",
+  onLaunched,
+  variant = "default",
+  size = "default",
+  fullWidth = false,
+  disabled,
+  className,
+}: LaunchControlProps) {
+  const { launch, launching } = useLaunchConversation({ getRequest, openAfterLaunch, openMode, onLaunched });
+  const defaultModel = useDefaultModel();
+
+  const busy = disabled || launching !== null;
+  const btnVariant = variant;
+  const blue =
+    variant === "default"
+      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+      : "";
+
+  const rows = <LaunchModelMenuContent launch={launch} />;
 
   if (size === "icon") {
     return (

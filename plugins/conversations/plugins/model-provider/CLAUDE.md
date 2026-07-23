@@ -69,6 +69,7 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`
+    - `conversations/conversations-view`
     - `conversations/runtime-tmux`
     - `debug/claude-cli-calls`
     - `infra/claude-cli`

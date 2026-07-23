@@ -6,19 +6,26 @@
 
 - Description: Sidebar list of all conversations.
 - Web:
-  - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
+  - Contributes:
+    - `Shell.Sidebar` "New conversation" → `LaunchSidebarItem`
+    - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
   - Uses:
-    - `conversations.useConversations`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversations-view/data-view.SidebarDataView`
+    - `conversations/model-provider.useDefaultModel`
     - `conversations/pane-restore.loadRouteForConversation`
     - `conversations/pane-restore.reportCorruptSavedRoute`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.SidebarPaneSection`
-    - `primitives/css/column.Column`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/launch.LaunchControl`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/ui-kit.DropdownMenu`
+    - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/css/ui-kit.SidebarMenu`
+    - `primitives/css/ui-kit.SidebarMenuButton`
+    - `primitives/css/ui-kit.SidebarMenuItem`
+    - `primitives/icon-button.IconButton`
+    - `primitives/launch.LaunchModelMenuContent`
+    - `primitives/launch.useLaunchConversation`
     - `primitives/pane.useOpenPane`
     - `primitives/pane.usePaneStore`
     - `shell.Shell`

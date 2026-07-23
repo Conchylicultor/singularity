@@ -215,7 +215,6 @@
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversation-view/vscode`
-    - `conversations/conversations-view`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
     - `conversations/recover`

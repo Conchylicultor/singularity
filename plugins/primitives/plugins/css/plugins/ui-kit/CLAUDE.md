@@ -353,6 +353,7 @@ structurally unrepresentable.
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
+    - `conversations/conversations-view`
     - `conversations/effort-provider`
     - `conversations/model-provider`
     - `conversations/preprompts`

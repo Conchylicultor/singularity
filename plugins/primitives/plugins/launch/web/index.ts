@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-export { LaunchControl, useLaunchConversation, type LaunchControlProps, type LaunchRequest } from "./components/launch-control";
+export { LaunchControl, LaunchModelMenuContent, useLaunchConversation, type LaunchControlProps, type LaunchRequest } from "./components/launch-control";
 export { LaunchAgentPopover, type LaunchAgentPopoverProps } from "./components/launch-agent-popover";
 
 export default {

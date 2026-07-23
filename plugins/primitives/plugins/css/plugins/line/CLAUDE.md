@@ -33,6 +33,7 @@ case) and intentionally does not compose it.
     - `apps/sonata/library`
     - `apps/studio/compositions/release/release-logs`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+    - `conversations/conversations-view`
     - `debug/timeline`
     - `primitives/bar`
     - `primitives/css/row`
