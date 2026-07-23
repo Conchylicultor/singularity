@@ -237,6 +237,14 @@
       "name": "@singularity/plugin-apps-deploy-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/ssh-setup": {
+      "name": "@singularity/plugin-apps-deploy-ssh-setup",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner": {
+      "name": "@singularity/plugin-apps-deploy-ssh-setup-hetzner",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer": {
       "name": "@singularity/plugin-apps-file-explorer",
       "version": "0.0.1",
@@ -3717,6 +3725,10 @@
       "name": "@singularity/plugin-primitives-select-scope",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/setup-steps": {
+      "name": "@singularity/plugin-primitives-setup-steps",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/shortcuts": {
       "name": "@singularity/plugin-primitives-shortcuts",
       "version": "0.0.1",
@@ -5127,6 +5139,10 @@
     "@singularity/plugin-apps-deploy-servers": ["@singularity/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
 
     "@singularity/plugin-apps-deploy-shell": ["@singularity/plugin-apps-deploy-shell@workspace:plugins/apps/plugins/deploy/plugins/shell"],
+
+    "@singularity/plugin-apps-deploy-ssh-setup": ["@singularity/plugin-apps-deploy-ssh-setup@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup"],
+
+    "@singularity/plugin-apps-deploy-ssh-setup-hetzner": ["@singularity/plugin-apps-deploy-ssh-setup-hetzner@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner"],
 
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 
@@ -6775,6 +6791,8 @@
     "@singularity/plugin-primitives-section-card": ["@singularity/plugin-primitives-section-card@workspace:plugins/primitives/plugins/section-card"],
 
     "@singularity/plugin-primitives-select-scope": ["@singularity/plugin-primitives-select-scope@workspace:plugins/primitives/plugins/select-scope"],
+
+    "@singularity/plugin-primitives-setup-steps": ["@singularity/plugin-primitives-setup-steps@workspace:plugins/primitives/plugins/setup-steps"],
 
     "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 

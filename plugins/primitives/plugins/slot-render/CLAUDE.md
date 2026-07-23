@@ -111,6 +111,7 @@ What this does and does NOT do:
     - `apps-core/tab-surface`
     - `apps/browser/shell`
     - `apps/debug/shell`
+    - `apps/deploy/servers`
     - `apps/deploy/shell`
     - `apps/file-explorer/shell`
     - `apps/home/shell`

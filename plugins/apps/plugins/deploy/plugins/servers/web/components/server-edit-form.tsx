@@ -14,6 +14,7 @@ import {
 } from "../../shared/endpoints";
 import { ServerStatusBadge } from "./server-status-badge";
 import { FieldShell, fieldInputClass, fieldTextareaClass } from "./server-fields";
+import { Servers } from "../slots";
 
 /** Wire an EditableField to a text input / textarea. */
 function fieldProps(field: EditableField<string>) {
@@ -110,6 +111,9 @@ export function ServerEditForm({ server }: { server: Server }) {
           {...fieldProps(consoleUrl)}
         />
       </FieldShell>
+      <Servers.SshSetup.Render>
+        {(s) => <s.component server={server} />}
+      </Servers.SshSetup.Render>
       <SshKeyField server={server} />
     </Stack>
   );
@@ -144,7 +148,8 @@ function SshKeyField({ server }: { server: Server }) {
           <span className={server.sshKeyConfigured ? "text-success" : "text-warning"}>
             {server.sshKeyConfigured ? "Configured" : "Not set"}
           </span>
-          {" — paste a key to " + (server.sshKeyConfigured ? "replace it." : "set it.")}
+          {" — paste a key manually to " +
+            (server.sshKeyConfigured ? "replace it." : "set it.")}
         </>
       }
     >

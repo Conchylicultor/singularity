@@ -500,6 +500,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
             - Slots:
+              - `Servers.SshSetup` ← `apps.deploy.ssh-setup`
               - `serverDetailPane.Actions`
               - `serversRootPane.Actions`
             - Contributes:
@@ -527,10 +528,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/row-actions.RowActionButton`
+              - `primitives/slot-render.defineRenderSlot`
             - Exports (types): `Server`
             - Exports (values):
+              - `generateSshKeypair`
               - `NEW_SERVER_ID`
               - `serverDetailPane`
+              - `Servers`
               - `serversResource`
               - `serversRootPane`
           - Server:
@@ -553,9 +557,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `GET /api/deploy/servers/:id`
               - `PATCH /api/deploy/servers/:id`
               - `DELETE /api/deploy/servers/:id`
+              - `POST /api/deploy/servers/:id/ssh-keypair`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/ssh-setup`
+              - `apps/deploy/ssh-setup/hetzner`
           - Shared:
             - Exports (types):
               - `CreateServerBody`
+              - `GenerateKeypairBody`
               - `Server`
               - `ServerStatus`
               - `UpdateServerBody`
@@ -563,6 +573,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createServer`
               - `CreateServerBodySchema`
               - `deleteServer`
+              - `GenerateKeypairBodySchema`
+              - `generateSshKeypair`
               - `getServer`
               - `listServers`
               - `ServerSchema`
@@ -586,6 +598,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `deployApp`
           - Cross-plugin:
             - Imported by: `apps/deploy/servers`
+        - **`ssh-setup`** — Provider-aware SSH setup for deploy servers: matches the console URL against the generic SshProvider registry and renders the matched provider's guided instructions as a collapsible section inline in the server page's SSH area.
+          - Web:
+            - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
+            - Contributes: `Servers.SshSetup` "ssh-setup" → `SshSetupSection`
+            - Uses:
+              - `apps/deploy/servers.Servers`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
+              - `primitives/section-card.SectionCard`
+            - Exports (types): `SshProviderDescriptor`
+            - Exports (values): `SshProvider`
+          - Cross-plugin:
+            - Imported by: `apps/deploy/ssh-setup/hetzner`
+          - Plugins:
+            - **`hetzner`** — Hetzner Cloud SSH provider: detects console.hetzner.com console URLs and contributes the Hetzner-specific guided key-install flow (generate → web terminal → authorized_keys one-liner).
+              - Web:
+                - Contributes: `SshProvider` "Hetzner"
+                - Uses:
+                  - `apps/deploy/servers.generateSshKeypair`
+                  - `apps/deploy/servers.Server`
+                  - `apps/deploy/ssh-setup.SshProvider`
+                  - `infra/endpoints.fetchEndpoint`
+                  - `primitives/copy-to-clipboard.CopyButton`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/setup-steps.Step`
+                  - `primitives/setup-steps.StepDone`
+                  - `primitives/setup-steps.StepLink`
+                  - `primitives/setup-steps.Steps`
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
@@ -13852,6 +13896,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/deploy/servers`
+          - `apps/deploy/ssh-setup/hetzner`
           - `apps/mail/attachments`
           - `apps/mail/inbox`
           - `apps/mail/reading-pane`
@@ -17642,6 +17687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useCopyToClipboard`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/ssh-setup/hetzner`
           - `auth/google/setup-wizard`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/file-path`
@@ -17925,6 +17971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/icon-picker`
               - `primitives/pane`
+              - `primitives/setup-steps`
               - `primitives/text-editor/paste-images`
               - `primitives/tree`
               - `screenshot`
@@ -18102,6 +18149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/ssh-setup/hetzner`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -18124,6 +18172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/stall`
               - `primitives/data-view`
               - `primitives/error-boundary`
+              - `primitives/setup-steps`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -18695,6 +18744,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/tabs`
               - `apps/browser/webview`
               - `apps/deploy/servers`
+              - `apps/deploy/ssh-setup`
+              - `apps/deploy/ssh-setup/hetzner`
               - `apps/home/shell`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
@@ -18939,6 +18990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/row-actions`
+              - `primitives/setup-steps`
               - `primitives/tabbed-view`
               - `primitives/tree`
               - `reorder`
@@ -19024,6 +19076,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/agent-manager/worktree-switcher`
               - `apps/deploy/servers`
+              - `apps/deploy/ssh-setup`
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
@@ -19165,6 +19218,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/tabs`
               - `apps/browser/webview`
               - `apps/deploy/servers`
+              - `apps/deploy/ssh-setup`
+              - `apps/deploy/ssh-setup/hetzner`
               - `apps/home/shell`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
@@ -19410,6 +19465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/markdown`
               - `primitives/pane`
               - `primitives/rank-reorder`
+              - `primitives/setup-steps`
               - `reorder`
               - `reorder/edit-mode`
               - `reorder/editor`
@@ -19661,6 +19717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/tabs`
               - `apps/browser/webview`
               - `apps/deploy/servers`
+              - `apps/deploy/ssh-setup/hetzner`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
@@ -19885,6 +19942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/row-actions`
               - `primitives/search`
               - `primitives/section-card`
+              - `primitives/setup-steps`
               - `primitives/slot-render`
               - `primitives/text-editor`
               - `primitives/text-editor/paste-images`
@@ -22521,7 +22579,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types): `SectionCardProps`
         - Exports (values): `SectionCard`
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`
+        - Imported by:
+          - `apps/deploy/ssh-setup`
+          - `apps/sonata/library`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
       - Cross-plugin:
         - Imported by:
@@ -22540,6 +22600,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `ContentScope`
           - `selectScopeProps`
+    - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external) and StepDone (success line) affordances.
+      - Web:
+        - Uses:
+          - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+        - Exports (types):
+          - `StepProps`
+          - `StepState`
+        - Exports (values):
+          - `Step`
+          - `StepDone`
+          - `StepLink`
+          - `Steps`
+      - Cross-plugin:
+        - Imported by: `apps/deploy/ssh-setup/hetzner`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
         - Slots: `Shortcuts.Shortcut` ← `apps-core.surface.floating`, `apps-core.surface.solo`, `reorder.edit-mode`
@@ -22608,6 +22688,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-surface`
           - `apps/browser/shell`
           - `apps/debug/shell`
+          - `apps/deploy/servers`
           - `apps/deploy/shell`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
@@ -23250,6 +23331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
       - `Staging.DiffRenderer` → `ReorderDiffRenderer`
     - Uses:
       - `config_v2.ConfigV2`
@@ -23329,6 +23411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "debug-app.toolbar"
       - `ConfigV2.Register` "deploy.section"
       - `ConfigV2.Register` "deploy.servers.item-actions"
+      - `ConfigV2.Register` "deploy.servers.ssh-setup"
       - `ConfigV2.Register` "file-explorer.sidebar"
       - `ConfigV2.Register` "file-explorer.toolbar"
       - `ConfigV2.Register` "home.section"

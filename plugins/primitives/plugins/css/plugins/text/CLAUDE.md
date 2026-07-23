@@ -151,6 +151,8 @@ fixed raw size escapes per-site via
     - `apps/browser/tabs`
     - `apps/browser/webview`
     - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
+    - `apps/deploy/ssh-setup/hetzner`
     - `apps/home/shell`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`
@@ -396,6 +398,7 @@ fixed raw size escapes per-site via
     - `primitives/markdown`
     - `primitives/pane`
     - `primitives/rank-reorder`
+    - `primitives/setup-steps`
     - `reorder`
     - `reorder/edit-mode`
     - `reorder/editor`

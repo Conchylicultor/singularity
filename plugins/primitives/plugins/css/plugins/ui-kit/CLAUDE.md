@@ -260,6 +260,7 @@ structurally unrepresentable.
     - `apps/browser/tabs`
     - `apps/browser/webview`
     - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup/hetzner`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/mail/sync-status`
@@ -484,6 +485,7 @@ structurally unrepresentable.
     - `primitives/row-actions`
     - `primitives/search`
     - `primitives/section-card`
+    - `primitives/setup-steps`
     - `primitives/slot-render`
     - `primitives/text-editor`
     - `primitives/text-editor/paste-images`

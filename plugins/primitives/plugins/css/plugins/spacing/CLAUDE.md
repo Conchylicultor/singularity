@@ -108,6 +108,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/browser/tabs`
     - `apps/browser/webview`
     - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
+    - `apps/deploy/ssh-setup/hetzner`
     - `apps/home/shell`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`
@@ -352,6 +354,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/pane`
     - `primitives/prompt-editor`
     - `primitives/row-actions`
+    - `primitives/setup-steps`
     - `primitives/tabbed-view`
     - `primitives/tree`
     - `reorder`

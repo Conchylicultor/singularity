@@ -123,6 +123,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/folder-picker`
     - `primitives/icon-picker`
     - `primitives/pane`
+    - `primitives/setup-steps`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`
     - `screenshot`

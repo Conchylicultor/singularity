@@ -7,6 +7,7 @@
 - Description: Server registry for the deployment platform. Server registry for the deployment platform.
 - Web:
   - Slots:
+    - `Servers.SshSetup` ← `apps.deploy.ssh-setup`
     - `serverDetailPane.Actions`
     - `serversRootPane.Actions`
   - Contributes:
@@ -34,10 +35,13 @@
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/row-actions.RowActionButton`
+    - `primitives/slot-render.defineRenderSlot`
   - Exports (types): `Server`
   - Exports (values):
+    - `generateSshKeypair`
     - `NEW_SERVER_ID`
     - `serverDetailPane`
+    - `Servers`
     - `serversResource`
     - `serversRootPane`
 - Server:
@@ -60,9 +64,15 @@
     - `GET /api/deploy/servers/:id`
     - `PATCH /api/deploy/servers/:id`
     - `DELETE /api/deploy/servers/:id`
+    - `POST /api/deploy/servers/:id/ssh-keypair`
+- Cross-plugin:
+  - Imported by:
+    - `apps/deploy/ssh-setup`
+    - `apps/deploy/ssh-setup/hetzner`
 - Shared:
   - Exports (types):
     - `CreateServerBody`
+    - `GenerateKeypairBody`
     - `Server`
     - `ServerStatus`
     - `UpdateServerBody`
@@ -70,6 +80,8 @@
     - `createServer`
     - `CreateServerBodySchema`
     - `deleteServer`
+    - `GenerateKeypairBodySchema`
+    - `generateSshKeypair`
     - `getServer`
     - `listServers`
     - `ServerSchema`

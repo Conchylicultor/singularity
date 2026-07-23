@@ -49,3 +49,20 @@ export const updateServer = defineEndpoint({
 export const deleteServer = defineEndpoint({
   route: "DELETE /api/deploy/servers/:id",
 });
+
+export const GenerateKeypairBodySchema = z.object({
+  /** Required to regenerate over an already-configured key (otherwise 409). */
+  replace: z.boolean().optional(),
+});
+export type GenerateKeypairBody = z.infer<typeof GenerateKeypairBodySchema>;
+
+/**
+ * Generates an ed25519 keypair for the server: the private half goes straight
+ * into the secrets store (never returned), the public half is persisted on the
+ * row and returned for the user to install on the server.
+ */
+export const generateSshKeypair = defineEndpoint({
+  route: "POST /api/deploy/servers/:id/ssh-keypair",
+  body: GenerateKeypairBodySchema,
+  response: z.object({ publicKey: z.string() }),
+});

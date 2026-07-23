@@ -7,7 +7,13 @@ export {
   getServer,
   updateServer,
   deleteServer,
+  generateSshKeypair,
   CreateServerBodySchema,
   UpdateServerBodySchema,
+  GenerateKeypairBodySchema,
 } from "./endpoints";
-export type { CreateServerBody, UpdateServerBody } from "./endpoints";
+export type {
+  CreateServerBody,
+  UpdateServerBody,
+  GenerateKeypairBody,
+} from "./endpoints";

@@ -1,0 +1,1 @@
+ALTER TABLE "deploy_servers" ADD COLUMN "ssh_public_key" text;

@@ -13,6 +13,7 @@
     - `useCopyToClipboard`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/ssh-setup/hetzner`
     - `auth/google/setup-wizard`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/file-path`

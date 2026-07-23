@@ -15,7 +15,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** [4 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
     - **`home`** — Home — app launcher and entry point.
       - Plugins:
@@ -479,6 +479,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
     - **`section-card`** — Titled collapsible card primitive: Card chrome + a SectionHeaderRow trigger (chevron, icon, title, sibling header actions) + an unmounted-while-collapsed body. The sanctioned home for the 'card whose title expands it' shape, so a stack of such cards is uniform by construction.
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
+    - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external) and StepDone (success line) affordances.
     - **`shortcuts`** [load-bearing] — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
     - **`slot-render`** [load-bearing] — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.

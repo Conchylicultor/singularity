@@ -1429,6 +1429,13 @@
       "tag": "20260723_014110_6e4d06f0__remove_blog_publishing",
       "hash": "6e4d06f0",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784804089000,
+      "tag": "20260723_105449_0187a835__deploy_ssh_public_key",
+      "hash": "0187a835",
+      "breakpoints": true
     }
   ]
 }

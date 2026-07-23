@@ -7,7 +7,8 @@ import {
 } from "./components/server-item-actions";
 
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
-export { serversResource } from "../shared";
+export { Servers } from "./slots";
+export { serversResource, generateSshKeypair } from "../shared";
 export type { Server } from "../shared";
 
 export default {

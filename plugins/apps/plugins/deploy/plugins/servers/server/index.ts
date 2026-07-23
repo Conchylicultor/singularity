@@ -5,6 +5,7 @@ import { handleGet } from "./internal/handle-get";
 import { handleCreate } from "./internal/handle-create";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
+import { handleGenerateKeypair } from "./internal/handle-generate-keypair";
 import { serversResource } from "./internal/resources";
 import {
   listServers,
@@ -12,6 +13,7 @@ import {
   getServer,
   updateServer,
   deleteServer,
+  generateSshKeypair,
 } from "../shared/endpoints";
 
 export { _deployServers } from "./internal/tables";
@@ -25,6 +27,7 @@ export default {
     [getServer.route]: handleGet,
     [updateServer.route]: handleUpdate,
     [deleteServer.route]: handleDelete,
+    [generateSshKeypair.route]: handleGenerateKeypair,
   },
   contributions: [Resource.Declare(serversResource)],
 } satisfies ServerPluginDefinition;
