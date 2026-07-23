@@ -1,6 +1,6 @@
 {
-  "id": "79060e8d-774a-4a1a-aac8-276becc46c8c",
-  "prevId": "29843d25-cd6d-4aae-a0cc-815053bbd3fc",
+  "id": "e6685a7d-9d29-4882-963a-180e22e4a8a9",
+  "prevId": "a03bd5f3-55bb-4607-8b51-a42d9e035820",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -199,6 +199,12 @@
         },
         "console_url": {
           "name": "console_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ssh_public_key": {
+          "name": "ssh_public_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false

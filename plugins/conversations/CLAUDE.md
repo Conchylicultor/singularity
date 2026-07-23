@@ -25,12 +25,12 @@
     - `useHasActiveSiblingInWorktree`
     - `useHasActiveSiblings`
 - Server:
-<<<<<<< .merge_file_q5LJHF
   - Contributes:
     - `ConfigV2.Register` "auto-answer"
     - `trigger` "tasks.maybe-launch-dependents"
     - `trigger` "conversations.notify-created"
-    - `containerTask` "task-meta-system"
+    - `taskCategory` "conversations"
+    - `taskCategory` "system"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.forkConfig`
@@ -59,18 +59,16 @@
     - `shell/notifications.recordNotification`
     - `tasks/auto-start.claimAutoStart`
     - `tasks/auto-start.getTaskAutoStart`
-    - `tasks/container-tasks.assertNotContainerTask`
-    - `tasks/container-tasks.ContainerTask`
+    - `tasks/task-category.setTaskCategory`
+    - `tasks/task-category.TaskCategory`
     - `tasks/task-effort.getTaskEffort`
     - `tasks/task-preprompt.getTaskPreprompt`
     - `tasks/tasks-core.adoptOrphanConversation`
     - `tasks/tasks-core.conversationAttachments`
-    - `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`
     - `tasks/tasks-core.createAttempt`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.deleteAttempt`
     - `tasks/tasks-core.deleteConversationRow`
-    - `tasks/tasks-core.ensureMetaTask`
     - `tasks/tasks-core.getAttempt`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.getConversationClaudeSessionId`
@@ -120,7 +118,6 @@
     - `resumeConversation`
     - `Runtime`
     - `sendTurn`
-    - `SYSTEM_META_TASK_ID`
     - `userTurnSent`
   - Register:
     - `defineJob('tasks.maybe-launch')`
@@ -140,14 +137,6 @@
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-=======
-  - Contributes: `ConfigV2.Register` "auto-answer", `trigger` "tasks.maybe-launch-dependents", `trigger` "conversations.notify-created", `taskCategory` "conversations", `taskCategory` "system"
-  - Uses: `config_v2.ConfigV2`, `config_v2.forkConfig`, `config_v2.getConfig`, `conversations/all-conversations.handleQuery`, `conversations/preprompts.resolvePreprompt`, `conversations/session-chain.recordSessionId`, `conversations/transcript-watcher.findTranscriptPath`, `conversations/transcript-watcher.readChainLines`, `conversations/transcript-watcher.refreshConversationChain`, `conversations/transcript-watcher.resolveConversationTranscriptPaths`, `conversations/transcript-watcher.watchTranscript`, `database.db`, `database.isTransientDbError`, `database/fork.databaseForkJob`, `infra/attachments.getAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.isMain`, `infra/worktree.setupWorktree`, `infra/worktree.worktreePathFor`, `reports.recordReport`, `shell/notifications.recordNotification`, `tasks/auto-start.claimAutoStart`, `tasks/auto-start.getTaskAutoStart`, `tasks/task-category.setTaskCategory`, `tasks/task-category.TaskCategory`, `tasks/task-effort.getTaskEffort`, `tasks/task-preprompt.getTaskPreprompt`, `tasks/tasks-core.adoptOrphanConversation`, `tasks/tasks-core.conversationAttachments`, `tasks/tasks-core.createAttempt`, `tasks/tasks-core.createTask`, `tasks/tasks-core.deleteAttempt`, `tasks/tasks-core.deleteConversationRow`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.getConversationClaudeSessionId`, `tasks/tasks-core.getConversationRuntime`, `tasks/tasks-core.getTask`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.insertConversation`, `tasks/tasks-core.listArmedDependentsOf`, `tasks/tasks-core.listAttemptsForTask`, `tasks/tasks-core.listConversationsForDisplay`, `tasks/tasks-core.listConversationsForInfra`, `tasks/tasks-core.listExistingConversationIds`, `tasks/tasks-core.listGoneConversations`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.markConversationGone`, `tasks/tasks-core.setConversationHibernated`, `tasks/tasks-core.taskStatusChanged`, `tasks/tasks-core.updateConversation`, `tasks/tasks-core.updateTask`, `tasks/tasks-core.updateTaskTitle`
-  - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`, `plugins/conversations/server/internal/tables-turn-completed-event.ts`, `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
-  - Exports: Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`; Values: `afterTurn`, `answerPrompt`, `conversationCreated`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `ensureResumed`, `flushInteractivePrompt`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `userTurnSent`
-  - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineJob('conversations.notify-created')`, `defineJob('conversations.spawn')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
-  - Routes: `GET /api/conversations`, `GET /api/conversations/gone`, `GET /api/conversations/:id`, `POST /api/conversations`, `DELETE /api/conversations`, `POST /api/conversations/:id/turn`, `POST /api/conversations/:id/stop`, `GET /api/conversations/:id/turns`, `POST /api/conversations/:id/close`
->>>>>>> .merge_file_zD7nyx
 - Core:
   - Uses:
     - `config_v2.defineConfig`

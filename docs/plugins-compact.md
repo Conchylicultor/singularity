@@ -286,7 +286,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`dialog`** — Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).
     - **`engine`** — Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
 
-- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Plugins:
     - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 
@@ -542,9 +542,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
-    - **`container-tasks`** — Registry of system container/meta task ids that must not own attempts: a cached hook so the web can gate Launch affordances on container rows. Registry of system container/meta task ids that must not own attempts: server-contribution registry + guard, plus a cached endpoint so the web can gate Launch affordances on container rows.
-    - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports meta-folder and registers the task-creating handler into reports' investigation sink.
+    - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
+    - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its keyed live resource, and the category-list endpoint.
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
     - **`task-deps-tree`** — Dependency tree section for the task detail: renders task_dependencies as a nesting = runs-after tree (with a switch to the read-only creation tree), atomic drag-to-reorder, per-row detach, and 'also after' fan-in chips.
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.

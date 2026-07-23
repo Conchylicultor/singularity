@@ -6543,7 +6543,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "auto-answer"
       - `trigger` "tasks.maybe-launch-dependents"
       - `trigger` "conversations.notify-created"
-      - `containerTask` "task-meta-system"
+      - `taskCategory` "conversations"
+      - `taskCategory` "system"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.forkConfig`
@@ -6572,18 +6573,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `shell/notifications.recordNotification`
       - `tasks/auto-start.claimAutoStart`
       - `tasks/auto-start.getTaskAutoStart`
-      - `tasks/container-tasks.assertNotContainerTask`
-      - `tasks/container-tasks.ContainerTask`
+      - `tasks/task-category.setTaskCategory`
+      - `tasks/task-category.TaskCategory`
       - `tasks/task-effort.getTaskEffort`
       - `tasks/task-preprompt.getTaskPreprompt`
       - `tasks/tasks-core.adoptOrphanConversation`
       - `tasks/tasks-core.conversationAttachments`
-      - `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`
       - `tasks/tasks-core.createAttempt`
       - `tasks/tasks-core.createTask`
       - `tasks/tasks-core.deleteAttempt`
       - `tasks/tasks-core.deleteConversationRow`
-      - `tasks/tasks-core.ensureMetaTask`
       - `tasks/tasks-core.getAttempt`
       - `tasks/tasks-core.getConversation`
       - `tasks/tasks-core.getConversationClaudeSessionId`
@@ -6633,7 +6632,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `resumeConversation`
       - `Runtime`
       - `sendTurn`
-      - `SYSTEM_META_TASK_ID`
       - `userTurnSent`
     - Register:
       - `defineJob('tasks.maybe-launch')`
@@ -6836,7 +6834,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "agent-launches"
           - `derived-view` "agents_v"
           - `derived-table` "task_latest_conversation"
-          - `containerTask` "task-meta-agents"
+          - `taskCategory` "agents"
         - Uses:
           - `conversations.createConversation`
           - `database.db`
@@ -6850,12 +6848,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-picker.resolveIconSvgNodesJson`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAfterSibling`
-          - `tasks/container-tasks.ContainerTask`
+          - `tasks/task-category.setTaskCategory`
+          - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.conversationCascadeSignatures`
           - `tasks/tasks-core.conversationsActiveResource`
           - `tasks/tasks-core.conversationsView`
           - `tasks/tasks-core.createTask`
-          - `tasks/tasks-core.ensureMetaTask`
           - `tasks/tasks-core.listConversationsForDisplay`
         - DB schema:
           - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`
@@ -6874,7 +6872,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AgentLaunchSchema`
           - `AgentLaunchWithStatusSchema`
           - `agents`
-          - `AGENTS_META_TASK_ID`
           - `AgentSchema`
           - `agentsResource`
           - `nextAgentRankUnder`
@@ -13567,33 +13564,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `apps/pages/history`
 
-- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Web:
     - Contributes: `ActionBar.Item` → `ImproveButton`
     - Uses:
       - `primitives/css/ui-kit.Button`
       - `shell/action-bar.ActionBar`
       - `tasks/task-draft-form.TaskDraftPopover`
-    - Exports (values):
-      - `IMPROVEMENTS_META_TASK_ID`
-      - `openImproveWithText`
+    - Exports (values): `openImproveWithText`
   - Server:
     - Contributes:
       - `trigger` "improve.apply-group"
-      - `containerTask` "task-meta-improvements"
+      - `taskCategory` "improvements"
     - Uses:
       - `conversations.conversationCreated`
       - `conversations/conversations-view/grouped.addMemberToGroup`
       - `database.db`
       - `infra/events.Trigger`
       - `infra/jobs.defineJob`
-      - `tasks/container-tasks.ContainerTask`
-      - `tasks/tasks-core.ensureMetaTask`
+      - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/improve/server/internal/tables.ts`
     - Exports (values):
       - `_improve_config`
       - `_improvePendingGroups`
-      - `IMPROVEMENTS_META_TASK_ID`
     - Register: `defineJob('improve.apply-group')`
   - Cross-plugin:
     - Imported by:
@@ -14061,8 +14054,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/pushes`
           - `stats/tasks`
           - `tasks`
-          - `tasks/container-tasks`
           - `tasks/task-attachments`
+          - `tasks/task-category`
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-description`
@@ -14158,6 +14151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `plugin-meta/plugin-health`
           - `tasks/auto-start`
+          - `tasks/task-category`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
@@ -14899,6 +14893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-health`
           - `shell/notifications`
           - `tasks/auto-start`
+          - `tasks/task-category`
           - `tasks/tasks-core`
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
@@ -17595,6 +17590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-shell`
           - `primitives/css/row`
           - `primitives/data-view`
+          - `primitives/data-view/tree`
           - `primitives/detail-sections`
           - `primitives/section-card`
           - `primitives/tree`
@@ -18982,6 +18978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
+              - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/detail-sections`
               - `primitives/diff-view`
@@ -19130,6 +19127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/sticky/stack`
               - `primitives/data-table`
               - `primitives/data-view`
+              - `primitives/data-view/tree`
               - `primitives/multi-select`
               - `primitives/tree`
               - `review/code-review`
@@ -20654,17 +20652,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
             - Uses:
+              - `primitives/collapsible.ExpandAllButton`
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/sticky.Sticky`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/data-view.DataViewRenderProps`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.evaluateNode`
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.FieldDef`
+              - `primitives/data-view.GroupedSections`
               - `primitives/data-view.HierarchyConfig`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.makeSortComparator`
+              - `primitives/data-view.partitionIntoSections`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.useResolveCell`
@@ -21604,6 +21608,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/attempt-view`
           - `tasks/auto-start`
+          - `tasks/task-category`
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-description`
@@ -21746,7 +21751,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `tasks/attempt-view`
           - `tasks/task-dependencies`
-          - `tasks/task-deps-tree`
           - `tasks/task-draft-form`
           - `tasks/task-events`
           - `tasks/task-list`
@@ -23340,6 +23344,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
       - `Staging.DiffRenderer` → `ReorderDiffRenderer`
     - Uses:
       - `config_v2.ConfigV2`
@@ -23467,6 +23472,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "task-deps-tree.actions"
       - `ConfigV2.Register` "task-detail.section"
       - `ConfigV2.Register` "task-draft-form.action"
+      - `ConfigV2.Register` "tasks.fields"
       - `ConfigV2.Register` "tasks.list-actions"
       - `ConfigV2.Register` "tasks.task-actions"
       - `ConfigV2.Register` "text-editor.plugin"
@@ -24538,7 +24544,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `infra/endpoints.implement`
-          - `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`
           - `tasks/tasks-core.listTasks`
         - Routes:
           - `GET /api/stats/tasks/cumulative`
@@ -24550,9 +24555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Server:
-    - Contributes:
-      - `trigger` "tasks.push-ingest"
-      - `containerTask` "task-meta-conversations"
+    - Contributes: `trigger` "tasks.push-ingest"
     - Uses:
       - `conversations.maybeLaunchTaskJob`
       - `database.db`
@@ -24568,7 +24571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/worktree.ensureMainWorktreeRoot`
       - `primitives/rank.rankAfterSibling`
       - `tasks/auto-start.setTaskAutoStart`
-      - `tasks/container-tasks.ContainerTask`
+      - `tasks/task-category.setTaskCategory`
       - `tasks/task-effort.inheritTaskEffort`
       - `tasks/task-preprompt.inheritTaskPreprompt`
       - `tasks/task-preprompt.setTaskPreprompt`
@@ -24576,11 +24579,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-title.synthesiseTitleFallback`
       - `tasks/tasks-core._tasks`
       - `tasks/tasks-core.addTaskDependency`
-      - `tasks/tasks-core.backfillMetaParent`
-      - `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`
       - `tasks/tasks-core.createTask`
       - `tasks/tasks-core.DbExecutor`
-      - `tasks/tasks-core.ensureMetaTask`
       - `tasks/tasks-core.getConversation`
       - `tasks/tasks-core.getTask`
       - `tasks/tasks-core.getTaskDependencyIds`
@@ -24759,41 +24759,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `tasks`
           - `tasks/task-header`
-    - **`container-tasks`** — Registry of system container/meta task ids that must not own attempts: a cached hook so the web can gate Launch affordances on container rows. Registry of system container/meta task ids that must not own attempts: server-contribution registry + guard, plus a cached endpoint so the web can gate Launch affordances on container rows.
-      - Web:
-        - Uses: `infra/endpoints.useEndpoint`
-        - Exports (values):
-          - `useContainerTaskIds`
-          - `useIsContainerTask`
+    - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
       - Server:
-        - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-        - Exports (values):
-          - `assertNotContainerTask`
-          - `ContainerTask`
-          - `isContainerTask`
-        - Routes: `GET /api/tasks/container-ids`
-      - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (values): `listContainerTaskIds`
-      - Cross-plugin:
-        - Imported by:
-          - `conversations`
-          - `conversations/agents`
-          - `improve`
-          - `tasks`
-          - `tasks/reports-investigation`
-          - `tasks/task-description`
-          - `tasks/task-list`
-    - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports meta-folder and registers the task-creating handler into reports' investigation sink.
-      - Server:
-        - Contributes: `containerTask` "task-meta-reports"
+        - Contributes: `taskCategory` "reports"
         - Uses:
           - `reports.reportInvestigationSink`
-          - `tasks/container-tasks.ContainerTask`
+          - `tasks/task-category.setTaskCategory`
+          - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.createTask`
-          - `tasks/tasks-core.ensureMetaTask`
           - `tasks/tasks-core.getTask`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
@@ -24807,6 +24780,50 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `tasks/task-detail.TaskDetailSlots`
+    - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its keyed live resource, and the category-list endpoint.
+      - Web:
+        - Contributes: `Tasks.Fields` "category" → `CategoryField`
+        - Uses:
+          - `infra/endpoints.useEndpoint`
+          - `primitives/live-state.useResource`
+          - `tasks/task-list.Tasks`
+        - Exports (types): `TaskCategoryRow`
+        - Exports (values):
+          - `taskCategoriesResource`
+          - `TaskCategoryRowSchema`
+          - `useTaskCategories`
+          - `useTaskCategoryMap`
+      - Server:
+        - Contributes: `resource.declare` "task-categories"
+        - Uses:
+          - `infra/endpoints.implement`
+          - `infra/entity-extensions.defineExtension`
+          - `infra/query-resource.queryResource`
+          - `tasks/tasks-core._tasks`
+        - DB schema: `plugins/tasks/plugins/task-category/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_category`)
+        - Exports (values):
+          - `getTaskCategory`
+          - `setTaskCategory`
+          - `taskCategoriesServerResource`
+          - `TaskCategory`
+          - `tasksCategory`
+        - Resources: `task-categories` (keyed)
+        - Routes: `GET /api/tasks/categories`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types): `TaskCategoryDef`
+        - Exports (values):
+          - `listTaskCategories`
+          - `TaskCategoryDefSchema`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations`
+          - `conversations/agents`
+          - `improve`
+          - `tasks`
+          - `tasks/reports-investigation`
+          - `tasks/task-dependencies`
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
       - Web:
         - Contributes:
@@ -24827,6 +24844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
           - `tasks.useTask`
+          - `tasks/task-category.useTaskCategoryMap`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-draft-form.TaskDraftPopover`
@@ -24837,7 +24855,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `task-deps-tree.actions` "detach" → `DetachAction`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
-          - `infra/endpoints.useEndpoint`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/spacing.Stack`
@@ -24851,7 +24868,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
-          - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
           - `primitives/view-switcher.useActiveViewId`
           - `primitives/view-switcher.ViewSwitcher`
@@ -24898,7 +24914,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/paste-images.isAttachmentUrl`
           - `tasks.patchTask`
           - `tasks.useTask`
-          - `tasks/container-tasks.useIsContainerTask`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-detail.useFlushAll`
           - `tasks/task-detail.useRegisterFlush`
@@ -25120,6 +25135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`
           - `Tasks.ListActions`
+          - `Tasks.Fields` ← `tasks.task-category`
         - Contributes:
           - `Tasks.TaskActions` "child-count" → `ChildCountAction`
           - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
@@ -25132,6 +25148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
+          - `primitives/data-view.defineFieldExtensions`
           - `primitives/data-view.defineItemActions`
           - `primitives/icon-button.IconButton`
           - `primitives/launch.LaunchControl`
@@ -25142,7 +25159,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/tree.useSubtreeExpandAll`
           - `tasks.patchTask`
-          - `tasks/container-tasks.useIsContainerTask`
           - `tasks/task-status.STATUS_META`
           - `tasks/task-status.StatusBadge`
           - `tasks/task-status.StatusIcon`
@@ -25153,6 +25169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `tasks/auto-start`
+          - `tasks/task-category`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
     - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
@@ -25308,7 +25325,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Push`
           - `PushLandedPayload`
           - `Task`
-          - `TaskFilters`
           - `TaskListItem`
           - `TaskStatus`
           - `TaskStatusChangedPayload`
@@ -25326,11 +25342,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AttemptSchema`
           - `attemptsResource`
           - `AttemptStatusSchema`
-          - `backfillMetaParent`
           - `conversationAttachments`
           - `conversationCascadeSignatures`
           - `ConversationKindSchema`
-          - `CONVERSATIONS_META_TASK_ID`
           - `conversationsActiveResource`
           - `ConversationSchema`
           - `conversationsGoneResource`
@@ -25344,7 +25358,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteConversationRow`
           - `dropTaskTree`
           - `emitStatusChangeIfChanged`
-          - `ensureMetaTask`
           - `findNextRankInFolder`
           - `getAttempt`
           - `getConversation`
@@ -25506,7 +25519,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/session-divergence`
           - `debug/slow-ops/cluster`
           - `debug/worktree-cleanup`
-          - `improve`
           - `plugin-meta/plugin-health`
           - `review/plugin-changes`
           - `stats/cost`
@@ -25514,6 +25526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/auto-start`
           - `tasks/reports-investigation`
+          - `tasks/task-category`
           - `tasks/task-deps-tree`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
@@ -25526,6 +25539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
           - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
           - `tasks/auto-start` (table `tasks_ext_auto_start`)
+          - `tasks/task-category` (table `tasks_ext_category`)
           - `tasks/task-effort` (table `tasks_ext_effort`)
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)

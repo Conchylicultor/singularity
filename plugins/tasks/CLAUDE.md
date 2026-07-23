@@ -6,10 +6,7 @@
 
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
 - Server:
-<<<<<<< .merge_file_iSM1Jl
-  - Contributes:
-    - `trigger` "tasks.push-ingest"
-    - `containerTask` "task-meta-conversations"
+  - Contributes: `trigger` "tasks.push-ingest"
   - Uses:
     - `conversations.maybeLaunchTaskJob`
     - `database.db`
@@ -25,7 +22,7 @@
     - `infra/worktree.ensureMainWorktreeRoot`
     - `primitives/rank.rankAfterSibling`
     - `tasks/auto-start.setTaskAutoStart`
-    - `tasks/container-tasks.ContainerTask`
+    - `tasks/task-category.setTaskCategory`
     - `tasks/task-effort.inheritTaskEffort`
     - `tasks/task-preprompt.inheritTaskPreprompt`
     - `tasks/task-preprompt.setTaskPreprompt`
@@ -33,11 +30,8 @@
     - `tasks/task-title.synthesiseTitleFallback`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.addTaskDependency`
-    - `tasks/tasks-core.backfillMetaParent`
-    - `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.DbExecutor`
-    - `tasks/tasks-core.ensureMetaTask`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.getTask`
     - `tasks/tasks-core.getTaskDependencyIds`
@@ -69,13 +63,6 @@
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `POST /api/tasks/:id/deps-move`
     - `GET /api/repo-info`
-=======
-  - Contributes: `trigger` "tasks.push-ingest"
-  - Uses: `conversations.maybeLaunchTaskJob`, `database.db`, `infra/attachments.getAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/warmup.defineWarmup`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/rank.rankAfterSibling`, `tasks/auto-start.setTaskAutoStart`, `tasks/task-category.setTaskCategory`, `tasks/task-effort.inheritTaskEffort`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/task-preprompt.setTaskPreprompt`, `tasks/task-title.scheduleTaskTitleUpdate`, `tasks/task-title.synthesiseTitleFallback`, `tasks/tasks-core._tasks`, `tasks/tasks-core.addTaskDependency`, `tasks/tasks-core.createTask`, `tasks/tasks-core.DbExecutor`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.getTask`, `tasks/tasks-core.getTaskDependencyIds`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.insertPush`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.listPushShasIn`, `tasks/tasks-core.listTasks`, `tasks/tasks-core.removeTaskDependency`, `tasks/tasks-core.taskAttachments`, `tasks/tasks-core.updateTask`, `tasks/tasks-core.withTaskStatusBatch`
-  - Exports: Values: `armTaskAutoStart`
-  - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`, `defineWarmup('tasks.push-reconcile')`
-  - Routes: `GET /api/tasks`, `POST /api/tasks`, `POST /api/tasks/chain`, `POST /api/tasks/insert-between`, `GET /api/tasks/:id`, `PATCH /api/tasks/:id`, `POST /api/tasks/:id/auto-start`, `DELETE /api/tasks/:id/auto-start`, `POST /api/tasks/:id/dependencies`, `DELETE /api/tasks/:id/dependencies/:depId`, `POST /api/tasks/:id/deps-move`, `GET /api/repo-info`
->>>>>>> .merge_file_VzyNTF
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`

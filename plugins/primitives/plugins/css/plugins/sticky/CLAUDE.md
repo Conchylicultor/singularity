@@ -74,7 +74,6 @@ toggle, silently resetting any child component state (e.g. an inner
     - `Sticky`
     - `stickyClasses`
 - Cross-plugin:
-<<<<<<< .merge_file_2UFR1k
   - Imported by:
     - `apps/mail/search`
     - `conversations/conversation-view/commits-graph`
@@ -85,13 +84,11 @@ toggle, silently resetting any child component state (e.g. an inner
     - `primitives/css/sticky/stack`
     - `primitives/data-table`
     - `primitives/data-view`
+    - `primitives/data-view/tree`
     - `primitives/multi-select`
     - `primitives/tree`
     - `review/code-review`
     - `review/config-defaults`
-=======
-  - Imported by: `apps/mail/search`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `debug/profiling/ops/op-gantt`, `debug/queue`, `debug/trace/pane`, `primitives/css/sticky/stack`, `primitives/data-table`, `primitives/data-view`, `primitives/data-view/tree`, `primitives/multi-select`, `primitives/tree`, `review/code-review`, `review/config-defaults`
->>>>>>> .merge_file_mxSUmr
 - Sub-plugins:
   - **`stack`** — Sticky-stack layout primitive: <StickyStack>/<StickyStackItem> pin N sticky siblings sharing one containing block, each below the ones before it (capped; degrades to the swap hand-off).
 

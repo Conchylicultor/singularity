@@ -1436,6 +1436,13 @@
       "tag": "20260723_105449_0187a835__deploy_ssh_public_key",
       "hash": "0187a835",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784821271000,
+      "tag": "20260723_154111_5dd9181d__add_task_category_ext",
+      "hash": "5dd9181d",
+      "breakpoints": true
     }
   ]
 }

@@ -6,13 +6,11 @@
 
 - Description: Dependency tree section for the task detail: renders task_dependencies as a nesting = runs-after tree (with a switch to the read-only creation tree), atomic drag-to-reorder, per-row detach, and 'also after' fan-in chips.
 - Web:
-<<<<<<< .merge_file_w2EQvj
   - Contributes:
     - `TaskDetailSlots.Section` "deps-tree" → `DepsTreeSection`
     - `task-deps-tree.actions` "detach" → `DetachAction`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
@@ -26,7 +24,6 @@
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
-    - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `primitives/view-switcher.useActiveViewId`
     - `primitives/view-switcher.ViewSwitcher`
@@ -38,10 +35,6 @@
     - `tasks/task-status.STATUS_META`
     - `tasks/task-status.StatusBadge`
     - `tasks/task-status.StatusIcon`
-=======
-  - Contributes: `TaskDetailSlots.Section` "deps-tree" → `DepsTreeSection`, `task-deps-tree.actions` "detach" → `DetachAction`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/data-view.HierarchyConfig`, `primitives/data-view.ItemActionProps`, `primitives/icon-button.IconButton`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/view-switcher.useActiveViewId`, `primitives/view-switcher.ViewSwitcher`, `primitives/view-switcher.ViewSwitcherOption`, `tasks.patchTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-list.TasksSubtree`, `tasks/task-status.STATUS_META`, `tasks/task-status.StatusBadge`, `tasks/task-status.StatusIcon`
->>>>>>> .merge_file_6DjUuk
 - Core:
   - Uses:
     - `tasks/tasks-core.TaskGraph`
