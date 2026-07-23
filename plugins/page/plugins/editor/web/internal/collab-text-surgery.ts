@@ -91,6 +91,46 @@ export function truncateBlockTextFrom(editor: LexicalEditor, offset: number): vo
 }
 
 /**
+ * `focus()`'s ONE landing policy, in both scroll modes:
+ *
+ * > **An existing selection wins; only a selection-less editor lands at the
+ * > content START.**
+ *
+ * The first half is what makes `focus()` safe to call on the block that ALREADY
+ * holds the caret — which every structural op that keeps the user in place does
+ * (Tab-indent / Shift+Tab-outdent re-focus their own block after the move). The
+ * second half is the freshly-split/inserted case: a brand-new editor has no
+ * prior selection, and Lexical's default is rootEnd — wrong for a split, whose
+ * caret belongs BEFORE the tail.
+ *
+ * `scroll: true` is literally Lexical's `editor.focus()`, which already encodes
+ * exactly this (`selection.dirty = true` when one exists, else the
+ * `defaultSelection`). The no-scroll arm has to hand-roll it — `editor.focus()`
+ * offers no `preventScroll` — so it must reproduce BOTH halves: marking the live
+ * selection dirty is what forces the reconciler to write it back to the DOM,
+ * the same restore `editor.focus()` performs. Dropping that half (an
+ * unconditional `$getRoot().selectStart()`) is what silently sent the caret home
+ * on every Tab.
+ */
+function focusRestoringSelection(editor: LexicalEditor, scroll: boolean): void {
+  if (scroll) {
+    editor.focus(undefined, { defaultSelection: "rootStart" });
+    return;
+  }
+  // No-scroll: focus the root directly (`preventScroll`) and land the caret
+  // under the skip-scroll tag so the reconcile doesn't scroll either.
+  editor.getRootElement()?.focus({ preventScroll: true });
+  editor.update(
+    () => {
+      const selection = $getSelection();
+      if (selection !== null) selection.dirty = true;
+      else $getRoot().selectStart();
+    },
+    { tag: SKIP_SCROLL_TAG },
+  );
+}
+
+/**
  * Focus a CRDT-bound editor that may still be HYDRATING (per-block docs sync
  * async after mount, so a freshly-split/inserted block's root is empty for a
  * beat). Lexical's `editor.focus()` is a selection no-op on an empty root
@@ -101,34 +141,19 @@ export function truncateBlockTextFrom(editor: LexicalEditor, offset: number): vo
  * the first synced content commits (one-shot; skipped if the user moved focus
  * away or already placed a selection by typing meanwhile).
  *
+ * Both paths land through {@link focusRestoringSelection}, so an editor that
+ * already holds a caret keeps it and only a selection-less one is placed.
  * `scroll` (default false) declares whether the landing follows the caret into
- * view. Scroll-wanted (split/merge/focusNew) keeps today's `editor.focus(...)`;
- * no-scroll focuses the ROOT with `preventScroll` and tags the rootStart
- * selection `skip-scroll-into-view` so the reconcile doesn't scroll either.
+ * view.
  */
 export function focusHydratingAware(editor: LexicalEditor, scroll = false): void {
   const empty = editor.getEditorState().read(() => $getRoot().getChildrenSize() === 0);
   if (!empty) {
     // Non-empty at focus time — since Stage 4a's instant pre-seed this is the
-    // NORMAL path for a freshly-split block (the tail is already in). A fresh
-    // editor has no prior selection, and the default selection is rootEnd —
-    // wrong for a split, whose caret belongs at the content START (before the
-    // tail). Explicit rootStart restores the pre-4a one-shot behavior; an
-    // editor with a real prior selection restores it (the default only applies
-    // when none exists).
-    if (scroll) {
-      editor.focus(undefined, { defaultSelection: "rootStart" });
-    } else {
-      // No-scroll: `editor.focus()` has no preventScroll, so focus the root
-      // directly and place the caret at rootStart under the skip-scroll tag.
-      editor.getRootElement()?.focus({ preventScroll: true });
-      editor.update(
-        () => {
-          $getRoot().selectStart();
-        },
-        { tag: SKIP_SCROLL_TAG },
-      );
-    }
+    // NORMAL path both for a freshly-split block (the tail is already in, no
+    // selection yet → content start) and for a re-focus of the block the user
+    // is already editing (selection present → restored untouched).
+    focusRestoringSelection(editor, scroll);
     return;
   }
   editor.getRootElement()?.focus(scroll ? undefined : { preventScroll: true });
@@ -138,19 +163,7 @@ export function focusHydratingAware(editor: LexicalEditor, scroll = false): void
     unregister();
     if (document.activeElement !== editor.getRootElement()) return;
     const hasSelection = editor.getEditorState().read(() => $getSelection() !== null);
-    if (!hasSelection) {
-      if (scroll) {
-        editor.focus(undefined, { defaultSelection: "rootStart" });
-      } else {
-        editor.getRootElement()?.focus({ preventScroll: true });
-        editor.update(
-          () => {
-            $getRoot().selectStart();
-          },
-          { tag: SKIP_SCROLL_TAG },
-        );
-      }
-    }
+    if (!hasSelection) focusRestoringSelection(editor, scroll);
   });
 }
 

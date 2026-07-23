@@ -642,12 +642,16 @@ function SelectionLayer({
         return;
       }
       if (y < firstEl.getBoundingClientRect().top) {
-        focusBlock(firstId);
+        // A pointer landing states WHERE it wants the caret, like the in-row
+        // branch below — never a bare `focusBlock`, whose `focus()` restores the
+        // block's last caret position (right for a structural re-focus, wrong
+        // for a click that means "the very top of the page").
+        if (!focusBlockBoundary(firstId, "start")) applyRange(firstId, firstId);
         return;
       }
       if (y > lastEl.getBoundingClientRect().bottom) {
         if (fallback && lastBlock.type === fallback.type && textOf(lastBlock) === "") {
-          focusBlock(lastBlock.id);
+          focusBlockBoundary(lastBlock.id, "end");
         } else if (fallback) {
           insert(fallback.type, fallback.empty?.() ?? {});
         }
@@ -663,7 +667,7 @@ function SelectionLayer({
       }
       clearSelection();
     },
-    [flat, handles, focusBlock, insert, clearSelection, applyRange, focusBlockBoundary],
+    [flat, handles, insert, clearSelection, applyRange, focusBlockBoundary],
   );
 
   const onPointerDown = useCallback(

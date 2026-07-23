@@ -124,6 +124,23 @@ Two rules keep this from leaking:
   and for host chrome with the same arguments — it never branches on which. A
   one-line surface (the title) therefore omits `focusAtColumn` and is entered at its
   end, with no special case anywhere.
+- **`focus()` restores, it does not place.** The bare `focus()` member means
+  "give this surface the keyboard back"; an editor that already holds a caret
+  keeps it exactly where it is, and only a *selection-less* one (a fresh
+  split/insert) is landed at its content start. `focusHydratingAware` funnels
+  both of its paths (hydrated / still-empty) and both scroll modes through one
+  `focusRestoringSelection`, which is Lexical's own `editor.focus()` policy —
+  mark an existing selection dirty so the reconciler writes it back, else apply
+  the `rootStart` default. The no-scroll arm has to hand-roll that (there is no
+  `preventScroll` on `editor.focus()`), and while it hand-rolled only the
+  *second* half — an unconditional `$getRoot().selectStart()` — every structural
+  op that re-focuses the block the user is standing in silently sent the caret
+  home: `Tab`/`Shift+Tab` (whose executors call `focusBlock` after the move) were
+  a caret-to-start keystroke. **A caller that wants a specific position says so**
+  — `focusBoundary(edge)` / `focusOffset(n)`, which is why the empty-background
+  click lands through `focusBlockBoundary` in all three of its branches rather
+  than leaning on a side effect of `focus()`. `e2e/indent-caret-verify.mjs` is
+  the executable spec (indent + outdent, caret parked mid-word).
 - **`resolveKeystroke` never learns about the boundary.** Backspace at the start of
   the first top-level block has no block to merge into, so it resolves to exactly
   what ArrowLeft there resolves to — `{ type: "nav", dir: "left" }`. Whether a
