@@ -24,6 +24,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "conversations-sidebar-history", pluginId: "conversations.conversations-view.data-view.history" },
   { id: "conversations-sidebar-queue", pluginId: "conversations.conversations-view.data-view.queue" },
   { id: "debug.boot-profiles", pluginId: "debug.boot-profile" },
+  { id: "debug.config-orphans", pluginId: "debug.config-orphans" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },
   { id: "debug.reports", pluginId: "debug.reports" },
   { id: "debug.slow-ops.cluster-aggregate", pluginId: "debug.slow-ops.cluster" },

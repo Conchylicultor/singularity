@@ -1,0 +1,1 @@
+export { configOrphans } from "./endpoints";

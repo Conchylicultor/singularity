@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { dirname, join, relative } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
-import { computeHash, effective, propagate, readonlyProxy, readTypedConfig, stringifyConfigValue, APP_SCOPE_DIR } from "@plugins/config_v2/core";
+import { computeHash, effective, propagate, readonlyProxy, readTypedConfig, stringifyConfigValue, APP_SCOPE_DIR, configFileOwner } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigProxy, ConfigValues, JsonValue } from "@plugins/config_v2/core";
 import type { FieldDef, FieldsRecord } from "@plugins/fields/core";
 import {
@@ -333,32 +333,6 @@ export async function loadConfigDescriptorsByOriginPath(opts: {
     result.set(`${hierarchyPath}/${descriptor.name}.origin.jsonc`, descriptor);
   }
   return result;
-}
-
-/**
- * Resolve the (hierarchyPath, descriptor name) a config file is governed by — the
- * descriptor whose presence keeps the file alive. Mirrors the check's
- * `stripScopeSegment`: a scoped override (`<hier>/@app/<id>/<name>.jsonc`) is
- * anchored to its BASE descriptor `<hier>/<name>`, never to the scope dir; a base
- * value `<hier>/<name>.jsonc` and an origin `<hier>/<name>.origin.jsonc` are
- * anchored directly. Returns null for non-config files (e.g. `config/CLAUDE.md`).
- * Paths are relative to `config/`, forward-slash separated.
- */
-function configFileOwner(relPath: string): { hier: string; name: string } | null {
-  const cut = (p: string, suffix: string): { hier: string; name: string } => {
-    const base = p.slice(0, p.length - suffix.length);
-    const idx = base.lastIndexOf("/");
-    return { hier: idx === -1 ? "" : base.slice(0, idx), name: base.slice(idx + 1) };
-  };
-  if (relPath.endsWith(".origin.jsonc")) return cut(relPath, ".origin.jsonc");
-  if (relPath.endsWith(".jsonc")) {
-    // Scoped delta: strip the trailing `@app/<id>/` segment to recover the base
-    // descriptor key, matching the check's anchor resolution exactly.
-    const scoped = new RegExp(`^(.*)/${APP_SCOPE_DIR}/[^/]+/([^/]+)\\.jsonc$`).exec(relPath);
-    if (scoped) return { hier: scoped[1]!, name: scoped[2]! };
-    return cut(relPath, ".jsonc");
-  }
-  return null;
 }
 
 function walkJsoncFiles(dir: string, baseDir: string, out: string[]): void {

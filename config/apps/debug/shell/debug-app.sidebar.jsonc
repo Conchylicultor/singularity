@@ -1,4 +1,4 @@
-// @hash d2adb780cf14
+// @hash 7018dd022410
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -20,6 +20,7 @@
     "debug.broadcasts:broadcasts",
     "debug.memory:memory",
     "debug.worktree-cleanup:worktree-cleanup",
+    "debug.config-orphans:config-orphans",
     "debug.zero-test:zero-test",
     { "type": "spacer", "id": "spacer-1" },
     "conversations.recover:conversations-recover",

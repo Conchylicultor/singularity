@@ -11,6 +11,7 @@ export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
 export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, mergeConflictByPath, getRawFileContent } from "./internal/registry";
 export { getAllDescriptors, getScopedDescriptors } from "./internal/resource";
+export { auditUserConfigOrphans } from "./internal/orphan-audit";
 export { forkScope, deleteScope, forkDescriptorScope, removeDescriptorScope } from "./internal/scope-fork";
 export { registerFieldStorageProvider, getFieldStorageProvider, hasFieldStorageProvider } from "./internal/field-storage-providers";
 export type { FieldStorageProvider } from "./internal/field-storage-providers";

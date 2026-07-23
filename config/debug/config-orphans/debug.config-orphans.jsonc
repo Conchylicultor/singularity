@@ -1,0 +1,10 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "view": { "type": "table", "sort": { "fieldId": "risk", "direction": "desc" } }
+    }
+  ]
+}

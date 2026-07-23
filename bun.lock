@@ -1685,6 +1685,9 @@
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/config-orphans": {
+      "name": "@singularity/plugin-debug-config-orphans",
+    },
     "plugins/debug/plugins/duress-shed": {
       "name": "@singularity/plugin-debug-duress-shed",
       "version": "0.0.1",
@@ -5836,6 +5839,8 @@
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
+
+    "@singularity/plugin-debug-config-orphans": ["@singularity/plugin-debug-config-orphans@workspace:plugins/debug/plugins/config-orphans"],
 
     "@singularity/plugin-debug-duress-shed": ["@singularity/plugin-debug-duress-shed@workspace:plugins/debug/plugins/duress-shed"],
 

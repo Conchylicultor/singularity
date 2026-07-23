@@ -41,3 +41,20 @@ export {
 } from "./internal/tier-logic";
 export { setConfigField, forkScope, deleteScope, forkDescriptorScope, removeDescriptorScope, configSnapshot } from "./internal/endpoints";
 export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";
+export { configFileOwner } from "./internal/config-file-owner";
+export {
+  orphanFileRoleSchema,
+  orphanRiskClassSchema,
+  orphanReasonSchema,
+  orphanFileSchema,
+  orphanEntrySchema,
+  orphanReportSchema,
+} from "./internal/orphan-report";
+export type {
+  OrphanFileRole,
+  OrphanRiskClass,
+  OrphanReason,
+  OrphanFile,
+  OrphanEntry,
+  OrphanReport,
+} from "./internal/orphan-report";
