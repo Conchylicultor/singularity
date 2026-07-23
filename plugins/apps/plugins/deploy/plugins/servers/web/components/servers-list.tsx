@@ -8,7 +8,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { serversResource, type Server } from "../../shared";
-import { addServerPane, serverDetailPane } from "../panes";
+import { serverDetailPane, NEW_SERVER_ID } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
 import { ServerItemActions } from "./server-item-actions";
 
@@ -63,7 +63,9 @@ export function ServersList() {
       actions={
         <Button
           variant="default"
-          onClick={() => openPane(addServerPane, {}, { mode: "push" })}
+          onClick={() =>
+            openPane(serverDetailPane, { serverId: NEW_SERVER_ID }, { mode: "push" })
+          }
         >
           + Add
         </Button>

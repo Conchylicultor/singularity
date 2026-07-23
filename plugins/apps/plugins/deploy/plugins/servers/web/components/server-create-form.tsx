@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { createServer } from "../../shared/endpoints";
+import { FieldShell, fieldInputClass, fieldTextareaClass } from "./server-fields";
 
-export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }) {
+/**
+ * Create state of the unified server page: blank fields + an explicit "Add
+ * Server" button (a row can't autosave until it exists). Renders the same
+ * field layout as the edit form, so adding and editing look identical.
+ */
+export function ServerCreateForm({ onCreated }: { onCreated: (id: string) => void }) {
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
@@ -28,7 +33,7 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
           sshPrivateKey: sshPrivateKey || undefined,
         },
       });
-      onSuccess(server.id);
+      onCreated(server.id);
     } finally {
       setSubmitting(false);
     }
@@ -36,73 +41,62 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
 
   return (
     <Stack as="form" onSubmit={handleSubmit} gap="lg" className="p-lg">
-      <Stack as="label" gap="xs">
-        <Text as="span" variant="label">Name</Text>
+      <FieldShell label="Name">
         <input
-          className="bg-input rounded-md border px-sm py-xs text-body"
+          className={fieldInputClass}
           placeholder="e.g. equin-prod"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-      </Stack>
-      <Stack as="label" gap="xs">
-        <Text as="span" variant="label">
-          Host <span className="text-destructive">*</span>
-        </Text>
+      </FieldShell>
+      <FieldShell label="Host" required>
         <input
-          className="bg-input rounded-md border px-sm py-xs text-body"
+          className={fieldInputClass}
           placeholder="e.g. 49.13.197.105"
           value={host}
           onChange={(e) => setHost(e.target.value)}
           required
           autoFocus
         />
-      </Stack>
+      </FieldShell>
       <div className="flex gap-md">
-        <label className="flex flex-1 flex-col gap-xs">
-          <Text as="span" variant="label">SSH User</Text>
+        <FieldShell label="SSH User" className="flex-1">
           <input
-            className="bg-input rounded-md border px-sm py-xs text-body"
+            className={fieldInputClass}
             value={sshUser}
             onChange={(e) => setSshUser(e.target.value)}
           />
-        </label>
-        <label className="flex w-20 flex-col gap-xs">
-          <Text as="span" variant="label">Port</Text>
+        </FieldShell>
+        <FieldShell label="Port" className="w-20">
           <input
-            className="bg-input rounded-md border px-sm py-xs text-body"
+            className={fieldInputClass}
             type="number"
             value={port}
             onChange={(e) => setPort(e.target.value)}
           />
-        </label>
+        </FieldShell>
       </div>
-      <Stack as="label" gap="xs">
-        <Text as="span" variant="label">Console URL</Text>
+      <FieldShell
+        label="Console URL"
+        hint="Link to the provider's management console for this server."
+      >
         <input
-          className="bg-input rounded-md border px-sm py-xs text-body"
+          className={fieldInputClass}
           type="url"
           placeholder="e.g. https://console.hetzner.com/projects/…/servers/…"
           value={consoleUrl}
           onChange={(e) => setConsoleUrl(e.target.value)}
         />
-        <Text as="span" variant="caption" className="text-muted-foreground">
-          Link to the provider's management console for this server.
-        </Text>
-      </Stack>
-      <Stack as="label" gap="xs">
-        <Text as="span" variant="label">SSH Private Key</Text>
+      </FieldShell>
+      <FieldShell label="SSH Private Key" hint="Stored encrypted. Can be added later.">
         <textarea
-          className="bg-input rounded-md border px-sm py-xs font-mono text-caption"
+          className={fieldTextareaClass}
           rows={5}
           placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
           value={sshPrivateKey}
           onChange={(e) => setSshPrivateKey(e.target.value)}
         />
-        <Text as="span" variant="caption" className="text-muted-foreground">
-          Stored encrypted. Can be added later.
-        </Text>
-      </Stack>
+      </FieldShell>
       <Stack gap="none" direction="row" justify="end" className="pt-xs">
         <button
           type="submit"

@@ -6,10 +6,10 @@
 
 - Description: Server registry for the deployment platform. Server registry for the deployment platform.
 - Web:
-  - Slots: `addServerPane.Actions`, `serverDetailPane.Actions`, `serversRootPane.Actions`
-  - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-add-server", `Pane.Register` "deploy-server-detail", `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
-  - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/data-view.FieldDef`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row-actions.RowActionButton`
-  - Exports: Types: `Server`; Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
+  - Slots: `serverDetailPane.Actions`, `serversRootPane.Actions`
+  - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-server-detail", `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
+  - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/data-view.FieldDef`, `primitives/editable-field.EditableField`, `primitives/editable-field.useEditableField`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row-actions.RowActionButton`
+  - Exports: Types: `Server`; Values: `NEW_SERVER_ID`, `serverDetailPane`, `serversResource`, `serversRootPane`
 - Server:
   - Contributes: `resource.declare` "deploy.servers"
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`

@@ -163,10 +163,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
-            - Slots: `addServerPane.Actions`, `serverDetailPane.Actions`, `serversRootPane.Actions`
-            - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-add-server", `Pane.Register` "deploy-server-detail", `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
-            - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/data-view.FieldDef`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row-actions.RowActionButton`
-            - Exports: Types: `Server`; Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
+            - Slots: `serverDetailPane.Actions`, `serversRootPane.Actions`
+            - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-server-detail", `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
+            - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/data-view.FieldDef`, `primitives/editable-field.EditableField`, `primitives/editable-field.useEditableField`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row-actions.RowActionButton`
+            - Exports: Types: `Server`; Values: `NEW_SERVER_ID`, `serverDetailPane`, `serversResource`, `serversRootPane`
           - Server:
             - Contributes: `resource.declare` "deploy.servers"
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`
@@ -5400,7 +5400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/latest-ref.useLatestRef`, `primitives/sync-status.useReportSync`
         - Exports: Types: `EditableField`, `UseEditableFieldOptions`; Values: `useEditableField`
       - Cross-plugin:
-        - Imported by: `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `apps/workflows/definitions`, `apps/workflows/editor`, `conversations/agents`, `conversations/conversation-view/notes`, `page/code-block`, `page/math/equation`, `tasks/task-description`, `tasks/task-header`
+        - Imported by: `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `apps/workflows/definitions`, `apps/workflows/editor`, `conversations/agents`, `conversations/conversation-view/notes`, `page/code-block`, `page/math/equation`, `tasks/task-description`, `tasks/task-header`
     - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
       - Web:
         - Uses: `primitives/latest-ref.useEventCallback`
