@@ -6,13 +6,20 @@
 
 - Description: App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
 - Web:
-  - Slots: `WorkflowsApp.Sidebar` ← `apps.workflows.definitions`, `WorkflowsApp.Toolbar`
+  - Slots:
+    - `WorkflowsApp.Sidebar` ← `apps.workflows.definitions`
+    - `WorkflowsApp.Toolbar`
   - Contributes: `Apps.App` "Workflows" → `WorkflowsLayout`
-  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Values: `WorkflowsApp`
+  - Uses:
+    - `apps-core.Apps`
+    - `apps-core/app-icon.mdAppIcon`
+    - `layouts/miller.MillerColumns`
+    - `primitives/app-shell.AppShellLayout`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (values): `WorkflowsApp`
 - Core:
   - Uses: `primitives/pane.defineApp`
-  - Exports: Values: `workflowsApp`
+  - Exports (values): `workflowsApp`
 - Cross-plugin:
   - Imported by: `apps/workflows/definitions`
 

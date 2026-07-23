@@ -19,8 +19,12 @@ data-view capabilities live in dedicated sub-plugins under `plugins/`:
   - Contributes: `Fields.Identity` "bool"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `boolFieldType`, `boolIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `boolFieldType`
+    - `boolIdentity`
 - Cross-plugin:
   - Imported by: `fields/bool/config`
 - Sub-plugins:

@@ -27,8 +27,34 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
 
 - Description: Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
 - Web:
-  - Contributes: `Sonata.Effect` "metronome" → `MetronomeEngine`, `SonataToolbar.End` "metronome" → `MetronomeButton`, `Sonata.Hud` "count-in" → `CountInOverlay`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/audio/engine.LoopWindowBeats`, `apps/sonata/audio/engine.ScheduleHandle`, `apps/sonata/audio/engine.startScheduling`, `apps/sonata/audio/engine.useAudioGraph`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Separator`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`
+  - Contributes:
+    - `Sonata.Effect` "metronome" → `MetronomeEngine`
+    - `SonataToolbar.End` "metronome" → `MetronomeButton`
+    - `Sonata.Hud` "count-in" → `CountInOverlay`
+    - `ConfigV2.WebRegister`
+  - Uses:
+    - `apps/sonata/audio/engine.LoopWindowBeats`
+    - `apps/sonata/audio/engine.ScheduleHandle`
+    - `apps/sonata/audio/engine.startScheduling`
+    - `apps/sonata/audio/engine.useAudioGraph`
+    - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.SonataToolbar`
+    - `apps/sonata/shell.useCursorApi`
+    - `apps/sonata/shell.useSonata`
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `config_v2.useSetConfig`
+    - `primitives/css/center.Center`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.Separator`
+    - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/popover.InlinePopover`
 - Server:
   - Contributes: `ConfigV2.Register` "sonata.metronome"
   - Uses: `config_v2.ConfigV2`

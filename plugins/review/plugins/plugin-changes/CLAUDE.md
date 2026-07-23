@@ -7,20 +7,71 @@
 - Description: Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
 - Disabled: yes
 - Web:
-  - Slots: `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`, `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
+  - Slots:
+    - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`
+    - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
   - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
-  - Uses: `infra/endpoints.useEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/slot-render.defineRenderSlot`, `review.ReviewSlots`
-  - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
+  - Uses:
+    - `infra/endpoints.useEndpoint`
+    - `primitives/collapsible.ExpandAllButton`
+    - `primitives/collapsible.useExpandAll`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/badge.formatStatusLabel`
+    - `primitives/css/card.Card`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/slot-render.defineRenderSlot`
+    - `review.ReviewSlots`
+  - Exports (types): `FacetDiff`
+  - Exports (values):
+    - `PluginChangesSlots`
+    - `usePluginFacetDiffs`
 - Server:
   - Contributes: `resource.declare` "review.plugin-changes"
-  - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.editedFilesResource`, `conversations/conversation-view/code.editedFilesSignature`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
+  - Uses:
+    - `code-explorer.getRangeFiles`
+    - `code-explorer.resolveParentSha`
+    - `conversations/conversation-view/code.editedFilesResource`
+    - `conversations/conversation-view/code.editedFilesSignature`
+    - `conversations/conversation-view/code.getEditedFiles`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/git-read-cache.createGitStateMemo`
+    - `infra/git-watcher.lastKnownMainSha`
+    - `infra/git-watcher.refHeadResource`
+    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/paths.GIT`
+    - `infra/paths.REPO_ROOT`
+    - `primitives/commit-list.runGit`
+    - `tasks/tasks-core.getConversation`
+    - `tasks/tasks-core.listPushesByPushId`
   - Resources: `review.plugin-changes` (push)
   - Routes: `GET /api/review/plugin-changes`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `DiffList`, `DiffRenderer`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`; Values: `getPluginChanges`
+  - Exports (types):
+    - `DiffList`
+    - `DiffRenderer`
+    - `PluginChangedFile`
+    - `PluginChangeDiff`
+    - `PluginChangesResponse`
+    - `PluginReviewProps`
+  - Exports (values): `getPluginChanges`
 - Cross-plugin:
-  - Imported by: `plugin-meta/facets/contributions/render-diff`, `plugin-meta/facets/cross-refs/render-diff`, `plugin-meta/facets/db-schema/render-diff`, `plugin-meta/facets/exports/render-diff`, `plugin-meta/facets/registrations/render-diff`, `plugin-meta/facets/resources/render-diff`, `plugin-meta/facets/routes/render-diff`, `plugin-meta/facets/slots/render-diff`, `plugin-meta/facets/structure/render-diff`, `review/plugin-changes/api-changes`, `review/plugin-changes/file-changes`
+  - Imported by:
+    - `plugin-meta/facets/contributions/render-diff`
+    - `plugin-meta/facets/cross-refs/render-diff`
+    - `plugin-meta/facets/db-schema/render-diff`
+    - `plugin-meta/facets/exports/render-diff`
+    - `plugin-meta/facets/registrations/render-diff`
+    - `plugin-meta/facets/resources/render-diff`
+    - `plugin-meta/facets/routes/render-diff`
+    - `plugin-meta/facets/slots/render-diff`
+    - `plugin-meta/facets/structure/render-diff`
+    - `review/plugin-changes/api-changes`
+    - `review/plugin-changes/file-changes`
 - Sub-plugins:
   - **`api-changes`** (disabled — cascade) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (disabled — cascade) — File-level diff section for per-plugin review cards.

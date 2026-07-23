@@ -18,8 +18,13 @@ lives in the `plugins/storage` sub-plugin.
   - Contributes: `Fields.Identity` "uuid"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/text.textFieldType`
-  - Exports: Values: `uuidFieldType`, `uuidIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields/text.textFieldType`
+  - Exports (values):
+    - `uuidFieldType`
+    - `uuidIdentity`
 - Cross-plugin:
   - Imported by: `fields/uuid/config`
 - Sub-plugins:

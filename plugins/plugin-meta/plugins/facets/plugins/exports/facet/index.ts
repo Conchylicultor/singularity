@@ -82,12 +82,15 @@ export default createFacet<ExportsData>({
     for (const rt of RUNTIME_FOLDERS) {
       const symbols = data[rt];
       if (symbols.length === 0) continue;
+      // Two facts rather than one composite string, so the doc renderer can put
+      // each exported symbol on its own line (a barrel with 80 exports is
+      // unreadable — and undiffable — as a single comma-joined blob).
       const types = symbols.filter((s) => s.kind === "type");
       const values = symbols.filter((s) => s.kind === "value");
-      const parts: string[] = [];
-      if (types.length > 0) parts.push(`Types: ${types.map((s) => `\`${s.name}\``).join(", ")}`);
-      if (values.length > 0) parts.push(`Values: ${values.map((s) => `\`${s.name}\``).join(", ")}`);
-      facts.push({ folder: rt, key: "Exports", values: [parts.join("; ")] });
+      if (types.length > 0)
+        facts.push({ folder: rt, key: "Exports (types)", values: types.map((s) => `\`${s.name}\``) });
+      if (values.length > 0)
+        facts.push({ folder: rt, key: "Exports (values)", values: values.map((s) => `\`${s.name}\``) });
     }
     return facts;
   },

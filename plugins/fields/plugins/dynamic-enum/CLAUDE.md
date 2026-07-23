@@ -24,8 +24,12 @@ equality on the field descriptor, with a text-input fallback when unmatched).
   - Contributes: `Fields.Identity` "dynamic-enum"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `dynamicEnumFieldType`, `dynamicEnumIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `dynamicEnumFieldType`
+    - `dynamicEnumIdentity`
 - Cross-plugin:
   - Imported by: `fields/dynamic-enum/config`
 - Sub-plugins:

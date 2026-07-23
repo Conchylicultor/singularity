@@ -66,13 +66,105 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
 
 - Description: Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).
 - Server:
-  - Uses: `database.db`, `infra/attachments.Attachments`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `integrations/gmail.getGmailToken`
-  - DB schema: `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`, `plugins/apps/plugins/mail/plugins/mail-core/server/internal/tables.ts`
-  - Exports: Types: `GmailConnection`; Values: `_mailAccounts`, `_mailAttachments`, `_mailDrafts`, `_mailLabels`, `_mailMessageLabels`, `_mailMessages`, `_mailOutbox`, `_mailSyncState`, `_mailThreads`, `mailDraftAttachments`, `mailViewFilterSql`, `requireGmailToken`, `resolveMailAccountId`
+  - Uses:
+    - `database.db`
+    - `infra/attachments.Attachments`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
+    - `integrations/gmail.getGmailToken`
+  - DB schema:
+    - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`
+    - `plugins/apps/plugins/mail/plugins/mail-core/server/internal/tables.ts`
+  - Exports (types): `GmailConnection`
+  - Exports (values):
+    - `_mailAccounts`
+    - `_mailAttachments`
+    - `_mailDrafts`
+    - `_mailLabels`
+    - `_mailMessageLabels`
+    - `_mailMessages`
+    - `_mailOutbox`
+    - `_mailSyncState`
+    - `_mailThreads`
+    - `mailDraftAttachments`
+    - `mailViewFilterSql`
+    - `requireGmailToken`
+    - `resolveMailAccountId`
 - Core:
-  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `MailAccount`, `MailAddress`, `MailAttachment`, `MailDraft`, `MailLabel`, `MailLabelRef`, `MailLabelType`, `MailMessage`, `MailMessageLabel`, `MailOutboxItem`, `MailOutboxOpType`, `MailOutboxStatus`, `MailSyncErrorCode`, `MailSyncPhase`, `MailSyncState`, `MailSyncStatus`, `MailSyncView`, `MailSystemView`, `MailThread`, `MailViewFilter`; Values: `DEFAULT_MAIL_VIEW`, `deriveMailSyncView`, `labelViewId`, `MAIL_LABEL_TYPES`, `MAIL_OUTBOX_OP_TYPES`, `MAIL_OUTBOX_STATUSES`, `MAIL_SYNC_ERROR_CODES`, `MAIL_SYNC_REMEDIATION`, `MAIL_SYNC_STATUSES`, `MAIL_SYSTEM_VIEWS`, `mailAccountFields`, `MailAccountSchema`, `MailAddressSchema`, `mailAttachmentFields`, `MailAttachmentSchema`, `mailDraftFields`, `MailDraftSchema`, `mailLabelFields`, `MailLabelRefSchema`, `MailLabelSchema`, `mailMessageFields`, `mailMessageLabelFields`, `MailMessageLabelSchema`, `MailMessageSchema`, `mailOutboxFields`, `MailOutboxItemSchema`, `mailSyncStateFields`, `mailSyncStateResource`, `MailSyncStateSchema`, `mailThreadFields`, `MailThreadSchema`, `mailViewLabelId`, `MAX_CONSECUTIVE_RESYNCS`, `parseMailView`
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `MailAccount`
+    - `MailAddress`
+    - `MailAttachment`
+    - `MailDraft`
+    - `MailLabel`
+    - `MailLabelRef`
+    - `MailLabelType`
+    - `MailMessage`
+    - `MailMessageLabel`
+    - `MailOutboxItem`
+    - `MailOutboxOpType`
+    - `MailOutboxStatus`
+    - `MailSyncErrorCode`
+    - `MailSyncPhase`
+    - `MailSyncState`
+    - `MailSyncStatus`
+    - `MailSyncView`
+    - `MailSystemView`
+    - `MailThread`
+    - `MailViewFilter`
+  - Exports (values):
+    - `DEFAULT_MAIL_VIEW`
+    - `deriveMailSyncView`
+    - `labelViewId`
+    - `MAIL_LABEL_TYPES`
+    - `MAIL_OUTBOX_OP_TYPES`
+    - `MAIL_OUTBOX_STATUSES`
+    - `MAIL_SYNC_ERROR_CODES`
+    - `MAIL_SYNC_REMEDIATION`
+    - `MAIL_SYNC_STATUSES`
+    - `MAIL_SYSTEM_VIEWS`
+    - `mailAccountFields`
+    - `MailAccountSchema`
+    - `MailAddressSchema`
+    - `mailAttachmentFields`
+    - `MailAttachmentSchema`
+    - `mailDraftFields`
+    - `MailDraftSchema`
+    - `mailLabelFields`
+    - `MailLabelRefSchema`
+    - `MailLabelSchema`
+    - `mailMessageFields`
+    - `mailMessageLabelFields`
+    - `MailMessageLabelSchema`
+    - `MailMessageSchema`
+    - `mailOutboxFields`
+    - `MailOutboxItemSchema`
+    - `mailSyncStateFields`
+    - `mailSyncStateResource`
+    - `MailSyncStateSchema`
+    - `mailThreadFields`
+    - `MailThreadSchema`
+    - `mailViewLabelId`
+    - `MAX_CONSECUTIVE_RESYNCS`
+    - `parseMailView`
 - Cross-plugin:
-  - Imported by: `apps/mail/attachments`, `apps/mail/inbox`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/sync`, `apps/mail/thread-list`
+  - Imported by:
+    - `apps/mail/attachments`
+    - `apps/mail/inbox`
+    - `apps/mail/mailbox`
+    - `apps/mail/reading-pane`
+    - `apps/mail/sync`
+    - `apps/mail/thread-list`
 
 <!-- AUTOGENERATED:END -->

@@ -8,9 +8,13 @@
 - Web:
   - Slots: `SidebarDataView.View` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
   - Uses: `primitives/tabbed-view.defineTabbedView`
-  - Exports: Types: `ConversationSidebarProps`; Values: `SidebarDataView`
+  - Exports (types): `ConversationSidebarProps`
+  - Exports (values): `SidebarDataView`
 - Cross-plugin:
-  - Imported by: `conversations/conversations-view`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`
+  - Imported by:
+    - `conversations/conversations-view`
+    - `conversations/conversations-view/data-view/history`
+    - `conversations/conversations-view/data-view/queue`
 - Sub-plugins:
   - **`history`** — Contributes the History list (a server-delegated DataView reusing the all-conversations query infra) as the History tab of the `dataview` sidebar variant.
   - **`queue`** — Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.

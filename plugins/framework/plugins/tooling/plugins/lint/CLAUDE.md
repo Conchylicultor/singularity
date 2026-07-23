@@ -6,7 +6,13 @@
 
 - Description: Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
 - Core:
-  - Exports: Types: `BuildLintConfigOptions`, `ParserTypeSource`; Values: `buildLintConfig`, `findPluginDirs`, `lintCollectedDir`
+  - Exports (types):
+    - `BuildLintConfigOptions`
+    - `ParserTypeSource`
+  - Exports (values):
+    - `buildLintConfig`
+    - `findPluginDirs`
+    - `lintCollectedDir`
 - Sub-plugins:
   - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
   - **`button-safety`** — button-safety lint rule: no-async-raw-button

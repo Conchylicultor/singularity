@@ -81,22 +81,144 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Description: Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
-  - Slots: `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`, `accountsPane.Actions`
-  - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `shell/notifications.toast`
-  - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `AuthScopeRequirement`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `GrantAccessButton`, `missingScopes`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
+  - Slots:
+    - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.notion`
+    - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
+    - `accountsPane.Actions`
+  - Uses:
+    - `config_v2/settings.configNavPane`
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useResource`
+    - `primitives/pane.Pane`
+    - `primitives/pane.useOpenPane`
+    - `shell/notifications.toast`
+  - Exports (types):
+    - `AuthProviderContribution`
+    - `AuthProviderRowProps`
+    - `AuthScopeRequirement`
+    - `ConnectArgs`
+    - `ConnectButtonProps`
+    - `ConnectResult`
+  - Exports (values):
+    - `accountsPane`
+    - `Auth`
+    - `ConnectButton`
+    - `currentWorktreeName`
+    - `disconnect`
+    - `GrantAccessButton`
+    - `missingScopes`
+    - `startConnectFlow`
+    - `useAccountStatus`
+    - `useAuthState`
 - Central:
-  - Uses: `infra/secrets.getSecret`, `infra/secrets.ready`, `infra/secrets.SecretsKeychainLockedError`, `infra/secrets.setSecret`
-  - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
+  - Uses:
+    - `infra/secrets.getSecret`
+    - `infra/secrets.ready`
+    - `infra/secrets.SecretsKeychainLockedError`
+    - `infra/secrets.setSecret`
+  - Exports (types):
+    - `ApiKeyConfig`
+    - `AuthAccountState`
+    - `AuthEnvAccessor`
+    - `AuthIdentity`
+    - `AuthProviderDescriptor`
+    - `AuthProviderKind`
+    - `AuthStateValue`
+    - `GetAccessTokenArgs`
+    - `OAuth2Config`
+    - `ParsedTokenResponse`
+    - `ResolvedCredentials`
+    - `TokenFailure`
+    - `TokenNeedsConsent`
+    - `TokenResponse`
+    - `TokenSuccess`
+  - Exports (values):
+    - `AuthCredentialsMissingError`
+    - `AuthError`
+    - `AuthKeychainLockedError`
+    - `AuthNeedsConsentError`
+    - `AuthProviderUnknownError`
+    - `authStateResource`
+    - `defineAuthProvider`
+    - `getAccessToken`
+    - `getAccountIdentity`
+    - `listProviders`
+    - `registerAuthProvider`
   - Resources: `auth-state` (push)
-  - Routes: `GET /api/auth/start/:provider`, `GET /api/auth/callback/:provider`, `POST /api/auth/disconnect/:provider`, `POST /api/auth/api-key/:provider`, `GET /api/auth/state`, `POST /api/auth/token`
+  - Routes:
+    - `GET /api/auth/start/:provider`
+    - `GET /api/auth/callback/:provider`
+    - `POST /api/auth/disconnect/:provider`
+    - `POST /api/auth/api-key/:provider`
+    - `GET /api/auth/state`
+    - `POST /api/auth/token`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.centralResourceDescriptor`
-  - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `DisconnectBody`, `GetAccessTokenArgs`, `GetTokenBody`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `SetApiKeyBody`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `disconnect`, `DisconnectBodySchema`, `getAuthState`, `getToken`, `GetTokenBodySchema`, `oauthCallback`, `oauthStart`, `setApiKey`, `SetApiKeyBodySchema`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.centralResourceDescriptor`
+  - Exports (types):
+    - `ApiKeyConfig`
+    - `AuthAccountState`
+    - `AuthEnvAccessor`
+    - `AuthIdentity`
+    - `AuthProviderDescriptor`
+    - `AuthProviderKind`
+    - `AuthStateValue`
+    - `DisconnectBody`
+    - `GetAccessTokenArgs`
+    - `GetTokenBody`
+    - `OAuth2Config`
+    - `ParsedTokenResponse`
+    - `ResolvedCredentials`
+    - `SetApiKeyBody`
+    - `TokenFailure`
+    - `TokenNeedsConsent`
+    - `TokenResponse`
+    - `TokenSuccess`
+  - Exports (values):
+    - `AuthCredentialsMissingError`
+    - `AuthError`
+    - `AuthKeychainLockedError`
+    - `AuthNeedsConsentError`
+    - `AuthProviderUnknownError`
+    - `authStateResource`
+    - `defineAuthProvider`
+    - `disconnect`
+    - `DisconnectBodySchema`
+    - `getAuthState`
+    - `getToken`
+    - `GetTokenBodySchema`
+    - `oauthCallback`
+    - `oauthStart`
+    - `setApiKey`
+    - `SetApiKeyBodySchema`
 - Cross-plugin:
-  - Imported by: `apps/settings/accounts`, `auth/apple-signing/setup-wizard`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/targets/google-drive`, `integrations/gmail`
+  - Imported by:
+    - `apps/settings/accounts`
+    - `auth/apple-signing/setup-wizard`
+    - `auth/google`
+    - `auth/google/setup-wizard`
+    - `auth/notion`
+    - `backup`
+    - `backup/targets/google-drive`
+    - `integrations/gmail`
   - Endpoint callers: `setup-wizard`
 - Server:
-  - Exports: Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCentralOfflineError`, `getTokenFromCentral`
+  - Exports (types):
+    - `GetAccessTokenArgs`
+    - `TokenFailure`
+    - `TokenNeedsConsent`
+    - `TokenResponse`
+    - `TokenSuccess`
+  - Exports (values):
+    - `AuthCentralOfflineError`
+    - `getTokenFromCentral`
 - Sub-plugins:
   - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
     - Plugins:

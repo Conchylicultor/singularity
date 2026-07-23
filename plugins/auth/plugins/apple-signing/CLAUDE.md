@@ -9,15 +9,24 @@
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
 - Server:
-  - Contributes: `ConfigV2.Register` "apple-signing", `Release.EnvProvider` "tauri"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.setConfig`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.getSecret`, `release.Release`
-  - Exports: Values: `getAppleSigningEnv`
+  - Contributes:
+    - `ConfigV2.Register` "apple-signing"
+    - `Release.EnvProvider` "tauri"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `config_v2.setConfig`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/secrets.getSecret`
+    - `release.Release`
+  - Exports (values): `getAppleSigningEnv`
   - Routes: `POST /api/apple-signing/certificate`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Values: `setAppleCertificateEndpoint`
+  - Exports (values): `setAppleCertificateEndpoint`
 - Shared:
-  - Exports: Values: `appleSigningConfig`
+  - Exports (values): `appleSigningConfig`
 - Sub-plugins:
   - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' provider row plus the guided certificate + App Store Connect API key setup wizard pane.
 

@@ -111,11 +111,25 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
 ## Plugin reference
 
 - Web:
-  - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.ensureNotificationsClient`, `primitives/live-state.NotificationsProvider`, `primitives/perfs/boot-trace.markBootInstant`, `primitives/perfs/boot-trace.startBootSpan`, `primitives/perfs/scheduler.yieldToMain`
+  - Uses:
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit`
+    - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/live-state.ensureNotificationsClient`
+    - `primitives/live-state.NotificationsProvider`
+    - `primitives/perfs/boot-trace.markBootInstant`
+    - `primitives/perfs/boot-trace.startBootSpan`
+    - `primitives/perfs/scheduler.yieldToMain`
 - Cross-plugin:
   - Imported by: `framework/tooling/web-artifacts`
 - Core:
-  - Exports: Types: `BabelPluginItem`, `OrderedBabelContribution`, `ViteContributionReturn`; Values: `findViteContributions`, `loadBabelContributions`
+  - Exports (types):
+    - `BabelPluginItem`
+    - `OrderedBabelContribution`
+    - `ViteContributionReturn`
+  - Exports (values):
+    - `findViteContributions`
+    - `loadBabelContributions`
 - Structure:
   - Loose top-level files: `vite.config.ts`
   - Composition root: yes

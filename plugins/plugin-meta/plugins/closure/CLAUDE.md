@@ -163,8 +163,39 @@ empty. Run with
 ## Plugin reference
 
 - Core:
-  - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`
-  - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `EntryPattern`, `InclusionPath`, `InclusionStep`, `MembershipState`, `ParsedPattern`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `disabledClosure`, `expandEntrySeeds`, `explainInclusion`, `flattenManifest`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `matchEntryPattern`, `parseEntryPattern`, `resolveComposition`, `serializeEdgeGraph`
+  - Uses:
+    - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.PluginId`
+    - `plugin-meta/facets.getFacet`
+    - `plugin-meta/facets/contributions.contributionsFacetDef`
+    - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
+    - `plugin-meta/facets/slots.slotsFacetDef`
+  - Exports (types):
+    - `Composition`
+    - `CompositionManifest`
+    - `Edge`
+    - `EdgeGraph`
+    - `EdgeKind`
+    - `EntryPattern`
+    - `InclusionPath`
+    - `InclusionStep`
+    - `MembershipState`
+    - `ParsedPattern`
+    - `SerializedEdgeGraph`
+  - Exports (values):
+    - `classifyEdges`
+    - `deserializeEdgeGraph`
+    - `disabledClosure`
+    - `expandEntrySeeds`
+    - `explainInclusion`
+    - `flattenManifest`
+    - `hardClosure`
+    - `impactOfPruning`
+    - `impactOfSelecting`
+    - `matchEntryPattern`
+    - `parseEntryPattern`
+    - `resolveComposition`
+    - `serializeEdgeGraph`
 - Cross-plugin:
   - Imported by: `framework/tooling/codegen`
 

@@ -7,7 +7,21 @@
 - Description: Sidebar list of all conversations.
 - Web:
   - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/conversations-view/data-view.SidebarDataView`, `conversations/pane-restore.loadRouteForConversation`, `conversations/pane-restore.reportCorruptSavedRoute`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/launch.LaunchControl`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `shell.Shell`
+  - Uses:
+    - `conversations.useConversations`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations/conversations-view/data-view.SidebarDataView`
+    - `conversations/pane-restore.loadRouteForConversation`
+    - `conversations/pane-restore.reportCorruptSavedRoute`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/app-shell.SidebarPaneSection`
+    - `primitives/css/column.Column`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/launch.LaunchControl`
+    - `primitives/pane.useOpenPane`
+    - `primitives/pane.usePaneStore`
+    - `shell.Shell`
 - Sub-plugins:
   - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the tab host mounted directly by the conversations-view mount point. Per-tab sub-plugins (Queue, History) contribute their tab into SidebarDataView.View.
   - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.

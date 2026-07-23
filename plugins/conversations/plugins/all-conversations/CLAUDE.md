@@ -7,18 +7,74 @@
 - Description: All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
 - Web:
   - Slots: `allConversationsPane.Actions`
-  - Contributes: `Pane.Register` "all-conversations", `Shell.Sidebar` "Conversation" → `component`
-  - Uses: `conversations/conversation-ui/item.ConvStatusDot`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/inline.Inline`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `shell.Shell`
-  - Exports: Values: `allConversationsPane`, `conversationFieldDefs`
+  - Contributes:
+    - `Pane.Register` "all-conversations"
+    - `Shell.Sidebar` "Conversation" → `component`
+  - Uses:
+    - `conversations/conversation-ui/item.ConvStatusDot`
+    - `conversations/conversation-view.conversationPane`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/text.Text`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.useResource`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/relative-time.RelativeTime`
+    - `shell.Shell`
+  - Exports (values):
+    - `allConversationsPane`
+    - `conversationFieldDefs`
 - Server:
   - Contributes: `resource.declare` "conversations-revision"
-  - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/keyset.buildSortKeys`, `primitives/keyset.keyValuesOf`, `primitives/keyset.orderByClauses`, `primitives/keyset.seekPredicate`, `tasks/tasks-core.conversationsView`
-  - Exports: Values: `conversationsRevisionResource`, `handleQuery`
+  - Uses:
+    - `database.db`
+    - `fields/server-capabilities-loader`
+    - `fields/server-capabilities.resolveFieldFilterSql`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.compileWhere`
+    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/keyset.buildSortKeys`
+    - `primitives/keyset.keyValuesOf`
+    - `primitives/keyset.orderByClauses`
+    - `primitives/keyset.seekPredicate`
+    - `tasks/tasks-core.conversationsView`
+  - Exports (values):
+    - `conversationsRevisionResource`
+    - `handleQuery`
   - Resources: `conversations-revision` (push)
 - Core:
-  - Uses: `conversations/model-provider.modelDisplayLabel`, `conversations/model-provider.SELECTABLE_MODELS`, `infra/endpoints.defineEndpoint`, `primitives/data-view.FilterGroupSchema`, `primitives/live-state.resourceDescriptor`, `tasks/tasks-core.ConversationKindSchema`, `tasks/tasks-core.ConversationSchema`, `tasks/tasks-core.ConversationStatusSchema`
-  - Exports: Types: `ConversationFieldSpec`, `ConversationFieldType`, `QueryConversationsBody`; Values: `CONVERSATION_FIELDS`, `conversationsRevisionResource`, `queryConversations`, `QueryConversationsBodySchema`, `QueryConversationsResponseSchema`, `SortRuleSchema`
+  - Uses:
+    - `conversations/model-provider.modelDisplayLabel`
+    - `conversations/model-provider.SELECTABLE_MODELS`
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/data-view.FilterGroupSchema`
+    - `primitives/live-state.resourceDescriptor`
+    - `tasks/tasks-core.ConversationKindSchema`
+    - `tasks/tasks-core.ConversationSchema`
+    - `tasks/tasks-core.ConversationStatusSchema`
+  - Exports (types):
+    - `ConversationFieldSpec`
+    - `ConversationFieldType`
+    - `QueryConversationsBody`
+  - Exports (values):
+    - `CONVERSATION_FIELDS`
+    - `conversationsRevisionResource`
+    - `queryConversations`
+    - `QueryConversationsBodySchema`
+    - `QueryConversationsResponseSchema`
+    - `SortRuleSchema`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`
+  - Imported by:
+    - `conversations`
+    - `conversations/conversations-view/data-view/history`
+    - `conversations/conversations-view/data-view/queue`
 
 <!-- AUTOGENERATED:END -->

@@ -6,20 +6,91 @@
 
 - Description: Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
 - Server:
-  - Contributes: `resource.declare` "queue-ranks", `resource.declare` "queue-pin", `trigger` "queue.seed-rank", `trigger` "queue.pin-revalidate", `trigger` "queue.advance-pin", `trigger` "queue.task-status-pin"
-  - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `database.currentTxId`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.isMain`, `infra/query-resource.windowQueryResource`, `tasks/tasks-core._attempts`, `tasks/tasks-core._conversations`, `tasks/tasks-core.conversationStatusChanged`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.listBlockingDepIds`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.taskStatusChanged`
+  - Contributes:
+    - `resource.declare` "queue-ranks"
+    - `resource.declare` "queue-pin"
+    - `trigger` "queue.seed-rank"
+    - `trigger` "queue.pin-revalidate"
+    - `trigger` "queue.advance-pin"
+    - `trigger` "queue.task-status-pin"
+  - Uses:
+    - `conversations.conversationCreated`
+    - `conversations.userTurnSent`
+    - `database.currentTxId`
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/entity-extensions.defineExtension`
+    - `infra/events.Trigger`
+    - `infra/jobs.defineJob`
+    - `infra/paths.isMain`
+    - `infra/query-resource.windowQueryResource`
+    - `tasks/tasks-core._attempts`
+    - `tasks/tasks-core._conversations`
+    - `tasks/tasks-core.conversationStatusChanged`
+    - `tasks/tasks-core.getConversation`
+    - `tasks/tasks-core.hasBlockingDep`
+    - `tasks/tasks-core.listBlockingDepIds`
+    - `tasks/tasks-core.listDependentIds`
+    - `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
-  - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queuePinResource`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
-  - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.pin-revalidate')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`, `defineJob('queue.sweep-gone-ranks')`
+  - Exports (values):
+    - `conversationsQueue`
+    - `endRank`
+    - `findTaskIdForConversation`
+    - `lockDeck`
+    - `queuePinResource`
+    - `queueRanksResource`
+    - `rankAdjacentTo`
+    - `rankAfterBlockers`
+    - `rankAfterN`
+    - `rankForBottom`
+    - `rankForTop`
+    - `rankJoiningGroup`
+    - `reseatGroupMembers`
+    - `seedRankJob`
+    - `upsertRank`
+  - Register:
+    - `defineJob('queue.seed-rank')`
+    - `defineJob('queue.pin-revalidate')`
+    - `defineJob('queue.advance-pin')`
+    - `defineJob('queue.task-status-pin')`
+    - `defineJob('queue.sweep-gone-ranks')`
   - Resources: `queue-pin` (push)
-  - Routes: `POST /api/conversations-queue/reorder`, `POST /api/conversations-queue/promote`, `POST /api/conversations-queue/demote`, `POST /api/conversations-queue/step-down`, `POST /api/conversations-queue/rerank`
+  - Routes:
+    - `POST /api/conversations-queue/reorder`
+    - `POST /api/conversations-queue/promote`
+    - `POST /api/conversations-queue/demote`
+    - `POST /api/conversations-queue/step-down`
+    - `POST /api/conversations-queue/rerank`
 - Web:
   - Uses: `primitives/optimistic-mutation.OpNoLongerApplies`
-  - Exports: Types: `ClassifiedQueue`, `RankedConversation`, `ReorderVars`, `TaskGroup`; Values: `applyReorder`, `classifyQueue`
+  - Exports (types):
+    - `ClassifiedQueue`
+    - `RankedConversation`
+    - `ReorderVars`
+    - `TaskGroup`
+  - Exports (values):
+    - `applyReorder`
+    - `classifyQueue`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.pointQueryResourceDescriptor`, `primitives/live-state.resourceDescriptor`, `primitives/rank.RankSchema`
-  - Exports: Types: `QueueData`, `QueueRankRow`; Values: `demoteQueue`, `promoteQueue`, `queuePinResource`, `queueRanksResource`, `reorderQueue`, `rerankQueue`, `stepDownQueue`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `infra/query-resource.pointQueryResourceDescriptor`
+    - `primitives/live-state.resourceDescriptor`
+    - `primitives/rank.RankSchema`
+  - Exports (types):
+    - `QueueData`
+    - `QueueRankRow`
+  - Exports (values):
+    - `demoteQueue`
+    - `promoteQueue`
+    - `queuePinResource`
+    - `queueRanksResource`
+    - `reorderQueue`
+    - `rerankQueue`
+    - `stepDownQueue`
 - Cross-plugin:
   - Imported by: `conversations/conversations-view/data-view/queue`
 

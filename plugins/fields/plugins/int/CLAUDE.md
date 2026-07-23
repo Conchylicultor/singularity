@@ -17,8 +17,13 @@ the foundation's proof that the `extends` chain works end to end.
   - Contributes: `Fields.Identity` "int"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/number.numberFieldType`
-  - Exports: Values: `intFieldType`, `intIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields/number.numberFieldType`
+  - Exports (values):
+    - `intFieldType`
+    - `intIdentity`
 - Cross-plugin:
   - Imported by: `fields/int/config`
 - Sub-plugins:

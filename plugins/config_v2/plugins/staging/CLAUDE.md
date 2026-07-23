@@ -8,21 +8,90 @@
 - Web:
   - Slots: `Staging.DiffRenderer` ← `reorder`
   - Contributes: `Core.Root` → `StagedDefaultsOverlayHost`
-  - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/optimistic-mutation.useOptimisticResource`
-  - Exports: Types: `StagedConfigDefault`, `StagedDiffProps`, `StagedKey`, `StagingDiffRenderer`; Values: `GenericConfigDiff`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`, `Staging`, `useApplyAllConfigDefaults`, `useApplyConfigDefault`, `useDiscardAllConfigDefaults`, `useDiscardConfigDefault`, `useHasStagedDefaults`, `useStageConfigDefault`, `useStageDefault`, `useStagedKeys`, `useStagedValue`, `useStagingDiffRenderers`
+  - Uses:
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/optimistic-mutation.useOptimisticResource`
+  - Exports (types):
+    - `StagedConfigDefault`
+    - `StagedDiffProps`
+    - `StagedKey`
+    - `StagingDiffRenderer`
+  - Exports (values):
+    - `GenericConfigDiff`
+    - `StagedConfigDefaultSchema`
+    - `stagedConfigDefaultsResource`
+    - `Staging`
+    - `useApplyAllConfigDefaults`
+    - `useApplyConfigDefault`
+    - `useDiscardAllConfigDefaults`
+    - `useDiscardConfigDefault`
+    - `useHasStagedDefaults`
+    - `useStageConfigDefault`
+    - `useStageDefault`
+    - `useStagedKeys`
+    - `useStagedValue`
+    - `useStagingDiffRenderers`
 - Server:
   - Contributes: `resource.declare` "config-v2-staged-defaults"
-  - Uses: `config_v2.getAllDescriptors`, `database.currentTxId`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `infra/worktree.withWorktreeMutateSlot`
+  - Uses:
+    - `config_v2.getAllDescriptors`
+    - `database.currentTxId`
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
+    - `infra/jobs.defineJob`
+    - `infra/paths.GIT`
+    - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.removeWorktree`
+    - `infra/worktree.withWorktreeMutateSlot`
   - DB schema: `plugins/config_v2/plugins/staging/server/internal/tables.ts`
-  - Exports: Values: `_stagedConfigDefault`, `stagedConfigDefaultsResource`
+  - Exports (values):
+    - `_stagedConfigDefault`
+    - `stagedConfigDefaultsResource`
   - Register: `defineJob('config-v2.land-defaults')`
   - Resources: `config-v2-staged-defaults` (push)
-  - Routes: `POST /api/config-v2/staged-defaults`, `POST /api/config-v2/staged-defaults/:pluginId/:configName/apply`, `POST /api/config-v2/staged-defaults/apply-all`, `DELETE /api/config-v2/staged-defaults/:pluginId/:configName`, `DELETE /api/config-v2/staged-defaults`
+  - Routes:
+    - `POST /api/config-v2/staged-defaults`
+    - `POST /api/config-v2/staged-defaults/:pluginId/:configName/apply`
+    - `POST /api/config-v2/staged-defaults/apply-all`
+    - `DELETE /api/config-v2/staged-defaults/:pluginId/:configName`
+    - `DELETE /api/config-v2/staged-defaults`
 - Core:
-  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `StageConfigDefaultBody`, `StagedConfigDefault`; Values: `applyAllConfigDefaults`, `applyConfigDefault`, `discardAllConfigDefaults`, `discardConfigDefault`, `stageConfigDefault`, `StageConfigDefaultBodySchema`, `stagedConfigDefaultFields`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `StageConfigDefaultBody`
+    - `StagedConfigDefault`
+  - Exports (values):
+    - `applyAllConfigDefaults`
+    - `applyConfigDefault`
+    - `discardAllConfigDefaults`
+    - `discardConfigDefault`
+    - `stageConfigDefault`
+    - `StageConfigDefaultBodySchema`
+    - `stagedConfigDefaultFields`
+    - `StagedConfigDefaultSchema`
+    - `stagedConfigDefaultsResource`
 - Cross-plugin:
-  - Imported by: `config_v2/staging/promote-action`, `plugin-meta/composition`, `reorder`, `reorder/edit-mode`, `review/config-defaults`
+  - Imported by:
+    - `config_v2/staging/promote-action`
+    - `plugin-meta/composition`
+    - `reorder`
+    - `reorder/edit-mode`
+    - `review/config-defaults`
 - Sub-plugins:
   - **`promote-action`** — Generic 'Set as default for everyone' action in the config settings detail pane: stages the descriptor's current user-layer document as a committed git default (review-pane apply lands it). Contributed into ConfigDetail.Action, so config_v2/settings stays ignorant of staging.
 

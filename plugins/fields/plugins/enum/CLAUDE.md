@@ -32,8 +32,12 @@ token) matches descriptors built with the factory.
   - Contributes: `Fields.Identity` "enum"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `enumFieldType`, `enumIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `enumFieldType`
+    - `enumIdentity`
 - Cross-plugin:
   - Imported by: `fields/enum/config`
 - Sub-plugins:

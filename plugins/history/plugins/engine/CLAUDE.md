@@ -24,14 +24,33 @@ Notion's free-tier page-history semantics.
 
 - Description: Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/retention.defineRetention`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/retention.defineRetention`
   - DB schema: `plugins/history/plugins/engine/server/internal/tables.ts`
-  - Exports: Types: `HistorySource`; Values: `defineHistorySource`, `deleteVersions`, `recordVersion`
+  - Exports (types): `HistorySource`
+  - Exports (values):
+    - `defineHistorySource`
+    - `deleteVersions`
+    - `recordVersion`
   - Register: `defineJob('retention.entity_versions')`
-  - Routes: `GET /api/history/:sourceId/:entityId/versions`, `GET /api/history/:sourceId/:entityId/versions/:versionId`, `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
+  - Routes:
+    - `GET /api/history/:sourceId/:entityId/versions`
+    - `GET /api/history/:sourceId/:entityId/versions/:versionId`
+    - `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `Version`, `VersionWithSnapshot`; Values: `getVersion`, `listVersions`, `restoreVersion`, `VersionSchema`, `VersionWithSnapshotSchema`
+  - Exports (types):
+    - `Version`
+    - `VersionWithSnapshot`
+  - Exports (values):
+    - `getVersion`
+    - `listVersions`
+    - `restoreVersion`
+    - `VersionSchema`
+    - `VersionWithSnapshotSchema`
 - Cross-plugin:
   - Imported by: `apps/pages/history`
 

@@ -6,7 +6,12 @@
 
 - Description: Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
 - Core:
-  - Exports: Types: `Check`, `CheckContext`, `CheckResult`, `CheckScope`; Values: `CHECK_SCOPES`
+  - Exports (types):
+    - `Check`
+    - `CheckContext`
+    - `CheckResult`
+    - `CheckScope`
+  - Exports (values): `CHECK_SCOPES`
 - Sub-plugins:
   - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
   - **`checks`** — Check runner and built-in checks for ./singularity check

@@ -24,8 +24,12 @@ picker.
   - Contributes: `Fields.Identity` "directory-path"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `directoryPathFieldType`, `directoryPathIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `directoryPathFieldType`
+    - `directoryPathIdentity`
 - Cross-plugin:
   - Imported by: `fields/directory-path/config`
 - Sub-plugins:

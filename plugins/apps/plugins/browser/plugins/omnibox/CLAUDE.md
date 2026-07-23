@@ -7,8 +7,12 @@
 - Description: Browser address bar: URL normalization with search fallback, synced to the current URL.
 - Web:
   - Contributes: `Browser.Omnibox` "Omnibox" → `Omnibox`
-  - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.useBrowserNav`, `primitives/search.SearchInput`
-  - Exports: Types: `NormalizedInput`; Values: `normalizeInput`
+  - Uses:
+    - `apps/browser/shell.Browser`
+    - `apps/browser/shell.useBrowserNav`
+    - `primitives/search.SearchInput`
+  - Exports (types): `NormalizedInput`
+  - Exports (values): `normalizeInput`
 - Cross-plugin:
   - Imported by: `apps/browser/start-page`
 

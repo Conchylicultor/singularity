@@ -8,12 +8,33 @@
 - Web:
   - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date-change`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools-delta`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
-  - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`, `primitives/css/text.Text`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/slot-render.defineDispatchSlot`
-  - Exports: Values: `JsonlViewerAttachment`
+  - Uses:
+    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`
+    - `primitives/css/text.Text`
+    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/slot-render.defineDispatchSlot`
+  - Exports (values): `JsonlViewerAttachment`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/date-change`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-error`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
+    - `conversations/conversation-view/jsonl-viewer/attachment/date-change`
+    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
+    - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
+    - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
+    - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+    - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+    - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
+    - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+    - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
 - Core:
-  - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
+  - Exports (types):
+    - `AttachmentEvent`
+    - `AttachmentRendererProps`
 - Sub-plugins:
   - **`agent-listing-delta`** — Renders agent-listing-delta attachment events showing which agent types are available (or added/removed) for the Agent tool.
   - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.

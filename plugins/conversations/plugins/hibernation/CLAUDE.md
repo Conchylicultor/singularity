@@ -7,11 +7,23 @@
 - Description: Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
 - Web:
   - Contributes: `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `infra/endpoints.fetchEndpoint`
-  - Exports: Values: `markConversationViewed`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `infra/endpoints.fetchEndpoint`
+  - Exports (values): `markConversationViewed`
 - Server:
   - Contributes: `ConfigV2.Register` "conversation-hibernation"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.deleteConversation`, `conversations.ensureResumed`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.isMain`, `tasks/tasks-core.listHibernationCandidates`, `tasks/tasks-core.setConversationHibernated`, `tasks/tasks-core.touchConversationViewed`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `conversations.deleteConversation`
+    - `conversations.ensureResumed`
+    - `infra/endpoints.implement`
+    - `infra/jobs.defineJob`
+    - `infra/paths.isMain`
+    - `tasks/tasks-core.listHibernationCandidates`
+    - `tasks/tasks-core.setConversationHibernated`
+    - `tasks/tasks-core.touchConversationViewed`
   - Register: `defineJob('conversations.hibernate-idle')`
   - Routes: `POST /api/conversations/:id/viewed`
 - Cross-plugin:

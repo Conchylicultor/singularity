@@ -8,10 +8,18 @@
 - Web:
   - Slots: `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
   - Contributes: `Pane.Register` "pages-root"
-  - Uses: `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Values: `PagesWelcome`
+  - Uses:
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (values): `PagesWelcome`
 - Cross-plugin:
-  - Imported by: `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`
+  - Imported by:
+    - `apps/pages/welcome/quick-create`
+    - `apps/pages/welcome/recent-pages`
 - Sub-plugins:
   - **`quick-create`** — Quick-create section for the Pages landing surface: template tiles (blank, to-do, bulleted list) that create and open a new page.
   - **`recent-pages`** — Recent-pages section for the Pages landing surface: the most recently updated pages as clickable rows.

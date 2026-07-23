@@ -33,8 +33,12 @@ four runtimes (core / web / server / central).
   - Contributes: `Fields.Identity` "secret"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `secretFieldType`, `secretIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `secretFieldType`
+    - `secretIdentity`
 - Cross-plugin:
   - Imported by: `fields/secret/config`
 - Sub-plugins:

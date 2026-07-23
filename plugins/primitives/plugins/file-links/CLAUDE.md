@@ -6,8 +6,18 @@
 
 - Description: Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
 - Web:
-  - Uses: `primitives/css/badge.Badge`, `primitives/css/link-chip.LinkChip`
-  - Exports: Types: `FileLinkSegment`, `FileLinkTextProps`; Values: `FILE_PATH_RE`, `FileLinkText`, `linkifyChildren`, `parseFileLinks`, `URL_RE`
+  - Uses:
+    - `primitives/css/badge.Badge`
+    - `primitives/css/link-chip.LinkChip`
+  - Exports (types):
+    - `FileLinkSegment`
+    - `FileLinkTextProps`
+  - Exports (values):
+    - `FILE_PATH_RE`
+    - `FileLinkText`
+    - `linkifyChildren`
+    - `parseFileLinks`
+    - `URL_RE`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/markdown-extensions`
 

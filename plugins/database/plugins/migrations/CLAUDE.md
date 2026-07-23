@@ -100,12 +100,23 @@ modules; the `schema-files-loadable` check enforces this invariant.
 
 - Description: DDL lifecycle: migration runner and SQL files.
 - Server:
-  - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.defineLogSink`
-  - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
+  - Uses:
+    - `database/derived-views.rebuildDerivedViews`
+    - `primitives/log-channels.defineLogSink`
+  - Exports (values):
+    - `dryRunPendingMigrations`
+    - `migrationsReady`
+    - `runMigrations`
 - Cross-plugin:
   - Imported by: `database`
 - Core:
-  - Exports: Types: `DestructiveClassification`, `DestructiveKind`; Values: `classifyMigrationSql`, `parseSchemaGlobs`, `schemaGlobFiles`
+  - Exports (types):
+    - `DestructiveClassification`
+    - `DestructiveKind`
+  - Exports (values):
+    - `classifyMigrationSql`
+    - `parseSchemaGlobs`
+    - `schemaGlobFiles`
 - Structure:
   - Non-standard folders: `data/`
   - Loose top-level files: `drizzle.config.ts`

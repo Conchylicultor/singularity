@@ -24,8 +24,12 @@ lives in the `plugins/config` sub-plugin.
   - Contributes: `Fields.Identity` "object"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `objectFieldType`, `objectIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `objectFieldType`
+    - `objectIdentity`
 - Cross-plugin:
   - Imported by: `fields/object/config`
 - Sub-plugins:

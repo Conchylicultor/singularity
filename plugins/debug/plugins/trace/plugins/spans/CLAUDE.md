@@ -41,7 +41,19 @@ flagged orphan roots (evicted <5 ms parent, or a detached child).
 - Description: Spans trace lane: the flight window rendered as a nested call-tree waterfall — one window-relative Gantt row per span instance, depth-indented under its true parent (per-instance parentId), collapsible, with per-layer wait bands painted at their true offsets and a click-to-detail bar. Built-in trace event class 'spans': the flight window (open + recently-completed spans with wait/child/self decomposition) captured synchronously at the trip instant.
 - Web:
   - Contributes: `Trace.Lane` → `SpansLane`
-  - Uses: `debug/profiling.formatDuration`, `debug/profiling.MultiSpanLane`, `debug/profiling.SpanBar`, `debug/trace/engine.Trace`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
+  - Uses:
+    - `debug/profiling.formatDuration`
+    - `debug/profiling.MultiSpanLane`
+    - `debug/profiling.SpanBar`
+    - `debug/trace/engine.Trace`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.SingleLineProvider`
 - Server:
   - Contributes: `trace-event-class` "spans"
   - Uses: `debug/trace/engine.defineTraceEventClass`

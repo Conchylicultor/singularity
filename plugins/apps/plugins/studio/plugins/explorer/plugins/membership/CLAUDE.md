@@ -54,9 +54,26 @@ by the `tree` primitive's `RowChrome` `accent` layer (a primitive-owned
 
 - Description: Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
 - Web:
-  - Contributes: `Explorer.TreeRowAccent` "membership" → `MembershipTint`, `Explorer.TreeRowBadge` "membership" → `MembershipPin`
-  - Uses: `apps/studio/explorer.Explorer`, `apps/studio/graph.graphCanvasPane`, `apps/studio/membership-tint.STATE_TINT`, `plugin-meta/composition.DiffState`, `plugin-meta/composition.pinAsRoot`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useEnsureCompositionData`, `primitives/css/cluster.Cluster`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`
-  - Exports: Values: `DIFF_LEGEND`, `DIFF_TINT`
+  - Contributes:
+    - `Explorer.TreeRowAccent` "membership" → `MembershipTint`
+    - `Explorer.TreeRowBadge` "membership" → `MembershipPin`
+  - Uses:
+    - `apps/studio/explorer.Explorer`
+    - `apps/studio/graph.graphCanvasPane`
+    - `apps/studio/membership-tint.STATE_TINT`
+    - `plugin-meta/composition.DiffState`
+    - `plugin-meta/composition.pinAsRoot`
+    - `plugin-meta/composition.useActiveMembership`
+    - `plugin-meta/composition.useDiffMap`
+    - `plugin-meta/composition.useEnsureCompositionData`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/icon-button.IconButton`
+    - `primitives/pane.openPane`
+  - Exports (values):
+    - `DIFF_LEGEND`
+    - `DIFF_TINT`
 - Cross-plugin:
   - Imported by: `apps/studio/compositions`
 

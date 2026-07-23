@@ -25,10 +25,16 @@ these capabilities via the `extends`-chain fallback.
   - Contributes: `Fields.Identity` "number"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `numberFieldType`, `numberIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `numberFieldType`
+    - `numberIdentity`
 - Cross-plugin:
-  - Imported by: `fields/float`, `fields/int`
+  - Imported by:
+    - `fields/float`
+    - `fields/int`
 - Sub-plugins:
   - **`data-view-codec`** — Number field type: data-view custom-column value codec (native number ↔ canonical text).
   - **`filter`** — Number field type: data-view filter operator set (= ≠ > < ≥ ≤ between is-empty …).

@@ -6,16 +6,34 @@
 
 - Description: Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
 - Web:
-  - Contributes: `Core.Boot`, `ThemeEngine.PresetSource` "Preset Source"
-  - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/live-state.hydrateEndpoint`, `ui/theme-engine.ThemeEngine`
+  - Contributes:
+    - `Core.Boot`
+    - `ThemeEngine.PresetSource` "Preset Source"
+  - Uses:
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpoint`
+    - `primitives/live-state.hydrateEndpoint`
+    - `ui/theme-engine.ThemeEngine`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
   - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`
-  - Exports: Values: `_tweakcnThemes`
-  - Routes: `GET /api/tweakcn/themes`, `POST /api/tweakcn/themes`, `DELETE /api/tweakcn/themes/:id`
+  - Exports (values): `_tweakcnThemes`
+  - Routes:
+    - `GET /api/tweakcn/themes`
+    - `POST /api/tweakcn/themes`
+    - `DELETE /api/tweakcn/themes/:id`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `TweakcnTheme`; Values: `convertTweakcnTheme`, `deleteTweakcnTheme`, `importTweakcnTheme`, `listTweakcnThemes`, `TweakcnThemeSchema`
+  - Exports (types): `TweakcnTheme`
+  - Exports (values):
+    - `convertTweakcnTheme`
+    - `deleteTweakcnTheme`
+    - `importTweakcnTheme`
+    - `listTweakcnThemes`
+    - `TweakcnThemeSchema`
 - Cross-plugin:
   - Imported by: `ui/tweakcn/community-browser`
 - Sub-plugins:

@@ -24,8 +24,61 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
 
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/file-sink.defineFileSink`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/spawn.getWorktreeRoot`, `infra/spawn.spawnCaptured`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-  - Exports: Types: `CandidateSource`, `CheckCache`, `CheckRunProgress`, `CodeMatch`, `DirFact`, `FileFact`, `FileSystemView`, `GlobFact`, `ImportMatch`, `ListCandidateSourcesOptions`, `OutstandingCheck`, `ProgressRecord`, `QueryFact`, `ReadSet`, `RunChecksOptions`, `TreeSnapshot`, `TscTarget`, `ValidateOptions`, `ValidateResult`; Values: `checkCollectedDir`, `computeCheckSourceHash`, `computeTreeHash`, `currentScanView`, `discoverTscTargets`, `fingerprint`, `gitGrepList`, `grepCode`, `grepImports`, `isBuildInProgress`, `listAllChecks`, `listCandidateSources`, `loadTreeSnapshot`, `markBuildInProgress`, `materializeWarmBase`, `openCheckCache`, `publishWarmBase`, `readCheckProgress`, `runChecks`, `scopeOf`, `tsBuildInfoPath`, `validate`
+  - Uses:
+    - `framework/tooling/collected-dir.defineCollectedDir`
+    - `framework/tooling/collected-dir.loadCollectedDir`
+    - `infra/file-sink.defineFileSink`
+    - `infra/paths.REPO_ROOT`
+    - `infra/paths.SINGULARITY_DIR`
+    - `infra/spawn.getWorktreeRoot`
+    - `infra/spawn.spawnCaptured`
+    - `plugin-meta/parse-utils.findImports`
+    - `plugin-meta/parse-utils.lineAt`
+    - `plugin-meta/parse-utils.maskSource`
+    - `plugin-meta/plugin-tree.buildPluginTree`
+  - Exports (types):
+    - `CandidateSource`
+    - `CheckCache`
+    - `CheckRunProgress`
+    - `CodeMatch`
+    - `DirFact`
+    - `FileFact`
+    - `FileSystemView`
+    - `GlobFact`
+    - `ImportMatch`
+    - `ListCandidateSourcesOptions`
+    - `OutstandingCheck`
+    - `ProgressRecord`
+    - `QueryFact`
+    - `ReadSet`
+    - `RunChecksOptions`
+    - `TreeSnapshot`
+    - `TscTarget`
+    - `ValidateOptions`
+    - `ValidateResult`
+  - Exports (values):
+    - `checkCollectedDir`
+    - `computeCheckSourceHash`
+    - `computeTreeHash`
+    - `currentScanView`
+    - `discoverTscTargets`
+    - `fingerprint`
+    - `gitGrepList`
+    - `grepCode`
+    - `grepImports`
+    - `isBuildInProgress`
+    - `listAllChecks`
+    - `listCandidateSources`
+    - `loadTreeSnapshot`
+    - `markBuildInProgress`
+    - `materializeWarmBase`
+    - `openCheckCache`
+    - `publishWarmBase`
+    - `readCheckProgress`
+    - `runChecks`
+    - `scopeOf`
+    - `tsBuildInfoPath`
+    - `validate`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`apps-paths-from-app-ref`**

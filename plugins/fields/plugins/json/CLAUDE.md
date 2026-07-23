@@ -9,8 +9,12 @@
   - Contributes: `Fields.Identity` "json"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `jsonFieldType`, `jsonIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `jsonFieldType`
+    - `jsonIdentity`
 - Cross-plugin:
   - Imported by: `fields/json/config`
 - Sub-plugins:

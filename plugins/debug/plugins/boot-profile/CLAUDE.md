@@ -67,18 +67,84 @@ unbounded.
 
 - Description: Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
 - Web:
-  - Contributes: `Pane.Register` "debug-boot-profile", `Pane.Register` "debug-boot-profile-detail", `Pane.Register` "debug-boot-profiles-list", `DebugApp.Sidebar` "Boot Profile" → `component`, `DebugApp.Sidebar` "Boot Profiles" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.PhaseConfig`, `debug/profiling.PhaseGroup`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.WaitWorkRow`, `infra/endpoints.EndpointError`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/perfs/boot-trace.BootPhase`, `primitives/perfs/boot-trace.BootSpan`, `primitives/perfs/boot-trace.BootTrace`, `primitives/perfs/boot-trace.bootWindowEnd`, `primitives/perfs/boot-trace.getBootTrace`, `primitives/perfs/boot-trace.refreshBootTrace`, `primitives/perfs/boot-trace.useBootTrace`, `primitives/relative-time.RelativeTime`, `shell/notifications.toast`
-  - Exports: Values: `BootProfileGantt`
+  - Contributes:
+    - `Pane.Register` "debug-boot-profile"
+    - `Pane.Register` "debug-boot-profile-detail"
+    - `Pane.Register` "debug-boot-profiles-list"
+    - `DebugApp.Sidebar` "Boot Profile" → `component`
+    - `DebugApp.Sidebar` "Boot Profiles" → `component`
+  - Uses:
+    - `apps/debug/shell.DebugApp`
+    - `debug/profiling.formatDuration`
+    - `debug/profiling.GanttContainer`
+    - `debug/profiling.PhaseConfig`
+    - `debug/profiling.PhaseGroup`
+    - `debug/profiling.ProfilingContext`
+    - `debug/profiling.Span`
+    - `debug/profiling.SpanDetail`
+    - `debug/profiling.WaitWorkRow`
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpoint`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/center.Center`
+    - `primitives/css/column.Column`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/data-table.ColumnDef`
+    - `primitives/data-table.DataTable`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/loading.Loading`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/perfs/boot-trace.BootPhase`
+    - `primitives/perfs/boot-trace.BootSpan`
+    - `primitives/perfs/boot-trace.BootTrace`
+    - `primitives/perfs/boot-trace.bootWindowEnd`
+    - `primitives/perfs/boot-trace.getBootTrace`
+    - `primitives/perfs/boot-trace.refreshBootTrace`
+    - `primitives/perfs/boot-trace.useBootTrace`
+    - `primitives/relative-time.RelativeTime`
+    - `shell/notifications.toast`
+  - Exports (values): `BootProfileGantt`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/retention.defineRetention`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defaultRandom`
+    - `infra/entities.defineEntity`
+    - `infra/retention.defineRetention`
   - DB schema: `plugins/debug/plugins/boot-profile/server/internal/tables.ts`
-  - Exports: Values: `_bootTraces`
+  - Exports (values): `_bootTraces`
   - Register: `defineJob('retention.boot_traces')`
-  - Routes: `POST /api/boot-traces`, `GET /api/boot-traces/:id`, `GET /api/boot-traces`
+  - Routes:
+    - `POST /api/boot-traces`
+    - `GET /api/boot-traces/:id`
+    - `GET /api/boot-traces`
 - Core:
-  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`
-  - Exports: Types: `SavedBootTrace`; Values: `BootTraceSchema`, `savedBootTraceFields`, `SavedBootTraceSchema`
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
+    - `fields/uuid/config.uuidField`
+  - Exports (types): `SavedBootTrace`
+  - Exports (values):
+    - `BootTraceSchema`
+    - `savedBootTraceFields`
+    - `SavedBootTraceSchema`
 - Cross-plugin:
   - Imported by: `debug/trace/client-boot`
 

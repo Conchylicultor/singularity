@@ -18,8 +18,12 @@ a read-only thumbnail cell and no filter.
   - Contributes: `Fields.Identity` "image"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `imageFieldType`, `imageIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `imageFieldType`
+    - `imageIdentity`
 - Sub-plugins:
   - **`table`** — Image field type: data-view table cell (read-only thumbnail).
 

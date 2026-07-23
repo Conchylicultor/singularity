@@ -6,8 +6,13 @@
 
 - Description: Fancy piano-roll FX (opt-in): a comet arcs along the keyboard line between consecutive notes of the same track, with a fading particle trail. Server registration of the fx-comets enabled toggle.
 - Web:
-  - Contributes: `PianoRollFx` "Pitch comets" → `LazyBoundary`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
+  - Contributes:
+    - `PianoRollFx` "Pitch comets" → `LazyBoundary`
+    - `ConfigV2.WebRegister`
+  - Uses:
+    - `apps/sonata/piano-roll.PianoRollFx`
+    - `config_v2.ConfigV2`
+    - `primitives/lazy-component.lazyComponent`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

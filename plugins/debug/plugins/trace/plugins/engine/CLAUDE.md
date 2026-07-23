@@ -219,21 +219,99 @@ silent**. No engine edit, no `*-in-sync` codegen: the snapshot is self-describin
 
 - Description: Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table, list/get endpoints, a daily 7-day sweep, and the test-trigger verification endpoint.
 - Web:
-  - Slots: `Trace.Lane` ← `debug.trace.boot`, `debug.trace.client-boot`, `debug.trace.contention`, `debug.trace.gates`, `debug.trace.spans`, `debug.trace.stall`, `Trace.TriggerSummary`
+  - Slots:
+    - `Trace.Lane` ← `debug.trace.boot`, `debug.trace.client-boot`, `debug.trace.contention`, `debug.trace.gates`, `debug.trace.spans`, `debug.trace.stall`
+    - `Trace.TriggerSummary`
   - Contributes: `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/slot-render.defineDispatchSlot`
-  - Exports: Types: `TraceLaneProps`, `TraceListItem`, `TraceSelection`, `TraceSelectionField`, `TraceTriggerSummaryProps`; Values: `getTrace`, `listTraces`, `Trace`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/slot-render.defineDispatchSlot`
+  - Exports (types):
+    - `TraceLaneProps`
+    - `TraceListItem`
+    - `TraceSelection`
+    - `TraceSelectionField`
+    - `TraceTriggerSummaryProps`
+  - Exports (values):
+    - `getTrace`
+    - `listTraces`
+    - `Trace`
 - Server:
-  - Contributes: `ConfigV2.Register` "trace", `change-feed-exclusion` "traces"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/paths.currentWorktreeName`, `infra/retention.defineRetention`, `reports.recordReport`
+  - Contributes:
+    - `ConfigV2.Register` "trace"
+    - `change-feed-exclusion` "traces"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `database.db`
+    - `database/change-feed.ExcludeFromChangeFeed`
+    - `infra/duress.createShedBuffer`
+    - `infra/duress.ShedSummary`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defaultRandom`
+    - `infra/entities.defineEntity`
+    - `infra/paths.currentWorktreeName`
+    - `infra/retention.defineRetention`
+    - `reports.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
-  - Exports: Types: `TraceEventClassHandle`, `TraceEventClassSpec`; Values: `_traces`, `captureTrace`, `defineTraceEventClass`, `TraceEventClass`
+  - Exports (types):
+    - `TraceEventClassHandle`
+    - `TraceEventClassSpec`
+  - Exports (values):
+    - `_traces`
+    - `captureTrace`
+    - `defineTraceEventClass`
+    - `TraceEventClass`
   - Register: `defineJob('retention.traces')`
-  - Routes: `GET /api/traces`, `GET /api/traces/:id`, `POST /api/debug/trace/test-trigger`
+  - Routes:
+    - `GET /api/traces`
+    - `GET /api/traces/:id`
+    - `POST /api/debug/trace/test-trigger`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `primitives/pane.defineRoute`
-  - Exports: Types: `RingEvent`, `Trace`, `TraceSnapshot`, `TraceTrigger`, `TripContext`; Values: `traceConfig`, `traceDetailRoute`, `traceFields`, `traceListRoute`, `TraceSchema`, `TraceSnapshotSchema`, `TraceTriggerSchema`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/float/config.floatField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
+    - `fields/uuid/config.uuidField`
+    - `primitives/pane.defineRoute`
+  - Exports (types):
+    - `RingEvent`
+    - `Trace`
+    - `TraceSnapshot`
+    - `TraceTrigger`
+    - `TripContext`
+  - Exports (values):
+    - `traceConfig`
+    - `traceDetailRoute`
+    - `traceFields`
+    - `traceListRoute`
+    - `TraceSchema`
+    - `TraceSnapshotSchema`
+    - `TraceTriggerSchema`
 - Cross-plugin:
-  - Imported by: `debug/boot-monitor`, `debug/op-rate`, `debug/sentinel`, `debug/slow-ops`, `debug/stall-monitor`, `debug/trace/boot`, `debug/trace/client-boot`, `debug/trace/contention`, `debug/trace/gates`, `debug/trace/pane`, `debug/trace/spans`, `debug/trace/stall`
+  - Imported by:
+    - `debug/boot-monitor`
+    - `debug/op-rate`
+    - `debug/sentinel`
+    - `debug/slow-ops`
+    - `debug/stall-monitor`
+    - `debug/trace/boot`
+    - `debug/trace/client-boot`
+    - `debug/trace/contention`
+    - `debug/trace/gates`
+    - `debug/trace/pane`
+    - `debug/trace/spans`
+    - `debug/trace/stall`
 
 <!-- AUTOGENERATED:END -->

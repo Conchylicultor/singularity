@@ -40,8 +40,25 @@ itself stays a pane concern — this surface only follows the choice made there.
 - Web:
   - Slots: `QuickTheme.Section` ← `ui.tweakcn.community-browser`
   - Contributes: `ActionBar.Item` → `QuickThemeButton`
-  - Uses: `apps-core.useActiveApp`, `apps-core/tabs.navigate`, `config_v2.useScopeMembership`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.defineRenderSlot`, `shell/action-bar.ActionBar`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.ThemeScopeProvider`, `ui/theme-engine/theme-customizer.themeCustomizerRoute`
-  - Exports: Types: `QuickThemeSectionContribution`; Values: `QuickTheme`
+  - Uses:
+    - `apps-core.useActiveApp`
+    - `apps-core/tabs.navigate`
+    - `config_v2.useScopeMembership`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/icon-button.IconButton`
+    - `primitives/popover.InlinePopover`
+    - `primitives/slot-render.defineRenderSlot`
+    - `shell/action-bar.ActionBar`
+    - `ui/theme-engine.ThemeEngine`
+    - `ui/theme-engine.ThemeScopeProvider`
+    - `ui/theme-engine/theme-customizer.themeCustomizerRoute`
+  - Exports (types): `QuickThemeSectionContribution`
+  - Exports (values): `QuickTheme`
 - Cross-plugin:
   - Imported by: `ui/tweakcn/community-browser`
 

@@ -87,12 +87,66 @@ are no per-interaction round-trips.
 
 - Description: Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
 - Web:
-  - Slots: `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`, `comparePane.Actions`, `compositionDetailPane.Actions`, `compositionsPane.Actions`
-  - Contributes: `Pane.Register` "compositions", `Pane.Register` "composition-detail", `Pane.Register` "composition-compare", `studio.compositions.item-actions` "delete" → `DeleteAction`, `Studio.Sidebar` "Compositions" → `component`
-  - Uses: `apps/studio/compositions/auto-serve.useServeComposition`, `apps/studio/explorer/membership.DIFF_LEGEND`, `apps/studio/shell.Studio`, `plugin-meta/composition.setActiveComposition`, `plugin-meta/composition.setCompareComposition`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useCompareComposition`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useManifestActions`, `plugin-meta/composition.useManifestItems`, `plugin-meta/composition.usePromoteManifestsToGit`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/link-chip.LinkChip`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineItemActions`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row-actions.RowActionButton`, `primitives/tooltip.WithTooltip`
-  - Exports: Values: `comparePane`, `CompositionDetail`, `compositionDetailPane`, `compositionsPane`
+  - Slots:
+    - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`
+    - `comparePane.Actions`
+    - `compositionDetailPane.Actions`
+    - `compositionsPane.Actions`
+  - Contributes:
+    - `Pane.Register` "compositions"
+    - `Pane.Register` "composition-detail"
+    - `Pane.Register` "composition-compare"
+    - `studio.compositions.item-actions` "delete" → `DeleteAction`
+    - `Studio.Sidebar` "Compositions" → `component`
+  - Uses:
+    - `apps/studio/compositions/auto-serve.useServeComposition`
+    - `apps/studio/explorer/membership.DIFF_LEGEND`
+    - `apps/studio/shell.Studio`
+    - `plugin-meta/composition.setActiveComposition`
+    - `plugin-meta/composition.setCompareComposition`
+    - `plugin-meta/composition.useActiveComposition`
+    - `plugin-meta/composition.useCompareComposition`
+    - `plugin-meta/composition.useCompositionData`
+    - `plugin-meta/composition.useDiffMap`
+    - `plugin-meta/composition.useManifestActions`
+    - `plugin-meta/composition.useManifestItems`
+    - `plugin-meta/composition.usePromoteManifestsToGit`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/link-chip.LinkChip`
+    - `primitives/css/row.Row`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.defineItemActions`
+    - `primitives/detail-sections.defineDetailSections`
+    - `primitives/loading.Loading`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/row-actions.RowActionButton`
+    - `primitives/tooltip.WithTooltip`
+  - Exports (values):
+    - `comparePane`
+    - `CompositionDetail`
+    - `compositionDetailPane`
+    - `compositionsPane`
 - Cross-plugin:
-  - Imported by: `apps/studio/compositions/closure-tree`, `apps/studio/compositions/contributors`, `apps/studio/compositions/draft-actions`, `apps/studio/compositions/entry-points`, `apps/studio/compositions/membership-summary`, `apps/studio/compositions/release`
+  - Imported by:
+    - `apps/studio/compositions/closure-tree`
+    - `apps/studio/compositions/contributors`
+    - `apps/studio/compositions/draft-actions`
+    - `apps/studio/compositions/entry-points`
+    - `apps/studio/compositions/membership-summary`
+    - `apps/studio/compositions/release`
 - Sub-plugins:
   - **`auto-serve`** — Serve capability for compositions: the live-serve toggle panel + the enable→build hook, consumed by the unified Build & serve section and the compositions list. Reset-to-first-launch endpoint for a served composition: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
   - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.

@@ -21,8 +21,17 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
 ## Plugin reference
 
 - Core:
-  - Uses: `framework/plugin-id.asPath`, `framework/plugin-id.RUNTIME_FOLDERS`, `plugin-meta/facets.defineFacet`
-  - Exports: Types: `ApiUse`, `CrossRefsData`, `RawUse`; Values: `crossRefsFacetDef`, `crossRefsToComparable`
+  - Uses:
+    - `framework/plugin-id.asPath`
+    - `framework/plugin-id.RUNTIME_FOLDERS`
+    - `plugin-meta/facets.defineFacet`
+  - Exports (types):
+    - `ApiUse`
+    - `CrossRefsData`
+    - `RawUse`
+  - Exports (values):
+    - `crossRefsFacetDef`
+    - `crossRefsToComparable`
 - Cross-plugin:
   - Imported by: `plugin-meta/closure`
 - Sub-plugins:

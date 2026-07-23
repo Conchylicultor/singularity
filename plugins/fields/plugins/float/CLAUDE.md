@@ -18,8 +18,13 @@ Like `int`, it demonstrates the `extends` chain — differing only in that its
   - Contributes: `Fields.Identity` "float"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/number.numberFieldType`
-  - Exports: Values: `floatFieldType`, `floatIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields/number.numberFieldType`
+  - Exports (values):
+    - `floatFieldType`
+    - `floatIdentity`
 - Cross-plugin:
   - Imported by: `fields/float/config`
 - Sub-plugins:

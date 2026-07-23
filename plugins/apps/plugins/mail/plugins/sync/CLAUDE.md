@@ -193,13 +193,52 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
 - Description: Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
 - Server:
   - Contributes: `resource.declare` "mail-sync-state"
-  - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.defineLogSink`
-  - Exports: Values: `mailSyncStateServerResource`
-  - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`, `defineJob('mail.attachment-scan')`
-  - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`, `GET /api/mail/search`
+  - Uses:
+    - `apps/mail/gmail-api.getMessage`
+    - `apps/mail/gmail-api.getProfile`
+    - `apps/mail/gmail-api.listHistory`
+    - `apps/mail/gmail-api.listLabels`
+    - `apps/mail/gmail-api.listMessages`
+    - `apps/mail/mail-core._mailAccounts`
+    - `apps/mail/mail-core._mailAttachments`
+    - `apps/mail/mail-core._mailLabels`
+    - `apps/mail/mail-core._mailMessageLabels`
+    - `apps/mail/mail-core._mailMessages`
+    - `apps/mail/mail-core._mailSyncState`
+    - `apps/mail/mail-core._mailThreads`
+    - `apps/mail/mail-core.requireGmailToken`
+    - `database.db`
+    - `infra/endpoints.implement`
+    - `infra/jobs.defineJob`
+    - `infra/jobs.NonRetryableError`
+    - `integrations/gmail.isGmailEnabled`
+    - `primitives/log-channels.defineLogSink`
+  - Exports (values): `mailSyncStateServerResource`
+  - Register:
+    - `defineJob('mail.backfill')`
+    - `defineJob('mail.delta')`
+    - `defineJob('mail.sync-tick')`
+    - `defineJob('mail.attachment-scan')`
+  - Routes:
+    - `POST /api/mail/sync`
+    - `POST /api/mail/hydrate`
+    - `GET /api/mail/search`
 - Core:
-  - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailLabelRefSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
-  - Exports: Types: `MailSearchResult`; Values: `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`, `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `MailSearchResultSchema`, `mailSyncEndpoint`, `MAX_ATTACHMENT_SCAN_PAGES`, `MAX_BACKFILL_MESSAGES`
+  - Uses:
+    - `apps/mail/mail-core.MailAttachmentSchema`
+    - `apps/mail/mail-core.MailLabelRefSchema`
+    - `apps/mail/mail-core.MailMessageSchema`
+    - `infra/endpoints.defineEndpoint`
+  - Exports (types): `MailSearchResult`
+  - Exports (values):
+    - `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`
+    - `BACKFILL_WINDOW_DAYS`
+    - `mailHydrateMessageEndpoint`
+    - `mailSearchEndpoint`
+    - `MailSearchResultSchema`
+    - `mailSyncEndpoint`
+    - `MAX_ATTACHMENT_SCAN_PAGES`
+    - `MAX_BACKFILL_MESSAGES`
 - Sub-plugins:
   - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
 

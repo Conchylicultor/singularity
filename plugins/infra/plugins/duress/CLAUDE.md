@@ -133,13 +133,29 @@ Settings → Config): `enabled`, `persistFirstN` (3), `bufferMaxEntries` (2000),
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes: `ConfigV2.Register` "duress"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/duress/latch.duressEpisode`, `infra/duress/latch.isUnderDuress`, `primitives/log-channels.defineLogSink`
-  - Exports: Types: `ShedBuffer`, `ShedBufferOptions`, `ShedCascadeStats`, `ShedSummary`; Values: `createShedBuffer`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `infra/duress/latch.duressEpisode`
+    - `infra/duress/latch.isUnderDuress`
+    - `primitives/log-channels.defineLogSink`
+  - Exports (types):
+    - `ShedBuffer`
+    - `ShedBufferOptions`
+    - `ShedCascadeStats`
+    - `ShedSummary`
+  - Exports (values): `createShedBuffer`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
-  - Exports: Values: `duressConfig`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields/bool/config.boolField`
+    - `fields/int/config.intField`
+  - Exports (values): `duressConfig`
 - Cross-plugin:
-  - Imported by: `debug/slow-ops`, `debug/trace/engine`, `reports`
+  - Imported by:
+    - `debug/slow-ops`
+    - `debug/trace/engine`
+    - `reports`
 - Sub-plugins:
   - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the cheap synchronous isUnderDuress()). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve) can import it safely.
 

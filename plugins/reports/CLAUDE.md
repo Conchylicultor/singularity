@@ -7,21 +7,100 @@
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
   - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.op-wedge-watchdog`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
-  - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
+  - Uses:
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/tab-id.getTabId`
+  - Exports (types): `ReportContext`
+  - Exports (values):
+    - `investigate`
+    - `report`
+    - `Reports`
 - Server:
-  - Contributes: `resource.declare` "reports", `change-feed-exclusion` "reports"
-  - Uses: `build/server-build-id.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `infra/retention.defineRetention`, `infra/warmup.defineWarmup`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`
+  - Contributes:
+    - `resource.declare` "reports"
+    - `change-feed-exclusion` "reports"
+  - Uses:
+    - `build/server-build-id.getServerBuildId`
+    - `database.db`
+    - `database/change-feed.ExcludeFromChangeFeed`
+    - `infra/duress.createShedBuffer`
+    - `infra/duress.ShedSummary`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/paths.REPORTS_DIR`
+    - `infra/retention.defineRetention`
+    - `infra/warmup.defineWarmup`
+    - `shell/notifications.recordNotification`
+    - `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
-  - Exports: Types: `InvestigationTaskRequest`, `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `reportInvestigationSink`, `ReportKind`, `ReportNoiseRule`, `reportsResource`
-  - Register: `defineWarmup('reports.backfill-noise')`, `defineJob('retention.reports')`
+  - Exports (types):
+    - `InvestigationTaskRequest`
+    - `ReportKindSpec`
+    - `ReportKindVariant`
+    - `ReportNoiseInput`
+    - `ReportNoiseRuleSpec`
+    - `ReportRow`
+  - Exports (values):
+    - `_reports`
+    - `recordReport`
+    - `reportInvestigationSink`
+    - `ReportKind`
+    - `ReportNoiseRule`
+    - `reportsResource`
+  - Register:
+    - `defineWarmup('reports.backfill-noise')`
+    - `defineJob('retention.reports')`
   - Resources: `reports` (push)
-  - Routes: `POST /api/reports`, `POST /api/reports/:id/investigate`
+  - Routes:
+    - `POST /api/reports`
+    - `POST /api/reports/:id/investigate`
 - Core:
-  - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
-  - Exports: Types: `Report`, `ReportSource`; Values: `CLIENT_REPORT_SOURCES`, `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`, `SERVER_REPORT_SOURCES`
+  - Uses:
+    - `primitives/live-state.resourceDescriptor`
+    - `primitives/pane.defineRoute`
+  - Exports (types):
+    - `Report`
+    - `ReportSource`
+  - Exports (values):
+    - `CLIENT_REPORT_SOURCES`
+    - `reportDetailRoute`
+    - `ReportSchema`
+    - `reportsResource`
+    - `reportsRootRoute`
+    - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/conversation-view/pending-turn`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/boot-watchdog`, `debug/duress-shed`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/op-wedge-watchdog`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/sentinel`, `debug/session-divergence`, `debug/slow-ops`, `debug/stall-monitor`, `debug/trace/engine`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/live-state-stale-drop`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `reports/turn-unconfirmed`, `tasks/reports-investigation`
+  - Imported by:
+    - `conversations`
+    - `conversations/conversation-view/pending-turn`
+    - `conversations/model-provider`
+    - `conversations/pane-restore`
+    - `conversations/runtime-tmux`
+    - `debug/boot-budget`
+    - `debug/boot-watchdog`
+    - `debug/duress-shed`
+    - `debug/live-state-churn/monitor`
+    - `debug/op-rate`
+    - `debug/op-wedge-watchdog`
+    - `debug/queue-health`
+    - `debug/read-set-shrink`
+    - `debug/reports`
+    - `debug/sentinel`
+    - `debug/session-divergence`
+    - `debug/slow-ops`
+    - `debug/stall-monitor`
+    - `debug/trace/engine`
+    - `infra/boot-snapshot`
+    - `reports/crash`
+    - `reports/endpoint-errors`
+    - `reports/launch-fix`
+    - `reports/live-state-stale-drop`
+    - `reports/noise-rules`
+    - `reports/optimistic-divergence`
+    - `reports/plugin-load-errors`
+    - `reports/render-loop`
+    - `reports/turn-unconfirmed`
+    - `tasks/reports-investigation`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).

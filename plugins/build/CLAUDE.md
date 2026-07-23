@@ -6,23 +6,151 @@
 
 - Description: Trigger `./singularity build` from the toolbar.
 - Web:
-  - Slots: `BuildDetailSlots.Section` ← `build.build-commits`, `build.build-fix`, `build.build-info`, `build.build-logs`, `build.build-profiling`, `buildDetailPane.Actions`, `buildPane.Actions`
-  - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `DebugApp.Sidebar` "Builds" → `component`, `ConfigV2.WebRegister`
-  - Uses: `apps-core/tabs.navigate`, `apps/debug/shell.DebugApp`, `config_v2.ConfigV2`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/commit-list.CommitRowItem`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/detail-sections.defineDetailSections`, `primitives/icon-button.IconButton`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`, `shell/notifications.toast`
-  - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`, `useStaleFrontend`
+  - Slots:
+    - `BuildDetailSlots.Section` ← `build.build-commits`, `build.build-fix`, `build.build-info`, `build.build-logs`, `build.build-profiling`
+    - `buildDetailPane.Actions`
+    - `buildPane.Actions`
+  - Contributes:
+    - `ActionBar.Item` → `BuildButton`
+    - `Pane.Register` "build"
+    - `Pane.Register` "build-detail"
+    - `DebugApp.Sidebar` "Builds" → `component`
+    - `ConfigV2.WebRegister`
+  - Uses:
+    - `apps-core/tabs.navigate`
+    - `apps/debug/shell.DebugApp`
+    - `config_v2.ConfigV2`
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/auto-scroll.JumpToBottomButton`
+    - `primitives/auto-scroll.useStickyScroll`
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
+    - `primitives/commit-list.CommitRowItem`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/row.Row`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/spinner.Spinner`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/detail-sections.defineDetailSections`
+    - `primitives/icon-button.IconButton`
+    - `primitives/live-state.useNotificationsChannelStatuses`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/log-channels.clientLog`
+    - `primitives/networking.useReconnectingWebSocket`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/popover.InlinePopover`
+    - `primitives/relative-time.RelativeTime`
+    - `primitives/tooltip.WithTooltip`
+    - `shell/action-bar.ActionBar`
+    - `shell/notifications.toast`
+  - Exports (values):
+    - `buildDetailPane`
+    - `BuildDetailSlots`
+    - `buildPane`
+    - `useStaleFrontend`
 - Server:
-  - Contributes: `ConfigV2.Register` "config", `resource.declare` "build.mainAheadCount", `resource.declare` "build.history", `resource.declare` "build.frontendHash", `trigger` "build.run"
-  - Uses: `build/run-ledger._buildRuns`, `build/server-build-id.getServerBuildId`, `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.pruneWorktreeBuildArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.WEB_DIST_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `infra/query-resource.queryResource`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
-  - Register: `defineJob('build.run')`, `defineJob('build.run.debounced')`
-  - Resources: `build.frontendHash` (push), `build.history` (keyed), `build.mainAheadCount` (push)
-  - Routes: `POST /api/build`, `POST /api/build/serve`
+  - Contributes:
+    - `ConfigV2.Register` "config"
+    - `resource.declare` "build.mainAheadCount"
+    - `resource.declare` "build.history"
+    - `resource.declare` "build.frontendHash"
+    - `trigger` "build.run"
+  - Uses:
+    - `build/run-ledger._buildRuns`
+    - `build/server-build-id.getServerBuildId`
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/events.Trigger`
+    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.FileWatcher`
+    - `infra/git-watcher.refAdvanced`
+    - `infra/git-watcher.refHeadResource`
+    - `infra/jobs.defineJob`
+    - `infra/paths.currentWorktreeName`
+    - `infra/paths.isMain`
+    - `infra/paths.pruneWorktreeBuildArtifacts`
+    - `infra/paths.REPO_ROOT`
+    - `infra/paths.WEB_DIST_DIR`
+    - `infra/paths.worktreeArtifacts`
+    - `infra/paths.worktreeDataDir`
+    - `infra/query-resource.queryResource`
+    - `primitives/commit-list.LOG_FORMAT`
+    - `primitives/commit-list.parseGitLog`
+    - `primitives/commit-list.runGit`
+    - `primitives/log-channels.Log`
+    - `shell/notifications.recordNotification`
+  - Register:
+    - `defineJob('build.run')`
+    - `defineJob('build.run.debounced')`
+  - Resources:
+    - `build.frontendHash` (push)
+    - `build.history` (keyed)
+    - `build.mainAheadCount` (push)
+  - Routes:
+    - `POST /api/build`
+    - `POST /api/build/serve`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.queryResourceDescriptor`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
-  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildDetailRoute`, `buildHistoryResource`, `buildRoute`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `serveCompositionEndpoint`, `triggerBuildEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `infra/query-resource.queryResourceDescriptor`
+    - `primitives/commit-list.CommitRowSchema`
+    - `primitives/live-state.resourceDescriptor`
+    - `primitives/pane.defineRoute`
+  - Exports (types):
+    - `BuildRun`
+    - `FrontendHash`
+    - `MainAheadCount`
+  - Exports (values):
+    - `buildDetailRoute`
+    - `buildHistoryResource`
+    - `buildRoute`
+    - `BuildRunSchema`
+    - `frontendHashResource`
+    - `FrontendHashSchema`
+    - `mainAheadCountResource`
+    - `MainAheadCountSchema`
+    - `serveCompositionEndpoint`
+    - `triggerBuildEndpoint`
 - Cross-plugin:
-  - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`, `debug/reports`
+  - Imported by:
+    - `build/build-commits`
+    - `build/build-fix`
+    - `build/build-info`
+    - `build/build-logs`
+    - `build/build-profiling`
+    - `debug/reports`
 - Shared:
-  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
+  - Exports (types):
+    - `BuildRun`
+    - `FrontendHash`
+    - `MainAheadCount`
+  - Exports (values):
+    - `buildConfig`
+    - `buildHistoryResource`
+    - `BuildRunSchema`
+    - `frontendHashResource`
+    - `FrontendHashSchema`
+    - `mainAheadCountResource`
+    - `MainAheadCountSchema`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.

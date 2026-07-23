@@ -24,8 +24,13 @@ wire-schema concern a consumer layers on with `@plugins/primitives/rank`'s
   - Contributes: `Fields.Identity` "rank"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/text.textFieldType`
-  - Exports: Values: `rankFieldType`, `rankIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields/text.textFieldType`
+  - Exports (values):
+    - `rankFieldType`
+    - `rankIdentity`
 - Cross-plugin:
   - Imported by: `fields/rank/config`
 - Sub-plugins:

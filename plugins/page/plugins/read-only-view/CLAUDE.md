@@ -6,8 +6,39 @@
 
 - Description: Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
 - Web:
-  - Uses: `page/editor.BLOCK_INDENT`, `page/editor.BLOCK_INSET`, `page/editor.colorCssValue`, `page/editor.Editor`, `page/editor.MARKER_GUTTER`, `page/editor.PageIcon`, `page/math/render.KatexMath`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `primitives/css/placeholder.Placeholder`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/text.TextVariant`, `primitives/css/ui-kit.cn`, `primitives/live-state.useResource`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text-editor/paste-images.attachmentUrl`
-  - Exports: Types: `BlockDiffKind`, `ForestBlock`, `ReadOnlyBlocksProps`, `ReadOnlyNode`, `RunsRendererProps`; Values: `buildForest`, `ReadOnlyBlocks`, `RunsRenderer`
+  - Uses:
+    - `page/editor.BLOCK_INDENT`
+    - `page/editor.BLOCK_INSET`
+    - `page/editor.colorCssValue`
+    - `page/editor.Editor`
+    - `page/editor.MARKER_GUTTER`
+    - `page/editor.PageIcon`
+    - `page/math/render.KatexMath`
+    - `primitives/css/center.Center`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/link-chip.LinkChip`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/selection-indicator.CheckboxIndicator`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
+    - `primitives/css/text.TextVariant`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.useResource`
+    - `primitives/syntax-highlight.HighlightedCode`
+    - `primitives/text-editor/paste-images.attachmentUrl`
+  - Exports (types):
+    - `BlockDiffKind`
+    - `ForestBlock`
+    - `ReadOnlyBlocksProps`
+    - `ReadOnlyNode`
+    - `RunsRendererProps`
+  - Exports (values):
+    - `buildForest`
+    - `ReadOnlyBlocks`
+    - `RunsRenderer`
 - Cross-plugin:
   - Imported by: `apps/pages/history`
 

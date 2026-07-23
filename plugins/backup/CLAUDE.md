@@ -7,22 +7,71 @@
 - Description: Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 - Web:
   - Slots: `backupPane.Actions`
-  - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `auth.GrantAccessButton`, `config_v2.ConfigV2`, `config_v2/config-link.ConfigGearButton`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
-  - Exports: Values: `backupPane`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `Pane.Register` "backup"
+    - `DebugApp.Sidebar` "Backup" → `component`
+  - Uses:
+    - `apps/debug/shell.DebugApp`
+    - `auth.GrantAccessButton`
+    - `config_v2.ConfigV2`
+    - `config_v2/config-link.ConfigGearButton`
+    - `infra/endpoints.useEndpoint`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/loading.Loading`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+  - Exports (values): `backupPane`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.BACKUPS_DIR`, `infra/paths.isMain`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `database.db`
+    - `infra/endpoints.implement`
+    - `infra/jobs.defineJob`
+    - `infra/paths.BACKUPS_DIR`
+    - `infra/paths.isMain`
   - DB schema: `plugins/backup/server/internal/tables.ts`
-  - Exports: Values: `_backupRuns`, `BackupSource`, `BackupTarget`
+  - Exports (values):
+    - `_backupRuns`
+    - `BackupSource`
+    - `BackupTarget`
   - Register: `defineJob('backup.run')`
-  - Routes: `POST /api/backup/run`, `GET /api/backup/runs`
+  - Routes:
+    - `POST /api/backup/run`
+    - `GET /api/backup/runs`
 - Cross-plugin:
-  - Imported by: `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/databases`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/sources/transcripts`, `backup/targets/google-drive`, `backup/targets/local`
+  - Imported by:
+    - `backup/sources/attachments`
+    - `backup/sources/claude-settings`
+    - `backup/sources/config`
+    - `backup/sources/databases`
+    - `backup/sources/project-memory`
+    - `backup/sources/secrets`
+    - `backup/sources/singularity-platform`
+    - `backup/sources/transcripts`
+    - `backup/targets/google-drive`
+    - `backup/targets/local`
 - Core:
-  - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupSourceItem`, `BackupSourceReport`, `BackupTargetResult`
+  - Exports (types):
+    - `BackupArchive`
+    - `BackupManifest`
+    - `BackupSourceItem`
+    - `BackupSourceReport`
+    - `BackupTargetResult`
 - Shared:
-  - Exports: Types: `BackupRun`; Values: `BackupRunSchema`, `listBackupRuns`, `runBackup`
+  - Exports (types): `BackupRun`
+  - Exports (values):
+    - `BackupRunSchema`
+    - `listBackupRuns`
+    - `runBackup`
 - Sub-plugins:
   - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
     - Plugins:

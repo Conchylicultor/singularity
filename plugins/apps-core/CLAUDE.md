@@ -7,13 +7,74 @@
 - Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
 - Load-bearing: yes
 - Web:
-  - Slots: `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`, `Apps.RailFraming` ← `apps-core.app-rail-framing`, `Apps.Surface` ← `apps-core.surface`, `Apps.TabBar` ← `apps-core.tab-bar`, `Apps.TabBarActions` ← `shell.global-action-bar`
-  - Uses: `primitives/pane.stripBasePath`, `primitives/pane.useSurfaceAppId`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Types: `ActiveApp`, `Placement`, `RailFramingContribution`, `ResolvedApp`, `SurfaceContribution`, `TabBarContribution`; Values: `Apps`, `defaultApp`, `getFocusedAppId`, `matchAppForPath`, `resolveAppForPath`, `setFocusedApp`, `useActiveApp`, `useCurrentAppId`, `useFocusedAppId`, `usePathname`
+  - Slots:
+    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`
+    - `Apps.RailFraming` ← `apps-core.app-rail-framing`
+    - `Apps.Surface` ← `apps-core.surface`
+    - `Apps.TabBar` ← `apps-core.tab-bar`
+    - `Apps.TabBarActions` ← `shell.global-action-bar`
+  - Uses:
+    - `primitives/pane.stripBasePath`
+    - `primitives/pane.useSurfaceAppId`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (types):
+    - `ActiveApp`
+    - `Placement`
+    - `RailFramingContribution`
+    - `ResolvedApp`
+    - `SurfaceContribution`
+    - `TabBarContribution`
+  - Exports (values):
+    - `Apps`
+    - `defaultApp`
+    - `getFocusedAppId`
+    - `matchAppForPath`
+    - `resolveAppForPath`
+    - `setFocusedApp`
+    - `useActiveApp`
+    - `useCurrentAppId`
+    - `useFocusedAppId`
+    - `usePathname`
 - Cross-plugin:
-  - Imported by: `apps-core/app-rail`, `apps-core/app-rail-framing`, `apps-core/layout`, `apps-core/surface`, `apps-core/surface/floating`, `apps-core/tab-bar`, `apps-core/tab-surface`, `apps-core/tabs`, `apps-core/theme-scope`, `apps/agent-manager/shell`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/mail/shell`, `apps/pages/shell`, `apps/prototypes/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/website/shell`, `apps/workflows/shell`, `config_v2/config-link`, `config_v2/settings`, `shell/global-action-bar`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/quick-theme`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
+  - Imported by:
+    - `apps-core/app-rail`
+    - `apps-core/app-rail-framing`
+    - `apps-core/layout`
+    - `apps-core/surface`
+    - `apps-core/surface/floating`
+    - `apps-core/tab-bar`
+    - `apps-core/tab-surface`
+    - `apps-core/tabs`
+    - `apps-core/theme-scope`
+    - `apps/agent-manager/shell`
+    - `apps/browser/shell`
+    - `apps/debug/shell`
+    - `apps/deploy/shell`
+    - `apps/file-explorer/shell`
+    - `apps/home/app-cards`
+    - `apps/home/shell`
+    - `apps/mail/shell`
+    - `apps/pages/shell`
+    - `apps/prototypes/shell`
+    - `apps/settings/shell`
+    - `apps/sonata/shell`
+    - `apps/story/shell`
+    - `apps/studio/shell`
+    - `apps/website/shell`
+    - `apps/workflows/shell`
+    - `config_v2/config-link`
+    - `config_v2/settings`
+    - `shell/global-action-bar`
+    - `tasks/task-draft-form`
+    - `ui/theme-engine`
+    - `ui/theme-engine/quick-theme`
+    - `ui/theme-engine/theme-customizer`
+    - `ui/theme-toggle`
+    - `ui/variant-region`
 - Core:
-  - Exports: Types: `Placement`, `RailFramingProps`
+  - Exports (types):
+    - `Placement`
+    - `RailFramingProps`
 - Sub-plugins:
   - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.

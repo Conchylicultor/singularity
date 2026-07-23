@@ -46,8 +46,11 @@ therefore never depends on the current expand state — no flapping at the bound
 
 - Description: Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
 - Web:
-  - Uses: `primitives/css/spacing.Stack`, `primitives/element-size.useResizeObserver`
-  - Exports: Types: `ExpandableProps`; Values: `Expandable`
+  - Uses:
+    - `primitives/css/spacing.Stack`
+    - `primitives/element-size.useResizeObserver`
+  - Exports (types): `ExpandableProps`
+  - Exports (values): `Expandable`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/user-text`
 

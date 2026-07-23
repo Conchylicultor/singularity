@@ -23,10 +23,29 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
 - Description: Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
-  - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
+  - Uses:
+    - `config_v2/fields.FieldRenderer`
+    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.Fields`
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
 - Core:
-  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/object.objectFieldType`
-  - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
+  - Uses:
+    - `fields.FieldDef`
+    - `fields.FieldMeta`
+    - `fields.fieldSchemaWithDefault`
+    - `fields.FieldsRecord`
+    - `fields.FieldType`
+    - `fields.InferFieldsObject`
+    - `fields/object.objectFieldType`
+  - Exports (types): `ObjectFieldDef`
+  - Exports (values):
+    - `isObjectFieldDef`
+    - `objectField`
 - Cross-plugin:
   - Imported by: `apps-core/surface/floating/wallpaper`
 

@@ -6,8 +6,15 @@
 
 - Description: Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
 - Web:
-  - Contributes: `PianoRollFx` "Sound-wave ripples" → `LazyBoundary`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
+  - Contributes:
+    - `PianoRollFx` "Sound-wave ripples" → `LazyBoundary`
+    - `ConfigV2.WebRegister`
+  - Uses:
+    - `apps/sonata/piano-roll.easeOutCubic`
+    - `apps/sonata/piano-roll.FxContext`
+    - `apps/sonata/piano-roll.PianoRollFx`
+    - `config_v2.ConfigV2`
+    - `primitives/lazy-component.lazyComponent`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

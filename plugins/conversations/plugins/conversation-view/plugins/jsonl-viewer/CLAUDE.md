@@ -44,19 +44,102 @@ do not duplicate it in `system`, `task-notification`, `meta-prompt`,
 
 - Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
 - Web:
-  - Slots: `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.unknown`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`, `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `JsonlViewer.RowAction` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`, `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
-  - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-  - Uses: `conversations/conversation-view/pending-turn.PendingTurnCard`, `conversations/conversation-view/pending-turn.reconcilePendingTurns`, `conversations/conversation-view/pending-turn.usePendingTurns`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/css/badge.Badge`, `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/scroll-reveal.revealElement`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`, `SectionExpand`; Values: `CopyTextAction`, `EventActionProvider`, `EventLine`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `RowActions`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useSectionExpand`
+  - Slots:
+    - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.unknown`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
+    - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
+    - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
+    - `JsonlViewer.RowAction` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`
+    - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
+    - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
+  - Contributes:
+    - `JsonlViewer.RowAction` "timestamp" → `TimestampAction`
+    - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
+  - Uses:
+    - `conversations/conversation-view/pending-turn.PendingTurnCard`
+    - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
+    - `conversations/conversation-view/pending-turn.usePendingTurns`
+    - `primitives/auto-scroll.JumpToBottomButton`
+    - `primitives/auto-scroll.useStickyScroll`
+    - `primitives/copy-to-clipboard.useCopyToClipboard`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/sticky.Sticky`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/live-state.ResourceView`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/popover.InlinePopover`
+    - `primitives/relative-time.RelativeTime`
+    - `primitives/scroll-reveal.revealElement`
+    - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (types):
+    - `EventFilterContribution`
+    - `OverlayContribution`
+    - `RowActionContribution`
+    - `SectionExpand`
+  - Exports (values):
+    - `CopyTextAction`
+    - `EventActionProvider`
+    - `EventLine`
+    - `formatTime`
+    - `JsonlPane`
+    - `JsonlViewer`
+    - `RowActionButton`
+    - `RowActions`
+    - `Timestamp`
+    - `useJsonlConversationId`
+    - `useLastAssistantEvent`
+    - `useRowMarkdown`
+    - `useSectionExpand`
 - Server:
   - Contributes: `resource.declare` "jsonl-events"
-  - Uses: `conversations/transcript-watcher.readJsonlEventsFromChain`, `conversations/transcript-watcher.resolveConversationTranscriptPaths`, `conversations/transcript-watcher.transcriptChainSignature`, `conversations/transcript-watcher.watchTranscript`, `infra/git-read-cache.createSignedMemo`
+  - Uses:
+    - `conversations/transcript-watcher.readJsonlEventsFromChain`
+    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+    - `conversations/transcript-watcher.transcriptChainSignature`
+    - `conversations/transcript-watcher.watchTranscript`
+    - `infra/git-read-cache.createSignedMemo`
   - Resources: `jsonl-events` (push)
 - Core:
-  - Uses: `conversations/transcript-watcher.JsonlEvent`, `conversations/transcript-watcher.JsonlEventSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `JsonlEventsResponse`; Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
+  - Uses:
+    - `conversations/transcript-watcher.JsonlEvent`
+    - `conversations/transcript-watcher.JsonlEventSchema`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types): `JsonlEventsResponse`
+  - Exports (values):
+    - `JsonlEventsPayloadSchema`
+    - `jsonlEventsResource`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view`, `conversations/conversation-view/fork-session`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/assistant-thinking`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/meta-prompt`, `conversations/conversation-view/jsonl-viewer/preprompt`, `conversations/conversation-view/jsonl-viewer/queue-operation`, `conversations/conversation-view/jsonl-viewer/summary`, `conversations/conversation-view/jsonl-viewer/system`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/teammate-message`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/unknown`, `conversations/conversation-view/jsonl-viewer/user-image`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/terminal-pane`
+  - Imported by:
+    - `conversations/conversation-view`
+    - `conversations/conversation-view/fork-session`
+    - `conversations/conversation-view/jsonl-viewer/assistant-text`
+    - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
+    - `conversations/conversation-view/jsonl-viewer/attachment`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+    - `conversations/conversation-view/jsonl-viewer/message-toc`
+    - `conversations/conversation-view/jsonl-viewer/meta-prompt`
+    - `conversations/conversation-view/jsonl-viewer/preprompt`
+    - `conversations/conversation-view/jsonl-viewer/queue-operation`
+    - `conversations/conversation-view/jsonl-viewer/summary`
+    - `conversations/conversation-view/jsonl-viewer/system`
+    - `conversations/conversation-view/jsonl-viewer/task-notification`
+    - `conversations/conversation-view/jsonl-viewer/teammate-message`
+    - `conversations/conversation-view/jsonl-viewer/tool-call`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/unknown`
+    - `conversations/conversation-view/jsonl-viewer/user-image`
+    - `conversations/conversation-view/jsonl-viewer/user-text`
+    - `conversations/conversation-view/terminal-pane`
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

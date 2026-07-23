@@ -180,18 +180,85 @@ nothing remote is built here.
 
 - Description: Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
-  - Contributes: `resource.declare` "release.run", `resource.declare` "release.history-revision", `resource.declare` "release.previews"
-  - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.FieldColumnMap`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/keyset.buildSortKeys`, `primitives/keyset.keyValuesOf`, `primitives/keyset.orderByClauses`, `primitives/keyset.seekPredicate`, `primitives/log-channels.defineLogSink`
+  - Contributes:
+    - `resource.declare` "release.run"
+    - `resource.declare` "release.history-revision"
+    - `resource.declare` "release.previews"
+  - Uses:
+    - `database.db`
+    - `fields/server-capabilities-loader`
+    - `fields/server-capabilities.resolveFieldFilterSql`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/launcher.gatewayPidFile`
+    - `infra/launcher.isRunning`
+    - `infra/launcher.teardownSelfContainedApp`
+    - `infra/paths.currentWorktreeName`
+    - `infra/paths.pruneWorktreeReleaseArtifacts`
+    - `infra/paths.REPO_ROOT`
+    - `infra/paths.SINGULARITY_DIR`
+    - `infra/paths.worktreeArtifacts`
+    - `infra/paths.worktreeDataDir`
+    - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.compileWhere`
+    - `primitives/data-view/server-query.FieldColumnMap`
+    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/keyset.buildSortKeys`
+    - `primitives/keyset.keyValuesOf`
+    - `primitives/keyset.orderByClauses`
+    - `primitives/keyset.seekPredicate`
+    - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/release/server/internal/tables.ts`
-  - Exports: Values: `_releaseRuns`, `collectReleaseEnv`, `newReleaseRunId`, `Release`, `releaseOutDir`, `triggerRelease`
-  - Resources: `release.history-revision` (push), `release.previews` (push), `release.run` (push)
-  - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`, `POST /api/release/history/query`
+  - Exports (values):
+    - `_releaseRuns`
+    - `collectReleaseEnv`
+    - `newReleaseRunId`
+    - `Release`
+    - `releaseOutDir`
+    - `triggerRelease`
+  - Resources:
+    - `release.history-revision` (push)
+    - `release.previews` (push)
+    - `release.run` (push)
+  - Routes:
+    - `POST /api/release`
+    - `POST /api/release/runs/:id/preview`
+    - `POST /api/release/runs/:id/preview/stop`
+    - `GET /api/release/runs/:id/logs`
+    - `POST /api/release/history/query`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/data-view.FilterGroupSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `Preview`, `QueryReleaseHistoryBody`, `ReleaseLogLine`, `ReleaseLogsResponse`, `ReleaseRun`, `ReleaseTarget`; Values: `previewEndpoint`, `PreviewSchema`, `previewStateResource`, `queryReleaseHistory`, `QueryReleaseHistoryBodySchema`, `QueryReleaseHistoryResponseSchema`, `RELEASE_LOG_CHANNEL`, `RELEASE_TARGETS`, `releaseLogsEndpoint`, `ReleaseLogsResponseSchema`, `releaseRunResource`, `ReleaseRunSchema`, `releaseRunsRevisionResource`, `releaseTargetById`, `SortRuleSchema`, `stopPreviewEndpoint`, `triggerReleaseEndpoint`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/data-view.FilterGroupSchema`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `Preview`
+    - `QueryReleaseHistoryBody`
+    - `ReleaseLogLine`
+    - `ReleaseLogsResponse`
+    - `ReleaseRun`
+    - `ReleaseTarget`
+  - Exports (values):
+    - `previewEndpoint`
+    - `PreviewSchema`
+    - `previewStateResource`
+    - `queryReleaseHistory`
+    - `QueryReleaseHistoryBodySchema`
+    - `QueryReleaseHistoryResponseSchema`
+    - `RELEASE_LOG_CHANNEL`
+    - `RELEASE_TARGETS`
+    - `releaseLogsEndpoint`
+    - `ReleaseLogsResponseSchema`
+    - `releaseRunResource`
+    - `ReleaseRunSchema`
+    - `releaseRunsRevisionResource`
+    - `releaseTargetById`
+    - `SortRuleSchema`
+    - `stopPreviewEndpoint`
+    - `triggerReleaseEndpoint`
 - Cross-plugin:
   - Imported by: `auth/apple-signing`
 - Shared:
-  - Exports: Types: `ReleaseStatus`
+  - Exports (types): `ReleaseStatus`
 
 <!-- AUTOGENERATED:END -->

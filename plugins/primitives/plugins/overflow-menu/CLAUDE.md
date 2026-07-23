@@ -6,8 +6,20 @@
 
 - Description: Single-line row that keeps as many children inline as fit and collapses the overflow behind a trailing ⋯ dropdown menu. Built on responsive-overflow; reserves the trigger's width so it is never clipped.
 - Web:
-  - Uses: `primitives/css/measure-strip.MeasureStrip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/element-size.useResizeObserver`, `primitives/icon-button.IconButton`
-  - Exports: Types: `OverflowMenuItem`, `OverflowMenuProps`; Values: `OverflowMenu`
+  - Uses:
+    - `primitives/css/measure-strip.MeasureStrip`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.DropdownMenu`
+    - `primitives/css/ui-kit.DropdownMenuContent`
+    - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/element-size.useResizeObserver`
+    - `primitives/icon-button.IconButton`
+  - Exports (types):
+    - `OverflowMenuItem`
+    - `OverflowMenuProps`
+  - Exports (values): `OverflowMenu`
 - Cross-plugin:
   - Imported by: `apps/sonata/library`
 

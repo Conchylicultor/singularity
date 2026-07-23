@@ -7,18 +7,48 @@
 - Description: Format-agnostic generated-content substrate: useGeneratedUnits() generates + persists per-unit text keyed by (pageId, kind, unitId) over live-state. No UI. Format-agnostic generated-content substrate: LLM-generate text and persist it keyed by (pageId, kind, unitId) with per-unit input-hash + status, pushed over live-state.
 - Server:
   - Contributes: `resource.declare` "story-generated-units"
-  - Uses: `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`
+  - Uses:
+    - `database.db`
+    - `infra/claude-cli.ClaudeCliError`
+    - `infra/claude-cli.runClaudePrint`
+    - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defaultRandom`
+    - `infra/entities.defineEntity`
+    - `infra/jobs.defineJob`
+    - `infra/query-resource.queryResource`
   - DB schema: `plugins/apps/plugins/story/plugins/generation/server/internal/tables.ts`
-  - Exports: Values: `_storyGeneratedUnits`, `storyGeneratedUnitsResource`
+  - Exports (values):
+    - `_storyGeneratedUnits`
+    - `storyGeneratedUnitsResource`
   - Register: `defineJob('story-generation.generate')`
   - Resources: `story-generated-units` (keyed)
   - Routes: `POST /api/story/generate/:pageId/:kind/:unitId`
 - Web:
-  - Uses: `infra/endpoints.useEndpointMutation`, `primitives/live-state.useResource`
-  - Exports: Types: `GenerationTurn`, `GenStatus`; Values: `useGeneratedUnits`
+  - Uses:
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/live-state.useResource`
+  - Exports (types):
+    - `GenerationTurn`
+    - `GenStatus`
+  - Exports (values): `useGeneratedUnits`
 - Core:
-  - Uses: `fields.FieldsRecord`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/entities.wireSchema`
-  - Exports: Types: `GenStatus`, `StoryGeneratedUnitRow`; Values: `GEN_STATUSES`, `STORY_GENERATED_UNIT_SERVER_ONLY`, `storyGeneratedUnitFields`, `StoryGeneratedUnitRowSchema`
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
+    - `fields/uuid/config.uuidField`
+    - `infra/entities.wireSchema`
+  - Exports (types):
+    - `GenStatus`
+    - `StoryGeneratedUnitRow`
+  - Exports (values):
+    - `GEN_STATUSES`
+    - `STORY_GENERATED_UNIT_SERVER_ONLY`
+    - `storyGeneratedUnitFields`
+    - `StoryGeneratedUnitRowSchema`
 - Cross-plugin:
   - Imported by: `apps/story/renderers/blog`
 

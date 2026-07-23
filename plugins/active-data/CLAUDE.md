@@ -82,21 +82,86 @@ Behavior:
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 - Web:
   - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
-  - Contributes: `MarkdownEnhancerSlot`, `InlineTextWalkerSlot`, `TextEditorSlots.NodeExtensions`
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/inline-text.InlineTextWalker`, `primitives/inline-text.InlineTextWalkerContext`, `primitives/inline-text.InlineTextWalkerSlot`, `primitives/inline-text.useInlineTextWalker`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`, `primitives/text-editor.TextEditorSlots`
-  - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
+  - Contributes:
+    - `MarkdownEnhancerSlot`
+    - `InlineTextWalkerSlot`
+    - `TextEditorSlots.NodeExtensions`
+  - Uses:
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/center.Center`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/inline-text.InlineTextWalker`
+    - `primitives/inline-text.InlineTextWalkerContext`
+    - `primitives/inline-text.InlineTextWalkerSlot`
+    - `primitives/inline-text.useInlineTextWalker`
+    - `primitives/live-state.useResource`
+    - `primitives/markdown.MarkdownEnhancement`
+    - `primitives/markdown.MarkdownEnhancementContext`
+    - `primitives/markdown.MarkdownEnhancerSlot`
+    - `primitives/markdown.useMarkdownEnhancement`
+    - `primitives/text-editor.TextEditorSlots`
+  - Exports (types):
+    - `ActiveDataBindingHandle`
+    - `ActiveDataBlockContribution`
+    - `ActiveDataCodeContribution`
+    - `ActiveDataContribution`
+    - `ActiveDataIdentity`
+    - `ActiveDataInlineContribution`
+    - `ActiveDataSegment`
+    - `CodeReplaceContrib`
+  - Exports (values):
+    - `ActiveData`
+    - `ActiveDataIdentityProvider`
+    - `useActiveDataBinding`
+    - `useActiveDataCodeReplace`
+    - `useActiveDataIdentity`
+    - `useActiveDataLinkify`
+    - `useActiveDataSegments`
 - Server:
   - Contributes: `resource.declare` "active-data.bindings"
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
-  - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`
+  - Exports (values):
+    - `_activeDataBindings`
+    - `activeDataBindingsResource`
   - Resources: `active-data.bindings` (push)
-  - Routes: `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`, `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+  - Routes:
+    - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+    - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`, `PutBindingBody`; Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `deleteBinding`, `inlineBoundary`, `putBinding`, `putBindingBodySchema`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `ActiveDataBinding`
+    - `ActiveDataBindingsPayload`
+    - `PutBindingBody`
+  - Exports (values):
+    - `ActiveDataBindingSchema`
+    - `ActiveDataBindingsPayloadSchema`
+    - `activeDataBindingsResource`
+    - `deleteBinding`
+    - `inlineBoundary`
+    - `putBinding`
+    - `putBindingBodySchema`
 - Cross-plugin:
-  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `improve/element-picker`
+  - Imported by:
+    - `active-data/attempt`
+    - `active-data/conv`
+    - `active-data/plugin-link`
+    - `active-data/task`
+    - `active-data/task-link`
+    - `conversations/conversation-view/jsonl-viewer/assistant-text`
+    - `improve/element-picker`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.

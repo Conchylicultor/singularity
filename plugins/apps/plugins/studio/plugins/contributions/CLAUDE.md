@@ -6,8 +6,30 @@
 
 - Description: Central view of all plugin contributions aggregated by type.
 - Web:
-  - Contributes: `Pane.Register` "contributions", `Studio.Sidebar` "Contributions" → `component`
-  - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.ContributionsRowClick`, `plugin-meta/contributions-table.FacetTableEntry`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-table.DataTable`, `primitives/filter-chips.FilterChip`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.SearchInput`
+  - Contributes:
+    - `Pane.Register` "contributions"
+    - `Studio.Sidebar` "Contributions" → `component`
+  - Uses:
+    - `apps/studio/shell.Studio`
+    - `infra/endpoints.useEndpoint`
+    - `plugin-meta/contributions-table.Contributions`
+    - `plugin-meta/contributions-table.ContributionsRowClick`
+    - `plugin-meta/contributions-table.FacetTableEntry`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
+    - `primitives/css/column.Column`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/data-table.DataTable`
+    - `primitives/filter-chips.FilterChip`
+    - `primitives/loading.Loading`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/search.SearchInput`
 - Sub-plugins:
   - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 

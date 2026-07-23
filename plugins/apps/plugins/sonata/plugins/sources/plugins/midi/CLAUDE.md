@@ -6,16 +6,49 @@
 
 - Description: MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
 - Web:
-  - Contributes: `Sonata.Source` "MIDI File", `Library.Source` "midi", `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
-  - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `infra/attachments.getAttachmentFile`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/live-state.useResource`
-  - Exports: Values: `MIDI_SOURCE_ID`, `useSongMidi`
+  - Contributes:
+    - `Sonata.Source` "MIDI File"
+    - `Library.Source` "midi"
+    - `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
+  - Uses:
+    - `apps/sonata/library.Library`
+    - `apps/sonata/library.openSongImperative`
+    - `apps/sonata/shell.Sonata`
+    - `infra/attachments.getAttachmentFile`
+    - `infra/attachments.uploadAttachment`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.useResource`
+  - Exports (values):
+    - `MIDI_SOURCE_ID`
+    - `useSongMidi`
 - Server:
   - Contributes: `resource.declare` "sonata-song-midi"
-  - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.songAttachments`, `apps/sonata/library.updateSongMeta`, `database.db`, `infra/attachments.createAttachment`, `infra/attachments.getAttachment`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
+  - Uses:
+    - `apps/sonata/library._songs`
+    - `apps/sonata/library.createSongRow`
+    - `apps/sonata/library.songAttachments`
+    - `apps/sonata/library.updateSongMeta`
+    - `database.db`
+    - `infra/attachments.createAttachment`
+    - `infra/attachments.getAttachment`
+    - `infra/endpoints.implement`
+    - `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
-  - Exports: Types: `ImportMidiSongInput`; Values: `getSongMidiBySourcePath`, `importMidiSong`, `listFolderImportedSongs`, `setSourceMissing`, `songMidi`, `songMidiLiveResource`
-  - Routes: `POST /api/sonata/songs/midi`, `GET /api/sonata/songs/:id/midi`
+  - Exports (types): `ImportMidiSongInput`
+  - Exports (values):
+    - `getSongMidiBySourcePath`
+    - `importMidiSong`
+    - `listFolderImportedSongs`
+    - `setSourceMissing`
+    - `songMidi`
+    - `songMidiLiveResource`
+  - Routes:
+    - `POST /api/sonata/songs/midi`
+    - `GET /api/sonata/songs/:id/midi`
 - Cross-plugin:
   - Imported by: `apps/sonata/sources/midi/folders`
 - Sub-plugins:

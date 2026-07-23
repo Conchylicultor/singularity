@@ -62,21 +62,93 @@ the bar).
 
 - Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
 - Web:
-  - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`, `Reports.KindView` → `SlowOpKindView`
-  - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.registerSlowResourceReporter`, `primitives/perfs/boot-trace.getBootTrace`, `reports.Reports`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `Core.Root` → `SlowOpCollector`
+    - `Reports.KindView` → `SlowOpKindView`
+  - Uses:
+    - `apps-core/tabs.navigate`
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/link-chip.LinkChip`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.registerSlowResourceReporter`
+    - `primitives/perfs/boot-trace.getBootTrace`
+    - `reports.Reports`
 - Server:
-  - Contributes: `resource.declare` "slow-ops", `ConfigV2.Register` "slow-op", `report-kind` "slow-op", `change-feed-exclusion` "slow_ops"
-  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `debug/trace/engine.captureTrace`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.getJobSlowThresholdMs`, `infra/retention.defineRetention`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
+  - Contributes:
+    - `resource.declare` "slow-ops"
+    - `ConfigV2.Register` "slow-op"
+    - `report-kind` "slow-op"
+    - `change-feed-exclusion` "slow_ops"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.watchConfig`
+    - `database.db`
+    - `database/change-feed.ExcludeFromChangeFeed`
+    - `debug/trace/engine.captureTrace`
+    - `infra/contention.ContentionSnapshot`
+    - `infra/contention.getContentionSnapshot`
+    - `infra/duress.createShedBuffer`
+    - `infra/duress.ShedSummary`
+    - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defaultRandom`
+    - `infra/entities.defineEntity`
+    - `infra/jobs.getJobSlowThresholdMs`
+    - `infra/retention.defineRetention`
+    - `primitives/log-channels.defineLogSink`
+    - `primitives/log-channels.readChannelJson`
+    - `reports.recordReport`
+    - `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
-  - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
+  - Exports (types): `RecordSlowOpInput`
+  - Exports (values):
+    - `_slowOps`
+    - `readSlowOpMarkers`
+    - `recordSlowOp`
+    - `slowOpsResource`
   - Register: `defineJob('retention.slow_ops')`
   - Resources: `slow-ops` (push)
   - Routes: `POST /api/slow-ops/client`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `CallerBreakdown`, `CallerRef`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `CallerRefSchema`, `loadSeverity`, `slowOpConfig`, `slowOpFields`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields/date/config.dateField`
+    - `fields/float/config.floatField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
+    - `fields/uuid/config.uuidField`
+    - `infra/contention.ContentionSnapshotSchema`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `CallerBreakdown`
+    - `CallerRef`
+    - `SlowOp`
+    - `SlowOpMarker`
+    - `SlowOpReportPayload`
+    - `SlowOpSample`
+  - Exports (values):
+    - `CallerBreakdownSchema`
+    - `CallerRefSchema`
+    - `loadSeverity`
+    - `slowOpConfig`
+    - `slowOpFields`
+    - `SlowOpMarkerSchema`
+    - `SlowOpReportPayloadSchema`
+    - `SlowOpSampleSchema`
+    - `SlowOpSchema`
+    - `slowOpsResource`
 - Cross-plugin:
-  - Imported by: `debug/boot-monitor`, `debug/health-monitor`
+  - Imported by:
+    - `debug/boot-monitor`
+    - `debug/health-monitor`
 - Sub-plugins:
   - **`cluster`** — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
   - **`pane`** — Aggregates tab of the Slow Events pane: a global, ranked overview of slow operations with per-operation caller attribution.

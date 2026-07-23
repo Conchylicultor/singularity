@@ -29,17 +29,49 @@ that settles would stop retrying and would render as a permanent answer.
 - Description: Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
 - Server:
   - Contributes: `resource.declare` "edited-files"
-  - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createSignedMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `primitives/commit-list.WorktreeGoneError`, `tasks/tasks-core.getConversation`
-  - Exports: Values: `editedFilesResource`, `editedFilesSignature`, `getEditedFiles`
+  - Uses:
+    - `infra/file-watcher.getParcelWatcher`
+    - `infra/git-read-cache.createSignedMemo`
+    - `infra/host-read-pool.withHeavyReadSlot`
+    - `primitives/commit-list.runGit`
+    - `primitives/commit-list.WorktreeGoneError`
+    - `tasks/tasks-core.getConversation`
+  - Exports (values):
+    - `editedFilesResource`
+    - `editedFilesSignature`
+    - `getEditedFiles`
   - Resources: `edited-files` (invalidate)
 - Web:
-  - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
-  - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
+  - Uses:
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useResource`
+  - Exports (values):
+    - `gitStatusBadge`
+    - `gitStatusDot`
+    - `useEditedFiles`
 - Core:
-  - Uses: `primitives/live-state.Resolvable`, `primitives/live-state.resolvableSchema`, `primitives/live-state.resourceDescriptor`, `primitives/live-state.unresolved`
-  - Exports: Types: `EditedFile`, `EditedFilesPayload`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`
+  - Uses:
+    - `primitives/live-state.Resolvable`
+    - `primitives/live-state.resolvableSchema`
+    - `primitives/live-state.resourceDescriptor`
+    - `primitives/live-state.unresolved`
+  - Exports (types):
+    - `EditedFile`
+    - `EditedFilesPayload`
+    - `EditedFilesResponse`
+    - `EditedFileStatus`
+  - Exports (values):
+    - `EditedFileSchema`
+    - `editedFilesResource`
 - Cross-plugin:
-  - Imported by: `code-explorer/code-api`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/push-and-exit`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`
+  - Imported by:
+    - `code-explorer/code-api`
+    - `conversations/conversation-view/code/docs-button`
+    - `conversations/conversation-view/code/file-pane`
+    - `conversations/conversation-view/push-and-exit`
+    - `review/code-review`
+    - `review/plugin-changes`
+    - `review/plugin-changes/file-changes`
 - Sub-plugins:
   - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
   - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.

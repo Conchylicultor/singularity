@@ -6,18 +6,91 @@
 
 - Description: Central settings pane for switching visual variants of pluggable UI components.
 - Web:
-  - Slots: `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ThemeEngine.GlobalPreset` ← `ui.tokens`, `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`, `ThemeEngine.PresetSource` ← `ui.tweakcn`
-  - Contributes: `Core.Root` → `ThemeInjector`, `Core.Root` → `AppScopeThemes`, `ConfigV2.WebRegister`, `DynamicEnum.Options` "Theme"
-  - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core.useCurrentAppId`, `apps-core/theme-scope.useRootThemeScope`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useScopeMembership`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/ui-kit.appThemeScope`, `primitives/css/ui-kit.themeScopeSelectors`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Types: `ColorAdjustment`, `ColorMode`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `TokenGroupPresets`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ScopedAppTheme`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useColorMode`, `useResolvedColorMode`, `useThemeScopeId`, `useTokenGroupPresetOptions`, `useTokenGroupPresets`
+  - Slots:
+    - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+    - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+    - `ThemeEngine.GlobalPreset` ← `ui.tokens`
+    - `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`
+    - `ThemeEngine.PresetSource` ← `ui.tweakcn`
+  - Contributes:
+    - `Core.Root` → `ThemeInjector`
+    - `Core.Root` → `AppScopeThemes`
+    - `ConfigV2.WebRegister`
+    - `DynamicEnum.Options` "Theme"
+  - Uses:
+    - `apps-core.Apps`
+    - `apps-core.useActiveApp`
+    - `apps-core.useCurrentAppId`
+    - `apps-core/theme-scope.useRootThemeScope`
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `config_v2.useScopeMembership`
+    - `fields/dynamic-enum/config.DynamicEnum`
+    - `primitives/css/ui-kit.appThemeScope`
+    - `primitives/css/ui-kit.themeScopeSelectors`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (types):
+    - `ColorAdjustment`
+    - `ColorMode`
+    - `ColorTransformContribution`
+    - `GlobalPresetContribution`
+    - `PresetSourceContribution`
+    - `TokenGroupContribution`
+    - `TokenGroupPreset`
+    - `TokenGroupPresets`
+    - `VariantGroupContribution`
+  - Exports (values):
+    - `ColorAdjustContext`
+    - `ScopedAppTheme`
+    - `ThemeEngine`
+    - `ThemeScope`
+    - `ThemeScopeProvider`
+    - `transformValues`
+    - `useColorMode`
+    - `useResolvedColorMode`
+    - `useThemeScopeId`
+    - `useTokenGroupPresetOptions`
+    - `useTokenGroupPresets`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`, `fields/enum/config.enumField`
-  - Exports: Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`; Values: `defineTokenGroup`, `themeEngineConfig`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields/dynamic-enum/config.dynamicEnumField`
+    - `fields/enum/config.enumField`
+  - Exports (types):
+    - `TokenGroupDescriptor`
+    - `TokenGroupField`
+    - `TokenGroupSchema`
+  - Exports (values):
+    - `defineTokenGroup`
+    - `themeEngineConfig`
 - Cross-plugin:
-  - Imported by: `apps-core/surface/floating`, `apps/website/demos/theme-toy`, `shell/toast`, `ui/segmented-progress-bar`, `ui/tab-bar/customizer`, `ui/theme-engine/quick-theme`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
+  - Imported by:
+    - `apps-core/surface/floating`
+    - `apps/website/demos/theme-toy`
+    - `shell/toast`
+    - `ui/segmented-progress-bar`
+    - `ui/tab-bar/customizer`
+    - `ui/theme-engine/quick-theme`
+    - `ui/theme-engine/theme-customizer`
+    - `ui/tokens`
+    - `ui/tokens/categorical`
+    - `ui/tokens/chart`
+    - `ui/tokens/color-adjust`
+    - `ui/tokens/color-palette`
+    - `ui/tokens/density`
+    - `ui/tokens/font-family`
+    - `ui/tokens/font-family/google-fonts`
+    - `ui/tokens/rich-text-palette`
+    - `ui/tokens/shadow`
+    - `ui/tokens/shape`
+    - `ui/tokens/sidebar-palette`
+    - `ui/tokens/type-scale`
+    - `ui/tweakcn`
+    - `ui/tweakcn/community-browser`
+    - `ui/variant-region`
 - Sub-plugins:
   - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (community themes), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
   - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.

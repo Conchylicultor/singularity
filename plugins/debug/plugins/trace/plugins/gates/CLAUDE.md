@@ -7,7 +7,14 @@
 - Description: Gates trace lane: a point-in-time gate-occupancy strip (active/max + queued per concurrency layer, saturated gates highlighted) at the trip instant. Built-in trace event class 'gates': per-concurrency-gate occupancy (active / queued / max per layer) captured synchronously at the trip instant.
 - Web:
   - Contributes: `Trace.Lane` → `GatesLane`
-  - Uses: `debug/trace/engine.Trace`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`
+  - Uses:
+    - `debug/trace/engine.Trace`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
 - Server:
   - Contributes: `trace-event-class` "gates"
   - Uses: `debug/trace/engine.defineTraceEventClass`

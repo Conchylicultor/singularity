@@ -86,7 +86,9 @@
 
 - Description: Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
 - Core:
-  - Exports: Values: `ZERO_CACHE_PORT`, `zeroCacheEnabled`
+  - Exports (values):
+    - `ZERO_CACHE_PORT`
+    - `zeroCacheEnabled`
 - Sub-plugins:
   - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
   - **`client`** — Generic, schema-parameterized Zero client: the ZeroRoot provider wrapper, the useZeroResource (ResourceResult-shaped) adapter, and a raw useZeroQuery re-export. No concrete schema.

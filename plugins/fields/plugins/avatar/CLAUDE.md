@@ -22,8 +22,15 @@ lives in the `plugins/config` sub-plugin.
   - Contributes: `Fields.Identity` "avatar"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Types: `AvatarSpec`, `SvgNode`; Values: `avatarFieldType`, `avatarIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (types):
+    - `AvatarSpec`
+    - `SvgNode`
+  - Exports (values):
+    - `avatarFieldType`
+    - `avatarIdentity`
 - Cross-plugin:
   - Imported by: `fields/avatar/config`
 - Sub-plugins:

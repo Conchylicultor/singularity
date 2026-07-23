@@ -8,18 +8,84 @@
 - Web:
   - Slots: `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.from-url`, `apps-core.surface.floating.wallpaper.openverse`, `apps-core.surface.floating.wallpaper.upload`
   - Contributes: `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/css/grid.Grid`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.DialogTitle`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/cursor-menu.CursorAnchor`, `primitives/cursor-menu.CursorAnchoredMenu`, `primitives/imperative-dialog.openDialog`, `primitives/loading.Loading`, `primitives/search.SearchInput`
-  - Exports: Types: `WallpaperCandidate`; Values: `DesktopContextMenu`, `openWallpaperPicker`, `Wallpaper`, `WallpaperAttribution`, `WallpaperSearchPanel`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `config_v2.useSetConfig`
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpoint`
+    - `primitives/css/grid.Grid`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/ui-kit.DialogTitle`
+    - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/cursor-menu.CursorAnchor`
+    - `primitives/cursor-menu.CursorAnchoredMenu`
+    - `primitives/imperative-dialog.openDialog`
+    - `primitives/loading.Loading`
+    - `primitives/search.SearchInput`
+  - Exports (types): `WallpaperCandidate`
+  - Exports (values):
+    - `DesktopContextMenu`
+    - `openWallpaperPicker`
+    - `Wallpaper`
+    - `WallpaperAttribution`
+    - `WallpaperSearchPanel`
 - Server:
   - Contributes: `ConfigV2.Register` "wallpaper"
-  - Uses: `config_v2.ConfigV2`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`, `infra/safe-fetch.parsePublicUrl`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
-  - Exports: Types: `WallpaperSearchProvider`; Values: `defineWallpaperProvider`, `getWallpaperProvider`
-  - Routes: `GET /api/wallpaper/search`, `POST /api/wallpaper/import-url`, `POST /api/wallpaper/upload`, `GET /api/wallpaper/image`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/paths.SINGULARITY_DIR`
+    - `infra/safe-fetch.parsePublicUrl`
+    - `infra/safe-fetch.safeFetch`
+    - `infra/safe-fetch.SsrfError`
+  - Exports (types): `WallpaperSearchProvider`
+  - Exports (values):
+    - `defineWallpaperProvider`
+    - `getWallpaperProvider`
+  - Routes:
+    - `GET /api/wallpaper/search`
+    - `POST /api/wallpaper/import-url`
+    - `POST /api/wallpaper/upload`
+    - `GET /api/wallpaper/image`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/enum/config.enumField`, `fields/int/config.intField`, `fields/object/config.objectField`, `fields/text/config.textField`, `infra/endpoints.blob`, `infra/endpoints.defineEndpoint`, `infra/endpoints.multipart`
-  - Exports: Types: `SavedWallpaper`, `WallpaperAttribution`, `WallpaperCandidate`, `WallpaperResult`; Values: `importWallpaperUrl`, `SavedWallpaperSchema`, `searchWallpaper`, `uploadWallpaper`, `WallpaperAttributionSchema`, `wallpaperConfig`, `wallpaperImage`, `WallpaperResultSchema`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields/enum/config.enumField`
+    - `fields/int/config.intField`
+    - `fields/object/config.objectField`
+    - `fields/text/config.textField`
+    - `infra/endpoints.blob`
+    - `infra/endpoints.defineEndpoint`
+    - `infra/endpoints.multipart`
+  - Exports (types):
+    - `SavedWallpaper`
+    - `WallpaperAttribution`
+    - `WallpaperCandidate`
+    - `WallpaperResult`
+  - Exports (values):
+    - `importWallpaperUrl`
+    - `SavedWallpaperSchema`
+    - `searchWallpaper`
+    - `uploadWallpaper`
+    - `WallpaperAttributionSchema`
+    - `wallpaperConfig`
+    - `wallpaperImage`
+    - `WallpaperResultSchema`
 - Cross-plugin:
-  - Imported by: `apps-core/surface/floating`, `apps-core/surface/floating/wallpaper/from-url`, `apps-core/surface/floating/wallpaper/openverse`, `apps-core/surface/floating/wallpaper/upload`
+  - Imported by:
+    - `apps-core/surface/floating`
+    - `apps-core/surface/floating/wallpaper/from-url`
+    - `apps-core/surface/floating/wallpaper/openverse`
+    - `apps-core/surface/floating/wallpaper/upload`
   - Endpoint callers: `floating`
 - Sub-plugins:
   - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.

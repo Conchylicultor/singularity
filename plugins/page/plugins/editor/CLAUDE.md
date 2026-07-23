@@ -825,22 +825,333 @@ tests). The whole document lives in React state and is discarded on unmount.
 
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
-  - Slots: `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`, `Editor.TurnInto` ← `page.turn-into-page`, `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/scroll-reveal.useRevealOnActive`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineOrderedDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.OrderedDispatchContribution`, `primitives/sync-status.useReportSync`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`, `primitives/text-editor/caret-trigger.useForcedCaretQuery`, `primitives/undo-redo.useScopedUndoRedo`, `reorder.isNodeData`, `reorder.TopLevelEntry`, `reorder.useReorderedEntries`
-  - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockSection`, `BlockTextExtension`, `BlockTextPluginProps`, `CaretSurface`, `CaretSurfaceRef`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_INDENT`, `BLOCK_INSET`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `colorCssValue`, `Editor`, `filterBlockTypes`, `flattenSections`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `MARKER_GUTTER`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageContentColumn`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useGroupedInsertableBlocks`, `useInsertableBlocks`, `usePageOptions`
+  - Slots:
+    - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+    - `Editor.TurnInto` ← `page.turn-into-page`
+    - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
+  - Uses:
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/overlay.Overlay`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/row.Row`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/icon-button.IconButton`
+    - `primitives/icon-picker.SvgIcon`
+    - `primitives/latest-ref.useEventCallback`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.liveStateSocketKind`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/multi-select.MultiSelectProvider`
+    - `primitives/multi-select.SelectionBar`
+    - `primitives/multi-select.useMultiSelect`
+    - `primitives/multi-select.useMultiSelectItem`
+    - `primitives/networking.subscribeWsStatus`
+    - `primitives/optimistic-mutation.OpNoLongerApplies`
+    - `primitives/optimistic-mutation.useOptimisticResource`
+    - `primitives/popover.InlinePopover`
+    - `primitives/popover.InlinePopoverProps`
+    - `primitives/scroll-reveal.useRevealOnActive`
+    - `primitives/select-scope.ContentScope`
+    - `primitives/slot-render.defineOrderedDispatchSlot`
+    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/slot-render.OrderedDispatchContribution`
+    - `primitives/sync-status.useReportSync`
+    - `primitives/text-editor/caret-trigger.atWordBoundary`
+    - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
+    - `primitives/text-editor/caret-trigger.useCaretMenu`
+    - `primitives/text-editor/caret-trigger.useCaretQuery`
+    - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
+    - `primitives/undo-redo.useScopedUndoRedo`
+    - `reorder.isNodeData`
+    - `reorder.TopLevelEntry`
+    - `reorder.useReorderedEntries`
+  - Exports (types):
+    - `BlockContribution`
+    - `BlockEditorAPI`
+    - `BlockEditorHandle`
+    - `BlockPasteHandler`
+    - `BlockRendererProps`
+    - `BlockSection`
+    - `BlockTextExtension`
+    - `BlockTextPluginProps`
+    - `CaretSurface`
+    - `CaretSurfaceRef`
+    - `FormatToolbarValue`
+    - `MarkButtonProps`
+    - `PageIconProps`
+    - `PageOption`
+    - `PageOptionsResult`
+  - Exports (values):
+    - `BLOCK_INDENT`
+    - `BLOCK_INSET`
+    - `BlockEditor`
+    - `BlockTextEditor`
+    - `BlockTextRenderer`
+    - `BlockTypeList`
+    - `colorCssValue`
+    - `Editor`
+    - `filterBlockTypes`
+    - `flattenSections`
+    - `getBlockTextExtensions`
+    - `isValidLinkUrl`
+    - `MarkButton`
+    - `MARKER_GUTTER`
+    - `normalizeLinkUrl`
+    - `OPEN_LINK_POPOVER_COMMAND`
+    - `PageContentColumn`
+    - `PageIcon`
+    - `PageOptionsList`
+    - `registerBlockPasteHandler`
+    - `registerBlockTextExtension`
+    - `useBlockEditor`
+    - `useFormatToolbar`
+    - `useGroupedInsertableBlocks`
+    - `useInsertableBlocks`
+    - `usePageOptions`
 - Server:
-  - Contributes: `resource.declare` "pages", `resource.declare` "page-blocks", `page.block-data` "page"
-  - Uses: `database.currentTxId`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/trash._trashEntries`, `infra/trash.defineTrashSource`, `infra/trash.recordTrashEntry`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`
-  - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
-  - Exports: Types: `Block`, `BlockDeleteHook`, `BlockRestoreHook`, `BlocksChangedPayload`, `BlockTrashHook`, `PageContentSnapshot`, `PageData`, `StoredBlock`; Values: `_blocks`, `BlockLifecycle`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `deleteBlocksSubtree`, `Editor`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesLiveResource`, `replacePageContent`, `serializePageContent`
-  - Register: `defineTriggerEvent('page.blocksChanged')`, `defineTrashSource('pages')`
-  - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/turn-into-page`, `POST /api/pages/:pageId/blocks/op`, `POST /api/pages/:pageId/blocks/patch`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
+  - Contributes:
+    - `resource.declare` "pages"
+    - `resource.declare` "page-blocks"
+    - `page.block-data` "page"
+  - Uses:
+    - `database.currentTxId`
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/events.defineTriggerEvent`
+    - `infra/trash._trashEntries`
+    - `infra/trash.defineTrashSource`
+    - `infra/trash.recordTrashEntry`
+    - `primitives/rank.nextRankUnder`
+    - `primitives/rank.rankAfterSibling`
+  - DB schema:
+    - `plugins/page/plugins/editor/server/internal/tables-events.ts`
+    - `plugins/page/plugins/editor/server/internal/tables.ts`
+  - Exports (types):
+    - `Block`
+    - `BlockDeleteHook`
+    - `BlockRestoreHook`
+    - `BlocksChangedPayload`
+    - `BlockTrashHook`
+    - `PageContentSnapshot`
+    - `PageData`
+    - `StoredBlock`
+  - Exports (values):
+    - `_blocks`
+    - `BlockLifecycle`
+    - `blocksChanged`
+    - `BlockSchema`
+    - `blocksLiveResource`
+    - `deleteBlocksSubtree`
+    - `Editor`
+    - `PAGE_BLOCK_TYPE`
+    - `pageData`
+    - `PageDataSchema`
+    - `pagesLiveResource`
+    - `replacePageContent`
+    - `serializePageContent`
+  - Register:
+    - `defineTriggerEvent('page.blocksChanged')`
+    - `defineTrashSource('pages')`
+  - Routes:
+    - `GET /api/pages`
+    - `GET /api/pages/:pageId/blocks`
+    - `POST /api/blocks`
+    - `PATCH /api/blocks/:id`
+    - `DELETE /api/blocks/:id`
+    - `POST /api/blocks/:id/move`
+    - `POST /api/blocks/:id/turn-into-page`
+    - `POST /api/pages/:pageId/blocks/op`
+    - `POST /api/pages/:pageId/blocks/patch`
+    - `POST /api/pages/:pageId/blocks/bulk-delete`
+    - `POST /api/pages/:pageId/blocks/bulk-move`
+    - `POST /api/pages/:pageId/blocks/bulk-duplicate`
+    - `POST /api/pages/:pageId/blocks/paste`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `infra/trash.TrashOutcomeSchema`, `primitives/collab-doc.readYDoc`, `primitives/collab-doc.yDocContent`, `primitives/collab-doc.yDocFromLexical`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.selectionRoots`, `primitives/tree.subtreeIds`
-  - Exports: Types: `Block`, `BlockData`, `BlockDiff`, `BlockHandle`, `BlockMarkdown`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MdParseCtx`, `MdSerializeCtx`, `MoveBlockBody`, `PageCover`, `PageData`, `PageRow`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextBearingSchema`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defaultTextHandle`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `nextVisibleLine`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `pageBlockHandle`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `PageRowSchema`, `PAGES_TRASH_SOURCE`, `pagesResource`, `parseMarkdownToForest`, `pasteAnchorId`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `planForestInsert`, `prevVisibleLine`, `rankWindow`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `serializeForestToMarkdown`, `serializeSubtree`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `infra/trash.TrashOutcomeSchema`
+    - `primitives/collab-doc.readYDoc`
+    - `primitives/collab-doc.yDocContent`
+    - `primitives/collab-doc.yDocFromLexical`
+    - `primitives/live-state.resourceDescriptor`
+    - `primitives/rank.Rank`
+    - `primitives/rank.RankSchema`
+    - `primitives/tree.isDescendant`
+    - `primitives/tree.selectionRoots`
+    - `primitives/tree.subtreeIds`
+  - Exports (types):
+    - `Block`
+    - `BlockData`
+    - `BlockDiff`
+    - `BlockHandle`
+    - `BlockMarkdown`
+    - `BlockNode`
+    - `BlockOp`
+    - `BlockPatch`
+    - `BlockTextVariant`
+    - `BulkDeleteBlocksBody`
+    - `BulkDuplicateBlocksBody`
+    - `BulkMoveBlocksBody`
+    - `ColorToken`
+    - `CreateBlockBody`
+    - `Mark`
+    - `MdParseCtx`
+    - `MdSerializeCtx`
+    - `MoveBlockBody`
+    - `PageCover`
+    - `PageData`
+    - `PageRow`
+    - `PasteBlocksBody`
+    - `RichText`
+    - `RunsTokenExtension`
+    - `RunsXmlTextOptions`
+    - `SerializedBlock`
+    - `TextBearingSchema`
+    - `TextData`
+    - `TextRun`
+    - `TurnIntoPageBody`
+    - `UpdateBlockBody`
+  - Exports (values):
+    - `applyBlockOp`
+    - `applyBlockOpEndpoint`
+    - `BlockOpSchema`
+    - `BlockPatchSchema`
+    - `BlockSchema`
+    - `blocksResource`
+    - `bulkDeleteBlocks`
+    - `BulkDeleteBlocksBodySchema`
+    - `bulkDuplicateBlocks`
+    - `BulkDuplicateBlocksBodySchema`
+    - `bulkMoveBlocks`
+    - `BulkMoveBlocksBodySchema`
+    - `canIndent`
+    - `canOutdent`
+    - `childrenOf`
+    - `coalesce`
+    - `COLOR_TOKENS`
+    - `colorCssValue`
+    - `createBlock`
+    - `CreateBlockBodySchema`
+    - `defaultTextHandle`
+    - `defineBlock`
+    - `deleteBlock`
+    - `diffBlocks`
+    - `isEmptyPatch`
+    - `listBlocks`
+    - `listPages`
+    - `MARK_ORDER`
+    - `mergeRuns`
+    - `moveBlock`
+    - `MoveBlockBodySchema`
+    - `nextVisibleLine`
+    - `opBlockIds`
+    - `PAGE_BLOCK_TYPE`
+    - `pageBlockHandle`
+    - `PageCoverSchema`
+    - `pageData`
+    - `PageDataSchema`
+    - `PageRowSchema`
+    - `PAGES_TRASH_SOURCE`
+    - `pagesResource`
+    - `parseMarkdownToForest`
+    - `pasteAnchorId`
+    - `pasteBlocks`
+    - `PasteBlocksBodySchema`
+    - `patchBlocks`
+    - `patchesFromDiff`
+    - `plainOf`
+    - `planForestInsert`
+    - `prevVisibleLine`
+    - `rankWindow`
+    - `RichTextSchema`
+    - `runsLength`
+    - `runsOf`
+    - `runsOfNode`
+    - `runsToLexical`
+    - `runsToXmlText`
+    - `serializeBlockRuns`
+    - `SerializedBlockSchema`
+    - `serializeForestToMarkdown`
+    - `serializeSubtree`
+    - `sortMarks`
+    - `splitRuns`
+    - `SvgNodeSchema`
+    - `textBlockSchema`
+    - `textDataSchema`
+    - `textOf`
+    - `TextRunSchema`
+    - `tokenOf`
+    - `turnIntoPage`
+    - `TurnIntoPageBodySchema`
+    - `updateBlock`
+    - `UpdateBlockBodySchema`
+    - `withRuns`
+    - `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/story/story-core`, `apps/website/demos/editor-toy`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/sub-page`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
-  - Extended by: `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)
+  - Imported by:
+    - `apps/pages/content-search`
+    - `apps/pages/history`
+    - `apps/pages/page-tree`
+    - `apps/pages/starred`
+    - `apps/pages/welcome/recent-pages`
+    - `apps/story/marker`
+    - `apps/story/shell`
+    - `apps/story/story-core`
+    - `apps/website/demos/editor-toy`
+    - `page/attachment-block`
+    - `page/audio`
+    - `page/bookmark`
+    - `page/bulleted-list`
+    - `page/callout`
+    - `page/code-block`
+    - `page/divider`
+    - `page/editor-collab`
+    - `page/embed`
+    - `page/file`
+    - `page/formatting/bold`
+    - `page/formatting/code`
+    - `page/formatting/color`
+    - `page/formatting/italic`
+    - `page/formatting/link`
+    - `page/formatting/strikethrough`
+    - `page/formatting/underline`
+    - `page/heading/heading-1`
+    - `page/heading/heading-2`
+    - `page/heading/heading-3`
+    - `page/image`
+    - `page/inline-date`
+    - `page/inline-page-link`
+    - `page/links`
+    - `page/math/equation`
+    - `page/math/inline`
+    - `page/numbered-list`
+    - `page/page-link`
+    - `page/quote`
+    - `page/read-only-view`
+    - `page/sub-page`
+    - `page/text`
+    - `page/to-do`
+    - `page/toggle`
+    - `page/turn-into-page`
+    - `page/url-paste`
+    - `page/video`
+  - Extended by:
+    - `apps/pages/starred` (table `page_blocks_ext_starred`)
+    - `apps/story/marker` (table `page_blocks_ext_story`)
   - Endpoint callers: `editor-collab`
 
 <!-- AUTOGENERATED:END -->

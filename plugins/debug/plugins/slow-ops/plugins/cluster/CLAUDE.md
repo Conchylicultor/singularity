@@ -35,10 +35,29 @@ so the pane never imports this component directly.
 - Description: Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
 - Web:
   - Contributes: `SlowEvents.View` "Cluster" → `ClusterView`
-  - Uses: `debug/trace/pane.SlowEvents`, `infra/endpoints.getEndpointErrorMessage`, `infra/ndjson-stream.readNdjson`, `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/relative-time.RelativeTime`
+  - Uses:
+    - `debug/trace/pane.SlowEvents`
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/ndjson-stream.readNdjson`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.FieldDef`
+    - `primitives/relative-time.RelativeTime`
 - Server:
-  - Uses: `database/admin.listDatabases`, `database/admin.openShortLivedClient`, `infra/ndjson-stream.ndjsonResponse`, `tasks/tasks-core.listAttempts`
-  - Exports: Values: `listLiveForkDatabases`
+  - Uses:
+    - `database/admin.listDatabases`
+    - `database/admin.openShortLivedClient`
+    - `infra/ndjson-stream.ndjsonResponse`
+    - `tasks/tasks-core.listAttempts`
+  - Exports (values): `listLiveForkDatabases`
   - Routes: `GET /api/slow-ops/cluster`
 - Cross-plugin:
   - Imported by: `debug/timeline`

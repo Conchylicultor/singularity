@@ -6,8 +6,15 @@
 
 - Description: Titled collapsible card primitive: Card chrome + a SectionHeaderRow trigger (chevron, icon, title, sibling header actions) + an unmounted-while-collapsed body. The sanctioned home for the 'card whose title expands it' shape, so a stack of such cards is uniform by construction.
 - Web:
-  - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/card.Card`, `primitives/css/row.SectionHeaderRow`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`
-  - Exports: Types: `SectionCardProps`; Values: `SectionCard`
+  - Uses:
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/css/card.Card`
+    - `primitives/css/row.SectionHeaderRow`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+  - Exports (types): `SectionCardProps`
+  - Exports (values): `SectionCard`
 - Cross-plugin:
   - Imported by: `apps/sonata/library`
 

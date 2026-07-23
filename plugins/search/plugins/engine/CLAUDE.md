@@ -6,13 +6,25 @@
 
 - Description: Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, and the GET /api/search endpoint.
 - Server:
-  - Uses: `database.db`, `infra/endpoints.implement`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.implement`
   - DB schema: `plugins/search/plugins/engine/server/internal/tables.ts`
-  - Exports: Values: `deleteSearchDocs`, `deleteSource`, `getSourceDocMetadata`, `upsertSearchDocs`
+  - Exports (values):
+    - `deleteSearchDocs`
+    - `deleteSource`
+    - `getSourceDocMetadata`
+    - `upsertSearchDocs`
   - Routes: `GET /api/search`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `SearchDoc`, `SearchResult`; Values: `SearchDocSchema`, `searchEndpoint`, `SearchResultSchema`
+  - Exports (types):
+    - `SearchDoc`
+    - `SearchResult`
+  - Exports (values):
+    - `SearchDocSchema`
+    - `searchEndpoint`
+    - `SearchResultSchema`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`
 

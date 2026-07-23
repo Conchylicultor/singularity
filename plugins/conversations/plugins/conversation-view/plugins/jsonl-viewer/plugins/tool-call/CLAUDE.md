@@ -7,13 +7,41 @@
 - Description: Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
 - Web:
   - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
-  - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/css/badge.Badge`, `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/scroll.Scroll`, `primitives/css/text.Text`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`
-  - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`
+  - Contributes:
+    - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
+    - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
+  - Uses:
+    - `conversations/conversation-view/jsonl-viewer.CopyTextAction`
+    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/text.Text`
+    - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/slot-render.DispatchContribution`
+  - Exports (types): `ToolRendererContribution`
+  - Exports (values):
+    - `JsonlViewerTool`
+    - `ToolCallCard`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/read`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/write`
 - Core:
-  - Exports: Types: `ToolCallEvent`, `ToolRendererProps`
+  - Exports (types):
+    - `ToolCallEvent`
+    - `ToolRendererProps`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
   - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).

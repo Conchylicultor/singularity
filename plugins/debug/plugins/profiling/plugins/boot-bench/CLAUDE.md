@@ -37,7 +37,16 @@ Uses (hand-written, beyond the autogen list below): `infra/host-read-pool`
 
 - Description: Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
 - Server:
-  - Uses: `database.db`, `database/live-state-snapshot.clearPersistedSnapshots`, `infra/boot-snapshot.assembleBootSnapshot`, `infra/boot-snapshot.bootCriticalKeys`, `infra/endpoints.implement`, `infra/host-admission.defineHostPool`, `infra/host-read-pool.heavyReadSlotCount`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`
+  - Uses:
+    - `database.db`
+    - `database/live-state-snapshot.clearPersistedSnapshots`
+    - `infra/boot-snapshot.assembleBootSnapshot`
+    - `infra/boot-snapshot.bootCriticalKeys`
+    - `infra/endpoints.implement`
+    - `infra/host-admission.defineHostPool`
+    - `infra/host-read-pool.heavyReadSlotCount`
+    - `infra/mcp.Mcp`
+    - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('benchmark_boot')`
   - Routes: `POST /api/debug/boot-bench/run`
 

@@ -18,8 +18,12 @@ read-only table cell and no filter.
   - Contributes: `Fields.Identity` "color"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `colorFieldType`, `colorIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `colorFieldType`
+    - `colorIdentity`
 - Cross-plugin:
   - Imported by: `fields/color/config`
 - Sub-plugins:

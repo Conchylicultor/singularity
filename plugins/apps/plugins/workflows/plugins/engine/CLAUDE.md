@@ -19,20 +19,118 @@ linear data pipeline: each step's input is the previous step's output
 - Description: Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
 - Web:
   - Slots: `Workflows.StepType` ← `apps.workflows.steps.branch`, `apps.workflows.steps.http-request`, `apps.workflows.steps.llm-prompt`, `apps.workflows.steps.set-value`, `apps.workflows.steps.template`, `apps.workflows.steps.user-input`
-  - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/relative-time.RelativeTime`
-  - Exports: Values: `CollapsibleValue`, `StepStatusBadge`, `StepTraceShell`, `useStepTypeIndex`, `ValueBlock`, `Workflows`
+  - Uses:
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
+    - `primitives/relative-time.RelativeTime`
+  - Exports (values):
+    - `CollapsibleValue`
+    - `StepStatusBadge`
+    - `StepTraceShell`
+    - `useStepTypeIndex`
+    - `ValueBlock`
+    - `Workflows`
 - Server:
-  - Contributes: `resource.declare` "workflow-definitions", `resource.declare` "workflow-executions"
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/jobs.abortDurableRun`, `infra/jobs.defineJob`, `infra/jobs.isSuspendSignal`
-  - DB schema: `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables-events.ts`, `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables.ts`
-  - Exports: Types: `StepExecutorRunArgs`, `StepExecutorSpec`, `StepResult`, `UserInputSubmittedPayload`; Values: `_userInputSubmittedTriggers`, `_workflowDefinitions`, `_workflowExecutions`, `_workflowExecutionSteps`, `defineStepExecutor`, `getExecutor`, `setStepExpiryIfUnset`, `userInputSubmitted`, `workflowDefinitionsResource`, `workflowExecutionsResource`
-  - Register: `defineJob('workflows.run')`, `defineTriggerEvent('workflows.userInputSubmitted')`
-  - Resources: `workflow-definitions` (push), `workflow-executions` (push)
-  - Routes: `GET /api/workflows/definitions`, `POST /api/workflows/definitions`, `GET /api/workflows/definitions/:id`, `PATCH /api/workflows/definitions/:id`, `DELETE /api/workflows/definitions/:id`, `GET /api/workflows/executions`, `POST /api/workflows/executions`, `GET /api/workflows/executions/:id`, `DELETE /api/workflows/executions/:id`, `POST /api/workflows/executions/:execId/steps/:stepId/submit`
+  - Contributes:
+    - `resource.declare` "workflow-definitions"
+    - `resource.declare` "workflow-executions"
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/events.defineTriggerEvent`
+    - `infra/jobs.abortDurableRun`
+    - `infra/jobs.defineJob`
+    - `infra/jobs.isSuspendSignal`
+  - DB schema:
+    - `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables-events.ts`
+    - `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables.ts`
+  - Exports (types):
+    - `StepExecutorRunArgs`
+    - `StepExecutorSpec`
+    - `StepResult`
+    - `UserInputSubmittedPayload`
+  - Exports (values):
+    - `_userInputSubmittedTriggers`
+    - `_workflowDefinitions`
+    - `_workflowExecutions`
+    - `_workflowExecutionSteps`
+    - `defineStepExecutor`
+    - `getExecutor`
+    - `setStepExpiryIfUnset`
+    - `userInputSubmitted`
+    - `workflowDefinitionsResource`
+    - `workflowExecutionsResource`
+  - Register:
+    - `defineJob('workflows.run')`
+    - `defineTriggerEvent('workflows.userInputSubmitted')`
+  - Resources:
+    - `workflow-definitions` (push)
+    - `workflow-executions` (push)
+  - Routes:
+    - `GET /api/workflows/definitions`
+    - `POST /api/workflows/definitions`
+    - `GET /api/workflows/definitions/:id`
+    - `PATCH /api/workflows/definitions/:id`
+    - `DELETE /api/workflows/definitions/:id`
+    - `GET /api/workflows/executions`
+    - `POST /api/workflows/executions`
+    - `GET /api/workflows/executions/:id`
+    - `DELETE /api/workflows/executions/:id`
+    - `POST /api/workflows/executions/:execId/steps/:stepId/submit`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `CreateDefinitionBody`, `CreateExecutionBody`, `DefinitionStep`, `ExecutionStatus`, `ExecutionStepStatus`, `SubmitStepBody`, `UpdateDefinitionBody`, `WorkflowDefinition`, `WorkflowExecution`, `WorkflowExecutionStep`; Values: `createDefinition`, `CreateDefinitionBodySchema`, `createExecution`, `CreateExecutionBodySchema`, `DefinitionStepSchema`, `deleteDefinition`, `deleteExecution`, `ExecutionStatusSchema`, `ExecutionStepStatusSchema`, `getDefinition`, `getExecution`, `listDefinitions`, `listExecutions`, `submitStep`, `SubmitStepBodySchema`, `updateDefinition`, `UpdateDefinitionBodySchema`, `WorkflowDefinitionSchema`, `workflowDefinitionsDescriptor`, `WorkflowExecutionSchema`, `workflowExecutionsDescriptor`, `WorkflowExecutionStepSchema`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `CreateDefinitionBody`
+    - `CreateExecutionBody`
+    - `DefinitionStep`
+    - `ExecutionStatus`
+    - `ExecutionStepStatus`
+    - `SubmitStepBody`
+    - `UpdateDefinitionBody`
+    - `WorkflowDefinition`
+    - `WorkflowExecution`
+    - `WorkflowExecutionStep`
+  - Exports (values):
+    - `createDefinition`
+    - `CreateDefinitionBodySchema`
+    - `createExecution`
+    - `CreateExecutionBodySchema`
+    - `DefinitionStepSchema`
+    - `deleteDefinition`
+    - `deleteExecution`
+    - `ExecutionStatusSchema`
+    - `ExecutionStepStatusSchema`
+    - `getDefinition`
+    - `getExecution`
+    - `listDefinitions`
+    - `listExecutions`
+    - `submitStep`
+    - `SubmitStepBodySchema`
+    - `updateDefinition`
+    - `UpdateDefinitionBodySchema`
+    - `WorkflowDefinitionSchema`
+    - `workflowDefinitionsDescriptor`
+    - `WorkflowExecutionSchema`
+    - `workflowExecutionsDescriptor`
+    - `WorkflowExecutionStepSchema`
 - Cross-plugin:
-  - Imported by: `apps/workflows/editor`, `apps/workflows/executions`, `apps/workflows/steps/branch`, `apps/workflows/steps/http-request`, `apps/workflows/steps/llm-prompt`, `apps/workflows/steps/set-value`, `apps/workflows/steps/template`, `apps/workflows/steps/user-input`
+  - Imported by:
+    - `apps/workflows/editor`
+    - `apps/workflows/executions`
+    - `apps/workflows/steps/branch`
+    - `apps/workflows/steps/http-request`
+    - `apps/workflows/steps/llm-prompt`
+    - `apps/workflows/steps/set-value`
+    - `apps/workflows/steps/template`
+    - `apps/workflows/steps/user-input`
 
 <!-- AUTOGENERATED:END -->

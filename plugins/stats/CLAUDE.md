@@ -6,12 +6,34 @@
 
 - Description: Root plugin hosting stacked chart contributions from child plugins.
 - Web:
-  - Slots: `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.tasks`, `statsPane.Actions`
-  - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
-  - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `shell.Shell`
-  - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`
+  - Slots:
+    - `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.tasks`
+    - `statsPane.Actions`
+  - Contributes:
+    - `Pane.Register` "stats"
+    - `Shell.Sidebar` "Stats" → `component`
+  - Uses:
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/slot-render.defineRenderSlot`
+    - `shell.Shell`
+  - Exports (values):
+    - `Stats`
+    - `statsPane`
+    - `useShowEmptyDays`
 - Cross-plugin:
-  - Imported by: `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`
+  - Imported by:
+    - `stats/commits`
+    - `stats/cost`
+    - `stats/pushes`
+    - `stats/tasks`
 - Sub-plugins:
   - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
   - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.

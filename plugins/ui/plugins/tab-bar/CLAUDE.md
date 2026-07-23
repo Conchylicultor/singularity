@@ -7,17 +7,44 @@
 - Description: Themable tab bar: chip / underline / connected variants.
 - Web:
   - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
-  - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Tab bar variant"
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`, `primitives/slot-render.renderIsolated`
-  - Exports: Types: `TabProps`, `TabVariantContribution`; Values: `Tab`, `TabBarSlots`, `TabCloseButton`, `TabIcon`, `useActiveTabVariant`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `DynamicEnum.Options` "Tab bar variant"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `fields/dynamic-enum/config.DynamicEnum`
+    - `primitives/css/center.Center`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+    - `primitives/slot-render.renderIsolated`
+  - Exports (types):
+    - `TabProps`
+    - `TabVariantContribution`
+  - Exports (values):
+    - `Tab`
+    - `TabBarSlots`
+    - `TabCloseButton`
+    - `TabIcon`
+    - `useActiveTabVariant`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`
-  - Exports: Types: `TabProps`; Values: `tabBarConfig`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields/dynamic-enum/config.dynamicEnumField`
+  - Exports (types): `TabProps`
+  - Exports (values): `tabBarConfig`
 - Cross-plugin:
-  - Imported by: `apps-core/surface/floating`, `apps-core/tab-bar`, `ui/tab-bar/chip`, `ui/tab-bar/connected`, `ui/tab-bar/customizer`, `ui/tab-bar/underline`
+  - Imported by:
+    - `apps-core/surface/floating`
+    - `apps-core/tab-bar`
+    - `ui/tab-bar/chip`
+    - `ui/tab-bar/connected`
+    - `ui/tab-bar/customizer`
+    - `ui/tab-bar/underline`
 - Sub-plugins:
   - **`chip`** — Accent-filled pill tab (the canonical chip look).
   - **`connected`** — Folder tab; the active tab merges into the content surface.

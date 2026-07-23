@@ -26,15 +26,33 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
 
 - Description: Favorites/starred pages for the Pages app: contributes a `starred` bool field into the Pages sidebar DataView (Favorites is a filtered list view) plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint. Contributes a `starred` bool field into the Pages sidebar DataView.
 - Web:
-  - Contributes: `PageTree.Fields` "starred" → `StarredField`, `PageTree.RowActions` "star" → `StarRowAction`, `PageDetail.HeaderActions` → `StarHeaderAction`
-  - Uses: `apps/pages/page-tree.PageDetail`, `apps/pages/page-tree.PageTree`, `infra/endpoints.useEndpointMutation`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
-  - Exports: Types: `StarredPageRow`; Values: `StarredPageRowSchema`, `starredPagesResource`
+  - Contributes:
+    - `PageTree.Fields` "starred" → `StarredField`
+    - `PageTree.RowActions` "star" → `StarRowAction`
+    - `PageDetail.HeaderActions` → `StarHeaderAction`
+  - Uses:
+    - `apps/pages/page-tree.PageDetail`
+    - `apps/pages/page-tree.PageTree`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/icon-button.IconButton`
+    - `primitives/live-state.useResource`
+  - Exports (types): `StarredPageRow`
+  - Exports (values):
+    - `StarredPageRowSchema`
+    - `starredPagesResource`
 - Server:
   - Contributes: `resource.declare` "pages-starred"
-  - Uses: `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/query-resource.queryResource`, `page/editor._blocks`
+  - Uses:
+    - `infra/endpoints.implement`
+    - `infra/entity-extensions.defineExtension`
+    - `infra/query-resource.queryResource`
+    - `page/editor._blocks`
   - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`
   - Entity extension of: `page/editor` (table `page_blocks_ext_starred`)
-  - Exports: Values: `pageBlocksStarred`, `setPageStarred`, `starredPagesServerResource`
+  - Exports (values):
+    - `pageBlocksStarred`
+    - `setPageStarred`
+    - `starredPagesServerResource`
   - Resources: `pages-starred` (keyed)
   - Routes: `PUT /api/pages/:pageId/starred`
 

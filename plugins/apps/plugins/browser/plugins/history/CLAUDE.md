@@ -7,13 +7,27 @@
 - Description: Browser history: a headless recorder that logs every navigation to the history store, plus the useRecents() hook over the browser-recents live resource. Browser history store (browser_history table), the distinct-by-url recents live resource, and the POST /api/browser/history record endpoint.
 - Web:
   - Contributes: `Browser.Effects` "Effects" → `RecordVisits`
-  - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.useResource`
-  - Exports: Types: `BrowserRecent`; Values: `BrowserRecentSchema`, `browserRecentsResource`, `useRecents`, `useRecordVisit`
+  - Uses:
+    - `apps/browser/shell.Browser`
+    - `apps/browser/shell.useBrowserNav`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/live-state.useResource`
+  - Exports (types): `BrowserRecent`
+  - Exports (values):
+    - `BrowserRecentSchema`
+    - `browserRecentsResource`
+    - `useRecents`
+    - `useRecordVisit`
 - Server:
   - Contributes: `resource.declare` "browser-recents"
-  - Uses: `database.db`, `infra/endpoints.implement`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.implement`
   - DB schema: `plugins/apps/plugins/browser/plugins/history/server/internal/tables.ts`
-  - Exports: Values: `browserHistory`, `browserRecentsServerResource`, `recordVisit`
+  - Exports (values):
+    - `browserHistory`
+    - `browserRecentsServerResource`
+    - `recordVisit`
   - Resources: `browser-recents` (push)
   - Routes: `POST /api/browser/history`
 - Cross-plugin:

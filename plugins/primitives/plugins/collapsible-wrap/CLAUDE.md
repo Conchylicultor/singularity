@@ -83,8 +83,17 @@ when `(overflowing || expanded) && !editMode`.
 
 - Description: Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
 - Web:
-  - Uses: `primitives/css/surface.Surface`, `primitives/css/ui-kit.cn`, `primitives/element-size.useResizeObserver`, `primitives/icon-button.IconButton`, `primitives/sortable-list.rectSortingStrategy`, `reorder.ReorderLayout`, `reorder.ReorderLayoutContext`, `reorder.useEditMode`
-  - Exports: Types: `CollapsibleWrapProps`; Values: `CollapsibleWrap`
+  - Uses:
+    - `primitives/css/surface.Surface`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/element-size.useResizeObserver`
+    - `primitives/icon-button.IconButton`
+    - `primitives/sortable-list.rectSortingStrategy`
+    - `reorder.ReorderLayout`
+    - `reorder.ReorderLayoutContext`
+    - `reorder.useEditMode`
+  - Exports (types): `CollapsibleWrapProps`
+  - Exports (values): `CollapsibleWrap`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/header`
 

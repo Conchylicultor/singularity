@@ -86,15 +86,36 @@ rename.
 
 - Description: Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration. Files a report when the health-monitor sampler detects a main-thread event-loop stall: captures the coherent-instant stall trace and files a deduped event-loop-stall report (fingerprinted on the dominant caller stack) so a frozen backend reaches the bell + Debug → Reports, linked to its trace.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `StallSummary`
-  - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `reports.Reports`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `Reports.KindView` → `StallSummary`
+  - Uses:
+    - `apps-core/tabs.navigate`
+    - `config_v2.ConfigV2`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/link-chip.LinkChip`
+    - `reports.Reports`
 - Server:
-  - Contributes: `ConfigV2.Register` "stall-monitor", `report-kind` "event-loop-stall"
-  - Uses: `config_v2.ConfigV2`, `debug/trace/engine.captureTrace`, `reports.recordReport`, `reports.ReportKind`
-  - Exports: Values: `recordEventLoopStall`
+  - Contributes:
+    - `ConfigV2.Register` "stall-monitor"
+    - `report-kind` "event-loop-stall"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `debug/trace/engine.captureTrace`
+    - `reports.recordReport`
+    - `reports.ReportKind`
+  - Exports (values): `recordEventLoopStall`
 - Core:
-  - Uses: `config_v2.defineConfig`, `debug/trace/stall.StallLeafSchema`, `debug/trace/stall.StallStackSchema`, `fields/bool/config.boolField`
-  - Exports: Types: `StallPayload`; Values: `stallMonitorConfig`, `StallPayloadSchema`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `debug/trace/stall.StallLeafSchema`
+    - `debug/trace/stall.StallStackSchema`
+    - `fields/bool/config.boolField`
+  - Exports (types): `StallPayload`
+  - Exports (values):
+    - `stallMonitorConfig`
+    - `StallPayloadSchema`
 - Cross-plugin:
   - Imported by: `debug/health-monitor`
 

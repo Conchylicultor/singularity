@@ -39,8 +39,15 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * A fact's values are rendered one-per-line as a nested list — a comma-joined
+ * blob of 40 importers is unreadable and rewrites the whole line in a diff when
+ * a single entry is added. A lone value stays inline (it is already on its own
+ * line; nesting it would only add noise).
+ */
 function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
   const subIndent = `${bodyIndent}  `;
+  const valueIndent = `${subIndent}  `;
   const lines: string[] = [];
   const folders = new Map<string, DocFact[]>();
   for (const f of facts) {
@@ -52,7 +59,12 @@ function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
     const content: string[] = [];
     for (const fact of group) {
       if (fact.values.length === 0) continue;
-      content.push(`${subIndent}- ${fact.key}: ${fact.values.join(", ")}`);
+      if (fact.values.length === 1) {
+        content.push(`${subIndent}- ${fact.key}: ${fact.values[0]}`);
+        continue;
+      }
+      content.push(`${subIndent}- ${fact.key}:`);
+      for (const value of fact.values) content.push(`${valueIndent}- ${value}`);
     }
     if (content.length > 0) {
       lines.push(`${bodyIndent}- ${capitalize(folder)}:`);

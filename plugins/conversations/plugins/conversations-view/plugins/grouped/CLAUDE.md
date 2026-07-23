@@ -6,9 +6,12 @@
 
 - Description: Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
 - Server:
-  - Uses: `database.db`, `primitives/rank.nextRankUnder`, `tasks/tasks-core._conversations`
+  - Uses:
+    - `database.db`
+    - `primitives/rank.nextRankUnder`
+    - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
-  - Exports: Values: `addMemberToGroup`
+  - Exports (values): `addMemberToGroup`
 - Cross-plugin:
   - Imported by: `improve`
 

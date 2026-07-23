@@ -6,8 +6,13 @@
 
 - Description: Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
 - Web:
-  - Contributes: `PianoRollFx` "Note shatter" → `LazyBoundary`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
+  - Contributes:
+    - `PianoRollFx` "Note shatter" → `LazyBoundary`
+    - `ConfigV2.WebRegister`
+  - Uses:
+    - `apps/sonata/piano-roll.PianoRollFx`
+    - `config_v2.ConfigV2`
+    - `primitives/lazy-component.lazyComponent`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

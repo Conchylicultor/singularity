@@ -7,16 +7,35 @@
 - Description: Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.
 - Web:
   - Contributes: `ActionBar.Item` → `ImproveButton`
-  - Uses: `primitives/css/ui-kit.Button`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftPopover`
-  - Exports: Values: `IMPROVEMENTS_META_TASK_ID`, `openImproveWithText`
+  - Uses:
+    - `primitives/css/ui-kit.Button`
+    - `shell/action-bar.ActionBar`
+    - `tasks/task-draft-form.TaskDraftPopover`
+  - Exports (values):
+    - `IMPROVEMENTS_META_TASK_ID`
+    - `openImproveWithText`
 - Server:
-  - Contributes: `trigger` "improve.apply-group", `containerTask` "task-meta-improvements"
-  - Uses: `conversations.conversationCreated`, `conversations/conversations-view/grouped.addMemberToGroup`, `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.ensureMetaTask`
+  - Contributes:
+    - `trigger` "improve.apply-group"
+    - `containerTask` "task-meta-improvements"
+  - Uses:
+    - `conversations.conversationCreated`
+    - `conversations/conversations-view/grouped.addMemberToGroup`
+    - `database.db`
+    - `infra/events.Trigger`
+    - `infra/jobs.defineJob`
+    - `tasks/container-tasks.ContainerTask`
+    - `tasks/tasks-core.ensureMetaTask`
   - DB schema: `plugins/improve/server/internal/tables.ts`
-  - Exports: Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
+  - Exports (values):
+    - `_improve_config`
+    - `_improvePendingGroups`
+    - `IMPROVEMENTS_META_TASK_ID`
   - Register: `defineJob('improve.apply-group')`
 - Cross-plugin:
-  - Imported by: `improve/element-picker`, `screenshot/draw-on-app`
+  - Imported by:
+    - `improve/element-picker`
+    - `screenshot/draw-on-app`
 - Sub-plugins:
   - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 

@@ -14,18 +14,81 @@ sibling plugins (e.g. publish's tree component).
 
 - Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 - Web:
-  - Slots: `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`, `pluginViewPane.Actions`
+  - Slots:
+    - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`
+    - `pluginViewPane.Actions`
   - Contributes: `Pane.Register` "plugin-view"
-  - Uses: `infra/endpoints.useEndpoint`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`
-  - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
+  - Uses:
+    - `infra/endpoints.useEndpoint`
+    - `primitives/breadcrumb.Breadcrumb`
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/detail-sections.defineDetailSections`
+    - `primitives/loading.Loading`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+  - Exports (types):
+    - `ExportRuntime`
+    - `PluginNode`
+    - `PluginTreePayload`
+  - Exports (values):
+    - `ConsumerList`
+    - `PluginDetail`
+    - `PluginLink`
+    - `pluginViewPane`
+    - `PluginViewSlots`
+    - `RUNTIME_COLORS`
+    - `Section`
+    - `SubHeading`
 - Server:
-  - Uses: `infra/endpoints.implement`, `plugin-meta/plugin-tree.getFacetsTreeCached`, `plugin-meta/plugin-tree.getStructureTreeCached`
-  - Routes: `GET /api/plugin-view/tree`, `GET /api/plugin-view/facets-tree`
+  - Uses:
+    - `infra/endpoints.implement`
+    - `plugin-meta/plugin-tree.getFacetsTreeCached`
+    - `plugin-meta/plugin-tree.getStructureTreeCached`
+  - Routes:
+    - `GET /api/plugin-view/tree`
+    - `GET /api/plugin-view/facets-tree`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginFacetsTree`, `getPluginTree`
+  - Exports (types):
+    - `PluginNode`
+    - `PluginTreePayload`
+  - Exports (values):
+    - `getPluginFacetsTree`
+    - `getPluginTree`
 - Cross-plugin:
-  - Imported by: `active-data/plugin-link`, `apps/studio/compositions/closure-tree`, `apps/studio/explorer`, `plugin-meta/contributions-table`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
+  - Imported by:
+    - `active-data/plugin-link`
+    - `apps/studio/compositions/closure-tree`
+    - `apps/studio/explorer`
+    - `plugin-meta/contributions-table`
+    - `plugin-meta/facets/contributions/render-detail`
+    - `plugin-meta/facets/cross-refs/render-detail`
+    - `plugin-meta/facets/db-schema/render-detail`
+    - `plugin-meta/facets/exports/render-detail`
+    - `plugin-meta/facets/registrations/render-detail`
+    - `plugin-meta/facets/resources/render-detail`
+    - `plugin-meta/facets/routes/render-detail`
+    - `plugin-meta/facets/slots/render-detail`
+    - `plugin-meta/facets/structure/render-contributions`
+    - `plugin-meta/facets/structure/render-detail`
+    - `plugin-meta/plugin-health`
+    - `plugin-meta/plugin-view/dependencies`
+    - `plugin-meta/plugin-view/file-tree`
+    - `plugin-meta/plugin-view/inclusion`
+    - `plugin-meta/plugin-view/runtimes`
+    - `plugin-meta/plugin-view/source-path`
+    - `plugin-meta/plugin-view/sub-plugins`
 - Sub-plugins:
   - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and collapsing DAG diamonds via first-occurrence dedup.
   - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.

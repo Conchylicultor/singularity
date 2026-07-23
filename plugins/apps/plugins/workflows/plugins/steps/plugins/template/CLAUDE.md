@@ -16,7 +16,13 @@ Config: `{ template?: string; json?: boolean }`.
 - Description: Template step type for workflows. Renders a {{ expr }} template against the previous step's output and emits the result (string or parsed JSON). Template step type for workflows. Renders a {{ expr }} template against the previous step's output and emits the result (string or parsed JSON).
 - Web:
   - Contributes: `Workflows.StepType` "Template"
-  - Uses: `apps/workflows/engine.CollapsibleValue`, `apps/workflows/engine.ValueBlock`, `apps/workflows/engine.Workflows`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`
+  - Uses:
+    - `apps/workflows/engine.CollapsibleValue`
+    - `apps/workflows/engine.ValueBlock`
+    - `apps/workflows/engine.Workflows`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.ToggleChip`
 - Server:
   - Uses: `apps/workflows/engine.defineStepExecutor`
   - Register: `defineStepExecutor('template')`

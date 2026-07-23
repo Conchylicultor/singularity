@@ -86,10 +86,36 @@ See `plugins/commands/` for the reference implementation.
 
 - Description: Facet-based plugin metadata extraction and docgen pipeline
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`
-  - Exports: Types: `DocFact`, `ExtractContext`, `Facet`, `FacetDef`, `RenderDocContext`; Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
+  - Uses:
+    - `framework/tooling/collected-dir.defineCollectedDir`
+    - `framework/tooling/collected-dir.loadCollectedDir`
+  - Exports (types):
+    - `DocFact`
+    - `ExtractContext`
+    - `Facet`
+    - `FacetDef`
+    - `RenderDocContext`
+  - Exports (values):
+    - `createFacet`
+    - `defineFacet`
+    - `facetCollectedDir`
+    - `getFacet`
+    - `loadFacets`
+    - `setFacet`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`, `plugin-meta/closure`, `plugin-meta/facets/contributions`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/db-schema`, `plugin-meta/facets/exports`, `plugin-meta/facets/registrations`, `plugin-meta/facets/resources`, `plugin-meta/facets/routes`, `plugin-meta/facets/slots`, `plugin-meta/facets/structure`, `plugin-meta/plugin-tree`
+  - Imported by:
+    - `framework/tooling/codegen`
+    - `plugin-meta/closure`
+    - `plugin-meta/facets/contributions`
+    - `plugin-meta/facets/cross-refs`
+    - `plugin-meta/facets/db-schema`
+    - `plugin-meta/facets/exports`
+    - `plugin-meta/facets/registrations`
+    - `plugin-meta/facets/resources`
+    - `plugin-meta/facets/routes`
+    - `plugin-meta/facets/slots`
+    - `plugin-meta/facets/structure`
+    - `plugin-meta/plugin-tree`
 - Sub-plugins:
   - **`contributions`**
     - Plugins:

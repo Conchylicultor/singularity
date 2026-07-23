@@ -191,8 +191,28 @@ instrument grouping — while `convert` itself stays pure.
 
 - Description: Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
 - Web:
-  - Contributes: `Sonata.Display` "Notation" → `LazyBoundary`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "notation"
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/lazy-component.lazyComponent`, `primitives/virtual-rows.useVirtualRows`
+  - Contributes:
+    - `Sonata.Display` "Notation" → `LazyBoundary`
+    - `ConfigV2.WebRegister`
+    - `Sonata.ViewOption` "notation"
+  - Uses:
+    - `apps/sonata/shell.Sonata`
+    - `apps/sonata/shell.useCursorApi`
+    - `apps/sonata/shell.useSonata`
+    - `apps/sonata/track-mixer.useHiddenTrackIds`
+    - `apps/sonata/track-mixer.useTrackMixerEntries`
+    - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
+    - `primitives/css/center.Center`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/element-size.useElementSize`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/lazy-component.lazyComponent`
+    - `primitives/virtual-rows.useVirtualRows`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

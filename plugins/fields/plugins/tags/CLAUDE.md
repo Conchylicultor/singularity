@@ -29,8 +29,12 @@ array-aware filter.
   - Contributes: `Fields.Identity` "tags"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `tagsFieldType`, `tagsIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `tagsFieldType`
+    - `tagsIdentity`
 - Sub-plugins:
   - **`filter`** — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
   - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).

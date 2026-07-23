@@ -10,8 +10,13 @@ sortable fractional-indexing column.
 
 - Description: Rank field factory (rankField) for building field records.
 - Core:
-  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/rank.rankFieldType`
-  - Exports: Types: `RankFieldDef`; Values: `rankField`
+  - Uses:
+    - `fields.FieldDef`
+    - `fields.FieldMeta`
+    - `fields.pickMeta`
+    - `fields/rank.rankFieldType`
+  - Exports (types): `RankFieldDef`
+  - Exports (values): `rankField`
 - Cross-plugin:
   - Imported by: `tasks/tasks-core`
 

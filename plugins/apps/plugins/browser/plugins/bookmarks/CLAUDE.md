@@ -6,19 +6,57 @@
 
 - Description: Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live resource, and add/delete endpoints backing the star toggle and bookmarks bar.
 - Web:
-  - Contributes: `Browser.Actions` "Chrome actions" → `BookmarkStar`, `Browser.SubBar` "Sub bar" → `BookmarksBar`
-  - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.Favicon`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/bar.Bar`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`
-  - Exports: Types: `BookmarkRow`; Values: `BookmarkRowSchema`, `browserBookmarksResource`, `useBookmarks`
+  - Contributes:
+    - `Browser.Actions` "Chrome actions" → `BookmarkStar`
+    - `Browser.SubBar` "Sub bar" → `BookmarksBar`
+  - Uses:
+    - `apps/browser/shell.Browser`
+    - `apps/browser/shell.Favicon`
+    - `apps/browser/shell.useBrowserNav`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/bar.Bar`
+    - `primitives/css/row.Row`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/icon-button.IconButton`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.useResource`
+  - Exports (types): `BookmarkRow`
+  - Exports (values):
+    - `BookmarkRowSchema`
+    - `browserBookmarksResource`
+    - `useBookmarks`
 - Server:
   - Contributes: `resource.declare` "browser-bookmarks"
-  - Uses: `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/query-resource.queryResource`
+  - Uses:
+    - `database.db`
+    - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
+    - `infra/query-resource.queryResource`
   - DB schema: `plugins/apps/plugins/browser/plugins/bookmarks/server/internal/tables.ts`
-  - Exports: Values: `_browserBookmarks`, `addBookmark`, `browserBookmarksServerResource`, `deleteBookmark`
+  - Exports (values):
+    - `_browserBookmarks`
+    - `addBookmark`
+    - `browserBookmarksServerResource`
+    - `deleteBookmark`
   - Resources: `browser-bookmarks` (keyed)
-  - Routes: `POST /api/browser/bookmarks`, `DELETE /api/browser/bookmarks/:id`
+  - Routes:
+    - `POST /api/browser/bookmarks`
+    - `DELETE /api/browser/bookmarks/:id`
 - Core:
-  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/query-resource.queryResourceDescriptor`
-  - Exports: Types: `BookmarkRow`; Values: `bookmarkFields`, `BookmarkRowSchema`, `browserBookmarksResource`
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
+    - `infra/query-resource.queryResourceDescriptor`
+  - Exports (types): `BookmarkRow`
+  - Exports (values):
+    - `bookmarkFields`
+    - `BookmarkRowSchema`
+    - `browserBookmarksResource`
 - Cross-plugin:
   - Imported by: `apps/browser/start-page`
   - Endpoint callers: `history`

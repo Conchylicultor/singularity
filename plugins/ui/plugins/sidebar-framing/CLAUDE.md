@@ -7,17 +7,26 @@
 - Description: Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
 - Web:
   - Slots: `SidebarFraming.Variant` ← `ui.sidebar-framing.floating`, `ui.sidebar-framing.flush`, `ui.sidebar-framing.inset`
-  - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Sidebar framing variant", `ThemeEngine.VariantGroup` "Sidebar framing" → `Picker`, `AppShell.Framing` "Framing" → `Region`
-  - Uses: `primitives/app-shell.AppShell`, `ui/variant-region.defineVariantRegionWeb`
-  - Exports: Values: `SidebarFraming`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `DynamicEnum.Options` "Sidebar framing variant"
+    - `ThemeEngine.VariantGroup` "Sidebar framing" → `Picker`
+    - `AppShell.Framing` "Framing" → `Region`
+  - Uses:
+    - `primitives/app-shell.AppShell`
+    - `ui/variant-region.defineVariantRegionWeb`
+  - Exports (values): `SidebarFraming`
 - Server:
   - Contributes: `ConfigV2.Register` "sidebar-framing"
   - Uses: `ui/variant-region.variantRegionServerContribution`
 - Core:
   - Uses: `ui/variant-region.defineVariantRegion`
-  - Exports: Values: `sidebarFraming`
+  - Exports (values): `sidebarFraming`
 - Cross-plugin:
-  - Imported by: `ui/sidebar-framing/floating`, `ui/sidebar-framing/flush`, `ui/sidebar-framing/inset`
+  - Imported by:
+    - `ui/sidebar-framing/floating`
+    - `ui/sidebar-framing/flush`
+    - `ui/sidebar-framing/inset`
 - Sub-plugins:
   - **`floating`** — Floating sidebar framing — the sidebar renders as a rounded, detached card.
   - **`flush`** — Flush sidebar framing — the default, pixel-identical to the original app shell.

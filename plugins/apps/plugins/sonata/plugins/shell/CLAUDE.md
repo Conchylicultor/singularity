@@ -30,14 +30,110 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
 
 - Description: App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Transport,Section} slots.
 - Web:
-  - Slots: `Sonata.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`, `Sonata.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`, `Sonata.Analyzer` ← `apps.sonata.rich.chord-analyzer`, `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`, `Sonata.TransportOverlay` ← `apps.sonata.pedal.lane`, `apps.sonata.progress.loop`, `Sonata.TransportEdge` ← `apps.sonata.progress.loop`, `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`, `Sonata.Home` ← `apps.sonata.library`, `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`, `Sonata.Transport` ← `apps.sonata.progress.scrubber`, `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`, `Sonata.ViewOption` ← `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`, `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`, `SonataToolbar.Start` ← `apps.sonata.library`, `SonataToolbar.End` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`
+  - Slots:
+    - `Sonata.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
+    - `Sonata.Display` ← `apps.sonata.notation`, `apps.sonata.piano-roll`, `apps.sonata.songsheet`
+    - `Sonata.Analyzer` ← `apps.sonata.rich.chord-analyzer`
+    - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
+    - `Sonata.TransportOverlay` ← `apps.sonata.pedal.lane`, `apps.sonata.progress.loop`
+    - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
+    - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
+    - `Sonata.Home` ← `apps.sonata.library`
+    - `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
+    - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`
+    - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
+    - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
+    - `Sonata.ViewOption` ← `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`
+    - `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
+    - `SonataToolbar.Start` ← `apps.sonata.library`
+    - `SonataToolbar.End` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
-  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `config_v2.useConfig`, `layouts/full-pane.FullPane`, `primitives/css/center.Center`, `primitives/css/text.Text`, `primitives/latest-ref.useLatestRef`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/scoped-store.defineScopedStore`, `primitives/scoped-store.ScopedStore`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.defineWrapperSlot`
-  - Exports: Types: `CountInState`, `CursorApi`, `CursorStore`, `LaneInsets`, `LoopRange`, `RhythmGroove`, `SonataContextValue`, `SonataSection`, `TransportClock`; Values: `cursorApiFor`, `CursorStoreProvider`, `KeyModeStoreProvider`, `LaneInsetsProvider`, `RhythmStoreProvider`, `Sonata`, `SonataProvider`, `SonataToolbar`, `TEMPO_MATH_FLOOR`, `TransposeStoreProvider`, `useCursorApi`, `useCursorBeat`, `useCursorSelector`, `useHasAuthoredChord`, `useHasChords`, `useKeyAutoDetect`, `useLaneInsets`, `useRhythmGroove`, `useSetKeyAutoDetect`, `useSetRhythmGroove`, `useSetTransposeSemitones`, `useSonata`, `useTransposeSemitones`
+  - Uses:
+    - `apps-core.Apps`
+    - `apps-core/app-icon.mdAppIcon`
+    - `config_v2.useConfig`
+    - `layouts/full-pane.FullPane`
+    - `primitives/css/center.Center`
+    - `primitives/css/text.Text`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/pane-toolbar.definePaneToolbar`
+    - `primitives/scoped-store.defineScopedStore`
+    - `primitives/scoped-store.ScopedStore`
+    - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/slot-render.defineMountSlot`
+    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/slot-render.defineWrapperSlot`
+  - Exports (types):
+    - `CountInState`
+    - `CursorApi`
+    - `CursorStore`
+    - `LaneInsets`
+    - `LoopRange`
+    - `RhythmGroove`
+    - `SonataContextValue`
+    - `SonataSection`
+    - `TransportClock`
+  - Exports (values):
+    - `cursorApiFor`
+    - `CursorStoreProvider`
+    - `KeyModeStoreProvider`
+    - `LaneInsetsProvider`
+    - `RhythmStoreProvider`
+    - `Sonata`
+    - `SonataProvider`
+    - `SonataToolbar`
+    - `TEMPO_MATH_FLOOR`
+    - `TransposeStoreProvider`
+    - `useCursorApi`
+    - `useCursorBeat`
+    - `useCursorSelector`
+    - `useHasAuthoredChord`
+    - `useHasChords`
+    - `useKeyAutoDetect`
+    - `useLaneInsets`
+    - `useRhythmGroove`
+    - `useSetKeyAutoDetect`
+    - `useSetRhythmGroove`
+    - `useSetTransposeSemitones`
+    - `useSonata`
+    - `useTransposeSemitones`
 - Core:
   - Uses: `primitives/pane.defineApp`
-  - Exports: Values: `sonataApp`
+  - Exports (values): `sonataApp`
 - Cross-plugin:
-  - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/live-play`, `apps/sonata/audio/metronome`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/notation`, `apps/sonata/pedal/indicator`, `apps/sonata/pedal/lane`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/loop`, `apps/sonata/progress/scrubber`, `apps/sonata/progress/sections`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-label`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-progression`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/circle-of-fifths`, `apps/sonata/rich/key-chip`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/key-readout`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/rich/voicing-controls`, `apps/sonata/songsheet`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/ultimate-guitar`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/sonata/transpose`, `apps/sonata/view-options`
+  - Imported by:
+    - `apps/sonata/audio/engine`
+    - `apps/sonata/audio/live-play`
+    - `apps/sonata/audio/metronome`
+    - `apps/sonata/controls`
+    - `apps/sonata/library`
+    - `apps/sonata/notation`
+    - `apps/sonata/pedal/indicator`
+    - `apps/sonata/pedal/lane`
+    - `apps/sonata/piano-keyboard`
+    - `apps/sonata/piano-roll`
+    - `apps/sonata/playback-history`
+    - `apps/sonata/progress/loop`
+    - `apps/sonata/progress/scrubber`
+    - `apps/sonata/progress/sections`
+    - `apps/sonata/rich/chord-analyzer`
+    - `apps/sonata/rich/chord-label`
+    - `apps/sonata/rich/chord-overlay`
+    - `apps/sonata/rich/chord-progression`
+    - `apps/sonata/rich/chord-readout`
+    - `apps/sonata/rich/circle-of-fifths`
+    - `apps/sonata/rich/key-chip`
+    - `apps/sonata/rich/key-mode`
+    - `apps/sonata/rich/key-readout`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/rich/voicing-controls`
+    - `apps/sonata/songsheet`
+    - `apps/sonata/sources/chord-grid`
+    - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/track-mixer`
+    - `apps/sonata/transport-bar`
+    - `apps/sonata/transpose`
+    - `apps/sonata/view-options`
 
 <!-- AUTOGENERATED:END -->

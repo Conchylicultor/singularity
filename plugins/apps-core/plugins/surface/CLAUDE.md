@@ -7,11 +7,34 @@
 - Description: Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
 - Web:
   - Slots: `Surface.Placement` ← `apps-core.surface.docked`, `apps-core.surface.floating`, `apps-core.surface.solo`
-  - Contributes: `Apps.Surface` "Surface" → `SurfaceBody`, `ActionBar.Item` → `ActionBarPlacementControl`
-  - Uses: `apps-core.Apps`, `apps-core/tab-surface.TabSurface`, `apps-core/tabs.registerPlacementCapabilities`, `apps-core/tabs.setSurfaceMode`, `apps-core/tabs.Tab`, `apps-core/tabs.useSurfaceMode`, `apps-core/tabs.useTabs`, `primitives/css/clip.Clip`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `shell/action-bar.ActionBar`
-  - Exports: Types: `PlacementChromeProps`, `PlacementDef`, `PlacementStyleApi`; Values: `PlacementStyleProvider`, `Surface`, `usePlacementStyle`
+  - Contributes:
+    - `Apps.Surface` "Surface" → `SurfaceBody`
+    - `ActionBar.Item` → `ActionBarPlacementControl`
+  - Uses:
+    - `apps-core.Apps`
+    - `apps-core/tab-surface.TabSurface`
+    - `apps-core/tabs.registerPlacementCapabilities`
+    - `apps-core/tabs.setSurfaceMode`
+    - `apps-core/tabs.Tab`
+    - `apps-core/tabs.useSurfaceMode`
+    - `apps-core/tabs.useTabs`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/ui-kit.PortalThemeScopeProvider`
+    - `shell/action-bar.ActionBar`
+  - Exports (types):
+    - `PlacementChromeProps`
+    - `PlacementDef`
+    - `PlacementStyleApi`
+  - Exports (values):
+    - `PlacementStyleProvider`
+    - `Surface`
+    - `usePlacementStyle`
 - Cross-plugin:
-  - Imported by: `apps-core/surface/docked`, `apps-core/surface/floating`, `apps-core/surface/solo`
+  - Imported by:
+    - `apps-core/surface/docked`
+    - `apps-core/surface/floating`
+    - `apps-core/surface/solo`
 - Sub-plugins:
   - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
   - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).

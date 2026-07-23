@@ -13,7 +13,12 @@ central: ResourceDef[] }`.
 
 - Core:
   - Uses: `plugin-meta/facets.defineFacet`
-  - Exports: Types: `ResourceDef`, `ResourceFacetData`; Values: `resourcesFacetDef`, `resourcesToComparable`
+  - Exports (types):
+    - `ResourceDef`
+    - `ResourceFacetData`
+  - Exports (values):
+    - `resourcesFacetDef`
+    - `resourcesToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin resources section in the plugin detail pane.

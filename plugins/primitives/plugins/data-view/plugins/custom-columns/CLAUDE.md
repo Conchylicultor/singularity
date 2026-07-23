@@ -43,17 +43,78 @@ how the caller obtained it.
 
 - Description: User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
 - Web:
-  - Contributes: `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`, `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
-  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.useEndpointMutation`, `primitives/css/inline.Inline`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `primitives/data-view.DataViewId`, `primitives/data-view.DataViewSlots`, `primitives/data-view.getDataViewDescriptor`, `primitives/data-view.useDataViewSettings`, `primitives/data-view.useFieldIdentities`, `primitives/data-view.useResolveColumnConfig`, `primitives/data-view.useResolveOperatorSet`, `primitives/data-view.useResolveValueCodec`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.useResource`
-  - Exports: Types: `CustomColumnDefsController`, `CustomColumnValueIndex`; Values: `CustomColumnsFields`, `useCustomColumnDefs`, `useCustomColumnValues`, `useSetCustomColumnValue`
+  - Contributes:
+    - `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`
+    - `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
+  - Uses:
+    - `config_v2.useConfig`
+    - `config_v2.useSetConfig`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.Input`
+    - `primitives/css/ui-kit.Select`
+    - `primitives/css/ui-kit.SelectContent`
+    - `primitives/css/ui-kit.SelectItem`
+    - `primitives/css/ui-kit.SelectTrigger`
+    - `primitives/css/ui-kit.SelectValue`
+    - `primitives/data-view.DataViewId`
+    - `primitives/data-view.DataViewSlots`
+    - `primitives/data-view.getDataViewDescriptor`
+    - `primitives/data-view.useDataViewSettings`
+    - `primitives/data-view.useFieldIdentities`
+    - `primitives/data-view.useResolveColumnConfig`
+    - `primitives/data-view.useResolveOperatorSet`
+    - `primitives/data-view.useResolveValueCodec`
+    - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.useResource`
+  - Exports (types):
+    - `CustomColumnDefsController`
+    - `CustomColumnValueIndex`
+  - Exports (values):
+    - `CustomColumnsFields`
+    - `useCustomColumnDefs`
+    - `useCustomColumnValues`
+    - `useSetCustomColumnValue`
 - Server:
-  - Contributes: `resource.declare` "data-view-custom-values", `data-view.query-augmentor`
-  - Uses: `database.db`, `fields/server-capabilities.resolveFieldValueTextCast`, `infra/endpoints.implement`, `primitives/data-view/server-query.DataViewServer`, `primitives/data-view/server-query.FieldColumnMap`, `primitives/data-view/server-query.QueryAugmentor`, `primitives/data-view/server-query.QueryAugmentorContext`, `primitives/data-view/server-query.ServerQueryAugmentation`
+  - Contributes:
+    - `resource.declare` "data-view-custom-values"
+    - `data-view.query-augmentor`
+  - Uses:
+    - `database.db`
+    - `fields/server-capabilities.resolveFieldValueTextCast`
+    - `infra/endpoints.implement`
+    - `primitives/data-view/server-query.DataViewServer`
+    - `primitives/data-view/server-query.FieldColumnMap`
+    - `primitives/data-view/server-query.QueryAugmentor`
+    - `primitives/data-view/server-query.QueryAugmentorContext`
+    - `primitives/data-view/server-query.ServerQueryAugmentation`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
-  - Exports: Values: `_dataViewCustomValues`, `customColumnValuesLiveResource`
-  - Routes: `POST /api/data-view/custom-values`, `POST /api/data-view/custom-values/delete-column`
+  - Exports (values):
+    - `_dataViewCustomValues`
+    - `customColumnValuesLiveResource`
+  - Routes:
+    - `POST /api/data-view/custom-values`
+    - `POST /api/data-view/custom-values/delete-column`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `CustomColumnDef`, `CustomColumnValueRow`, `DeleteCustomColumnValuesBody`, `SetCustomColumnValueBody`; Values: `CustomColumnDefSchema`, `CustomColumnValueRowSchema`, `customColumnValuesResource`, `deleteCustomColumnValues`, `DeleteCustomColumnValuesBodySchema`, `setCustomColumnValue`, `SetCustomColumnValueBodySchema`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `CustomColumnDef`
+    - `CustomColumnValueRow`
+    - `DeleteCustomColumnValuesBody`
+    - `SetCustomColumnValueBody`
+  - Exports (values):
+    - `CustomColumnDefSchema`
+    - `CustomColumnValueRowSchema`
+    - `customColumnValuesResource`
+    - `deleteCustomColumnValues`
+    - `DeleteCustomColumnValuesBodySchema`
+    - `setCustomColumnValue`
+    - `SetCustomColumnValueBodySchema`
 
 <!-- AUTOGENERATED:END -->

@@ -9,8 +9,15 @@
   - Contributes: `Fields.Identity` "reorder-tree"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Types: `ReorderNode`, `ReorderTree`; Values: `reorderTreeFieldType`, `reorderTreeIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (types):
+    - `ReorderNode`
+    - `ReorderTree`
+  - Exports (values):
+    - `reorderTreeFieldType`
+    - `reorderTreeIdentity`
 - Cross-plugin:
   - Imported by: `fields/reorder-tree/config`
 - Sub-plugins:

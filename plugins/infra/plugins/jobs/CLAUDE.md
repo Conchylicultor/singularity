@@ -28,17 +28,123 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
 - Description: Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
 - Load-bearing: yes
 - Server:
-  - Contributes: `resource.declare` "jobs-list", `resource.declare` "dead-jobs"
-  - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Contributes:
+    - `resource.declare` "jobs-list"
+    - `resource.declare` "dead-jobs"
+  - Uses:
+    - `database.db`
+    - `database/admin.connectionString`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-  - Exports: Types: `BacklogJobStat`, `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `RunningJobStat`, `ScheduleSpec`; Values: `abortDurableRun`, `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `getJobSlowThresholdMs`, `isSuspendSignal`, `JOB_CONCURRENCY`, `jobsListResource`, `NonRetryableError`, `queryBacklogByJobName`, `queryDeadJobStats`, `queryQueueBacklog`, `queryRunningJobs`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
-  - Register: `defineJob('jobs.resume')`, `defineJob('jobs.dead-gc')`
-  - Resources: `dead-jobs` (invalidate), `jobs-list` (invalidate)
-  - Routes: `GET /api/jobs`, `GET /api/jobs/dead`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
+  - Exports (types):
+    - `BacklogJobStat`
+    - `DeadJobStat`
+    - `DefineJobSpec`
+    - `DurableHooks`
+    - `EnqueueOpts`
+    - `EnqueueTx`
+    - `JobCtx`
+    - `JobFactory`
+    - `QueueBacklogStat`
+    - `RegisteredJob`
+    - `RunningJobStat`
+    - `ScheduleSpec`
+  - Exports (values):
+    - `abortDurableRun`
+    - `deadJobsResource`
+    - `DEFAULT_MAX_ATTEMPTS`
+    - `defineJob`
+    - `getAllRegisteredJobNames`
+    - `getJobSlowThresholdMs`
+    - `isSuspendSignal`
+    - `JOB_CONCURRENCY`
+    - `jobsListResource`
+    - `NonRetryableError`
+    - `queryBacklogByJobName`
+    - `queryDeadJobStats`
+    - `queryQueueBacklog`
+    - `queryRunningJobs`
+    - `UNSAFE_getRegisteredJob`
+    - `UNSAFE_installDurableHooks`
+    - `UNSAFE_sweepStuckLocks`
+  - Register:
+    - `defineJob('jobs.resume')`
+    - `defineJob('jobs.dead-gc')`
+  - Resources:
+    - `dead-jobs` (invalidate)
+    - `jobs-list` (invalidate)
+  - Routes:
+    - `GET /api/jobs`
+    - `GET /api/jobs/dead`
+    - `POST /api/jobs/:id/retry`
+    - `DELETE /api/jobs/:id`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `DeadJobRow`, `DeadJobsPayload`, `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `DeadJobRowSchema`, `DeadJobsPayloadSchema`, `deadJobsResource`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listDeadJobs`, `listJobs`, `retryJob`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types):
+    - `DeadJobRow`
+    - `DeadJobsPayload`
+    - `JobRow`
+    - `JobsPayload`
+    - `JobState`
+  - Exports (values):
+    - `cancelJob`
+    - `DeadJobRowSchema`
+    - `DeadJobsPayloadSchema`
+    - `deadJobsResource`
+    - `JobRowSchema`
+    - `jobsListResource`
+    - `JobsPayloadSchema`
+    - `JobStateSchema`
+    - `listDeadJobs`
+    - `listJobs`
+    - `retryJob`
 - Cross-plugin:
-  - Imported by: `apps/mail/sync`, `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `database/live-state-snapshot`, `database/zero/cache-service`, `debug/boot-budget`, `debug/boot-monitor`, `debug/boot-watchdog`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/op-wedge-watchdog`, `debug/queue-health`, `debug/read-set-shrink`, `debug/session-divergence`, `debug/slow-ops`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `infra/retention`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
+  - Imported by:
+    - `apps/mail/sync`
+    - `apps/pages/content-search`
+    - `apps/pages/history`
+    - `apps/sonata/sources/midi/folders`
+    - `apps/story/generation`
+    - `apps/workflows/engine`
+    - `backup`
+    - `build`
+    - `config_v2/staging`
+    - `conversations`
+    - `conversations/conversation-category`
+    - `conversations/conversation-preprompt`
+    - `conversations/conversation-progress`
+    - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversation-view/turn-summary`
+    - `conversations/conversations-view/queue`
+    - `conversations/hibernation`
+    - `conversations/transcript-retention`
+    - `database/fork`
+    - `database/live-state-snapshot`
+    - `database/zero/cache-service`
+    - `debug/boot-budget`
+    - `debug/boot-monitor`
+    - `debug/boot-watchdog`
+    - `debug/live-state-churn/monitor`
+    - `debug/op-rate`
+    - `debug/op-wedge-watchdog`
+    - `debug/queue-health`
+    - `debug/read-set-shrink`
+    - `debug/session-divergence`
+    - `debug/slow-ops`
+    - `debug/worktree-cleanup`
+    - `improve`
+    - `infra/attachments`
+    - `infra/events`
+    - `infra/events-test`
+    - `infra/retention`
+    - `page/attachment-block`
+    - `page/inline-date`
+    - `page/links`
+    - `shell/notifications`
+    - `tasks`
+    - `tasks/task-title`
 
 <!-- AUTOGENERATED:END -->

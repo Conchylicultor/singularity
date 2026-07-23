@@ -6,8 +6,26 @@
 
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
-  - Uses: `infra/spawn.getWorktreeRoot`, `plugin-meta/parse-utils.findImports`, `plugin-meta/plugin-tree.buildPluginTree`
-  - Exports: Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`; Values: `allow`, `boundaryRulesCheck`, `compositionRoots`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `runtimeNames`, `zone`
+  - Uses:
+    - `infra/spawn.getWorktreeRoot`
+    - `plugin-meta/parse-utils.findImports`
+    - `plugin-meta/plugin-tree.buildPluginTree`
+  - Exports (types):
+    - `AllowEdge`
+    - `BoundaryConfig`
+    - `DenyEdge`
+    - `Edge`
+    - `RuntimeName`
+    - `ZoneDefinition`
+  - Exports (values):
+    - `allow`
+    - `boundaryRulesCheck`
+    - `compositionRoots`
+    - `createBoundaryCheck`
+    - `defineBoundaries`
+    - `deny`
+    - `runtimeNames`
+    - `zone`
 - Structure:
   - Loose top-level files: `boundary-config.ts`
 

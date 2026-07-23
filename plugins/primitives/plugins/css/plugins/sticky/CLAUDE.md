@@ -63,10 +63,31 @@ toggle, silently resetting any child component state (e.g. an inner
 
 - Description: Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/z-layers.InTreeLayer`, `primitives/css/z-layers.zLayerClass`
-  - Exports: Types: `StickyEdge`, `StickyProps`; Values: `Sticky`, `stickyClasses`
+  - Uses:
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/z-layers.InTreeLayer`
+    - `primitives/css/z-layers.zLayerClass`
+  - Exports (types):
+    - `StickyEdge`
+    - `StickyProps`
+  - Exports (values):
+    - `Sticky`
+    - `stickyClasses`
 - Cross-plugin:
-  - Imported by: `apps/mail/search`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `debug/profiling/ops/op-gantt`, `debug/queue`, `debug/trace/pane`, `primitives/css/sticky/stack`, `primitives/data-table`, `primitives/data-view`, `primitives/multi-select`, `primitives/tree`, `review/code-review`, `review/config-defaults`
+  - Imported by:
+    - `apps/mail/search`
+    - `conversations/conversation-view/commits-graph`
+    - `conversations/conversation-view/jsonl-viewer`
+    - `debug/profiling/ops/op-gantt`
+    - `debug/queue`
+    - `debug/trace/pane`
+    - `primitives/css/sticky/stack`
+    - `primitives/data-table`
+    - `primitives/data-view`
+    - `primitives/multi-select`
+    - `primitives/tree`
+    - `review/code-review`
+    - `review/config-defaults`
 - Sub-plugins:
   - **`stack`** — Sticky-stack layout primitive: <StickyStack>/<StickyStackItem> pin N sticky siblings sharing one containing block, each below the ones before it (capped; degrades to the swap hand-off).
 

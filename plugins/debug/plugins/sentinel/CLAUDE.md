@@ -179,15 +179,67 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 - Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
 - Web:
-  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `DuressEpisodeSummary`
-  - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `Reports.KindView` → `DuressEpisodeSummary`
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/inline.Inline`
+    - `reports.Reports`
 - Server:
-  - Contributes: `trace-event-class` "cluster", `trace-event-class` "fleet-flights", `report-kind` "duress-episode", `ConfigV2.Register` "sentinel"
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.isRelease`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.defineLogSink`, `primitives/log-channels.readChannelEntries`, `primitives/log-channels.readChannelJson`, `reports.recordReport`, `reports.ReportKind`
-  - Exports: Values: `readDuressEpisodes`
+  - Contributes:
+    - `trace-event-class` "cluster"
+    - `trace-event-class` "fleet-flights"
+    - `report-kind` "duress-episode"
+    - `ConfigV2.Register` "sentinel"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `config_v2.watchConfig`
+    - `database/embedded.PG_PORT`
+    - `database/embedded.PG_SOCKET_DIR`
+    - `database/embedded.PG_USER`
+    - `debug/health-monitor.HealthSample`
+    - `debug/health-monitor.HealthSampleSchema`
+    - `debug/health-monitor.HostSampleSchema`
+    - `debug/trace/engine.captureTrace`
+    - `debug/trace/engine.defineTraceEventClass`
+    - `infra/duress/latch.clearDuress`
+    - `infra/duress/latch.isUnderDuress`
+    - `infra/duress/latch.readDuress`
+    - `infra/duress/latch.refreshDuress`
+    - `infra/duress/latch.setDuress`
+    - `infra/paths.currentWorktreeName`
+    - `infra/paths.isMain`
+    - `infra/paths.isRelease`
+    - `infra/paths.listWorktreeDirs`
+    - `infra/paths.MAIN_WORKTREE_NAME`
+    - `infra/paths.WORKTREES_DIR`
+    - `primitives/log-channels.defineLogSink`
+    - `primitives/log-channels.readChannelEntries`
+    - `primitives/log-channels.readChannelJson`
+    - `reports.recordReport`
+    - `reports.ReportKind`
+  - Exports (values): `readDuressEpisodes`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/float/config.floatField`, `fields/int/config.intField`
-  - Exports: Types: `ClusterSample`, `ClusterSection`, `DuressEpisodeEvent`, `DuressEpisodeReportPayload`; Values: `ClusterSampleSchema`, `ClusterSectionSchema`, `DURESS_EPISODES_CHANNEL`, `DuressEpisodeEventSchema`, `DuressEpisodeReportPayloadSchema`, `sentinelConfig`
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields/bool/config.boolField`
+    - `fields/float/config.floatField`
+    - `fields/int/config.intField`
+  - Exports (types):
+    - `ClusterSample`
+    - `ClusterSection`
+    - `DuressEpisodeEvent`
+    - `DuressEpisodeReportPayload`
+  - Exports (values):
+    - `ClusterSampleSchema`
+    - `ClusterSectionSchema`
+    - `DURESS_EPISODES_CHANNEL`
+    - `DuressEpisodeEventSchema`
+    - `DuressEpisodeReportPayloadSchema`
+    - `sentinelConfig`
 - Cross-plugin:
   - Imported by: `debug/timeline`
 

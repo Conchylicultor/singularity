@@ -18,7 +18,12 @@ This facet is the single source of truth for route metadata.
 
 - Core:
   - Uses: `plugin-meta/facets.defineFacet`
-  - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`, `routesToComparable`
+  - Exports (types):
+    - `RouteDef`
+    - `RoutesData`
+  - Exports (values):
+    - `routesFacetDef`
+    - `routesToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin routes section in the plugin detail pane.

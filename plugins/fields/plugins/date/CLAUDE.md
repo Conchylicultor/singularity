@@ -24,8 +24,12 @@ sub-plugins under `plugins/`:
   - Contributes: `Fields.Identity` "date"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `dateFieldType`, `dateIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `dateFieldType`
+    - `dateIdentity`
 - Cross-plugin:
   - Imported by: `fields/date/config`
 - Sub-plugins:

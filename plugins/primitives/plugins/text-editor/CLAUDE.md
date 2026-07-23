@@ -34,11 +34,33 @@ Plugin slot.
 
 - Description: Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
 - Web:
-  - Slots: `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`, `TextEditorSlots.NodeExtensions` ← `active-data`
-  - Uses: `primitives/css/ui-kit.cn`, `primitives/latest-ref.useLatestRef`, `primitives/lazy-component.lazyComponent`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Types: `NodeExtension`, `TextEditorPluginProps`; Values: `registerNodeExtension`, `TextEditor`, `TextEditorSlots`
+  - Slots:
+    - `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
+    - `TextEditorSlots.NodeExtensions` ← `active-data`
+  - Uses:
+    - `primitives/css/ui-kit.cn`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/lazy-component.lazyComponent`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (types):
+    - `NodeExtension`
+    - `TextEditorPluginProps`
+  - Exports (values):
+    - `registerNodeExtension`
+    - `TextEditor`
+    - `TextEditorSlots`
 - Cross-plugin:
-  - Imported by: `active-data`, `active-data/task`, `conversations/agents`, `conversations/conversation-view/branch`, `primitives/launch`, `primitives/prompt-editor`, `primitives/text-editor/paste-images`, `screenshot`, `tasks/task-description`, `tasks/task-draft-form`
+  - Imported by:
+    - `active-data`
+    - `active-data/task`
+    - `conversations/agents`
+    - `conversations/conversation-view/branch`
+    - `primitives/launch`
+    - `primitives/prompt-editor`
+    - `primitives/text-editor/paste-images`
+    - `screenshot`
+    - `tasks/task-description`
+    - `tasks/task-draft-form`
 - Sub-plugins:
   - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
   - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.

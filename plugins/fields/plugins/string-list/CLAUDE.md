@@ -25,8 +25,12 @@ sub-plugin.
   - Contributes: `Fields.Identity` "string-list"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Values: `stringListFieldType`, `stringListIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (values):
+    - `stringListFieldType`
+    - `stringListIdentity`
 - Cross-plugin:
   - Imported by: `fields/string-list/config`
 - Sub-plugins:

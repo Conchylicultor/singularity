@@ -7,17 +7,25 @@
 - Description: App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
 - Web:
   - Slots: `AppRailFraming.Variant` ← `apps-core.app-rail-framing.hidden`, `apps-core.app-rail-framing.rail`
-  - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "App rail variant", `ThemeEngine.VariantGroup` "App rail" → `Picker`, `Apps.RailFraming` "Rail framing" → `Region`
-  - Uses: `apps-core.Apps`, `ui/variant-region.defineVariantRegionWeb`
-  - Exports: Values: `AppRailFraming`
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `DynamicEnum.Options` "App rail variant"
+    - `ThemeEngine.VariantGroup` "App rail" → `Picker`
+    - `Apps.RailFraming` "Rail framing" → `Region`
+  - Uses:
+    - `apps-core.Apps`
+    - `ui/variant-region.defineVariantRegionWeb`
+  - Exports (values): `AppRailFraming`
 - Server:
   - Contributes: `ConfigV2.Register` "app-rail-framing"
   - Uses: `ui/variant-region.variantRegionServerContribution`
 - Core:
   - Uses: `ui/variant-region.defineVariantRegion`
-  - Exports: Values: `appRailFraming`
+  - Exports (values): `appRailFraming`
 - Cross-plugin:
-  - Imported by: `apps-core/app-rail-framing/hidden`, `apps-core/app-rail-framing/rail`
+  - Imported by:
+    - `apps-core/app-rail-framing/hidden`
+    - `apps-core/app-rail-framing/rail`
 - Sub-plugins:
   - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
   - **`rail`** — App-rail framing — the default 2.5rem icon rail.

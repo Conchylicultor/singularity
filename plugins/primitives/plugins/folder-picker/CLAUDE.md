@@ -38,14 +38,38 @@ has **no** config_v2 dependency — the `directory-path` config field type wraps
 
 - Description: Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
 - Web:
-  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`
-  - Exports: Types: `FolderPickerPopoverProps`, `FolderPickerProps`; Values: `FolderPicker`, `FolderPickerPopover`, `useHostDir`
+  - Uses:
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpoint`
+    - `primitives/css/center.Center`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/row.Row`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/spinner.Spinner`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.Input`
+    - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+    - `primitives/icon-button.IconButton`
+    - `primitives/loading.Loading`
+    - `primitives/popover.InlinePopover`
+  - Exports (types):
+    - `FolderPickerPopoverProps`
+    - `FolderPickerProps`
+  - Exports (values):
+    - `FolderPicker`
+    - `FolderPickerPopover`
+    - `useHostDir`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Uses:
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
   - Routes: `GET /api/primitives/folder-picker/browse`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Values: `browseHostDir`
+  - Exports (values): `browseHostDir`
 - Cross-plugin:
   - Imported by: `fields/directory-path/config`
 

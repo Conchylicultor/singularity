@@ -7,16 +7,51 @@
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
 - Web:
   - Slots: `screenshotPane.Actions`
-  - Contributes: `Pane.Register` "screenshot", `ActionBar.Item` → `ScreenshotButton`
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/grid.Grid`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/element-size.useResizeObserver`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/launch.LaunchControl`, `primitives/launch.LaunchRequest`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/text-editor.TextEditor`, `screenshot/draw-canvas.applyStrokes`, `screenshot/draw-canvas.DrawCanvas`, `screenshot/draw-canvas.Stroke`, `shell/action-bar.ActionBar`, `shell/notifications.toast`
-  - Exports: Values: `captureApp`, `screenshotPane`
+  - Contributes:
+    - `Pane.Register` "screenshot"
+    - `ActionBar.Item` → `ScreenshotButton`
+  - Uses:
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/center.Center`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/grid.Grid`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/element-size.useResizeObserver`
+    - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
+    - `primitives/launch.LaunchControl`
+    - `primitives/launch.LaunchRequest`
+    - `primitives/loading.Loading`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/text-editor.TextEditor`
+    - `screenshot/draw-canvas.applyStrokes`
+    - `screenshot/draw-canvas.DrawCanvas`
+    - `screenshot/draw-canvas.Stroke`
+    - `shell/action-bar.ActionBar`
+    - `shell/notifications.toast`
+  - Exports (values):
+    - `captureApp`
+    - `screenshotPane`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
-  - Routes: `POST /api/screenshots/:id`, `GET /api/screenshots/:id`, `POST /api/screenshots/:id/file`
+  - Uses:
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+  - Routes:
+    - `POST /api/screenshots/:id`
+    - `GET /api/screenshots/:id`
+    - `POST /api/screenshots/:id/file`
 - Cross-plugin:
   - Imported by: `screenshot/draw-on-app`
 - Shared:
-  - Exports: Values: `createScreenshot`, `getScreenshot`, `saveScreenshotFile`
+  - Exports (values):
+    - `createScreenshot`
+    - `getScreenshot`
+    - `saveScreenshotFile`
 - Sub-plugins:
   - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
   - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.

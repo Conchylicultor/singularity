@@ -6,8 +6,14 @@
 
 - Description: Saves and restores the pane route per conversation using localStorage.
 - Web:
-  - Uses: `primitives/pane.getRoute`, `primitives/pane.PaneOptions`, `reports.report`
-  - Exports: Types: `RouteRestore`; Values: `loadRouteForConversation`, `reportCorruptSavedRoute`
+  - Uses:
+    - `primitives/pane.getRoute`
+    - `primitives/pane.PaneOptions`
+    - `reports.report`
+  - Exports (types): `RouteRestore`
+  - Exports (values):
+    - `loadRouteForConversation`
+    - `reportCorruptSavedRoute`
 - Cross-plugin:
   - Imported by: `conversations/conversations-view`
 

@@ -25,9 +25,90 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
 
 - Description: Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
 - Web:
-  - Uses: `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.DensityControlled`, `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
-  - Exports: Types: `IconButtonProps`; Values: `IconButton`
+  - Uses:
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.DensityControlled`
+    - `primitives/shortcuts.formatShortcutLabel`
+    - `primitives/tooltip.Kbd`
+    - `primitives/tooltip.WithTooltip`
+  - Exports (types): `IconButtonProps`
+  - Exports (values): `IconButton`
 - Cross-plugin:
-  - Imported by: `apps-core/surface/floating`, `apps-core/surface/solo`, `apps-core/tab-bar`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/proxy`, `apps/browser/tabs`, `apps/browser/webview`, `apps/mail/reading-pane`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/trash`, `apps/sonata/audio/engine`, `apps/sonata/audio/metronome`, `apps/sonata/library`, `apps/sonata/progress/loop`, `apps/sonata/progress/sections`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/rich/voicing-controls`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/sonata/transpose`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions/entry-points`, `apps/studio/compositions/release/release-logs`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/workflows/definitions`, `apps/workflows/editor`, `apps/workflows/steps/user-input`, `build`, `build/build-logs`, `config_v2/config-link`, `conversations/agents`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/notes`, `conversations/conversation-view/resume`, `conversations/conversation-view/terminal-pane`, `debug/broadcasts`, `debug/memory`, `debug/timeline`, `debug/worktree-cleanup`, `fields/enum/column-config`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/data-view/custom-columns`, `primitives/data-view/view-core`, `primitives/folder-picker`, `primitives/launch`, `primitives/overflow-menu`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `primitives/row-actions`, `primitives/sync-status`, `primitives/tree`, `reorder/edit-mode`, `review/config-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `tasks/task-dependencies`, `tasks/task-deps-tree`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list`, `ui/theme-engine/quick-theme`, `ui/theme-toggle`
+  - Imported by:
+    - `apps-core/surface/floating`
+    - `apps-core/surface/solo`
+    - `apps-core/tab-bar`
+    - `apps/browser/bookmarks`
+    - `apps/browser/navigation`
+    - `apps/browser/proxy`
+    - `apps/browser/tabs`
+    - `apps/browser/webview`
+    - `apps/mail/reading-pane`
+    - `apps/pages/history`
+    - `apps/pages/page-tree`
+    - `apps/pages/starred`
+    - `apps/pages/trash`
+    - `apps/sonata/audio/engine`
+    - `apps/sonata/audio/metronome`
+    - `apps/sonata/library`
+    - `apps/sonata/progress/loop`
+    - `apps/sonata/progress/sections`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/rich/voicing-controls`
+    - `apps/sonata/track-mixer`
+    - `apps/sonata/transport-bar`
+    - `apps/sonata/transpose`
+    - `apps/story/renderers/slides`
+    - `apps/story/shell`
+    - `apps/studio/compositions/entry-points`
+    - `apps/studio/compositions/release/release-logs`
+    - `apps/studio/explorer/membership`
+    - `apps/studio/graph`
+    - `apps/workflows/definitions`
+    - `apps/workflows/editor`
+    - `apps/workflows/steps/user-input`
+    - `build`
+    - `build/build-logs`
+    - `config_v2/config-link`
+    - `conversations/agents`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+    - `conversations/conversation-view/notes`
+    - `conversations/conversation-view/resume`
+    - `conversations/conversation-view/terminal-pane`
+    - `debug/broadcasts`
+    - `debug/memory`
+    - `debug/timeline`
+    - `debug/worktree-cleanup`
+    - `fields/enum/column-config`
+    - `fullscreen`
+    - `improve/element-picker`
+    - `page/editor`
+    - `page/formatting/color`
+    - `page/formatting/link`
+    - `primitives/collapsible-wrap`
+    - `primitives/data-view`
+    - `primitives/data-view/custom-columns`
+    - `primitives/data-view/view-core`
+    - `primitives/folder-picker`
+    - `primitives/launch`
+    - `primitives/overflow-menu`
+    - `primitives/pane`
+    - `primitives/prompt-editor/voice-input`
+    - `primitives/row-actions`
+    - `primitives/sync-status`
+    - `primitives/tree`
+    - `reorder/edit-mode`
+    - `review/config-defaults`
+    - `screenshot`
+    - `screenshot/draw-on-app`
+    - `shell/global-action-bar`
+    - `shell/notifications`
+    - `tasks/task-dependencies`
+    - `tasks/task-deps-tree`
+    - `tasks/task-description`
+    - `tasks/task-events`
+    - `tasks/task-list`
+    - `ui/theme-engine/quick-theme`
+    - `ui/theme-toggle`
 
 <!-- AUTOGENERATED:END -->

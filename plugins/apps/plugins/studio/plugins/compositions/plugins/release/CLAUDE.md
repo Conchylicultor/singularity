@@ -46,11 +46,40 @@ top-level and untouched by this; only the Studio UI lives here.
 - Description: Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
 - Web:
   - Slots: `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
-  - Contributes: `Pane.Register` "release-detail", `CompositionDetail.Section` "release" → `ReleaseSection`, `CompositionDetail.Section` "release-history" → `ReleaseHistorySection`
-  - Uses: `apps/studio/compositions.CompositionDetail`, `apps/studio/compositions.compositionDetailPane`, `apps/studio/compositions/auto-serve.ServeTargetPanel`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `plugin-meta/composition.useManifestItems`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`
-  - Exports: Values: `ReleaseDetail`
+  - Contributes:
+    - `Pane.Register` "release-detail"
+    - `CompositionDetail.Section` "release" → `ReleaseSection`
+    - `CompositionDetail.Section` "release-history" → `ReleaseHistorySection`
+  - Uses:
+    - `apps/studio/compositions.CompositionDetail`
+    - `apps/studio/compositions.compositionDetailPane`
+    - `apps/studio/compositions/auto-serve.ServeTargetPanel`
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpointMutation`
+    - `plugin-meta/composition.useManifestItems`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.FieldDef`
+    - `primitives/detail-sections.defineDetailSections`
+    - `primitives/live-state.matchResource`
+    - `primitives/live-state.useResource`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/relative-time.RelativeTime`
+  - Exports (values): `ReleaseDetail`
 - Cross-plugin:
-  - Imported by: `apps/studio/compositions/release/release-artifact`, `apps/studio/compositions/release/release-info`, `apps/studio/compositions/release/release-logs`
+  - Imported by:
+    - `apps/studio/compositions/release/release-artifact`
+    - `apps/studio/compositions/release/release-info`
+    - `apps/studio/compositions/release/release-logs`
 - Sub-plugins:
   - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
   - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.

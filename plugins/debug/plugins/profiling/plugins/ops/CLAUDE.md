@@ -50,16 +50,58 @@ every worktree backend from writing it concurrently.
 - Description: Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
 - Web:
   - Slots: `opDetailPane.Actions`
-  - Contributes: `Profiling.Section` → `OpSection`, `Pane.Register` "debug-profiling-op-detail"
-  - Uses: `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.MultiSpanLane`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/ops/op-gantt.opFillClass`, `debug/profiling/ops/op-gantt.OpGantt`, `debug/profiling/ops/op-gantt.waitFillClass`, `infra/endpoints.useEndpoint`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/clip.Clip`, `primitives/css/cluster.Cluster`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `shell/toast.showToast`, `tasks/attempt-view.attemptPane`
-  - Exports: Values: `getOpProfiling`, `opDetailPane`, `useOpClick`
+  - Contributes:
+    - `Profiling.Section` → `OpSection`
+    - `Pane.Register` "debug-profiling-op-detail"
+  - Uses:
+    - `conversations/conversation-view.conversationPane`
+    - `debug/profiling.formatDuration`
+    - `debug/profiling.GanttContainer`
+    - `debug/profiling.MultiSpanLane`
+    - `debug/profiling.Profiling`
+    - `debug/profiling.ProfilingContext`
+    - `debug/profiling.Span`
+    - `debug/profiling.SpanDetail`
+    - `debug/profiling.SpanRow`
+    - `debug/profiling.useProfilingContext`
+    - `debug/profiling/build.buildProfileDetailPane`
+    - `debug/profiling/ops/op-gantt.opFillClass`
+    - `debug/profiling/ops/op-gantt.OpGantt`
+    - `debug/profiling/ops/op-gantt.waitFillClass`
+    - `infra/endpoints.useEndpoint`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/badge.formatStatusLabel`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `shell/toast.showToast`
+    - `tasks/attempt-view.attemptPane`
+  - Exports (values):
+    - `getOpProfiling`
+    - `opDetailPane`
+    - `useOpClick`
 - Server:
-  - Uses: `database/admin.openShortLivedClient`, `debug/profiling/op-log.finalizeOrphanedOps`, `debug/profiling/op-log.readOpRecords`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/worktree.isWorktreeOpActive`
-  - Routes: `GET /api/debug/profiling/ops`, `GET /api/debug/profiling/ops/:opId`
+  - Uses:
+    - `database/admin.openShortLivedClient`
+    - `debug/profiling/op-log.finalizeOrphanedOps`
+    - `debug/profiling/op-log.readOpRecords`
+    - `infra/endpoints.HttpError`
+    - `infra/endpoints.implement`
+    - `infra/paths.isMain`
+    - `infra/worktree.isWorktreeOpActive`
+  - Routes:
+    - `GET /api/debug/profiling/ops`
+    - `GET /api/debug/profiling/ops/:opId`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/push-profiling`
 - Shared:
-  - Exports: Values: `getOpProfiling`
+  - Exports (values): `getOpProfiling`
 - Sub-plugins:
   - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
 

@@ -16,8 +16,13 @@ resolves to `text` and reuses `TextCell` / the text `FilterContribution`.
   - Contributes: `Fields.Identity` "multiline-text"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/text.textFieldType`
-  - Exports: Values: `multilineTextFieldType`, `multilineTextIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields/text.textFieldType`
+  - Exports (values):
+    - `multilineTextFieldType`
+    - `multilineTextIdentity`
 - Cross-plugin:
   - Imported by: `fields/multiline-text/config`
 - Sub-plugins:

@@ -36,8 +36,101 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
 - Description: Centering layout primitive: <Center axis> centers its content on one or both axes via a grid place-items box.
 - Web:
   - Uses: `primitives/css/ui-kit.cn`
-  - Exports: Types: `CenterAxis`, `CenterProps`; Values: `Center`
+  - Exports (types):
+    - `CenterAxis`
+    - `CenterProps`
+  - Exports (values): `Center`
 - Cross-plugin:
-  - Imported by: `active-data`, `active-data/plugin-link`, `apps-core/app-rail`, `apps-core/layout`, `apps-core/surface/floating`, `apps/agent-manager/welcome`, `apps/browser/webview`, `apps/mail/reading-pane`, `apps/mail/shell`, `apps/mail/thread-list`, `apps/pages/page-tree`, `apps/sonata/audio/metronome`, `apps/sonata/library`, `apps/sonata/notation`, `apps/sonata/piano-roll`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/shell`, `apps/sonata/songsheet`, `apps/sonata/transport-bar`, `apps/story/pages-integration`, `apps/story/render`, `apps/story/renderers/slides`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/explorer/expand-collapse`, `apps/website/demos/app-gallery`, `apps/website/demos/plugin-pyramid`, `apps/workflows/editor`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-view`, `conversations/conversation-view/code/file-pane/image`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/reports`, `debug/trace/pane`, `fields/avatar/config`, `fields/bool/inline`, `infra/health`, `layouts/route-fallback`, `page/audio`, `page/bookmark`, `page/callout`, `page/editor`, `page/file`, `page/formatting/color`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/page-link`, `page/read-only-view`, `page/sub-page`, `page/video`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/sub-plugins`, `primitives/cursor-pagination`, `primitives/data-table`, `primitives/data-view`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/tree`, `primitives/diff-view`, `primitives/folder-picker`, `primitives/icon-picker`, `primitives/pane`, `primitives/text-editor/paste-images`, `primitives/tree`, `screenshot`, `shell/global-action-bar`, `shell/notifications`, `tasks/task-draft-form`, `tasks/task-graph`, `tasks/task-status`, `ui/tab-bar`
+  - Imported by:
+    - `active-data`
+    - `active-data/plugin-link`
+    - `apps-core/app-rail`
+    - `apps-core/layout`
+    - `apps-core/surface/floating`
+    - `apps/agent-manager/welcome`
+    - `apps/browser/webview`
+    - `apps/mail/reading-pane`
+    - `apps/mail/shell`
+    - `apps/mail/thread-list`
+    - `apps/pages/page-tree`
+    - `apps/sonata/audio/metronome`
+    - `apps/sonata/library`
+    - `apps/sonata/notation`
+    - `apps/sonata/piano-roll`
+    - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/shell`
+    - `apps/sonata/songsheet`
+    - `apps/sonata/transport-bar`
+    - `apps/story/pages-integration`
+    - `apps/story/render`
+    - `apps/story/renderers/slides`
+    - `apps/studio/contributions`
+    - `apps/studio/explorer`
+    - `apps/studio/explorer/expand-collapse`
+    - `apps/website/demos/app-gallery`
+    - `apps/website/demos/plugin-pyramid`
+    - `apps/workflows/editor`
+    - `auth/apple-signing/setup-wizard`
+    - `auth/google/setup-wizard`
+    - `code-explorer`
+    - `config_v2/settings`
+    - `conversations/agents`
+    - `conversations/conversation-category`
+    - `conversations/conversation-view`
+    - `conversations/conversation-view/code/file-pane/image`
+    - `conversations/conversation-view/dependencies`
+    - `conversations/conversation-view/jsonl-viewer/investigate-event`
+    - `conversations/conversation-view/jsonl-viewer/message-toc`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `debug/boot-profile`
+    - `debug/broadcasts`
+    - `debug/claude-cli-calls`
+    - `debug/memory`
+    - `debug/profiling`
+    - `debug/queue`
+    - `debug/reports`
+    - `debug/trace/pane`
+    - `fields/avatar/config`
+    - `fields/bool/inline`
+    - `infra/health`
+    - `layouts/route-fallback`
+    - `page/audio`
+    - `page/bookmark`
+    - `page/callout`
+    - `page/editor`
+    - `page/file`
+    - `page/formatting/color`
+    - `page/image`
+    - `page/inline-date`
+    - `page/inline-page-link`
+    - `page/links`
+    - `page/math/equation`
+    - `page/math/inline`
+    - `page/page-link`
+    - `page/read-only-view`
+    - `page/sub-page`
+    - `page/video`
+    - `plugin-meta/plugin-view`
+    - `plugin-meta/plugin-view/dependencies`
+    - `plugin-meta/plugin-view/sub-plugins`
+    - `primitives/cursor-pagination`
+    - `primitives/data-table`
+    - `primitives/data-view`
+    - `primitives/data-view/gallery`
+    - `primitives/data-view/list`
+    - `primitives/data-view/tree`
+    - `primitives/diff-view`
+    - `primitives/folder-picker`
+    - `primitives/icon-picker`
+    - `primitives/pane`
+    - `primitives/text-editor/paste-images`
+    - `primitives/tree`
+    - `screenshot`
+    - `shell/global-action-bar`
+    - `shell/notifications`
+    - `tasks/task-draft-form`
+    - `tasks/task-graph`
+    - `tasks/task-status`
+    - `ui/tab-bar`
 
 <!-- AUTOGENERATED:END -->

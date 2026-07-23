@@ -49,17 +49,49 @@ sidebar — which owns the labels — shows the friendly name.
 - Web:
   - Slots: `mailboxViewPane.Actions`
   - Contributes: `Pane.Register` "mail-view"
-  - Uses: `apps/mail/reading-pane.threadPane`, `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/line.Line`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/cursor-pagination.InfiniteScrollFooter`, `primitives/cursor-pagination.InfiniteScrollHandle`, `primitives/cursor-pagination.useInfiniteScroll`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `primitives/virtual-rows.VirtualRows`
-  - Exports: Values: `mailboxViewPane`
+  - Uses:
+    - `apps/mail/reading-pane.threadPane`
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/row.Row`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/cursor-pagination.InfiniteScrollFooter`
+    - `primitives/cursor-pagination.InfiniteScrollHandle`
+    - `primitives/cursor-pagination.useInfiniteScroll`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
+    - `primitives/relative-time.RelativeTime`
+    - `primitives/virtual-rows.VirtualRows`
+  - Exports (values): `mailboxViewPane`
 - Server:
   - Contributes: `resource.declare` "mail-threads-revision"
-  - Uses: `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`, `infra/endpoints.implement`
-  - Exports: Values: `mailThreadsRevisionServerResource`
+  - Uses:
+    - `apps/mail/mail-core._mailThreads`
+    - `apps/mail/mail-core.mailViewFilterSql`
+    - `apps/mail/mail-core.resolveMailAccountId`
+    - `database.db`
+    - `infra/endpoints.implement`
+  - Exports (values): `mailThreadsRevisionServerResource`
   - Resources: `mail-threads-revision` (push)
   - Routes: `POST /api/mail/threads`
 - Core:
-  - Uses: `apps/mail/mail-core.MailThreadSchema`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `MailThreadPage`; Values: `MailThreadPageSchema`, `mailThreadsRevisionResource`, `queryThreadsEndpoint`
+  - Uses:
+    - `apps/mail/mail-core.MailThreadSchema`
+    - `infra/endpoints.defineEndpoint`
+    - `primitives/live-state.resourceDescriptor`
+  - Exports (types): `MailThreadPage`
+  - Exports (values):
+    - `MailThreadPageSchema`
+    - `mailThreadsRevisionResource`
+    - `queryThreadsEndpoint`
 - Cross-plugin:
   - Imported by: `apps/mail/mailbox`
 

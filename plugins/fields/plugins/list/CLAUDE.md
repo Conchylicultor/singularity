@@ -37,8 +37,15 @@ slot — lives in the `plugins/config` sub-plugin.
   - Contributes: `Fields.Identity` "list"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields.FieldsRecord`, `fields.InferFieldsObject`
-  - Exports: Types: `ListItem`; Values: `listFieldType`, `listIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+    - `fields.FieldsRecord`
+    - `fields.InferFieldsObject`
+  - Exports (types): `ListItem`
+  - Exports (values):
+    - `listFieldType`
+    - `listIdentity`
 - Cross-plugin:
   - Imported by: `fields/list/config`
 - Sub-plugins:

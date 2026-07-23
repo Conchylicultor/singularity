@@ -7,9 +7,36 @@
 - Description: Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
 - Web:
   - Slots: `graphCanvasPane.Actions`
-  - Contributes: `Pane.Register` "graph", `Studio.Sidebar` "Plugin Graph" → `component`
-  - Uses: `apps/studio/membership-tint.STATE_LEGEND`, `apps/studio/membership-tint.STATE_TINT`, `apps/studio/shell.Studio`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useGraph`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/cluster.Cluster`, `primitives/css/column.Column`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/graph-canvas.GraphCanvas`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/search.SearchInput`
-  - Exports: Values: `graphCanvasPane`
+  - Contributes:
+    - `Pane.Register` "graph"
+    - `Studio.Sidebar` "Plugin Graph" → `component`
+  - Uses:
+    - `apps/studio/membership-tint.STATE_LEGEND`
+    - `apps/studio/membership-tint.STATE_TINT`
+    - `apps/studio/shell.Studio`
+    - `plugin-meta/composition.useActiveComposition`
+    - `plugin-meta/composition.useActiveMembership`
+    - `plugin-meta/composition.useCompositionData`
+    - `plugin-meta/composition.useGraph`
+    - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/column.Column`
+    - `primitives/css/row.Row`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/graph-canvas.GraphCanvas`
+    - `primitives/icon-button.IconButton`
+    - `primitives/loading.Loading`
+    - `primitives/pane.openPane`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/search.SearchInput`
+  - Exports (values): `graphCanvasPane`
 - Cross-plugin:
   - Imported by: `apps/studio/explorer/membership`
 

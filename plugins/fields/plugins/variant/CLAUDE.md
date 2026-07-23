@@ -29,8 +29,13 @@ sub-plugin.
   - Contributes: `Fields.Identity` "variant"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-  - Exports: Types: `VariantValue`; Values: `variantFieldType`, `variantIdentity`
+  - Uses:
+    - `fields.defineFieldIdentity`
+    - `fields.defineFieldType`
+  - Exports (types): `VariantValue`
+  - Exports (values):
+    - `variantFieldType`
+    - `variantIdentity`
 - Cross-plugin:
   - Imported by: `fields/variant/config`
 - Sub-plugins:

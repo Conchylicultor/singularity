@@ -6,8 +6,23 @@
 
 - Description: Runs Claude CLI sessions inside tmux panes.
 - Server:
-  - Uses: `conversations.Runtime`, `conversations/model-provider.resolveCliFlag`, `infra/paths.CLAUDE`, `infra/paths.CLAUDE_SESSIONS_DIR`, `infra/paths.PS`, `infra/paths.TMUX`, `infra/worktree.isWorktreeOpActive`, `packages/spawn-priority.backgroundPrefix`, `reports.recordReport`
-  - Exports: Types: `ProcessLister`, `ProcessTree`; Values: `captureProcessTree`, `listPanes`, `subtreePids`
+  - Uses:
+    - `conversations.Runtime`
+    - `conversations/model-provider.resolveCliFlag`
+    - `infra/paths.CLAUDE`
+    - `infra/paths.CLAUDE_SESSIONS_DIR`
+    - `infra/paths.PS`
+    - `infra/paths.TMUX`
+    - `infra/worktree.isWorktreeOpActive`
+    - `packages/spawn-priority.backgroundPrefix`
+    - `reports.recordReport`
+  - Exports (types):
+    - `ProcessLister`
+    - `ProcessTree`
+  - Exports (values):
+    - `captureProcessTree`
+    - `listPanes`
+    - `subtreePids`
 - Cross-plugin:
   - Imported by: `debug/session-divergence`
 

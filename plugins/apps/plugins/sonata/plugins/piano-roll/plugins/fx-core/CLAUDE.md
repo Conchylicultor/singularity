@@ -6,8 +6,16 @@
 
 - Description: Ambient piano-roll FX (on by default): key-strike glow, rising sparks, and an active-note brighten over the sounding bar. Server registration of the fx-core enabled toggle.
 - Web:
-  - Contributes: `PianoRollFx` "Note glow & sparks" → `LazyBoundary`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.FxNoteEvent`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
+  - Contributes:
+    - `PianoRollFx` "Note glow & sparks" → `LazyBoundary`
+    - `ConfigV2.WebRegister`
+  - Uses:
+    - `apps/sonata/piano-roll.easeOutCubic`
+    - `apps/sonata/piano-roll.FxContext`
+    - `apps/sonata/piano-roll.FxNoteEvent`
+    - `apps/sonata/piano-roll.PianoRollFx`
+    - `config_v2.ConfigV2`
+    - `primitives/lazy-component.lazyComponent`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
