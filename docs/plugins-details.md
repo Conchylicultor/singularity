@@ -1289,6 +1289,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.arg`
+              - `framework/tooling/e2e-harness.baseUrl`
+              - `framework/tooling/e2e-harness.report`
+              - `framework/tooling/e2e-harness.snap`
+              - `framework/tooling/e2e-harness.withBrowser`
+              - `page/editor-collab.blockDocText`
+              - `page/editor-collab.fetchBlockDoc`
+              - `page/editor-collab.fetchBlockDocText`
+              - `page/editor.blockText`
+              - `page/editor.editableBlocks`
+              - `page/editor.openBlankPage`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
           - Web:
             - Slots:
@@ -5144,6 +5157,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useDefaultPlacement`
           - `useSurfaceMode`
           - `useTabs`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-rail`
@@ -10177,9 +10197,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/debug/live-state-emit/start`
               - `POST /api/debug/live-state-emit/stop`
               - `GET /api/debug/live-state-emit/status`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.baseUrl`
+              - `framework/tooling/e2e-harness.numArg`
+              - `framework/tooling/e2e-harness.requireArg`
+              - `framework/tooling/e2e-harness.withBrowser`
           - Core:
+            - Exports (types):
+              - `EmitStartOptions`
+              - `EmitStatus`
+              - `LiveStateEmitGlobal`
             - Exports (values):
               - `DEFAULT_EMIT_DURATION_MS`
+              - `EmitStatusSchema`
               - `LIVE_STATE_EMIT_GLOBAL`
               - `MAX_EMIT_DURATION_MS`
               - `MAX_EMIT_RATE`
@@ -10861,8 +10892,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
         - Exports (values): `renderProfilerPane`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.numArg`
+          - `framework/tooling/e2e-harness.withBrowser`
       - Core:
         - Exports (types):
+          - `FormatProfilerReportOptions`
           - `HookChange`
           - `HookKind`
           - `InitiatorStat`
@@ -10871,6 +10908,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RemountCause`
           - `RemountStat`
         - Exports (values):
+          - `formatProfilerReport`
           - `RENDER_PROFILER_CHANNEL`
           - `RENDER_PROFILER_GLOBAL`
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
@@ -13344,6 +13382,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineCollectedDir`
               - `isCollectedDirDef`
               - `loadCollectedDir`
+        - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/tabs`
+              - `apps/pages/history`
+              - `debug/live-state-churn/emit`
+              - `debug/render-profiler`
+              - `infra/events-test`
+              - `page/editor`
+              - `page/editor-collab`
+              - `page/image`
+              - `primitives/css/ui-kit`
+              - `primitives/networking`
+              - `primitives/overscroll-hint`
+              - `primitives/pane`
+              - `primitives/text-editor/caret-trigger`
+              - `release`
+          - E2e:
+            - Exports (types):
+              - `BootOptions`
+              - `Captured`
+              - `ColorScheme`
+              - `Harness`
+              - `Report`
+              - `Session`
+              - `SessionOptions`
+            - Exports (values):
+              - `arg`
+              - `baseUrl`
+              - `boot`
+              - `capture`
+              - `DEFAULT_VIEWPORT`
+              - `detectOsColorScheme`
+              - `flag`
+              - `numArg`
+              - `pathUrl`
+              - `report`
+              - `requireArg`
+              - `snap`
+              - `usage`
+              - `withBrowser`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses: `infra/paths.HOME_DIR`
@@ -14314,6 +14393,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GET /api/events-test/triggers`
           - `GET /api/events-test/wait-idle`
           - `POST /api/events-test/crash-recovery`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.pathUrl`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -15881,6 +15965,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UpdateBlockBodySchema`
           - `withRuns`
           - `xmlTextToRuns`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
+        - Exports (types):
+          - `BlankDoc`
+          - `CaretState`
+          - `OpenBlankPageOptions`
+        - Exports (values):
+          - `blockIdOf`
+          - `blockText`
+          - `caretState`
+          - `editableBlocks`
+          - `openBlankPage`
+          - `pageIdFromUrl`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/content-search`
@@ -15960,6 +16062,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `blockDocInit`
           - `BlockDocRowSchema`
           - `blockDocUpdate`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.capture`
+          - `framework/tooling/e2e-harness.numArg`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
+          - `page/editor.blockText`
+          - `page/editor.caretState`
+          - `page/editor.editableBlocks`
+          - `page/editor.openBlankPage`
+        - Exports (values):
+          - `blockDocText`
+          - `fetchBlockDoc`
+          - `fetchBlockDocText`
+      - Cross-plugin:
+        - Imported by: `apps/pages/history`
     - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "embed" → `EmbedBlock`
@@ -16154,6 +16275,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `imageBlock`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
     - **`inline-date`** — Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
       - Server:
         - Contributes: `trigger` "page.reminders.reconcile"
@@ -19704,6 +19831,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `usePortalThemeScope`
               - `useSidebar`
               - `useSingleLine`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.baseUrl`
+              - `framework/tooling/e2e-harness.numArg`
+              - `framework/tooling/e2e-harness.report`
+              - `framework/tooling/e2e-harness.withBrowser`
           - Cross-plugin:
             - Imported by:
               - `active-data`
@@ -21917,6 +22050,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `subscribeNetDiag`
           - `subscribeWsStatus`
           - `useReconnectingWebSocket`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.capture`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.withBrowser`
       - Cross-plugin:
         - Imported by:
           - `apps/studio/compositions/release/release-logs`
@@ -21989,6 +22128,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
       - Web:
         - Contributes: `Core.Root` → `OverscrollHintController`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.withBrowser`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.mail.inbox`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.thread-list`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
@@ -22091,6 +22235,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useRouteState`
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.numArg`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.requireArg`
+          - `framework/tooling/e2e-harness.withBrowser`
       - Cross-plugin:
         - Imported by:
           - `active-data/attempt`
@@ -22952,6 +23103,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useCaretMenu`
               - `useCaretQuery`
               - `useForcedCaretQuery`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.arg`
+              - `framework/tooling/e2e-harness.baseUrl`
+              - `framework/tooling/e2e-harness.boot`
+              - `framework/tooling/e2e-harness.report`
+              - `framework/tooling/e2e-harness.snap`
+              - `framework/tooling/e2e-harness.withBrowser`
           - Cross-plugin:
             - Imported by:
               - `page/editor`
@@ -23249,6 +23408,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `SortRuleSchema`
       - `stopPreviewEndpoint`
       - `triggerReleaseEndpoint`
+  - E2e:
+    - Uses:
+      - `framework/tooling/e2e-harness.arg`
+      - `framework/tooling/e2e-harness.ColorScheme`
+      - `framework/tooling/e2e-harness.detectOsColorScheme`
+      - `framework/tooling/e2e-harness.numArg`
+      - `framework/tooling/e2e-harness.report`
+      - `framework/tooling/e2e-harness.requireArg`
+      - `framework/tooling/e2e-harness.withBrowser`
   - Cross-plugin:
     - Imported by: `auth/apple-signing`
   - Shared:

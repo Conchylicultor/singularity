@@ -225,6 +225,14 @@ bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigg
     - `useCaretMenu`
     - `useCaretQuery`
     - `useForcedCaretQuery`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.arg`
+    - `framework/tooling/e2e-harness.baseUrl`
+    - `framework/tooling/e2e-harness.boot`
+    - `framework/tooling/e2e-harness.report`
+    - `framework/tooling/e2e-harness.snap`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Cross-plugin:
   - Imported by:
     - `page/editor`

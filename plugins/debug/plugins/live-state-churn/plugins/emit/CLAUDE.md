@@ -42,9 +42,20 @@
     - `POST /api/debug/live-state-emit/start`
     - `POST /api/debug/live-state-emit/stop`
     - `GET /api/debug/live-state-emit/status`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.baseUrl`
+    - `framework/tooling/e2e-harness.numArg`
+    - `framework/tooling/e2e-harness.requireArg`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Core:
+  - Exports (types):
+    - `EmitStartOptions`
+    - `EmitStatus`
+    - `LiveStateEmitGlobal`
   - Exports (values):
     - `DEFAULT_EMIT_DURATION_MS`
+    - `EmitStatusSchema`
     - `LIVE_STATE_EMIT_GLOBAL`
     - `MAX_EMIT_DURATION_MS`
     - `MAX_EMIT_RATE`

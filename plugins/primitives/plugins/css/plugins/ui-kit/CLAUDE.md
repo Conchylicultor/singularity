@@ -240,6 +240,12 @@ structurally unrepresentable.
     - `usePortalThemeScope`
     - `useSidebar`
     - `useSingleLine`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.baseUrl`
+    - `framework/tooling/e2e-harness.numArg`
+    - `framework/tooling/e2e-harness.report`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Cross-plugin:
   - Imported by:
     - `active-data`

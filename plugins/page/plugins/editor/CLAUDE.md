@@ -1101,6 +1101,24 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `UpdateBlockBodySchema`
     - `withRuns`
     - `xmlTextToRuns`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.arg`
+    - `framework/tooling/e2e-harness.baseUrl`
+    - `framework/tooling/e2e-harness.report`
+    - `framework/tooling/e2e-harness.snap`
+    - `framework/tooling/e2e-harness.withBrowser`
+  - Exports (types):
+    - `BlankDoc`
+    - `CaretState`
+    - `OpenBlankPageOptions`
+  - Exports (values):
+    - `blockIdOf`
+    - `blockText`
+    - `caretState`
+    - `editableBlocks`
+    - `openBlankPage`
+    - `pageIdFromUrl`
 - Cross-plugin:
   - Imported by:
     - `apps/pages/content-search`

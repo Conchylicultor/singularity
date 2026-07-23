@@ -52,6 +52,11 @@
     - `GET /api/events-test/triggers`
     - `GET /api/events-test/wait-idle`
     - `POST /api/events-test/crash-recovery`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.pathUrl`
+    - `framework/tooling/e2e-harness.snap`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`

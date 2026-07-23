@@ -86,6 +86,13 @@ still matches after it, so back/forward keeps working across reloads.
     - `useDefaultPlacement`
     - `useSurfaceMode`
     - `useTabs`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.arg`
+    - `framework/tooling/e2e-harness.baseUrl`
+    - `framework/tooling/e2e-harness.report`
+    - `framework/tooling/e2e-harness.snap`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-rail`

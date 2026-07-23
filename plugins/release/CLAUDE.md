@@ -256,6 +256,15 @@ nothing remote is built here.
     - `SortRuleSchema`
     - `stopPreviewEndpoint`
     - `triggerReleaseEndpoint`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.arg`
+    - `framework/tooling/e2e-harness.ColorScheme`
+    - `framework/tooling/e2e-harness.detectOsColorScheme`
+    - `framework/tooling/e2e-harness.numArg`
+    - `framework/tooling/e2e-harness.report`
+    - `framework/tooling/e2e-harness.requireArg`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Cross-plugin:
   - Imported by: `auth/apple-signing`
 - Shared:

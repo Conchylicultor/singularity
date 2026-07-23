@@ -87,7 +87,14 @@ await withBrowser(async (h) => {
   const moverId = (await readCaret(page)).inBlock;
   console.log("mover id:", moverId);
   r.ok("setup: caret is in the second block", moverId != null);
-  if (!moverId) r.finish();
+  if (!moverId) {
+    // Nothing downstream is meaningful without the mover's id. The explicit
+    // `return` is what narrows moverId to string for the rest of the run —
+    // finish() is typed `never`, but control-flow narrowing off a method call
+    // needs the callee's reference to be explicitly typed, which `r` is not.
+    r.finish();
+    return;
+  }
 
   // --- 2. caret mid-word, then Tab ------------------------------------------
   // From end-of-line (offset 11) back to offset 6 — inside "line".

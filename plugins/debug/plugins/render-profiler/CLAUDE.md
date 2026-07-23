@@ -115,8 +115,14 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (values): `renderProfilerPane`
+- E2e:
+  - Uses:
+    - `framework/tooling/e2e-harness.baseUrl`
+    - `framework/tooling/e2e-harness.numArg`
+    - `framework/tooling/e2e-harness.withBrowser`
 - Core:
   - Exports (types):
+    - `FormatProfilerReportOptions`
     - `HookChange`
     - `HookKind`
     - `InitiatorStat`
@@ -125,6 +131,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `RemountCause`
     - `RemountStat`
   - Exports (values):
+    - `formatProfilerReport`
     - `RENDER_PROFILER_CHANNEL`
     - `RENDER_PROFILER_GLOBAL`
 
