@@ -34,6 +34,7 @@ export default {
       id: "color-adjust",
       componentLabel: "Color Adjust",
       component: ColorAdjustPicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "color-adjust",

@@ -4123,6 +4123,10 @@
       "name": "@singularity/plugin-ui-theme-engine",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/theme-engine/plugins/quick-theme": {
+      "name": "@singularity/plugin-ui-theme-engine-quick-theme",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/theme-engine/plugins/theme-customizer": {
       "name": "@singularity/plugin-ui-theme-engine-theme-customizer",
       "version": "0.0.1",
@@ -6955,6 +6959,8 @@
     "@singularity/plugin-ui-tab-bar-underline": ["@singularity/plugin-ui-tab-bar-underline@workspace:plugins/ui/plugins/tab-bar/plugins/underline"],
 
     "@singularity/plugin-ui-theme-engine": ["@singularity/plugin-ui-theme-engine@workspace:plugins/ui/plugins/theme-engine"],
+
+    "@singularity/plugin-ui-theme-engine-quick-theme": ["@singularity/plugin-ui-theme-engine-quick-theme@workspace:plugins/ui/plugins/theme-engine/plugins/quick-theme"],
 
     "@singularity/plugin-ui-theme-engine-theme-customizer": ["@singularity/plugin-ui-theme-engine-theme-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-customizer"],
 

@@ -1,4 +1,4 @@
-// @hash f0d9d666f24f
+// @hash 183123d8d4c6
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -16,7 +16,7 @@
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "shell.notifications:notifications",
-    "ui.theme-engine.theme-customizer:theme-customizer",
+    "ui.theme-engine.quick-theme:quick-theme",
     "ui.theme-toggle:theme-light-dark"
   ]
 }

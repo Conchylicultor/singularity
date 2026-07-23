@@ -33,6 +33,7 @@ export default {
       id: "sidebar-palette",
       componentLabel: "Sidebar Palette",
       component: SidebarPalettePicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "sidebar-palette",

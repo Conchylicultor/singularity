@@ -1,11 +1,5 @@
-import { useMemo, useState } from "react";
-import {
-  useEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
-import { useConfigRegistrations } from "@plugins/config_v2/web";
-import { setConfigField } from "@plugins/config_v2/core";
-import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
+import { useMemo } from "react";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   DataView,
   defineDataView,
@@ -13,28 +7,19 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import type { CatalogTheme } from "../../shared";
-import { getCatalog, applyCatalogTheme } from "../../core";
+import { getCatalog } from "../../core";
+import { useApplyCatalogTheme } from "../internal/use-apply-catalog-theme";
 import { CommunityThemeCard } from "./community-theme-card";
 import { ImportByUrl } from "./import-by-url";
 
 const COMMUNITY_BROWSER_VIEW = defineDataView("tweakcn.community-browser");
 
 export function CommunityBrowserSection({ search }: { search: string }) {
-  const scopeId = useThemeScopeId();
-  const [applyingId, setApplyingId] = useState<string | null>(null);
-
   const { data, isLoading } = useEndpoint(getCatalog, {});
   const themes = data?.themes;
 
-  const tokenGroups = ThemeEngine.TokenGroup.useContributions();
-  const registrations = useConfigRegistrations();
-
-  const applyMutation = useEndpointMutation(applyCatalogTheme, {
-    invalidates: [listTweakcnThemes],
-  });
-  const { mutate: setConfigMutation } = useEndpointMutation(setConfigField);
+  const { applyingId, applyTheme, applyPresets } = useApplyCatalogTheme();
 
   const sortedTags = useMemo(() => {
     if (!themes) return [];
@@ -89,44 +74,6 @@ export function CommunityBrowserSection({ search }: { search: string }) {
 
   if (!sectionMatchesSearch) return null;
 
-  const handleApply = (
-    tweakcnId: string,
-    presets: Record<
-      string,
-      { light: Record<string, string>; dark: Record<string, string> }
-    >,
-  ) => {
-    const presetId = `tweakcn:${tweakcnId}`;
-    for (const group of tokenGroups) {
-      if (group.id in presets) {
-        const reg = registrations.find(
-          (r) => r.descriptor === group.configDescriptor,
-        );
-        if (reg) {
-          setConfigMutation({
-            body: scopeId
-              ? { storePath: reg.storePath, key: "preset", value: presetId, scopeId }
-              : { storePath: reg.storePath, key: "preset", value: presetId },
-          });
-        }
-      }
-    }
-  };
-
-  const handleCardClick = (themeId: string) => {
-    setApplyingId(themeId);
-    applyMutation.mutate(
-      { body: { themeId } },
-      {
-        onSuccess: (savedTheme) => {
-          handleApply(savedTheme.tweakcnId, savedTheme.presets);
-          setApplyingId(null);
-        },
-        onError: () => setApplyingId(null),
-      },
-    );
-  };
-
   return (
     <Stack gap="md">
       <DataView<CatalogTheme>
@@ -150,14 +97,14 @@ export function CommunityBrowserSection({ search }: { search: string }) {
               <CommunityThemeCard
                 theme={t}
                 isPending={applyingId === t.id}
-                onApply={() => handleCardClick(t.id)}
+                onApply={() => applyTheme(t.id)}
               />
             ),
           },
         }}
       />
 
-      <ImportByUrl search={search} onApply={handleApply} />
+      <ImportByUrl search={search} onApply={applyPresets} />
     </Stack>
   );
 }

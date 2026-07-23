@@ -1,4 +1,4 @@
-// @hash f0d9d666f24f
+// @hash 183123d8d4c6
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -14,7 +14,7 @@
     "improve.element-picker:element-picker",
     "fullscreen:fullscreen-toggle",
     "ui.theme-toggle:theme-light-dark",
-    "ui.theme-engine.theme-customizer:theme-customizer",
+    "ui.theme-engine.quick-theme:quick-theme",
     "reorder.edit-mode:reorder-pen",
     "reorder.edit-mode:reorder-scope-toggle"
   ]

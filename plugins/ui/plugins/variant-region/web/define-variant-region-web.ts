@@ -48,6 +48,9 @@ export function defineVariantRegionWeb<Props>(
       id: core.id,
       componentLabel: core.label,
       component: Picker,
+      // A variant region is a pluggable chrome component by construction — its
+      // variant is an independent choice a theme swap never rewrites.
+      selects: "component",
     }),
   ];
 

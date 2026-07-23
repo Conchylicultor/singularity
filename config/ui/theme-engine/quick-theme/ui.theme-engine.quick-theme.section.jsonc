@@ -1,0 +1,13 @@
+// @hash 73ad9f01fd25
+{
+  // Vertical stack of sections inside the quick-theme popover, rendered above
+  // the variant pickers. Top = first thing the user reaches for; the community
+  // theme picker is the whole point of the popover, so it leads.
+  //
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "ui.tweakcn.community-browser:community-themes"
+  ]
+}

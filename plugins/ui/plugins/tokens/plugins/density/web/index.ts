@@ -32,6 +32,7 @@ export default {
       id: "density",
       componentLabel: "Density",
       component: DensityPicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "density",

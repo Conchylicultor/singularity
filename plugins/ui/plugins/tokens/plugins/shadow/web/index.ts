@@ -51,6 +51,7 @@ export default {
       id: "shadow",
       componentLabel: "Shadow",
       component: ShadowPicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "shadow",

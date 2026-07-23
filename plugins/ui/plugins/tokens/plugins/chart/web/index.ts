@@ -32,6 +32,7 @@ export default {
       id: "chart",
       componentLabel: "Chart",
       component: ChartPicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "chart",

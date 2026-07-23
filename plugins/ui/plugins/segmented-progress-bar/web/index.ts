@@ -28,6 +28,7 @@ export default {
       id: "segmented-progress-bar",
       componentLabel: "Segmented Progress Bar",
       component: VariantPicker,
+      selects: "component",
     }),
   ],
 } satisfies PluginDefinition;

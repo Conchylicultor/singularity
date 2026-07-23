@@ -100,6 +100,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "tasks.task-actions", pluginId: "tasks.task-list" },
   { slotId: "text-editor.plugin", pluginId: "primitives.text-editor" },
   { slotId: "theme-customizer.section", pluginId: "ui.theme-engine.theme-customizer" },
+  { slotId: "ui.theme-engine.quick-theme.section", pluginId: "ui.theme-engine.quick-theme" },
   { slotId: "ui.theme-engine.variant-group", pluginId: "ui.theme-engine" },
   { slotId: "website.agents.section", pluginId: "apps.website.pillars.agents" },
   { slotId: "website.apps.section", pluginId: "apps.website.pillars.apps" },

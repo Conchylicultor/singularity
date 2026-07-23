@@ -32,6 +32,7 @@ export default {
       id: "categorical",
       componentLabel: "Categorical",
       component: CategoricalPicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "categorical",

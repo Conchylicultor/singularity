@@ -8,6 +8,23 @@ export interface VariantGroupContribution {
   id: string;
   componentLabel: string;
   component: ComponentType;
+  /**
+   * What this picker actually chooses — the axis a consumer needs to decide
+   * whether showing it alongside a theme switcher is informative or redundant:
+   *
+   * - `"component"` — a pluggable component's visual variant (sidebar framing,
+   *   tab bar, progress bar, window titlebar). An independent choice that
+   *   SURVIVES a theme swap, so it is worth offering next to one.
+   * - `"tokens"` — a token group's preset (palette, shape, density, fonts,
+   *   shadow, …). A global preset or an imported tweakcn theme rewrites these
+   *   wholesale, so a surface that already switches themes would be offering
+   *   the same choice twice, with the second one silently overwritten.
+   *
+   * Deliberately REQUIRED, not defaulted: a new token-group picker that
+   * silently inherited `"component"` would reappear in every compact surface,
+   * which is exactly the drift this field exists to prevent.
+   */
+  selects: "component" | "tokens";
 }
 
 export interface TokenGroupPreset {

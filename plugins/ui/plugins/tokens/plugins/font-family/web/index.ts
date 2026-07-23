@@ -33,6 +33,7 @@ export default {
       id: "font-family",
       componentLabel: "Fonts",
       component: FontFamilyPicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "font-family",

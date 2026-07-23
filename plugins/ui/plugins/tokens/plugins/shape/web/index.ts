@@ -32,6 +32,7 @@ export default {
       id: "shape",
       componentLabel: "Shape",
       component: ShapePicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "shape",

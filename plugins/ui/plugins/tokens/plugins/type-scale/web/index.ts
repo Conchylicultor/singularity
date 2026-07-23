@@ -32,6 +32,7 @@ export default {
       id: "type-scale",
       componentLabel: "Type Scale",
       component: TypeScalePicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "type-scale",

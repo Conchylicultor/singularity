@@ -1,11 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { themeCustomizerPane } from "./panes";
-import { ThemeCustomizerButton } from "./components/theme-customizer-button";
 
 export { ThemeCustomizer } from "./slots";
-export { themeCustomizerPane } from "./panes";
+export { themeCustomizerPane, themeCustomizerRoute } from "./panes";
 export { TokenRow, type TokenRowProps } from "./components/token-row";
 export {
   TokenModeContext,
@@ -15,11 +13,7 @@ export {
 export default {
   description:
     "Extensible theme customization pane with global preset picker, search, and contributed sections.",
-  contributions: [
-    Pane.Register({ pane: themeCustomizerPane }),
-    ActionBar.Item({
-      id: "theme-customizer",
-      component: ThemeCustomizerButton,
-    }),
-  ],
+  // The toolbar entry point lives in the sibling `quick-theme` plugin: the
+  // palette button opens the quick-switch popover, whose footer navigates here.
+  contributions: [Pane.Register({ pane: themeCustomizerPane })],
 } satisfies PluginDefinition;

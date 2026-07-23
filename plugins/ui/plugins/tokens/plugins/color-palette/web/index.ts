@@ -33,6 +33,7 @@ export default {
       id: "color-palette",
       componentLabel: "Color Palette",
       component: ColorPalettePicker,
+      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "color-palette",
