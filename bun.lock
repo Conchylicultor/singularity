@@ -831,22 +831,6 @@
       "name": "@singularity/plugin-apps-website",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/website/plugins/blog": {
-      "name": "@singularity/plugin-apps-website-blog",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/website/plugins/blog/plugins/pages-integration": {
-      "name": "@singularity/plugin-apps-website-blog-pages-integration",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/website/plugins/blog/plugins/publish": {
-      "name": "@singularity/plugin-apps-website-blog-publish",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/website/plugins/blog/plugins/site": {
-      "name": "@singularity/plugin-apps-website-blog-site",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/website/plugins/demos": {
       "name": "@singularity/plugin-apps-website-demos",
       "version": "0.0.1",
@@ -5421,14 +5405,6 @@
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@singularity/plugin-apps-website": ["@singularity/plugin-apps-website@workspace:plugins/apps/plugins/website"],
-
-    "@singularity/plugin-apps-website-blog": ["@singularity/plugin-apps-website-blog@workspace:plugins/apps/plugins/website/plugins/blog"],
-
-    "@singularity/plugin-apps-website-blog-pages-integration": ["@singularity/plugin-apps-website-blog-pages-integration@workspace:plugins/apps/plugins/website/plugins/blog/plugins/pages-integration"],
-
-    "@singularity/plugin-apps-website-blog-publish": ["@singularity/plugin-apps-website-blog-publish@workspace:plugins/apps/plugins/website/plugins/blog/plugins/publish"],
-
-    "@singularity/plugin-apps-website-blog-site": ["@singularity/plugin-apps-website-blog-site@workspace:plugins/apps/plugins/website/plugins/blog/plugins/site"],
 
     "@singularity/plugin-apps-website-demos": ["@singularity/plugin-apps-website-demos@workspace:plugins/apps/plugins/website/plugins/demos"],
 

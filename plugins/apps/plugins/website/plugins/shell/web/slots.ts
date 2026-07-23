@@ -4,7 +4,7 @@ import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web"
 
 /**
  * The shared site header, rendered as the pane header (`chrome.header`) of
- * EVERY website pane so the nav persists across landing / blog / downloads.
+ * EVERY website pane so the nav persists across landing / pillars / downloads.
  * Start hosts the wordmark (contributed by the shell); section plugins
  * contribute their nav links into End (use `<WebsiteNavLink/>` for the
  * standard look).

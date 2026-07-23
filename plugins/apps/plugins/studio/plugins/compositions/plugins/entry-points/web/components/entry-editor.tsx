@@ -19,8 +19,8 @@ import {
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 // Compact chip label for an entry pattern: the base's last segment, decorated
-// with the grammar markers so `apps.website.blog`, `apps.website.blog.**`, and
-// `!apps.website.blog.**` stay visually distinct. (The full pattern editor is a
+// with the grammar markers so `apps.website.demos`, `apps.website.demos.**`, and
+// `!apps.website.demos.**` stay visually distinct. (The full pattern editor is a
 // deferred increment; this keeps the current chips honest.)
 function shortName(pattern: EntryPattern): string {
   const p = parseEntryPattern(pattern);

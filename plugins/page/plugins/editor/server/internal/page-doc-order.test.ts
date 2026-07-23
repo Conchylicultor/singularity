@@ -155,8 +155,8 @@ describe("document order across rank spaces", () => {
 describe("membership is never a function of the traversal", () => {
   // Hole B. A live page whose ancestor chain is broken (its `parentId` points at
   // a trashed row) must still APPEAR — otherwise it vanishes not just from the
-  // sidebar but from the `[[` picker, breadcrumbs, the story gallery and the
-  // blog panel. It is kept and deterministically placed last in its group.
+  // sidebar but from the `[[` picker, breadcrumbs and the story gallery. It is
+  // kept and deterministically placed last in its group.
   test("a page with a broken ancestor chain still appears, sorted last in its group", async () => {
     await seedBlock({ id: "W", parentId: null, pageId: null, type: "page", rank: "a0" });
     await seedBlock({ id: "ok", parentId: "W", pageId: "W", type: "page", rank: "a5" });

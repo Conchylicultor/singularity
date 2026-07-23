@@ -72,7 +72,7 @@ barrel re-exports only the umbrella's own symbols).
 |---|---|
 | `apps.deploy` | that node only (+ its hard closure, as always). **No implicit subtree.** |
 | `apps.deploy.**` | node ∪ `subtree(node)` — opt into containment. |
-| `!apps.website.blog.**` | negative — subtracts from *this composition's* seed set. |
+| `!apps.website.demos.**` | negative — subtracts from *this composition's* seed set. |
 
 `expandEntrySeeds(entryPoints, graph)` returns `{ seeds, named }`: positives
 seed their matches and record their exact base in `named`; negatives

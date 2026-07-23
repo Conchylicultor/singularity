@@ -1,4 +1,4 @@
-// @hash d46931c86ea8
+// @hash 36fa6cc3d90e
 {
   "manifests": [
     {
@@ -186,7 +186,6 @@
       "category": "app",
       "entryPoints": [
         "apps.website.**",
-        "!apps.website.blog.**",
         "!apps.website.demos.editor-toy.**"
       ],
       "selectedContributors": [

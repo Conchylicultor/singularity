@@ -94,13 +94,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
         - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
-    - **`website`** — Website — the public-facing site of Singularity (brand: equin): landing, downloads, blog, demos.
+    - **`website`** — Website — the public-facing site of Singularity (brand: equin): landing, downloads, demos.
       - Plugins:
-        - **`blog`** — Blog: pages-authored posts published to the public site.
-          - Plugins:
-            - **`pages-integration`** — Pages integration for Blog: an embedded publish panel (slug + summary, Publish/Unpublish, View on site) in the page-detail pane for turning a page into a public blog post.
-            - **`publish`** — Blog publish marker (read hooks + set/clear mutations). No UI: useBlogPosts/useBlogPost, setBlogPost/clearBlogPost. Blog publish marker: page_blocks_ext_blog_post side-table (entity-extensions), blogPostsResource, set/clear endpoints.
-            - **`site`** — Public blog surfaces for the equin website: the /website/blog list and /website/blog/:slug post panes (page content rendered read-only), plus the Blog nav link in the shared site header.
         - **`demos`** — Interactive toy demos of Singularity features embedded in the public site.
           - Plugins:
             - **`agent-run`** — Agent-run simulator on the public site's Agents page: a fake task list where the visitor launches agents and watches each race through worktree → edit → build → merge, several concurrently — a deterministic, client-only replay of the real loop.

@@ -368,7 +368,7 @@ function NodeView({
   if (node.type === PAGE_BLOCK_TYPE) {
     // Must precede the generic fallback: a sub-page's handle carries no `label`
     // and its data has no `text`, so it would otherwise land on the placeholder
-    // card and leak "Unknown block: page" onto the public blog site.
+    // card and leak "Unknown block: page" onto every read-only surface.
     body = (
       <>
         <SubPageChip data={data} />

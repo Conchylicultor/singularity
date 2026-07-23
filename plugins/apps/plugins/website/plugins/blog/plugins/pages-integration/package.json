@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-website-blog-pages-integration",
-  "description": "Pages integration for Blog: an embedded publish panel in the page-detail pane (slug + summary inputs, Publish/Unpublish, and View on site) for turning a page into a public blog post.",
-  "private": true,
-  "version": "0.0.1"
-}

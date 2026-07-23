@@ -1422,6 +1422,13 @@
       "tag": "20260722_230203_2fd9c304__merged_20260722_2301",
       "hash": "2fd9c304",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784770870000,
+      "tag": "20260723_014110_6e4d06f0__remove_blog_publishing",
+      "hash": "6e4d06f0",
+      "breakpoints": true
     }
   ]
 }

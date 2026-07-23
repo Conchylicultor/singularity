@@ -115,19 +115,11 @@ export const compositionsConfig = defineConfig({
         app("workflows", "apps.workflows"),
 
         // The public equin site. The entry grammar takes the whole site subtree
-        // and then subtracts the two branches that would contaminate it:
+        // and then subtracts the one branch that would contaminate it:
         //  1. `"apps.website.**"` seeds the `apps.website` node + its ENTIRE
         //     subtree (the `.**` glob). Everything under the site ships by
         //     default.
-        //  2. `"!apps.website.blog.**"` drops the whole `blog` umbrella. Its
-        //     `blog.pages-integration` hard-imports
-        //     `@plugins/apps/plugins/pages/plugins/page-tree/web` (it mounts an
-        //     authoring panel into the Pages app), so keeping it would drag the
-        //     Pages app + block editor into the public site. The negative trims
-        //     only the `.**`-implicit ids the site subtree pulled in (the blog is
-        //     being retired anyway; it is the site's only server plugin and its
-        //     only `page` dependency).
-        //  3. `"!apps.website.demos.editor-toy.**"` drops the editor-toy demo.
+        //  2. `"!apps.website.demos.editor-toy.**"` drops the editor-toy demo.
         //     editor-toy embeds a live `<BlockEditor>`, and the block editor's
         //     hard closure now reaches worktree infra: `page.editor → reorder →
         //     config_v2.staging → infra.worktree` (staging lands a promoted config
@@ -141,7 +133,7 @@ export const compositionsConfig = defineConfig({
         //     editor-toy is left out; every other demo ships. (Severing the
         //     reorder→staging→worktree taproot to make a live editor releasable
         //     stand-alone is a follow-up.)
-        //  4. `selectedContributors: ["apps.sonata.audio.piano"]` is the sampled
+        //  3. `selectedContributors: ["apps.sonata.audio.piano"]` is the sampled
         //     grand behind the app-gallery's Sonata vignette — a genuine
         //     load-bearing soft option: it contributes `SonataAudio.Instrument`
         //     (the axis that lives in `apps.sonata.audio.instruments`, NOT in
@@ -168,7 +160,6 @@ export const compositionsConfig = defineConfig({
           category: "app" as const,
           entryPoints: [
             "apps.website.**",
-            "!apps.website.blog.**",
             "!apps.website.demos.editor-toy.**",
           ],
           selectedContributors: ["apps.sonata.audio.piano"],

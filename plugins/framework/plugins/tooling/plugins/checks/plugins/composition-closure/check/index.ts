@@ -136,7 +136,7 @@ const check: Check = {
         if (!allIds.has(base)) {
           return fail(
             `composition "${m.name}" references unknown plugin id "${base}" in entry pattern "${entry}"`,
-            "Entry points are patterns: a dot-encoded PluginId with an optional leading `!` (trim) and trailing `.**` (subtree), e.g. `apps.website.**` or `!apps.website.blog.**`. The base id must resolve to a real plugin.",
+            "Entry points are patterns: a dot-encoded PluginId with an optional leading `!` (trim) and trailing `.**` (subtree), e.g. `apps.website.**` or `!apps.website.demos.**`. The base id must resolve to a real plugin.",
           );
         }
       }

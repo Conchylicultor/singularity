@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-website-blog-site",
-  "description": "Public blog surfaces for the equin website: the /website/blog list and /website/blog/:slug post panes, plus the Blog nav link in the shared site header.",
-  "private": true,
-  "version": "0.0.1"
-}

@@ -1,10 +1,9 @@
-// @hash 4a0a8b66c34e
+// @hash 26f5bcfbc10e
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.website.blog.site:blog",
     "apps.website.downloads:download",
     "apps.website.pillars.agents:agents",
     "apps.website.pillars.apps:apps",

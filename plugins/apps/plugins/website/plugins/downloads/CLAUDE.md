@@ -6,8 +6,8 @@
 
 - Description: Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
 - Web:
-  - Slots: `downloadsPane.Actions`, `downloadsPane.Start` ← `apps.website.shell`, `downloadsPane.End` ← `apps.website.blog.site`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
-  - Contributes: `Pane.Register` "website-downloads", `blogListPane.End` "download" → `DownloadNavItem`
+  - Slots: `downloadsPane.Actions`, `downloadsPane.Start` ← `apps.website.shell`, `downloadsPane.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
+  - Contributes: `Pane.Register` "website-downloads", `downloadsPane.End` "download" → `DownloadNavItem`
   - Uses: `apps/website/shell.WebsiteNavLink`, `apps/website/shell.WebsitePage`, `apps/website/shell.WebsiteToolbar`, `primitives/css/badge.Badge`, `primitives/css/card.Card`, `primitives/css/grid.Grid`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`
   - Exports: Values: `downloadsPane`
 - Cross-plugin:

@@ -82,7 +82,7 @@ test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () =
   expect([...ar.extends].sort()).toEqual(["conversations", "tasks-domain"]);
 });
 
-test("the website app seed uses the glob grammar to take the site subtree minus blog / editor-toy", () => {
+test("the website app seed uses the glob grammar to take the site subtree minus editor-toy", () => {
   const site = byName("website");
   expect(site.category).toBe("app");
   const m = manifestItemToManifest(site);
@@ -90,13 +90,12 @@ test("the website app seed uses the glob grammar to take the site subtree minus 
   expect(m.name.length).toBeGreaterThan(0);
   expect(m.entryPoints.length).toBeGreaterThan(0);
   // The regression guard, stated in the new glob grammar: `.**` takes the whole
-  // site subtree, then two negatives trim the branches that would drag in the
-  // Pages app + block editor + worktree infra (blog/pages-integration and the
-  // editor-toy demo). The "actually absent from the bundle" regression lives in
-  // closure.test.ts (with a real plugin tree); here we only assert the grammar.
+  // site subtree, then a negative trims the branch that would drag in the block
+  // editor + worktree infra (the editor-toy demo). The "actually absent from the
+  // bundle" regression lives in closure.test.ts (with a real plugin tree); here
+  // we only assert the grammar.
   const entries = m.entryPoints.map(String);
   expect(entries).toContain("apps.website.**");
-  expect(entries).toContain("!apps.website.blog.**");
   expect(entries).toContain("!apps.website.demos.editor-toy.**");
 });
 

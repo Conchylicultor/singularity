@@ -1,0 +1,1 @@
+DROP TABLE "page_blocks_ext_blog_post" CASCADE;

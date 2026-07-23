@@ -4,9 +4,8 @@
 
 ## Plugin reference
 
-- Description: Website — the public-facing site of Singularity (brand: equin): landing, downloads, blog, demos.
+- Description: Website — the public-facing site of Singularity (brand: equin): landing, downloads, demos.
 - Sub-plugins:
-  - **`blog`** — Blog: pages-authored posts published to the public site.
   - **`demos`** — Interactive toy demos of Singularity features embedded in the public site.
   - **`downloads`** — Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
   - **`landing`** — Landing-page sections of the public website (hero, three pillars, closing CTA).

@@ -132,13 +132,13 @@ test("parseEntryPattern splits negation / base / subtree", () => {
     base: "apps.website",
     subtree: true,
   });
-  expect(parseEntryPattern("!apps.website.blog.**")).toMatchObject({
+  expect(parseEntryPattern("!apps.website.demos.**")).toMatchObject({
     negate: true,
-    base: "apps.website.blog",
+    base: "apps.website.demos",
     subtree: true,
   });
   // raw is preserved verbatim.
-  expect(parseEntryPattern("!apps.website.blog.**").raw).toBe("!apps.website.blog.**");
+  expect(parseEntryPattern("!apps.website.demos.**").raw).toBe("!apps.website.demos.**");
 });
 
 // (i) A bare id seeds ONLY the node + its hard closure — no implicit subtree.
@@ -228,24 +228,20 @@ test("negation cannot sever a hard import: a kept sibling's dep still ships", ()
   expect(comp.bundle.has(asPluginId("root.drop.inner"))).toBe(true);
 });
 
-// (v) Real-tree `website`-shaped manifest: `.**` minus two branch negatives excludes
-// every blog / editor-toy id and keeps the rest of the website subtree.
-test("website-shaped manifest: .** minus negatives drops blog + editor-toy branches", () => {
+// (v) Real-tree `website`-shaped manifest: `.**` minus a branch negative excludes
+// every editor-toy id and keeps the rest of the website subtree.
+test("website-shaped manifest: .** minus negatives drops the editor-toy branch", () => {
   const websiteManifest: CompositionManifest = {
     name: "website",
     entryPoints: [
       asPluginId("apps.website.**"),
-      asPluginId("!apps.website.blog.**"),
       asPluginId("!apps.website.demos.editor-toy.**"),
     ],
     selectedContributors: [],
   };
   const comp = resolveComposition(graph, websiteManifest);
 
-  // Every blog id and every editor-toy id is OUT of the bundle.
-  const blogIds = [...tree.byDir.values()]
-    .map((n) => n.id)
-    .filter((id) => id === "apps.website.blog" || id.startsWith("apps.website.blog."));
+  // Every editor-toy id is OUT of the bundle.
   const editorToyIds = [...tree.byDir.values()]
     .map((n) => n.id)
     .filter(
@@ -253,9 +249,8 @@ test("website-shaped manifest: .** minus negatives drops blog + editor-toy branc
         id === "apps.website.demos.editor-toy" ||
         id.startsWith("apps.website.demos.editor-toy."),
     );
-  expect(blogIds.length).toBeGreaterThan(0);
   expect(editorToyIds.length).toBeGreaterThan(0);
-  for (const id of [...blogIds, ...editorToyIds]) {
+  for (const id of editorToyIds) {
     expect(comp.bundle.has(asPluginId(id))).toBe(false);
   }
 
