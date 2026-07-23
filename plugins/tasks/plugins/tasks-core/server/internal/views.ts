@@ -1,4 +1,4 @@
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { eq, getTableColumns, sql, type SQL } from "drizzle-orm";
 import { boolean, pgView, text } from "drizzle-orm/pg-core";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
 import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
@@ -66,6 +66,50 @@ export const attempts = pgView("attempts_v").as((qb) => {
     .leftJoin(_attemptPushAgg, eq(_attemptPushAgg.attemptId, _attempts.id));
 });
 
+// THE definition of "dependency `dep` is still blocking whatever depends on it".
+//
+// There are two blocking queries and they must never disagree: the transitive
+// closure below (task_blocking_v, which drives the auto-start gate and the
+// `blocked` badge) and the deliberately single-hop direct frontier in
+// queries/tasks.ts (listBlockingDepIds, which feeds queue ranking). They differ
+// in SHAPE — recursive walk vs direct edges — never in RULE, so the rule lives
+// here once and both interpolate it. Parameterized by column expressions because
+// the two call sites name the task table differently (a `dep` CTE alias vs the
+// bare `tasks` relation).
+//
+// It re-derives "settled" from raw columns rather than reading `tasks_v.status`
+// (tasks_v depends on this view — reading it would be circular), so it must stay
+// in agreement with `isSettled` (core/task-graph.ts) and the tasks_v status CASE:
+//   settled ⇔ status ∈ {done, dropped}
+//   dropped ⇔ dropped_at IS NOT NULL
+//   done    ⇔ has a completed attempt AND NOT held  ← hold outranks `done`
+//
+// That last clause is why `held_at` appears here at all. Without it, a task that
+// had pushed and was then held kept the completed-attempt exemption, stopped
+// blocking, and auto-launched its armed dependents — the "Hold & close marked the
+// task done and started the next one" bug.
+function depIsBlocking(dep: { droppedAt: SQL; heldAt: SQL; id: SQL }): SQL {
+  return sql`
+    ${dep.droppedAt} IS NULL
+    AND (
+      ${dep.heldAt} IS NOT NULL
+      OR NOT EXISTS (
+        SELECT 1 FROM ${attempts} att
+         WHERE att.task_id = ${dep.id} AND att.status = 'completed'
+      )
+    )
+  `;
+}
+
+// The single-hop frontier (queries/tasks.ts) interpolates the same rule against
+// the bare `tasks` relation joined to the dependency edge it is walking.
+export const directDepIsBlocking = (dependsOnTaskId: SQL): SQL =>
+  depIsBlocking({
+    droppedAt: sql`${_tasks.droppedAt}`,
+    heldAt: sql`${_tasks.heldAt}`,
+    id: dependsOnTaskId,
+  });
+
 // Transitive dependency-blocking, computed once as a shared derived view so the
 // auto-start gate (hasBlockingDep) and the UI status badge (tasks_v) read the
 // SAME definition instead of mirroring two single-hop queries. A task is blocked
@@ -83,12 +127,9 @@ export const attempts = pgView("attempts_v").as((qb) => {
 // blocked".
 //
 // This recursive CTE is the SQL embodiment of `isSettled` / `TaskGraph.
-// activeBlockers` (core/task-graph.ts): it walks *through* settled (dropped or
-// completed) ancestors and blocks on ANY non-settled one — the same rule, in
-// both directions. It cannot read `tasks_v.status` to define "settled" because
-// tasks_v depends on this view (circular), so it re-derives settled from the raw
-// columns (`dropped_at IS NULL AND NOT EXISTS(completed attempt)`); both
-// definitions must stay in agreement.
+// activeBlockers` (core/task-graph.ts): it walks *through* settled ancestors and
+// blocks on ANY non-settled one — the same rule, in both directions. The
+// per-ancestor test is `depIsBlocking` above, the shared definition.
 export const taskBlocking = pgView("task_blocking_v", {
   taskId: text("task_id").notNull(),
   hasBlockingDep: boolean("has_blocking_dep").notNull(),
@@ -103,13 +144,11 @@ export const taskBlocking = pgView("task_blocking_v", {
         JOIN ${_taskDependencies} td ON td.task_id = a.ancestor_id
     )
     SELECT a.task_id AS task_id,
-           bool_or(
-             dep.dropped_at IS NULL
-             AND NOT EXISTS (
-               SELECT 1 FROM ${attempts} att
-                WHERE att.task_id = dep.id AND att.status = 'completed'
-             )
-           ) AS has_blocking_dep
+           bool_or(${depIsBlocking({
+             droppedAt: sql`dep.dropped_at`,
+             heldAt: sql`dep.held_at`,
+             id: sql`dep.id`,
+           })}) AS has_blocking_dep
       FROM ancestors a
       JOIN ${_tasks} dep ON dep.id = a.ancestor_id
      GROUP BY a.task_id
@@ -174,9 +213,25 @@ export const tasks = pgView("tasks_v").as((qb) => {
     .with(attemptAgg, waiting, completedPush, deps)
     .select({
       ...getTableColumns(_tasks),
+      // Precedence note — `held_at` gates the `done` branch instead of sitting
+      // below it. A completed attempt (= it pushed AND has no live conversation)
+      // otherwise outranked an explicit hold, so "Hold & close" on a
+      // conversation whose attempt had ever pushed wrote held_at, closed the
+      // last live conversation, flipped the attempt `pushed` → `completed`, and
+      // resolved the task to `done` — silently discarding the hold AND emitting
+      // taskStatusChanged{status:'done'}, which is exactly what
+      // tasks.maybe-launch-dependents fans out on, so the next task launched.
+      // Hold is a user's explicit "not now": it wins over `done`.
+      //
+      // It stays BELOW the three `hasActive` branches, mirroring the existing
+      // active-overrides-dropped rule — holding a task whose agent is still
+      // running reports the live truth (`in_progress`), not the intent. This is
+      // not a hole in the hold-and-exit path: that handler closes the
+      // conversation, so by the time the hold is observable the task is inactive.
       status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
         CASE
-          WHEN COALESCE(${attemptAgg.hasCompleted}, false)                  THEN 'done'
+          WHEN ${_tasks.heldAt} IS NULL AND COALESCE(${attemptAgg.hasCompleted}, false)
+                                                                            THEN 'done'
           WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${taskBlocking.hasBlockingDep}, false)
                                                                             THEN 'blocked'
           WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${waiting.hasWaiting}, false)
@@ -193,8 +248,12 @@ export const tasks = pgView("tasks_v").as((qb) => {
         NOT COALESCE(${attemptAgg.hasCompleted}, false)
         AND COALESCE(${attemptAgg.hasActive}, false)
       )`.as("active"),
+      // Same held_at gate as the status CASE, so the two never contradict each
+      // other: a task reported as `held` is not finished, and must not carry a
+      // finished_at (the stats plugins read it as a completion timestamp).
       finishedAt: sql<Date | null>`
         CASE
+          WHEN ${_tasks.heldAt} IS NOT NULL                  THEN NULL
           WHEN COALESCE(${attemptAgg.hasCompleted}, false)   THEN ${completedPush.minCompletedPushAt}
           WHEN ${_tasks.droppedAt} IS NOT NULL               THEN ${_tasks.droppedAt}
           ELSE                                                    NULL

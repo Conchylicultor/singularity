@@ -1,9 +1,9 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
-import { attempts, taskBlocking, tasks } from "../views";
+import { directDepIsBlocking, taskBlocking, tasks } from "../views";
 import type { Task } from "../schema";
 import { TaskGraph } from "../../../core";
 import type { DbExecutor } from "../status-batch";
@@ -101,12 +101,10 @@ export async function listBlockingDepIds(
     .where(
       and(
         eq(_taskDependencies.taskId, taskId),
-        isNull(_tasks.droppedAt),
-        sql`NOT EXISTS (
-          SELECT 1 FROM ${attempts} a
-           WHERE a.task_id = ${_taskDependencies.dependsOnTaskId}
-             AND a.status = 'completed'
-        )`,
+        // The SHARED rule (views.ts) — single-hop in shape, identical in
+        // substance to the transitive task_blocking_v walk. Notably it treats a
+        // held dependency as still blocking even once an attempt completed.
+        directDepIsBlocking(sql`${_taskDependencies.dependsOnTaskId}`),
       ),
     );
   return rows.map((r) => r.depTaskId);
