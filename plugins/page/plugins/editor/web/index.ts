@@ -23,7 +23,6 @@ export {
   BlockTypeList,
 } from "./components/block-type-list";
 export type { BlockSection } from "./components/block-type-list";
-export { BlockTypeMenu } from "./components/block-type-menu";
 export {
   registerBlockTextExtension,
   getBlockTextExtensions,

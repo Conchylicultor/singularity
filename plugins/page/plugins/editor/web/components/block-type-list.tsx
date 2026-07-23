@@ -41,8 +41,8 @@ export function useGroupedInsertableBlocks(): BlockSection[] {
 
 /**
  * Flat insertable block list in authored-config order — `useGroupedInsertableBlocks`
- * flattened. Shared by the flat consumers (turn-into menu, `BlockTypeMenu`), which
- * inherit the group ordering for free while ignoring the section boundaries.
+ * flattened. Shared by the flat consumers (the turn-into menu), which inherit the
+ * group ordering for free while ignoring the section boundaries.
  */
 export function useInsertableBlocks(): BlockHandle<unknown>[] {
   const sections = useGroupedInsertableBlocks();
@@ -93,9 +93,9 @@ export function filterBlockTypes(
  *   `onPointerDown` because the menu is a focus-less surface over a live editor
  *   caret — a press perturbs the host selection and unmounts this row before a
  *   `mousedown` could fire (see `useCaretMenu`'s `commit`).
- * - **Focused popover picker** (Add block / turn-into): only `onSelect` is set.
- *   It commits on `onMouseDown` + `preventDefault` so the click never blurs the
- *   picker's own search field.
+ * - **Focused popover picker** (turn-into): only `onSelect` is set. It commits
+ *   on `onMouseDown` + `preventDefault` so the click never blurs the picker's
+ *   own search field.
  */
 function BlockTypeRow({
   block,
@@ -154,9 +154,8 @@ function BlockTypeRow({
  * - **`onCommit(index)`** — caret menus (slash / gutter-`+`). Rows commit on
  *   `onPointerDown` through the `useCaretMenu` `commit`, which is `pointerdown`-
  *   timed and `editor.update`-wrapped so a mouse click matches the keyboard.
- * - **`onSelect(block)`** — focused popover pickers (Add block / turn-into).
- *   Rows commit on `onMouseDown` + `preventDefault` to keep the picker's field
- *   focused.
+ * - **`onSelect(block)`** — focused popover pickers (turn-into). Rows commit on
+ *   `onMouseDown` + `preventDefault` to keep the picker's field focused.
  */
 export function BlockTypeList({
   sections,

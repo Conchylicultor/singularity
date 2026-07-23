@@ -1,5 +1,5 @@
 // E2E verification for the page-editor image block.
-// Flow: open Pages → create a page → Add block → Image → upload a file →
+// Flow: open Pages → create a page → /image → upload a file →
 // assert <img> renders → drag the resize handle → report the persisted width.
 import { chromium } from "playwright";
 
@@ -17,13 +17,12 @@ await page.waitForTimeout(2500);
 await page.getByRole("button", { name: "New Page" }).first().click();
 await page.waitForTimeout(1500);
 
-// 2. Add a block → pick "Image".
-await page.getByRole("button", { name: "Add block" }).first().click();
+// 2. Land the caret in the (empty) body, then convert via the inline `/` menu.
+await page.getByRole("listbox", { name: "Page blocks" }).click();
 await page.waitForTimeout(500);
-const filter = page.getByPlaceholder("Filter blocks...");
-await filter.fill("image");
-await page.waitForTimeout(300);
-await filter.press("Enter");
+await page.keyboard.type("/image");
+await page.waitForTimeout(400);
+await page.keyboard.press("Enter");
 await page.waitForTimeout(800);
 
 // 3. Confirm the empty placeholder rendered.

@@ -63,7 +63,6 @@ import { Editor } from "../slots";
 import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
 import { useBlockSelection, type BlockSelectionActions } from "../internal/use-block-selection";
-import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow } from "./block-row";
 import { BLOCK_GUTTER } from "../internal/page-column";
 import { FileDropOverlay } from "./file-drop-overlay";
@@ -1036,10 +1035,6 @@ function SelectionLayer({
                   }
                 />
               ))}
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the Add-block affordance below the block list; the container isn't a flex Stack (it holds keyed rows + an absolute marquee), so the margin can't lift into a parent gap */}
-              <div className="mt-1">
-                <AddBlockMenu />
-              </div>
               {marquee && (
                 <div
                   // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
