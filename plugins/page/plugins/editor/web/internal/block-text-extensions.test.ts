@@ -88,6 +88,14 @@ function $selectInText(node: LexicalNode, offset: number): void {
   $setSelection(sel);
 }
 
+/** Collapse the caret onto the ROOT at child index `index` (a paragraph boundary). */
+function $selectRoot(index: number): void {
+  const sel = $createRangeSelection();
+  sel.anchor.set("root", index, "element");
+  sel.focus.set("root", index, "element");
+  $setSelection(sel);
+}
+
 describe("runs↔Lexical round-trip", () => {
   test("plain text", () => {
     expect(roundTrip([{ text: "hello world" }])).toEqual([{ text: "hello world" }]);
@@ -256,6 +264,34 @@ describe("$linearCaretOffset / $placeCaretAtLinearOffset", () => {
     const editor = makeEditor(runs);
     update(editor, () => $placeCaretAtLinearOffset(999));
     expect(read(editor, () => $linearCaretOffset())).toBe(3);
+  });
+
+  test("ROOT anchor resolves to a paragraph boundary, never null", () => {
+    // Lexical mints a root-anchored element selection whenever the selection
+    // first materializes while the root is childless — the normal state of a
+    // freshly split/inserted block, whose caret then NEVER re-anchors on its own.
+    // Returning null here read as `atStart: false` and silently demoted every
+    // structural keystroke (Backspace/Delete/arrows) to a passthrough.
+    const empty = makeEditor([]);
+    update(empty, () => $selectRoot(0));
+    expect(read(empty, () => $linearCaretOffset())).toBe(0);
+
+    // Two paragraphs ("ab" ⏎ "cde") → linear "ab\ncde", total 6. Boundary before
+    // paragraph 0 / 1, and past the last one (the end of the content).
+    const editor = makeEditor([{ text: "ab" }]);
+    update(editor, () => {
+      const p = $createParagraphNode();
+      p.append($createTextNode("cde"));
+      $getRoot().append(p);
+    });
+    expect(read(editor, () => $paragraphsPlainLength())).toBe(6);
+
+    update(editor, () => $selectRoot(0));
+    expect(read(editor, () => $linearCaretOffset())).toBe(0);
+    update(editor, () => $selectRoot(1));
+    expect(read(editor, () => $linearCaretOffset())).toBe(3); // "ab" + join
+    update(editor, () => $selectRoot(2));
+    expect(read(editor, () => $linearCaretOffset())).toBe(6); // end, not 7
   });
 });
 

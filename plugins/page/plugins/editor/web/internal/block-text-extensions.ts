@@ -5,6 +5,7 @@ import {
   $isElementNode,
   $isLineBreakNode,
   $isRangeSelection,
+  $isRootNode,
   $isTextNode,
   $setSelection,
   type ElementNode,
@@ -203,10 +204,27 @@ export function $paragraphsPlainLength(): number {
 }
 
 /**
+ * The linear offset of the paragraph boundary at root child index `index` — the
+ * position immediately BEFORE the `index`-th paragraph, or the very end of the
+ * content when `index` is at/past the last one. Each preceding paragraph
+ * contributes its leaf length plus the join char that follows it; the LAST
+ * paragraph is followed by no join, so a boundary past the end lands on the end
+ * of the content rather than one char beyond it.
+ */
+function offsetOfParagraphBoundary(index: number): number {
+  const paras = paragraphs();
+  const before = Math.min(Math.max(index, 0), paras.length);
+  let acc = 0;
+  for (let i = 0; i < before; i++) acc += leavesLength(paras[i]!) + 1;
+  return before === paras.length ? Math.max(acc - 1, 0) : acc;
+}
+
+/**
  * Inside a Lexical read/update: the selection anchor's linear offset in the
- * stored-runs basis, or null when there is no range selection. Handles both a
- * text anchor (offset relative to a text node) and an element anchor (offset is a
- * child index on a paragraph or LinkNode) by walking leaves in document order.
+ * stored-runs basis, or null when there is no range selection. Handles a text
+ * anchor (offset relative to a text node), an element anchor (offset is a child
+ * index on a paragraph or LinkNode) by walking leaves in document order, and a
+ * ROOT anchor (offset is a paragraph index).
  */
 export function $linearCaretOffset(): number | null {
   const selection = $getSelection();
@@ -214,6 +232,20 @@ export function $linearCaretOffset(): number | null {
   const anchor = selection.anchor;
   const anchorNode = anchor.getNode();
   const anchorKey = anchorNode.getKey();
+
+  // A ROOT anchor is a DOCUMENT-level position ("before the Nth paragraph"), not
+  // a paragraph-relative one, so the per-paragraph walk below can never find it —
+  // it would fall through every branch and return null. Lexical mints exactly this
+  // anchor whenever a selection first materializes while the root is still
+  // CHILDLESS, which is the normal state of a freshly split/inserted block: its
+  // editor takes DOM focus before the content doc has bootstrapped the empty
+  // paragraph in (`focusHydratingAware`), so the browser's default selection
+  // resolves to the root. Nothing re-anchors it afterwards, so an unresolved null
+  // here left `atStart`/`atEnd` reading FALSE forever in that block, silently
+  // demoting every structural keystroke to a passthrough — Backspace-at-start in a
+  // brand-new empty block did nothing at all until some other edit moved the
+  // anchor down into the paragraph.
+  if ($isRootNode(anchorNode)) return offsetOfParagraphBoundary(anchor.offset);
 
   const paras = paragraphs();
   let acc = 0;

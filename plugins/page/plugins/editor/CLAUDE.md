@@ -212,6 +212,22 @@ block → [convertTo, outdent, merge]`, `empty-Enter: empty bullet nested two de
 → [outdent, outdent, convertTo, split]`, `Delete: block with a subtree →
 [mergeNext, mergeNext, nav]`, etc.).
 
+**A ladder is only as good as the caret context feeding it.** Every rung is gated
+on `caret.atStart` / `caret.atEnd`, so `readCaretContext` must never report an
+offset it did not actually resolve: an unresolvable anchor returns **null** — no
+caret context at all, so the keystroke passes through — never `offset: 0`
+alongside `atStart: false`, a self-contradicting context that silently demotes
+*every* structural keystroke to a passthrough. The case that proved it: Lexical
+anchors a selection on the **ROOT** (`{key: "root", type: "element"}`) whenever
+the selection first materializes while the root is still childless — the normal
+state of a freshly split/inserted block, whose editor takes DOM focus before the
+content doc bootstraps the empty paragraph in (`focusHydratingAware`), and which
+never re-anchors itself afterwards. A root anchor is a legal *document-level*
+position ("before the Nth paragraph"), so `$linearCaretOffset` resolves it as
+one; while it returned null instead, Backspace-at-start in a brand-new empty
+block was a dead keystroke until some other edit moved the anchor down into the
+paragraph — the first press did nothing, the second outdented.
+
 **Delete's ladder is deliberately one rung, and that is not an omission.**
 Backspace's ladder is long only because the *current* block's own marker and
 indentation sit physically between the caret and the line break above it. To the

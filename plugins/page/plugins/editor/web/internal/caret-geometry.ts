@@ -116,7 +116,15 @@ function measureVisualLines(root: HTMLElement): Pick<
   };
 }
 
-/** Measure the caret in `editor`. Returns null when there is no range selection. */
+/**
+ * Measure the caret in `editor`. Returns null when there is no caret to measure:
+ * no range selection, or an anchor the linear-offset model cannot resolve. Null
+ * is the ONLY "I don't know" — the offset and the `atStart`/`atEnd` flags are
+ * always derived from the same resolved number, never from a substituted default
+ * that would make them contradict each other (an unresolved anchor used to read
+ * as `offset: 0` AND `atStart: false`, so every structural keystroke silently
+ * degraded to a passthrough).
+ */
 export function readCaretContext(editor: LexicalEditor): CaretContext | null {
   const structural = editor.getEditorState().read(():
     | { offset: number; collapsed: boolean; atStart: boolean; atEnd: boolean }
@@ -125,10 +133,11 @@ export function readCaretContext(editor: LexicalEditor): CaretContext | null {
     if (!$isRangeSelection(selection)) return null;
     // One walk each for the offset and the total; derive start/end from them.
     const off = $linearCaretOffset();
+    if (off === null) return null;
     const total = $paragraphsPlainLength();
     const collapsed = selection.isCollapsed();
     return {
-      offset: off ?? 0,
+      offset: off,
       collapsed,
       atStart: collapsed && off === 0,
       atEnd: collapsed && off === total,
