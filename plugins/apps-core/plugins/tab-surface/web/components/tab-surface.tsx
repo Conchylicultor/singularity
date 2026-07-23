@@ -81,18 +81,24 @@ function UndoRedoKeys() {
 }
 
 /**
- * Reads the tab's active leaf pane and publishes its resolved title up to the
+ * Reads the tab's title-owning pane and publishes its resolved title up to the
  * tabs store, so the tab bar and the browser title can show the selected
- * page/conversation/song. Mounted inside each tab's `PaneSurfaceProvider`, so
- * `useRoute()` reads THIS tab's store — including background (keep-alive) tabs,
- * which keep their label fresh while unfocused. The actual `useTitle` hook runs
- * one level down in {@link LeafTitleReporter}, keyed by pane id.
+ * page/conversation/song. The title owner is the FIRST pane in the route
+ * declaring `titleOwner` (the main surface — a conversation, a task), so
+ * auxiliary panes stacked to its right (file peek, review, terminal) never
+ * steal the title; routes with no owner fall back to the leaf. Mounted inside
+ * each tab's `PaneSurfaceProvider`, so `useRoute()` reads THIS tab's store —
+ * including background (keep-alive) tabs, which keep their label fresh while
+ * unfocused. The actual `useTitle` hook runs one level down in
+ * {@link LeafTitleReporter}, keyed by pane id.
  */
 function TabTitleReporter({ tabId }: { tabId: string }) {
   const route = useRoute();
   const state = useRouteState();
   const panes = route?.panes ?? [];
-  const leaf = panes.length > 0 ? panes[panes.length - 1]! : null;
+  const leaf =
+    panes.find((p) => p.pane.titleOwner) ??
+    (panes.length > 0 ? panes[panes.length - 1]! : null);
   if (leaf) {
     return (
       <LeafTitleReporter

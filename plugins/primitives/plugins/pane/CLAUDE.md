@@ -293,6 +293,31 @@ back to the pane's `chrome.title` config (`string | (params) =>
 string`). Use the prop when the title needs loaded data; use the config
 when it's static or derivable from URL params.
 
+#### Tab / document title ownership (`titleOwner`)
+
+The pane's own header title (above) is distinct from the **tab/document
+title** — the label shown in the tab bar and mirrored into
+`document.title`. That one is resolved per route by the tab surface via
+`usePaneTitle` (the pane's `useTitle` hook, falling back to
+`chrome.title`), against the route's **title owner**: the FIRST pane in
+the route declaring `titleOwner: true` on `Pane.define`.
+
+`titleOwner` marks a **main surface** — a pane whose entity is the
+identity of the page (a conversation, a task, a page, a song), as
+opposed to navigation lists/trees or auxiliary tool panes (file peek,
+review, terminal). First-owner-wins gives the right answer in both
+directions with a single static declaration:
+
+- `attempt / conv / file-peek` → the conversation titles the tab; aux
+  panes stacked to its right never steal it.
+- `tasks-root / task-detail / conv` → the task titles the tab; the same
+  conversation pane is a drill-in here, subordinate to the task.
+
+Routes with no title owner fall back to the leaf pane (then the app
+index pane, then the app name). Declaring `titleOwner` without a
+`useTitle`/`chrome.title` that actually resolves would pin the tab to
+the app name — give the owner a title source.
+
 #### Title typography is container-owned
 
 PaneChrome wraps the title region — string **or** node — in the

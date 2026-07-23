@@ -55,6 +55,9 @@ export const conversationPane = Pane.define({
   // Tab/document title: the conversation's name from the global live-state
   // resource (same source as the header's ConversationTitle).
   useTitle: useConversationTitle,
+  // Main surface: aux panes opened to the right (file peek, review, terminal)
+  // never steal the tab title from the conversation.
+  titleOwner: true,
 });
 
 /** The conversation's title from the global live-state resource, or undefined. */

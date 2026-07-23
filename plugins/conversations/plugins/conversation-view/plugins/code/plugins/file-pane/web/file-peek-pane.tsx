@@ -11,11 +11,22 @@ import { FileContent } from "./components/file-content";
 import { FileTabs } from "./components/file-tabs";
 import { useFileRenderers } from "./components/use-file-renderers";
 
+/** The file's basename, minus any trailing `:line` suffix. */
+function fileTitle(filePath: string): string {
+  const path = filePath.replace(/:\d+$/, "");
+  return path.slice(path.lastIndexOf("/") + 1);
+}
+
 export const filePeekPane = Pane.define({
   id: "file-peek",
   segment: "file/:worktree/:filePath*",
   component: FilePeekPaneBody,
-  chrome: { history: false },
+  chrome: {
+    history: false,
+    // Tab/document title: the file name from the URL param, so a deep link
+    // shows the file instead of the bare app name.
+    title: ({ filePath }) => fileTitle(filePath),
+  },
   width: 600,
   resolve: false,
 });

@@ -24,11 +24,21 @@ function useResolveTask({ taskId }: { taskId: string }) {
   return { pending: false, found: result.data.some((t) => t.id === taskId) };
 }
 
+/** The task's title from the global live-state resource, or undefined. */
+function useTaskTitle({ taskId }: { taskId: string }): string | undefined {
+  return useTask(taskId)?.title ?? undefined;
+}
+
 export const taskDetailPane = Pane.define({
   route: taskDetailRoute,
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,
+  // Tab/document title: the task's title (same source as the header).
+  useTitle: useTaskTitle,
+  // Main surface: a conversation or aux pane opened under the task is a
+  // drill-in — it never steals the tab title from the task.
+  titleOwner: true,
 });
 
 function TasksRoot(): ReactElement {

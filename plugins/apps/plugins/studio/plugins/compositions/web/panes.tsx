@@ -46,6 +46,9 @@ export const compositionDetailPane = Pane.define({
   width: 560,
   resolve: useResolveComposition,
   useTitle: useCompositionTitle,
+  // Main surface: the release-run pane pushed to the right is a drill-in — it
+  // never steals the tab title from the composition.
+  titleOwner: true,
 });
 
 export const comparePane = Pane.define({

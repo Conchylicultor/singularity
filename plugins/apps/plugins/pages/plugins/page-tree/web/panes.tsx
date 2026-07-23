@@ -53,6 +53,8 @@ export const pageDetailPane = Pane.define({
   // Tab/document title: the page's title from the global pages resource (same
   // source PageDetailBody renders), falling back to the pageId via chrome.title.
   useTitle: usePageTitle,
+  // Main surface: aux panes opened to the right never steal the tab title.
+  titleOwner: true,
 });
 
 /** The page's title from the global pages resource, or undefined while loading. */

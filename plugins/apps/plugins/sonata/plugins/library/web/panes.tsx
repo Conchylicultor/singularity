@@ -68,6 +68,8 @@ export const sonataPlayerPane = Pane.define({
   // while the resource loads. Self-contained — `useSonata()` context is
   // unavailable at the tab-surface level where this runs.
   useTitle: useSongTitle,
+  // Main surface: aux panes opened to the right never steal the tab title.
+  titleOwner: true,
 });
 
 /** Canonical song title from the global resource, or the optimistic open hint. */

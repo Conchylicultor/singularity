@@ -279,6 +279,16 @@ export interface PaneInternal {
    * read site with a `??`.
    */
   optionDefaults: PaneOptions;
+  /**
+   * Declares this pane a MAIN SURFACE — a pane whose entity is the identity of
+   * the page (a conversation, a task, a page), as opposed to navigation
+   * (lists/trees) or auxiliary tools (file peek, review, terminal). The
+   * tab/document title resolves against the FIRST title owner in the route, so
+   * aux panes stacked to its right never steal the title, and a main pane
+   * opened as a drill-in under another main pane (e.g. a conversation under a
+   * task) stays subordinate. Routes with no title owner fall back to the leaf.
+   */
+  titleOwner: boolean;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -1596,6 +1606,13 @@ type DefineArgs<
     options: Options,
   ) => string | undefined;
   /**
+   * Declares this pane a MAIN SURFACE — the entity the page is about (a
+   * conversation, a task, a page), as opposed to navigation lists or auxiliary
+   * tool panes. The tab/document title resolves against the FIRST title owner
+   * in the route. See {@link PaneInternal.titleOwner}. Defaults to false.
+   */
+  titleOwner?: boolean;
+  /**
    * Default column width in pixels. Read by layout renderers (e.g. Miller
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
@@ -1637,6 +1654,8 @@ type RouteDefineArgs<
     hint: Hint<HintT>,
     options: Options,
   ) => string | undefined;
+  /** Declares this pane a main surface for tab-title resolution. See {@link DefineArgs.titleOwner}. */
+  titleOwner?: boolean;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
 } & RouteResolveField<Params>;
@@ -1728,6 +1747,7 @@ function define(
       (args.useTitle as PaneInternal["useTitle"] | undefined) ??
       (() => undefined),
     optionDefaults: args.options ?? {},
+    titleOwner: args.titleOwner ?? false,
   };
 
   return makePaneObject(internal, route);
