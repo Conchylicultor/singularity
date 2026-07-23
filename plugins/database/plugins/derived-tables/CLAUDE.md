@@ -31,13 +31,17 @@ waits for a 2nd case — measure first.
 - The rollup table's drizzle read handle lives in a **non-glob file**
   (e.g. `rollup-table.ts`, NOT `tables.ts`/`schema.ts`) so codegen never emits a
   migration for it — same reason plain views live in `views.ts`.
-- `rebuildDerivedTables(tx)` (server) runs **inside the change-feed's
-  `rebuildTriggers` transaction**, after the per-table trigger loop. It takes
-  `tx` as a parameter so it never imports `@plugins/database/server` (which
-  would cycle). Running there is race-free (`onReadyBlocking` hooks have no topo
-  order) and gives atomic feed-exemption for free: the rollup table does not yet
-  exist when the feed snapshots `listPublicTables` (before the txn), so no
-  NOTIFY trigger is installed on it.
+- `rebuildDerivedTables(db)` (server) runs in the **`database` plugin's own
+  `onReadyBlocking`** (`plugins/database/server/index.ts`), sequenced explicitly
+  after `runMigrations` and before `rebuildDerivedViews` — the rollup-before-view
+  order matters because a derived view may reference a rollup table (e.g.
+  `attempts_v` LEFT JOINs the rollups), so the rollup must exist when `CREATE
+  VIEW` runs. It takes its executor as a parameter so it never imports
+  `@plugins/database/server` (which would cycle); `database/server` passes the
+  pool-backed `db`. Feed-exemption is not a matter of *when* it runs: the rollup
+  tables are named in `feedExemptTables()`, which the change-feed unions into its
+  denylist, so `listPublicTables` filters them out and no NOTIFY trigger is ever
+  installed on them regardless of creation order.
 - `feedExemptTables()` returns the rollup table names; the change-feed merges
   them into its trigger `DENYLIST` so a rollup is never fed (it is a pure
   read-cache fed by its source's change, not an independent write surface).

@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
 import {
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
@@ -271,40 +270,6 @@ CREATE TABLE IF NOT EXISTS "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}" (
   signature text NOT NULL
 )`;
 
-// A deadlock/serialization victim is by definition retryable: Postgres rolled the
-// whole transaction back, so it holds nothing and a fresh re-run has no partial
-// state to lose — the same argument `pool.query`'s retry makes in
-// database/server/internal/client.ts. It is repeated HERE because
-// `db.transaction()` takes the `pool.connect()` → `client.query` path, which
-// bypasses that wrapper entirely (the leak documented in plugins/database/CLAUDE.md)
-// — which is exactly why a deadlocked rebuild killed boot instead of retrying.
-// Bounded and logged: a persistent conflict still throws and blocks boot loudly.
-const RETRYABLE_SQLSTATES = new Set(["40P01", "40001"]);
-const MAX_REBUILD_RETRIES = 4;
-const rebuildRetryDelay = withJitter(exponential({ initial: 50, max: 1_000 }));
-
-type TxCallback = Parameters<NodePgDatabase["transaction"]>[0];
-
-async function runRebuildTx(db: NodePgDatabase, fn: TxCallback): Promise<void> {
-  await retryUntil(
-    async (attempt) => {
-      try {
-        await db.transaction(fn);
-        return true;
-      } catch (err) {
-        const code = (err as { code?: string } | null)?.code ?? "";
-        if (!RETRYABLE_SQLSTATES.has(code) || attempt >= MAX_REBUILD_RETRIES) throw err;
-        log.publish(
-          `[change-feed] [deadlock-retry] sqlstate=${code} attempt=${attempt + 1}/${MAX_REBUILD_RETRIES} — retrying trigger rebuild`,
-          "stderr",
-        );
-        return null; // retryable victim — back off and retry the whole rebuild
-      }
-    },
-    { delay: rebuildRetryDelay },
-  );
-}
-
 // Cached at boot during rebuildTriggers — the set of public tables we installed
 // triggers on. The listener's on-reconnect FULL sweep iterates this set (see
 // listener.ts). It is the by-construction-complete table universe; applyDbChange
@@ -322,39 +287,49 @@ export function getCoveredTables(): readonly string[] {
 
 // Rebuilds the entire change-feed trigger layer from source.
 //
-// Deterministic, data-less DDL (NOT a migration) — mirrors
-// rebuildDerivedViews: enumerate the live schema, then CREATE OR REPLACE the
-// function and DROP+CREATE every per-table trigger inside one transaction. Any
-// failure throws and blocks boot loudly rather than running with a half-installed
-// feed.
+// Deterministic, data-less DDL (NOT a migration) — mirrors rebuildDerivedViews:
+// enumerate the live schema, CREATE OR REPLACE the function, then DROP+CREATE
+// every per-table trigger. Any failure throws and blocks boot loudly rather than
+// running with a half-installed feed.
 //
 // `db` is passed in (like rebuildDerivedViews / runMigrations) so this module
 // never imports @plugins/database/server — that would cycle (database/server
 // calls into the change-feed plugin's onReadyBlocking).
 //
-// SKIP WHEN UNCHANGED — mirrors the identical fix in rebuildDerivedViews, whose
-// header comment describes the same failure. `DROP+CREATE TRIGGER` takes an
-// AccessExclusive lock on its table until commit, and this rebuild does that for
-// EVERY public table in ONE transaction — so mid-rebuild it holds an exclusive
-// lock on a large, alphabetically-ordered prefix of the database while still
-// asking for more. That is textbook hold-and-wait, and during a hot-swap restart
-// it runs against a DB that is anything but quiet: the PREVIOUS backend is still
-// serving reads (the swap is ready-gated), and this hook races the database
-// plugin's own onReadyBlocking (migrations → rollup reconcile → view rebuild)
-// under Promise.all with no topo order. Any of those readers that touches two
-// tables in the opposite order closes a cycle, and Postgres shoots one session:
-// when the victim is THIS transaction, the exception escapes onReadyBlocking, the
-// backend exits before ready, and the deploy fails with the old code still live.
-// Build build-1784288281433-w62dep died exactly this way (attempts ⇄
-// conversations, SQLSTATE 40P01).
+// SKIP WHEN UNCHANGED — mirrors the identical fingerprint fast-path in
+// rebuildDerivedViews. The trigger layer is a pure function of (schema, denylist,
+// emitted DDL), so we fingerprint the compiled DDL and skip the rebuild entirely
+// when it matches what is already live — taking ZERO table locks on the
+// steady-state restart path, the overwhelming majority of boots (a frontend-only
+// commit changes no triggers at all). The lock window only opens on a genuine
+// schema/denylist change.
 //
-// The trigger layer is a pure function of (schema, denylist, emitted DDL), so we
-// fingerprint the compiled DDL and skip the rebuild entirely when it matches
-// what is already live — taking ZERO table locks on the steady-state restart
-// path, which is the overwhelming majority of boots (a frontend-only commit, as
-// that build was, changes no triggers at all). The lock window — and the deadlock
-// risk that comes with it — now only opens on a genuine schema/denylist change,
-// and `runRebuildTx` rides out a victim there rather than killing boot.
+// SINGLE-RELATION TRANSACTIONS — when a real rebuild IS needed, it is split into
+// one `db.transaction` PER TABLE (plus a prelude and a signature-stamp tx) rather
+// than one giant transaction over the whole schema. `DROP+CREATE TRIGGER` takes an
+// AccessExclusive lock on its table until commit; the old one-transaction rebuild
+// held exclusive locks on an alphabetically-ordered PREFIX of the database while
+// still asking for more — textbook hold-and-wait. During a hot-swap restart the
+// PREVIOUS backend is still serving reads (the swap is ready-gated) holding
+// AccessShare locks on those same tables, so a reader touching two tables in the
+// opposite order closed a lock cycle; Postgres shot the rebuild transaction, the
+// exception escaped onReadyBlocking, and the deploy failed with the old code still
+// live (build-1784288281433-w62dep died this way: attempts ⇄ conversations,
+// SQLSTATE 40P01). A transaction that only ever holds ONE relation's exclusive
+// lock cannot be a node in a wait cycle — it acquires that one lock or blocks on
+// exactly one holder (an old-backend reader, which is not waiting on us for a
+// second relation). The wait-for graph is a forest by construction; the deadlock
+// is impossible, not retried. A per-table tx can still BLOCK briefly on a live
+// reader's AccessShare lock, but the old backend's reads are short (ms), so this
+// is a wait, not a hang.
+//
+// Self-healing (see change-feed/CLAUDE.md): each table's DROP+CREATE is in one tx
+// so it always has a COMPLETE trigger set (old or new, never none); the notify
+// function is committed FIRST so old and new triggers both call the current
+// function (no feed event lost — a mid-rebuild write fires whichever trigger
+// version is installed, both emitting a compatible NOTIFY); and the signature is
+// stamped LAST so a boot that dies mid-loop never records a matching signature ⇒
+// the next boot re-runs the full idempotent rebuild ⇒ converges.
 export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   // Infra plumbing + derived-table rollups + feature `ExcludeFromChangeFeed`
   // opt-outs, all unioned (contributions collected by the framework before this
@@ -406,53 +381,85 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
     return;
   }
 
-  await runRebuildTx(db, async (tx) => {
-    // L2: the changelog the trigger function INSERTs into MUST exist before the
-    // function is defined and before any per-table trigger that fires it. Create
-    // it first, inside this same transaction — `onReadyBlocking` hooks run in
-    // parallel, so the live-state-snapshot plugin's own boot ordering can't be
-    // relied on for this (it owns the snapshot table; change-feed owns the
-    // changelog because change-feed writes it).
+  // PHASE 1 — Prelude tx. The changelog the trigger function INSERTs into MUST
+  // exist before the function is defined, and the function MUST exist and be
+  // COMMITTED before any per-table trigger that references it is created. Both are
+  // set up here in their own transaction, committed before phase 2 opens. Neither
+  // takes a user-table AccessExclusive lock (CREATE TABLE IF NOT EXISTS on our own
+  // changelog + CREATE OR REPLACE FUNCTION), so the prelude cannot be part of a
+  // deadlock cycle. `onReadyBlocking` hooks run in parallel, so change-feed owns
+  // the changelog's creation itself rather than relying on any other plugin's
+  // boot ordering.
+  await db.transaction(async (tx) => {
     await ensureChangelogTable(tx);
-
     await tx.execute(drizzleSql.raw(NOTIFY_FUNCTION_DDL));
+  });
 
-    // Drop any live_state_* triggers lingering on a now-excluded table — e.g. a
-    // table that had a feed on prior boots and was just opted out via
-    // ExcludeFromChangeFeed. Catalog-driven (find-then-drop by name) so it names
-    // no specific table and self-heals a rename/drift, mirroring how the rest of
-    // this layer is rebuilt from the live schema rather than tracked.
-    if (exclude.size > 0) {
-      const existing = await tx.execute<{ tgname: string; relname: string }>(
-        drizzleSql.raw(
-          `SELECT t.tgname, c.relname
-           FROM pg_trigger t
-           JOIN pg_class c ON c.oid = t.tgrelid
-           JOIN pg_namespace n ON n.oid = c.relnamespace
-           WHERE n.nspname = 'public'
-             AND NOT t.tgisinternal
-             AND t.tgname LIKE 'live_state_%'`,
-        ),
-      );
-      for (const { tgname, relname } of existing.rows) {
-        if (!exclude.has(relname)) continue;
+  // Discover any live_state_* triggers lingering on a now-excluded table — e.g. a
+  // table that had a feed on prior boots and was just opted out via
+  // ExcludeFromChangeFeed. Catalog-driven (find-then-drop by name) so it names no
+  // specific table and self-heals a rename/drift, mirroring how the rest of this
+  // layer is rebuilt from the live schema rather than tracked. This is a read
+  // (no locks that matter); the drops happen in per-relation txs below. Grouped
+  // by relation so each table's stale triggers are dropped in ONE single-relation
+  // transaction. `compiled` only holds DESIRED (non-excluded) tables and this map
+  // only holds excluded ones, so the two per-table loops below are disjoint — no
+  // table is ever touched by two phase-2 transactions.
+  const staleByTable = new Map<string, string[]>();
+  if (exclude.size > 0) {
+    const existing = await db.execute<{ tgname: string; relname: string }>(
+      drizzleSql.raw(
+        `SELECT t.tgname, c.relname
+         FROM pg_trigger t
+         JOIN pg_class c ON c.oid = t.tgrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public'
+           AND NOT t.tgisinternal
+           AND t.tgname LIKE 'live_state_%'`,
+      ),
+    );
+    for (const { tgname, relname } of existing.rows) {
+      if (!exclude.has(relname)) continue;
+      const names = staleByTable.get(relname) ?? [];
+      names.push(tgname);
+      staleByTable.set(relname, names);
+    }
+  }
+
+  // PHASE 2 — Per-relation txs. Each transaction touches exactly ONE table's
+  // triggers, so it holds at most that one relation's AccessExclusive lock and can
+  // never be a node in a wait cycle.
+  //
+  // Stale-drop: one tx per now-excluded table, dropping just its live_state_*
+  // triggers.
+  for (const [relname, tgnames] of staleByTable) {
+    await db.transaction(async (tx) => {
+      for (const tgname of tgnames) {
         await tx.execute(
           drizzleSql.raw(
             `DROP TRIGGER IF EXISTS ${quoteIdent(tgname)} ON ${quoteIdent(relname)}`,
           ),
         );
       }
-    }
+    });
+  }
 
-    for (const { stmts } of compiled) {
+  // Desired: one tx per table, running that table's full DROP+CREATE set (3 DROP
+  // IF EXISTS + 3 CREATE) together — so the table always has a COMPLETE trigger
+  // set (the DROPs and CREATEs commit atomically, never leaving it trigger-less).
+  for (const { stmts } of compiled) {
+    await db.transaction(async (tx) => {
       for (const stmt of stmts) {
         await tx.execute(drizzleSql.raw(stmt));
       }
-    }
+    });
+  }
 
-    // Stamp the signature LAST, inside the same transaction: a rolled-back rebuild
-    // leaves no signature row, so a failed boot can never mark the layer current
-    // and skip a rebuild it never finished.
+  // PHASE 3 — Signature-stamp tx, LAST, only after every per-relation tx above has
+  // committed. This is the commit point that marks the rebuild "done": a boot that
+  // dies mid-loop never records a matching signature, so the next boot re-runs the
+  // full (idempotent) rebuild and converges.
+  await db.transaction(async (tx) => {
     await tx.execute(drizzleSql.raw(TRIGGER_STATE_DDL));
     await tx.execute(
       drizzleSql`
@@ -463,10 +470,14 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
     );
   });
 
+  // Set from the DESIRED compiled set now that the rebuild has committed.
   coveredTables = triggers.map((t) => t.table);
 
   log.publish(
-    `[change-feed] installed live_state triggers on ${coveredTables.length} table(s)`,
+    `[change-feed] installed live_state triggers on ${coveredTables.length} table(s)`
+      + (staleByTable.size > 0
+        ? ` (dropped stale triggers on ${staleByTable.size} now-excluded table(s))`
+        : ""),
   );
 
   await warnOnCoverageGaps(db, exclude);

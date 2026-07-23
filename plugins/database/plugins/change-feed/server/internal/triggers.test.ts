@@ -6,14 +6,18 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server";
 
-// Real-DB trigger-rebuild suite, pinning the SKIP-WHEN-UNCHANGED contract.
+// Real-DB trigger-rebuild suite, pinning the SKIP-WHEN-UNCHANGED fast-path AND
+// the single-relation rebuild contract.
 //
-// The rebuild holds an AccessExclusive lock on every public table until commit, so
-// on a hot-swap restart (previous backend still reading, sibling onReadyBlocking
-// hooks racing) it could deadlock and take boot down with it — build
-// build-1784288281433-w62dep died exactly that way. The fix is to skip the rebuild
-// (and its lock window) when the live trigger layer already IS the desired one, so
-// "did it skip?" is now a load-bearing property and belongs under test.
+// On a hot-swap restart the previous backend is still reading these tables, so a
+// rebuild that held AccessExclusive locks on many tables in ONE transaction could
+// deadlock and take boot down with it — build build-1784288281433-w62dep died
+// exactly that way. Two properties now keep that from recurring, both load-bearing
+// and under test here: (1) the rebuild is SKIPPED entirely when the live trigger
+// layer already IS the desired one (no locks at all), and (2) when a rebuild does
+// run, it is split into ONE transaction per table, so no transaction ever holds
+// more than a single relation's lock and a deadlock cycle is impossible by
+// construction.
 //
 // The witness for skip-vs-rebuild is TRIGGER OID IDENTITY: a rebuild is
 // DROP+CREATE, which necessarily mints a new pg_trigger row (new oid). Unchanged
@@ -67,7 +71,7 @@ describe("rebuildTriggers", () => {
     const after = await triggerOids();
 
     // Identical oids ⇒ the rows were never dropped and recreated ⇒ the rebuild
-    // (and its whole-database exclusive-lock window) was skipped.
+    // (and its per-table lock windows) was skipped.
     expect(after).toEqual(before);
   });
 

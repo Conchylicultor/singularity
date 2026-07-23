@@ -1,52 +1,88 @@
 # change-feed
 
-## The trigger rebuild skips when unchanged
+## The trigger rebuild: fingerprint fast-path, then single-relation transactions
 
 `rebuildTriggers` (`internal/triggers.ts`) installs the feed by `DROP+CREATE
-TRIGGER`ing **every** public table in **one** transaction — so mid-rebuild it
-holds an `AccessExclusive` lock on an alphabetically-ordered prefix of the whole
-database while still asking for more. That is hold-and-wait, and boot is the worst
-possible moment for it:
+TRIGGER`ing every non-excluded public table. Boot is the worst possible moment to
+hold table locks:
 
 - the **previous backend is still serving reads** of those same tables (the
-  hot-swap is ready-gated — it does not stop until the new backend is ready), and
-- this hook **races the database plugin's own `onReadyBlocking`** (migrations →
-  rollup reconcile → view rebuild): `onReadyBlocking` hooks run under a flat
+  hot-swap is ready-gated — it does not stop until the new backend is ready,
+  holding `AccessShare` locks throughout), and
+- this hook runs alongside the database plugin's own `onReadyBlocking` (migrations
+  → rollup reconcile → view rebuild): `onReadyBlocking` hooks run under a flat
   `Promise.all` with no topo order.
 
-Any concurrent session that touches two tables in the opposite order closes a
-lock cycle. Postgres then shoots one session — and when the victim is the rebuild
-transaction, the error escapes `onReadyBlocking`, the backend **exits before
-ready**, and the deploy fails leaving the old code live. This is not theoretical:
-build `build-1784288281433-w62dep` on main died exactly this way (`attempts` ⇄
-`conversations`, SQLSTATE `40P01`).
+### Fast-path: skip when unchanged
 
-So, mirroring the identical fix in
+Mirroring the identical fast-path in
 [`derived-views`](../derived-views/server/internal/rebuild.ts): the trigger layer
 is a pure function of (schema, denylist, emitted DDL), so the compiled DDL is
 fingerprinted into `live_state_trigger_state` and **the rebuild is skipped
 entirely when the signature matches what is already live**. A steady-state restart
 — the overwhelming majority of boots, since any frontend-only commit leaves the
-trigger set untouched — now takes **zero table locks**, and the lock window only
-opens on a genuine schema/denylist change.
+trigger set untouched — takes **zero table locks**. The lock window only opens on
+a genuine schema/denylist change.
 
-Two things keep that safe:
-
-- **The signature is never trusted alone.** `triggerLayerUpToDate` re-verifies
-  from the catalog that the function, the changelog table, and every expected
-  trigger physically exist, and that no `live_state_*` trigger lingers on an
-  excluded table. Anything dropped out of band falls through to a real rebuild.
-  (It reads only catalogs — no user-table locks, which is the whole point.)
-- **The rare rebuild path rides out a victim.** `db.transaction()` takes the
-  `pool.connect()` path, which bypasses `pool.query`'s deadlock retry (the leak
-  documented in `plugins/database/CLAUDE.md`) — which is *why* a deadlock killed
-  boot rather than retrying. `runRebuildTx` re-runs the whole (idempotent)
-  transaction on `40P01`/`40001`, bounded and logged; a persistent conflict still
-  throws and blocks boot loudly.
+**The signature is never trusted alone.** `triggerLayerUpToDate` re-verifies from
+the catalog that the function, the changelog table, and every expected trigger
+physically exist, and that no `live_state_*` trigger lingers on an excluded table.
+Anything dropped out of band falls through to a real rebuild. (It reads only
+catalogs — no user-table locks, which is the whole point.)
 
 The signature row lives in the DB so a worktree fork carries it with its triggers
 (`CREATE DATABASE … TEMPLATE` copies both), so a fork skips the rebuild too rather
 than paying a spurious first-boot one.
+
+### The real rebuild: one transaction per relation (deadlock impossible)
+
+When a rebuild *is* needed, it is **never** one transaction over the whole schema.
+The old design `DROP+CREATE TRIGGER`d every table in **one** transaction, so
+mid-rebuild it held `AccessExclusive` locks on an alphabetically-ordered prefix of
+the database *while still asking for more* — textbook hold-and-wait. During the
+hot-swap the old backend's reads lock those same tables in the opposite order,
+closing a lock cycle; Postgres shot the rebuild transaction, the error escaped
+`onReadyBlocking`, and the deploy failed leaving the old code live (build
+`build-1784288281433-w62dep` died exactly this way: `attempts` ⇄ `conversations`,
+SQLSTATE `40P01`).
+
+The fix is structural: **the rebuild is split so no transaction ever holds more
+than one relation's exclusive lock.** A transaction that only ever locks one
+relation cannot be a node in a wait cycle — it acquires that one lock or blocks on
+exactly one holder (an old-backend reader, which is not itself waiting on us for a
+second relation). The wait-for graph is a forest by construction; **the deadlock
+is impossible, not retried** (there is no `lock_timeout`, no retry loop). A
+per-table tx can still *block* briefly on a live reader's `AccessShare` lock, but
+the old backend's reads are short (ms), so this is a wait, not a hang.
+
+The rebuild runs in three phases, each its own `db.transaction`:
+
+1. **Prelude tx** — `ensureChangelogTable` + `CREATE OR REPLACE FUNCTION
+   live_state_notify`. The function must exist and be committed before any trigger
+   references it. Neither statement takes a user-table `AccessExclusive` lock.
+2. **Per-relation txs** — one transaction **per table**: for each desired table,
+   its full `DROP…IF EXISTS` + `CREATE` set for all three ops; for each stale
+   (now-excluded) table still carrying `live_state_*` triggers, just its drops.
+   Each touches exactly one table.
+3. **Signature-stamp tx** — `TRIGGER_STATE_DDL` + the signature upsert, **last**,
+   only after every per-relation tx commits.
+
+Three self-healing invariants make this safe:
+
+- **No object is ever half-built.** Each table's `DROP…IF EXISTS` + `CREATE` is in
+  one tx, so the table always has a *complete* trigger set — old or new, never
+  none. The notify function is committed first, so old and new triggers both call
+  the current function. **No feed event is lost**: a write mid-rebuild fires
+  whichever trigger version is installed, and both emit a compatible NOTIFY
+  through the same committed function.
+- **"Done" is recorded last.** The signature is stamped only after all per-table
+  txs commit, and is trusted only alongside the catalog re-verify. A boot that
+  dies mid-loop never records a matching signature ⇒ the next boot re-runs the
+  full (idempotent, `DROP…IF EXISTS` + `CREATE`) rebuild ⇒ converges.
+- **Partial state is "old-but-working," never "broken."** The only thing lost vs.
+  one-big-tx is "all tables flip in the same instant," which nothing consumes
+  (triggers are independent, all call the same function). Worst case is a loud
+  error on a concurrent write, self-healed next boot — never silent corruption.
 
 ## Boot-time reconciliation against consumers
 
