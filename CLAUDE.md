@@ -163,65 +163,37 @@ This will:
 - The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `singularity.localhost:9000`.
 - Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.singularity/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
 
-## Screenshots
+## Driving the app (screenshots & E2E)
 
-Take screenshots of the app using Playwright (Chromium is pre-installed).
-
-For a single static snapshot:
+Chromium is pre-installed. Scripts default to your own worktree's deploy, so
+`./singularity build` first. For a static snapshot:
 
 ```bash
 bun run playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000 /tmp/screenshot.png
 ```
 
-If you need to **verify behavior** (click a button, confirm state, capture a
-before/after), go straight to a scripted Playwright run — don't take blind
-static screenshots first. Use the helper at
-[`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts)
-or copy it as a starting point:
+To **verify behavior** (click something, confirm state), don't take blind
+snapshots — run [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts),
+which prints the matched button's state and writes `-before.png` / `-after.png`:
 
 ```bash
 bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-  --url http://<worktree>.localhost:9000/agents/c/<id> \
-  --click "Design docs" \
-  --out /tmp/docs
+  --url http://<worktree>.localhost:9000/agents/c/<id> --click "Design docs" --out /tmp/docs
 ```
 
-It prints the matched button's `disabled` / `aria-pressed` / text state and
-writes `-before.png` + `-after.png`, so a single run tells you whether the
-feature actually works. `--url` defaults to this worktree's own deploy.
-
-### E2E tests
-
-End-to-end Playwright scripts live **inside the plugin they verify**, at
-`plugins/<path>/e2e/<name>.ts`. There is no top-level `e2e/` folder and no test
-runner — each script is a standalone program:
+For a repeatable flow, write a standalone E2E script in the plugin it verifies,
+at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which `bun test` would
+pick up. These are manual only; nothing runs them automatically.
 
 ```bash
-bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts       # no args needed
 bun plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
 ```
 
-- **The target defaults to your own worktree** (`http://<worktree>.localhost:9000`,
-  derived — never a literal host). Override with `--base`/`--url`/`--origin` or
-  `$SINGULARITY_E2E_BASE`. Run `./singularity build` first.
-- **Shared helpers** come from
-  `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — argv parsing,
-  target resolution, `withBrowser`/`session`, error capture, the `report()`
-  pass/fail logger, screenshots. Don't hand-roll these; a script that needs a
-  new generic capability adds it to the harness.
-- **Domain flows** belong to the plugin that owns the surface and are shared
-  through that plugin's own `e2e/index.ts` barrel (e.g. `openBlankPage` from
-  `@plugins/page/plugins/editor/e2e`).
-- The `e2e` runtime may import other plugins' `core` and `e2e` barrels only — it
-  is denied `web`/`server`, because an e2e test drives the deployed app through
-  the browser rather than importing the code under test.
-- Never name a file in `e2e/` `*.test.ts` — `bun test` would try to run it.
-- These scripts are **manual**: nothing runs them automatically (no `check`, no
-  CI, no `build`/`push` gate). They are type-checked, not executed.
-- **Plugin-contributed lint rules do not apply here** (nor in `__tests__/` /
-  `*.test.ts`): they enforce the *app's* composition, and `e2e` can't import the
-  primitives they point at. typescript-eslint, react-hooks, and `promise-safety`
-  still apply. See [`plugins/framework/plugins/tooling/plugins/lint/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/lint/CLAUDE.md).
+- Shared helpers (argv, target, `withBrowser`, `report()`) come from
+  `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it rather
+  than hand-rolling. Domain flows go in the owning plugin's `e2e/index.ts`.
+- `e2e` may import other plugins' `core` and `e2e` barrels only — it drives the
+  deployed app, not the code under test.
 
 ## Debugging
 
@@ -257,23 +229,19 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 
 ### Testing
 
-Tests are **optional and manual** — nothing runs them automatically (no `./singularity check`, no CI, no `build`/`push` gate). When you do run tests, always pass an **explicit file or folder path** — there is no blanket "run everything" target.
+Optional and manual — nothing runs them automatically. The runner is chosen by
+where the file lives, so the two never cross-load. Always pass an explicit path;
+there is no "run everything" target (a bare `bun test` would load the vitest
+files and fail). Requires `node_modules`, so run after a build or `bun install`.
 
-The runner is chosen by **where the file lives**, so the two never cross-load:
-
-- **`bun:test` — pure logic, co-located next to source as `*.test.ts(x)`** (lint / check / server / web-logic; anything not needing a DOM). Never put a bun:test file under a `__tests__/` folder. Run a specific file or folder:
+- **`bun:test`** — pure logic, next to source as `*.test.ts(x)`, never under `__tests__/`.
   ```bash
-  bun test plugins/page/plugins/editor/core/block-ops.test.ts
-  bun test plugins/page/plugins/editor                 # a folder
+  bun test plugins/page/plugins/editor/core/block-ops.test.ts   # file or folder
   ```
-- **`vitest` — jsdom/React tests, co-located in the plugin's own `web/__tests__/` folder.** One repo-wide vitest project (root `vitest.config.ts`: jsdom + `@plugins` alias + shared `test/setup.ts`) auto-discovers every `plugins/**/web/__tests__/**/*.test.{ts,tsx}` — no per-plugin config. Add a jsdom test by dropping a `*.test.tsx` in your plugin's `web/__tests__/`. Run the whole DOM suite from the repo root:
+- **`vitest`** — jsdom/React, in the plugin's `web/__tests__/`. Auto-discovered by the root `vitest.config.ts`; no per-plugin config.
   ```bash
-  bun run test:dom
-  bun run test:dom plugins/primitives/plugins/pane   # scope to one plugin's tests
+  bun run test:dom plugins/primitives/plugins/pane   # omit path for the full suite
   ```
-- **Prerequisite:** `node_modules` must be populated. Any `./singularity` invocation (and `build` as step 1) runs `bun install` — so run tests after a build, or `bun install` first.
-- Do **not** run a blanket `bun test` from the repo root: it would also try to load the vitest files under `__tests__/` and fail. Scope `bun test` to a folder of pure tests, or use `bun run test:dom` for the jsdom suites.
-- **No `SINGULARITY_WORKTREE=…` prefix needed.** Server-side / DB-backed `bun:test` suites resolve their worktree identity automatically: the root `bunfig.toml` `[test]` preload (`test/bun-preload.ts`) defaults `SINGULARITY_WORKTREE` to the current checkout when unset, so `bun test <path>` just works. An explicitly-set value still wins (e.g. `SINGULARITY_WORKTREE=singularity bun test …` to target main's DB).
 
 ### Coding Style
 
