@@ -1,5 +1,4 @@
 import {
-  CONVERSATIONS_META_TASK_ID,
   createTask,
   createAttempt,
   deleteAttempt,
@@ -20,13 +19,12 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { spawnConversationJob } from "./spawn-job";
 import { conversationCreated } from "./tables-created-event";
-import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
-import { assertNotContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
+import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 const DEFAULT_RUNTIME = "tmux";
@@ -118,18 +116,12 @@ export async function createConversation(
     conversationId = newId(CONVERSATION_PREFIX);
   } else {
     let taskId = opts.taskId;
-    // A container/meta task is a system folder and must never own an attempt.
-    // Guard only an explicitly-provided id; the auto-created fallback below is
-    // always a fresh leaf.
-    if (opts.taskId) assertNotContainerTask(opts.taskId);
     if (!taskId) {
-      const folderId =
-        opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;
       const task = await createTask({
-        folderId,
         title: "Untitled",
         author: spawnedBy,
       });
+      await setTaskCategory(task.id, opts.kind === "system" ? "system" : "conversations");
       taskId = task.id;
     }
     effectiveTaskId = taskId;

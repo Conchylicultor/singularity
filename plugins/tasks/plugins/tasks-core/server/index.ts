@@ -83,7 +83,6 @@ export {
   isDescendant,
   taskDependsOn,
 } from "./internal/queries/tasks";
-export type { TaskFilters } from "./internal/queries/tasks";
 
 export {
   listAttempts,
@@ -115,15 +114,12 @@ export {
 
 // Mutation functions — writes (live-state invalidation is DB-feed-driven)
 export {
-  CONVERSATIONS_META_TASK_ID,
   createTask,
   updateTask,
   updateTaskTitle,
   dropTaskTree,
   addTaskDependency,
   removeTaskDependency,
-  ensureMetaTask,
-  backfillMetaParent,
 } from "./internal/mutations/tasks";
 export type {
   CreateTaskInput,

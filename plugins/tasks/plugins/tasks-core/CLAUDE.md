@@ -37,6 +37,7 @@ the `fields.storage` contributions, unregistered in the browser). So
 - Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Server:
+<<<<<<< .merge_file_Xa4FaC
   - Contributes:
     - `resource.declare` "tasks"
     - `resource.declare` "task-detail"
@@ -198,6 +199,14 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `pushes-by-attempt` (keyed)
     - `task-detail` (push)
     - `tasks` (keyed)
+=======
+  - Contributes: `resource.declare` "tasks", `resource.declare` "task-detail", `resource.declare` "attempts", `resource.declare` "pushes", `resource.declare` "pushes-by-attempt", `resource.declare` "conversations-active", `resource.declare` "conversations-system", `resource.declare` "conversations-gone", `resource.declare` "conversations-gone-stats", `derived-table` "attempt_conv_agg", `derived-table` "attempt_push_agg", `derived-view` "attempts_v", `derived-view` "conversations_v", `derived-view` "task_blocking_v", `derived-view` "tasks_v"
+  - Uses: `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/events.defineTriggerEvent`, `infra/query-resource.compileEdges`, `infra/query-resource.queryResource`, `infra/query-resource.rel`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`
+  - DB schema: `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`, `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
+  - Exports: Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationStatusChangedPayload`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `DbExecutor`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskListItem`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`; Values: `_attempts`, `_conversations`, `_conversationStatusChangedTriggers`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `conversationAttachments`, `conversationCascadeSignatures`, `ConversationKindSchema`, `conversationsActiveResource`, `ConversationSchema`, `conversationsGoneResource`, `conversationsGoneStatsResource`, `conversationsSystemResource`, `conversationStatusChanged`, `conversationsView`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `dropTaskTree`, `emitStatusChangeIfChanged`, `findNextRankInFolder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `getTaskDependencyIds`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listDependentIds`, `listExistingConversationIds`, `listGoneConversations`, `listHibernationCandidates`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `maybeDropTaskOnExit`, `pushesByAttemptResource`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `setConversationHibernated`, `taskAttachments`, `taskDependsOn`, `taskDetailResource`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `touchConversationViewed`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`, `withTaskStatusBatch`
+  - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`, `defineTriggerEvent('conversation.statusChanged')`
+  - Resources: `attempts` (keyed), `conversations-active` (keyed), `conversations-gone` (keyed), `conversations-gone-stats` (push), `conversations-system` (keyed), `pushes` (push), `pushes-by-attempt` (keyed), `task-detail` (push), `tasks` (keyed)
+>>>>>>> .merge_file_nDGYmP
 - Core:
   - Uses:
     - `conversations/model-provider.ConversationModelSchema`
@@ -256,6 +265,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `tasksRootRoute`
     - `TaskStatusSchema`
 - Cross-plugin:
+<<<<<<< .merge_file_Xa4FaC
   - Imported by:
     - `active-data`
     - `backup/sources/transcripts`
@@ -314,5 +324,9 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `tasks/task-effort` (table `tasks_ext_effort`)
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
+=======
+  - Imported by: `active-data`, `backup/sources/transcripts`, `code-explorer`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/notes`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/summary`, `conversations/transcript-api`, `conversations/transcript-retention`, `conversations/transcript-watcher`, `database/query`, `debug/profiling/boot-bench`, `debug/profiling/runtime`, `debug/queue-health`, `debug/session-divergence`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `plugin-meta/plugin-health`, `review/plugin-changes`, `stats/cost`, `stats/tasks`, `tasks`, `tasks/auto-start`, `tasks/reports-investigation`, `tasks/task-category`, `tasks/task-deps-tree`, `tasks/task-effort`, `tasks/task-preprompt`, `tasks/task-title`
+  - Extended by: `conversations/conversation-category` (table `conversations_ext_category`), `conversations/conversation-view/notes` (table `conversations_ext_notes`), `conversations/conversation-preprompt` (table `conversations_ext_preprompt`), `conversations/conversation-progress` (table `conversations_ext_progress`), `conversations/conversations-view/queue` (table `conversations_ext_queue`), `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`), `tasks/auto-start` (table `tasks_ext_auto_start`), `tasks/task-category` (table `tasks_ext_category`), `tasks/task-effort` (table `tasks_ext_effort`), `plugin-meta/plugin-health` (table `tasks_ext_health_review`), `tasks/task-preprompt` (table `tasks_ext_preprompt`)
+>>>>>>> .merge_file_nDGYmP
 
 <!-- AUTOGENERATED:END -->

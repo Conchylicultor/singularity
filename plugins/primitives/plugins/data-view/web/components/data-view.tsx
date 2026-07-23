@@ -234,9 +234,10 @@ function DataViewInner<TRow>({
   // manual order (Notion's model), so the pill must stay reachable to clear it.
   const hasSort =
     sortController.sortableFields.length > 0 && activeSupportsSort;
-  // Group-by support mirrors sort: the tree opts out (`supportsGroupBy: false`)
-  // because it orders by hierarchy, not a flat field. The settings menu hides
-  // the group-by control accordingly.
+  // Group-by support mirrors sort: every built-in view (including the tree,
+  // which partitions its ROOTS into sections) supports it today; the opt-out
+  // flag remains for future group-less view types. The settings menu hides the
+  // group-by control accordingly.
   const activeSupportsGroupBy =
     activeInstance?.viewType.supportsGroupBy !== false;
 

@@ -15,6 +15,7 @@ import {
   type TaskChainTarget,
 } from "@plugins/tasks/core";
 import { tasksResource, isSettled, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import { useTaskCategoryMap } from "@plugins/tasks/plugins/task-category/web";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
@@ -22,24 +23,29 @@ import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/r
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
-const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
-
-function targetForSibling(task: TaskListItem): TaskChainTarget {
+function targetForSibling(
+  task: TaskListItem,
+  categoryMap: ReadonlyMap<string, string>,
+): TaskChainTarget {
   if (task.folderId) {
     return { kind: "folder", folderTaskId: task.folderId };
   }
-  return { kind: "metaTask", metaTaskId: CONVERSATIONS_META_TASK_ID };
+  const categoryId = categoryMap.get(task.id);
+  if (categoryId) {
+    return { kind: "category", categoryId };
+  }
+  return { kind: "root" };
 }
 
 export function TaskDependencies({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const tasksResult = useResource(tasksResource);
+  const categoryMap = useTaskCategoryMap();
 
   const deps = task?.dependencies ?? [];
 
   const folderCandidate = (() => {
     if (!task?.folderId || tasksResult.pending) return null;
-    if (task.folderId === CONVERSATIONS_META_TASK_ID) return null;
     if (deps.includes(task.folderId)) return null;
     return tasksResult.data.find((t) => t.id === task.folderId) ?? null;
   })();
@@ -52,7 +58,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   if (!task) return null;
   if (tasksResult.pending) return <Loading variant="rows" />;
 
-  const target = targetForSibling(task);
+  const target = targetForSibling(task, categoryMap);
 
   return (
     <Collapsible defaultOpen>

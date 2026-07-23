@@ -1,9 +1,11 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { MdLink } from "react-icons/md";
+import { MdAdd, MdLink } from "react-icons/md";
 import {
   evaluateNode,
   FieldCell,
+  GroupedSections,
   makeSortComparator,
+  partitionIntoSections,
   pickPrimaryField,
   resolveBodyFields,
   useResolveCell,
@@ -22,10 +24,18 @@ import {
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import type { TreeViewOptions } from "../internal/types";
+import {
+  bucketRowsByRootSection,
+  fieldsForProjected,
+  projectedRoots,
+} from "../internal/group-rows";
 import {
   isAliasNodeId,
   projectRows,
@@ -277,6 +287,34 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   }, [visibleProjected, rowComparator]);
 
+  // Group-by (Notion-style flat sections over the tree): the ROOTS partition
+  // into sections by the group-by field through the shared pure partition
+  // (enum-option section order + the "None" bucket for free), and every
+  // descendant follows its root's section regardless of its own value. Computed
+  // unconditionally (a cheap no-op when not grouped) so hook order stays
+  // stable; `null` = ungrouped → the fast-path below renders exactly the
+  // pre-group-by output.
+  const groupBy = props.state.groupBy;
+  const grouped = useMemo(() => {
+    const field = groupBy ? fields.find((f) => f.id === groupBy) : undefined;
+    // Unset / unresolvable / value-less group field → the ungrouped fast-path.
+    if (!groupBy || !field?.value) return null;
+    const sections = partitionIntoSections(
+      projectedRoots(sortedProjected),
+      fieldsForProjected(fields),
+      groupBy,
+      (p) => p.id,
+    );
+    const buckets = bucketRowsByRootSection(sortedProjected, sections);
+    return {
+      sections,
+      // Per-section TreeList rows, keyed by section key (all keys are non-null
+      // strings here — the null-key single section only exists ungrouped).
+      rowsBySectionKey: new Map(sections.map((s, i) => [s.key, buckets[i]!])),
+    };
+  }, [sortedProjected, fields, groupBy]);
+  const groupActive = grouped !== null;
+
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {
       if (!hierarchy) return null;
@@ -378,8 +416,13 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // A field sort overrides the manual (rank) order, so drag-to-reorder would set
   // a rank with no visible effect — disable DnD while sorted (drop back to manual
-  // to reorder), mirroring Notion. `onCreate` stays enabled.
-  const onMove = sortActive || !hierOnMove ? undefined : wrappedOnMove;
+  // to reorder), mirroring Notion. Grouping suspends DnD the same way: a
+  // per-section TreeList sees only its own section's roots, so a within-section
+  // root reorder could mint a rank colliding with a hidden root of another
+  // section (the documented filtered-projection hazard). `onCreate` stays
+  // enabled in both cases.
+  const onMove =
+    sortActive || groupActive || !hierOnMove ? undefined : wrappedOnMove;
 
   // Expand fallback: when the data source has no server-persisted expand state,
   // persist it in this view's ViewState (localStorage) via the host.
@@ -398,36 +441,121 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         ? "Add"
         : null;
 
+  const search = {
+    accessor: searchAccessor,
+    query: props.state.query,
+    hideInput: true,
+  };
+  // One TreeList render, shared by both paths. `sectioned` = a per-section list
+  // inside the grouped chrome: it suppresses the list's own toolbar and root-Add
+  // footer (both render exactly ONCE for the whole view, hoisted below) while
+  // keeping the hidden-input search threaded in — it drives each list's
+  // subtree-preserving filter.
+  const renderTreeList = (
+    treeRows: readonly Projected<unknown>[],
+    sectioned: boolean,
+  ) => (
+    <TreeList<Projected<unknown>>
+      rows={treeRows}
+      selectedId={props.selectedRowId}
+      rootId={options.rootId}
+      onSelect={(id) => {
+        const original = originalById.get(id);
+        if (original !== undefined) props.onRowActivate?.(original);
+      }}
+      onToggleExpanded={onToggleExpanded}
+      onMove={onMove}
+      onCreate={hierOnCreate ? wrappedOnCreate : undefined}
+      Row={Row}
+      dragOverlay={dragOverlay}
+      addLabel={sectioned ? null : addLabel}
+      canCreate={!!hierOnCreate}
+      multiSelect={
+        props.selection ? { actions: props.selection.bulkActions } : undefined
+      }
+      toolbar={
+        sectioned
+          ? { search }
+          : { search, expandAll: options.expandAll, start: options.toolbarStart }
+      }
+    />
+  );
+
+  if (grouped) {
+    // Hoisted once-per-view chrome, mirroring TreeList's own toolbar/footer
+    // markup: expand-all runs over the FULL projected set (every section), and
+    // the root Add sits after the last section (a new root lands in whatever
+    // section its own field value dictates).
+    const childParents = new Set(
+      sortedProjected.filter((p) => p.parentId).map((p) => p.parentId!),
+    );
+    const nodesWithChildren = sortedProjected.filter((p) =>
+      childParents.has(p.id),
+    );
+    const showExpandAll = !!options.expandAll && nodesWithChildren.length > 0;
+    const allExpanded =
+      nodesWithChildren.length > 0 && nodesWithChildren.every((p) => p.expanded);
+    const toggleExpandAll = async () => {
+      const next = !allExpanded;
+      await Promise.all(
+        nodesWithChildren
+          .filter((p) => p.expanded !== next)
+          .map(async (p) => onToggleExpanded(p.id, next)),
+      );
+    };
+    const showToolbar = showExpandAll || !!options.toolbarStart;
+    const showRootAdd = !options.rootId && addLabel != null && !!hierOnCreate;
+    return (
+      <>
+        {showToolbar && (
+          <div className="px-pane-gutter">
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the sections below (mirrors TreeList's own toolbar) */}
+            <Sticky mask className="mb-1">
+              <Stack direction="row" gap="xs" align="center" justify="between">
+                <Stack direction="row" gap="xs" align="center">
+                  {options.toolbarStart}
+                </Stack>
+                <Stack direction="row" gap="xs" align="center">
+                  {showExpandAll && (
+                    <ExpandAllButton
+                      allExpanded={allExpanded}
+                      onToggle={toggleExpandAll}
+                    />
+                  )}
+                </Stack>
+              </Stack>
+            </Sticky>
+          </div>
+        )}
+        <GroupedSections
+          sections={grouped.sections}
+          collapsedSections={props.collapsedSections}
+          setSectionCollapsed={props.setSectionCollapsed}
+        >
+          {(section) => (
+            <div className="px-pane-gutter">
+              {renderTreeList(grouped.rowsBySectionKey.get(section.key)!, true)}
+            </div>
+          )}
+        </GroupedSections>
+        {showRootAdd && (
+          <div className="px-pane-gutter">
+            <Button
+              variant="ghost"
+              onClick={() => void wrappedOnCreate({ parentId: null })}
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the sections above (mirrors TreeList's own footer)
+              className="text-muted-foreground mt-1 w-fit"
+            >
+              <MdAdd className="size-4" />
+              {addLabel}
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
-    <div className="px-pane-gutter">
-      <TreeList<Projected<unknown>>
-        rows={sortedProjected}
-        selectedId={props.selectedRowId}
-        rootId={options.rootId}
-        onSelect={(id) => {
-          const original = originalById.get(id);
-          if (original !== undefined) props.onRowActivate?.(original);
-        }}
-        onToggleExpanded={onToggleExpanded}
-        onMove={onMove}
-        onCreate={hierOnCreate ? wrappedOnCreate : undefined}
-        Row={Row}
-        dragOverlay={dragOverlay}
-        addLabel={addLabel}
-        canCreate={!!hierOnCreate}
-        multiSelect={
-          props.selection ? { actions: props.selection.bulkActions } : undefined
-        }
-        toolbar={{
-          search: {
-            accessor: searchAccessor,
-            query: props.state.query,
-            hideInput: true,
-          },
-          expandAll: options.expandAll,
-          start: options.toolbarStart,
-        }}
-      />
-    </div>
+    <div className="px-pane-gutter">{renderTreeList(sortedProjected, false)}</div>
   );
 }

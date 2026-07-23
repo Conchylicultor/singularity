@@ -10,8 +10,8 @@ import { useDataViewSettings } from "./settings-context";
  * Group-by setting (the first `view`-scope settings contribution): a field
  * picker writing `viewModel.setGroupBy`, reading groupable fields + the active
  * groupBy from `DataViewSettingsContext`. Renders nothing when the active view
- * opts out of group-by (`supportsGroupBy: false`, e.g. the tree) or the schema
- * has no groupable field — so the "Current view" section stays empty-clean.
+ * opts out of group-by (`supportsGroupBy: false`) or the schema has no
+ * groupable field — so the "Current view" section stays empty-clean.
  */
 export function GroupByControl(): ReactNode {
   const { fields, activeState, activeViewId, viewModel, activeSupportsGroupBy } =

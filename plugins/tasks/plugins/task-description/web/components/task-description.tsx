@@ -9,7 +9,6 @@ import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/we
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { useIsContainerTask } from "@plugins/tasks/plugins/container-tasks/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint } from "@plugins/tasks/core";
 import { taskDetailResource, type Task } from "@plugins/tasks/plugins/tasks-core/core";
@@ -27,7 +26,6 @@ function TaskDescriptionInner({
   detailTask: Task | null;
 }) {
   const flushAll = useFlushAll();
-  const isContainer = useIsContainerTask(taskId);
 
   const descField = useEditableField({
     value: detailTask?.description ?? "",
@@ -54,18 +52,14 @@ function TaskDescriptionInner({
           onFocus={descField.onFocus}
           onBlur={descField.onBlur}
         />
-        {/* A container/meta task is a system folder that can't own an attempt —
-            hide Launch so the user never hits the server-side rejection. */}
-        {!isContainer && (
-          <Stack align="end" gap="none">
-            <LaunchControl
-              getRequest={buildLaunchRequest}
-              disabled={!task.title.trim()}
-              className="w-auto"
-              openAfterLaunch={false}
-            />
-          </Stack>
-        )}
+        <Stack align="end" gap="none">
+          <LaunchControl
+            getRequest={buildLaunchRequest}
+            disabled={!task.title.trim()}
+            className="w-auto"
+            openAfterLaunch={false}
+          />
+        </Stack>
         </Stack>
       </CollapsibleContent>
       </Stack>

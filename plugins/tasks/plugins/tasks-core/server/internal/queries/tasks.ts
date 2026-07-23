@@ -8,22 +8,11 @@ import type { Task } from "../schema";
 import { TaskGraph } from "../../../core";
 import type { DbExecutor } from "../status-batch";
 
-export interface TaskFilters {
-  excludeId?: string;
-}
-
-export async function listTasks(
-  filters?: TaskFilters,
-  exec: DbExecutor = db,
-): Promise<Task[]> {
-  const rows = (await exec
+export async function listTasks(exec: DbExecutor = db): Promise<Task[]> {
+  return (await exec
     .select()
     .from(tasks)
     .orderBy(asc(tasks.rank), asc(tasks.createdAt))) as unknown as Task[];
-  if (filters?.excludeId) {
-    return rows.filter((r) => r.id !== filters.excludeId);
-  }
-  return rows;
 }
 
 export async function getTask(id: string): Promise<Task | null> {
@@ -171,5 +160,5 @@ export async function taskDependsOn(
   target: string,
   exec: DbExecutor = db,
 ): Promise<boolean> {
-  return TaskGraph.from(await listTasks(undefined, exec)).dependsOn(start, target);
+  return TaskGraph.from(await listTasks(exec)).dependsOn(start, target);
 }

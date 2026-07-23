@@ -16,12 +16,6 @@ import { handleRepoInfo } from "./internal/handle-repo-info";
 import { pushIngestJob, pushReconcileWarmup } from "./internal/push-watcher";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
-import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
-import { CONVERSATIONS_META_TASK_ID } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  backfillConversationsMetaParent,
-  ensureConversationsMetaTask,
-} from "./internal/meta-conversations";
 import { addTaskTool } from "./internal/mcp-tools";
 import {
   listTasks,
@@ -59,15 +53,8 @@ export default {
   register: [addTaskTool, pushIngestJob, pushReconcileWarmup],
   contributions: [
     Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: pushIngestJob, with: {}, oneShot: false }),
-    ContainerTask({ id: CONVERSATIONS_META_TASK_ID }),
   ],
-  onReady: async () => {
-    const created = await ensureConversationsMetaTask();
-    if (created) {
-      await backfillConversationsMetaParent();
-    }
-    // The one-shot boot reconcile now runs as the host-scoped
-    // `tasks.push-reconcile` warm-up (main-only, deferred + throttled). The
-    // git-watcher trigger keeps ingestion live from this point forward.
-  },
+  // The one-shot boot reconcile runs as the host-scoped `tasks.push-reconcile`
+  // warm-up (main-only, deferred + throttled). The git-watcher trigger keeps
+  // ingestion live from this point forward.
 } satisfies ServerPluginDefinition;

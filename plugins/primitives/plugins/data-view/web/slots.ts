@@ -34,9 +34,10 @@ export interface DataViewContribution extends ViewTypeMeta {
   loadingVariant?: LoadingVariant;
   /** Skeleton item count for the loading variant (forwarded to <Loading count>). */
   loadingCount?: number;
-  /** Whether this view supports group-by sections. Default true; the tree view
-   *  sets false (it orders by hierarchy, not a flat field) — so the host hides
-   *  the group-by control for it. Mirrors `supportsSort`. */
+  /** Whether this view supports group-by sections. Default true (every built-in
+   *  view, including the tree — it partitions its ROOTS into sections); a view
+   *  with no meaningful group axis sets false and the host hides the group-by
+   *  control for it. Mirrors `supportsSort`. */
   supportsGroupBy?: boolean;
   /** Whether this view supports flat manual-order (rank-based drag reorder).
    *  Default **false** (unlike `supportsSort`/`supportsGroupBy`): the flat views

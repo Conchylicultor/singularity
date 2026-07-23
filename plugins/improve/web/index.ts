@@ -3,7 +3,6 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { ImproveButton } from "./components/improve-button";
 
 export { openImproveWithText } from "./internal/open-store";
-export { IMPROVEMENTS_META_TASK_ID } from "../shared/constants";
 
 export default {
   description:

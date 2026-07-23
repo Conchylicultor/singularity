@@ -2,8 +2,11 @@ import { z } from "zod";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 export const TaskChainTargetSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("metaTask"), metaTaskId: z.string().min(1) }),
+  // Root task stamped with a category (system filing paths, e.g. Improve).
+  z.object({ kind: z.literal("category"), categoryId: z.string().min(1) }),
   z.object({ kind: z.literal("folder"), folderTaskId: z.string().min(1) }),
+  // Top-level task — no folder, no category.
+  z.object({ kind: z.literal("root") }),
 ]);
 export type TaskChainTarget = z.infer<typeof TaskChainTargetSchema>;
 

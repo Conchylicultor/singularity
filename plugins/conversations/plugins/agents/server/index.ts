@@ -2,7 +2,7 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
-import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { handleList } from "./internal/handle-list";
 import { handleGet } from "./internal/handle-get";
 import { handleCreate } from "./internal/handle-create";
@@ -13,7 +13,6 @@ import { handleListLaunches } from "./internal/handle-list-launches";
 import { agentLaunchesResource, agentsResource } from "./internal/resources";
 import { agents } from "./internal/views";
 import { taskLatestConversationSpec } from "./internal/rollup-spec";
-import { ensureAgentsMetaTask, AGENTS_META_TASK_ID } from "./internal/meta-agents";
 import { backfillAgentSvgNodes } from "./internal/backfill-svg";
 import {
   listAgents,
@@ -30,7 +29,6 @@ export { agents } from "./internal/views";
 export { AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./internal/schema";
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./internal/schema";
 export { agentsResource, agentLaunchesResource } from "./internal/resources";
-export { AGENTS_META_TASK_ID } from "./internal/meta-agents";
 export { nextAgentRankUnder } from "./internal/rank";
 
 export default {
@@ -44,9 +42,8 @@ export default {
     [launchAgent.route]: handleLaunch,
     [listAgentLaunches.route]: handleListLaunches,
   },
-  contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource), View({ view: agents }), DerivedTable(taskLatestConversationSpec), ContainerTask({ id: AGENTS_META_TASK_ID })],
+  contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource), View({ view: agents }), DerivedTable(taskLatestConversationSpec), TaskCategory({ id: "agents", label: "Agents", order: 2 })],
   onReady: async () => {
-    await ensureAgentsMetaTask();
     await backfillAgentSvgNodes();
   },
 } satisfies ServerPluginDefinition;

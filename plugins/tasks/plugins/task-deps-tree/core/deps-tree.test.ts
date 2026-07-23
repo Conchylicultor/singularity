@@ -53,20 +53,20 @@ describe("taskClusterIds", () => {
     // A ← B ← C (B depends on A, C depends on B). Seed from the middle: the
     // cluster reaches the blocker A AND the dependent C.
     const tasks = [task("A"), task("B", ["A"]), task("C", ["B"])];
-    expect(taskClusterIds(tasks, "B", new Set())).toEqual(members("A", "B", "C"));
+    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "C"));
   });
 
   test("pulls in created children (creation edge, downward)", () => {
     // B and C were created under A (folderId = A), no dependency edges.
     const tasks = [task("A"), task("B", [], { folderId: "A" }), task("C", [], { folderId: "A" })];
-    expect(taskClusterIds(tasks, "A", new Set())).toEqual(members("A", "B", "C"));
+    expect(taskClusterIds(tasks, "A")).toEqual(members("A", "B", "C"));
   });
 
   test("pulls in the creator and siblings (creation edge, upward + across)", () => {
     // Viewing a created child B reaches its creator A and its sibling C — 'two
     // independent tasks shown because one created the other'.
     const tasks = [task("A"), task("B", [], { folderId: "A" }), task("C", [], { folderId: "A" })];
-    expect(taskClusterIds(tasks, "B", new Set())).toEqual(members("A", "B", "C"));
+    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "C"));
   });
 
   test("unions dependency and creation relations", () => {
@@ -77,39 +77,13 @@ describe("taskClusterIds", () => {
       task("X"),
       task("Y", [], { folderId: "X" }),
     ];
-    expect(taskClusterIds(tasks, "B", new Set())).toEqual(members("A", "B", "X", "Y"));
-  });
-
-  test("does NOT traverse creation edges through a container/bucket", () => {
-    // BUCKET holds hundreds of unrelated tasks. Selected S lives directly under
-    // it alongside sibling U. The bucket must not drag U (or itself) in.
-    const tasks = [
-      task("BUCKET"),
-      task("S", [], { folderId: "BUCKET" }),
-      task("U", [], { folderId: "BUCKET" }),
-    ];
-    const containers = new Set(["BUCKET"]);
-    // S has no deps and no children ⇒ isolated once the bucket is a boundary.
-    expect(taskClusterIds(tasks, "S", containers)).toEqual(members("S"));
-  });
-
-  test("a container is a boundary, not fanned out, even when a real folder nests it", () => {
-    // Real folder F created child C. F sits under BUCKET. Viewing C reaches F
-    // (real creator) but stops at BUCKET — never expanding the bucket's siblings.
-    const tasks = [
-      task("BUCKET"),
-      task("F", [], { folderId: "BUCKET" }),
-      task("C", [], { folderId: "F" }),
-      task("OTHER", [], { folderId: "BUCKET" }),
-    ];
-    const containers = new Set(["BUCKET"]);
-    expect(taskClusterIds(tasks, "C", containers)).toEqual(members("F", "C"));
+    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "X", "Y"));
   });
 
   test("isolated task yields just itself; unknown root yields empty", () => {
     const tasks = [task("A"), task("B", ["X"]), task("X")];
-    expect(taskClusterIds(tasks, "A", new Set())).toEqual(members("A"));
-    expect(taskClusterIds(tasks, "missing", new Set())).toEqual(new Set());
+    expect(taskClusterIds(tasks, "A")).toEqual(members("A"));
+    expect(taskClusterIds(tasks, "missing")).toEqual(new Set());
   });
 });
 

@@ -1,9 +1,9 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks/plugins/tasks-core/server";
+import { listTasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { getTasksCumulative } from "../../shared/endpoints";
 
 export const handleCumulative = implement(getTasksCumulative, async () => {
-  const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
+  const allTasks = await listTasks();
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
   const events: { t: number; dTotal: number; dActive: number; dCompleted: number; dDropped: number }[] = [];

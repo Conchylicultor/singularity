@@ -8,6 +8,7 @@ import {
   markConversationClosed,
   setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { recordReport } from "@plugins/reports/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";
@@ -116,7 +117,13 @@ async function tick(): Promise<void> {
             title: live.title || null,
           });
           if (adopted) {
-            dbById.set(adopted.id, adopted);
+            dbById.set(adopted.conversation.id, adopted.conversation);
+            // Adoption synthesized a fresh root task — stamp it like every
+            // other auto-created conversation task. Linked-to-existing-attempt
+            // adoptions keep the task's original category.
+            if (adopted.createdTaskId) {
+              await setTaskCategory(adopted.createdTaskId, "conversations");
+            }
           }
         } catch (err) {
           console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);

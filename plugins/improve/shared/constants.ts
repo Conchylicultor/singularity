@@ -1,3 +1,3 @@
-// Shared between web and server: the meta-task id under which Improve
-// submissions are filed. Server's onReady ensures the row exists.
-export const IMPROVEMENTS_META_TASK_ID = "task-meta-improvements";
+// Shared between web and server: the category Improve submissions are stamped
+// with. The server contributes the matching TaskCategory registration.
+export const IMPROVEMENTS_CATEGORY_ID = "improvements";

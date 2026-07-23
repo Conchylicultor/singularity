@@ -21,19 +21,21 @@ import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 import { setTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
+import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 
 export const handleCreateChain = implement(createTaskChain, async ({ body }) => {
-  // Single folder source — server does not care which target kind it came from.
-  // The folder is display-only organization; it carries no execution semantics.
-  const folderId =
-    body.target.kind === "metaTask"
-      ? body.target.metaTaskId
-      : body.target.folderTaskId;
+  // `folder` targets nest under an existing task; `category`/`root` targets
+  // create root tasks (a category is a stamped dimension, not a parent — every
+  // card in the chain shares it, mirroring the shared folder).
+  const folderId = body.target.kind === "folder" ? body.target.folderTaskId : null;
+  const categoryId = body.target.kind === "category" ? body.target.categoryId : null;
 
-  // Verify the folder task exists.
-  const folderTask = await getTask(folderId);
-  if (!folderTask) {
-    throw new HttpError(400, `folder task ${folderId} not found`);
+  if (folderId) {
+    // Verify the folder task exists.
+    const folderTask = await getTask(folderId);
+    if (!folderTask) {
+      throw new HttpError(400, `folder task ${folderId} not found`);
+    }
   }
 
   // Verify relate.taskId exists upfront so we don't half-create the chain
@@ -77,7 +79,7 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
     cardAttachments.push(resolved);
   }
 
-  const author = body.target.kind === "metaTask" ? "improve-plugin" : "user";
+  const author = body.target.kind === "category" ? "improve-plugin" : "user";
   const groupId = body.relate ? body.relate.taskId : null;
   const taskIds: string[] = [];
 
@@ -105,6 +107,10 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
       });
       scheduleTaskTitleUpdate(newTask.id, card.text, fallbackTitle);
       taskIds.push(newTask.id);
+
+      if (categoryId) {
+        await setTaskCategory(newTask.id, categoryId);
+      }
 
       if (attachments.length > 0) {
         await taskAttachments.add(newTask.id, attachments.map((a) => a.id));

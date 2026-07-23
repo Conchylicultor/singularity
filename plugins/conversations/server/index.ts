@@ -21,7 +21,6 @@ import {
 } from "../core/endpoints";
 import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
-import { ensureSystemMeta, SYSTEM_META_TASK_ID } from "./internal/meta-system";
 import {
   maybeLaunchTaskJob,
   maybeLaunchDependentsJob,
@@ -33,7 +32,7 @@ import { conversationTurnCompleted } from "./internal/tables-turn-completed-even
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { autoAnswerConfig } from "../shared/config";
 import { queryConversations } from "@plugins/conversations/plugins/all-conversations/core";
@@ -61,7 +60,6 @@ export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
 export { userTurnSent } from "./internal/tables-user-turn-sent-event";
 export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event";
-export { SYSTEM_META_TASK_ID } from "./internal/meta-system";
 
 export default {
   description:
@@ -84,11 +82,11 @@ export default {
     ConfigV2.Register({ descriptor: autoAnswerConfig }),
     Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),
     Trigger({ on: conversationCreated, do: notifyConversationCreatedJob, with: {}, oneShot: false }),
-    ContainerTask({ id: SYSTEM_META_TASK_ID }),
+    TaskCategory({ id: "conversations", label: "Conversations", order: 0 }),
+    TaskCategory({ id: "system", label: "System", order: 1 }),
   ],
   register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, notifyConversationCreatedJob, spawnConversationJob, conversationCreated, conversationTurnCompleted, userTurnSent],
-  onReady: async () => {
-    await ensureSystemMeta();
+  onReady: () => {
     startPoller();
     startTurnEmitter();
   },

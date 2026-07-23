@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { findNextRankInFolder } from "../queries/tasks";
 import { listActiveConversations } from "../queries/conversations";
 import { listPushesForAttempt } from "../queries/pushes";
-import { CONVERSATIONS_META_TASK_ID, updateTask } from "./tasks";
+import { updateTask } from "./tasks";
 import { ensureMainWorktreeRoot, isCanonicalWorktreePath } from "@plugins/infra/plugins/worktree/server";
 import path from "path";
 
@@ -60,6 +60,10 @@ const TASK_PREFIX = "task";
 const newTaskId = () =>
   `${TASK_PREFIX}-${Math.floor(Date.now() / 1000)}-${Math.random().toString(36).slice(2, 6)}`;
 
+// Returns the adopted conversation row plus the id of the task this call
+// synthesized (null when the conversation was linked to an existing attempt's
+// task) — the caller stamps the new task's category, which lives in a plugin
+// tasks-core cannot import.
 export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   // Never adopt a tmux session whose worktree is not a canonical agent worktree
   // (`<root>/.claude/worktrees/<id>`). Stray sessions started in /tmp or the
@@ -71,6 +75,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   if (!isCanonicalWorktreePath(input.worktreePath, repoRoot)) return null;
 
   let inserted = false;
+  let createdTaskId: string | null = null;
   const taskId = newTaskId();
   // Derive attempt id from the worktree directory name so basename(worktreePath) === attemptId.
   const attemptId = path.basename(input.worktreePath);
@@ -103,12 +108,11 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     inserted = !!row;
   } else {
     await db.transaction(async (tx) => {
-      const rank = await findNextRankInFolder(CONVERSATIONS_META_TASK_ID, tx);
+      const rank = await findNextRankInFolder(null, tx);
       await tx
         .insert(_tasks)
         .values({
           id: taskId,
-          folderId: CONVERSATIONS_META_TASK_ID,
           title: input.title?.trim() || "Untitled",
           rank: rank.toJSON(),
         });
@@ -129,6 +133,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         .onConflictDoNothing()
         .returning();
       inserted = !!row;
+      if (inserted) createdTaskId = taskId;
     });
   }
   if (!inserted) return null;
@@ -138,5 +143,6 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     .where(eq(conversations.id, input.id))
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  return row ?? null;
+  if (!row) return null;
+  return { conversation: row, createdTaskId };
 }

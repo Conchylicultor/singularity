@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { createConversation } from "@plugins/conversations/server";
 import {
   DEFAULT_MODEL,
@@ -10,7 +11,6 @@ import {
 import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
-import { AGENTS_META_TASK_ID } from "./meta-agents";
 
 function formatLaunchTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -40,10 +40,10 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
 
   const now = new Date();
   const task = await createTask({
-    folderId: AGENTS_META_TASK_ID,
     title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
     author: "agents-plugin",
   });
+  await setTaskCategory(task.id, "agents");
 
   const conversation = await createConversation({
     taskId: task.id,

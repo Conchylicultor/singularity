@@ -28,9 +28,14 @@ function freshCards(includeUrl: boolean): CardDraft[] {
 }
 
 function draftScope(target: TaskChainTarget): string {
-  return target.kind === "metaTask"
-    ? `metaTask:${target.metaTaskId}`
-    : `folder:${target.folderTaskId}`;
+  switch (target.kind) {
+    case "category":
+      return `category:${target.categoryId}`;
+    case "folder":
+      return `folder:${target.folderTaskId}`;
+    case "root":
+      return "root";
+  }
 }
 
 export interface TaskDraftRelate {

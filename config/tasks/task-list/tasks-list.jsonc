@@ -6,6 +6,7 @@
       "name": "Tree",
       "view": {
         "type": "tree",
+        "groupBy": "category",
         "visibleFields": ["title", "updatedAt"],
         "filter": {
           "kind": "group",

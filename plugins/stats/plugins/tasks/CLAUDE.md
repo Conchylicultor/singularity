@@ -25,6 +25,7 @@
     - `stats/commits.tooltipNumberFormatter`
     - `stats/commits.yAxisFormatter`
 - Server:
+<<<<<<< .merge_file_NesxFZ
   - Uses:
     - `infra/endpoints.implement`
     - `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`
@@ -32,6 +33,10 @@
   - Routes:
     - `GET /api/stats/tasks/cumulative`
     - `GET /api/stats/tasks/daily`
+=======
+  - Uses: `infra/endpoints.implement`, `tasks/tasks-core.listTasks`
+  - Routes: `GET /api/stats/tasks/cumulative`, `GET /api/stats/tasks/daily`
+>>>>>>> .merge_file_HP9emD
 - Shared:
   - Exports (values):
     - `getTasksCumulative`

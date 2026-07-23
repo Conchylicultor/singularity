@@ -13,20 +13,15 @@ import { TaskGraph, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/
  *     otherwise-independent tasks are pulled in together when one created the
  *     other.
  *
- * The one guard that keeps this bounded: `containerIds` — the system meta/bucket
- * tasks (Improvements, Reports, Conversations, …). Those hold hundreds of
- * unrelated tasks, so we never traverse creation edges THROUGH them: a container
- * is never added as a creator-parent, and a container's children are never
- * fanned in. Without this a single `folderId` hop into a bucket would drag the
- * whole task tree into the cluster. (Dependency edges are always followed;
- * buckets have none.)
+ * The walk is bounded by the genuine creation/dependency component: system
+ * filing stamps a category (a field, not a `folderId` edge), so there are no
+ * mega-hub folder nodes a single hop could fan out through.
  *
  * Returns the member ids including `rootId`; empty when `rootId` is unknown.
  */
 export function taskClusterIds(
   tasks: readonly TaskListItem[],
   rootId: string,
-  containerIds: ReadonlySet<string>,
 ): Set<string> {
   const byId = new Map(tasks.map((t) => [t.id, t] as const));
   if (!byId.has(rootId)) return new Set();
@@ -56,13 +51,10 @@ export function taskClusterIds(
     // Dependency neighbours — both directions, always.
     for (const n of graph.directDependencies(cur)) visit(n.id);
     for (const n of graph.directDependents(cur)) visit(n.id);
-    // Creator (folder parent) — up one hop, unless the creator is a bucket.
-    const parent = byId.get(cur)?.folderId ?? null;
-    if (parent && !containerIds.has(parent)) visit(parent);
-    // Created (folder children) — down, unless THIS node is a bucket.
-    if (!containerIds.has(cur)) {
-      for (const c of childrenOf.get(cur) ?? []) visit(c);
-    }
+    // Creator (folder parent) — up one hop.
+    visit(byId.get(cur)?.folderId);
+    // Created (folder children) — down.
+    for (const c of childrenOf.get(cur) ?? []) visit(c);
   }
   return members;
 }

@@ -6,6 +6,7 @@
 
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
 - Server:
+<<<<<<< .merge_file_iSM1Jl
   - Contributes:
     - `trigger` "tasks.push-ingest"
     - `containerTask` "task-meta-conversations"
@@ -68,6 +69,13 @@
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `POST /api/tasks/:id/deps-move`
     - `GET /api/repo-info`
+=======
+  - Contributes: `trigger` "tasks.push-ingest"
+  - Uses: `conversations.maybeLaunchTaskJob`, `database.db`, `infra/attachments.getAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/warmup.defineWarmup`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/rank.rankAfterSibling`, `tasks/auto-start.setTaskAutoStart`, `tasks/task-category.setTaskCategory`, `tasks/task-effort.inheritTaskEffort`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/task-preprompt.setTaskPreprompt`, `tasks/task-title.scheduleTaskTitleUpdate`, `tasks/task-title.synthesiseTitleFallback`, `tasks/tasks-core._tasks`, `tasks/tasks-core.addTaskDependency`, `tasks/tasks-core.createTask`, `tasks/tasks-core.DbExecutor`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.getTask`, `tasks/tasks-core.getTaskDependencyIds`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.insertPush`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.listPushShasIn`, `tasks/tasks-core.listTasks`, `tasks/tasks-core.removeTaskDependency`, `tasks/tasks-core.taskAttachments`, `tasks/tasks-core.updateTask`, `tasks/tasks-core.withTaskStatusBatch`
+  - Exports: Values: `armTaskAutoStart`
+  - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`, `defineWarmup('tasks.push-reconcile')`
+  - Routes: `GET /api/tasks`, `POST /api/tasks`, `POST /api/tasks/chain`, `POST /api/tasks/insert-between`, `GET /api/tasks/:id`, `PATCH /api/tasks/:id`, `POST /api/tasks/:id/auto-start`, `DELETE /api/tasks/:id/auto-start`, `POST /api/tasks/:id/dependencies`, `DELETE /api/tasks/:id/dependencies/:depId`, `POST /api/tasks/:id/deps-move`, `GET /api/repo-info`
+>>>>>>> .merge_file_VzyNTF
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
@@ -141,9 +149,9 @@
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
   - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
-  - **`container-tasks`** — Registry of system container/meta task ids that must not own attempts: a cached hook so the web can gate Launch affordances on container rows. Registry of system container/meta task ids that must not own attempts: server-contribution registry + guard, plus a cached endpoint so the web can gate Launch affordances on container rows.
-  - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports meta-folder and registers the task-creating handler into reports' investigation sink.
+  - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
+  - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its keyed live resource, and the category-list endpoint.
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
   - **`task-deps-tree`** — Dependency tree section for the task detail: renders task_dependencies as a nesting = runs-after tree (with a switch to the read-only creation tree), atomic drag-to-reorder, per-row detach, and 'also after' fan-in chips.
   - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.

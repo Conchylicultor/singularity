@@ -1,6 +1,6 @@
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _attempts, _taskDependencies, _tasks } from "../tables";
+import { _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
 import type { TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
@@ -8,8 +8,6 @@ import { findNextRankInFolder, isDescendant, listTasks, taskDependsOn } from "..
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 import type { DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-
-export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
 export interface CreateTaskInput {
   id?: string;
@@ -218,34 +216,4 @@ export async function dropTaskTree(id: string): Promise<number> {
     await emitStatusChangeIfChanged(tid, befores.get(tid) ?? null);
   }
   return ids.length;
-}
-
-// Idempotently ensures the meta-task exists. Returns true iff this call
-// inserted the row (used as a one-shot signal for backfills).
-export async function ensureMetaTask(id: string, title: string): Promise<boolean> {
-  const rank = await findNextRankInFolder(null);
-  const rows = await db
-    .insert(_tasks)
-    .values({ id, title, rank: rank.toJSON() })
-    .onConflictDoNothing({ target: _tasks.id })
-    .returning({ id: _tasks.id });
-  return rows.length === 1;
-}
-
-// Re-file orphan roots that have >=1 attempt into the meta task's folder.
-export async function backfillMetaParent(
-  metaTaskId: string,
-): Promise<number> {
-  const rows = await db
-    .update(_tasks)
-    .set({ folderId: metaTaskId })
-    .where(
-      and(
-        isNull(_tasks.folderId),
-        ne(_tasks.id, metaTaskId),
-        sql`EXISTS (SELECT 1 FROM ${_attempts} a WHERE a.task_id = ${_tasks.id})`,
-      ),
-    )
-    .returning({ id: _tasks.id });
-  return rows.length;
 }

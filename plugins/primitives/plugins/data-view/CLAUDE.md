@@ -326,7 +326,9 @@ divergence unrepresentable. See
 of `data-table`'s subgrid — chrome that owned a `<Stack>` would displace them out of
 the grid and break column alignment — so it composes `StickyStack` directly inside
 `data-table`, under the same policy and with `base` offset by its own sticky column
-header. The tree has no flat sections and does not participate.
+header. The tree renders through the shared chrome too, with one `TreeList` per
+section: its ROOTS partition by the group-by field and every descendant follows
+its root's section (see the tree child's CLAUDE.md "Group-by").
 
 ## Aggregating sections (`aggregate`)
 

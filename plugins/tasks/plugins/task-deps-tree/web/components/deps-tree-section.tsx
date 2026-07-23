@@ -4,7 +4,6 @@ import {
   useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -12,12 +11,10 @@ import {
   useActiveViewId,
   type ViewSwitcherOption,
 } from "@plugins/primitives/plugins/view-switcher/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   tasksResource,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { listContainerTaskIds } from "@plugins/tasks/plugins/container-tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TasksSubtree } from "@plugins/tasks/plugins/task-list/web";
 import { taskClusterIds } from "@plugins/tasks/plugins/task-deps-tree/core";
@@ -46,19 +43,6 @@ function DepsTreeSectionLoaded({
   taskId: string;
   allTasks: readonly TaskListItem[];
 }) {
-  // The cluster spans dependency + creation edges but must NOT fan out through
-  // system buckets, so it needs the container-id set. Cached forever after boot.
-  const containers = useEndpoint(
-    listContainerTaskIds,
-    {},
-    { staleTime: Infinity, gcTime: Infinity },
-  );
-  const ready = !containers.isLoading;
-  const containerIds = useMemo(
-    () => new Set(containers.data?.ids ?? []),
-    [containers.data],
-  );
-
   const { activeViewId, setActiveView } = useActiveViewId("task-deps-tree:view");
   const activeId = activeViewId ?? "deps";
 
@@ -70,12 +54,10 @@ function DepsTreeSectionLoaded({
     [openPane],
   );
 
-  // The single member set both tabs render — one set, organized two ways. Skip
-  // the (potentially whole-tree) walk until container ids resolve, so an empty
-  // set never briefly drags every task in.
+  // The single member set both tabs render — one set, organized two ways.
   const memberIds = useMemo(
-    () => (ready ? taskClusterIds(allTasks, taskId, containerIds) : new Set<string>()),
-    [ready, allTasks, taskId, containerIds],
+    () => taskClusterIds(allTasks, taskId),
+    [allTasks, taskId],
   );
 
   // Self-hide with the original trigger: the task must take part in a dependency
@@ -87,8 +69,6 @@ function DepsTreeSectionLoaded({
     allTasks.some((t) => t.dependencies.includes(taskId));
   const hasFolderChildren = allTasks.some((t) => t.folderId === taskId);
   if (!hasDepEdge && !hasFolderChildren) return null;
-
-  if (!ready) return <Loading variant="rows" />;
 
   return (
     <Stack gap="sm">

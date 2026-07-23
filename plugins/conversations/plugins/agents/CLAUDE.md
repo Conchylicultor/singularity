@@ -90,6 +90,7 @@
     - `patchAgent`
     - `systemAgentDetailPane`
 - Server:
+<<<<<<< .merge_file_4erEtF
   - Contributes:
     - `resource.declare` "agents"
     - `resource.declare` "agent-launches"
@@ -148,6 +149,14 @@
     - `DELETE /api/agents/:id`
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
+=======
+  - Contributes: `resource.declare` "agents", `resource.declare` "agent-launches", `derived-view` "agents_v", `derived-table` "task_latest_conversation", `taskCategory` "agents"
+  - Uses: `conversations.createConversation`, `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/query-resource.compileEdges`, `infra/query-resource.rel`, `primitives/icon-picker.resolveIconSvgNodesJson`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`, `tasks/task-category.setTaskCategory`, `tasks/task-category.TaskCategory`, `tasks/tasks-core.conversationCascadeSignatures`, `tasks/tasks-core.conversationsActiveResource`, `tasks/tasks-core.conversationsView`, `tasks/tasks-core.createTask`, `tasks/tasks-core.listConversationsForDisplay`
+  - DB schema: `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`, `plugins/conversations/plugins/agents/server/internal/schema.ts`, `plugins/conversations/plugins/agents/server/internal/tables-attachments.ts`, `plugins/conversations/plugins/agents/server/internal/tables.ts`, `plugins/conversations/plugins/agents/server/internal/views.ts`
+  - Exports: Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`; Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
+  - Resources: `agent-launches` (keyed), `agents` (push)
+  - Routes: `GET /api/agents`, `POST /api/agents`, `GET /api/agents/:id`, `PATCH /api/agents/:id`, `DELETE /api/agents/:id`, `POST /api/agents/:id/launch`, `GET /api/agents/:id/launches`
+>>>>>>> .merge_file_w4Dh9z
 - Core:
   - Uses:
     - `conversations/model-provider.ConversationModelSchema`

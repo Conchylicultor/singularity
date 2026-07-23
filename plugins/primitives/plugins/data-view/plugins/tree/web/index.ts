@@ -18,10 +18,10 @@ export default {
       // Defaults to manual (rank) order — the DnD-reorderable order the tree
       // ships. Picking a field sort reorders each sibling group by that field
       // (and suspends DnD while active). Sort applies per-sibling, preserving
-      // hierarchy.
+      // hierarchy. Group-by partitions the ROOTS into sections (children follow
+      // their root) and likewise suspends DnD while active — default flags for
+      // both.
       supportsSort: true,
-      // The tree partitions by hierarchy, not by a flat group-by field.
-      supportsGroupBy: false,
       loadingVariant: "rows",
       component: TreeView,
     }),

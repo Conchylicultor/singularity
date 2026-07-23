@@ -4008,16 +4008,16 @@
       "name": "@singularity/plugin-tasks-auto-start",
       "version": "0.0.1",
     },
-    "plugins/tasks/plugins/container-tasks": {
-      "name": "@singularity/plugin-tasks-container-tasks",
-      "version": "0.0.1",
-    },
     "plugins/tasks/plugins/reports-investigation": {
       "name": "@singularity/plugin-tasks-reports-investigation",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-attachments": {
       "name": "@singularity/plugin-tasks-task-attachments",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-category": {
+      "name": "@singularity/plugin-tasks-task-category",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-dependencies": {
@@ -6916,11 +6916,11 @@
 
     "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
 
-    "@singularity/plugin-tasks-container-tasks": ["@singularity/plugin-tasks-container-tasks@workspace:plugins/tasks/plugins/container-tasks"],
-
     "@singularity/plugin-tasks-reports-investigation": ["@singularity/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 
     "@singularity/plugin-tasks-task-attachments": ["@singularity/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
+
+    "@singularity/plugin-tasks-task-category": ["@singularity/plugin-tasks-task-category@workspace:plugins/tasks/plugins/task-category"],
 
     "@singularity/plugin-tasks-task-dependencies": ["@singularity/plugin-tasks-task-dependencies@workspace:plugins/tasks/plugins/task-dependencies"],
 

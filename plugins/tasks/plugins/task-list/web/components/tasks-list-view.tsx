@@ -35,6 +35,7 @@ export function TasksListView({
           hierarchy={taskHierarchy}
           viewOptions={{ tree: buildTreeOptions({}), list: {} }}
           itemActions={Tasks.TaskActions}
+          fieldExtensions={Tasks.Fields}
           emptyState="No tasks yet."
         />
       )}
