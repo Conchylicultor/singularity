@@ -113,11 +113,22 @@ export function discoverCollectedDirs(
 //      AUTO-GROWS — registering a new runtime or collected-dir type adds its
 //      folder name here with zero edits, which is the friction being removed.
 //   2. A fixed set of stable structural conventions (core, shared, plugins, bin,
-//      scripts) that are not runtime/collected-dir types and never grow when a
-//      new such type is added — so listing them here is not the friction.
+//      scripts, e2e) that are not runtime/collected-dir types and never grow when
+//      a new such type is added — so listing them here is not the friction.
+//      `e2e` holds a plugin's Playwright scripts; it is deliberately NOT a
+//      collected dir (there is nothing to register — a collected dir would
+//      generate an empty registry and pull in collected-dir-tsconfig-coverage).
 export function standardPluginDirs(root: string): Set<string> {
   const collected = discoverCollectedDirs(root).map((d) => d.dir);
-  return new Set([...collected, "core", "shared", "plugins", "bin", "scripts"]);
+  return new Set([
+    ...collected,
+    "core",
+    "shared",
+    "plugins",
+    "bin",
+    "scripts",
+    "e2e",
+  ]);
 }
 
 // ── Entry collection ───────────────────────────────────────────────

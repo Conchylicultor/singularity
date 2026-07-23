@@ -1,22 +1,12 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { MAX_EMIT_RATE } from "../core";
+import { MAX_EMIT_RATE, EmitStatusSchema } from "../core";
 
-/** Snapshot of the in-memory emit controller. */
-export const EmitStatusSchema = z.object({
-  active: z.boolean(),
-  /** Resource key currently being emitted (null when idle). */
-  key: z.string().nullable(),
-  /** Configured pushes/sec. */
-  rate: z.number(),
-  startedAtMs: z.number().nullable(),
-  endsAtMs: z.number().nullable(),
-  /** Scheduled triggerResourcePush calls so far this session. */
-  ticks: z.number(),
-  /** Param-tuples reached on the last tick (0 = nobody listening → unobservable). */
-  lastSubscriberCount: z.number(),
-});
-export type EmitStatus = z.infer<typeof EmitStatusSchema>;
+// EmitStatusSchema lives in core/ because the window-level global API — whose
+// methods all resolve to an EmitStatus — is a contract shared with the e2e
+// driver, and e2e may import core but not shared. See core/global-api.ts.
+export { EmitStatusSchema };
+export type { EmitStatus } from "../core";
 
 export const startEmit = defineEndpoint({
   route: "POST /api/debug/live-state-emit/start",

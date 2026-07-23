@@ -51,10 +51,13 @@ export function discoverTscTargets(root: string): TscTarget[] {
     });
   }
 
-  // Root-level test project: owns every `*.test.ts(x)` / `__tests__/**` file,
-  // which the runtime tsconfigs now exclude. Without it those files belong to
-  // no program — type-checked here (matching the dedicated test project main
-  // references via `tsc -b`) and linted via the same program.
+  // Root-level test project: owns every `*.test.ts(x)` / `__tests__/**` file
+  // plus every `plugins/**/e2e/**` Playwright script, none of which the runtime
+  // tsconfigs include. Without it those files belong to no program —
+  // type-checked here (matching the dedicated test project main references via
+  // `tsc -b`) and linted via the same program. e2e/ lands here rather than in a
+  // project of its own because it needs exactly this target's shape: DOM lib
+  // (for `page.evaluate` browser bodies) plus node/bun types (for the driver).
   if (existsSync(join(root, "tsconfig.test.json"))) {
     targets.push({
       name: "test",

@@ -98,7 +98,7 @@ thrashes; the on-demand **React fiber-commit profiler** names the INITIATING
 component + hook (esp. `useSyncExternalStore`, where `useResource`/`useQuery`
 land), splits mount vs update, and ranks remounts with the structural cause
 (element-type flip, key-change). OFF by default. Open **Debug → Render
-Profiler**, or headless `bun e2e/render-profile.mjs --url … --seconds 8`; the
+Profiler**, or headless `bun plugins/debug/plugins/render-profiler/e2e/render-profile.ts --url … --seconds 8`; the
 report dumps to `logs/render-profiler.jsonl`; API `window.__reactRenderProfiler`.
 → [`plugins/debug/plugins/render-profiler/CLAUDE.md`](../../../plugins/debug/plugins/render-profiler/CLAUDE.md)
 
@@ -131,7 +131,7 @@ reports (STEP 0). → [`plugins/debug/plugins/queue/CLAUDE.md`](../../../plugins
   `"singularity"` for main). → [`plugins/database/plugins/query/CLAUDE.md`](../../../plugins/database/plugins/query/CLAUDE.md)
 - **Claude CLI calls** — every `claude --print` with prompt / output / source /
   duration. → [`plugins/debug/plugins/claude-cli-calls/CLAUDE.md`](../../../plugins/debug/plugins/claude-cli-calls/CLAUDE.md)
-- **Verify in the real app** — scripted Playwright (`e2e/screenshot.mjs`): clicks,
+- **Verify in the real app** — scripted Playwright (`plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts`): clicks,
   before/after shots, control state. Prefer over blind static shots.
 
 ## The front-door invariant

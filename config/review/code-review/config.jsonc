@@ -1,10 +1,9 @@
-// @hash a03269e2c498
+// @hash aa34d742f8ad
 {
   // Path prefixes that require no special attention during review.
   "safePaths": [
     { "path": "plugins/" },
     { "path": "docs/" },
-    { "path": "e2e/" },
     { "path": "research/" },
     { "path": "sidequests/" },
     { "path": "bun.lock" }

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-e2e-harness",
+  "description": "Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).",
+  "private": true,
+  "version": "0.0.1"
+}

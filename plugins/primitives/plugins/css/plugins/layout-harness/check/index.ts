@@ -121,7 +121,7 @@ const check: Check = {
     return ctx.grant.run(() => browserPool.run(async () => {
       if (existsSync(markerFile(sig))) return { ok: true };
 
-      // Chromium must be provisioned (the e2e postinstall owns that). Fail loudly
+      // Chromium must be provisioned (the e2e-harness provision step owns that). Fail loudly
       // with a clear hint — never auto-install.
       let exe: string;
       try {
@@ -130,14 +130,14 @@ const check: Check = {
         return {
           ok: false,
           message: `Could not resolve the Playwright Chromium executable: ${(err as Error).message}`,
-          hint: "Provision the browser with `bun e2e/ensure-chromium.mjs` (or `bun run playwright install chromium`), then re-run.",
+          hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
         };
       }
       if (!exe || !existsSync(exe)) {
         return {
           ok: false,
           message: `Playwright Chromium is not installed (expected at ${exe || "<unresolved>"}).`,
-          hint: "Provision the browser with `bun e2e/ensure-chromium.mjs` (or `bun run playwright install chromium`), then re-run.",
+          hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
         };
       }
 

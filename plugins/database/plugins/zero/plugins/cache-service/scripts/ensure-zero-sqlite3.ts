@@ -15,7 +15,7 @@
  *
  * Invoked via the cache-service `provision/index.ts` contribution, which the
  * framework provisioning runner drives from the root `postinstall` (alongside
- * e2e/ensure-chromium.mjs) — so the binary is provisioned by the same mechanism
+ * the e2e-harness plugin's provision/index.ts) — so the binary is provisioned by the same mechanism
  * — `bun install` — that provisions the package, and they can never drift. This
  * module no longer auto-runs on import; the runner orchestrates it. Steady state
  * is a noop: one resolve + one stat, then return.

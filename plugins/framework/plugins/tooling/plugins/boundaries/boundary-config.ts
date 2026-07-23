@@ -12,6 +12,12 @@ export default defineBoundaries({
     central: ["central", "core", "shared"],
     core: ["core"],
     shared: ["shared", "core"],
+    // e2e/ — Playwright scripts that drive the deployed app from OUTSIDE it.
+    // They may use other plugins' `core` types and other plugins' `e2e` flow
+    // helpers (the shared harness, the "open a blank Pages doc" flow), and are
+    // denied `web`/`server`/`shared`: an end-to-end test asserts on the running
+    // app through the browser, never by importing the code under test.
+    e2e: ["e2e", "core"],
   },
 
   runtimeExceptions: [

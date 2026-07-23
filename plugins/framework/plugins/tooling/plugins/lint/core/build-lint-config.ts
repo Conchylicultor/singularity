@@ -28,6 +28,7 @@ import type { ESLint, Linter } from "eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
 import { lintEntries } from "./lint.generated";
+import { NON_APP_FILE_GLOBS } from "./non-app-globs";
 
 interface PluginContribution {
   /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
@@ -37,6 +38,13 @@ interface PluginContribution {
   rules: Record<string, unknown>;
   /** Per-rule exemption globs, keyed by rule id, declared by the contributing plugin. */
   ignores?: Record<string, string[]>;
+  /**
+   * Rule ids that stay enforced in test/e2e files (NON_APP_FILE_GLOBS), which
+   * contributed rules are otherwise off in. Opt in for rules that catch a real
+   * BUG anywhere they fire — a floating promise, a swallowed error — as opposed
+   * to an app-architecture deviation, which is meaningless in a test driver.
+   */
+  enforceEverywhere?: string[];
 }
 
 /**
@@ -60,13 +68,33 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
       continue;
     }
     const def = (r.value as {
-      default?: { name?: string; rules?: Record<string, unknown>; ignores?: Record<string, string[]> };
+      default?: {
+        name?: string;
+        rules?: Record<string, unknown>;
+        ignores?: Record<string, string[]>;
+        enforceEverywhere?: string[];
+      };
     }).default;
     if (!def?.name || !def.rules) {
       failures.push(`${e.pluginPath}/lint — default export missing { name, rules }`);
       continue;
     }
-    contributions.push({ relPath: e.pluginPath, name: def.name, rules: def.rules, ignores: def.ignores });
+    // A typo'd rule id in enforceEverywhere would silently leave the rule off in
+    // tests — exactly the failure this mechanism exists to prevent. Fail loudly.
+    const unknown = (def.enforceEverywhere ?? []).filter((id) => !(id in def.rules!));
+    if (unknown.length > 0) {
+      failures.push(
+        `${e.pluginPath}/lint — enforceEverywhere names rule(s) this plugin does not define: ${unknown.join(", ")}`,
+      );
+      continue;
+    }
+    contributions.push({
+      relPath: e.pluginPath,
+      name: def.name,
+      rules: def.rules,
+      ignores: def.ignores,
+      enforceEverywhere: def.enforceEverywhere,
+    });
   }
   if (failures.length > 0) {
     throw new Error(`[eslint] failed to load lint contributions:\n  ${failures.join("\n  ")}`);
@@ -272,6 +300,22 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
     ),
   }));
 
+  // Contributed rules are architecture rules; turn them off in test/e2e files
+  // unless the contributing plugin opted the rule back in (see NON_APP_FILE_GLOBS).
+  const nonAppConfigs: Linter.Config[] = contributions
+    .map((c) => {
+      const enforced = new Set(c.enforceEverywhere ?? []);
+      const off = Object.keys(c.rules).filter((ruleId) => !enforced.has(ruleId));
+      return { c, off };
+    })
+    .filter(({ off }) => off.length > 0)
+    .map(({ c, off }) => ({
+      files: [...NON_APP_FILE_GLOBS],
+      rules: Object.fromEntries(
+        off.map((ruleId) => [`${c.name}/${ruleId}`, "off"] as const),
+      ),
+    })) as Linter.Config[];
+
   const exemptConfigs: Linter.Config[] = contributions.flatMap((c) =>
     Object.entries(c.ignores ?? {})
       // An empty glob array is a valid "no allowlist" state; ESLint rejects a
@@ -283,5 +327,5 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
       }),
   );
 
-  return [...baseConfigs, ...pluginConfigs, ...exemptConfigs];
+  return [...baseConfigs, ...pluginConfigs, ...nonAppConfigs, ...exemptConfigs];
 }

@@ -2466,6 +2466,10 @@
       "name": "@singularity/plugin-framework-tooling-collected-dir",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/e2e-harness": {
+      "name": "@singularity/plugin-framework-tooling-e2e-harness",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/guards": {
       "name": "@singularity/plugin-framework-tooling-guards",
       "version": "0.0.1",
@@ -6217,6 +6221,8 @@
     "@singularity/plugin-framework-tooling-codegen": ["@singularity/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 
     "@singularity/plugin-framework-tooling-collected-dir": ["@singularity/plugin-framework-tooling-collected-dir@workspace:plugins/framework/plugins/tooling/plugins/collected-dir"],
+
+    "@singularity/plugin-framework-tooling-e2e-harness": ["@singularity/plugin-framework-tooling-e2e-harness@workspace:plugins/framework/plugins/tooling/plugins/e2e-harness"],
 
     "@singularity/plugin-framework-tooling-guards": ["@singularity/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
 

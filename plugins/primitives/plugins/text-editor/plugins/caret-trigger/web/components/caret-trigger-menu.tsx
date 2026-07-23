@@ -19,7 +19,7 @@ export interface CaretTriggerMenuProps
  * means a host cannot wire a different trigger's dismissal into this surface.
  *
  * `data-caret-trigger` makes the arbiter's at-most-one-owner invariant
- * observable from the DOM (`e2e/caret-trigger-wedge.mjs` asserts on it); the
+ * observable from the DOM (`e2e/caret-trigger-wedge.ts` asserts on it); the
  * `contents` wrapper takes no box, so it cannot perturb the surface's layout.
  */
 export function CaretTriggerMenu({ caret, open, children, ...rest }: CaretTriggerMenuProps) {

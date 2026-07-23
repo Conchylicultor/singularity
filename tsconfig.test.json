@@ -11,6 +11,7 @@
     "plugins/**/*.test.ts",
     "plugins/**/*.test.tsx",
     "plugins/**/__tests__/**/*",
+    "plugins/**/e2e/**/*.ts",
     "plugins/**/shared/*.d.ts",
     "test/**/*"
   ]

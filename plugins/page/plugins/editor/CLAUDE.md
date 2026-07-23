@@ -356,7 +356,7 @@ the event targets the button). `copySelectionViaButton` handles both explicitly.
 
 jsdom cannot reproduce the mid-dispatch flush (React's sync-lane work lands on a
 microtask that cannot run while the dispatch unwinds), so the unit test reaches the
-same *state* across two keystrokes; `e2e/block-selection-verify.mjs` covers the
+same *state* across two keystrokes; `e2e/block-selection-verify.ts` covers the
 single-dispatch symptom in a real browser.
 
 ## The gutter `+` and `/` are one unified menu
@@ -721,7 +721,7 @@ history restore):**
   stored one as DUPLICATED text on reopen), regardless of how
   `CollaborationPlugin` orders `connect()` relative to the hook's effects.
   Residual known edge: a keystroke landing < ~20ms after Enter
-  (beyond human input; see `e2e/split-typing-window-probe.mjs`) can still be
+  (beyond human input; see `@plugins/page/plugins/editor-collab`'s `e2e/split-typing-window-probe.ts`) can still be
   dropped.
 - **Split focus/caret under pre-seed.** Two follow-on fixes: the origin's
   deferred truncation is background surgery on the block the user is LEAVING

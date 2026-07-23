@@ -140,7 +140,7 @@ mouse in two independent ways, and both are why this seam exists:
 `commit` therefore lives in `useCaretMenu` (one place, both hazards handled) and
 every consumer routes item clicks through it (`page/editor`'s `BlockTypeList` /
 `PageOptionsList` take an `onCommit`; `inline-date` calls `commit(i)` directly).
-`e2e/caret-trigger-wedge.mjs` covers the keyboard/derivation half; the
+`e2e/caret-trigger-wedge.ts` covers the keyboard/derivation half; the
 mouse-commit half is exercised by the page editor's click tests.
 
 ## The single-owner arbiter
@@ -173,7 +173,7 @@ see:
 ```bash
 bun test plugins/primitives/plugins/text-editor/plugins/caret-trigger/web/internal
 bun run test:dom plugins/primitives/plugins/text-editor/plugins/caret-trigger
-bun e2e/caret-trigger-wedge.mjs --origin http://<worktree>.localhost:9000
+bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts --origin http://<worktree>.localhost:9000
 ```
 
 - **`web/internal/*.test.ts` (bun:test)** — the pure derivation: `scanTrigger`,
@@ -187,7 +187,7 @@ bun e2e/caret-trigger-wedge.mjs --origin http://<worktree>.localhost:9000
   so `FloatingSurface` would never paint. The derivation is where the bug lived.
   Note its `type()` helper appends to the **existing** TextNode — rebuilding the
   node mints a fresh `nodeKey` and legitimately resets the dismissal identity.
-- **`e2e/caret-trigger-wedge.mjs` (playwright)** — all four triggers end-to-end in
+- **`e2e/caret-trigger-wedge.ts` (playwright)** — all four triggers end-to-end in
   the real app, plus blur/refocus, the arbiter (`@friday [[bar` → only `[[`), and
   that `$$` still lets arrows move the caret. It creates and deletes its own
   scratch page. Three things it has to get right, all learned the hard way:

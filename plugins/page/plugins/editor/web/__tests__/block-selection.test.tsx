@@ -130,7 +130,7 @@ function setup() {
  * the bad guard can do damage. A real browser re-renders in time (`focusin` is
  * discrete) and the guard fires. Reaching the same state across two keystrokes
  * gives the same discrimination without depending on React's flush timing;
- * `e2e/block-selection-verify.mjs` covers the single-dispatch symptom for real.
+ * `e2e/block-selection-verify.ts` covers the single-dispatch symptom for real.
  */
 function inSelectionMode(id: string) {
   const t = setup();

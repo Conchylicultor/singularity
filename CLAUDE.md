@@ -175,11 +175,12 @@ bun run playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800"
 
 If you need to **verify behavior** (click a button, confirm state, capture a
 before/after), go straight to a scripted Playwright run — don't take blind
-static screenshots first. Use the helper at [`e2e/screenshot.mjs`](e2e/screenshot.mjs)
+static screenshots first. Use the helper at
+[`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts)
 or copy it as a starting point:
 
 ```bash
-bun e2e/screenshot.mjs \
+bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
   --url http://<worktree>.localhost:9000/agents/c/<id> \
   --click "Design docs" \
   --out /tmp/docs
@@ -187,7 +188,40 @@ bun e2e/screenshot.mjs \
 
 It prints the matched button's `disabled` / `aria-pressed` / text state and
 writes `-before.png` + `-after.png`, so a single run tells you whether the
-feature actually works.
+feature actually works. `--url` defaults to this worktree's own deploy.
+
+### E2E tests
+
+End-to-end Playwright scripts live **inside the plugin they verify**, at
+`plugins/<path>/e2e/<name>.ts`. There is no top-level `e2e/` folder and no test
+runner — each script is a standalone program:
+
+```bash
+bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts       # no args needed
+bun plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
+```
+
+- **The target defaults to your own worktree** (`http://<worktree>.localhost:9000`,
+  derived — never a literal host). Override with `--base`/`--url`/`--origin` or
+  `$SINGULARITY_E2E_BASE`. Run `./singularity build` first.
+- **Shared helpers** come from
+  `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — argv parsing,
+  target resolution, `withBrowser`/`session`, error capture, the `report()`
+  pass/fail logger, screenshots. Don't hand-roll these; a script that needs a
+  new generic capability adds it to the harness.
+- **Domain flows** belong to the plugin that owns the surface and are shared
+  through that plugin's own `e2e/index.ts` barrel (e.g. `openBlankPage` from
+  `@plugins/page/plugins/editor/e2e`).
+- The `e2e` runtime may import other plugins' `core` and `e2e` barrels only — it
+  is denied `web`/`server`, because an e2e test drives the deployed app through
+  the browser rather than importing the code under test.
+- Never name a file in `e2e/` `*.test.ts` — `bun test` would try to run it.
+- These scripts are **manual**: nothing runs them automatically (no `check`, no
+  CI, no `build`/`push` gate). They are type-checked, not executed.
+- **Plugin-contributed lint rules do not apply here** (nor in `__tests__/` /
+  `*.test.ts`): they enforce the *app's* composition, and `e2e` can't import the
+  primitives they point at. typescript-eslint, react-hooks, and `promise-safety`
+  still apply. See [`plugins/framework/plugins/tooling/plugins/lint/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/lint/CLAUDE.md).
 
 ## Debugging
 

@@ -4,3 +4,9 @@ export {
   MAX_EMIT_DURATION_MS,
   MAX_EMIT_RATE,
 } from "./constants";
+export { EmitStatusSchema } from "./global-api";
+export type {
+  EmitStatus,
+  EmitStartOptions,
+  LiveStateEmitGlobal,
+} from "./global-api";

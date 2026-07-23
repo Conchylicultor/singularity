@@ -12,7 +12,6 @@ export const reviewConfig = defineConfig({
       default: [
         { path: "plugins/" },
         { path: "docs/" },
-        { path: "e2e/" },
         { path: "research/" },
         { path: "sidequests/" },
         { path: "bun.lock" },

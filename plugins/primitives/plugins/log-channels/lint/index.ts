@@ -55,6 +55,11 @@ export default {
       // structured logger (which persists over HTTP to a live server) is
       // unreachable. console — captured by the install output — is the sink.
       "**/provision/**/*.{ts,tsx}",
+      // e2e/ — Playwright scripts run by hand against a deployed app. They are
+      // standalone processes OUTSIDE the server (no backend of their own to
+      // POST to), and their entire output contract is the pass/fail transcript
+      // the developer or agent reads on stdout. console is the sink.
+      "**/e2e/**/*.{ts,tsx}",
     ],
   },
 };

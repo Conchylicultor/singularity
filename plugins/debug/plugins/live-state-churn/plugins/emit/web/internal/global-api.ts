@@ -1,26 +1,16 @@
 import { useEffect } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LIVE_STATE_EMIT_GLOBAL } from "../../core";
-import type { EmitStatus } from "../../shared/endpoints";
+import type { LiveStateEmitGlobal } from "../../core";
 import { startEmit, stopEmit, getEmitStatus } from "../../shared/endpoints";
 
-/** Options for the window-level imperative `start`. */
-export interface EmitStartOptions {
-  key: string;
-  rate: number;
-  durationMs?: number;
-}
-
-/** The window-level imperative emit API installed by this module. */
-export interface LiveStateEmitGlobal {
-  start: (opts: EmitStartOptions) => Promise<EmitStatus>;
-  stop: () => Promise<EmitStatus>;
-  status: () => Promise<EmitStatus>;
-}
-
+// The interface itself lives in core/global-api.ts so the headless e2e driver —
+// which may import core but not web — augments Window with the SAME type this
+// installer does. Two structurally-identical local copies would be distinct
+// types on one Window key, which TypeScript rejects (TS2717).
 declare global {
   interface Window {
-    __liveStateEmit?: LiveStateEmitGlobal;
+    [LIVE_STATE_EMIT_GLOBAL]?: LiveStateEmitGlobal;
   }
 }
 
