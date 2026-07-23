@@ -42,7 +42,6 @@ composes last.
     - `fillClasses`
 - Cross-plugin:
   - Imported by:
-    - `apps/deploy/ssh-setup/hetzner`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

@@ -621,14 +621,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/servers.Server`
                   - `apps/deploy/ssh-setup.SshProvider`
                   - `infra/endpoints.fetchEndpoint`
-                  - `primitives/copy-to-clipboard.CopyButton`
-                  - `primitives/css/fill.Fill`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/setup-steps.Step`
+                  - `primitives/setup-steps.StepCommand`
                   - `primitives/setup-steps.StepDone`
                   - `primitives/setup-steps.StepLink`
+                  - `primitives/setup-steps.StepNote`
                   - `primitives/setup-steps.Steps`
     - **`file-explorer`** — File explorer app.
       - Plugins:
@@ -5363,7 +5363,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/css/badge.Badge`
-              - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -5373,6 +5372,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading.Loading`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepLink`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
             - Exports (values): `appleSetupPane`
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Web:
@@ -5407,8 +5411,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth.useAccountStatus`
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
-              - `primitives/copy-to-clipboard.CopyButton`
-              - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
@@ -5416,6 +5418,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.Pane`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepCommand`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepLink`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
             - Exports (values): `googleSetupPane`
           - Cross-plugin:
             - Imported by: `auth/google`
@@ -17689,12 +17697,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useCopyToClipboard`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/ssh-setup/hetzner`
-          - `auth/google/setup-wizard`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `page/code-block`
           - `primitives/filepath-breadcrumb`
+          - `primitives/setup-steps`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
@@ -17920,8 +17927,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/demos/app-gallery`
               - `apps/website/demos/plugin-pyramid`
               - `apps/workflows/editor`
-              - `auth/apple-signing/setup-wizard`
-              - `auth/google/setup-wizard`
               - `code-explorer`
               - `config_v2/settings`
               - `conversations/agents`
@@ -18150,7 +18155,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
-              - `apps/deploy/ssh-setup/hetzner`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -22612,9 +22616,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `ContentScope`
           - `selectScopeProps`
-    - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external) and StepDone (success line) affordances.
+    - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external), StepDone (success line), StepNote (muted hint) and StepCommand (copyable command row) affordances.
       - Web:
         - Uses:
+          - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/spacing.insetClass`
@@ -22627,11 +22632,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `StepState`
         - Exports (values):
           - `Step`
+          - `StepCommand`
           - `StepDone`
           - `StepLink`
+          - `StepNote`
           - `Steps`
       - Cross-plugin:
-        - Imported by: `apps/deploy/ssh-setup/hetzner`
+        - Imported by:
+          - `apps/deploy/ssh-setup/hetzner`
+          - `auth/apple-signing/setup-wizard`
+          - `auth/google/setup-wizard`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
         - Slots: `Shortcuts.Shortcut` ← `apps-core.surface.floating`, `apps-core.surface.solo`, `reorder.edit-mode`

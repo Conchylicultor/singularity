@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -14,8 +15,9 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
  * Lifecycle position of a step within a guided setup flow. `upcoming` steps are
- * dimmed and inert (their controls cannot be reached), `active` is the step the
- * user should act on, `done` shows a green check instead of the number.
+ * dimmed and inert — pointer- and Tab-unreachable, so no control inside one
+ * needs its own `disabled` — `active` is the step the user should act on, `done`
+ * shows a green check instead of the number.
  */
 export type StepState = "upcoming" | "active" | "done";
 
@@ -54,8 +56,8 @@ export function Steps({ children, className }: { children: ReactNode; className?
 /**
  * One numbered step: a state-tinted circle (number → check when done) with a
  * vertical rail connecting it to the next step, a title, and arbitrary body
- * content. `upcoming` dims the whole step and disables pointer events, so a
- * step's controls need no individual `disabled` wiring.
+ * content. `upcoming` dims the whole step and marks it inert — pointer- AND
+ * Tab-unreachable — so a step's controls need no individual `disabled` wiring.
  */
 export function Step({
   title,
@@ -70,7 +72,8 @@ export function Step({
       as="li"
       direction="row"
       gap="md"
-      className={cn(state === "upcoming" && "opacity-40 pointer-events-none")}
+      inert={state === "upcoming"}
+      className={cn(state === "upcoming" && "opacity-40")}
     >
       {/* Default cross-axis stretch keeps this column at full row height, so
           the rail (the Fill below the circle) spans down to the next step. */}
@@ -119,6 +122,33 @@ export function StepLink({ href, label = "Open" }: { href: string; label?: strin
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline icon offset from button label */}
       <MdOpenInNew className="ml-1 size-3.5" />
     </Button>
+  );
+}
+
+/** Muted explanatory line inside a step body ("Application type: Desktop app"). */
+export function StepNote({ children }: { children: ReactNode }) {
+  return (
+    <Text as="p" variant="caption" className="text-muted-foreground">
+      {children}
+    </Text>
+  );
+}
+
+/** Copyable command or URL line: a code block plus a copy button. */
+export function StepCommand({ text, title }: { text: string; title: string }) {
+  return (
+    <Stack direction="row" align="start" gap="sm">
+      <Fill>
+        <Text
+          as="code"
+          variant="caption"
+          className="rounded-md bg-muted px-sm py-xs break-all"
+        >
+          {text}
+        </Text>
+      </Fill>
+      <CopyButton text={text} title={title} />
+    </Stack>
   );
 }
 

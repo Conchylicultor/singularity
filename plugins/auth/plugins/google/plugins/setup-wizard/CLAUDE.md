@@ -15,8 +15,6 @@
     - `auth.useAccountStatus`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/copy-to-clipboard.CopyButton`
-    - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
@@ -24,6 +22,12 @@
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.Pane`
+    - `primitives/setup-steps.Step`
+    - `primitives/setup-steps.StepCommand`
+    - `primitives/setup-steps.StepDone`
+    - `primitives/setup-steps.StepLink`
+    - `primitives/setup-steps.StepNote`
+    - `primitives/setup-steps.Steps`
   - Exports (values): `googleSetupPane`
 - Cross-plugin:
   - Imported by: `auth/google`

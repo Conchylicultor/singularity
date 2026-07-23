@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -10,6 +8,8 @@ import {
   Step,
   StepLink,
   StepDone,
+  StepNote,
+  StepCommand,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import {
   generateSshKeypair,
@@ -70,10 +70,10 @@ export function HetznerInstructions({
           </Stack>
         ) : (
           <Stack gap="sm" align="start">
-            <Text as="p" variant="caption" className="text-muted-foreground">
+            <StepNote>
               Creates an ed25519 keypair on this machine. The private key is
               stored in the secrets store and never shown.
-            </Text>
+            </StepNote>
             <Button
               variant="default"
               loading={generating}
@@ -90,11 +90,11 @@ export function HetznerInstructions({
         state={publicKey ? "active" : "upcoming"}
       >
         <Stack gap="sm" align="start">
-          <Text as="p" variant="caption" className="text-muted-foreground">
+          <StepNote>
             In the server view, open the web terminal (the <b>&gt;_</b> button,
             top right) and log in as{" "}
             <Text as="code" variant="caption">{server.sshUser}</Text>.
-          </Text>
+          </StepNote>
           <StepLink href={server.consoleUrl ?? ""} label="Open console" />
         </Stack>
       </Step>
@@ -104,30 +104,17 @@ export function HetznerInstructions({
         state={publicKey ? "active" : "upcoming"}
       >
         <Stack gap="sm">
-          <Text as="p" variant="caption" className="text-muted-foreground">
+          <StepNote>
             Paste this into the web terminal (or any shell on the server):
-          </Text>
-          <Stack direction="row" align="start" gap="sm">
-            <Fill>
-              <Text
-                as="code"
-                variant="caption"
-                className="rounded-md bg-muted px-sm py-xs break-all"
-              >
-                {publicKey ? installCommand(publicKey) : "…"}
-              </Text>
-            </Fill>
-            {publicKey && (
-              <CopyButton
-                text={installCommand(publicKey)}
-                title="Copy install command"
-              />
-            )}
-          </Stack>
-          <Text as="p" variant="caption" className="text-muted-foreground">
+          </StepNote>
+          <StepCommand
+            text={publicKey ? installCommand(publicKey) : "…"}
+            title="Copy install command"
+          />
+          <StepNote>
             Done — once the key is installed, this app can reach the server
             over SSH.
-          </Text>
+          </StepNote>
         </Stack>
       </Step>
     </Steps>

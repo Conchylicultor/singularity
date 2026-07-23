@@ -70,8 +70,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/website/demos/app-gallery`
     - `apps/website/demos/plugin-pyramid`
     - `apps/workflows/editor`
-    - `auth/apple-signing/setup-wizard`
-    - `auth/google/setup-wizard`
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`

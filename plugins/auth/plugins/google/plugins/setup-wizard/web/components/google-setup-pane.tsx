@@ -1,6 +1,5 @@
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import {
   useAccountStatus,
   startConnectFlow,
@@ -11,10 +10,16 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
-import { MdCheck, MdOpenInNew } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import {
+  Steps,
+  Step,
+  StepLink,
+  StepDone,
+  StepNote,
+  StepCommand,
+} from "@plugins/primitives/plugins/setup-steps/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
@@ -96,87 +101,55 @@ export function GoogleSetupPane() {
         </Text>
       </div>
 
-      <Stack as="ol" gap="lg">
+      <Steps>
         <Step
-          number={1}
           title="Select or create a GCP project"
-          active={true}
-          done={hasProject}
+          state={hasProject ? "done" : "active"}
         >
-          <StepLink
-            href="https://console.cloud.google.com/projectcreate"
-            disabled={false}
-          />
+          <StepLink href="https://console.cloud.google.com/projectcreate" />
         </Step>
 
         <Step
-          number={2}
           title="Enable Google Drive API"
-          active={hasProject}
-          done={false}
+          state={hasProject ? "active" : "upcoming"}
         >
           <StepLink
             href={`https://console.cloud.google.com/apis/library/drive.googleapis.com?project=${projectId}`}
-            disabled={!hasProject}
           />
         </Step>
 
         <Step
-          number={3}
           title="Set up OAuth consent screen"
-          active={hasProject}
-          done={false}
+          state={hasProject ? "active" : "upcoming"}
         >
           <StepLink
             href={`https://console.cloud.google.com/auth/overview?project=${projectId}`}
-            disabled={!hasProject}
           />
         </Step>
 
         <Step
-          number={4}
           title="Create OAuth 2.0 credentials"
-          active={hasProject}
-          done={false}
+          state={hasProject ? "active" : "upcoming"}
         >
           <Stack gap="sm">
             <StepLink
               href={`https://console.cloud.google.com/auth/clients/create?project=${projectId}`}
-              disabled={!hasProject}
             />
-            <Text as="p" variant="caption" className="text-muted-foreground">
+            <StepNote>
               Application type: <span className="font-medium">Desktop app</span>
-            </Text>
-            <div className="flex items-center gap-sm">
-              <Text as="code" variant="caption" className="flex-1 rounded-md bg-muted px-sm py-xs break-all">
-                {REDIRECT_URI}
-              </Text>
-              <CopyButton
-                text={REDIRECT_URI}
-                title="Copy redirect URI"
-                className="shrink-0"
-              />
-            </div>
-            <Text as="p" variant="caption" className="text-muted-foreground">
-              Add this as the Authorized redirect URI
-            </Text>
+            </StepNote>
+            <StepCommand text={REDIRECT_URI} title="Copy redirect URI" />
+            <StepNote>Add this as the Authorized redirect URI</StepNote>
           </Stack>
         </Step>
 
         <Step
-          number={5}
           title="Enter credentials"
-          active={true}
-          done={credentialsSaved}
+          state={credentialsSaved ? "done" : "active"}
         >
           <Stack gap="sm">
             {credentialsSaved ? (
-              <Text as="div" variant="caption" className="text-success">
-                <Stack direction="row" align="center" gap="xs">
-                  <MdCheck className="h-4 w-4" />
-                  Credentials configured
-                </Stack>
-              </Text>
+              <StepDone>Credentials configured</StepDone>
             ) : (
               <>
                 <Input
@@ -205,25 +178,20 @@ export function GoogleSetupPane() {
         </Step>
 
         <Step
-          number={6}
           title="Connect your account"
-          active={credentialsSaved}
-          done={!!connected}
+          state={connected ? "done" : credentialsSaved ? "active" : "upcoming"}
         >
           <Stack gap="sm">
             {connected ? (
-              <Text as="div" variant="caption" className="text-success">
-                <Stack direction="row" align="center" gap="xs">
-                  <MdCheck className="h-4 w-4" />
-                  Connected
-                  {status.identity?.email ? ` (${status.identity.email})` : ""}
-                </Stack>
-              </Text>
+              <StepDone>
+                Connected
+                {status.identity?.email ? ` (${status.identity.email})` : ""}
+              </StepDone>
             ) : (
               <>
                 <Button
                   variant="default"
-                  disabled={!credentialsSaved || connecting}
+                  disabled={connecting}
                   onClick={handleConnect}
                 >
                   {connecting ? "Connecting…" : "Connect with Google"}
@@ -235,66 +203,7 @@ export function GoogleSetupPane() {
             )}
           </Stack>
         </Step>
-      </Stack>
+      </Steps>
     </Stack>
-  );
-}
-
-function Step({
-  number,
-  title,
-  active,
-  done,
-  children,
-}: {
-  number: number;
-  title: string;
-  active: boolean;
-  done: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <li
-      className={`flex gap-md items-start ${active ? "opacity-100" : "opacity-40 pointer-events-none"}`}
-    >
-      <Center
-        className={`size-6 shrink-0 rounded-full ${
-          done
-            ? "bg-success/15 text-success"
-            : "bg-muted text-muted-foreground"
-        }`}
-      >
-        {done ? (
-          <MdCheck className="h-3.5 w-3.5" />
-        ) : (
-          <Text as="span" variant="caption" className="font-medium">{number}</Text>
-        )}
-      </Center>
-      <div className="flex flex-col gap-xs min-w-0">
-        <Text as="span" variant="label">{title}</Text>
-        {children}
-      </div>
-    </li>
-  );
-}
-
-function StepLink({
-  href,
-  disabled,
-}: {
-  href: string;
-  disabled: boolean;
-}) {
-  return (
-    <Button
-      variant="outline"
-      disabled={disabled}
-      onClick={() => window.open(href, "_blank")}
-      className="w-fit"
-    >
-      Open
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline icon offset from button label */}
-      <MdOpenInNew className="ml-1 h-3.5 w-3.5" />
-    </Button>
   );
 }
