@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActiveApp } from "@plugins/apps-core/web";
+import { getAppInstanceId } from "@plugins/primitives/plugins/app-instance/web";
 import type { RouteState } from "@plugins/primitives/plugins/pane/web";
 import {
   makeShellHistoryAdapter,
@@ -86,7 +87,7 @@ describe("serializePaneState", () => {
 });
 
 describe("commit — stamps the focused tab's identity onto every entry", () => {
-  it("merges { tabId, appId } into the route payload and PUSHES on mode push", () => {
+  it("merges { tabId, appId, appInstance } into the route payload and PUSHES on mode push", () => {
     const { deps } = makeDeps({ focused: { tabId: "T1", appId: "pages" } });
     const adapter = makeShellHistoryAdapter(deps);
     const pushSpy = vi.spyOn(window.history, "pushState");
@@ -103,6 +104,9 @@ describe("commit — stamps the focused tab's identity onto every entry", () => 
       route: [{ paneId: "p", params: { id: "x" }, options: {}, uuid: "u" }],
       tabId: "T1",
       appId: "pages",
+      // Which running app-state those ids are meaningful in — the *which* half
+      // of a later cold boot's fresh-vs-preserve decision.
+      appInstance: getAppInstanceId(),
     });
   });
 
@@ -116,7 +120,11 @@ describe("commit — stamps the focused tab's identity onto every entry", () => 
 
     expect(replaceSpy).toHaveBeenCalledTimes(1);
     expect(pushSpy).not.toHaveBeenCalled();
-    expect(window.history.state).toMatchObject({ tabId: "T1", appId: "pages" });
+    expect(window.history.state).toMatchObject({
+      tabId: "T1",
+      appId: "pages",
+      appInstance: getAppInstanceId(),
+    });
   });
 
   it("writes the payload verbatim (no stamp) when no tab is focused yet", () => {
@@ -125,8 +133,11 @@ describe("commit — stamps the focused tab's identity onto every entry", () => 
 
     adapter.commit({ url: "/pages", state: { pending: "p/1" }, mode: "push" });
 
+    // Verbatim: an entry with no tab identity carries no instance either —
+    // half a snapshot is worse than none, and `restore()` reads it as legacy.
     expect(window.history.state).toEqual({ pending: "p/1" });
     expect(window.history.state).not.toHaveProperty("tabId");
+    expect(window.history.state).not.toHaveProperty("appInstance");
   });
 });
 
@@ -223,6 +234,47 @@ describe("restore — snapshot → the right history-free dep, never a history w
     // Restoration NEVER writes history — the browser already advanced it.
     expect(pushSpy).not.toHaveBeenCalled();
     expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it("FOREIGN appInstance: falls back to URL reparse, never refocuses the foreign tabId", () => {
+    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
+      focused: { tabId: "T1", appId: "pages" },
+      // T2 exists here, so only the instance check can stop the adapter from
+      // trusting the entry — if it refocused T2 it would be honouring a tabId
+      // minted by a different running app-state that happens to collide.
+      tabs: [tab("T1", "pages"), tab("T2", "pages")],
+    });
+    window.history.replaceState(
+      { tabId: "T2", appId: "pages", appInstance: "some-other-instance", route: [] },
+      "",
+      "/story/s/1",
+    );
+
+    makeShellHistoryAdapter(deps).restore();
+
+    expect(refocus).not.toHaveBeenCalled();
+    // The URL is the only part of a foreign entry this instance can trust.
+    expect(rebuildAppInPlace).toHaveBeenCalledWith("T1", "story");
+    expect(restoreLiveRoute).toHaveBeenCalledTimes(1);
+    expect(setFocusedApp).toHaveBeenCalledWith("story");
+  });
+
+  it("OWN appInstance: the snapshot is trusted (the guard is instance-scoped, not blanket)", () => {
+    const { deps, refocus, rebuildAppInPlace, setFocusedApp } = makeDeps({
+      focused: { tabId: "T1", appId: "pages" },
+      tabs: [tab("T1", "pages"), tab("T2", "pages")],
+    });
+    window.history.replaceState(
+      { tabId: "T2", appId: "pages", appInstance: getAppInstanceId(), route: [] },
+      "",
+      "/pages",
+    );
+
+    makeShellHistoryAdapter(deps).restore();
+
+    expect(refocus).toHaveBeenCalledWith("T2");
+    expect(rebuildAppInPlace).not.toHaveBeenCalled();
+    expect(setFocusedApp).toHaveBeenCalledWith("pages");
   });
 
   it("matching tabId, already focused, same app: only restores the route", () => {

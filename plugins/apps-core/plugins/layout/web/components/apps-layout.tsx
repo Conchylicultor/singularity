@@ -27,9 +27,24 @@ import { TabsProvider, useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { shouldRedirectToDefaultApp } from "../internal/redirect-gate";
 
-/** Replace the URL and notify the router/pathname subscribers. */
+/**
+ * Replace the URL and notify the router/pathname subscribers.
+ *
+ * The existing `history.state` is PRESERVED, never overwritten with `{}`: an
+ * entry is a complete snapshot (`{ tabId, appId, appInstance, route|pending }`)
+ * and blanking it strands the entry — the shell adapter falls back to URL
+ * reparsing, and a later cold boot can no longer tell which app instance the
+ * entry belonged to.
+ *
+ * Preserving is safe here because this redirect only fires when the URL matches
+ * NO app, in which case `bootTabs` already resolved `urlAppId` through the
+ * `seedAppId` → `defaultApp(apps)` fallback (`use-tabs.tsx:247-248`) — the very
+ * app `defaultPath` points at. So the preserved `appId` already agrees with the
+ * post-redirect URL, and the preserved route is `[]`/pending (an unmatched URL
+ * seeds no resolved route). Nothing stale survives the rewrite.
+ */
 function redirectTo(url: string) {
-  window.history.replaceState({}, "", url);
+  window.history.replaceState(window.history.state ?? {}, "", url);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
 }

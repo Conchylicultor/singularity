@@ -1,5 +1,9 @@
 import { useCallback, useSyncExternalStore } from "react";
-import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import {
+  appInstanceKey,
+  legacyInstanceKey,
+  mayAdoptLegacyPayload,
+} from "@plugins/primitives/plugins/app-instance/web";
 import { nextSnapAction, type SnapDirection, type SnapZone } from "./use-snap";
 
 /** A window's free-floating box on the desktop, plus its chrome state. */
@@ -226,7 +230,13 @@ function reorder() {
   nextZ = ranked.length;
 }
 
-const LS_KEY = () => `app-windows:${getTabId()}`;
+/**
+ * sessionStorage key, namespaced per **app instance** (not per browser tab):
+ * window geometry is instance state, so an external navigation starts with a
+ * clean desktop while a reload / back-forward finds its windows where they
+ * were. See `primitives/app-instance`.
+ */
+const LS_KEY = () => appInstanceKey("app-windows");
 
 /** The persisted shape of a window (members + active + desktop + geo). */
 interface PersistedWindow {
@@ -267,6 +277,26 @@ function persist() {
 }
 
 /**
+ * MIGRATION (remove once no live session predates app instances): the
+ * pre-generation `app-windows:<tabId>` store, read at most once ever.
+ *
+ * Entitlement is {@link mayAdoptLegacyPayload}'s call — instance lifecycle,
+ * owned by `primitives/app-instance`, which carries the full rationale;
+ * consuming it (`removeItem`) is the consumer's half. What is specific here is
+ * the stake: a desktop full of windows is the most visible instance state there
+ * is, so a leak into a fresh instance doesn't merely restore stale data, it
+ * reopens windows the user never opened in this instance and puts them over the
+ * one tab they asked for.
+ */
+function adoptLegacyStore(): string | null {
+  if (!mayAdoptLegacyPayload()) return null;
+  const key = legacyInstanceKey("app-windows");
+  const raw = sessionStorage.getItem(key);
+  if (raw !== null) sessionStorage.removeItem(key);
+  return raw;
+}
+
+/**
  * Migrate the legacy `maximized` boolean (older persisted sessions) to the
  * unified `snap` field, and default the always-on-top flag, so a refresh never
  * crashes on a stale geometry shape.
@@ -302,7 +332,10 @@ function hydrate() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
   try {
-    const raw = sessionStorage.getItem(LS_KEY());
+    // The gen-scoped store, falling back ONCE to the pre-instance key for a
+    // document entitled to it (see `adoptLegacyStore`). The next `persist()`
+    // writes the whole store back under the gen-scoped key.
+    const raw = sessionStorage.getItem(LS_KEY()) ?? adoptLegacyStore();
     if (!raw) {
       ensureDefaultDesktop();
       reindex();

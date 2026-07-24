@@ -521,6 +521,14 @@ restore the route) with zero URL parsing. `handleLocationChange` reads only
 `route`/`pending` and ignores the extra keys, so the primitive never learns
 about tabs. See the tabs `CLAUDE.md` for the snapshot model.
 
+The shell adapter also stamps the **app instance** that wrote each entry
+(`appInstance`, from `primitives/app-instance`) — one running SPA app-state, of
+which a single browser tab hosts a sequence. An entry therefore names not just
+which tab it belonged to but which instance that tab id is meaningful in, so a
+cold boot can tell "restore the state this entry belongs to" from "this entry
+came from somewhere else". Still invisible to the pane store: it is one more
+ignored key on `history.state`.
+
 URL parsing (`parseUrl`) is only a fallback for initial page load, shared deep
 links, and legacy history entries with no snapshot.
 

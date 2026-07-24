@@ -21,6 +21,7 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
+import { getNavigationType } from "@plugins/primitives/plugins/app-instance/web";
 import { type Placement } from "@plugins/apps-core/core";
 import {
   Apps,
@@ -235,11 +236,37 @@ type ActivateTarget =
   | { kind: "pending"; rawPath: string };
 
 /**
+ * The tabId the CURRENT history entry names, but ONLY on a browser back/forward
+ * load. A history entry is a complete snapshot, so on a traversal the entry is
+ * authoritative about which tab the user was looking at — more so than the
+ * instance's persisted `focusedTabId`, which records wherever the instance was
+ * left rather than where this particular entry sat. On every other nav type the
+ * entry describes some earlier moment of *this* load's own instance (or nothing
+ * at all), so it must not steer focus: `undefined`.
+ */
+function backForwardEntryTabId(): string | undefined {
+  if (getNavigationType() !== "back_forward") return undefined;
+  const state = window.history.state as { tabId?: unknown } | null;
+  return typeof state?.tabId === "string" ? state.tabId : undefined;
+}
+
+/**
  * Construct the initial tab set exactly once: restore from sessionStorage, or
  * seed a single tab from the current URL's app. Pure store construction only —
  * the live-store wiring side-effect runs separately in a one-time effect.
+ *
+ * `seedTabId` is the tabId the history entry names on a back/forward load (see
+ * {@link backForwardEntryTabId}); it is a parameter purely so tests can drive
+ * it directly. It is used twice: to pick which restored tab is focused, and —
+ * when the entry's generation has been evicted so there is nothing to restore —
+ * as the id of the single minted tab, so the shell adapter's `restore()` still
+ * recognises the entries around it instead of a freshly-minted stranger.
  */
-export function bootTabs(apps: AppList, seedAppId: string): BootState {
+export function bootTabs(
+  apps: AppList,
+  seedAppId: string,
+  seedTabId: string | undefined = backForwardEntryTabId(),
+): BootState {
   // The current URL — not the persisted focus — is authoritative for which
   // app/pane is focused on load. Resolve it up front (same source of truth as
   // the cross-app `navigate()`), so a reload or deep link always lands on the
@@ -261,16 +288,38 @@ export function bootTabs(apps: AppList, seedAppId: string): BootState {
     rebuildBackgroundTab(p, apps),
   );
 
-  // Pick which tab the URL focuses: the persisted focused tab when it already
-  // belongs to the URL's app (the normal reload), else the first tab on that
-  // app, else a fresh tab so the URL's app is never silently dropped.
-  let focusIdx = tabs.findIndex(
-    (t) => t.tabId === persisted?.focusedTabId && t.appId === urlAppId,
-  );
+  // Pick which tab the URL focuses. The entry's own tab wins where it is
+  // available (a back/forward snapshot names the exact tab that was on screen —
+  // plain single-step Back already agrees with the rules below, but jumping
+  // straight to an older entry via the history dropdown does not), then the
+  // persisted focused tab when it already belongs to the URL's app (the normal
+  // reload), else the first tab on that app, else a fresh tab so the URL's app
+  // is never silently dropped.
+  //
+  // The entry's tab is honoured only when it also belongs to the URL's app:
+  // an entry stamped alongside this URL always does, so a disagreement means
+  // the tab was re-apped after the entry was written — and there the URL is
+  // authoritative, exactly as in every other branch here. (Focusing a tab whose
+  // app contradicts the URL would bind its store to one app's base path while
+  // seeding it with another app's parsed route.)
+  let focusIdx = seedTabId
+    ? tabs.findIndex((t) => t.tabId === seedTabId && t.appId === urlAppId)
+    : -1;
+  if (focusIdx < 0) {
+    focusIdx = tabs.findIndex(
+      (t) => t.tabId === persisted?.focusedTabId && t.appId === urlAppId,
+    );
+  }
   if (focusIdx < 0) focusIdx = tabs.findIndex((t) => t.appId === urlAppId);
   if (focusIdx < 0) {
+    // Nothing to focus. On a back/forward into an EVICTED generation this is
+    // the whole restoration: a single-tab instance built from the entry's own
+    // snapshot, reusing its tabId so the adapter keeps recognising the entries
+    // around it. (Guarded against an id already in the set, so reuse can never
+    // mint a duplicate.)
+    const reuseSeed = !!seedTabId && !tabs.some((t) => t.tabId === seedTabId);
     tabs.push({
-      tabId: crypto.randomUUID(),
+      tabId: reuseSeed ? seedTabId! : crypto.randomUUID(),
       appId: urlAppId,
       store: makeBackgroundStore(urlAppId, apps),
     });

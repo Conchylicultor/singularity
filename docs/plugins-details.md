@@ -4968,6 +4968,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
+              - `primitives/app-instance.appInstanceKey`
+              - `primitives/app-instance.legacyInstanceKey`
+              - `primitives/app-instance.mayAdoptLegacyPayload`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
@@ -4994,7 +4997,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/shortcuts.defineShortcut`
               - `primitives/shortcuts.formatShortcutLabel`
               - `primitives/shortcuts.getFocusedSurfaceId`
-              - `primitives/tab-id.getTabId`
               - `primitives/tooltip.WithTooltip`
               - `ui/tab-bar.Tab`
               - `ui/tab-bar.TabIcon`
@@ -5198,6 +5200,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.resolveAppForPath`
           - `apps-core.setFocusedApp`
           - `apps-core.useActiveApp`
+          - `primitives/app-instance.appInstanceKey`
+          - `primitives/app-instance.getAppInstanceId`
+          - `primitives/app-instance.getNavigationType`
+          - `primitives/app-instance.legacyInstanceKey`
+          - `primitives/app-instance.mayAdoptLegacyPayload`
+          - `primitives/app-instance.readAppInstance`
+          - `primitives/app-instance.stampAppInstance`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/pane.createPaneStore`
           - `primitives/pane.defaultHistoryAdapter`
@@ -5210,7 +5219,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.setLiveStore`
           - `primitives/pane.stripBasePath`
           - `primitives/shortcuts.setFocusedSurfaceId`
-          - `primitives/tab-id.getTabId`
         - Exports (types):
           - `PlacementCapabilities`
           - `Tab`
@@ -17591,6 +17599,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
+    - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
+      - Web:
+        - Uses: `primitives/tab-id.getTabId`
+        - Exports (types): `NavigationType`
+        - Exports (values):
+          - `appInstanceKey`
+          - `getAppInstanceId`
+          - `getNavigationType`
+          - `isFreshAppInstance`
+          - `legacyInstanceKey`
+          - `mayAdoptLegacyPayload`
+          - `readAppInstance`
+          - `resetAppInstanceForTests`
+          - `RETAINED_INSTANCES`
+          - `stampAppInstance`
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/surface/floating`
+          - `apps-core/tabs`
     - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
       - Web:
         - Slots: `AppShell.Framing` ← `ui.sidebar-framing`
@@ -23133,10 +23160,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
       - Cross-plugin:
         - Imported by:
-          - `apps-core/surface/floating`
-          - `apps-core/tabs`
           - `conversations/conversation-view/pending-turn`
           - `debug/reports`
+          - `primitives/app-instance`
           - `primitives/live-state`
           - `reports`
           - `shell/notifications`

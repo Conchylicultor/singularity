@@ -1,4 +1,8 @@
-import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import {
+  appInstanceKey,
+  legacyInstanceKey,
+  mayAdoptLegacyPayload,
+} from "@plugins/primitives/plugins/app-instance/web";
 import {
   stripBasePath,
   type PaneOptions,
@@ -76,9 +80,36 @@ export interface PersistedTabs {
   mode?: Placement;
 }
 
-/** sessionStorage key, namespaced per browser tab via {@link getTabId}. */
+/**
+ * sessionStorage key, namespaced per **app instance** — one running SPA
+ * app-state, not one browser tab. An external navigation (bookmark, address
+ * bar, link from another app) mints a fresh generation, so this key names an
+ * empty slot and the tab set starts clean; a reload or a back/forward adopts
+ * the generation the load belongs to and finds its tabs where it left them.
+ * See `primitives/app-instance`.
+ */
 function storageKey(): string {
-  return "app-tabs:" + getTabId();
+  return appInstanceKey("app-tabs");
+}
+
+/**
+ * MIGRATION (remove once no live session predates app instances): the
+ * pre-generation `app-tabs:<tabId>` payload, read at most once ever.
+ *
+ * Whether this document is entitled to it at all is
+ * {@link mayAdoptLegacyPayload}'s call — instance lifecycle, owned by
+ * `primitives/app-instance`, which carries the full rationale. Consuming it
+ * (`removeItem`) is the consumer's half: it closes the same hole from the other
+ * side, so the blob cannot outlive the migrating load and be picked up later.
+ * The following `savePersistedTabs` re-homes the payload under the gen-scoped
+ * key, so one preserving load carries the tab set across.
+ */
+function adoptLegacyPayload(): string | null {
+  if (!mayAdoptLegacyPayload()) return null;
+  const key = legacyInstanceKey("app-tabs");
+  const raw = window.sessionStorage.getItem(key);
+  if (raw !== null) window.sessionStorage.removeItem(key);
+  return raw;
 }
 
 /** Serialize a store's current route to the persisted slot shape. */
@@ -140,7 +171,8 @@ function rawPathForTab(
  */
 export function loadPersistedTabs(): PersistedTabs | null {
   if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(storageKey());
+  const raw =
+    window.sessionStorage.getItem(storageKey()) ?? adoptLegacyPayload();
   if (raw === null) return null;
   const parsed = JSON.parse(raw) as PersistedTabs;
   if (!Array.isArray(parsed.tabs) || typeof parsed.focusedTabId !== "string") {

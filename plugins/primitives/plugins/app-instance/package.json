@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-app-instance",
+  "description": "Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.",
+  "private": true,
+  "version": "0.0.1"
+}

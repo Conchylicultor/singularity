@@ -5,6 +5,11 @@ import type {
   RouteState,
   SerializedSlot,
 } from "@plugins/primitives/plugins/pane/web";
+import {
+  getAppInstanceId,
+  readAppInstance,
+  stampAppInstance,
+} from "@plugins/primitives/plugins/app-instance/web";
 import { resolveAppForPath, type ActiveApp } from "@plugins/apps-core/web";
 import type { Tab } from "./tabs-store";
 
@@ -28,11 +33,20 @@ import type { Tab } from "./tabs-store";
 
 /**
  * The composite `history.state` shape the shell writes: the pane's route payload
- * widened with the focused tab's identity. `handleLocationChange` reads only
- * `route`/`pending` and ignores `tabId`/`appId`, so the pane primitive never
- * needs to know about this shape.
+ * widened with the focused tab's identity, plus the **app instance** that wrote
+ * it. `handleLocationChange` reads only `route`/`pending` and ignores the extra
+ * keys, so the pane primitive never needs to know about this shape.
+ *
+ * `appInstance` is what lets a cold boot tell "this entry belongs to the state I
+ * am restoring" from "this entry belongs to a different running app-state" — it
+ * is the *which* half of the fresh-vs-preserve decision (the nav type is the
+ * *whether* half). See `primitives/app-instance`.
  */
-type CompositeState = PaneHistoryState & { tabId?: string; appId?: string };
+type CompositeState = PaneHistoryState & {
+  tabId?: string;
+  appId?: string;
+  appInstance?: string;
+};
 
 /**
  * The hooks into the tab manager the adapter needs. All reads go through
@@ -91,10 +105,17 @@ export function makeShellHistoryAdapter(deps: ShellHistoryDeps): HistoryAdapter 
   function commit({ url, state, mode }: LocationChange): void {
     const focused = deps.focused();
     // Merge the focused-tab snapshot into the route payload so the entry is a
-    // complete picture of what was on screen: which tab, which app, which route.
-    // (Absent only pre-mount, before any tab is live — commit never runs then.)
+    // complete picture of what was on screen: which tab, which app, which route
+    // — and which app INSTANCE those ids belong to, so a later cold boot can
+    // tell whether they name its own state or a foreign one.
+    // (Absent only pre-mount, before any tab is live — commit never runs then;
+    // an unstamped entry stays verbatim rather than carrying half a snapshot.)
     const composite: CompositeState = focused
-      ? { ...state, tabId: focused.tabId, appId: focused.appId }
+      ? stampAppInstance({
+          ...state,
+          tabId: focused.tabId,
+          appId: focused.appId,
+        })
       : state;
     const method = mode === "replace" ? "replaceState" : "pushState";
     window.history[method](composite, "", url);
@@ -111,11 +132,26 @@ export function makeShellHistoryAdapter(deps: ShellHistoryDeps): HistoryAdapter 
     // stamp the first composite entry. Nothing to restore.
     if (!focused) return;
 
+    // 1. FOREIGN-INSTANCE entry: the snapshot names an app instance that is not
+    //    the one running here, so its `tabId` addresses a tab set this document
+    //    never had — trusting it would refocus/rebuild against an id that means
+    //    nothing here. Same-document popstate can only reach entries this
+    //    instance itself wrote, so in normal operation this never fires; it
+    //    guards the genuinely weird (a duplicated tab, an engine replaying a
+    //    foreign entry into a live document). Degrade into the URL-reparse
+    //    branch below rather than throwing — this runs inside a user-facing
+    //    popstate handler, where the URL is always a usable second source.
+    const entryInstance = readAppInstance(raw);
+    const foreignInstance =
+      entryInstance !== undefined && entryInstance !== getAppInstanceId();
+
     // 2. Legacy / `{}` entry: no snapshot was stamped — a pre-deploy history
     //    entry, or apps-layout's canonicalization redirect wrote `{}`. Fall back
     //    to URL reparsing: resolve the app that owns the current URL and
-    //    reconcile the focused tab to it in place (no history write).
-    if (!raw.tabId || !raw.appId) {
+    //    reconcile the focused tab to it in place (no history write). A foreign
+    //    entry takes the same path, for the same reason: the URL is the only
+    //    part of it this instance can trust.
+    if (!raw.tabId || !raw.appId || foreignInstance) {
       const resolved = resolveAppForPath(window.location.pathname, deps.apps());
       const appId = resolved?.app.id ?? focused.appId;
       if (appId !== focused.appId) deps.rebuildAppInPlace(focused.tabId, appId);

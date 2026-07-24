@@ -135,6 +135,9 @@ last desktop creates a new one; moving before the first clamps).
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
+    - `primitives/app-instance.appInstanceKey`
+    - `primitives/app-instance.legacyInstanceKey`
+    - `primitives/app-instance.mayAdoptLegacyPayload`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -161,7 +164,6 @@ last desktop creates a new one; moving before the first clamps).
     - `primitives/shortcuts.defineShortcut`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/shortcuts.getFocusedSurfaceId`
-    - `primitives/tab-id.getTabId`
     - `primitives/tooltip.WithTooltip`
     - `ui/tab-bar.Tab`
     - `ui/tab-bar.TabIcon`
