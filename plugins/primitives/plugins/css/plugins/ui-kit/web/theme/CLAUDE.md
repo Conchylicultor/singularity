@@ -36,6 +36,41 @@ owner of every `--token`.
 - **Plugins consume tokens, never define them.** Plugin CSS files may reference `var(--background)` etc. but must not set `--background:` or any other theme variable. This rule is now **machine-enforced** by the `css-vars-single-owner` check: every token-group var must have exactly one declaring owner (its token group), so re-declaring one in static CSS — here or in any plugin — fails the build (declarations inside `@theme`/`@theme inline` are excluded, being Tailwind's lower-precedence utility layer).
 - **No plugin-level theming.** Themes are controlled globally. Plugins must not define their own theme overrides, color schemes, or mode-specific (`.dark`) custom property blocks. If a plugin needs a new token, add it to the relevant token group's descriptor.
 
+## Surface-relative helper vars (`--chrome-mask`, `--hover-fill`)
+
+Two vars are **derived helpers**, not token-group tokens: they hold no value of
+their own, they *follow the surface* a component was dropped into. Every surface
+co-publishes both — see the `:root, [data-theme-scope]` defaults here,
+`SURFACE_LEVELS` (per elevation role), and the app-shell sidebar wrapper.
+
+| var | utility | means |
+|---|---|---|
+| `--chrome-mask` | `bg-chrome-mask` | *my background*, for a sticky bar painting **over** me |
+| `--hover-fill` | `bg-hover-fill` | *a visible step off my background*, for a control highlighting **inside** me |
+
+`--hover-fill` exists because a **transparent** control has no surface of its own:
+`Button variant="ghost"` used to hover to the fixed `bg-muted`, which is
+calibrated against the page canvas (`--background`). Dropped in a sidebar, where
+`--sidebar` (0.965) and `--muted` (0.97) are the same tone, the hover painted the
+surface color onto itself and read as *no hover at all* — while the
+`SidebarMenuButton` beside it (correctly hovering to `--sidebar-accent`) lit up,
+so one row highlighted in two different ways. Following `--hover-fill` makes the
+two identical **by construction** rather than by matching hardcoded classes.
+
+Consequences when adding either:
+
+- **Publish both together.** A new tinted surface that sets a background and
+  neither var inherits the *enclosing* surface's — the hover/mask silently
+  belongs to the wrong plane.
+- **Re-declare at the scope root.** Both are custom properties, and
+  custom-property inheritance passes the **computed** value: anchored on `:root`
+  alone, a forked app's `[data-theme-scope]` subtree inherits the desktop
+  preset's resolved color and ignores its own. Hence `:root, [data-theme-scope]`.
+  The `inherited-theme-defaults-scoped` check enforces this.
+- **Only transparent variants follow the surface.** `default`/`outline`/
+  `secondary`/`destructive` paint their own background, so their hover is
+  relative to *themselves* and correctly stays a fixed token.
+
 ## Adding a custom `@utility` (the twMerge marker)
 
 `app.css` is the **single source of truth** for every custom `@utility` AND for how

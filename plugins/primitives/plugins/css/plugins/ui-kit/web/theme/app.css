@@ -76,6 +76,16 @@
        default + Surface roles + the app-shell sidebar), so a sticky header masks
        with the surface it floats over instead of a hardcoded `--background`. */
     --color-chrome-mask: var(--chrome-mask);
+    /* The transient-hover fill — the tone a hover/highlight paints ON the
+       current surface. `bg-hover-fill` resolves to `--hover-fill`, which every
+       surface co-publishes as a visible step off its OWN background (see `:root`
+       default + Surface roles + the app-shell sidebar), exactly as
+       `--chrome-mask` co-publishes the background itself. A transparent control
+       (`Button variant="ghost"`) therefore highlights against whatever it was
+       dropped into, instead of against a hardcoded `--muted` calibrated for the
+       page canvas — which on the sidebar (`--sidebar` 0.965 vs `--muted` 0.97)
+       landed on the surface color and read as no hover at all. */
+    --color-hover-fill: var(--hover-fill);
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-border: var(--sidebar-border);
@@ -440,6 +450,16 @@
        a scoped app theme). Re-declaring here re-reads `var(--background)` inside
        each scope. Guarded by `inherited-theme-defaults-scoped`. */
     --chrome-mask: var(--background);
+    /* Transient-hover fill default = the canvas hover tone (`--muted`), which is
+       what every ghost control already hovered to. Surface roles + the app-shell
+       sidebar override it per-subtree with a step off THEIR background. Same
+       DERIVED-helper status as `--chrome-mask` above, so it MUST be re-declared
+       at every theme-scope root for the identical reason: custom-property
+       inheritance passes the computed color, so anchored on `:root` alone a
+       forked app's `[data-theme-scope]` subtree would hover to the desktop
+       preset's `--muted` and ignore its own. Guarded by
+       `inherited-theme-defaults-scoped`. */
+    --hover-fill: var(--muted);
     }
   body {
     @apply bg-background;

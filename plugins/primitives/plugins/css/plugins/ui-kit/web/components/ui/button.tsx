@@ -23,8 +23,19 @@ const buttonVariants = cva(
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+        // Ghost is the ONE transparent variant — it has no background of its
+        // own, so its hover tone belongs to the surface it was dropped into, not
+        // to the page canvas. `bg-hover-fill` follows `--hover-fill`, which every
+        // surface co-publishes (see `SURFACE_LEVELS` / the app-shell sidebar);
+        // it defaults to `--muted`, so on the canvas this is byte-identical to
+        // the `bg-muted` it replaces. The former `dark:hover:bg-muted/50` is
+        // deliberately gone: that half-strength dark hover made ghost the only
+        // control that highlighted weaker than the menu items and sidebar rows
+        // beside it — the same inconsistency this token exists to remove.
+        // The other variants paint their own background, so their hover is
+        // relative to THEMSELVES and correctly stays a fixed token.
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "hover:bg-hover-fill hover:text-foreground aria-expanded:bg-hover-fill aria-expanded:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",

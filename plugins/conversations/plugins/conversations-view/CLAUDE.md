@@ -18,6 +18,7 @@
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.SidebarMenu`

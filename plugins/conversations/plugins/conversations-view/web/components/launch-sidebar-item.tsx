@@ -1,4 +1,5 @@
 import {
+  ButtonGroup,
   DropdownMenu,
   DropdownMenuTrigger,
   SidebarMenu,
@@ -17,12 +18,27 @@ import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/co
 import { useDefaultModel } from "@plugins/conversations/plugins/model-provider/web";
 
 /**
- * The new-conversation launch control as a sidebar nav row, built from the SAME
- * `SidebarMenuButton` chrome as the nav links — identical height, font, icon
- * sizing, and hover by construction. The button (the flexible cell) opens the
- * shared model menu; the rigid trailing `IconButton` (auto-pending while the
- * launch promise is in flight) launches the current default model. Real tracks,
- * never an absolute trailing affordance.
+ * The new-conversation launch control as a sidebar nav row: the same split
+ * `[ model dropdown | launch ]` shape as the shared `LaunchControl`, but built
+ * from `SidebarMenuButton` chrome so it matches the nav links beside it —
+ * identical height, font, icon sizing, and hover by construction. (Rendering
+ * `LaunchControl` here would import the page-canvas `Button` density and
+ * typography into the nav rail, which is why the composition is local; the
+ * launch *behavior* and the model menu still come from the primitive, via
+ * `useLaunchConversation` + `LaunchModelMenuContent`.)
+ *
+ * `ButtonGroup` is what makes the two halves read as ONE split control rather
+ * than two adjacent buttons: it squares the inner corners and collapses the
+ * doubled border into a single seam, exactly as it does for `LaunchControl`. It
+ * is a pure layout primitive — it neither clones children nor injects props, so
+ * a `SidebarMenuButton` (via the dropdown trigger's `render`) and an
+ * `IconButton` are both valid direct children; each renders exactly one DOM
+ * element, which is what the `[&>*:not(:first-child)]` seam selectors need.
+ *
+ * `Line` stays as the outer container for its `whitespace-nowrap`: the shadcn
+ * `SidebarMenuButton` carries `overflow-hidden` WITHOUT it, so on a narrow rail
+ * the label would wrap to a second line and the clip would hide the overflow
+ * rather than the wrap (the exact trap `no-clip-without-nowrap` describes).
  */
 export function LaunchSidebarItem() {
   const { launch, launching } = useLaunchConversation({});
@@ -33,7 +49,7 @@ export function LaunchSidebarItem() {
     <SidebarMenu className="px-sm">
       <SidebarMenuItem>
         <Line>
-          <Fill>
+          <ButtonGroup className="w-full">
             <DropdownMenu>
               <DropdownMenuTrigger render={<SidebarMenuButton />}>
                 <MdAdd />
@@ -43,14 +59,18 @@ export function LaunchSidebarItem() {
               </DropdownMenuTrigger>
               <LaunchModelMenuContent launch={launch} />
             </DropdownMenu>
-          </Fill>
-          <IconButton
-            icon={MdPlayArrow}
-            label={`Launch ${label}`}
-            variant="ghost"
-            disabled={launching !== null}
-            onClick={() => launch(defaultModel)}
-          />
+            <IconButton
+              icon={MdPlayArrow}
+              label={`Launch ${label}`}
+              variant="ghost"
+              disabled={launching !== null}
+              onClick={() => launch(defaultModel)}
+              // Match the sidebar nav rows' `rounded-md`; `Button`'s own base is
+              // `rounded-lg`, which would leave the group's two outer corners at
+              // different radii.
+              className="rounded-md"
+            />
+          </ButtonGroup>
         </Line>
       </SidebarMenuItem>
     </SidebarMenu>

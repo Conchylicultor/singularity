@@ -218,6 +218,14 @@ export function AppShellLayout({
     // One place covers every framing (flush/floating/inset), which all render
     // the shadcn `bg-sidebar` surface. `display:contents` keeps this wrapper out
     // of the sidebar's flex layout — it only carries the inherited var.
+    // It likewise publishes `--sidebar-accent` as `--hover-fill`, the tone a
+    // transient hover paints on this surface. `SidebarMenuButton` already
+    // hovers to `--sidebar-accent`; a ghost `Button`/`IconButton` hovers to
+    // `bg-hover-fill`, which now resolves to the SAME tone — so the two halves
+    // of a mixed row (e.g. the launch row's model dropdown + its play button)
+    // highlight identically by construction instead of one silently landing on
+    // the page-canvas `--muted`, which sits on top of `--sidebar` and reads as
+    // no hover at all.
     // The sidebar also publishes the pane-gutter rail as its own `--space-sm`
     // inset (instead of the pane-header default `--chrome-pad-x`), so any
     // DataView rendered in a sidebar sits on the sidebar's pill rail: band
@@ -229,6 +237,7 @@ export function AppShellLayout({
         {
           display: "contents",
           "--chrome-mask": "var(--sidebar)",
+          "--hover-fill": "var(--sidebar-accent)",
           [PANE_GUTTER_VAR]: "var(--space-sm)",
         } as React.CSSProperties
       }
