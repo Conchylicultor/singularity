@@ -1,7 +1,7 @@
 import { cp, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
-import { listActiveConversations } from "@plugins/tasks/plugins/tasks-core/server";
+import { listRetainedConversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { transcriptsSourceConfig } from "../../shared/config";
@@ -18,7 +18,10 @@ export async function assembleTranscripts(
   let count = 0;
   let files = 0;
   let sizeBytes = 0;
-  for (const conv of await listActiveConversations()) {
+  // Same retention scope the transcript-touch job keeps alive on disk (active,
+  // plus every conversation of a held task): a backup that omitted held work
+  // would restore a machine whose parked tasks have lost their history.
+  for (const conv of await listRetainedConversations()) {
     // A conversation spans its whole session chain; backing up only the live tail
     // would lose every earlier segment. Chain files are distinct `<sessionId>.jsonl`
     // names, so flattening them into `dir` by basename cannot collide.

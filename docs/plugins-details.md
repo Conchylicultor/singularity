@@ -5704,7 +5704,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `infra/paths.SINGULARITY_DIR`
-        - **`transcripts`** — Config UI for the transcripts backup source. Backs up active-conversation transcripts into the backup archive.
+        - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister`
             - Uses: `config_v2.ConfigV2`
@@ -5717,7 +5717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-              - `tasks/tasks-core.listActiveConversations`
+              - `tasks/tasks-core.listRetainedConversations`
     - **`targets`** — Umbrella for pluggable backup targets, each a self-gating sub-plugin contributing a BackupTarget.
       - Plugins:
         - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
@@ -9418,13 +9418,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/conversations/:id/transcript`
       - Shared:
         - Exports (values): `getConversationTranscript`
-    - **`transcript-retention`** — Keeps active conversations' Claude session JSONL alive by refreshing their mtime daily, so Claude Code's cleanupPeriodDays sweep never deletes a live transcript.
+    - **`transcript-retention`** — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes a transcript the user can still come back to.
       - Server:
         - Uses:
           - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
           - `infra/jobs.defineJob`
           - `primitives/log-channels.Log`
-          - `tasks/tasks-core.listActiveConversations`
+          - `tasks/tasks-core.listRetainedConversations`
         - Register: `defineJob('conversations.transcript-touch')`
     - **`transcript-watcher`** — Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
       - Server:
@@ -25665,6 +25665,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listPushesByPushId`
           - `listPushesForAttempt`
           - `listPushShasIn`
+          - `listRetainedConversations`
           - `listTasks`
           - `markConversationClosed`
           - `markConversationGone`

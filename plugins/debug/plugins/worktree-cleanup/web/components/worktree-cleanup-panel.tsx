@@ -236,7 +236,7 @@ export function WorktreeCleanupPanel() {
 
       {/* Automatic-reaper policy note */}
       <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground border-b">
-        Orphaned forks, config dirs, and gateway registry entries are reclaimed hourly; worktrees are deleted automatically after 30 days. Use the controls below to reap early.
+        Orphaned forks, config dirs, and gateway registry entries are reclaimed hourly; worktrees are deleted automatically after 90 days. Use the controls below to reap early.
       </Text>
 
       {/* Bulk result banner */}

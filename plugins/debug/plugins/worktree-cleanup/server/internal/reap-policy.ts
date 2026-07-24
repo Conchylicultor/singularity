@@ -10,7 +10,13 @@ import {
 import { dirExists } from "./reap";
 import { getGitHygiene, isSafeToReap, isTaskDeletable } from "./safety";
 
-export const AUTO_REAP_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// Abandonment backstop. Deliberately status-agnostic: it fires even for a task
+// the 72h clean path refuses to touch (held, in-progress, dirty, unpushed), so
+// nothing can pin a worktree on disk forever. 90 days rather than 30 because a
+// *held* task is parked work the user means to resume — the shorter floor was
+// reaping held worktrees out from under them well before they came back — but a
+// hard cleanup is still a hard cleanup, so the floor is raised, not removed.
+export const AUTO_REAP_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 // Canonical worktree-id shape (attempt id == fork DB name == registry entry
 // name): `att-<epoch>-<suffix>` / `claude-<epoch>-<suffix>`, plus the legacy
@@ -64,7 +70,8 @@ async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
 //   - ORPHAN: worktree dir gone but fork DB still present → drop the DB.
 //   - CLEAN PATH (isSafe @ 72h): dir present, pushed + clean + task done/dropped
 //     + ≥72h old — the hygiene-aware "nothing to lose" set.
-//   - HARD FLOOR (≥30d): abandonment backstop — drop even dirty/unpushed dirs.
+//   - HARD FLOOR (≥90d): abandonment backstop — drop even dirty/unpushed dirs,
+//     and even held tasks, which the clean path deliberately never reaps.
 //   - DB-ONLY ORPHAN: an att-* fork DB with no attempt row and no worktree dir.
 // Active attempts are NEVER reaped. A worktreePath that is not a canonical child
 // of `<root>/.claude/worktrees/` (the main repo root, /tmp, a hand-edited path)

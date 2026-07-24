@@ -29,8 +29,15 @@ export async function getGitHygiene(
   }
 }
 
-// Allowlist of task statuses known to have no live agent session.
-// Intentionally explicit: unknown/future statuses default to not-safe.
+// Allowlist of task statuses known to have no live agent session AND nothing the
+// user still means to come back to. Intentionally explicit: unknown/future
+// statuses default to not-safe.
+//
+// `held` is excluded ON PURPOSE, and is not an oversight to "fix": holding is the
+// user parking work they intend to resume, so its worktree must survive the clean
+// path however long it idles. Only the hard floor in reap-policy (90d) can take a
+// held worktree. The mirror of this rule on the transcript side is
+// `listRetainedConversations` (conversations/transcript-retention).
 const DELETABLE_TASK_STATUSES = new Set([
   "done",
   "dropped",

@@ -154,6 +154,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `listPushesByPushId`
     - `listPushesForAttempt`
     - `listPushShasIn`
+    - `listRetainedConversations`
     - `listTasks`
     - `markConversationClosed`
     - `markConversationGone`

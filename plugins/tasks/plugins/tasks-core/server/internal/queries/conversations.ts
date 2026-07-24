@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _conversations } from "../tables";
+import { _conversations, _tasks } from "../tables";
 import { conversations } from "../views";
 import type { Conversation } from "../schema";
 import { RECENT_GONE_LIMIT } from "../../../core";
@@ -18,10 +18,23 @@ export { RECENT_GONE_LIMIT };
 // other entry point excludes them.
 const notSystem = ne(conversations.kind, "system");
 
+// Conversations of a *held* task, whatever their own status. Holding is the user
+// saying "I am coming back to this", and the canonical "Hold & close" flow closes
+// every conversation on the way — so `active` alone excludes exactly the rows a
+// hold means to preserve. Built per call rather than hoisted to module scope so
+// `db` is never touched at import time.
+function onHeldTask(): SQL {
+  return inArray(
+    conversations.taskId,
+    db.select({ id: _tasks.id }).from(_tasks).where(isNotNull(_tasks.heldAt)),
+  );
+}
+
 type Filters = {
   includeSystem?: boolean;
   onlySystem?: boolean;
   active?: boolean;
+  activeOrHeldTask?: boolean;
   endedAtNotNull?: boolean;
   endedAtBefore?: Date;
   taskIds?: readonly string[];
@@ -33,6 +46,7 @@ function buildWhere(f: Filters): SQL | undefined {
   if (f.onlySystem) clauses.push(eq(conversations.kind, "system"));
   else if (!f.includeSystem) clauses.push(notSystem);
   if (f.active !== undefined) clauses.push(eq(conversations.active, f.active));
+  if (f.activeOrHeldTask) clauses.push(or(eq(conversations.active, true), onHeldTask())!);
   if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
   if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
   if (f.taskIds) clauses.push(inArray(conversations.taskId, [...f.taskIds]));
@@ -108,6 +122,21 @@ export function listConversationsForDisplay(
 // (see ../resources.ts), so this needs no scoped-recompute id parameter.
 export function listActiveConversations(): Promise<Conversation[]> {
   return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
+}
+
+// User-visible rows whose Claude JSONL transcript must be kept alive: every
+// active conversation, PLUS every conversation of a held task regardless of its
+// own status. Read by the transcript-touch job (conversations/transcript-
+// retention), which refreshes each file's mtime so Claude Code's
+// `cleanupPeriodDays` sweep never deletes it — transcripts are the sole source
+// of truth for conversation content, so aging one out erases the history.
+// `listActiveConversations` is the wrong scope there: a held task is parked, not
+// finished, and its conversations are `done` by construction (Hold & close).
+export function listRetainedConversations(): Promise<Conversation[]> {
+  return queryConversations(
+    { activeOrHeldTask: true },
+    { col: conversations.createdAt, dir: "desc" },
+  );
 }
 
 export async function countGoneConversations(): Promise<number> {

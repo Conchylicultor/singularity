@@ -82,7 +82,7 @@
       - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
       - **`secrets`** — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
       - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config, crashes) into the backup archive.
-      - **`transcripts`** — Config UI for the transcripts backup source. Backs up active-conversation transcripts into the backup archive.
+      - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
   - **`targets`** — Umbrella for pluggable backup targets, each a self-gating sub-plugin contributing a BackupTarget.
     - Plugins:
       - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
