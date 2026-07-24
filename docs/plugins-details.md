@@ -576,11 +576,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
             - Uses:
               - `apps/deploy/shell.Deploy`
+              - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/fill.Fill`
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineFieldExtensions`
@@ -588,6 +595,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
+              - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
@@ -596,14 +604,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/row-actions.RowActionButton`
               - `primitives/slot-render.defineRenderSlot`
-            - Exports (types): `Server`
+            - Exports (types):
+              - `Server`
+              - `SshKey`
             - Exports (values):
               - `generateSshKeypair`
+              - `importSshPrivateKey`
               - `NEW_SERVER_ID`
               - `serverDetailPane`
               - `Servers`
               - `serversResource`
               - `serversRootPane`
+              - `SshKeySchema`
           - Server:
             - Contributes: `resource.declare` "deploy.servers"
             - Uses:
@@ -613,6 +625,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/secrets.deleteSecret`
               - `infra/secrets.getSecret`
               - `infra/secrets.hasSecret`
+              - `infra/secrets.listKeysInNamespace`
               - `infra/secrets.setSecret`
             - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
             - Exports (values):
@@ -627,6 +640,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PATCH /api/deploy/servers/:id`
               - `DELETE /api/deploy/servers/:id`
               - `POST /api/deploy/servers/:id/ssh-keypair`
+              - `POST /api/deploy/servers/:id/ssh-keypair/import`
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/health`
@@ -636,7 +650,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `CreateServerBody`
               - `GenerateKeypairBody`
+              - `ImportKeypairBody`
               - `Server`
+              - `SshKey`
               - `UpdateServerBody`
             - Exports (values):
               - `createServer`
@@ -645,9 +661,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `GenerateKeypairBodySchema`
               - `generateSshKeypair`
               - `getServer`
+              - `ImportKeypairBodySchema`
+              - `importSshPrivateKey`
               - `listServers`
               - `ServerSchema`
               - `serversResource`
+              - `SshKeySchema`
               - `updateServer`
               - `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
@@ -666,7 +685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `deployApp`
           - Cross-plugin:
             - Imported by: `apps/deploy/servers`
-        - **`ssh-setup`** — Provider-aware SSH setup for deploy servers: owns the guided <Steps> flow (generate key → the matched provider's install steps → verify the connection) as a collapsible section inline in the server page's SSH area, matching the console URL against the generic SshProvider registry.
+        - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
           - Web:
             - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
             - Contributes: `Servers.SshSetup` "ssh-setup" → `SshSetupSection`
@@ -674,35 +693,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/health.useServerVerified`
               - `apps/deploy/health.VerifyConnectionBody`
               - `apps/deploy/servers.generateSshKeypair`
+              - `apps/deploy/servers.importSshPrivateKey`
               - `apps/deploy/servers.Server`
               - `apps/deploy/servers.Servers`
-              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/collapsible.Collapsible`
+              - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.CollapsibleContent`
+              - `primitives/collapsible.CollapsibleTrigger`
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/imperative-dialog.openDialog`
               - `primitives/section-card.SectionCard`
               - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepCommand`
               - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepLink`
               - `primitives/setup-steps.StepNote`
               - `primitives/setup-steps.Steps`
               - `primitives/setup-steps.StepState`
             - Exports (types):
-              - `SshInstallStep`
+              - `SshConsoleProps`
               - `SshProviderDescriptor`
             - Exports (values): `SshProvider`
           - Cross-plugin:
             - Imported by: `apps/deploy/ssh-setup/hetzner`
           - Plugins:
-            - **`hetzner`** — Hetzner Cloud SSH provider: detects console.hetzner.com console URLs and contributes the two Hetzner-specific install steps (open the web terminal → paste the authorized_keys one-liner) into the shared SSH setup flow.
+            - **`hetzner`** — Hetzner Cloud SSH provider: detects console.hetzner.com console URLs so the SSH setup section can name Hetzner and tell the user how to reach a root shell in its web terminal. Console prose only — the key flow belongs to ssh-setup.
               - Web:
                 - Contributes: `SshProvider` "Hetzner"
                 - Uses:
                   - `apps/deploy/ssh-setup.SshProvider`
-                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/setup-steps.StepCommand`
-                  - `primitives/setup-steps.StepLink`
                   - `primitives/setup-steps.StepNote`
     - **`file-explorer`** — File explorer app.
       - Plugins:
@@ -17846,6 +17877,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useExpandAll`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/ssh-setup`
           - `apps/mail/reading-pane`
           - `apps/workflows/engine`
           - `build`
@@ -17963,6 +17995,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useCopyToClipboard`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/servers`
+          - `apps/deploy/ssh-setup`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/code-block`
@@ -17989,6 +18023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/deploy/ssh-setup`
               - `apps/mail/attachments`
               - `apps/mail/mailbox`
               - `apps/mail/search`
@@ -18420,6 +18455,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/servers`
+              - `apps/deploy/ssh-setup`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -18485,6 +18522,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data`
+              - `apps/deploy/ssh-setup`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
@@ -19017,7 +19055,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
-              - `apps/deploy/ssh-setup/hetzner`
               - `apps/home/shell`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
@@ -19348,7 +19385,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/agent-manager/worktree-switcher`
               - `apps/deploy/health`
-              - `apps/deploy/ssh-setup`
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
@@ -21533,6 +21569,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating/wallpaper`
+          - `apps/deploy/servers`
+          - `apps/deploy/ssh-setup`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/studio/compositions/auto-serve`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.

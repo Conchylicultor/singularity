@@ -31,6 +31,7 @@ same threshold and can't desync in a row.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/deploy/ssh-setup`
     - `apps/mail/attachments`
     - `apps/mail/mailbox`
     - `apps/mail/search`

@@ -54,6 +54,8 @@ The dialog content `render` is responsible for its own panel chrome and a
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
+    - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/compositions/auto-serve`
 

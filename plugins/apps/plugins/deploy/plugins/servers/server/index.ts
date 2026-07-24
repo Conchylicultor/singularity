@@ -6,6 +6,8 @@ import { handleCreate } from "./internal/handle-create";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
 import { handleGenerateKeypair } from "./internal/handle-generate-keypair";
+import { handleImportKeypair } from "./internal/handle-import-keypair";
+import { backfillSshPublicKeys } from "./internal/backfill-ssh-public-keys";
 import { serversResource } from "./internal/resources";
 import {
   listServers,
@@ -14,6 +16,7 @@ import {
   updateServer,
   deleteServer,
   generateSshKeypair,
+  importSshPrivateKey,
 } from "../shared/endpoints";
 
 export { _deployServers } from "./internal/tables";
@@ -29,6 +32,10 @@ export default {
     [updateServer.route]: handleUpdate,
     [deleteServer.route]: handleDelete,
     [generateSshKeypair.route]: handleGenerateKeypair,
+    [importSshPrivateKey.route]: handleImportKeypair,
   },
   contributions: [Resource.Declare(serversResource)],
+  onReady: async () => {
+    await backfillSshPublicKeys();
+  },
 } satisfies ServerPluginDefinition;

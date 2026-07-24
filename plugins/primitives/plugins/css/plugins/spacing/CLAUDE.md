@@ -110,7 +110,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
-    - `apps/deploy/ssh-setup/hetzner`
     - `apps/home/shell`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`

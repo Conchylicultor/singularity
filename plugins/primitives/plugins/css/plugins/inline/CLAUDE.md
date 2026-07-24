@@ -54,6 +54,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/mail/sync-status`

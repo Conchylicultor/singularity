@@ -5,10 +5,10 @@ import type { Server } from "../shared";
 
 export const Servers = {
   /**
-   * Inline extension point in the SSH area of the server page, rendered just
-   * above the private-key paste field — for setup assistance that must sit
-   * next to the fields it concerns (unlike `Deploy.Section`, which renders as
-   * separate cards below the whole form).
+   * The SSH area of the server page. Its contributor owns the whole key flow
+   * (there is no separate paste field beside it), which is why it renders
+   * inline with the fields it concerns rather than as a card below the form
+   * like `Deploy.Section`.
    */
   SshSetup: defineRenderSlot<{
     order: number;

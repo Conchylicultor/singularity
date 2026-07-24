@@ -13,6 +13,8 @@
     - `useCopyToClipboard`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/code-block`

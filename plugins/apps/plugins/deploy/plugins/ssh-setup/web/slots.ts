@@ -1,23 +1,9 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 
-/**
- * One provider-specific step of the install flow. Generating the key and
- * verifying the connection are generic and owned by the section itself — a
- * provider only ever describes how to get the public key onto its machines, so
- * a new provider cannot forget (or re-implement) the shared steps.
- */
-export interface SshInstallStep {
-  title: string;
-  /**
-   * The section mounts this body only once a key exists (a dimmed, bodyless
-   * step still previews what is coming), so `publicKey` is non-null by
-   * construction — no provider has to handle the "no key yet" case. Note this
-   * is a MOUNT gate, not step inertness: an `inert` step still renders its
-   * children, so the guarantee comes from the section not rendering the body.
-   */
-  Body: ComponentType<{ server: Server; publicKey: string }>;
+export interface SshConsoleProps {
+  /** The user the install command must be run as, per the server's row. */
+  sshUser: string;
 }
 
 /**
@@ -33,11 +19,17 @@ export interface SshProviderDescriptor {
   /** Detects this provider from the server's console URL (client-side only). */
   match: (consoleUrl: URL) => boolean;
   /**
-   * The provider's install guidance, rendered between the generic generate and
-   * verify steps. Numbering is owned by the shared `<Steps>` container, so a
-   * provider never knows its own position in the flow.
+   * Provider-specific prose for reaching a root shell in THIS provider's
+   * console — and nothing else.
+   *
+   * A provider contributes NO key handling: generate / paste / fingerprint /
+   * install / verify / replace belong to the collection, so they exist
+   * identically for every server, including ones whose console URL is empty,
+   * unparsable, or matches no provider at all. The collection also owns every
+   * `<Step>` shell (`Steps` injects `number`/`isLast` onto its direct
+   * children), so a provider supplies a step *body*, never a step.
    */
-  installSteps: SshInstallStep[];
+  ConsoleInstructions: ComponentType<SshConsoleProps>;
 }
 
 /** Registry slot (mirrors `Auth.Provider`): descriptor lookup, not a render list. */

@@ -63,6 +63,7 @@ element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
     - `useExpandAll`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
     - `apps/workflows/engine`
     - `build`

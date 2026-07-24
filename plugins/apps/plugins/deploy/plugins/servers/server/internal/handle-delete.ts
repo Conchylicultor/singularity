@@ -4,6 +4,7 @@ import { deleteSecret } from "@plugins/infra/plugins/secrets/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
+import { SSH_SECRET_NAMESPACE } from "./ssh-secret";
 
 export const handleDelete = implement(deleteServer, async ({ params }) => {
   const [row] = await db
@@ -12,5 +13,5 @@ export const handleDelete = implement(deleteServer, async ({ params }) => {
     .returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
-  await deleteSecret({ namespace: "deploy-ssh", key: params.id });
+  await deleteSecret({ namespace: SSH_SECRET_NAMESPACE, key: params.id });
 });

@@ -8,11 +8,15 @@ import { SshFailureKindSchema } from "@plugins/infra/plugins/ssh/core";
  *
  * `checkedPublicKey` is `deploy_servers.ssh_public_key` **as of the check**, and
  * it is what makes "verified" exact without any cross-plugin write: the setup
- * step is done iff `ok && checkedPublicKey === server.sshPublicKey`. Regenerate
- * the key and `sshPublicKey` changes, the comparison fails, and the verify step
- * drops back to `active` on its own — `health` never has to be told, and
- * `servers` never has to import `health` to invalidate it. A manually pasted key
- * leaves both sides `null`, which compares equal, so that path verifies normally.
+ * step is done iff `ok && checkedPublicKey === server.sshKey?.publicKey`.
+ * Replace the key and that line changes, the comparison fails, and the verify
+ * step drops back to `active` on its own — `health` never has to be told, and
+ * `servers` never has to import `health` to invalidate it.
+ *
+ * The column is the same string `servers` projects into `sshKey.publicKey`, so
+ * the two sides are comparable by construction. A pasted key is no longer an
+ * exception: `servers` derives its public half at the door, so it too carries a
+ * real line here rather than a `null` that compares equal to everything.
  */
 export const ServerHealthRowSchema = z.object({
   parentId: z.string(),

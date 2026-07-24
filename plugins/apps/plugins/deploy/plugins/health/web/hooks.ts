@@ -26,12 +26,19 @@ export function useServerHealth(serverId: string): ServerHealthRow | undefined {
  * succeeded AND it was run against the key the server carries right now.
  *
  * The second half is what makes this exact with no cross-plugin write —
- * regenerating the key changes `sshPublicKey`, the comparison fails, and every
+ * replacing the key changes `sshKey.publicKey`, the comparison fails, and every
  * consumer (the verify step, the setup flow) drops back to unverified on its
- * own. Both `null` (a manually pasted key, which stores no public half)
- * compares equal, so that path verifies normally too.
+ * own.
+ *
+ * A server we hold no *identifiable* key for (`sshKey === null`) compares its
+ * `null` against whatever the probe recorded: a probe that ran against a real
+ * key is correctly no longer proof, and a probe that also recorded `null` (a
+ * pre-`sshKey` row) compares equal, which is the honest reading — the same key
+ * is still installed, we just can't name it.
  */
 export function useServerVerified(server: Server): boolean {
   const row = useServerHealth(server.id);
-  return !!row && row.ok && row.checkedPublicKey === server.sshPublicKey;
+  return (
+    !!row && row.ok && row.checkedPublicKey === (server.sshKey?.publicKey ?? null)
+  );
 }

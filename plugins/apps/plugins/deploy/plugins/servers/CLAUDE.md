@@ -18,11 +18,18 @@
     - `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
   - Uses:
     - `apps/deploy/shell.Deploy`
+    - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpointMutation`
+    - `primitives/copy-to-clipboard.CopyButton`
+    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.DialogDescription`
+    - `primitives/css/ui-kit.DialogTitle`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineFieldExtensions`
@@ -30,6 +37,7 @@
     - `primitives/data-view.FieldDef`
     - `primitives/editable-field.EditableField`
     - `primitives/editable-field.useEditableField`
+    - `primitives/imperative-dialog.openDialog`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
@@ -38,14 +46,18 @@
     - `primitives/pane.useOpenPane`
     - `primitives/row-actions.RowActionButton`
     - `primitives/slot-render.defineRenderSlot`
-  - Exports (types): `Server`
+  - Exports (types):
+    - `Server`
+    - `SshKey`
   - Exports (values):
     - `generateSshKeypair`
+    - `importSshPrivateKey`
     - `NEW_SERVER_ID`
     - `serverDetailPane`
     - `Servers`
     - `serversResource`
     - `serversRootPane`
+    - `SshKeySchema`
 - Server:
   - Contributes: `resource.declare` "deploy.servers"
   - Uses:
@@ -55,6 +67,7 @@
     - `infra/secrets.deleteSecret`
     - `infra/secrets.getSecret`
     - `infra/secrets.hasSecret`
+    - `infra/secrets.listKeysInNamespace`
     - `infra/secrets.setSecret`
   - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
   - Exports (values):
@@ -69,6 +82,7 @@
     - `PATCH /api/deploy/servers/:id`
     - `DELETE /api/deploy/servers/:id`
     - `POST /api/deploy/servers/:id/ssh-keypair`
+    - `POST /api/deploy/servers/:id/ssh-keypair/import`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/health`
@@ -78,7 +92,9 @@
   - Exports (types):
     - `CreateServerBody`
     - `GenerateKeypairBody`
+    - `ImportKeypairBody`
     - `Server`
+    - `SshKey`
     - `UpdateServerBody`
   - Exports (values):
     - `createServer`
@@ -87,9 +103,12 @@
     - `GenerateKeypairBodySchema`
     - `generateSshKeypair`
     - `getServer`
+    - `ImportKeypairBodySchema`
+    - `importSshPrivateKey`
     - `listServers`
     - `ServerSchema`
     - `serversResource`
+    - `SshKeySchema`
     - `updateServer`
     - `UpdateServerBodySchema`
 

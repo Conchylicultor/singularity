@@ -1,18 +1,23 @@
-import { useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  useEndpointMutation,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
 import type { Server } from "../../shared";
 import {
   updateServer,
   deleteServer,
   type UpdateServerBody,
 } from "../../shared/endpoints";
-import { FieldShell, fieldInputClass, fieldTextareaClass } from "./server-fields";
+import { FieldShell, fieldInputClass } from "./server-fields";
+import { DeleteServerDialog } from "./delete-server-dialog";
 import { Servers } from "../slots";
 
 /** Wire an EditableField to a text input / textarea. */
@@ -68,9 +73,29 @@ export function ServerEditForm({ server }: { server: Server }) {
     onSave: (v) => save({ consoleUrl: v || null }),
   });
 
-  async function handleDelete() {
-    if (!confirm(`Delete server "${server.name}"?`)) return;
-    await fetchEndpoint(deleteServer, { id: server.id });
+  const remove = useEndpointMutation(deleteServer);
+
+  function handleDelete() {
+    // Fire-and-forget: don't return the openDialog promise, or the button would
+    // auto-pend for the dialog's whole open lifetime. `loading={…isPending}`
+    // reflects the actual delete instead.
+    void openDialog((close) => (
+      <DeleteServerDialog
+        server={server}
+        onCancel={close}
+        onConfirm={() =>
+          remove
+            .mutateAsync({ params: { id: server.id } })
+            .then(() => close())
+            .catch((err: unknown) => {
+              // Expected delete failure — the global toast already reported it;
+              // keep the dialog open so the user can retry or cancel.
+              if (err instanceof EndpointError) return;
+              throw err;
+            })
+        }
+      />
+    ));
   }
 
   return (
@@ -85,6 +110,7 @@ export function ServerEditForm({ server }: { server: Server }) {
         </Stack>
         <Button
           variant="link"
+          loading={remove.isPending}
           onClick={handleDelete}
           className="text-destructive hover:text-destructive"
         >
@@ -116,56 +142,12 @@ export function ServerEditForm({ server }: { server: Server }) {
           {...fieldProps(consoleUrl)}
         />
       </FieldShell>
+      {/* Everything SSH-key-shaped lives in this slot. There is deliberately no
+          standalone paste field beside it: two write paths for one secret is
+          how the status and the box came to contradict each other. */}
       <Servers.SshSetup.Render>
         {(s) => <s.component server={server} />}
       </Servers.SshSetup.Render>
-      <SshKeyField server={server} />
     </Stack>
-  );
-}
-
-/**
- * Write-only SSH key field. The stored key is a secret and never read back, so
- * this shows only the configured/not-set status and saves a pasted key on blur
- * (clearing the box on success). An empty box is a no-op — it never wipes the
- * stored key.
- */
-function SshKeyField({ server }: { server: Server }) {
-  const [key, setKey] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function save() {
-    if (!key || saving) return;
-    setSaving(true);
-    try {
-      await fetchEndpoint(updateServer, { id: server.id }, { body: { sshPrivateKey: key } });
-      setKey("");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <FieldShell
-      label="SSH Private Key"
-      hint={
-        <>
-          <span className={server.sshKeyConfigured ? "text-success" : "text-warning"}>
-            {server.sshKeyConfigured ? "Configured" : "Not set"}
-          </span>
-          {" — paste a key manually to " +
-            (server.sshKeyConfigured ? "replace it." : "set it.")}
-        </>
-      }
-    >
-      <textarea
-        className={fieldTextareaClass}
-        rows={5}
-        placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-        value={key}
-        onChange={(e) => setKey(e.target.value)}
-        onBlur={() => void save()}
-      />
-    </FieldShell>
   );
 }

@@ -42,6 +42,8 @@ composes last.
     - `fillClasses`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/servers`
+    - `apps/deploy/ssh-setup`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

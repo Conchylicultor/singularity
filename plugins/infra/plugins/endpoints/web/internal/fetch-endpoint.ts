@@ -14,6 +14,11 @@ export class EndpointError extends Error {
 export function getEndpointErrorMessage(error: unknown): string {
   if (error instanceof EndpointError) {
     const { body } = error;
+    // `HttpError` serializes as `new Response(err.message)` — plain text — and
+    // `fetchEndpoint` falls back to `res.text()`, so its message arrives here
+    // as a string. Without this branch every one of those messages was
+    // discarded in favour of `EndpointError`'s hardcoded `HTTP <status>`.
+    if (typeof body === "string" && body.trim()) return body;
     if (
       body &&
       typeof body === "object" &&
@@ -99,12 +104,22 @@ export async function fetchEndpoint<
   });
 
   if (!res.ok) {
-    let errorBody: unknown;
-    try {
-      errorBody = await res.json();
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      errorBody = await res.text().catch(() => null);
+    // Read the body ONCE, as text, then upgrade to JSON if it parses.
+    //
+    // The reverse order silently destroys plain-text errors: `res.json()`
+    // disturbs the body, so the `res.text()` in its catch throws "Body already
+    // used" and yields null. Every `HttpError(400, "…")` in the repo — which
+    // serializes as plain text — therefore arrived here as a null body and was
+    // rendered as the useless "HTTP 400".
+    const rawBody = await res.text().catch(() => null);
+    let errorBody: unknown = rawBody;
+    if (rawBody) {
+      try {
+        errorBody = JSON.parse(rawBody);
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
+        // Not JSON — keep the text, which is exactly what HttpError sends.
+      }
     }
     if (opts?.report !== false) {
       endpointErrorSink.emit({ route: endpoint.route, status: res.status, body: errorBody });

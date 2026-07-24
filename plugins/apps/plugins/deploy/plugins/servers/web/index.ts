@@ -8,8 +8,13 @@ import {
 
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
 export { Servers } from "./slots";
-export { serversResource, generateSshKeypair } from "../shared";
-export type { Server } from "../shared";
+export {
+  serversResource,
+  generateSshKeypair,
+  importSshPrivateKey,
+  SshKeySchema,
+} from "../shared";
+export type { Server, SshKey } from "../shared";
 
 export default {
   description: "Server registry for the deployment platform.",

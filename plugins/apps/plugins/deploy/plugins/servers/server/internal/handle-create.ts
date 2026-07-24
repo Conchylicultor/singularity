@@ -1,14 +1,27 @@
 import { db } from "@plugins/database/server";
-import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
+import { toServer } from "./project-server";
+import { derivePublicKey } from "./ssh-keygen";
+import { rejectInvalidKey } from "./ssh-key-error";
+import { storeSshKey } from "./store-ssh-key";
 
 export const handleCreate = implement(createServer, async ({ body }) => {
   if (!body.host) {
     throw new HttpError(400, "host is required");
   }
   const id = `srv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  // Derive BEFORE the insert, so a key the user got wrong is a 400 and not a
+  // half-created server. The id is minted up front because the derived line
+  // carries it as the authorized_keys comment.
+  const publicKey = body.sshPrivateKey
+    ? await derivePublicKey(body.sshPrivateKey, `singularity-deploy-${id}`).catch(
+        rejectInvalidKey,
+      )
+    : undefined;
+
   const [row] = await db
     .insert(_deployServers)
     .values({
@@ -21,13 +34,9 @@ export const handleCreate = implement(createServer, async ({ body }) => {
     })
     .returning();
   if (!row) throw new HttpError(500, "insert returned no row");
-  if (body.sshPrivateKey) {
-    await setSecret({ namespace: "deploy-ssh", key: id }, body.sshPrivateKey);
+
+  if (body.sshPrivateKey && publicKey) {
+    return toServer(await storeSshKey(id, { privateKey: body.sshPrivateKey, publicKey }));
   }
-  return {
-    ...row,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    sshKeyConfigured: !!body.sshPrivateKey,
-  };
+  return toServer(row);
 });

@@ -30,7 +30,6 @@ no-provider default is `md`.
     - `apps/agent-manager/welcome`
     - `apps/agent-manager/worktree-switcher`
     - `apps/deploy/health`
-    - `apps/deploy/ssh-setup`
     - `apps/mail/search`
     - `apps/mail/sync-status`
     - `apps/studio/compositions/release`

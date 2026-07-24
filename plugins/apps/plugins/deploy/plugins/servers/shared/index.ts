@@ -1,5 +1,5 @@
-export type { Server } from "./schemas";
-export { ServerSchema } from "./schemas";
+export type { Server, SshKey } from "./schemas";
+export { ServerSchema, SshKeySchema } from "./schemas";
 export { serversResource } from "./resources";
 export {
   listServers,
@@ -8,12 +8,15 @@ export {
   updateServer,
   deleteServer,
   generateSshKeypair,
+  importSshPrivateKey,
   CreateServerBodySchema,
   UpdateServerBodySchema,
   GenerateKeypairBodySchema,
+  ImportKeypairBodySchema,
 } from "./endpoints";
 export type {
   CreateServerBody,
   UpdateServerBody,
   GenerateKeypairBody,
+  ImportKeypairBody,
 } from "./endpoints";

@@ -2,8 +2,8 @@ import { asc } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { hasSecret } from "@plugins/infra/plugins/secrets/server";
 import { _deployServers } from "./tables";
+import { toServers } from "./project-server";
 import { ServerSchema, type Server } from "../../shared";
 
 export const serversResource = defineResource<Server[]>({
@@ -15,16 +15,6 @@ export const serversResource = defineResource<Server[]>({
       .select()
       .from(_deployServers)
       .orderBy(asc(_deployServers.createdAt));
-    return Promise.all(
-      rows.map(async (r) => ({
-        ...r,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-        sshKeyConfigured: await hasSecret({
-          namespace: "deploy-ssh",
-          key: r.id,
-        }),
-      })),
-    );
+    return toServers(rows);
   },
 });
