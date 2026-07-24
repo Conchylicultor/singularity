@@ -3,6 +3,7 @@ import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 
 export const ConversationModelSchema = z.enum([
   "fable-5",
+  "opus-5",
   "opus-4-8",
   "opus-4-7",
   "opus-4-6",
@@ -12,7 +13,7 @@ export const ConversationModelSchema = z.enum([
 ]);
 export type ConversationModel = z.infer<typeof ConversationModelSchema>;
 
-export const DEFAULT_MODEL: ConversationModel = "opus-4-8";
+export const DEFAULT_MODEL: ConversationModel = "opus-5";
 
 /** Capability tiers, ordered cheap/fast → smart. Drives filter chips and tier resolution. */
 export const MODEL_TIERS = ["haiku", "sonnet", "opus", "fable"] as const;
@@ -31,7 +32,8 @@ export type ModelMeta = {
 
 export const MODEL_REGISTRY: Record<ConversationModel, ModelMeta> = {
   "fable-5": { cliFlag: "claude-fable-5", label: "Fable 5", family: "fable", iconSize: "size-4" },
-  "opus-4-8": { cliFlag: "claude-opus-4-8", label: "Opus 4.8", family: "opus", iconSize: "size-4" },
+  "opus-5": { cliFlag: "claude-opus-5", label: "Opus 5", family: "opus", iconSize: "size-4" },
+  "opus-4-8": { cliFlag: "claude-opus-4-8", label: "Opus 4.8", family: "opus", iconSize: "size-4", defaultHidden: true },
   "opus-4-7": { cliFlag: "claude-opus-4-7", label: "Opus 4.7", family: "opus", iconSize: "size-4", defaultHidden: true },
   "opus-4-6": { cliFlag: "claude-opus-4-6", label: "Opus 4.6", family: "opus", iconSize: "size-4", defaultHidden: true },
   "sonnet-5": { cliFlag: "claude-sonnet-5", label: "Sonnet 5", family: "sonnet", iconSize: "size-3" },
@@ -123,7 +125,7 @@ export function currentModelForTier(tier: ModelTier): ConversationModel {
     case "fable":
       return "fable-5";
     case "opus":
-      return "opus-4-8";
+      return "opus-5";
     case "sonnet":
       return "sonnet-5";
     case "haiku":

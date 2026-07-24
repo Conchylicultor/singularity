@@ -1457,6 +1457,13 @@
       "tag": "20260723_175230_931a20d2__deploy_server_health",
       "hash": "931a20d2",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1784932724000,
+      "tag": "20260724_223844_99be7fcd__default_model_opus_5",
+      "hash": "99be7fcd",
+      "breakpoints": true
     }
   ]
 }
