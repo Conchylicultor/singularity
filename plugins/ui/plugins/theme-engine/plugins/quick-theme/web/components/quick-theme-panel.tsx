@@ -69,8 +69,11 @@ export function QuickThemePanel({
   return (
     <ThemeScopeProvider scopeId={effectiveScopeId}>
       <Stack gap="none">
-        {/* The popover is the scroll owner: sections render at natural height so
-            no picker ends up in a scroller nested inside this one. */}
+        {/* The popover is the scroll owner: sections render at natural height, so
+            the panel's overall length is what scrolls here. The one sanctioned
+            exception is a section whose content is unbounded by nature (the
+            500-entry theme catalog) — it bounds itself so the sections below it
+            stay reachable. */}
         <Scroll axis="y" className="max-h-[60vh]">
           <Inset pad="md">
             <Stack gap="lg">

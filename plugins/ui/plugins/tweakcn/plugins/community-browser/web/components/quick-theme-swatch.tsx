@@ -1,5 +1,6 @@
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import type { CatalogTheme } from "../../shared";
 
@@ -44,7 +45,12 @@ export function QuickThemeSwatch({
         </Stack>
       }
     >
-      {theme.name}
+      {/* A `<Text>` leaf inside the Row's line container, so a long catalog name
+          ("APOTHEOSIS MINT MIDNIGHT") ellipsizes at the card edge instead of
+          bleeding over the neighbouring swatch. */}
+      <Text as="span" variant="caption">
+        {theme.name}
+      </Text>
     </Row>
   );
 }

@@ -1,0 +1,27 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "id": "themes", "name": "Themes", "view": { "type": "gallery" } },
+    {
+      "id": "professional",
+      "name": "Professional",
+      "view": {
+        "type": "gallery",
+        "filter": {
+          "kind": "group",
+          "id": "professional",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "professional-tag",
+              "fieldId": "tags",
+              "operatorId": "contains",
+              "value": "professional"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

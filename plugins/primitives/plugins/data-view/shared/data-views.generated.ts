@@ -47,6 +47,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks-list", pluginId: "tasks.task-list" },
   { id: "tasks-subtree", pluginId: "tasks.task-list" },
   { id: "tweakcn.community-browser", pluginId: "ui.tweakcn.community-browser" },
+  { id: "tweakcn.quick-theme", pluginId: "ui.tweakcn.community-browser" },
   { id: "workflows.definitions", pluginId: "apps.workflows.definitions" },
   { id: "workflows.executions", pluginId: "apps.workflows.executions" },
 ];

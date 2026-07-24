@@ -18769,7 +18769,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `review/config-defaults`
               - `search/quick-find`
-              - `ui/tweakcn/community-browser`
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
@@ -18939,6 +18938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/notifications`
               - `stats/cost`
               - `ui/theme-engine/quick-theme`
+              - `ui/tweakcn/community-browser`
         - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -20397,6 +20397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -20575,6 +20576,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "tasks-list"
           - `ConfigV2.Register` "tasks-subtree"
           - `ConfigV2.Register` "tweakcn.community-browser"
+          - `ConfigV2.Register` "tweakcn.quick-theme"
           - `ConfigV2.Register` "workflows.definitions"
           - `ConfigV2.Register` "workflows.executions"
         - Uses:
@@ -22004,7 +22006,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-draft-form`
           - `tasks/task-events`
           - `tasks/task-list`
-          - `ui/tweakcn/community-browser`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses:
@@ -22847,7 +22848,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/tree`
           - `search/quick-find`
           - `ui/theme-engine/theme-customizer`
-          - `ui/tweakcn/community-browser`
     - **`section-card`** — Titled collapsible card primitive: Card chrome + a SectionHeaderRow trigger (chevron, icon, title, sibling header actions) + an unmounted-while-collapsed body. The sanctioned home for the 'card whose title expands it' shape, so a stack of such cards is uniform by construction.
       - Web:
         - Uses:
@@ -26685,8 +26685,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleTrigger`
               - `primitives/css/card.Card`
               - `primitives/css/grid.Grid`
-              - `primitives/css/placeholder.Placeholder`
               - `primitives/css/row.Row`
+              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
@@ -26694,8 +26694,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
-              - `primitives/loading.Loading`
-              - `primitives/search.SearchInput`
               - `primitives/syntax-highlight.useDarkMode`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useThemeScopeId`

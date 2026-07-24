@@ -1,73 +1,104 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import type { CatalogTheme } from "../../shared";
 import { getCatalog } from "../../core";
 import { useApplyCatalogTheme } from "../internal/use-apply-catalog-theme";
 import { QuickThemeSwatch } from "./quick-theme-swatch";
 
-/** How many swatches the popover shows before asking the user to narrow down. */
-const QUICK_LIMIT = 12;
+const QUICK_THEME_VIEW = defineDataView("tweakcn.quick-theme");
 
 /**
- * The community catalog as a quick picker for the theme popover: type to narrow,
- * click a swatch to apply. Deliberately a bounded head of the matches rather than
- * a scrolling list — the popover already owns one scroller, and a nested one
- * makes a 500-theme catalog feel like a browser instead of a switcher. The
- * pane's full gallery (search, tags, import-by-URL) is one click away.
+ * The community catalog as a quick picker for the theme popover: the same
+ * DataView surface the pane's gallery is, rendered with the compact
+ * `QuickThemeSwatch` card instead of the pane's 64px preview panel. Search,
+ * tag filtering, sort and named views therefore come from the primitive — this
+ * section owns only the rows, the field schema, and the card.
+ *
+ * **Bounded, unlike the pane.** A DataView is natural-height and never owns a
+ * scroller; here that would let a 500-theme catalog push the popover's Variants
+ * section and footer hundreds of rows down. So the picker gets its OWN bounded
+ * scroller: a fixed-height region no matter how large the catalog grows, with
+ * the DataView's toolbar pinning to the top of it and everything below the
+ * section still one glance away. That makes this the deliberate exception to the
+ * panel's "the popover is the single scroll owner" rule — a searchable catalog
+ * is unbounded by nature, so it is the one section that must bound itself.
  */
 export function QuickThemeSection() {
-  const [search, setSearch] = useState("");
   const { data, isLoading } = useEndpoint(getCatalog, {});
+  const themes = data?.themes;
   const { applyingId, applyTheme } = useApplyCatalogTheme();
 
-  const matches = useMemo(() => {
-    const themes = data?.themes ?? [];
-    const q = search.trim().toLowerCase();
-    if (q.length === 0) return themes;
-    return themes.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q)),
-    );
-  }, [data, search]);
+  const rows = useMemo(() => themes ?? [], [themes]);
 
-  const shown = matches.slice(0, QUICK_LIMIT);
-  const overflow = matches.length - shown.length;
+  // Tag options drive the Filter pill's value picker — a closed set derived from
+  // the catalog itself, exactly as the pane's gallery does it.
+  const tagOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of rows) {
+      for (const tag of t.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag]) => ({ value: tag, label: tag }));
+  }, [rows]);
+
+  const fields = useMemo<FieldDef<CatalogTheme>[]>(
+    () => [
+      {
+        id: "name",
+        label: "Name",
+        type: "text",
+        primary: true,
+        value: (t) => t.name,
+      },
+      {
+        id: "tags",
+        label: "Tags",
+        type: "tags",
+        values: (t) => t.tags,
+        options: tagOptions,
+        sortable: false,
+      },
+    ],
+    [tagOptions],
+  );
 
   return (
-    <Stack gap="sm">
-      <SearchInput
-        placeholder="Search themes…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+    <Scroll axis="y" className="max-h-72">
+      <DataView<CatalogTheme>
+        storageKey={QUICK_THEME_VIEW}
+        rows={rows}
+        fields={fields}
+        rowKey={(t) => t.id}
+        views={["gallery"]}
+        defaultView="themes"
+        loading={isLoading}
+        searchAccessor={(t) => `${t.name} ${t.tags.join(" ")}`}
+        emptyState={
+          <Text as="p" variant="body" tone="muted">
+            No themes match your search.
+          </Text>
+        }
+        viewOptions={{
+          gallery: {
+            minCardWidth: 190,
+            renderCard: (t: CatalogTheme) => (
+              <QuickThemeSwatch
+                theme={t}
+                isPending={applyingId === t.id}
+                onApply={() => applyTheme(t.id)}
+              />
+            ),
+          },
+        }}
       />
-      {isLoading ? (
-        <Loading variant="rows" count={4} />
-      ) : shown.length === 0 ? (
-        <Placeholder>No themes match your search.</Placeholder>
-      ) : (
-        <Grid cols={2} gap="xs">
-          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- transient picker chrome inside a popover: a DataView owns a toolbar + sticky header and expects the enclosing pane's single scroller, neither of which exists here. */}
-          {shown.map((t) => (
-            <QuickThemeSwatch
-              key={t.id}
-              theme={t}
-              isPending={applyingId === t.id}
-              onApply={() => applyTheme(t.id)}
-            />
-          ))}
-        </Grid>
-      )}
-      {overflow > 0 && (
-        <Text variant="caption" tone="muted">
-          {overflow} more — refine your search, or open the theme editor.
-        </Text>
-      )}
-    </Stack>
+    </Scroll>
   );
 }

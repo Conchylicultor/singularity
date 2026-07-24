@@ -19,8 +19,8 @@
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
+    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
@@ -28,8 +28,6 @@
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/loading.Loading`
-    - `primitives/search.SearchInput`
     - `primitives/syntax-highlight.useDarkMode`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemeScopeId`
