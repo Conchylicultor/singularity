@@ -322,9 +322,10 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
 
         return (
           <>
-            {/* The toolbar adapts to its own width: the wide inline row below
-                `COMPACT_BREAKPOINT`, the folded compact form (search-icon + `MdTune`
-                options popover, single-view switcher hidden) above it. Each control
+            {/* The toolbar adapts to its own width: the wide inline row above
+                `COMPACT_BREAKPOINT`, the folded single-bar compact form below it
+                (search + sort/filter/fields all inside one `MdTune` options
+                popover, single-view switcher hidden). Each control
                 element is built once and handed to the toolbar, which only relocates
                 it — the sort/filter builder popovers are byte-for-byte identical in
                 either layout. */}

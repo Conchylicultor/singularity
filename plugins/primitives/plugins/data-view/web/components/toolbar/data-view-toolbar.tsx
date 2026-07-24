@@ -1,21 +1,21 @@
-import { useState, type ReactNode, type Ref } from "react";
-import { MdArrowBack, MdSearch } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { type ReactNode, type Ref } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import type { CreateOption } from "../../../core";
 import { CompactControls } from "./compact-controls";
 import { CreatorsControl } from "../creators-control";
 
 /**
- * Below this container width the toolbar folds: search collapses to a magnifier
- * that expands inline, and sort/filter/fields collapse behind one `MdTune`
- * options popover. Sized so the wide layout (search + 3 icon controls + view
- * switcher) only ever renders when it genuinely fits — narrow sidebars and split
- * panes get the compact form automatically, with no per-consumer flag.
+ * Below this container width the toolbar folds: search AND sort/filter/fields
+ * all collapse behind one `MdTune` options popover, leaving a single bar of
+ * [switcher | actions | create | options]. Sized so the wide layout (search + 3
+ * icon controls + view switcher) only ever renders when it genuinely fits —
+ * narrow sidebars and split panes get the compact form automatically, with no
+ * per-consumer flag.
  */
 const COMPACT_BREAKPOINT = 360;
 
@@ -53,9 +53,9 @@ export interface DataViewToolbarProps {
 
 /**
  * The DataView toolbar — a `<Sticky>` header that adapts to its own width. Wide:
- * the full inline row (unchanged). Narrow: the folded compact form. The toolbar
- * measures itself ({@link useElementSize}); the breakpoint switch happens before
- * paint, so there is no wide→compact flash.
+ * the full inline row (unchanged). Narrow: the folded compact form, which is
+ * always exactly ONE bar. The toolbar measures itself ({@link useElementSize});
+ * the breakpoint switch happens before paint, so there is no wide→compact flash.
  */
 export function DataViewToolbar({
   stickyRef,
@@ -72,14 +72,20 @@ export function DataViewToolbar({
   activeControlCount,
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
-  const [searchOpen, setSearchOpen] = useState(false);
   const compact = width > 0 && width < COMPACT_BREAKPOINT;
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. It folds on `compact`.
   const creatorsControl = <CreatorsControl creators={creators} compact={compact} />;
-  // Keep search expanded whenever there's an active query, so the filter stays
-  // visible and clearable even after a blur.
-  const searchExpanded = searchOpen || query.length > 0;
+  const searchInput = (
+    <SearchInput
+      value={query}
+      onChange={(e) => onQueryChange(e.target.value)}
+      placeholder="Search…"
+      // Wide: a fixed lane in the inline row. Compact: full width of the options
+      // popover (the wrapper's own block box) — hence no width class there.
+      wrapperClassName={compact ? undefined : "w-48"}
+    />
+  );
 
   const titleNode = title ? (
     <Text as="div" variant="label">
@@ -96,78 +102,55 @@ export function DataViewToolbar({
         ref={measureRef}
         // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
         //
-        // `flex-wrap` only when compact. The switcher deliberately never shrinks
-        // (its chips hug their content — see EditableViewSwitcher), so in a narrow
-        // host a multi-view switcher plus the trailing icon controls cannot share
-        // one line: without wrapping, the creator and the options gear are pushed
-        // past the container's edge and clipped, i.e. unreachable. Wrapping is
-        // self-limiting — it engages only on the lines that actually overflow, so a
-        // compact toolbar that already fits (≤1 view ⇒ switcher hidden) stays one row.
+        // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
+        // but the switcher behind the single options trigger, and the switcher
+        // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
+        // in the shrinkable scroll lane below, so the trailing controls can never
+        // be pushed past the container's edge and clipped.
         // eslint-disable-next-line layout/no-adhoc-layout
-        className={cn("flex items-center gap-sm py-sm px-pane-gutter", compact && "flex-wrap")}
+        className="flex items-center gap-sm py-sm px-pane-gutter"
       >
         {compact ? (
-          searchExpanded ? (
-            <>
-              <SearchInput
-                autoFocus
-                value={query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                placeholder="Search…"
-                wrapperClassName="flex-1 min-w-0"
-                onBlur={() => {
-                  if (query.length === 0) setSearchOpen(false);
-                }}
-              />
-              <IconButton
-                icon={MdArrowBack}
-                label="Close search"
-                onClick={() => {
-                  onQueryChange("");
-                  setSearchOpen(false);
-                }}
-              />
-            </>
-          ) : (
-            <>
-              {titleNode}
-              {switcherCount > 1 ? switcher : null}
-              <IconButton
-                className="ml-auto"
-                icon={MdSearch}
-                label="Search"
-                onClick={() => setSearchOpen(true)}
-              />
-              {actions}
-              {creatorsControl}
-              <CompactControls
-                entries={[
-                  ...(filterControl
-                    ? [{ label: "Filter", control: filterControl }]
-                    : []),
-                  ...(sortControl ? [{ label: "Sort", control: sortControl }] : []),
-                  ...(fieldsControl
-                    ? [{ label: "Fields", control: fieldsControl }]
-                    : []),
-                ]}
-                activeCount={activeControlCount}
-              />
-            </>
-          )
+          <>
+            {/* The one shrinkable cell of the bar. The switcher's chips hug their
+                content and never shrink, so when more views exist than fit, this
+                lane scrolls horizontally rather than pushing the trailing controls
+                out of reach. Scrollbar hidden — it is an overflow escape hatch, not
+                a permanent affordance. */}
+            <Scroll axis="x" fill hideScrollbar>
+              <Stack direction="row" align="center" gap="sm">
+                {titleNode}
+                {switcherCount > 1 ? switcher : null}
+              </Stack>
+            </Scroll>
+            {actions}
+            {creatorsControl}
+            {/* Search folds in here with sort/filter/fields — a non-empty query
+                counts toward the trigger's badge so a folded-away search is still
+                visible from the closed bar. */}
+            <CompactControls
+              search={searchInput}
+              entries={[
+                ...(filterControl
+                  ? [{ label: "Filter", control: filterControl }]
+                  : []),
+                ...(sortControl ? [{ label: "Sort", control: sortControl }] : []),
+                ...(fieldsControl
+                  ? [{ label: "Fields", control: fieldsControl }]
+                  : []),
+              ]}
+              activeCount={activeControlCount + (query.length > 0 ? 1 : 0)}
+            />
+          </>
         ) : (
           <>
             {titleNode}
+            {/* The switcher grows (flex-1) to absorb the leading slack, so it
+                pushes search + trailing controls to the right — no `ml-auto` margin
+                needed (and an auto margin would steal the free space from the
+                switcher's flex-grow, collapsing its hover-reveal spacer). */}
             {switcher}
-            <SearchInput
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Search…"
-              // The switcher now grows (flex-1) to absorb the leading slack, so it
-              // pushes search + trailing controls to the right — no `ml-auto` margin
-              // needed (and an auto margin would steal the free space from the
-              // switcher's flex-grow, collapsing its hover-reveal spacer).
-              wrapperClassName="w-48"
-            />
+            {searchInput}
             {filterControl}
             {sortControl}
             {actions}
