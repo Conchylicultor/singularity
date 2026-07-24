@@ -9,6 +9,7 @@
   - Imported by:
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
+    - `apps/deploy/health`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

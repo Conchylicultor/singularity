@@ -25,9 +25,17 @@ export class SpawnFailedError extends Error {
 
 const decoder = new TextDecoder();
 
+/**
+ * How long a timed-out child gets to die politely after `SIGTERM` before we
+ * `SIGKILL` it. Short: the deadline has already expired, this window only
+ * exists so a child that flushes/cleans up on TERM gets to.
+ */
+const SIGKILL_GRACE_MS = 2_000;
+
 function makeResult(
   exitCode: number,
   signalCode: string | null,
+  timedOut: boolean,
   stdoutBytes: Uint8Array,
   stderrBytes: Uint8Array,
   maxRssBytes: number | undefined,
@@ -37,6 +45,7 @@ function makeResult(
   return {
     exitCode,
     signalCode,
+    timedOut,
     stdoutBytes,
     stderrBytes,
     resourceUsage: { maxRssBytes },
@@ -61,6 +70,11 @@ function makeResult(
  * A non-zero exit is a RESULT, not an error — callers that treat it as fatal
  * use `spawnExpectOk`. Temp files orphaned by a hard crash are reclaimed by
  * the OS tmpdir sweep (repo convention).
+ *
+ * `opts.timeoutMs`, when given, is a one-shot deadline (see `SpawnOptions`):
+ * SIGTERM on expiry, SIGKILL after `SIGKILL_GRACE_MS`, `timedOut: true` on the
+ * result. Whatever the child wrote before the kill is still captured — the
+ * temp files are read after exit either way.
  */
 export async function spawnCaptured(argv: string[], opts: SpawnOptions = {}): Promise<SpawnResult> {
   const dir = mkdtempSync(join(tmpdir(), "sg-spawn-"));
@@ -72,6 +86,9 @@ export async function spawnCaptured(argv: string[], opts: SpawnOptions = {}): Pr
     let errFd: number | undefined;
     let proc: ReturnType<typeof Bun.spawn>;
     let exitCode: number;
+    let timedOut = false;
+    let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       if (opts.stdin !== undefined) {
         const inPath = join(dir, "in");
@@ -80,25 +97,45 @@ export async function spawnCaptured(argv: string[], opts: SpawnOptions = {}): Pr
       }
       outFd = openSync(outPath, "w");
       errFd = opts.mergeStderr ? outFd : openSync(errPath, "w");
-      proc = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
+      const child = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
         cwd: opts.cwd,
         env: opts.env,
         stdin: inFd ?? "ignore",
         stdout: outFd,
         stderr: errFd,
       });
-      exitCode = await proc.exited;
+      proc = child;
+      if (opts.timeoutMs !== undefined) {
+        deadlineTimer = setTimeout(() => {
+          timedOut = true;
+          child.kill("SIGTERM");
+          // Escalate only if TERM didn't take. `await proc.exited` resolves as
+          // soon as the child is reaped either way, and both timers are
+          // cleared in the `finally` below, so this never outlives the call.
+          killTimer = setTimeout(() => child.kill("SIGKILL"), SIGKILL_GRACE_MS);
+        }, opts.timeoutMs);
+      }
+      exitCode = await child.exited;
     } finally {
       // Close our copies of the fds regardless of spawn/exit outcome; the
       // child held its own dups. mergeStderr aliases errFd to outFd.
       if (inFd !== undefined) closeSync(inFd);
       if (outFd !== undefined) closeSync(outFd);
       if (errFd !== undefined && errFd !== outFd) closeSync(errFd);
+      if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
+      if (killTimer !== undefined) clearTimeout(killTimer);
     }
     const stdoutBytes = new Uint8Array(readFileSync(outPath));
     const stderrBytes = opts.mergeStderr ? new Uint8Array(0) : new Uint8Array(readFileSync(errPath));
     // rusage is only populated once the child has exited.
-    return makeResult(exitCode, proc.signalCode, stdoutBytes, stderrBytes, proc.resourceUsage()?.maxRSS);
+    return makeResult(
+      exitCode,
+      proc.signalCode,
+      timedOut,
+      stdoutBytes,
+      stderrBytes,
+      proc.resourceUsage()?.maxRSS,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

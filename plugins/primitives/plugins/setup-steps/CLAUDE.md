@@ -27,6 +27,8 @@
     - `Steps`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/health`
+    - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`

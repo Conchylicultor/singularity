@@ -37,11 +37,14 @@ tmpdir sweep (repo convention).
   spawn. `opts`: `cwd`, `env` (FULL replacement, same contract as `Bun.spawn`),
   `stdin` (whole `string | Uint8Array` buffer, EOF at the end), `background`
   (argv := `backgroundArgv(argv)` from `spawn-priority/core`), `mergeStderr`
-  (2>&1; `result.stderr === ""`). The result's `exitCode` **≠ 0 is a
+  (2>&1; `result.stderr === ""`), `timeoutMs` (opt-in one-shot deadline — see
+  below). The result's `exitCode` **≠ 0 is a
   legitimate result** — the caller branches. `stdout`/`stderr` are lazy cached
   utf8 decodes of `stdoutBytes`/`stderrBytes` (the raw bytes exist for
   byte-offset parsers like `git cat-file --batch` framing).
   `resourceUsage.maxRssBytes` is the child's true peak RSS, read after exit.
+  `timedOut` is `true` iff OUR deadline fired and we killed the child (never
+  inferred from `signalCode` — anyone can SIGTERM a child).
 - **`spawnExpectOk(argv, opts?)`** — the same, but THROWS `SpawnFailedError`
   (carrying argv/exitCode/signalCode/stdout/stderr) on non-zero exit, so a
   failed command can never be read as empty success.
@@ -57,10 +60,23 @@ tmpdir sweep (repo convention).
   first callers share it). Outside a git repo they **throw** — the old copies
   absorbed that to `""`, a latent path bug (repo fail-loud rule).
 
+## `timeoutMs` — opt-in, never a default
+
+Originally a stated non-goal ("a per-call timeout would just absorb hangs"),
+now available **opt-in and off by default**, because the reasoning only holds
+for callers that have no deadline of their own. It is one-shot — SIGTERM on
+expiry, SIGKILL 2s later, both timers cleared in the existing `finally` — not
+a polling loop, and it does not absorb anything: the kill surfaces as
+`timedOut: true` on the result, which the caller must branch on.
+
+Use it only where the CALLER owns a deadline it must honor — the first such
+site is `infra/ssh`, whose child talks to an arbitrary remote host and can wedge
+mid-handshake (past TCP connect, which is all OpenSSH's `ConnectTimeout`
+bounds), hanging an HTTP request forever. For everything else the ceiling stays
+the fleet's: op-wedge-watchdog's job, not a local timer's.
+
 ## Deliberate non-goals
 
-- **No `timeoutMs`** — fleet protection against a truly hung child is
-  op-wedge-watchdog's job; a per-call timeout would just absorb hangs.
 - **No `maxOutputBytes`** — a silent output cap is an absorbed failure.
 - **No sync variant** — `Bun.spawnSync` / `execFileSync` buffer natively (no
   JS streams, no wedge). The few existing sync sites are untouched and

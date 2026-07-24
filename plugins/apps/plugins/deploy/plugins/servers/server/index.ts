@@ -18,6 +18,7 @@ import {
 
 export { _deployServers } from "./internal/tables";
 export { serversResource } from "./internal/resources";
+export { getServerSshPrivateKey } from "./internal/ssh-secret";
 
 export default {
   description: "Server registry for the deployment platform.",

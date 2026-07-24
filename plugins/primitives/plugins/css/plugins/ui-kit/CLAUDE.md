@@ -265,8 +265,9 @@ structurally unrepresentable.
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/health`
     - `apps/deploy/servers`
-    - `apps/deploy/ssh-setup/hetzner`
+    - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/mail/sync-status`

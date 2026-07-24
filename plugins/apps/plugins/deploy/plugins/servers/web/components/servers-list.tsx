@@ -9,8 +9,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { serversResource, type Server } from "../../shared";
 import { serverDetailPane, NEW_SERVER_ID } from "../panes";
-import { ServerStatusBadge } from "./server-status-badge";
 import { ServerItemActions } from "./server-item-actions";
+import { Servers } from "../slots";
 
 const SERVERS_VIEW = defineDataView("deploy.servers");
 
@@ -19,6 +19,9 @@ export function ServersList() {
   const openPane = useOpenPane();
   const selectedId = serverDetailPane.useRouteEntry()?.params.serverId;
 
+  // Registry facts only. `status` is contributed through `Servers.Fields` by
+  // whichever plugin owns reachability (deploy/health), so this list never
+  // names it — adding or removing that plugin changes nothing here.
   const fields: FieldDef<Server>[] = useMemo(
     () => [
       { id: "name", label: "Name", type: "text", primary: true, value: (s) => s.name },
@@ -27,19 +30,6 @@ export function ServersList() {
         label: "Address",
         type: "text",
         value: (s) => `${s.host}:${s.port}`,
-      },
-      {
-        id: "status",
-        label: "Status",
-        type: "enum",
-        align: "end",
-        options: [
-          { value: "online", label: "Online" },
-          { value: "offline", label: "Offline" },
-          { value: "unknown", label: "Unknown" },
-        ],
-        value: (s) => s.status,
-        cell: (s) => <ServerStatusBadge status={s.status} />,
       },
     ],
     [],
@@ -52,6 +42,7 @@ export function ServersList() {
     <DataView<Server>
       rows={servers}
       fields={fields}
+      fieldExtensions={Servers.Fields}
       rowKey={(s) => s.id}
       views={["list"]}
       defaultView="list"

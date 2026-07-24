@@ -727,6 +727,7 @@ reaching for a heavier entity cache.
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/browser/start-page`
+    - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/mail/inbox`
     - `apps/mail/mail-core`

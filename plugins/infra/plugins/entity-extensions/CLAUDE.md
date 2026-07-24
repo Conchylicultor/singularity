@@ -71,6 +71,7 @@ If no data needs preserving, accept the auto-generated migration as-is.
     - `EntityExtensions`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/health`
     - `apps/pages/starred`
     - `apps/sonata/playback-history`
     - `apps/sonata/rich/key-mode`

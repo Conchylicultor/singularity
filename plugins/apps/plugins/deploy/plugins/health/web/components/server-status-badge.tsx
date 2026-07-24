@@ -1,7 +1,19 @@
-import type { ServerStatus } from "../../shared";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { ServerHealthRow } from "../../shared";
+
+export type ServerStatus = "unknown" | "online" | "offline";
+
+/**
+ * The one derivation of a server's status, from the one fact that decides it:
+ * no probe row → never checked (`unknown`), a successful probe → `online`,
+ * anything else → `offline`.
+ */
+export function serverStatus(row: ServerHealthRow | undefined): ServerStatus {
+  if (!row) return "unknown";
+  return row.ok ? "online" : "offline";
+}
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
   online: { bg: "bg-success", label: "Online" },

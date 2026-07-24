@@ -1,5 +1,5 @@
-export type { Server, ServerStatus } from "./schemas";
-export { ServerSchema, ServerStatusSchema } from "./schemas";
+export type { Server } from "./schemas";
+export { ServerSchema } from "./schemas";
 export { serversResource } from "./resources";
 export {
   listServers,

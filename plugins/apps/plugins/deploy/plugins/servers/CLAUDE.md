@@ -8,6 +8,8 @@
 - Web:
   - Slots:
     - `Servers.SshSetup` ← `apps.deploy.ssh-setup`
+    - `Servers.DetailHeader` ← `apps.deploy.health`
+    - `Servers.Fields` ← `apps.deploy.health`
     - `serverDetailPane.Actions`
     - `serversRootPane.Actions`
   - Contributes:
@@ -18,12 +20,12 @@
     - `apps/deploy/shell.Deploy`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/data-view.defineFieldExtensions`
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.FieldDef`
     - `primitives/editable-field.EditableField`
@@ -51,11 +53,13 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/secrets.deleteSecret`
+    - `infra/secrets.getSecret`
     - `infra/secrets.hasSecret`
     - `infra/secrets.setSecret`
   - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
   - Exports (values):
     - `_deployServers`
+    - `getServerSshPrivateKey`
     - `serversResource`
   - Resources: `deploy.servers` (push)
   - Routes:
@@ -67,14 +71,14 @@
     - `POST /api/deploy/servers/:id/ssh-keypair`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
-    - `apps/deploy/ssh-setup/hetzner`
+  - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
 - Shared:
   - Exports (types):
     - `CreateServerBody`
     - `GenerateKeypairBody`
     - `Server`
-    - `ServerStatus`
     - `UpdateServerBody`
   - Exports (values):
     - `createServer`
@@ -86,7 +90,6 @@
     - `listServers`
     - `ServerSchema`
     - `serversResource`
-    - `ServerStatusSchema`
     - `updateServer`
     - `UpdateServerBodySchema`
 

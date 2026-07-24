@@ -343,6 +343,7 @@ env shim needed. `compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/bookmarks`
+    - `apps/deploy/health`
     - `apps/mail/reading-pane`
     - `apps/pages/starred`
     - `apps/story/generation`

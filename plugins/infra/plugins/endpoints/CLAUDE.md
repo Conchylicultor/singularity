@@ -200,8 +200,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps-core/surface/floating/wallpaper/openverse`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
+    - `apps/deploy/health`
     - `apps/deploy/servers`
-    - `apps/deploy/ssh-setup/hetzner`
+    - `apps/deploy/ssh-setup`
     - `apps/mail/attachments`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`

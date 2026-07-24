@@ -150,6 +150,7 @@ fixed raw size escapes per-site via
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`

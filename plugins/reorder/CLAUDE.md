@@ -257,6 +257,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
     - `Staging.DiffRenderer` → `ReorderDiffRenderer`
   - Uses:
     - `config_v2.ConfigV2`
@@ -335,6 +337,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "debug-app.sidebar"
     - `ConfigV2.Register` "debug-app.toolbar"
     - `ConfigV2.Register` "deploy.section"
+    - `ConfigV2.Register` "deploy.servers.detail-header"
+    - `ConfigV2.Register` "deploy.servers.fields"
     - `ConfigV2.Register` "deploy.servers.item-actions"
     - `ConfigV2.Register` "deploy.servers.ssh-setup"
     - `ConfigV2.Register` "file-explorer.sidebar"

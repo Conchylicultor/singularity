@@ -229,6 +229,10 @@
       "name": "@singularity/plugin-apps-deploy",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/health": {
+      "name": "@singularity/plugin-apps-deploy-health",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/servers": {
       "name": "@singularity/plugin-apps-deploy-servers",
       "version": "0.0.1",
@@ -2757,6 +2761,10 @@
       "name": "@singularity/plugin-infra-spawn",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/ssh": {
+      "name": "@singularity/plugin-infra-ssh",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/trash": {
       "name": "@singularity/plugin-infra-trash",
       "version": "0.0.1",
@@ -5140,6 +5148,8 @@
 
     "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
 
+    "@singularity/plugin-apps-deploy-health": ["@singularity/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
+
     "@singularity/plugin-apps-deploy-servers": ["@singularity/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
 
     "@singularity/plugin-apps-deploy-shell": ["@singularity/plugin-apps-deploy-shell@workspace:plugins/apps/plugins/deploy/plugins/shell"],
@@ -6349,6 +6359,8 @@
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 
     "@singularity/plugin-infra-spawn": ["@singularity/plugin-infra-spawn@workspace:plugins/infra/plugins/spawn"],
+
+    "@singularity/plugin-infra-ssh": ["@singularity/plugin-infra-ssh@workspace:plugins/infra/plugins/ssh"],
 
     "@singularity/plugin-infra-trash": ["@singularity/plugin-infra-trash@workspace:plugins/infra/plugins/trash"],
 

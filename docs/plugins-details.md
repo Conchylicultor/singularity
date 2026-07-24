@@ -497,10 +497,77 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
+        - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its keyed live resource, and the probe / forget-host-key endpoints.
+          - Web:
+            - Contributes:
+              - `Servers.Fields` "status" → `StatusField`
+              - `Servers.DetailHeader` "status" → `ServerStatusHeader`
+            - Uses:
+              - `apps/deploy/servers.Servers`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/live-state.useResource`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepNote`
+            - Exports (types):
+              - `ServerHealthRow`
+              - `ServerStatus`
+              - `SshCheckResult`
+            - Exports (values):
+              - `checkServerSsh`
+              - `forgetServerHostKey`
+              - `serverHealthResource`
+              - `serverStatus`
+              - `ServerStatusBadge`
+              - `useServerHealth`
+              - `useServerHealthMap`
+              - `useServerVerified`
+              - `VerifyConnectionBody`
+          - Server:
+            - Contributes: `resource.declare` "deploy.server-health"
+            - Uses:
+              - `apps/deploy/servers._deployServers`
+              - `apps/deploy/servers.getServerSshPrivateKey`
+              - `database.db`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/query-resource.queryResource`
+              - `infra/ssh.sshRun`
+            - DB schema: `plugins/apps/plugins/deploy/plugins/health/server/internal/tables.ts`
+            - Entity extension of: `apps/deploy/servers` (table `deploy_servers_ext_health`)
+            - Exports (types): `ServerHealthRow`
+            - Exports (values):
+              - `serverHealth`
+              - `serverHealthResource`
+              - `ServerHealthRowSchema`
+              - `serverHealthServerResource`
+            - Resources: `deploy.server-health` (keyed)
+            - Routes:
+              - `POST /api/deploy/servers/:id/ssh-check`
+              - `POST /api/deploy/servers/:id/forget-host-key`
+          - Cross-plugin:
+            - Imported by: `apps/deploy/ssh-setup`
+          - Shared:
+            - Exports (types):
+              - `ServerHealthRow`
+              - `SshCheckResult`
+            - Exports (values):
+              - `checkServerSsh`
+              - `forgetServerHostKey`
+              - `serverHealthResource`
+              - `ServerHealthRowSchema`
+              - `SshCheckResultSchema`
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
             - Slots:
               - `Servers.SshSetup` ← `apps.deploy.ssh-setup`
+              - `Servers.DetailHeader` ← `apps.deploy.health`
+              - `Servers.Fields` ← `apps.deploy.health`
               - `serverDetailPane.Actions`
               - `serversRootPane.Actions`
             - Contributes:
@@ -511,12 +578,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/shell.Deploy`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/status-dot.StatusDot`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
               - `primitives/editable-field.EditableField`
@@ -544,11 +611,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/secrets.deleteSecret`
+              - `infra/secrets.getSecret`
               - `infra/secrets.hasSecret`
               - `infra/secrets.setSecret`
             - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
             - Exports (values):
               - `_deployServers`
+              - `getServerSshPrivateKey`
               - `serversResource`
             - Resources: `deploy.servers` (push)
             - Routes:
@@ -560,14 +629,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/deploy/servers/:id/ssh-keypair`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
-              - `apps/deploy/ssh-setup/hetzner`
+            - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
           - Shared:
             - Exports (types):
               - `CreateServerBody`
               - `GenerateKeypairBody`
               - `Server`
-              - `ServerStatus`
               - `UpdateServerBody`
             - Exports (values):
               - `createServer`
@@ -579,7 +648,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listServers`
               - `ServerSchema`
               - `serversResource`
-              - `ServerStatusSchema`
               - `updateServer`
               - `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
@@ -598,38 +666,44 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `deployApp`
           - Cross-plugin:
             - Imported by: `apps/deploy/servers`
-        - **`ssh-setup`** — Provider-aware SSH setup for deploy servers: matches the console URL against the generic SshProvider registry and renders the matched provider's guided instructions as a collapsible section inline in the server page's SSH area.
+        - **`ssh-setup`** — Provider-aware SSH setup for deploy servers: owns the guided <Steps> flow (generate key → the matched provider's install steps → verify the connection) as a collapsible section inline in the server page's SSH area, matching the console URL against the generic SshProvider registry.
           - Web:
             - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
             - Contributes: `Servers.SshSetup` "ssh-setup" → `SshSetupSection`
             - Uses:
+              - `apps/deploy/health.useServerVerified`
+              - `apps/deploy/health.VerifyConnectionBody`
+              - `apps/deploy/servers.generateSshKeypair`
+              - `apps/deploy/servers.Server`
               - `apps/deploy/servers.Servers`
+              - `infra/endpoints.fetchEndpoint`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/section-card.SectionCard`
-            - Exports (types): `SshProviderDescriptor`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
+              - `primitives/setup-steps.StepState`
+            - Exports (types):
+              - `SshInstallStep`
+              - `SshProviderDescriptor`
             - Exports (values): `SshProvider`
           - Cross-plugin:
             - Imported by: `apps/deploy/ssh-setup/hetzner`
           - Plugins:
-            - **`hetzner`** — Hetzner Cloud SSH provider: detects console.hetzner.com console URLs and contributes the Hetzner-specific guided key-install flow (generate → web terminal → authorized_keys one-liner).
+            - **`hetzner`** — Hetzner Cloud SSH provider: detects console.hetzner.com console URLs and contributes the two Hetzner-specific install steps (open the web terminal → paste the authorized_keys one-liner) into the shared SSH setup flow.
               - Web:
                 - Contributes: `SshProvider` "Hetzner"
                 - Uses:
-                  - `apps/deploy/servers.generateSshKeypair`
-                  - `apps/deploy/servers.Server`
                   - `apps/deploy/ssh-setup.SshProvider`
-                  - `infra/endpoints.fetchEndpoint`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/setup-steps.Step`
                   - `primitives/setup-steps.StepCommand`
-                  - `primitives/setup-steps.StepDone`
                   - `primitives/setup-steps.StepLink`
                   - `primitives/setup-steps.StepNote`
-                  - `primitives/setup-steps.Steps`
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
@@ -9424,6 +9498,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data`
       - `apps/browser/bookmarks`
       - `apps/browser/history`
+      - `apps/deploy/health`
       - `apps/deploy/servers`
       - `apps/mail/attachments`
       - `apps/mail/inbox`
@@ -13983,8 +14058,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
+          - `apps/deploy/health`
           - `apps/deploy/servers`
-          - `apps/deploy/ssh-setup/hetzner`
+          - `apps/deploy/ssh-setup`
           - `apps/mail/attachments`
           - `apps/mail/inbox`
           - `apps/mail/reading-pane`
@@ -14222,6 +14298,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `EntityExtensions`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/health`
           - `apps/pages/starred`
           - `apps/sonata/playback-history`
           - `apps/sonata/rich/key-mode`
@@ -14973,6 +15050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/browser/bookmarks`
+          - `apps/deploy/health`
           - `apps/mail/reading-pane`
           - `apps/pages/starred`
           - `apps/story/generation`
@@ -15159,6 +15237,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
+    - **`ssh`** — Hermetic SSH client primitive: sshRun opens a session to (host, port, user) with EXACTLY the private key it is given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and returns a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally.
+      - Cross-plugin:
+        - Imported by: `apps/deploy/health`
+      - Server:
+        - Exports (types):
+          - `SshRunResult`
+          - `SshTarget`
+        - Exports (values): `sshRun`
+      - Core:
+        - Exports (types): `SshFailureKind`
+        - Exports (values): `SshFailureKindSchema`
     - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
       - Server:
         - Contributes: `resource.declare` "trash-entries"
@@ -18878,6 +18967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/deploy/ssh-setup/hetzner`
@@ -19210,7 +19300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/task-link`
               - `apps/agent-manager/welcome`
               - `apps/agent-manager/worktree-switcher`
-              - `apps/deploy/servers`
+              - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
               - `apps/mail/search`
               - `apps/mail/sync-status`
@@ -19353,6 +19443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/deploy/ssh-setup/hetzner`
@@ -19857,8 +19948,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/health`
               - `apps/deploy/servers`
-              - `apps/deploy/ssh-setup/hetzner`
+              - `apps/deploy/ssh-setup`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
@@ -21632,6 +21724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/deploy/health`
           - `apps/deploy/servers`
           - `apps/mail/inbox`
           - `apps/mail/mail-core`
@@ -22585,6 +22678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/agent-manager/welcome`
           - `apps/browser/start-page`
+          - `apps/deploy/health`
           - `apps/mail/inbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
@@ -22791,6 +22885,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Steps`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/health`
+          - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
           - `auth/apple-signing/setup-wizard`
           - `auth/google/setup-wizard`
@@ -23524,6 +23620,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
       - `Staging.DiffRenderer` → `ReorderDiffRenderer`
     - Uses:
       - `config_v2.ConfigV2`
@@ -23602,6 +23700,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "debug-app.sidebar"
       - `ConfigV2.Register` "debug-app.toolbar"
       - `ConfigV2.Register` "deploy.section"
+      - `ConfigV2.Register` "deploy.servers.detail-header"
+      - `ConfigV2.Register` "deploy.servers.fields"
       - `ConfigV2.Register` "deploy.servers.item-actions"
       - `ConfigV2.Register` "deploy.servers.ssh-setup"
       - `ConfigV2.Register` "file-explorer.sidebar"

@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { hasSecret } from "@plugins/infra/plugins/secrets/server";
 import { _deployServers } from "./tables";
-import { ServerSchema, type Server, type ServerStatus } from "../../shared";
+import { ServerSchema, type Server } from "../../shared";
 
 export const serversResource = defineResource<Server[]>({
   key: "deploy.servers",
@@ -18,7 +18,6 @@ export const serversResource = defineResource<Server[]>({
     return Promise.all(
       rows.map(async (r) => ({
         ...r,
-        status: r.status as ServerStatus,
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
         sshKeyConfigured: await hasSecret({

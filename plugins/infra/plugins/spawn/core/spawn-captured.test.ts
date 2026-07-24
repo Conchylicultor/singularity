@@ -99,6 +99,34 @@ test("resourceUsage reports the child's peak RSS", async () => {
   expect(result.resourceUsage.maxRssBytes).toBeGreaterThan(0);
 });
 
+test("no timeoutMs: timedOut is false and nothing is killed", async () => {
+  const result = await spawnCaptured(["echo", "unbounded"]);
+  expect(result.timedOut).toBe(false);
+  expect(result.signalCode).toBeNull();
+});
+
+test("timeoutMs kills a hung child and reports timedOut", async () => {
+  const started = Date.now();
+  const result = await spawnCaptured(["sleep", "30"], { timeoutMs: 250 });
+  // The deadline is what returned us — not `sleep` finishing 30s later.
+  expect(Date.now() - started).toBeLessThan(10_000);
+  expect(result.timedOut).toBe(true);
+  expect(result.signalCode).toBe("SIGTERM");
+}, 15_000);
+
+test("timeoutMs that does not expire leaves the result untouched", async () => {
+  const result = await spawnCaptured(["echo", "in-time"], { timeoutMs: 30_000 });
+  expect(result.exitCode).toBe(0);
+  expect(result.timedOut).toBe(false);
+  expect(result.stdout).toBe("in-time\n");
+});
+
+test("output written before the deadline is still captured", async () => {
+  const result = await spawnCaptured(["sh", "-c", "echo early; sleep 30"], { timeoutMs: 400 });
+  expect(result.timedOut).toBe(true);
+  expect(result.stdout).toBe("early\n");
+}, 15_000);
+
 test("background: true demotes without breaking the capture", async () => {
   const result = await spawnCaptured(["echo", "demoted"], { background: true });
   expect(result.exitCode).toBe(0);

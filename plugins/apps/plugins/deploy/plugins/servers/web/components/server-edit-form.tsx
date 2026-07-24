@@ -12,7 +12,6 @@ import {
   deleteServer,
   type UpdateServerBody,
 } from "../../shared/endpoints";
-import { ServerStatusBadge } from "./server-status-badge";
 import { FieldShell, fieldInputClass, fieldTextareaClass } from "./server-fields";
 import { Servers } from "../slots";
 
@@ -76,8 +75,14 @@ export function ServerEditForm({ server }: { server: Server }) {
 
   return (
     <Stack gap="lg" className="p-lg">
-      <div className="flex items-center justify-between">
-        <ServerStatusBadge status={server.status} />
+      <Stack direction="row" align="center" justify="between" gap="sm">
+        {/* Wrapped so the header zone is one flex child even with zero
+            contributions — otherwise `justify-between` would pull Delete left. */}
+        <Stack direction="row" align="center" gap="sm">
+          <Servers.DetailHeader.Render>
+            {(s) => <s.component server={server} />}
+          </Servers.DetailHeader.Render>
+        </Stack>
         <Button
           variant="link"
           onClick={handleDelete}
@@ -85,7 +90,7 @@ export function ServerEditForm({ server }: { server: Server }) {
         >
           Delete
         </Button>
-      </div>
+      </Stack>
       <FieldShell label="Name">
         <input className={fieldInputClass} placeholder={server.host} {...fieldProps(name)} />
       </FieldShell>

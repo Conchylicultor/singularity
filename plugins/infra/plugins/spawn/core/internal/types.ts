@@ -19,6 +19,18 @@ export interface SpawnOptions {
   background?: boolean;
   /** Redirect stderr into the stdout fd (2>&1). `result.stderr` is then `""`. */
   mergeStderr?: boolean;
+  /**
+   * Hard wall-clock ceiling for the child, in ms. On expiry the child is sent
+   * `SIGTERM`, then `SIGKILL` after a short grace, and the result comes back
+   * with `timedOut: true` — a RESULT, not a throw, so the caller classifies it.
+   *
+   * One-shot deadline, not a polling loop, and deliberately opt-in: omitting it
+   * keeps the historical "no ceiling" behavior, because for most callers a hung
+   * child is the fleet watchdog's problem and a silent local timeout would just
+   * absorb the hang. Set it only where the CALLER owns a deadline it must honor
+   * (an HTTP request that cannot hang on a wedged network peer).
+   */
+  timeoutMs?: number;
 }
 
 /** What a completed capture-shaped spawn returns. */
@@ -26,6 +38,13 @@ export interface SpawnResult {
   /** ≠ 0 is a legitimate result — the caller branches. `spawnExpectOk` throws instead. */
   exitCode: number;
   signalCode: string | null;
+  /**
+   * True when `opts.timeoutMs` expired and WE killed the child. An explicit
+   * flag rather than something to infer from `signalCode`: a child can be
+   * SIGTERM'd by anyone (the op-wedge watchdog, a user ^C), so the signal alone
+   * never says whose deadline fired.
+   */
+  timedOut: boolean;
   /** Lazy, cached utf8 decode of `stdoutBytes`. */
   stdout: string;
   /** Lazy, cached utf8 decode of `stderrBytes`. Always `""` under `mergeStderr`. */
