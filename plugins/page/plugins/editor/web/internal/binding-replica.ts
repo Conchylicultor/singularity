@@ -1,4 +1,5 @@
 import { applyUpdate, Doc, encodeStateAsUpdate } from "yjs";
+import { Awareness } from "y-protocols/awareness";
 import type { Provider, ProviderAwareness } from "@lexical/yjs";
 
 /**
@@ -91,7 +92,7 @@ import type { Provider, ProviderAwareness } from "@lexical/yjs";
  * state, so anything the replica missed while detached still arrives as
  * post-attach events.
  *
- * ## Sync + awareness delegation
+ * ## Sync forwarding
  *
  * The canonical transport's `sync` events are forwarded to the replica's own
  * listeners while connected — `CollaborationPlugin` subscribes `sync` on the
@@ -100,10 +101,29 @@ import type { Provider, ProviderAwareness } from "@lexical/yjs";
  * completing). The replica additionally announces `sync(true)` itself at the
  * end of `connect()` (it then holds everything the canonical knows — and a
  * later-joining replica sees no transport transition to forward); a duplicate
- * announce is harmless, `shouldBootstrap` being false. Awareness is delegated
- * to the canonical provider's `Awareness` (one user-level awareness per
- * block, never broadcast — see `LiveStateYjsProvider`) instead of minting a
- * second one per binding.
+ * announce is harmless, `shouldBootstrap` being false.
+ *
+ * ## Awareness belongs to the doc the binding attached to
+ *
+ * The replica mints its OWN `Awareness` over {@link replicaDoc}. This is not a
+ * detail — it is the same construction invariant as the doc itself, applied to
+ * the identity channel:
+ *
+ * > `awareness.clientID` MUST equal the clientID of the doc the Lexical binding
+ * > attached to, because that is the ONLY thing distinguishing "me" from a
+ * > remote peer.
+ *
+ * `@lexical/yjs`'s `syncCursorPositions` renders a cursor + name label for
+ * every awareness state whose `clientID !== binding.clientID`, and
+ * `binding.clientID` is `binding.doc.clientID` — the REPLICA's. Delegating the
+ * canonical provider's awareness (whose `clientID` is the CANONICAL doc's, per
+ * `new Awareness(doc)`) therefore made the local user fail its own identity
+ * check: `initLocalState` wrote `{name, color}` under a clientID the binding
+ * did not recognize, and every caret move rendered one of Lexical's anonymous
+ * animal names ("Tiger", "Squid", …) trailing the user's own cursor. Nothing
+ * broadcasts awareness in this app, so a per-binding instance holds exactly one
+ * state — its own — which the binding now correctly skips: no remote states
+ * ever render, by construction rather than by a clientID coincidence.
  *
  * Lifecycle: owned by the hook hold in `use-collab-block-doc.ts` — created
  * lazily with the hold, deferred-destroyed alongside the entry release so it
@@ -117,12 +137,13 @@ import type { Provider, ProviderAwareness } from "@lexical/yjs";
  */
 /**
  * The canonical-side provider surface a replica needs: the connection to
- * delegate, the awareness to hand through, and the `sync` announcements to
- * forward. A structural subset of the registry's `BlockDocProvider`, declared
- * here so this file stays a leaf (no import back into the registry module).
+ * delegate and the `sync` announcements to forward. A structural subset of the
+ * registry's `BlockDocProvider`, declared here so this file stays a leaf (no
+ * import back into the registry module). Deliberately NOT `awareness` — see the
+ * module comment: a replica's awareness must be minted on its own doc, so the
+ * canonical's is not a thing the replica may reach for.
  */
 export interface CanonicalProviderPort {
-  readonly awareness: ProviderAwareness;
   connect(): void;
   disconnect(): void;
   on(type: "sync", cb: (isSynced: boolean) => void): void;
@@ -162,6 +183,14 @@ export class CanonicalConnection {
 export class BindingReplica implements Provider {
   /** The fresh per-binding doc CollaborationPlugin's binding attaches to. */
   readonly replicaDoc = new Doc();
+  /**
+   * This binding's own awareness, over its OWN doc — so `awareness.clientID`
+   * is `binding.clientID` and the local state is the state the binding skips
+   * (see the module comment). Real `Awareness` because
+   * `CollaborationPlugin`'s `initLocalState` / focus tracking write to it; it
+   * is never broadcast, so it only ever holds this one state.
+   */
+  private readonly _awareness = new Awareness(this.replicaDoc);
   private readonly canonical: Doc;
   private readonly canonicalProvider: CanonicalProviderPort;
   private readonly connection: CanonicalConnection;
@@ -193,7 +222,11 @@ export class BindingReplica implements Provider {
   }
 
   get awareness(): ProviderAwareness {
-    return this.canonicalProvider.awareness;
+    // y-protocols' `Awareness` types its states as generic records while
+    // `@lexical/yjs` narrows them to its own user-state shape. The two are
+    // compatible (Awareness stores whatever `initLocalState` writes) and this
+    // is the same cast the canonical providers make.
+    return this._awareness as unknown as ProviderAwareness;
   }
 
   /** Forward the transport's sync announcements (see the module comment). */
@@ -311,11 +344,15 @@ export class BindingReplica implements Provider {
 
   // --- Lifecycle ------------------------------------------------------------
 
-  /** Detach the relay and destroy the replica doc (canonical untouched). Idempotent. */
+  /**
+   * Detach the relay, kill this binding's awareness, and destroy the replica
+   * doc (canonical untouched). Idempotent.
+   */
   destroy(): void {
     if (this.destroyed) return;
     this.disconnect();
     this.destroyed = true;
+    this._awareness.destroy();
     this.replicaDoc.destroy();
     this.syncListeners.clear();
     this.statusListeners.clear();

@@ -156,8 +156,12 @@ function LocalCollabTextPlugin({ block }: { block: Block }) {
  *
  * Each block gets its own `LexicalCollaboration` context so per-block doc maps
  * never share a global registry (and `useCollaborationContext` — which throws
- * without a provider — is satisfied). Cursors are effectively off: awareness is
- * real but never broadcast, so no remote states ever render.
+ * without a provider — is satisfied). Cursors never render: awareness is real
+ * but never broadcast, and each binding's awareness is minted over the very doc
+ * that binding attached to (`BindingReplica`), so the only state that exists is
+ * the one `syncCursorPositions` skips as local. That second half is load-bearing
+ * — awareness over ANY other doc carries a clientID the binding reads as a
+ * remote peer, and the local user grows a labelled cursor of their own.
  *
  * Mounted exactly once per block, this is also where the block's prose reports
  * into the surface's sync-status cloud: the `doc-update` pipeline is what makes

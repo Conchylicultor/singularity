@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import * as Y from "yjs";
-import type { ProviderAwareness } from "@lexical/yjs";
+import type { Awareness } from "y-protocols/awareness";
 import {
   BindingReplica,
   CanonicalConnection,
@@ -20,16 +20,6 @@ import {
  * empty on a fresh page load.
  */
 
-/** Inert awareness stub — the replica only delegates it, never calls it. */
-const awareness: ProviderAwareness = {
-  getLocalState: () => null,
-  getStates: () => new Map(),
-  off: () => {},
-  on: () => {},
-  setLocalState: () => {},
-  setLocalStateField: () => {},
-};
-
 /**
  * Faithful stand-in for the canonical transport (`LiveStateYjsProvider`)'s
  * connect-gated ingestion: a state delivered via {@link onServerState} is
@@ -40,7 +30,6 @@ const awareness: ProviderAwareness = {
  * the transport.
  */
 class FakeTransportProvider implements CanonicalProviderPort {
-  readonly awareness = awareness;
   connectCalls = 0;
   disconnectCalls = 0;
 
@@ -453,10 +442,34 @@ describe("BindingReplica — lifecycle", () => {
     expect(() => replica.connect()).toThrow("connect() after destroy()");
   });
 
-  test("awareness is the canonical provider's, delegated — not a second minted one", () => {
+  // `@lexical/yjs`'s syncCursorPositions renders a labelled cursor for every
+  // awareness state whose clientID !== binding.clientID, and binding.clientID
+  // is the clientID of the doc the binding attached to — the REPLICA's. An
+  // awareness minted over any other doc makes the LOCAL user fail its own
+  // identity check and renders one of Lexical's anonymous animal names
+  // ("Tiger", …) trailing the user's own caret.
+  test("awareness is minted over the replica's OWN doc — its clientID is the binding's", () => {
     const canonical = makeCanonical();
     const replica = canonical.newReplica();
-    expect(replica.awareness).toBe(awareness);
+    const own = replica.awareness as unknown as Awareness;
+    expect(own.clientID).toBe(replica.replicaDoc.clientID);
+    expect(own.clientID).not.toBe(canonical.doc.clientID);
     replica.destroy();
+  });
+
+  test("each replica gets its own awareness (two editors of one block never see each other)", () => {
+    const canonical = makeCanonical();
+    const a = canonical.newReplica();
+    const b = canonical.newReplica();
+    const awarenessA = a.awareness as unknown as Awareness;
+    const awarenessB = b.awareness as unknown as Awareness;
+    expect(awarenessA).not.toBe(awarenessB);
+    // Nothing broadcasts awareness, so each instance holds exactly ONE state —
+    // its own, keyed by its own binding's clientID, which that binding skips.
+    // No state a binding would read as a remote peer exists, anywhere.
+    awarenessA.setLocalState({ color: "rgb(0,0,150)", name: "Tiger" });
+    expect([...awarenessB.getStates().keys()]).toEqual([b.replicaDoc.clientID]);
+    a.destroy();
+    b.destroy();
   });
 });
