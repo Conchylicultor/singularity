@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdLowPriority } from "react-icons/md";
-import { SidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
-import { SidebarQueueBody } from "./components/sidebar-queue";
+import { SidebarSources } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
+import { QueueSource } from "./components/sidebar-queue";
 import {
   QueueItemActions,
   PromoteAction,
@@ -13,14 +13,15 @@ import {
 
 export default {
   description:
-    "Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.",
+    "Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.",
   contributions: [
-    SidebarDataView.View({
+    SidebarSources({
       id: "queue",
       title: "Queue",
       icon: MdLowPriority,
       order: 5,
-      component: SidebarQueueBody,
+      views: ["list"],
+      component: QueueSource,
     }),
     QueueItemActions({ id: "promote", component: PromoteAction }),
     QueueItemActions({ id: "step-down", component: StepDownAction }),

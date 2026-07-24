@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import type { ViewConfigRow, ViewTypeMeta } from "../../core";
+import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
 import { buildInstanceFromRow } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
+import { normalizeRows, type RawViewRow } from "./normalize-rows";
 
 /** Trailing-edge debounce for config writes — `setConfig` POSTs the whole doc. */
 const WRITE_DEBOUNCE_MS = 400;
@@ -25,7 +25,9 @@ export interface ViewsConfigHandle {
    *  over the existing raw view (`{ ...prev, ...view }`), preserving any
    *  host-injected keys the caller didn't carry; default replaces wholesale. */
   updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
-  addView: (type: string) => string;
+  /** Append a new instance of `type`, bound to `sourceId` when given (the seed
+   *  row is stamped with `source: sourceId`; absent = the implicit sole source). */
+  addView: (type: string, sourceId?: string) => string;
   renameView: (id: string, name: string) => void;
   duplicateView: (id: string) => string;
   deleteView: (id: string) => void;
@@ -36,46 +38,6 @@ export interface ViewsConfigHandle {
  *  server, but we need one client-side for the optimistic mirror). */
 function newId(): string {
   return `view-${crypto.randomUUID()}`;
-}
-
-/**
- * A raw config row as authored on disk. Config is the single source of truth and
- * the authored shape is **terse** — only `{ name, view }` is required; `id` is
- * optional and derived on read (see `normalizeRows`). Array position is the
- * canonical order — there is no `rank`. This lets an agent hand-write
- * `{ "name": "All", "view": { "type": "table" } }` rows without inventing ids.
- */
-interface RawViewRow {
-  id?: string;
-  name: string;
-  view: VariantValue;
-}
-
-/** Slugify a name into a filename/id-safe token (`"My View" → "my-view"`). */
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-/**
- * Normalize raw (possibly terse) config rows into fully-formed `ViewConfigRow`s:
- * derive `id` (explicit `id` ?? slug(name) ?? `view-${index}`). Order is the
- * array position as authored/read — there is no `rank`. Config is the ONLY
- * source — there is no code synthesis. Duplicate derived ids are disambiguated
- * with an index suffix so each row stays addressable.
- */
-function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
-  const seenIds = new Set<string>();
-  return raw.map((row, i) => {
-    let id = row.id ?? slugify(row.name) ?? `view-${i}`;
-    if (id === "") id = `view-${i}`;
-    while (seenIds.has(id)) id = `${id}-${i}`;
-    seenIds.add(id);
-    return { id, name: row.name, view: row.view };
-  });
 }
 
 /**
@@ -96,13 +58,16 @@ function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
  * The engine treats each row's `view` as an **opaque `VariantValue`** — it never
  * reads or writes `sort`/`filter`. The host layers those on through `viewFor` +
  * `updateView({ merge: true })`.
+ *
+ * `entries` is the ordered source-entry list (per-source contributions /
+ * hierarchy / whitelist / options). Single-source consumers pass one implicit
+ * entry (`id` undefined); each row resolves through the entry matching its
+ * `source` key (`buildInstanceFromRow` — unknown source fail-softs).
  */
 export function useViewsConfig<T extends ViewTypeMeta>(
   storageKey: string,
   descriptorMap: Map<string, ConfigDescriptor>,
-  contributions: SealContributions<T>[],
-  hasHierarchy: boolean,
-  viewOptions: Record<string, unknown> | undefined,
+  entries: ViewSourceEntry<T>[],
 ): ViewsConfigHandle {
   // Resolve the descriptor via the supplied map (reference identity against the
   // registered `ConfigV2.WebRegister` descriptor). A missing id means the marker
@@ -202,14 +167,13 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   // source — no synthesized seed).
   const displayRows = mirror;
 
-  // Render in array order, resolving each row through the contribution registry.
+  // Render in array order, resolving each row through its source entry's
+  // contribution registry (unknown source / orphan type → fail-soft skip).
   const instances = useMemo<ResolvedViewInstance<T>[]>(() => {
     return displayRows
-      .map((row) =>
-        buildInstanceFromRow(row, contributions, hasHierarchy, viewOptions),
-      )
+      .map((row) => buildInstanceFromRow(row, entries))
       .filter((r): r is ResolvedViewInstance<T> => r !== null);
-  }, [displayRows, contributions, hasHierarchy, viewOptions]);
+  }, [displayRows, entries]);
 
   const rowById = useCallback(
     (id: string): ViewConfigRow | undefined =>
@@ -268,23 +232,29 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   );
 
   const addView = useCallback(
-    (type: string): string => {
+    (type: string, sourceId?: string): string => {
       const id = newId();
       applyMutation((rows) => {
-        const contribution = contributions.find((c) => c.type === type);
-        // Append to the end — array position is the order.
+        // Seed title resolved from the target source's own contributions (both
+        // possibly the implicit `undefined` entry — the single-source case).
+        const entry = entries.find((e) => e.id === sourceId);
+        const contribution = entry?.contributions.find((c) => c.type === type);
+        // Append to the end — array position is the order. The seed row is
+        // stamped with `source` only when bound to a named source, so
+        // single-source rows stay byte-identical.
         return [
           ...rows,
           {
             id,
             name: contribution?.title ?? type,
             view: { type } as VariantValue,
+            ...(sourceId !== undefined ? { source: sourceId } : {}),
           },
         ];
       });
       return id;
     },
-    [applyMutation, contributions],
+    [applyMutation, entries],
   );
 
   const duplicateView = useCallback(
@@ -299,6 +269,9 @@ export function useViewsConfig<T extends ViewTypeMeta>(
           name: `${src.name} copy`,
           // Deep-ish clone of the variant value (JSON-safe by construction).
           view: JSON.parse(JSON.stringify(src.view)) as VariantValue,
+          // Copy the source binding explicitly (conditional spread keeps
+          // source-less clones byte-identical — no `source` key).
+          ...(src.source !== undefined ? { source: src.source } : {}),
         };
         // Insert immediately after the source row — array position is the order.
         return [...rows.slice(0, idx + 1), clone, ...rows.slice(idx + 1)];

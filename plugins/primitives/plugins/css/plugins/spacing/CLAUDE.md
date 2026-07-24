@@ -381,7 +381,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `tasks/attempt-view`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
-    - `tasks/task-deps-tree`
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-draft-form`

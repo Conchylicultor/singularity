@@ -1,0 +1,10 @@
+// @hash 2c806ad6bd4a
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "tasks.task-deps-tree:deps",
+    "tasks.task-deps-tree:created"
+  ]
+}

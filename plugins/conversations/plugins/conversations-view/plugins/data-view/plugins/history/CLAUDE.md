@@ -4,19 +4,16 @@
 
 ## Plugin reference
 
-- Description: Contributes the History list (a server-delegated DataView reusing the all-conversations query infra) as the History tab of the `dataview` sidebar variant.
+- Description: Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
 - Web:
   - Contributes:
-    - `SidebarDataView.View` "History" → `SidebarDataViewBody`
+    - `SidebarSources` "History" → `HistorySource`
     - `conversations-sidebar-history-actions` "close" → `CloseConvAction`
   - Uses:
     - `conversations/all-conversations.conversationFieldDefs`
     - `conversations/conversation-ui/item.ConversationItem`
-    - `conversations/conversations-view/data-view.SidebarDataView`
+    - `conversations/conversations-view/data-view.SidebarSources`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/css/scroll.Scroll`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`

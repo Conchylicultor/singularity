@@ -6,7 +6,7 @@ import {
 import { useOpenPane, usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { closeConversation } from "@plugins/conversations/core";
-import { SidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
+import { ConversationsSidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 
 export function ConversationList() {
   const openPane = useOpenPane();
@@ -37,10 +37,10 @@ export function ConversationList() {
     }
   };
 
-  // The tab host is its own `Column fill` (tab switcher header + scrolling
-  // body), so it fills the sidebar column directly — no extra wrapper needed.
+  // The merged DataView surface owns its own `Scroll fill` root, so it fills
+  // the sidebar column directly — no extra wrapper needed.
   return (
-    <SidebarDataView.Host
+    <ConversationsSidebarDataView
       activeId={activeId}
       onNavigate={navigate}
       onCloseConversation={handleCloseConversation}

@@ -1,29 +1,24 @@
 import { useCallback, useMemo } from "react";
-import { MdAccountTree, MdFolderOpen } from "react-icons/md";
 import {
   useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
-  ViewSwitcher,
-  useActiveViewId,
-  type ViewSwitcherOption,
-} from "@plugins/primitives/plugins/view-switcher/web";
+  MergedDataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import {
   tasksResource,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { TasksSubtree } from "@plugins/tasks/plugins/task-list/web";
 import { taskClusterIds } from "@plugins/tasks/plugins/task-deps-tree/core";
-import { DepsTreeView } from "./deps-tree-view";
+import { DepsSources } from "../internal/deps-sources";
 
-const OPTIONS: ViewSwitcherOption[] = [
-  { id: "deps", title: "Dependencies", icon: MdAccountTree },
-  { id: "creation", title: "Created", icon: MdFolderOpen },
-];
+// The merged DataView surface id — the config lives under this plugin's tree at
+// `config/tasks/task-deps-tree/task-deps-tree.jsonc`.
+const DEPS_TREE_VIEW = defineDataView("task-deps-tree");
 
 export function DepsTreeSection({ taskId }: { taskId: string }) {
   const result = useResource(tasksResource);
@@ -43,9 +38,6 @@ function DepsTreeSectionLoaded({
   taskId: string;
   allTasks: readonly TaskListItem[];
 }) {
-  const { activeViewId, setActiveView } = useActiveViewId("task-deps-tree:view");
-  const activeId = activeViewId ?? "deps";
-
   // Selecting a task in the tree re-roots this pane in place, so the URL stays
   // truthful and the new root is shareable.
   const openPane = useOpenPane();
@@ -54,7 +46,7 @@ function DepsTreeSectionLoaded({
     [openPane],
   );
 
-  // The single member set both tabs render — one set, organized two ways.
+  // The single member set both sources render — one set, organized two ways.
   const memberIds = useMemo(
     () => taskClusterIds(allTasks, taskId),
     [allTasks, taskId],
@@ -70,24 +62,14 @@ function DepsTreeSectionLoaded({
   const hasFolderChildren = allTasks.some((t) => t.folderId === taskId);
   if (!hasDepEdge && !hasFolderChildren) return null;
 
+  // ONE merged DataView surface: the Dependencies / Created organisations are
+  // contributed sources, unified under a single switcher + config file.
   return (
-    <Stack gap="sm">
-      <ViewSwitcher options={OPTIONS} activeId={activeId} onSelect={setActiveView} />
-      {activeId === "creation" ? (
-        <TasksSubtree
-          members={memberIds}
-          readOnly
-          selectedId={taskId}
-          onSelect={onNavigate}
-        />
-      ) : (
-        <DepsTreeView
-          taskId={taskId}
-          allTasks={allTasks}
-          memberIds={memberIds}
-          onNavigate={onNavigate}
-        />
-      )}
-    </Stack>
+    <MergedDataView
+      storageKey={DEPS_TREE_VIEW}
+      sources={DepsSources}
+      hostProps={{ taskId, allTasks, memberIds, onNavigate }}
+      defaultView="deps"
+    />
   );
 }

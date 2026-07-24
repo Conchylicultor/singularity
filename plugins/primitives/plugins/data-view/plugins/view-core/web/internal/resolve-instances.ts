@@ -1,5 +1,10 @@
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
-import type { ViewInstance, ViewConfigRow, ViewTypeMeta } from "../../core";
+import type {
+  ViewInstance,
+  ViewConfigRow,
+  ViewSourceEntry,
+  ViewTypeMeta,
+} from "../../core";
 
 /** A resolved view-instance paired with the view-type that renders it. */
 export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
@@ -8,13 +13,22 @@ export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
 }
 
 /**
- * Build a resolved instance from a config row. Looks up the contribution by
- * `view.type`; **fail-soft** returns `null` when:
+ * Build a resolved instance from a config row. Resolves the row's `source` key
+ * against the supplied entry list (both possibly `undefined` — the implicit
+ * sole source), then looks up the contribution by `view.type` within that
+ * entry. **Fail-soft** returns `null` when:
+ *   - no entry matches `row.source` (an *unknown-source* row — a renamed /
+ *     removed source id; the row stays in config, it just isn't rendered until
+ *     its source returns — mirroring the orphan view-type hazard below), or
  *   - no view-type is registered for `view.type` (an *orphan* row — a renamed /
  *     removed view-type id, same documented hazard as reorder node-type ids), or
- *   - the view-type is hierarchical but the data source has no hierarchy.
+ *   - the view-type is hierarchical but the entry's source has no hierarchy.
  *
- * The row's whole `view` value is layered **over** the consumer's code-supplied
+ * The entry's `views` whitelist is deliberately NOT applied here — it gates
+ * the add menu only, never authored rows (matching the single-source `views`
+ * prop semantics: an authored row of a non-whitelisted type still renders).
+ *
+ * The row's whole `view` value is layered **over** the entry's code-supplied
  * `viewOptions[type]` to become the instance `options`: config-authored keys
  * (`sort`/`filter`/`coverField`/…) override, while non-serializable code-only
  * options (e.g. `renderCard`, `cover`) — which can never live in a config row —
@@ -22,23 +36,22 @@ export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
  */
 export function buildInstanceFromRow<T extends ViewTypeMeta>(
   row: ViewConfigRow,
-  contributions: SealContributions<T>[],
-  hasHierarchy: boolean,
-  viewOptions?: Record<string, unknown>,
+  entries: ViewSourceEntry<T>[],
 ): ResolvedViewInstance<T> | null {
-  const viewType = contributions.find((c) => c.type === row.view.type);
+  const entry = entries.find((e) => e.id === row.source);
+  if (!entry) return null;
+  const viewType = entry.contributions.find((c) => c.type === row.view.type);
   if (!viewType) return null;
-  if (viewType.hierarchical && !hasHierarchy) return null;
-  return {
-    instance: {
-      id: row.id,
-      name: row.name,
-      type: row.view.type,
-      options: {
-        ...((viewOptions?.[row.view.type] as object | undefined) ?? {}),
-        ...(row.view as object),
-      },
+  if (viewType.hierarchical && !entry.hasHierarchy) return null;
+  const instance: ViewInstance = {
+    id: row.id,
+    name: row.name,
+    type: row.view.type,
+    ...(row.source !== undefined ? { source: row.source } : {}),
+    options: {
+      ...((entry.viewOptions?.[row.view.type] as object | undefined) ?? {}),
+      ...(row.view as object),
     },
-    viewType,
   };
+  return { instance, viewType };
 }

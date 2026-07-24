@@ -11,7 +11,7 @@
     - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
   - Uses:
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversations-view/data-view.SidebarDataView`
+    - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
     - `conversations/model-provider.useDefaultModel`
     - `conversations/pane-restore.loadRouteForConversation`
     - `conversations/pane-restore.reportCorruptSavedRoute`
@@ -31,7 +31,7 @@
     - `primitives/pane.usePaneStore`
     - `shell.Shell`
 - Sub-plugins:
-  - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the tab host mounted directly by the conversations-view mount point. Per-tab sub-plugins (Queue, History) contribute their tab into SidebarDataView.View.
+  - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
   - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
   - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
 

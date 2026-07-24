@@ -6,6 +6,15 @@ import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
 
 export { DataView } from "./components/data-view";
+export { MergedDataView } from "./components/merged-data-view";
+export type { MergedDataViewProps } from "./components/merged-data-view";
+export { defineDataViewSources } from "./internal/define-data-view-sources";
+export type {
+  DataViewSources,
+  DataViewSourceContribution,
+  DataViewSourceProps,
+} from "./internal/define-data-view-sources";
+export type { DataViewSourceBundle } from "./internal/body-types";
 export {
   defineDataView,
   DATA_VIEW_HEADER_OFFSET_VAR,

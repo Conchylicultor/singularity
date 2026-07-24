@@ -143,6 +143,58 @@ skips** in `buildInstanceFromRow` — the same documented hazard as reorder
 node-type ids. The row stays in the config; it just isn't rendered until its
 view-type returns.
 
+## Multi-source surfaces (`MergedDataView`)
+
+One surface, N **sources**, one unified switcher: `<MergedDataView storageKey
+sources hostProps title? actions? defaultView?>` renders a single DataView
+surface (**one `storageKey` → one config file → one `EditableViewSwitcher`**)
+whose view-instances each bind to a source via the config row's optional
+`source` key (`{ "id": "queue", "name": "Queue", "source": "queue", "view":
+{ "type": "list" } }`). The sort/filter/search/properties chrome adapts
+automatically because it already derives from the active instance's fields —
+the source axis only decides *which data bundle* feeds the body.
+
+- **Sources are contributed components** through the per-consumer
+  `defineDataViewSources<THostProps>(id)` factory (web barrel — the sibling of
+  `defineItemActions`/`defineFieldExtensions`). A contribution is `{ id, title,
+  icon, order?, views?, hasHierarchy?, component }`; the component receives
+  `DataViewSourceProps<THostProps>` = `{ hostProps, render }`, owns its data
+  hooks, and **must always call `render(bundle)`** (pass `{ rows: [], loading:
+  true, … }` while loading — never early-return `null`, or the surface chrome
+  vanishes). The bundle is `DataViewSourceBundle<TRow>` = `DataViewProps` minus
+  the shell-owned keys (`storageKey`/`title`/`actions`/`defaultView`/`views`).
+- **`views` / `hasHierarchy` are STATIC contribution metadata**, not bundle
+  keys, on purpose: the view model must resolve *every* config row (switcher
+  chips, add-menu gating, the hierarchical gate) before any source component
+  mounts — and only the ACTIVE source ever mounts. Everything dynamic (rows,
+  fields, the actual `hierarchy` accessors, `viewOptions`, `dataSource`, …)
+  stays in the bundle; the host dev-warns when a bundle's `hierarchy` presence
+  contradicts the declared `hasHierarchy`. Code-only `viewOptions`
+  (`renderRow`, `renderCard`, …) reach the view through the body's options
+  re-merge (`{ ...bundle.viewOptions[type], ...instance.options }` — idempotent
+  on the single-source path).
+- **Only the active source mounts** (plain `renderIsolated`, no recursive
+  fold); switching sources remounts the body (`key={source.id}`), so
+  per-source subscriptions/controllers restart cleanly, and the server-page
+  cache is scoped per source (`sourceScope`).
+- **Fail-soft on unknown sources.** A row whose `source` matches no live
+  contribution (renamed/removed source id) is kept in config and skipped —
+  the same hazard class as an orphan `view.type`.
+- **Instance ids must be unique ACROSS sources** (one config file = one id
+  namespace). `normalizeRows` would disambiguate a duplicate with an index
+  suffix, silently renaming the row and orphaning its durable
+  `data_view_row_order` rows — author distinct ids per row, as
+  `config-stable-list-ids` already forces.
+- **Presets stay per-surface and fail-soft by design.** Sort/filter presets
+  key off `storageKey` only, so they are shared across sources; a preset
+  referencing a field the active source's schema lacks is simply excluded by
+  the controllers' dangling-fieldId guards. Do not namespace them per source.
+- Single-source `<DataView>` is the same machinery with **one implicit source
+  entry** (`id`/`title` undefined): same model, flat add menu, `source`-less
+  config rows — byte-identical to the pre-source behavior. The engine-side
+  semantics (row model, `ViewSourceEntry`, whitelist-gates-addability) live in
+  view-core — see its CLAUDE.md.
+
 ## Hierarchy
 
 A data source can declare itself hierarchical by passing `hierarchy` (a
@@ -810,8 +862,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+<<<<<<< .merge_file_oKL9rX
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+=======
+>>>>>>> .merge_file_txzao2
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses:
@@ -853,6 +908,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/view-core.buildViewConfigContributions`
     - `primitives/data-view/view-core.buildViewDescriptors`
     - `primitives/data-view/view-core.EditableViewSwitcher`
+    - `primitives/data-view/view-core.ResolvedViewInstance`
     - `primitives/data-view/view-core.useViewModel`
     - `primitives/data-view/view-core.useViewVariants`
     - `primitives/element-size.useElementSize`
@@ -883,6 +939,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSection`
     - `DataViewSettingContribution`
     - `DataViewSettingsContextValue`
+    - `DataViewSourceBundle`
+    - `DataViewSourceContribution`
+    - `DataViewSourceProps`
+    - `DataViewSources`
     - `FieldCellProps`
     - `FieldDef`
     - `FieldExtensionContribution`
@@ -910,6 +970,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActions`
     - `ItemActionsDescriptor`
     - `ManualOrderConfig`
+    - `MergedDataViewProps`
     - `SelectionConfig`
     - `ServerDataSourceResult`
     - `ServerDataSourceSpec`
@@ -927,6 +988,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataView`
     - `DataViewSlots`
     - `defineDataView`
+    - `defineDataViewSources`
     - `defineFieldExtensions`
     - `defineItemActions`
     - `EditableCell`
@@ -939,6 +1001,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `isFilterGroup`
     - `isGroupableField`
     - `makeSortComparator`
+    - `MergedDataView`
     - `PANE_GUTTER_VAR`
     - `partitionIntoSections`
     - `pickPrimaryField`
@@ -964,8 +1027,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "build.history"
     - `ConfigV2.Register` "code-explorer.file-tree"
     - `ConfigV2.Register` "config_v2.settings.nav"
-    - `ConfigV2.Register` "conversations-sidebar-history"
-    - `ConfigV2.Register` "conversations-sidebar-queue"
+    - `ConfigV2.Register` "conversations-sidebar"
     - `ConfigV2.Register` "debug.boot-profiles"
     - `ConfigV2.Register` "debug.config-orphans"
     - `ConfigV2.Register` "debug.profiling.runtime"
@@ -1018,6 +1080,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/all-conversations`
+    - `conversations/conversations-view/data-view`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `debug/boot-profile`

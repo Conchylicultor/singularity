@@ -1,0 +1,174 @@
+import { type ReactNode, useMemo } from "react";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
+import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import type { DataViewId } from "../../core";
+import { DataViewSlots, type DataViewContribution } from "../slots";
+import {
+  useDataViewModel,
+  type ViewModel,
+} from "../internal/use-data-view-model";
+import type {
+  DataViewSourceBundle,
+  DataViewShellChrome,
+} from "../internal/body-types";
+import type {
+  DataViewSources,
+  DataViewSourceProps,
+} from "../internal/define-data-view-sources";
+import { DataViewShellFrame } from "./data-view";
+import { DataViewBody } from "./data-view-body";
+
+export interface MergedDataViewProps<THostProps> {
+  storageKey: DataViewId;
+  /** The per-consumer source slot minted by `defineDataViewSources`. */
+  sources: DataViewSources<THostProps>;
+  /** The host surface's own props, threaded verbatim to every source. */
+  hostProps: THostProps;
+  title?: ReactNode;
+  actions?: ReactNode;
+  defaultView?: string;
+}
+
+/** One dev-warn per (storageKey, source) — the mismatch is static, so once. */
+const warnedHierarchyMismatch = new Set<string>();
+
+/**
+ * Multi-source DataView host: ONE surface (one `storageKey` → one config file →
+ * one `EditableViewSwitcher`) whose view-instances each bind to a contributed
+ * **source** via the config row's `source` key. The view model resolves every
+ * row up front from the contributions' STATIC metadata (`views`,
+ * `hasHierarchy`); only the ACTIVE instance's source component mounts — its
+ * data hooks run, it calls `render(bundle)`, and the bundle feeds the shared
+ * `DataViewBody`. Switching sources remounts the body (`key={source.id}`), so
+ * per-source subscriptions restart cleanly.
+ */
+export function MergedDataView<THostProps>(
+  props: MergedDataViewProps<THostProps>,
+): ReactNode {
+  const { storageKey, sources, hostProps, title, actions, defaultView } = props;
+  const contributions = DataViewSlots.View.useContributions();
+  const rawSourceContribs = sources.useContributions();
+  // `useContributions` returns registration order; honor the contributions'
+  // declared `order` (the add menu's section order and entry precedence), the
+  // same explicit sort the tabbed-view host applied.
+  const sourceContribs = useMemo(
+    () => [...rawSourceContribs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [rawSourceContribs],
+  );
+
+  // One `ViewSourceEntry` per contributed source, from static metadata only —
+  // no `viewOptions` (code-only options can't exist before the source mounts;
+  // the body re-merges the bundle's `viewOptions` under the instance options).
+  const entries = useMemo<ViewSourceEntry<DataViewContribution>[]>(
+    () =>
+      sourceContribs.map((c) => ({
+        id: c.id,
+        title: c.title,
+        icon: c.icon,
+        contributions,
+        hasHierarchy: c.hasHierarchy ?? false,
+        views: c.views,
+      })),
+    [sourceContribs, contributions],
+  );
+
+  const viewModel = useDataViewModel(storageKey, entries, defaultView);
+
+  return (
+    <DataViewShellFrame
+      storageKey={storageKey}
+      viewModel={viewModel}
+      contributions={contributions}
+      title={title}
+      actions={actions}
+    >
+      {(activeInstance, chrome) => {
+        // Always found: a row whose `source` matches no contribution never
+        // resolves into an instance (`buildInstanceFromRow` fail-softs), so an
+        // active instance's source is a live contribution by construction.
+        const activeSource = sourceContribs.find(
+          (c) => c.id === activeInstance.instance.source,
+        );
+        if (!activeSource) {
+          throw new Error(
+            `MergedDataView(${storageKey}): active instance ` +
+              `"${activeInstance.instance.id}" resolved with unknown source ` +
+              `"${activeInstance.instance.source ?? ""}"`,
+          );
+        }
+        return renderIsolated(sources.id, activeSource as unknown as Contribution, {
+          hostProps,
+          // The host consumes the bundle at `unknown` row space — the same
+          // documented cast boundary as field extensions (the contributor keeps
+          // full `TRow` typing; the shared body machinery is row-type-erased).
+          render: (bundle) => (
+            <MergedSourceBody
+              storageKey={storageKey}
+              viewModel={viewModel}
+              activeInstance={activeInstance}
+              chrome={chrome}
+              sourceId={activeSource.id}
+              declaredHasHierarchy={activeSource.hasHierarchy ?? false}
+              bundle={bundle as unknown as DataViewSourceBundle<unknown>}
+            />
+          ),
+        } satisfies DataViewSourceProps<THostProps>);
+      }}
+    </DataViewShellFrame>
+  );
+}
+
+/**
+ * Bridges one source's bundle into the shared `DataViewBody`. Keyed by the
+ * source id so switching sources remounts the body (controllers, toolbar
+ * state, subscriptions restart); plain instance switches within one source keep
+ * the body mounted, exactly like the single-source path.
+ */
+function MergedSourceBody(props: {
+  storageKey: DataViewId;
+  viewModel: ViewModel;
+  activeInstance: ResolvedViewInstance<DataViewContribution>;
+  chrome: DataViewShellChrome;
+  sourceId: string;
+  declaredHasHierarchy: boolean;
+  bundle: DataViewSourceBundle<unknown>;
+}): ReactNode {
+  const {
+    storageKey,
+    viewModel,
+    activeInstance,
+    chrome,
+    sourceId,
+    declaredHasHierarchy,
+    bundle,
+  } = props;
+  // The static `hasHierarchy` metadata drove the model's hierarchical gate; if
+  // the bundle disagrees (declared without a `hierarchy`, or vice versa), tree
+  // instances are either wrongly offered or wrongly hidden — surface it loudly
+  // in dev, once per (surface, source).
+  if (import.meta.env.DEV && !!bundle.hierarchy !== declaredHasHierarchy) {
+    const key = `${storageKey}:${sourceId}`;
+    if (!warnedHierarchyMismatch.has(key)) {
+      warnedHierarchyMismatch.add(key);
+      console.warn(
+        `[data-view] MergedDataView(${storageKey}) source "${sourceId}": ` +
+          `contribution declares hasHierarchy=${String(declaredHasHierarchy)} ` +
+          `but its bundle ${bundle.hierarchy ? "carries" : "lacks"} a ` +
+          `\`hierarchy\` — align the static metadata with the bundle.`,
+      );
+    }
+  }
+  return (
+    <DataViewBody<unknown>
+      key={sourceId}
+      {...bundle}
+      storageKey={storageKey}
+      viewModel={viewModel}
+      activeInstance={activeInstance}
+      chrome={chrome}
+      sourceScope={sourceId}
+    />
+  );
+}

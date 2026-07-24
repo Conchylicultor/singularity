@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from "react";
-import type { ComponentType } from "react";
-import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import { useViewModel } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import type {
+  AddableSource,
+  ViewSourceEntry,
+} from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { FilterGroup, SortRule, ViewState } from "../../core";
 import type { DataViewContribution } from "../slots";
 import { cyclePrimarySort } from "./sort-cycle";
@@ -11,19 +13,13 @@ import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
 import { useViewEphemeral } from "./use-view-ephemeral";
 
-/** A view-type the add-menu offers (capability-gated). */
-export interface AddableViewType {
-  type: string;
-  title: string;
-  icon: ComponentType<{ className?: string }>;
-}
-
 /** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
-  /** View-types the `+` menu offers: registered contributions ∩ `views`
-   *  whitelist (if any) ∩ hierarchical gate. */
-  available: AddableViewType[];
-  addView: (type: string) => void;
+  /** Add-menu groups, one per source entry (each entry's registered
+   *  contributions ∩ `views` whitelist ∩ hierarchical gate). A single-source
+   *  DataView yields exactly one untitled group — the flat-menu fast path. */
+  availableSources: AddableSource[];
+  addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
@@ -99,22 +95,21 @@ function readGroupBy(view: VariantValue | undefined): string | undefined {
  *   - `query`/`expanded` come from the device-local ephemeral store,
  *   - the result is repacked into the exact existing `ViewModel` shape so the
  *     `data-view.tsx` render logic is unchanged.
+ *
+ * `entries` is the ordered source-entry list. The single-source `<DataView>`
+ * shell builds one implicit entry from its own props; `MergedDataView` builds
+ * one entry per contributed source (static metadata only — no `viewOptions`).
+ * Pass a referentially-stable (memoized) array.
  */
 export function useDataViewModel(
   storageKey: string,
-  contributions: SealContributions<DataViewContribution>[],
-  views: string[] | undefined,
-  hasHierarchy: boolean,
-  viewOptions: Record<string, unknown> | undefined,
+  entries: ViewSourceEntry<DataViewContribution>[],
   defaultView: string | undefined,
 ): ViewModel {
   const core = useViewModel<DataViewContribution>(
     storageKey,
     dataViewDescriptors,
-    contributions,
-    views,
-    hasHierarchy,
-    viewOptions,
+    entries,
     defaultView,
   );
   const ephemeral = useViewEphemeral(storageKey);
@@ -219,7 +214,7 @@ export function useDataViewModel(
 
   const actions = useMemo<ViewActions>(
     () => ({
-      available: core.actions.available,
+      availableSources: core.actions.availableSources,
       addView: core.actions.addView,
       renameView: core.actions.renameView,
       duplicateView: core.actions.duplicateView,

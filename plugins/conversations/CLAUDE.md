@@ -307,10 +307,10 @@
       - **`vscode`** — Opens the conversation's worktree in VSCode.
   - **`conversations-view`** — Sidebar list of all conversations.
     - Plugins:
-      - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the tab host mounted directly by the conversations-view mount point. Per-tab sub-plugins (Queue, History) contribute their tab into SidebarDataView.View.
+      - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
         - Plugins:
-          - **`history`** — Contributes the History list (a server-delegated DataView reusing the all-conversations query infra) as the History tab of the `dataview` sidebar variant.
-          - **`queue`** — Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.
+          - **`history`** — Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
+          - **`queue`** — Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
       - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.

@@ -37,6 +37,9 @@
     - `tasks/task-status.StatusBadge`
     - `tasks/task-status.StatusIcon`
   - Exports (values):
+    - `buildTreeOptions`
+    - `clusterTaskHierarchy`
+    - `taskFields`
     - `Tasks`
     - `TasksListView`
     - `TasksSubtree`

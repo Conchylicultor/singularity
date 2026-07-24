@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import type { ComponentType } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import { useViewsConfig } from "../internal/use-views-config";
-import type { ViewTypeMeta } from "../../core";
+import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
 
 // The engine reads rows off `useConfig(descriptor).views` and persists via
 // `useSetConfig(descriptor)(key, value)`. Mock both: `useConfig` returns a fixed
@@ -26,19 +26,43 @@ const contributions = [
   { type: "gallery", title: "Gallery", icon: Icon },
 ] as unknown as SealContributions<ViewTypeMeta>[];
 
+// The implicit sole source — the single-source case every existing DataView is.
+const singleSource: ViewSourceEntry<ViewTypeMeta>[] = [
+  { contributions, hasHierarchy: false },
+];
+
+// A multi-source entry list (named sources) plus the implicit one.
+const multiSource: ViewSourceEntry<ViewTypeMeta>[] = [
+  { contributions, hasHierarchy: false },
+  { id: "queue", title: "Queue", contributions, hasHierarchy: false },
+];
+
 const descriptorMap = new Map<string, ConfigDescriptor>([
   ["k", {} as ConfigDescriptor],
 ]);
 
-function renderViews(views: unknown[]) {
+beforeEach(() => {
+  setConfigSpy.mockClear();
+});
+
+function renderViews(
+  views: unknown[],
+  entries: ViewSourceEntry<ViewTypeMeta>[] = singleSource,
+) {
   configDoc = { views };
-  return renderHook(() =>
-    useViewsConfig<ViewTypeMeta>("k", descriptorMap, contributions, false, undefined),
-  );
+  return renderHook(() => useViewsConfig<ViewTypeMeta>("k", descriptorMap, entries));
 }
 
 function ids(result: { current: ReturnType<typeof useViewsConfig> }): string[] {
   return result.current.instances.map((i) => i.instance.id);
+}
+
+/** The last persisted `views` rows (flushed on unmount). */
+function flushedRows(unmount: () => void): ViewConfigRow[] {
+  unmount();
+  const last = setConfigSpy.mock.calls.at(-1);
+  expect(last?.[0]).toBe("views");
+  return last?.[1] as ViewConfigRow[];
 }
 
 describe("useViewsConfig — array-order (no rank)", () => {
@@ -128,5 +152,90 @@ describe("useViewsConfig — mergeView key omission (Part B)", () => {
     expect(view && "sort" in view).toBe(false);
     // Other keys survive the merge.
     expect(view?.type).toBe("table");
+  });
+});
+
+describe("useViewsConfig — source preservation through every mutator", () => {
+  const mixedRows = [
+    { id: "q", name: "Queue", view: { type: "table" }, source: "queue" },
+    { id: "a", name: "All", view: { type: "table" } },
+  ];
+
+  it("resolves sourceful rows through their entry and carries source on instances", () => {
+    const { result } = renderViews(mixedRows, multiSource);
+    expect(ids(result)).toEqual(["q", "a"]);
+    expect(result.current.instances[0]!.instance.source).toBe("queue");
+    expect("source" in result.current.instances[1]!.instance).toBe(false);
+  });
+
+  it("renameView preserves source AND leaves source-less rows bare on write", () => {
+    const { result, unmount } = renderViews(mixedRows, multiSource);
+    act(() => {
+      result.current.renameView("q", "Q2");
+      result.current.renameView("a", "A2");
+    });
+    const rows = flushedRows(unmount);
+    expect(rows[0]!.source).toBe("queue");
+    // Byte-identity: the source-less row must not gain a `source` key.
+    expect("source" in rows[1]!).toBe(false);
+  });
+
+  it("reorderView preserves source", () => {
+    const { result, unmount } = renderViews(mixedRows, multiSource);
+    act(() => result.current.reorderView("q", 1));
+    const rows = flushedRows(unmount);
+    expect(rows.map((r) => r.id)).toEqual(["a", "q"]);
+    expect(rows[1]!.source).toBe("queue");
+    expect("source" in rows[0]!).toBe(false);
+  });
+
+  it("deleteView keeps the surviving row's source intact", () => {
+    const { result, unmount } = renderViews(mixedRows, multiSource);
+    act(() => result.current.deleteView("a"));
+    const rows = flushedRows(unmount);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.source).toBe("queue");
+  });
+
+  it("duplicateView copies source explicitly (and stays bare for bare rows)", () => {
+    const { result, unmount } = renderViews(mixedRows, multiSource);
+    act(() => {
+      result.current.duplicateView("q");
+      result.current.duplicateView("a");
+    });
+    const rows = flushedRows(unmount);
+    expect(rows).toHaveLength(4);
+    expect(rows[1]!.source).toBe("queue"); // clone of q
+    expect("source" in rows[3]!).toBe(false); // clone of a
+  });
+
+  it("updateView (merge) preserves source", () => {
+    const { result, unmount } = renderViews(mixedRows, multiSource);
+    act(() => {
+      result.current.updateView(
+        "q",
+        { sort: [{ fieldId: "x", direction: "asc" }] } as unknown as VariantValue,
+        { merge: true },
+      );
+    });
+    const rows = flushedRows(unmount);
+    expect(rows[0]!.source).toBe("queue");
+  });
+
+  it("addView(type, sourceId) stamps source on the seed row; without sourceId it stays bare", () => {
+    const { result, unmount } = renderViews([], multiSource);
+    let sourcefulId = "";
+    let bareId = "";
+    act(() => {
+      sourcefulId = result.current.addView("table", "queue");
+    });
+    act(() => {
+      bareId = result.current.addView("gallery");
+    });
+    const rows = flushedRows(unmount);
+    expect(rows.map((r) => r.id)).toEqual([sourcefulId, bareId]);
+    expect(rows[0]!.source).toBe("queue");
+    expect(rows[0]!.name).toBe("Table"); // seed title from the source's contributions
+    expect("source" in rows[1]!).toBe(false);
   });
 });

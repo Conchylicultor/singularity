@@ -4,10 +4,10 @@
 
 ## Plugin reference
 
-- Description: Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.
+- Description: Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
 - Web:
   - Contributes:
-    - `SidebarDataView.View` "Queue" → `SidebarQueueBody`
+    - `SidebarSources` "Queue" → `QueueSource`
     - `conversations-sidebar-queue-actions` "promote" → `PromoteAction`
     - `conversations-sidebar-queue-actions` "step-down" → `StepDownAction`
     - `conversations-sidebar-queue-actions` "demote" → `DemoteAction`
@@ -16,15 +16,12 @@
   - Uses:
     - `conversations/all-conversations.conversationFieldDefs`
     - `conversations/conversation-ui/item.ConversationItem`
-    - `conversations/conversations-view/data-view.SidebarDataView`
+    - `conversations/conversations-view/data-view.SidebarSources`
     - `conversations/conversations-view/queue.applyReorder`
     - `conversations/conversations-view/queue.classifyQueue`
     - `conversations/conversations-view/queue.ReorderVars`
     - `conversations/conversations-view/queue.TaskGroup`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/css/scroll.Scroll`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
     - `primitives/live-state.useResource`
     - `primitives/optimistic-mutation.useOptimisticResource`

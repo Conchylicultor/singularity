@@ -19,7 +19,7 @@ import {
 import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { QueueRow } from "./use-queue-rows";
 
-/** Per-consumer trailing-action slot for the Queue tab's rows. */
+/** Per-consumer trailing-action slot for the Queue source's rows. */
 export const QueueItemActions = defineItemActions<QueueRow>(
   "conversations-sidebar-queue-actions",
 );
@@ -27,8 +27,8 @@ export const QueueItemActions = defineItemActions<QueueRow>(
 /**
  * The per-render close handler cannot ride on `itemActions` props (item-action
  * components receive only `{ row, hasChildren }`), so it is threaded through this
- * module-scoped context, provided by {@link SidebarQueueBody}. Mirrors the History
- * tab's `CloseConversationContext`.
+ * module-scoped context, provided by {@link QueueSource}. Mirrors the History
+ * source's `CloseConversationContext`.
  */
 export const CloseConversationContext = createContext<
   ConversationSidebarProps["onCloseConversation"] | null

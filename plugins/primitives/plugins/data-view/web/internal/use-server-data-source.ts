@@ -53,8 +53,13 @@ function stableStringify(value: unknown): string {
  * unconditionally: the gating happens internally via `useInfiniteQuery`'s
  * `enabled`, so React's rules-of-hooks / the React Compiler stay satisfied.
  *
- * - `queryKey` carries `stableStringify(view)` → changing sort/filter/query
- *   yields a fresh key → pagination restarts from page 0.
+ * - `queryKey` carries the surface identity (`storageKey` + `sourceScope`) plus
+ *   `stableStringify(view)`. The identity segments keep two surfaces (or two
+ *   sources of one surface) with structurally-equal view state from sharing
+ *   pages fetched by a *different* `fetchPage` (the cache is `staleTime:
+ *   Infinity`). Deliberately NO per-instance `viewId`: instances of one surface
+ *   share one `fetchPage`, so cross-instance sharing is correct. Changing
+ *   sort/filter/query yields a fresh key → pagination restarts from page 0.
  * - `changeTick` is kept OUT of the queryKey; instead, when it changes, the hook
  *   `refetch()`es ALL currently-loaded pages in place (each re-runs with its
  *   stored keyset `pageParam`, so the window stays gap-free under live inserts).
@@ -65,6 +70,8 @@ export function useServerDataSource<TRow>(
   view: ServerQueryView,
   spec: ServerDataSourceSpec<TRow> | undefined,
   storageKey: DataViewId,
+  /** Per-source cache scope on a multi-source surface; `""` = the sole source. */
+  sourceScope = "",
 ): ServerDataSourceResult<TRow> | null {
   const viewKey = stableStringify({
     sort: view.sort,
@@ -75,7 +82,7 @@ export function useServerDataSource<TRow>(
   const pageSize = spec?.pageSize ?? DEFAULT_PAGE_SIZE;
 
   const query = useInfiniteQuery({
-    queryKey: ["data-view-server", viewKey],
+    queryKey: ["data-view-server", storageKey, sourceScope, viewKey],
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
       // `enabled: !!spec` guarantees `spec` is present whenever this runs.

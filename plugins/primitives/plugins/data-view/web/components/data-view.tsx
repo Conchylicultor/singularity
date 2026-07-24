@@ -1,50 +1,32 @@
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type CSSProperties, type ReactNode, useCallback, useMemo } from "react";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
-import type {
-  Contribution,
-  SealContributions,
-} from "@plugins/framework/plugins/web-sdk/core";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  type CreateOption,
+  type DataViewId,
   type DataViewProps,
-  type DataViewRenderProps,
-  type FieldDef,
-  type FieldExtensionsDescriptor,
-  type FilterGroup,
-  type ManualOrderConfig,
-  type SortRule,
 } from "../../core";
 import {
   EditableViewSwitcher,
   useViewVariants,
+  type ResolvedViewInstance,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
-import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
-import { useServerDataSource } from "../internal/use-server-data-source";
-import { useFilterController } from "../internal/use-filter-controller";
-import { useSortController } from "../internal/use-sort-controller";
-import { useSortPresets } from "../internal/use-sort-presets";
-import { useFilterPresets } from "../internal/use-filter-presets";
-import { CollectFieldExtensions } from "../internal/field-extensions";
-import { CollectRowOrder } from "../internal/row-order";
+import type { DataViewShellChrome } from "../internal/body-types";
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
-import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
-import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { CreatorsControl } from "./creators-control";
-import { DataViewToolbar } from "./toolbar/data-view-toolbar";
-import { DataViewSettingsMenu } from "./settings/settings-menu";
-import type { DataViewSettingsContextValue } from "./settings/settings-context";
+import { DataViewBody } from "./data-view-body";
 
 /**
  * Host entry point. Every DataView is config-backed (config mode is universal):
@@ -53,213 +35,110 @@ import type { DataViewSettingsContextValue } from "./settings/settings-context";
  * (config-authored instances, full instance actions, durable per-instance
  * sort/filter written back to the config row) and renders the editable
  * view-switcher.
+ *
+ * Split as shell + body: the shell (this file) owns the per-surface concerns —
+ * the view model, the switcher, the placeholder branch, the dev guards, and the
+ * toolbar-height measurement — while `DataViewBody` owns everything downstream
+ * of "which instance is active" (the field-extension fold, the data plumbing,
+ * the sort/filter controllers, the toolbar, the view render).
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
-  // Fold cross-plugin field contributions into `fields` BEFORE the model +
-  // controllers, so the merged schema reaches `useSortController`,
-  // `useFilterController`, and `renderProps.fields` uniformly (automatic once it
-  // is the `fields` prop). ONE fold over an ordered list of sources:
-  //
-  //  1. the **global** `DataViewSlots.FieldExtension` slot — always folded (every
-  //     DataView), the cross-cutting contributor case (e.g. custom-columns); then
-  //  2. the **per-consumer** `props.fieldExtensions` factory (Sonata's play-count
-  //     / last-played fields) — appended only when present.
-  //
-  // Both are the same `FieldExtensionsDescriptor`; the fold threads
-  // `{ storageKey, rowKey }` to every contributor (a per-consumer contributor
-  // ignores the coordinates it does not need). The host names no individual
-  // contributor: custom-columns folds in through the generic global slot,
-  // inverting the old host→child bridge.
-  //
-  // The fold runs in `unknown` row space (the global slot spans disjoint consumer
-  // row types), so `props.fields`/`rowKey` and the merged result cross a safe
-  // `FieldDef<unknown>`↔`FieldDef<TRow>` boundary cast.
-  const sources = props.fieldExtensions
-    ? [
-        DataViewSlots.FieldExtension,
-        props.fieldExtensions as FieldExtensionsDescriptor<unknown>,
-      ]
-    : [DataViewSlots.FieldExtension];
-  return (
-    <CollectFieldExtensions
-      sources={sources}
-      base={props.fields as FieldDef<unknown>[]}
-      storageKey={props.storageKey}
-      rowKey={props.rowKey as (row: unknown, index: number) => string}
-    >
-      {(fields) => (
-        <DataViewWithModel {...props} fields={fields as FieldDef<TRow>[]} />
-      )}
-    </CollectFieldExtensions>
-  );
-}
-
-function DataViewWithModel<TRow>(props: DataViewProps<TRow>): ReactNode {
   const contributions = DataViewSlots.View.useContributions();
+  // The single-source path is ONE implicit source entry (`id`/`title`
+  // undefined): every config row (all source-less) resolves through it, and the
+  // add menu stays the flat single-group fast path.
+  const hasHierarchy = !!props.hierarchy;
+  const { views, viewOptions } = props;
+  const entries = useMemo<ViewSourceEntry<DataViewContribution>[]>(
+    () => [{ contributions, hasHierarchy, views, viewOptions }],
+    [contributions, hasHierarchy, views, viewOptions],
+  );
   const viewModel = useDataViewModel(
     props.storageKey,
-    contributions,
-    props.views,
-    !!props.hierarchy,
-    props.viewOptions,
+    entries,
     props.defaultView,
   );
-  return <DataViewInner viewModel={viewModel} contributions={contributions} {...props} />;
+  return (
+    <DataViewShellFrame
+      storageKey={props.storageKey}
+      viewModel={viewModel}
+      contributions={contributions}
+      title={props.title}
+      actions={props.actions}
+      creators={props.creators}
+    >
+      {(activeInstance, chrome) => (
+        <DataViewBody<TRow>
+          {...props}
+          viewModel={viewModel}
+          activeInstance={activeInstance}
+          chrome={chrome}
+        />
+      )}
+    </DataViewShellFrame>
+  );
 }
 
-function DataViewInner<TRow>({
-  viewModel,
-  contributions,
-  ...props
-}: DataViewProps<TRow> & {
+/**
+ * The shared per-surface shell frame: dev guards, the root sticky containing
+ * block + `--dv-header-offset` publication, the editable switcher, and the
+ * zero-instances placeholder branch. `children` renders the per-active-instance
+ * body — it is invoked as a plain function (not a component), so it must stay
+ * hook-free; the body's hooks live in `DataViewBody`'s own components.
+ *
+ * Shared by the single-source `DataView` above and `MergedDataView` (exported
+ * plugin-internally, never from the barrel) so the placeholder / measurement /
+ * switcher logic cannot drift between the two hosts.
+ */
+export function DataViewShellFrame(props: {
+  storageKey: DataViewId;
   viewModel: ViewModel;
   contributions: SealContributions<DataViewContribution>[];
+  title?: ReactNode;
+  actions?: ReactNode;
+  creators?: CreateOption[];
+  children: (
+    activeInstance: ResolvedViewInstance<DataViewContribution>,
+    chrome: DataViewShellChrome,
+  ) => ReactNode;
 }): ReactNode {
   const {
-    rows,
-    rowKey,
+    storageKey,
+    viewModel,
+    contributions,
     title,
     actions,
-    searchAccessor,
-    onRowActivate,
-    selectedRowId,
-    emptyState,
-    loading,
-    loadingState,
-    hierarchy,
-    manualOrder,
-    aggregate,
-    selection,
-    itemActions,
     creators,
+    children,
   } = props;
 
   // DataView is always natural-height and never owns a scroller — the pane owns
   // exactly one scroll (via `<PaneScroll>`). Dev-only structural guard fires if
   // the enclosing pane forgot to provide that scroll (kept in its own hook so the
   // effect's DOM walk stays out of this component's React Compiler analysis).
-  const rootRef = useDataViewDevGuards(props.storageKey);
+  const rootRef = useDataViewDevGuards(storageKey);
 
   // Measure the sticky toolbar's height and publish it on the root as
   // `--dv-header-offset` (see `DATA_VIEW_HEADER_OFFSET_VAR`). Grouped views stack
   // their sticky group headers directly below the toolbar by reading this var, so
   // two stacked sticky bands never overlap regardless of the toolbar's (dynamic)
-  // height. Mirrors the `--chrome-mask` cross-plugin CSS-var convention.
+  // height. Mirrors the `--chrome-mask` cross-plugin CSS-var convention. The ref
+  // crosses into the body, which attaches it to the toolbar's `<Sticky>`.
   const [toolbarRef, { height: toolbarHeight }] = useElementSize();
 
   const viewVariants = useViewVariants(contributions);
-
-  // The schema is already fully merged: `props.fields` here arrives AFTER the
-  // top-level `DataView` folded both the global `DataViewSlots.FieldExtension`
-  // slot (custom columns, keyed by `{ storageKey, rowKey }`) and the per-consumer
-  // `fieldExtensions` factory into it. So the merged fields reach the model,
-  // controllers, and render-props uniformly with no custom-columns knowledge here.
-  const fields = props.fields;
-
-  // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
-  // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use
-  // it for a correct per-row `hasChildren`; the tree uses its own node count.
-  const hasChildren = useMemo(() => {
-    const parents = new Set<string>();
-    if (hierarchy) {
-      for (const row of rows) {
-        const pid = hierarchy.getParentId(row);
-        if (pid != null) parents.add(pid);
-      }
-    }
-    return (rowId: string) => parents.has(rowId);
-  }, [rows, hierarchy]);
 
   const { instances, activeId } = viewModel;
   const activeInstance =
     instances.find((r) => r.instance.id === activeId) ?? instances[0] ?? null;
 
   const activeViewId = activeInstance?.instance.id ?? "";
-  const activeState = viewModel.stateFor(activeViewId);
-
-  // Optional server-delegated data source. Called unconditionally (the hook
-  // no-ops and returns `null` when `props.dataSource` is absent — the in-memory
-  // path). When present, filter/sort/search/paginate run server-side over the
-  // live `activeState`, so the accumulated pages replace `rows` and the client
-  // pipeline (`useFlatRows`) is neutralized into a pass-through below.
-  const server = useServerDataSource(
-    activeState,
-    props.dataSource,
-    props.storageKey,
-  );
-
-  // Filter controller — the popover builder consumes the full surface (filter,
-  // setFilter, filterableFields, resolveOperatorSet, ruleCount).
-  const setActiveFilter = useCallback(
-    (filter: FilterGroup | null) => viewModel.setFilter(activeViewId, filter),
-    [viewModel, activeViewId],
-  );
-  const filterController = useFilterController(
-    fields,
-    activeState.filter,
-    setActiveFilter,
-  );
-  const hasFilters = filterController.filterableFields.length > 0;
-
-  // Sort controller — the popover builder consumes the flat surface (rules,
-  // sortableFields, ruleCount, add/remove/setDirection/setField/move/clear).
-  const setActiveSortRules = useCallback(
-    (rules: SortRule[]) => viewModel.setSortRules(activeViewId, rules),
-    [viewModel, activeViewId],
-  );
-  const sortController = useSortController(
-    fields,
-    activeState.sort,
-    setActiveSortRules,
-  );
-  // Saved, shareable sort presets — read from the sibling `sortPresets` key in
-  // the same per-surface config doc (independent of the active instance, so call
-  // unconditionally next to the sort controller).
-  const sortPresets = useSortPresets(props.storageKey);
-  // Saved, shareable filter presets — the twin of sort presets, read from the
-  // sibling `filterPresets` key in the same per-surface config doc (call
-  // unconditionally next to the filter controller).
-  const filterPresets = useFilterPresets(props.storageKey);
-  // A view opts out of the Sort pill via `supportsSort: false`. Every current
-  // view honors sort (the tree sorts each sibling group by field, defaulting to
-  // manual/rank order), so this stays enabled; the flag remains for future
-  // sort-less view types. Default (undefined) = honors sort.
-  const activeSupportsSort = activeInstance?.viewType.supportsSort !== false;
-  // Whether the active view can render a flat rank-ordered, drag-reorderable
-  // body at all (list/table opt in; gallery/tree do not). It says nothing about
-  // whether an order is *available* — see `manualOrderActive` below.
-  const activeSupportsManualOrder =
-    !!activeInstance?.viewType.supportsManualOrder;
-  // Manual order no longer suppresses the Sort pill: a sort simply overrides the
-  // manual order (Notion's model), so the pill must stay reachable to clear it.
-  const hasSort =
-    sortController.sortableFields.length > 0 && activeSupportsSort;
-  // Group-by support mirrors sort: every built-in view (including the tree,
-  // which partitions its ROOTS into sections) supports it today; the opt-out
-  // flag remains for future group-less view types. The settings menu hides the
-  // group-by control accordingly.
-  const activeSupportsGroupBy =
-    activeInstance?.viewType.supportsGroupBy !== false;
-
-  // Whether a row-order contributor may own this view's order. Each clause is a
-  // structural exclusion, not a preference:
-  const rowOrderEnabled =
-    activeSupportsManualOrder && // list / table only
-    manualOrder == null && // a consumer's domain order wins
-    props.dataSource == null && // server-paginated ⇒ the client cannot own the order
-    aggregate == null && // an aggregate representative's rank cannot stand for its members
-    !activeState.groupBy; // a cross-group drop would need a field write the primitive cannot do
-
-  // The per-view Properties control (which fields render in the body + their
-  // order) now lives in the settings gear as a `view`-scope `DataViewSlots.Setting`
-  // contribution (see `PropertiesControl`), reading/writing the same
-  // `activeState.visibleFields` / `viewModel.setVisibleFields` via
-  // `DataViewSettingsContext` — no host wiring needed here.
 
   // Config is the single source of truth: zero authored view-instances → render
   // an honest placeholder rather than an empty shell. The build-time
   // `data-view:configs-authored` check is the real forcing function; this keeps
-  // the pane from crashing if a config is authored-but-empty.
+  // the pane from crashing if a config is authored-but-empty. Early-returning
+  // here (before the body mounts) is the body's only gate.
   if (!activeInstance) {
     return (
       <Stack gap="none" ref={rootRef}>
@@ -281,210 +160,47 @@ function DataViewInner<TRow>({
         <div className="px-pane-gutter py-md">
           <Placeholder>
             No views configured — author{" "}
-            <code>config/&lt;plugin&gt;/{props.storageKey}.jsonc</code>
+            <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
           </Placeholder>
         </div>
       </Stack>
     );
   }
 
-  // Server-delegated substitution: when a `dataSource` drives this DataView, the
-  // SQL already applied sort/filter/search, so feed the accumulated server rows
-  // and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
-  // when sort/filter/query are empty). Absent → the in-memory path is untouched.
-  const effectiveRows: readonly unknown[] = server
-    ? server.rows
-    : (rows as readonly unknown[]);
-  // Neutralize ONLY the server-owned dimensions (sort/filter/query already ran in
-  // SQL). `visibleFields` is display-only — it never touches the query — so the
-  // `...activeState` spread deliberately PRESERVES it so the views still honor
-  // Properties on the server-delegated path.
-  const effectiveState = server
-    ? { ...activeState, sort: [], filter: null, query: "" }
-    : activeState;
-  const effectiveLoading = server ? server.loading : loading;
+  // The switcher needs only model inputs, so the shell builds the node once per
+  // surface and the body renders it inside the toolbar as an opaque node.
+  const chrome: DataViewShellChrome = {
+    switcher: (
+      <EditableViewSwitcher
+        instances={instances}
+        activeId={activeViewId}
+        onSelect={viewModel.setActiveView}
+        actions={viewModel.actions}
+        viewVariants={viewVariants}
+      />
+    ),
+    switcherCount: instances.length,
+    title,
+    actions,
+    stickyRef: toolbarRef,
+  };
 
-  // Fold the global `RowOrder` slot around the whole render. The children-callback
-  // is a plain function call (invoked in the fold's base case), NOT a component —
-  // so it contains no hooks; every hook above stays in this component's body.
-  //
-  // The fold takes the RAW rows and derives the ordered set itself, but only when
-  // `enabled` — deriving it here would cost EVERY DataView (tree, gallery,
-  // server-paginated) an extra `useFlatRows` pass per render for a set it discards.
   return (
-    <CollectRowOrder
-      enabled={rowOrderEnabled}
-      storageKey={props.storageKey}
-      viewId={activeViewId}
-      rowKey={rowKey as (row: unknown, index: number) => string}
-      rows={effectiveRows}
-      fields={fields as FieldDef<unknown>[]}
-      state={activeState}
-      resolveOperatorSet={filterController.resolveOperatorSet}
-      searchAccessor={searchAccessor as ((row: unknown) => string) | undefined}
+    // `Stack gap="none"` = a plain `flex flex-col` block box (no `min-h-0 flex-1`)
+    // that establishes this DataView's own sticky containing block and lets the
+    // body grow to natural height — the pane (via `<PaneScroll>`) owns the scroll.
+    <Stack
+      gap="none"
+      ref={rootRef}
+      // Publish the measured sticky-toolbar height so grouped views stack their
+      // own sticky group headers directly below it (see DATA_VIEW_HEADER_OFFSET_VAR).
+      style={
+        {
+          [DATA_VIEW_HEADER_OFFSET_VAR]: `${Math.round(toolbarHeight)}px`,
+        } as CSSProperties
+      }
     >
-      {(contributedRowOrder) => {
-        // One rule everywhere — the render path never branches on where the order
-        // came from. The consumer's domain order outranks any contributor.
-        const cfg =
-          (manualOrder as ManualOrderConfig<unknown> | undefined) ??
-          contributedRowOrder ??
-          null;
-        // A field sort OVERRIDES the manual order and suspends drag; clearing it
-        // restores the order. The sort test lives here and NOT in `rowOrderEnabled`
-        // on purpose: toggling a sort off/on must not tear down the contributor's
-        // live subscription, and `useDataViewSections`'s `manualRank ⇒ sort: []`
-        // rule stays untouched — the host simply withholds the config while a sort
-        // is set.
-        const manualOrderActive =
-          cfg != null && activeSupportsManualOrder && activeState.sort.length === 0;
-
-        // The host passes RAW rows; each view applies the processing matching its own
-        // semantics (gallery/table call `useFlatRows`, the tree feeds `TreeList`).
-        const renderProps: DataViewRenderProps<unknown> = {
-          rows: effectiveRows,
-          fields: fields as DataViewRenderProps<unknown>["fields"],
-          rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
-          state: effectiveState,
-          setSort: (fieldId) => viewModel.setSort(activeViewId, fieldId),
-          setFilter: (filter) => viewModel.setFilter(activeViewId, filter),
-          onRowActivate:
-            onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
-          selectedRowId,
-          options: activeInstance.instance.options,
-          searchAccessor:
-            searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
-          hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
-          // `manualOrderActive` already implies `cfg != null` (TS cannot see it
-          // through the boolean), hence the assertion.
-          manualOrder: manualOrderActive
-            ? (cfg as ManualOrderConfig<unknown>)
-            : undefined,
-          // Aggregate is a pure pipeline transform (orthogonal to the supports* flags):
-          // hand it to every flat view; only those rendering via `useDataViewSections`
-          // (list/table/gallery) act on it — the tree ignores it.
-          aggregate: aggregate as DataViewRenderProps<unknown>["aggregate"],
-          selection,
-          expanded: activeState.expanded,
-          setExpanded: (id, next) => viewModel.setExpanded(activeViewId, id, next),
-          collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
-          setSectionCollapsed: (key, collapsed) =>
-            viewModel.setSectionCollapsed(activeViewId, key, collapsed),
-          emptyState,
-          itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
-          hasChildren,
-          creators,
-        };
-
-        // Context for the unified settings menu — settings contributions (group-by,
-        // custom-columns' "Fields" UI, …) read what they need from here, no
-        // prop-threading. Custom-columns is now a real global-scope Setting contributor
-        // (it imports the slot directly), so the host names it nowhere.
-        const settingsContext: DataViewSettingsContextValue = {
-          storageKey: props.storageKey,
-          fields: fields as DataViewRenderProps<unknown>["fields"],
-          activeViewId,
-          activeState,
-          viewModel,
-          activeSupportsGroupBy,
-        };
-
-        return (
-          // `Stack gap="none"` = a plain `flex flex-col` block box (no `min-h-0 flex-1`)
-          // that establishes this DataView's own sticky containing block and lets the
-          // body grow to natural height — the pane (via `<PaneScroll>`) owns the scroll.
-          <Stack
-            gap="none"
-            ref={rootRef}
-            // Publish the measured sticky-toolbar height so grouped views stack their
-            // own sticky group headers directly below it (see DATA_VIEW_HEADER_OFFSET_VAR).
-            style={
-              {
-                [DATA_VIEW_HEADER_OFFSET_VAR]: `${Math.round(toolbarHeight)}px`,
-              } as CSSProperties
-            }
-          >
-            {/* The toolbar adapts to its own width: the wide inline row below
-                `COMPACT_BREAKPOINT`, the folded compact form (search-icon + `MdTune`
-                options popover, single-view switcher hidden) above it. Each control
-                element is built once and handed to the toolbar, which only relocates
-                it — the sort/filter builder popovers are byte-for-byte identical in
-                either layout. */}
-            <DataViewToolbar
-              stickyRef={toolbarRef}
-              title={title}
-              query={activeState.query}
-              onQueryChange={(next) => viewModel.setQuery(activeViewId, next)}
-              switcher={
-                <EditableViewSwitcher
-                  instances={instances}
-                  activeId={activeViewId}
-                  onSelect={viewModel.setActiveView}
-                  actions={viewModel.actions}
-                  viewVariants={viewVariants}
-                />
-              }
-              switcherCount={instances.length}
-              filterControl={
-                hasFilters ? (
-                  <FilterBuilderTrigger
-                    controller={filterController}
-                    presets={filterPresets}
-                  />
-                ) : null
-              }
-              sortControl={
-                hasSort ? (
-                  <SortBuilderTrigger
-                    controller={sortController}
-                    presets={sortPresets}
-                  />
-                ) : null
-              }
-              actions={actions}
-              /* Unified settings gear: renders every `DataViewSlots.Setting`
-                 contribution (per-view Group by, DataView-global custom-columns
-                 "Fields", …) uniformly. Self-hides when there is nothing to configure.
-                 Supersedes the old custom-columns-only gear. */
-              fieldsControl={<DataViewSettingsMenu context={settingsContext} />}
-              creators={creators}
-              activeControlCount={
-                (hasFilters ? filterController.ruleCount : 0) +
-                (hasSort ? sortController.ruleCount : 0)
-              }
-            />
-            {/* One density for every view type, so a row's controls and decorations
-                (avatars, status dots, chips, buttons) look identical whether the same
-                data is shown as a table, tree, list, or gallery. The table view's
-                `data-table` primitive already defaults to `xs`; declaring it here once
-                brings tree/list/gallery in line instead of each falling through to the
-                ambient `md` default. */}
-            {/* The host owns the loading→empty precedence: while loading it renders the
-                view-type's declared skeleton and NEVER calls `renderIsolated`, so a view
-                child only ever renders in the confirmed-not-loading state (it can no
-                longer mishandle loading and let a skeleton-less empty state leak through). */}
-            <ControlSizeProvider size="xs">
-              {effectiveLoading
-                ? (loadingState ?? (
-                    <Loading
-                      variant={activeInstance.viewType.loadingVariant ?? "rows"}
-                      count={activeInstance.viewType.loadingCount}
-                    />
-                  ))
-                : renderIsolated(
-                    DataViewSlots.View.id,
-                    activeInstance.viewType as unknown as Contribution,
-                    renderProps,
-                  )}
-            </ControlSizeProvider>
-            {/* Server-delegated infinite scroll: the error-gated footer (loading-more
-                spinner, Retry on a failed page fetch, and the IntersectionObserver
-                sentinel) that fetches the next page as it scrolls into view. Rendered
-                only on the server path; the in-memory path renders nothing. */}
-            {server ? <InfiniteScrollFooter handle={server.scroll} /> : null}
-          </Stack>
-        );
-      }}
-    </CollectRowOrder>
+      {children(activeInstance, chrome)}
+    </Stack>
   );
 }

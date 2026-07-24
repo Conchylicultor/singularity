@@ -96,6 +96,46 @@ describe("useServerDataSource", () => {
     expect(fetchPage).toHaveBeenCalledTimes(2);
   });
 
+  it("keys the page cache by storageKey + sourceScope + view state", async () => {
+    // The cache is `staleTime: Infinity`, so the key must carry the surface
+    // identity — two surfaces (or two sources) with structurally-equal view
+    // state must never share pages fetched by a different `fetchPage`.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const scopedWrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    const fetchPage = vi.fn(async () => pageOf(["a"], null));
+    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const { result } = renderHook(
+      () => useServerDataSource<string>(emptyView, spec, TEST_VIEW, "queue"),
+      { wrapper: scopedWrapper },
+    );
+    await waitFor(() => expect(result.current?.rows).toEqual(["a"]));
+    const keys = client.getQueryCache().getAll().map((q) => q.queryKey);
+    expect(keys).toHaveLength(1);
+    expect(keys[0]!.slice(0, 3)).toEqual(["data-view-server", "test-view", "queue"]);
+    // Trailing segment is the stable-stringified sort/filter/query view state.
+    expect(typeof keys[0]![3]).toBe("string");
+  });
+
+  it("defaults sourceScope to the empty string (single-source path)", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const scopedWrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    const fetchPage = vi.fn(async () => pageOf(["a"], null));
+    const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
+    const { result } = renderHook(
+      () => useServerDataSource<string>(emptyView, spec, TEST_VIEW),
+      { wrapper: scopedWrapper },
+    );
+    await waitFor(() => expect(result.current?.rows).toEqual(["a"]));
+    const keys = client.getQueryCache().getAll().map((q) => q.queryKey);
+    expect(keys[0]!.slice(0, 3)).toEqual(["data-view-server", "test-view", ""]);
+  });
+
   it("restarts pagination from page 0 when the view changes", async () => {
     const fetchPage = vi.fn(async () => pageOf(["a"], "cur-1"));
     const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };

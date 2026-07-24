@@ -1,0 +1,10 @@
+// @hash 0424fd04ea24
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "conversations.conversations-view.data-view.history:history",
+    "conversations.conversations-view.data-view.queue:queue"
+  ]
+}

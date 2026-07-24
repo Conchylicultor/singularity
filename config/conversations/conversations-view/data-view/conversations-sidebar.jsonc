@@ -2,8 +2,15 @@
 {
   "views": [
     {
+      "id": "queue",
+      "name": "Queue",
+      "source": "queue",
+      "view": { "type": "list", "groupBy": "section" }
+    },
+    {
       "id": "history",
       "name": "History",
+      "source": "history",
       "view": { "type": "list", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
     }
   ],

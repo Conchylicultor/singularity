@@ -69,6 +69,53 @@ example — data-view declares `sortPresets` (a nested `listField`) in
 (one per consumer): the per-id descriptor cache keys by id alone, so a varying
 field set per id would alias.
 
+## The source axis
+
+A view surface can bind its instances to N **sources**. The engine stays
+type-agnostic about what a source *is*: a config row's optional `source` key is
+an **opaque lookup key** resolved through the caller-supplied
+`ViewSourceEntry[]` list (core type). Each entry carries what used to be the
+flat `(contributions, hasHierarchy, viewOptions)` triple, plus `id` (matched
+against `row.source`; `undefined` = the implicit sole source — every
+single-source consumer passes exactly one such entry), `title`/`icon` (add-menu
+group chrome), and the `views` whitelist.
+
+- **Row model.** `ViewConfigRow` / `ViewInstance` carry `source?: string`.
+  `normalizeRows` (own module, `web/internal/normalize-rows.ts`) preserves it
+  via **conditional spread**, so a source-less row's JSON stays byte-identical
+  (`{ id, name, view }`, no `source` key) — the JSON-identity reconcile in
+  `useViewsConfig` depends on that. Every mutator preserves it (`{...r}`
+  spreads; `duplicateView` copies it explicitly; `addView(type, sourceId?)`
+  stamps it on the seed row and resolves the seed title from that source's own
+  contributions). Locked by tests (`normalize-rows.test.ts`,
+  `web/__tests__/use-views-config.test.tsx`).
+- **`source` is NOT declared in the descriptor's `itemFields`** — deliberately.
+  The `views` listField item schema is `.passthrough()`, so the key survives
+  the read path as-is; a declared *defaulted* field would be healed onto every
+  existing row of every surface as `source: ""` (mass config diff, and `""` ≠
+  absent). Consequence: the Settings-pane FieldRenderer shows no `source`
+  editor — it is stamped by `addView`, never hand-edited there.
+- **Resolution.** `buildInstanceFromRow(row, entries)` finds the entry by
+  `row.source` (both possibly `undefined`); **no entry → fail-soft `null`**
+  (the row stays in config, skipped — mirroring the orphan view-type hazard),
+  then the usual type lookup / hierarchical gate / options merge run against
+  that entry's own `contributions` / `hasHierarchy` / `viewOptions`.
+- **`views` whitelist gates addability, not authored rows.** The per-entry
+  whitelist filters that entry's add-menu group (`AddableSource.types`) only;
+  `buildInstanceFromRow` deliberately ignores it, so an authored row of a
+  non-whitelisted type still renders — the exact single-source semantics the
+  flat `views` prop always had.
+- **Grouped add menu.** `ViewActionsCore.availableSources: AddableSource[]`
+  (one group per entry) replaces the flat `available`; `addView(type,
+  sourceId?)`. `EditableViewSwitcher` renders one `DropdownMenuSection` per
+  source (label = source title — a groupless label would crash the menu), with
+  a byte-identical flat-item fast path when there is exactly one untitled
+  source.
+- **`useViewVariants` is deliberately global.** The `View` registry is one
+  shared vocabulary, identical for every source, so ONE variants map serves the
+  settings popover (it only ever opens on the active chip). Do not "fix" it to
+  be per-source.
+
 ## ⚠️ Invariant: never import data-view (no cycle)
 
 `view-core` is a **child** of `data-view`, so `data-view → view-core` is the only
@@ -90,7 +137,8 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
 
 ## Barrel API
 
-- `core`: `ViewTypeMeta`, `ViewInstance`, `ViewConfigRow`, `AddableViewType` (types).
+- `core`: `ViewTypeMeta`, `ViewInstance`, `ViewConfigRow`, `ViewSourceEntry`,
+  `AddableViewType`, `AddableSource` (types).
 - `shared`: `viewsDescriptor` (engine-private; reached cross-plugin via the
   `server` re-export or the `web` `buildViewDescriptors` helper, never directly).
 - `server`: `viewsDescriptor`,
@@ -122,6 +170,7 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/css/ui-kit.DropdownMenuSection`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
     - `primitives/hover-reveal.hoverRevealClass`
@@ -155,9 +204,11 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
   - Imported by: `primitives/data-view`
 - Core:
   - Exports (types):
+    - `AddableSource`
     - `AddableViewType`
     - `ViewConfigRow`
     - `ViewInstance`
+    - `ViewSourceEntry`
     - `ViewTypeMeta`
 - Shared:
   - Exports (values): `viewsDescriptor`

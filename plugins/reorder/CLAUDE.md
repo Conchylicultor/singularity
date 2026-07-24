@@ -258,7 +258,10 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+<<<<<<< .merge_file_sXAa1y
     - `ConfigV2.WebRegister`
+=======
+>>>>>>> .merge_file_30Jsb5
     - `Staging.DiffRenderer` → `ReorderDiffRenderer`
   - Uses:
     - `config_v2.ConfigV2`
@@ -334,6 +337,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "conversation.prompt-input"
     - `ConfigV2.Register` "conversations-sidebar-history-actions"
     - `ConfigV2.Register` "conversations-sidebar-queue-actions"
+    - `ConfigV2.Register` "conversations-sidebar-sources"
     - `ConfigV2.Register` "debug-app.sidebar"
     - `ConfigV2.Register` "debug-app.toolbar"
     - `ConfigV2.Register` "deploy.section"
@@ -385,6 +389,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "studio.sidebar"
     - `ConfigV2.Register` "studio.toolbar"
     - `ConfigV2.Register` "table-detail.section"
+    - `ConfigV2.Register` "task-deps-tree-sources"
     - `ConfigV2.Register` "task-deps-tree.actions"
     - `ConfigV2.Register` "task-detail.section"
     - `ConfigV2.Register` "task-draft-form.action"

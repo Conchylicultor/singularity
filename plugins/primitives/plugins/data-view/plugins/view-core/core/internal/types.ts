@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 
@@ -37,6 +38,10 @@ export interface ViewInstance {
   name: string;
   /** Registry id (`ViewTypeMeta.type`) this instance renders. */
   type: string;
+  /** Opaque source key this instance binds to (`ViewSourceEntry.id`). Absent =
+   *  the implicit sole source (every single-source surface). The engine only
+   *  ever matches it against the entry list — it never knows what a source IS. */
+  source?: string;
   /** Opaque per-instance options forwarded to the view-type component. */
   options?: unknown;
 }
@@ -52,6 +57,35 @@ export interface ViewConfigRow {
   id: string;
   name: string;
   view: VariantValue;
+  /** Opaque source key (`ViewSourceEntry.id`) this row binds to. Absent = the
+   *  implicit sole source. Carried verbatim through every read/write —
+   *  `normalizeRows` preserves it via conditional spread so source-less rows
+   *  stay byte-identical (the JSON-identity reconcile depends on that). */
+  source?: string;
+}
+
+/**
+ * One data source a view surface can bind its instances to. The engine treats
+ * `id` as an **opaque lookup key** matched against `ViewConfigRow.source`
+ * (`undefined` = the implicit sole source — the single-source case) — it never
+ * knows what a source renders; the consumer (e.g. data-view's `MergedDataView`)
+ * owns that. Each entry carries the per-source capability surface that used to
+ * be the flat `(contributions, hasHierarchy, viewOptions)` triple.
+ */
+export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
+  /** Matched against `ViewConfigRow.source`; `undefined` = the implicit sole
+   *  source. */
+  id?: string;
+  /** Add-menu group label; omitted for the implicit source (flat menu). */
+  title?: string;
+  icon?: ComponentType<{ className?: string }>;
+  contributions: SealContributions<T>[];
+  hasHierarchy: boolean;
+  /** Type whitelist for the add menu (gates addability, NOT authored rows —
+   *  mirroring the single-source `views` prop semantics). */
+  views?: string[];
+  /** Code-supplied per-type options merged under each row's `view` blob. */
+  viewOptions?: Record<string, unknown>;
 }
 
 /** A view-type the add-menu offers (capability-gated). */
@@ -59,4 +93,16 @@ export interface AddableViewType {
   type: string;
   title: string;
   icon: ComponentType<{ className?: string }>;
+}
+
+/** One add-menu group: the addable view-types of one source entry. A surface
+ *  with a single untitled source renders the types as today's flat menu. */
+export interface AddableSource {
+  /** `ViewSourceEntry.id` — threaded back into `addView(type, sourceId)`. */
+  sourceId?: string;
+  /** Menu group label; absent only for the implicit sole source. */
+  title?: string;
+  icon?: ComponentType<{ className?: string }>;
+  /** Per entry: contributions ∩ `views` whitelist ∩ hierarchical gate. */
+  types: AddableViewType[];
 }

@@ -1,8 +1,12 @@
 import { useMemo } from "react";
-import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import type { AddableViewType, ViewTypeMeta } from "../../core";
+import type {
+  AddableSource,
+  AddableViewType,
+  ViewSourceEntry,
+  ViewTypeMeta,
+} from "../../core";
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { useViewsConfig } from "./use-views-config";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
@@ -13,10 +17,11 @@ import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
  * sort/filter on top of it.
  */
 export interface ViewActionsCore {
-  /** View-types the `+` menu offers: registered contributions ∩ `views`
-   *  whitelist (if any) ∩ hierarchical gate. */
-  available: AddableViewType[];
-  addView: (type: string) => void;
+  /** Add-menu groups, one per source entry (each entry's registered
+   *  contributions ∩ `views` whitelist ∩ hierarchical gate). A single-source
+   *  surface yields exactly one untitled group — the flat-menu fast path. */
+  availableSources: AddableSource[];
+  addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
@@ -39,8 +44,8 @@ export interface ViewModelCore<T extends ViewTypeMeta = ViewTypeMeta> {
   viewFor: (id: string) => VariantValue | undefined;
   updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
   actions: ViewActionsCore;
-  /** Capability-gated add menu (registered ∩ whitelist ∩ hierarchical gate). */
-  available: AddableViewType[];
+  /** Capability-gated add menu, grouped per source entry. */
+  availableSources: AddableSource[];
 }
 
 /** Resolve the active instance id given the persisted selection + fallbacks. */
@@ -61,28 +66,23 @@ function resolveActiveId<T extends ViewTypeMeta>(
  * full instance actions. active-id stays device-local via `useActiveViewId`.
  * Opaque about per-instance options (`sort`/`filter`/query/expand are the host's
  * concern).
+ *
+ * `entries` is the ordered source-entry list; single-source consumers pass one
+ * implicit entry (`id`/`title` undefined). Pass a referentially-stable array —
+ * the instance list and add menu memoize on it.
  */
 export function useViewModel<T extends ViewTypeMeta>(
   storageKey: string,
   descriptorMap: Map<string, ConfigDescriptor>,
-  contributions: SealContributions<T>[],
-  views: string[] | undefined,
-  hasHierarchy: boolean,
-  viewOptions: Record<string, unknown> | undefined,
+  entries: ViewSourceEntry<T>[],
   defaultView: string | undefined,
 ): ViewModelCore<T> {
   // Config is the single source of truth — no synthesized defaults. The instance
   // list comes only from the authored config rows (terse `{ name, view }`,
-  // normalized on read). `useResolvedInstances` is no longer used here; the
-  // addable-types menu (`available`, below) is derived straight from the
-  // contributions — that is "what view-types exist", not "default instances".
-  const cfg = useViewsConfig(
-    storageKey,
-    descriptorMap,
-    contributions,
-    hasHierarchy,
-    viewOptions,
-  );
+  // normalized on read). The addable-types menu (`availableSources`, below) is
+  // derived straight from each entry's contributions — that is "what view-types
+  // exist per source", not "default instances".
+  const cfg = useViewsConfig(storageKey, descriptorMap, entries);
   const active = useActiveViewId(storageKey);
 
   const activeId = resolveActiveId(
@@ -91,25 +91,41 @@ export function useViewModel<T extends ViewTypeMeta>(
     defaultView,
   );
 
-  // Capability-gated add menu: registered contributions ∩ `views` whitelist (if
-  // present) ∩ hierarchical gate. Generic — driven by contributions, never by a
-  // named view child.
-  const available = useMemo<AddableViewType[]>(() => {
-    const usable = (
-      hasHierarchy ? contributions : contributions.filter((c) => !c.hierarchical)
-    ).filter((c) => (views ? views.includes(c.type) : true));
-    return usable
-      .slice()
-      .sort(
-        (a, b) =>
-          (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
-      )
-      .map((c) => ({ type: c.type, title: c.title, icon: c.icon }));
-  }, [contributions, views, hasHierarchy]);
+  // Capability-gated add menu, grouped per source entry: each group is that
+  // entry's registered contributions ∩ `views` whitelist (if present) ∩
+  // hierarchical gate. The `views` whitelist gates ADDABILITY only — authored
+  // rows of a non-whitelisted type still resolve (see `buildInstanceFromRow`).
+  // Generic — driven by the entries, never by a named view child.
+  const availableSources = useMemo<AddableSource[]>(() => {
+    return entries.map((entry) => {
+      const usable = (
+        entry.hasHierarchy
+          ? entry.contributions
+          : entry.contributions.filter((c) => !c.hierarchical)
+      ).filter((c) => (entry.views ? entry.views.includes(c.type) : true));
+      const types = usable
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
+        )
+        .map<AddableViewType>((c) => ({
+          type: c.type,
+          title: c.title,
+          icon: c.icon,
+        }));
+      return {
+        sourceId: entry.id,
+        title: entry.title,
+        icon: entry.icon,
+        types,
+      };
+    });
+  }, [entries]);
 
   const actions = useMemo<ViewActionsCore>(
     () => ({
-      available,
+      availableSources,
       addView: cfg.addView,
       renameView: cfg.renameView,
       duplicateView: cfg.duplicateView,
@@ -117,7 +133,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       reorderView: cfg.reorderView,
       updateView: cfg.updateView,
     }),
-    [available, cfg],
+    [availableSources, cfg],
   );
 
   return useMemo(
@@ -128,8 +144,8 @@ export function useViewModel<T extends ViewTypeMeta>(
       viewFor: cfg.viewFor,
       updateView: cfg.updateView,
       actions,
-      available,
+      availableSources,
     }),
-    [cfg, activeId, active.setActiveView, actions, available],
+    [cfg, activeId, active.setActiveView, actions, availableSources],
   );
 }
