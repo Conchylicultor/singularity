@@ -56,7 +56,7 @@ function tree(): BlockNode[] {
 }
 
 function ctx(blockId: string, over: Partial<IntentContext> = {}): IntentContext {
-  return { nodes: tree(), blockId, pageId: PAGE, ...over };
+  return { nodes: tree(), blockId, ...over };
 }
 
 function caret(over: Partial<CaretContext> = {}): CaretContext {
@@ -178,7 +178,6 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
       nodes,
       blockId: "B",
-      pageId: PAGE,
       editPolicy: { breakOutOnEmptyEnter: "text" },
     });
     expect(intent).toEqual({ type: "convertTo", to: "text" });
@@ -205,7 +204,6 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
       nodes,
       blockId: "A1",
-      pageId: PAGE,
       editPolicy: { breakOutOnEmptyEnter: "text" },
     });
     expect(intent).toEqual({ type: "outdent" });
@@ -244,7 +242,6 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 1, atEnd: false }), {
       nodes,
       blockId: "B",
-      pageId: PAGE,
       editPolicy: { dataOnSplit: (d) => ({ ...(d as object), checked: false }) },
     });
     expect(intent).toMatchObject({ type: "split", tailData: { text: "abc", checked: false } });
@@ -257,7 +254,6 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
       blockId: "B",
-      pageId: PAGE,
       editPolicy: { splitInto: "text", dataOnSplit: (d) => ({ ...(d as object), swapped: true }) },
     });
     expect(intent).toMatchObject({ type: "split", siblingType: "text", tailData: undefined });
@@ -270,7 +266,6 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
       blockId: "B",
-      pageId: PAGE,
       editPolicy: { asChild: true, childType: "text", dataOnSplit: (d) => ({ ...(d as object), swapped: true }) },
     });
     expect(intent).toMatchObject({ type: "split", asChild: true, childType: "text", tailData: undefined });
@@ -284,7 +279,6 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
       blockId: "B",
-      pageId: PAGE,
       editPolicy: { asChild: true, dataOnSplit: (d) => ({ ...(d as object), checked: false }) },
     });
     expect(intent).toMatchObject({ type: "split", asChild: true, tailData: { text: "abc", checked: false } });
@@ -327,7 +321,6 @@ describe("Backspace", () => {
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes,
         blockId: "B",
-        pageId: PAGE,
         editPolicy: { resetToOnBackspaceAtStart: "text" },
       }),
     ).toEqual({ type: "convertTo", to: "text" });
@@ -354,7 +347,6 @@ describe("Backspace", () => {
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes,
         blockId: "A1",
-        pageId: PAGE,
         editPolicy: { resetToOnBackspaceAtStart: "text" },
       }),
     ).toEqual({ type: "convertTo", to: "text" });
@@ -516,7 +508,6 @@ function runTrajectory(
     const intent = resolveKeystroke(key, NO_SHIFT, caret(caretOver), {
       nodes,
       blockId,
-      pageId: PAGE,
       editPolicy,
     });
     seq.push(intent.type);
@@ -607,6 +598,127 @@ describe("trajectories", () => {
       "mergeNext",
       "nav",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-page union boundaries: the composite store splices several pages'
+// blocks into ONE flat array, each row carrying its own `pageId` (nearest page
+// ancestor). Structural intents must never span two pages — the resolver gates
+// merge/mergeNext/outdent on the ROW's page, never a context scalar.
+// ---------------------------------------------------------------------------
+
+describe("multi-page union boundaries", () => {
+  const rankS = Rank.between(Rank.from(rankA), null).toJSON();
+  const rankD = Rank.between(Rank.from(rankS), null).toJSON();
+  const rankInB = Rank.between(null, null).toJSON();
+  const rankInC = Rank.between(Rank.from(rankInB), null).toJSON();
+
+  /**
+   * Spliced union of the outer page and sub-page S:
+   *   page (outer, not a row)
+   *   ├─ A
+   *   ├─ S (type "page" shell row — pageId = outer page)
+   *   │  ├─ B (pageId = S)
+   *   │  └─ C (pageId = S)
+   *   └─ D
+   * Collapsed variant drops the inner rows (their feed never mounts).
+   */
+  function union({ expanded = true }: { expanded?: boolean } = {}): BlockNode[] {
+    const rows: BlockNode[] = [
+      mk("A", PAGE, rankA, { text: "aa" }),
+      { ...mk("S", PAGE, rankS), type: "page", expanded },
+      { ...mk("B", "S", rankInB, { text: "bb" }), pageId: "S" },
+      { ...mk("C", "S", rankInC, { text: "cc" }), pageId: "S" },
+      mk("D", PAGE, rankD, { text: "dd" }),
+    ];
+    return expanded ? rows : rows.filter((n) => n.pageId !== "S");
+  }
+
+  test("shift+Tab on an inner page's top-level block → noop (not indented, no cross-page outdent)", () => {
+    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes: union(), blockId: "B" })).toEqual({
+      type: "noop",
+    });
+  });
+
+  test("shift+Tab on a genuinely nested inner block → outdent (within its own page)", () => {
+    const nodes = union().map((n) => (n.id === "B" ? { ...n, expanded: true } : n));
+    nodes.push({ ...mk("E", "B", rankChild, { text: "ee" }), pageId: "S" });
+    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes, blockId: "E" })).toEqual({
+      type: "outdent",
+    });
+  });
+
+  test("empty-Enter on an inner page's top-level block → split, not a cross-page outdent", () => {
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
+      nodes: union(),
+      blockId: "B",
+      editPolicy: { breakOutOnEmptyEnter: "text" },
+    });
+    expect(intent).toMatchObject({ type: "split" });
+  });
+
+  test("Backspace at D below an EXPANDED sub-page → nav left (prev visible line C is cross-page)", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: union(),
+        blockId: "D",
+      }),
+    ).toEqual({ type: "nav", dir: "left" });
+  });
+
+  test("Backspace at D below a COLLAPSED sub-page → nav left (a page shell row is unmergeable)", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: union({ expanded: false }),
+        blockId: "D",
+      }),
+    ).toEqual({ type: "nav", dir: "left" });
+  });
+
+  test("Backspace at the FIRST child of an expanded sub-page → nav left (its prev visible line is the shell)", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: union(),
+        blockId: "B",
+      }),
+    ).toEqual({ type: "nav", dir: "left" });
+  });
+
+  test("Backspace at an inner block whose prev visible line is same-page → merge (regression)", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: union(),
+        blockId: "C",
+      }),
+    ).toEqual({ type: "merge" });
+  });
+
+  test("Delete at end of A (next visible line is the page shell row) → nav right", () => {
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes: union(),
+        blockId: "A",
+      }),
+    ).toEqual({ type: "nav", dir: "right" });
+  });
+
+  test("Delete at end of the LAST inner block (next visible line D is cross-page) → nav right", () => {
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes: union(),
+        blockId: "C",
+      }),
+    ).toEqual({ type: "nav", dir: "right" });
+  });
+
+  test("Delete at end of an inner block whose next visible line is same-page → mergeNext (regression)", () => {
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes: union(),
+        blockId: "B",
+      }),
+    ).toEqual({ type: "mergeNext" });
   });
 });
 

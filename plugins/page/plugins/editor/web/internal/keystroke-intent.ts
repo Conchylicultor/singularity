@@ -9,7 +9,13 @@
 //
 // Pure module (no React, no Lexical, no DOM): unit-tested directly.
 
-import { childrenOf, nextVisibleLine, type BlockNode } from "../../core";
+import {
+  childrenOf,
+  nextVisibleLine,
+  PAGE_BLOCK_TYPE,
+  prevVisibleLine,
+  type BlockNode,
+} from "../../core";
 import type { CaretContext } from "./caret-geometry";
 
 export type KeystrokeKey =
@@ -58,8 +64,6 @@ export interface IntentContext {
   nodes: BlockNode[];
   /** The block whose editor fired the keystroke. */
   blockId: string;
-  /** The page block id — its direct children are "top level" (not indented). */
-  pageId: string;
   /**
    * The current block's declarative edit policy, resolved once at the consumer
    * from the block's handle (no prop drilling). `asChild`/`childType`/`splitInto`
@@ -84,9 +88,14 @@ export interface IntentContext {
   };
 }
 
-/** A block is "indented" when its parent is a normal content block, not the page. */
-function isIndented(node: BlockNode, pageId: string): boolean {
-  return node.parentId !== null && node.parentId !== pageId;
+/**
+ * A block is "indented" when its parent is a normal content block, not its own
+ * page. Per-row (`node.pageId` is the nearest page ancestor), so over a spliced
+ * multi-page union an inner page's top-level block is NOT indented — its parent
+ * is its own page's shell row, and outdenting would cross the page boundary.
+ */
+function isIndented(node: BlockNode): boolean {
+  return node.parentId !== null && node.parentId !== node.pageId;
 }
 
 function hasPrevSibling(nodes: BlockNode[], node: BlockNode): boolean {
@@ -120,7 +129,7 @@ export function resolveKeystroke(
       // empty-Enter escapes nesting outward. Empty == the caret is at both the
       // start and the end. Blocks without the policy fall straight through to split.
       if (caret.atStart && caret.atEnd && p?.breakOutOnEmptyEnter) {
-        if (isIndented(node, ctx.pageId)) return { type: "outdent" };
+        if (isIndented(node)) return { type: "outdent" };
         if (node.type !== p.breakOutOnEmptyEnter)
           return { type: "convertTo", to: p.breakOutOnEmptyEnter };
         // Already top-level and already the target type: fall through to split.
@@ -160,12 +169,21 @@ export function resolveKeystroke(
       const p = ctx.editPolicy;
       if (p?.resetToOnBackspaceAtStart && node.type !== p.resetToOnBackspaceAtStart)
         return { type: "convertTo", to: p.resetToOnBackspaceAtStart };
-      if (isIndented(node, ctx.pageId)) return { type: "outdent" };
-      if (hasPrevSibling(ctx.nodes, node)) return { type: "merge" };
-      // First block at top level: no block to merge into. Backspace here means
-      // exactly what ArrowLeft means — step backwards out of the block list, into
-      // whatever caret surface precedes it (the page title). If nothing does, the
-      // executor's nav is a no-op and the keystroke is still consumed.
+      if (isIndented(node)) return { type: "outdent" };
+      // Merge lands on the previous VISIBLE line (`applyMerge`'s own resolution),
+      // so gate on that line, not the previous sibling: over a spliced multi-page
+      // union it can belong to ANOTHER page (the last inner block of an expanded
+      // sub-page above), and a structural merge must never span two pages. A
+      // same-page page row (a collapsed sub-page shell) is equally unmergeable —
+      // the reducer refuses to write text onto page data.
+      const prev = prevVisibleLine(ctx.nodes, node);
+      if (prev && prev.pageId === node.pageId && prev.type !== PAGE_BLOCK_TYPE)
+        return { type: "merge" };
+      // No same-page line to merge into: the first top-level block, or a page
+      // boundary directly above. Backspace here means exactly what ArrowLeft
+      // means — step backwards out to whatever caret surface precedes (the page
+      // title, or a sub-page's shell row). If nothing does, the executor's nav
+      // is a no-op and the keystroke is still consumed.
       return { type: "nav", dir: "left" };
     }
     case "Delete": {
@@ -176,16 +194,22 @@ export function resolveKeystroke(
       // of-line: the line break below it — so merge the next visible line up into
       // this block. Its ladder is deliberately ONE rung: the next block's marker
       // and indentation sit AFTER that break, not between it and the caret, so
-      // nothing is nearer. Nothing below → step forward out of the block list
-      // (the exact mirror of Backspace's `nav left`); the keystroke is still
-      // consumed even when no caret surface follows.
-      if (!nextVisibleLine(ctx.nodes, node)) return { type: "nav", dir: "right" };
+      // nothing is nearer. The pulled-up line must be a same-page content line:
+      // over a spliced multi-page union the next visible line can belong to
+      // ANOTHER page (the outer page's next block after the last inner one), and
+      // a page shell row is void — the reducer refuses to merge either. Nothing
+      // mergeable below → step forward out of the block list (the exact mirror
+      // of Backspace's `nav left`); the keystroke is still consumed even when no
+      // caret surface follows.
+      const next = nextVisibleLine(ctx.nodes, node);
+      if (!next || next.pageId !== node.pageId || next.type === PAGE_BLOCK_TYPE)
+        return { type: "nav", dir: "right" };
       return { type: "mergeNext" };
     }
     case "Tab": {
       // Tab/Shift+Tab always consume the event (never move focus / insert a tab).
       if (mods.shift) {
-        return isIndented(node, ctx.pageId) ? { type: "outdent" } : { type: "noop" };
+        return isIndented(node) ? { type: "outdent" } : { type: "noop" };
       }
       return hasPrevSibling(ctx.nodes, node) ? { type: "indent" } : { type: "noop" };
     }

@@ -12,4 +12,7 @@ export const pageLinkBlock = defineBlock({
   // An icon+title Row (not doc text), wrapped in `py-xs`: seat the rail on the
   // Row's center — its own `pad-row-y` top plus half a `text-body` line.
   gutterFirstLineCenter: "calc(var(--space-xs) + var(--pad-row-y) + var(--line-height-body) / 2)",
+  // Always show the collapse chevron: a collapsed link mounts no children, so
+  // `hasChildren` is false and without this no chevron would ever appear.
+  collapsible: "always",
 });

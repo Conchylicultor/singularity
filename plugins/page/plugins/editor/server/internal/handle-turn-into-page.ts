@@ -51,6 +51,9 @@ export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body 
       .set({
         type: PAGE_BLOCK_TYPE,
         data: parseBlockData(PAGE_BLOCK_TYPE, { title: body.title, icon: null }),
+        // Turn into → Page keeps its content visible inline deterministically,
+        // rather than inheriting whatever the block had (e.g. a collapsed toggle).
+        expanded: true,
         updatedAt: new Date(),
       })
       .where(eq(_blocks.id, params.id));

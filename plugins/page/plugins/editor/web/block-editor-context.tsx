@@ -42,11 +42,8 @@ import {
 } from "./internal/optimistic-block-ops";
 import { landCaret } from "./internal/caret-landing";
 import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-surface";
-import {
-  useServerBlockStore,
-  useMemoryBlockStore,
-  type BlockStore,
-} from "./block-store";
+import { useMemoryBlockStore, type BlockStore } from "./block-store";
+import { CompositeServerProviderHost } from "./composite-block-store";
 import type { BlockEditorAPI } from "./types";
 
 /** Human labels for the structural-undo history (tooltips / menus). */
@@ -350,8 +347,11 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
       </MemoryProviderHost>
     );
   }
+  // The server path is the COMPOSITE host (composite-block-store.tsx): one
+  // feed per expanded nested page, composed into a single union store. With no
+  // expansion it degenerates to exactly the old single-feed ServerProviderHost.
   return (
-    <ServerProviderHost
+    <CompositeServerProviderHost
       pageId={props.pageId}
       enabledBlockTypes={props.enabledBlockTypes}
       onOpenPage={props.onOpenPage}
@@ -359,7 +359,7 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
       caretAfter={props.caretAfter}
     >
       {props.children}
-    </ServerProviderHost>
+    </CompositeServerProviderHost>
   );
 }
 
@@ -367,35 +367,6 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
 interface ProviderHostCaretProps {
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
-}
-
-function ServerProviderHost({
-  pageId,
-  enabledBlockTypes,
-  onOpenPage,
-  caretBefore,
-  caretAfter,
-  children,
-}: {
-  pageId: string;
-  enabledBlockTypes?: readonly string[];
-  onOpenPage?: (pageId: string) => void;
-  children: ReactNode;
-} & ProviderHostCaretProps) {
-  const store = useServerBlockStore(pageId);
-  return (
-    <BlockEditorProviderInner
-      store={store}
-      pageId={pageId}
-      serverSync
-      enabledBlockTypes={enabledBlockTypes}
-      onOpenPage={onOpenPage}
-      caretBefore={caretBefore}
-      caretAfter={caretAfter}
-    >
-      {children}
-    </BlockEditorProviderInner>
-  );
 }
 
 function MemoryProviderHost({
@@ -429,7 +400,10 @@ function MemoryProviderHost({
   );
 }
 
-function BlockEditorProviderInner({
+// Exported for the provider hosts only (the composite server host lives in
+// composite-block-store.tsx); apps never mount it directly — use
+// `BlockEditorProvider`.
+export function BlockEditorProviderInner({
   store,
   pageId,
   serverSync,
@@ -968,6 +942,13 @@ function BlockEditorProviderInner({
       if (!block) return;
       const target = prevVisibleLine(nodes, block);
       if (!target) return; // defensive: nothing to merge into
+      // Composite-union backstop: merge is strictly in-page. Over the union the
+      // previous visible line can belong to ANOTHER page (the line above an
+      // expanded sub-page's first block, or below its last); the keystroke
+      // resolver already guards the boundary, so a cross-page source/target
+      // pair here is a stray call — bail rather than splice text across two
+      // pages' stores.
+      if (target.pageId !== block.pageId) return;
       // The reducer's row-level text concatenation is ignored by bound
       // editors — the merging block's LIVE runs (may contain unflushed
       // edits) must land in the TARGET's content doc too. Both variants

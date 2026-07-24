@@ -28,6 +28,7 @@ import {
   type CollabSaveState,
 } from "./live-state-yjs-provider";
 import { LocalYjsProvider } from "./local-yjs-provider";
+import { BindingReplica, CanonicalConnection } from "./binding-replica";
 
 /**
  * Per-block `{ doc, provider, undoManager }` registry + the `useCollabBlockDoc`
@@ -46,6 +47,28 @@ import { LocalYjsProvider } from "./local-yjs-provider";
  * within one commit, and `CollaborationPlugin` does not re-call its
  * providerFactory on the simulated remount — an immediate destroy would pull
  * the doc out from under the binding it still holds.
+ *
+ * ## Per-binding replicas
+ *
+ * The Lexical binding does NOT attach to the shared canonical doc: each hook
+ * instance owns one {@link BindingReplica} — a fresh per-binding `Y.Doc` kept
+ * in sync with the canonical by a bidirectional synchronous relay — and
+ * `providerFactory` hands `CollaborationPlugin` THAT doc + provider. The
+ * invariant (see `binding-replica.ts`): a binding always attaches to an
+ * empty doc and receives ALL content as post-attach update events, so a
+ * second simultaneous editor of the same block (inline nested-page expansion
+ * + the page's detail pane) hydrates instead of rendering empty forever.
+ * Everything else stays canonical-side, where all edits land synchronously
+ * via the relay: the transport provider (and its save state), the
+ * `Y.UndoManager`, `captureBlockDocEdit`, the doc observers below, and the
+ * offscreen doc-level helpers. Since CollaborationPlugin now connects the
+ * replica, the replica delegates connect/disconnect to the transport,
+ * refcounted per entry (`replicaConnection`) — the transport HOLDS a
+ * delivered server state until its connect(), so an unconnected transport
+ * would leave every block empty. The replica rides the hold's lifecycle: created
+ * lazily on the first providerFactory call, deferred-destroyed alongside the
+ * entry release (same macrotask trick, same reason — the simulated remount
+ * never re-calls providerFactory, so the binding still holds the replica).
  *
  * ## Undo (Stage 3b)
  *
@@ -119,6 +142,12 @@ interface CollabDocEntry {
   blockId: string;
   doc: Doc;
   provider: BlockDocProvider;
+  /**
+   * Refcounted connect/disconnect delegation shared by every replica over this
+   * entry: the transport connects with the first connected replica and
+   * disconnects (eager flush) with the last (see `binding-replica.ts`).
+   */
+  replicaConnection: CanonicalConnection;
   um: UndoManager;
   /** Raised by `captureBlockDocEdit` so folded edits skip `onUndoableEdit`. */
   suppressUndoCapture: boolean;
@@ -249,6 +278,7 @@ export function acquireCollabDoc(
       blockId,
       doc,
       provider,
+      replicaConnection: new CanonicalConnection(provider),
       um,
       suppressUndoCapture: false,
       undoCaptureListeners: new Set(),
@@ -417,6 +447,12 @@ interface CollabDocHold {
   ensure: (id: string) => CollabDocEntry;
   /** The currently-held entry, WITHOUT acquiring one. Null before first `ensure`. */
   peek: () => CollabDocEntry | null;
+  /**
+   * The hold's per-binding {@link BindingReplica} over `id`'s entry, created
+   * lazily on first call (the providerFactory call). One replica per hook
+   * instance — its lifecycle rides the hold (see the module comment).
+   */
+  ensureReplica: (id: string) => BindingReplica;
 }
 
 /**
@@ -454,10 +490,33 @@ function useCollabDocHold(
   // `useEventCallback`, so every caller's dependence on the block id would
   // otherwise be invisible — to a reader and to `exhaustive-deps` alike.
   const heldRef = useRef<CollabDocEntry | null>(null);
+  // The hold's per-binding replica, tagged with the entry it relays to: a
+  // replica is only ever valid against the exact entry (canonical doc) it was
+  // built on, so a re-acquire that got a DIFFERENT entry (the old one
+  // finalized in between) must discard it rather than relay into a dead doc.
+  const replicaRef = useRef<{ entry: CollabDocEntry; replica: BindingReplica } | null>(
+    null,
+  );
+  const replicaDestroyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelReplicaDestroy = (): void => {
+    if (replicaDestroyTimerRef.current !== null) {
+      clearTimeout(replicaDestroyTimerRef.current);
+      replicaDestroyTimerRef.current = null;
+    }
+  };
+  const destroyReplicaNow = (): void => {
+    cancelReplicaDestroy();
+    replicaRef.current?.replica.destroy();
+    replicaRef.current = null;
+  };
+
   const ensure = useEventCallback((id: string): CollabDocEntry => {
     if (heldRef.current && heldRef.current.blockId !== id) {
       releaseCollabDoc(heldRef.current.blockId);
       heldRef.current = null;
+      // A re-keyed hook binds a NEW CollaborationPlugin doc; the old block's
+      // replica can never be handed out again.
+      destroyReplicaNow();
     }
     heldRef.current ??= acquireCollabDoc(
       id,
@@ -465,7 +524,25 @@ function useCollabDocHold(
       rowConfirmedRef.current,
       serverSync,
     );
+    // Reconcile the replica with the (possibly re-acquired) entry. Same-entry
+    // re-ensure cancels a pending deferred destroy — the StrictMode remount
+    // path, where CollaborationPlugin still holds this exact replica and never
+    // re-calls providerFactory. A different entry means the old canonical was
+    // finalized: the stale replica is discarded.
+    if (replicaRef.current) {
+      if (replicaRef.current.entry === heldRef.current) cancelReplicaDestroy();
+      else destroyReplicaNow();
+    }
     return heldRef.current;
+  });
+
+  const ensureReplica = useEventCallback((id: string): BindingReplica => {
+    const entry = ensure(id); // also reconciled/canceled any stale replica
+    replicaRef.current ??= {
+      entry,
+      replica: new BindingReplica(entry.doc, entry.provider, entry.replicaConnection),
+    };
+    return replicaRef.current.replica;
   });
 
   useEffect(() => {
@@ -474,6 +551,19 @@ function useCollabDocHold(
         releaseCollabDoc(heldRef.current.blockId);
         heldRef.current = null;
       }
+      // Deferred replica destroy, mirroring the registry's deferred entry
+      // destroy and for the same reason: a StrictMode simulated remount
+      // releases and re-ensures synchronously within one commit while
+      // CollaborationPlugin keeps the SAME provider/doc (providerFactory is
+      // never re-called) — an immediate destroy would pull the replica out
+      // from under the binding it still holds. Canceled by the next ensure().
+      if (replicaRef.current !== null && replicaDestroyTimerRef.current === null) {
+        replicaDestroyTimerRef.current = setTimeout(() => {
+          replicaDestroyTimerRef.current = null;
+          replicaRef.current?.replica.destroy();
+          replicaRef.current = null;
+        }, 0);
+      }
     };
   }, [blockId]);
 
@@ -481,13 +571,19 @@ function useCollabDocHold(
   // not mint a registry entry from a render-phase `useSyncExternalStore` probe.
   const peek = useEventCallback((): CollabDocEntry | null => heldRef.current);
 
-  return { ensure, peek };
+  return { ensure, peek, ensureReplica };
 }
 
 /**
  * The two content-doc observer effects shared by both hooks: the projection
  * observer (`doc.on("update")`) and the undo-capture observer. Storage-
  * agnostic — a local doc's updates and undo items surface identically.
+ *
+ * Both observe the CANONICAL doc, deliberately — never the hold's binding
+ * replica. Every replica edit relays into the canonical synchronously, so the
+ * canonical sees the union of all bindings' edits (a replica sees only its own
+ * plus relays), and the projection/undo semantics are identical whether one
+ * or five editors of the block are mounted.
  */
 function useDocObservers(
   blockId: string,
@@ -521,7 +617,7 @@ function useDocObservers(
 /** The `providerFactory` `CollaborationPlugin` calls to fetch the block's doc + provider. */
 function useProviderFactory(
   blockId: string,
-  ensure: (id: string) => CollabDocEntry,
+  ensureReplica: (id: string) => BindingReplica,
 ): CollabProviderFactory {
   return useEventCallback((id: string, yjsDocMap: Map<string, Doc>): Provider => {
     if (id !== blockId) {
@@ -529,10 +625,13 @@ function useProviderFactory(
         `useCollabBlockDoc: providerFactory id "${id}" != block id "${blockId}"`,
       );
     }
-    const entry = ensure(blockId);
+    // The binding gets the hold's per-binding REPLICA, never the shared
+    // canonical doc: a binding must attach to an empty doc and hydrate from
+    // post-attach events (see `binding-replica.ts` and the module comment).
+    const replica = ensureReplica(blockId);
     // CollaborationPlugin reads the doc back out of the map it hands us.
-    yjsDocMap.set(id, entry.doc);
-    return entry.provider;
+    yjsDocMap.set(id, replica.replicaDoc);
+    return replica;
   });
 }
 
@@ -600,7 +699,7 @@ export function useCollabBlockDoc(
   }, [blockId, contentRes, ensure]);
 
   const { saveState, retrySave } = useSaveState(blockId, hold);
-  const providerFactory = useProviderFactory(blockId, ensure);
+  const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
   return { providerFactory, saveState, retrySave };
 }
 
@@ -629,7 +728,7 @@ export function useLocalCollabBlockDoc(
   useDocObservers(blockId, ensure, onContentChange, onUndoableEdit);
 
   const { saveState, retrySave } = useSaveState(blockId, hold);
-  const providerFactory = useProviderFactory(blockId, ensure);
+  const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
   return { providerFactory, saveState, retrySave };
 }
 

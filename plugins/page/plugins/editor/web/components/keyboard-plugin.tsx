@@ -42,7 +42,7 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, pageId } = useBlockEditor();
+  const { rowsRef } = useBlockEditor();
   // The block-type registry: every block's static handle config (incl. the edit
   // policy and split-into-child flag). Resolved here, not prop-drilled.
   const contributions = Editor.Block.useContributions();
@@ -55,8 +55,6 @@ export function KeyboardPlugin({
   selectionRef.current = selection;
   const blockIdRef = useRef(blockId);
   blockIdRef.current = blockId;
-  const pageIdRef = useRef(pageId);
-  pageIdRef.current = pageId;
 
   useEffect(() => {
     function execute(
@@ -163,7 +161,6 @@ export function KeyboardPlugin({
       const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
         nodes,
         blockId: blockIdRef.current,
-        pageId: pageIdRef.current,
         editPolicy,
       });
       return execute(intent, event, caret);
