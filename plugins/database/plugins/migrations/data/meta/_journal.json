@@ -1432,6 +1432,13 @@
     },
     {
       "version": "7",
+      "when": 1784800202000,
+      "tag": "20260723_095002_5a4a96b4__collapse_existing_sub_pages",
+      "hash": "5a4a96b4",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1784804089000,
       "tag": "20260723_105449_0187a835__deploy_ssh_public_key",
       "hash": "0187a835",
