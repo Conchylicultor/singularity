@@ -8,13 +8,14 @@
 - Web:
   - Contributes:
     - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
-    - `JsonlViewer.RowAction` "raw-text-toggle" → `RawTextToggleAction`
+    - `JsonlRowActions.Item` "raw-text-toggle" → `RawTextToggleAction`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer.RowActionButton`
-    - `conversations/conversation-view/jsonl-viewer.RowActions`
     - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
     - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
     - `primitives/css/pin.Pin`
     - `primitives/css/text.Text`
     - `primitives/expandable.Expandable`

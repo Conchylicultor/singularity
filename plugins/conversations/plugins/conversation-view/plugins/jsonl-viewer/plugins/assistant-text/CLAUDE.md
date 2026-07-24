@@ -8,18 +8,19 @@
 - Web:
   - Contributes:
     - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
-    - `JsonlViewer.RowAction` "stop-reason" → `StopReasonAction`
-    - `JsonlViewer.RowAction` "markdown-toggle" → `MarkdownToggleAction`
-    - `JsonlViewer.RowAction` "copy-assistant-text" → `CopyAssistantTextAction`
+    - `JsonlRowActions.Item` "stop-reason" → `StopReasonAction`
+    - `JsonlRowActions.Item` "markdown-toggle" → `MarkdownToggleAction`
+    - `JsonlRowActions.Item` "copy-assistant-text" → `CopyAssistantTextAction`
   - Uses:
     - `active-data.ActiveDataIdentityProvider`
     - `active-data.useActiveDataSegments`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/jsonl-viewer.CopyTextAction`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer.RowActionButton`
-    - `conversations/conversation-view/jsonl-viewer.RowActions`
     - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
     - `primitives/css/pin.Pin`
     - `primitives/css/text.Text`
     - `primitives/markdown.Markdown`

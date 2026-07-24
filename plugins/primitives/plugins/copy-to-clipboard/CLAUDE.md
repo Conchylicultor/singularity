@@ -13,8 +13,8 @@
     - `useCopyToClipboard`
 - Cross-plugin:
   - Imported by:
-    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/file-path`
+    - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/code-block`
     - `primitives/filepath-breadcrumb`
     - `primitives/setup-steps`

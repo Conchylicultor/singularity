@@ -10,6 +10,7 @@
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
 

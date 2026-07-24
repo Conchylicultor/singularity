@@ -5,11 +5,6 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { UnknownEventRow } from "./components/unknown-event-row";
 import { PendingContentIndicator } from "./components/pending-content-indicator";
 
-export interface RowActionContribution {
-  id: string;
-  component: ComponentType<{ event: JsonlEvent }>;
-}
-
 export interface OverlayContribution {
   id: string;
   component: ComponentType;
@@ -61,10 +56,6 @@ export const JsonlViewer = {
   ),
   EventFilter: defineSlot<EventFilterContribution>(
     "conversation.jsonl-viewer.event-filter",
-    { docLabel: (p) => p.id },
-  ),
-  RowAction: defineRenderSlot<RowActionContribution>(
-    "conversation.jsonl-viewer.row-action",
     { docLabel: (p) => p.id },
   ),
   Overlay: defineRenderSlot<OverlayContribution>(

@@ -23,6 +23,7 @@ import {
   getSlotItemMiddlewares,
   getSlotListMiddlewares,
 } from "./registry";
+import { DispatchOutcomeContext } from "./dispatch-outcome";
 
 export interface RenderSlotConfig<P> {
   docLabel?: (props: P & { id: string }) => string | undefined;
@@ -456,9 +457,12 @@ export function defineDispatchSlot<
       );
     }
 
-    const matched = matchedIndex >= 0 ? cleanItems[matchedIndex] : undefined;
-    const Component = matched
-      ? UNSAFE_unsealSlotComponent(matched.component as SealedComponent<Props>)
+    const matchedItem =
+      matchedIndex >= 0 ? cleanItems[matchedIndex] : undefined;
+    const Component = matchedItem
+      ? UNSAFE_unsealSlotComponent(
+          matchedItem.component as SealedComponent<Props>,
+        )
       : config.fallback;
     // Index correspondence: both `cleanItems` and `rawContributions` come from
     // `ctx.bySlot.get(id)` (clean is a positional `.map` of raw — slots.ts:33-36),
@@ -473,7 +477,24 @@ export function defineDispatchSlot<
     const node: ReactNode = Component
       ? createElement(Component as ComponentType<object>, props as object)
       : null;
-    return applyItemMiddlewares(node, id, contribution);
+
+    // Publish the outcome to the subtree so a descendant can react to "nothing
+    // handled this" without every fallback threading a prop by hand. Memo deps
+    // are the BOOLEAN `matched`, never `matchedIndex`: reordering contributions
+    // must not churn the value for consumers that only care whether anything
+    // matched at all. The provider wraps OUTSIDE `applyItemMiddlewares` so the
+    // outcome is still readable from inside an error-boundary fallback.
+    const matched = matchedIndex >= 0;
+    const outcome = useMemo(
+      () => ({ slotId: id, key, matched }),
+      [key, matched],
+    );
+
+    return createElement(
+      DispatchOutcomeContext.Provider,
+      { value: outcome },
+      applyItemMiddlewares(node, id, contribution),
+    );
   };
 
   return dispatchSlot;

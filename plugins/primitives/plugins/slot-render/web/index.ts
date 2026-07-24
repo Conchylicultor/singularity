@@ -24,6 +24,8 @@ export type {
   WrapperSlotConfig,
   WrapContribution,
 } from "./internal/render-slot";
+export { useDispatchOutcome } from "./internal/dispatch-outcome";
+export type { DispatchOutcome } from "./internal/dispatch-outcome";
 export type {
   SlotItemMiddleware,
   SlotListMiddleware,

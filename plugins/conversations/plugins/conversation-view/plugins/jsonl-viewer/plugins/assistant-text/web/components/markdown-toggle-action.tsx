@@ -1,9 +1,7 @@
 import { MdCode } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import {
-  RowActionButton,
-  useRowMarkdown,
-} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { useRowMarkdown } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 export function MarkdownToggleAction({ event }: { event: JsonlEvent }) {
   const { markdownMode, setMarkdownMode } = useRowMarkdown();

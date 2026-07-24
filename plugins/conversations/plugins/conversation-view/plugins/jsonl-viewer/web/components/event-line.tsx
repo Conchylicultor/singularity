@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { RowActions } from "../internal/event-action-context";
+import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 /**
  * The shared one-line grammar for ambient / lifecycle rows in the transcript —

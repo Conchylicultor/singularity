@@ -9,6 +9,7 @@
   - Imported by:
     - `apps-core/tabs`
     - `apps/pages/history`
+    - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `debug/live-state-churn/emit`
     - `debug/render-profiler`
     - `infra/events-test`

@@ -1,5 +1,5 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { CopyTextAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { CopyTextAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 export function CopyToolResultAction({ event }: { event: JsonlEvent }) {
   if (event.kind !== "tool-call" || !event.result) return null;

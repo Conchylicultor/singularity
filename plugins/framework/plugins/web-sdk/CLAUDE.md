@@ -114,6 +114,17 @@ function BlockRow(props: BlockProps) {
 }
 ```
 
+`.Dispatch` publishes whether it matched a contribution or fell through to its
+`fallback`. A descendant reads it with `useDispatchOutcome()` (also from
+`@plugins/primitives/plugins/slot-render/web`), which returns
+`{ slotId, key, matched } | null` for the **nearest** enclosing `.Dispatch`. That
+is the sanctioned way to react to "nothing handled this" — e.g. an affordance
+that only appears on unhandled rows. Do **not** hand-thread a `isFallback`/
+`trailing=` prop through each fallback component: that has to be re-wired for
+every fallback, and every new one starts out missing it. See
+[`slot-render/CLAUDE.md`](../../../primitives/plugins/slot-render/CLAUDE.md) for
+the exact contract.
+
 #### `renderIsolated()` — bespoke selection, still isolated
 
 For cases where neither `.Render` nor `.Dispatch` can express the selection logic

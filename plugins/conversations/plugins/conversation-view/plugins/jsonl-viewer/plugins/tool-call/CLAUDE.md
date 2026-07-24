@@ -9,12 +9,13 @@
   - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
-    - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
+    - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer.CopyTextAction`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/scroll.Scroll`

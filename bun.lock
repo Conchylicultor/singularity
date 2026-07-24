@@ -1339,6 +1339,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary",
       "version": "0.0.1",
@@ -1401,10 +1405,6 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/unknown": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-unknown",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image": {
@@ -5690,6 +5690,8 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-system": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-system@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system"],
@@ -5721,8 +5723,6 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-workflow": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-workflow@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write"],
-
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-unknown": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-unknown@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/unknown"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-image": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-image@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image"],
 

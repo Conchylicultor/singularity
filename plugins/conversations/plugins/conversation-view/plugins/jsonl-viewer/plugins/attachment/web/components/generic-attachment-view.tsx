@@ -1,25 +1,10 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
-import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { InvestigateEventButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { AttachmentRendererProps } from "../../core";
 
 export function GenericAttachmentView({ event }: AttachmentRendererProps) {
-  const conversationId = useJsonlConversationId();
-
   return (
-    <CollapsibleCard
-      label={`attachment:${event.subtype}`}
-      trailing={
-        <InvestigateEventButton
-          label={`attachment:${event.subtype}`}
-          json={event.attachment}
-          sourceConversationId={conversationId}
-          className={hoverRevealTarget}
-        />
-      }
-    >
+    <CollapsibleCard label={`attachment:${event.subtype}`}>
       <Text
         as="pre"
         variant="caption"

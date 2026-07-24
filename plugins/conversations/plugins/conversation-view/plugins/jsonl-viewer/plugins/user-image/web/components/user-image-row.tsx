@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";

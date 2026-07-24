@@ -1,16 +1,22 @@
-// @hash d5880005e5c2
+// @hash 7fb0ce2f98ed
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Left-to-right order of the hover strip at a row's right edge. Reads as
+  // metadata → inspection → view toggles → copy → launch-an-agent actions, so
+  // the two consequential (conversation-creating) actions sit last, furthest
+  // from the pointer's resting position.
   "items": [
-    "conversations.conversation-view.fork-session:fork-session",
     "conversations.conversation-view.jsonl-viewer:timestamp",
     "conversations.conversation-view.jsonl-viewer:raw-json",
     "conversations.conversation-view.jsonl-viewer.assistant-text:stop-reason",
     "conversations.conversation-view.jsonl-viewer.assistant-text:markdown-toggle",
     "conversations.conversation-view.jsonl-viewer.assistant-text:copy-assistant-text",
+    "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle",
     "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
-    "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle"
+    "conversations.conversation-view.jsonl-viewer.investigate-event:investigate-event",
+    "conversations.conversation-view.fork-session:fork-session"
   ]
 }

@@ -294,7 +294,6 @@ fixed raw size escapes per-site via
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
-    - `conversations/conversation-view/jsonl-viewer/unknown`
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/op-status`

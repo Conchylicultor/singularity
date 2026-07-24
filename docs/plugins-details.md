@@ -7795,12 +7795,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tooltip.WithTooltip`
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
           - Web:
-            - Contributes: `JsonlViewer.RowAction` "fork-session" → `ForkSessionAction`
+            - Contributes: `JsonlRowActions.Item` "fork-session" → `ForkSessionAction`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
-              - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
               - `conversations/conversation-view/jsonl-viewer.useLastAssistantEvent`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
               - `primitives/launch.LaunchControl`
         - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
           - Web:
@@ -7845,22 +7845,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Web:
             - Slots:
-              - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.unknown`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
+              - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
               - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
               - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-              - `JsonlViewer.RowAction` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`
               - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
             - Contributes:
-              - `JsonlViewer.RowAction` "timestamp" → `TimestampAction`
-              - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
+              - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
+              - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
             - Uses:
+              - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.EventActionProvider`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
               - `conversations/conversation-view/pending-turn.PendingTurnCard`
               - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
               - `conversations/conversation-view/pending-turn.usePendingTurns`
               - `primitives/auto-scroll.JumpToBottomButton`
               - `primitives/auto-scroll.useStickyScroll`
-              - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/pin.Pin`
@@ -7868,10 +7871,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
               - `primitives/hover-reveal.hoverRevealGroup`
-              - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
@@ -7883,17 +7883,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `EventFilterContribution`
               - `OverlayContribution`
-              - `RowActionContribution`
               - `SectionExpand`
             - Exports (values):
-              - `CopyTextAction`
-              - `EventActionProvider`
               - `EventLine`
               - `formatTime`
               - `JsonlPane`
               - `JsonlViewer`
-              - `RowActionButton`
-              - `RowActions`
               - `Timestamp`
               - `useJsonlConversationId`
               - `useLastAssistantEvent`
@@ -7924,7 +7919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
               - `conversations/conversation-view/jsonl-viewer/attachment`
-              - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
               - `conversations/conversation-view/jsonl-viewer/preprompt`
@@ -7936,7 +7931,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
-              - `conversations/conversation-view/jsonl-viewer/unknown`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/terminal-pane`
@@ -7945,18 +7939,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
-                  - `JsonlViewer.RowAction` "stop-reason" → `StopReasonAction`
-                  - `JsonlViewer.RowAction` "markdown-toggle" → `MarkdownToggleAction`
-                  - `JsonlViewer.RowAction` "copy-assistant-text" → `CopyAssistantTextAction`
+                  - `JsonlRowActions.Item` "stop-reason" → `StopReasonAction`
+                  - `JsonlRowActions.Item` "markdown-toggle" → `MarkdownToggleAction`
+                  - `JsonlRowActions.Item` "copy-assistant-text" → `CopyAssistantTextAction`
                 - Uses:
                   - `active-data.ActiveDataIdentityProvider`
                   - `active-data.useActiveDataSegments`
                   - `conversations/conversation-view.conversationPane`
-                  - `conversations/conversation-view/jsonl-viewer.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.RowActionButton`
-                  - `conversations/conversation-view/jsonl-viewer.RowActions`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/text.Text`
                   - `primitives/markdown.Markdown`
@@ -7974,11 +7969,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-                  - `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`
                   - `primitives/css/text.Text`
-                  - `primitives/hover-reveal.hoverRevealTarget`
                   - `primitives/slot-render.defineDispatchSlot`
                 - Exports (values): `JsonlViewerAttachment`
               - Cross-plugin:
@@ -8038,6 +8030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                 - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
@@ -8071,6 +8064,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/text.Text`
                 - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
@@ -8111,11 +8105,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-            - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className.
+            - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
               - Web:
                 - Uses:
-                  - `conversations/conversation-view/jsonl-viewer.RowActions`
-                  - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
                   - `primitives/collapsible.CollapsibleChevron`
                   - `primitives/collapsible.useCollapsible`
                   - `primitives/css/card.Card`
@@ -8130,6 +8123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `CollapsibleCard`
               - Cross-plugin:
                 - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer`
                   - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
                   - `conversations/conversation-view/jsonl-viewer/attachment`
                   - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
@@ -8149,7 +8143,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
                   - `conversations/conversation-view/jsonl-viewer/teammate-message`
                   - `conversations/conversation-view/jsonl-viewer/tool-call`
-                  - `conversations/conversation-view/jsonl-viewer/unknown`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`
@@ -8187,22 +8180,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `toRelativePath`
               - Cross-plugin:
                 - Imported by:
-                  - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
                   - `conversations/conversation-view/jsonl-viewer/task-notification`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
-            - **`investigate-event`** — Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
+            - **`investigate-event`** — Contributes the add-a-renderer row action to every JSONL transcript row whose nearest dispatch fell back (unhandled event kind, tool name, or attachment subtype), launching an agent briefed to implement the missing renderer for that dispatch key.
               - Web:
+                - Contributes: `JsonlRowActions.Item` "investigate-event" → `InvestigateEventAction`
                 - Uses:
-                  - `primitives/css/center.Center`
+                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
                   - `primitives/launch.LaunchAgentPopover`
+                  - `primitives/slot-render.useDispatchOutcome`
                   - `shell/notifications.toast`
-                - Exports (values): `InvestigateEventButton`
-              - Cross-plugin:
-                - Imported by:
-                  - `conversations/conversation-view/jsonl-viewer/attachment`
-                  - `conversations/conversation-view/jsonl-viewer/unknown`
+              - E2e:
+                - Uses:
+                  - `framework/tooling/e2e-harness.arg`
+                  - `framework/tooling/e2e-harness.boot`
+                  - `framework/tooling/e2e-harness.pathUrl`
+                  - `framework/tooling/e2e-harness.report`
+                  - `framework/tooling/e2e-harness.withBrowser`
             - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "message-toc" → `MessageToc`
@@ -8249,6 +8249,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
                   - `conversations/conversation-view/jsonl-viewer/queue-operation`
+            - **`row-actions`** — Owns the JSONL transcript's hover-revealed row-action strip: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. Sits below collapsible-card so card chrome can host the strip without a cycle.
+              - Web:
+                - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`
+                - Uses:
+                  - `primitives/copy-to-clipboard.useCopyToClipboard`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/hover-reveal.hoverRevealTarget`
+                  - `primitives/slot-render.defineRenderSlot`
+                - Exports (types): `RowActionContribution`
+                - Exports (values):
+                  - `CopyTextAction`
+                  - `EventActionProvider`
+                  - `JsonlRowActions`
+                  - `RowActionButton`
+                  - `rowActionClass`
+                  - `RowActions`
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/fork-session`
+                  - `conversations/conversation-view/jsonl-viewer`
+                  - `conversations/conversation-view/jsonl-viewer/assistant-text`
+                  - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+                  - `conversations/conversation-view/jsonl-viewer/investigate-event`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call`
+                  - `conversations/conversation-view/jsonl-viewer/user-image`
+                  - `conversations/conversation-view/jsonl-viewer/user-text`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -8285,12 +8313,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
-                  - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
+                  - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
                 - Uses:
-                  - `conversations/conversation-view/jsonl-viewer.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/bouncing-dots.BouncingDots`
                   - `primitives/css/scroll.Scroll`
@@ -8510,22 +8539,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/syntax-highlight.HighlightedCode`
                       - `primitives/syntax-highlight.languageForPath`
-            - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
-              - Web:
-                - Contributes: `JsonlViewer.EventRenderer` "unknown" → `UnknownRow`
-                - Uses:
-                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-                  - `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`
-                  - `primitives/css/text.Text`
-                  - `primitives/hover-reveal.hoverRevealTarget`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.RowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
@@ -8533,13 +8552,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
-                  - `JsonlViewer.RowAction` "raw-text-toggle" → `RawTextToggleAction`
+                  - `JsonlRowActions.Item` "raw-text-toggle" → `RawTextToggleAction`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.RowActionButton`
-                  - `conversations/conversation-view/jsonl-viewer.RowActions`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
                   - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/text.Text`
                   - `primitives/expandable.Expandable`
@@ -13463,6 +13483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/tabs`
               - `apps/pages/history`
+              - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
               - `infra/events-test`
@@ -17914,8 +17935,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useCopyToClipboard`
       - Cross-plugin:
         - Imported by:
-          - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/file-path`
+          - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/code-block`
           - `primitives/filepath-breadcrumb`
           - `primitives/setup-steps`
@@ -18151,7 +18172,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
-              - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `debug/boot-profile`
@@ -19083,6 +19103,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
+              - `conversations/conversation-view/jsonl-viewer/row-actions`
               - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -19587,7 +19608,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/tool-call/write`
-              - `conversations/conversation-view/jsonl-viewer/unknown`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/op-status`
@@ -20028,11 +20048,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/exit`
               - `conversations/conversation-view/exit-menu`
               - `conversations/conversation-view/hold-and-exit`
-              - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
               - `conversations/conversation-view/jsonl-viewer/file-path`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
+              - `conversations/conversation-view/jsonl-viewer/row-actions`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/launch-prompts`
@@ -21314,8 +21334,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/progress/sections`
           - `config_v2/settings`
           - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/attachment`
-          - `conversations/conversation-view/jsonl-viewer/unknown`
+          - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `layouts/miller`
           - `page/audio`
           - `page/bookmark`
@@ -22927,6 +22946,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
         - Exports (types):
           - `DispatchContribution`
+          - `DispatchOutcome`
           - `DispatchSlot`
           - `DispatchSlotConfig`
           - `MountComponent`
@@ -22951,6 +22971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `registerSlotListMiddleware`
           - `renderIsolated`
           - `RenderSlotSubIdContext`
+          - `useDispatchOutcome`
       - Cross-plugin:
         - Imported by:
           - `apps-core`
@@ -22991,6 +23012,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/header`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/attachment`
+          - `conversations/conversation-view/jsonl-viewer/investigate-event`
+          - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `conversations/conversation-view/jsonl-viewer/tool-call`
           - `debug/profiling`
           - `debug/trace/engine`

@@ -3,7 +3,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { JsonlViewer } from "../slots";
+import { JsonlRowActions } from "../slots";
 
 const EventActionContext = createContext<JsonlEvent | null>(null);
 
@@ -24,7 +24,7 @@ export function EventActionProvider({
 /**
  * In-flow, hover-revealed cluster of the universal row actions (timestamp,
  * raw-json, copy, markdown-toggle, …). Reads the current event from context and
- * renders the `JsonlViewer.RowAction` contributions. Placed by each renderer
+ * renders the `JsonlRowActions.Item` contributions. Placed by each renderer
  * inside its own header row so it aligns with the header's right edge, occupies
  * only that line (body full width below), and never spills onto the next turn —
  * opacity-only reveal means no reflow. Pass `floating` for the headerless text/
@@ -49,8 +49,8 @@ export function RowActions({
   floating?: boolean;
 }) {
   const event = useContext(EventActionContext);
+  const actions = JsonlRowActions.Item.useContributions();
   if (!event) return null;
-  const actions = JsonlViewer.RowAction.useContributions();
   if (actions.length === 0) return null;
   return (
     <Stack
@@ -65,9 +65,9 @@ export function RowActions({
         className,
       )}
     >
-      <JsonlViewer.RowAction.Render>
+      <JsonlRowActions.Item.Render>
         {(item) => <item.component event={event} />}
-      </JsonlViewer.RowAction.Render>
+      </JsonlRowActions.Item.Render>
     </Stack>
   );
 }

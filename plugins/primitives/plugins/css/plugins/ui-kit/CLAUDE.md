@@ -345,11 +345,11 @@ structurally unrepresentable.
     - `conversations/conversation-view/exit`
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/hold-and-exit`
-    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
+    - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`

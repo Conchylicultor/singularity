@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -18,7 +19,7 @@ export function NestedMemoryAttachmentView({ event }: AttachmentRendererProps) {
   const att = event.attachment as NestedMemoryPayload;
 
   return (
-    <CollapsibleCard label="Memory" filePath={att.path}>
+    <CollapsibleCard label="Memory" aside={<FilePath filePath={att.path} />}>
       <Scroll className="max-h-64">
         <Text
           as="pre"

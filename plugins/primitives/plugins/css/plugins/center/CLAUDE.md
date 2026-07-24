@@ -77,7 +77,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `conversations/conversation-view`
     - `conversations/conversation-view/code/file-pane/image`
     - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/jsonl-viewer/message-toc`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `debug/boot-profile`

@@ -9,8 +9,7 @@ import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 /**
  * Wrapper that makes header content interactive inside the card's click-through
@@ -58,10 +57,14 @@ export interface CollapsibleCardProps {
    *  ellipsizes on one line. Stays click-through, so tapping it toggles the
    *  card. Pass bare content — the card paints it muted/dimmed. */
   summary?: ReactNode;
-  /** Convenience: render a clickable FilePath as the sibling aside. */
-  filePath?: string;
-  /** Sibling affordance after the label. Overrides filePath. Wrapped in
-   *  `<CardHeaderAction>` automatically, so pass the raw element. */
+  /** Sibling affordance after the label — e.g. a clickable `<FilePath>`.
+   *  Wrapped in `<CardHeaderAction>` automatically, so pass the raw element.
+   *  There is deliberately no `filePath` convenience prop: this is chrome, and
+   *  chrome must not depend on a domain component. `FilePath` reaches into
+   *  `conversation-view` for pane navigation, so a shortcut here would close the
+   *  cycle chrome → file-path → conversation-view → jsonl-viewer → chrome. Pass
+   *  `aside={<FilePath filePath={…} />}` from the renderer, which owns the
+   *  domain concern anyway. */
   aside?: ReactNode;
   /** Far-right sibling of the header row (e.g. running-dots). */
   trailing?: ReactNode;
@@ -96,7 +99,6 @@ export function CollapsibleCard({
   label,
   note,
   summary,
-  filePath,
   aside,
   trailing,
   error,
@@ -105,7 +107,7 @@ export function CollapsibleCard({
   children,
 }: CollapsibleCardProps) {
   const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
-  const sideContent = aside ?? (filePath ? <FilePath filePath={filePath} /> : null);
+  const sideContent = aside ?? null;
   return (
     <Card
       controlSize="xs"

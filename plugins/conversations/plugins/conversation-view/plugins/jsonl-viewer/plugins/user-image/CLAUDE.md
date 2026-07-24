@@ -9,7 +9,7 @@
   - Contributes: `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer.RowActions`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`

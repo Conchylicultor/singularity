@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { ToolCallRow } from "./components/tool-call-row";
 import { CopyToolResultAction } from "./components/copy-result-action";
 
@@ -13,6 +14,6 @@ export default {
     "Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.",
   contributions: [
     JsonlViewer.EventRenderer({ match: "tool-call", component: ToolCallRow }),
-    JsonlViewer.RowAction({ id: "copy-tool-result", component: CopyToolResultAction }),
+    JsonlRowActions.Item({ id: "copy-tool-result", component: CopyToolResultAction }),
   ],
 } satisfies PluginDefinition;

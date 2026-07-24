@@ -268,22 +268,22 @@
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
           - **`attachment`** [12 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
           - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
-          - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className.
+          - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
           - **`event-counter`** — Displays the total event count in the conversation toolbar.
           - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
           - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
-          - **`investigate-event`** — Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
+          - **`investigate-event`** — Contributes the add-a-renderer row action to every JSONL transcript row whose nearest dispatch fell back (unhandled event kind, tool name, or attachment subtype), launching an agent briefed to implement the missing renderer for that dispatch key.
           - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
           - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
           - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
           - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
           - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
+          - **`row-actions`** — Owns the JSONL transcript's hover-revealed row-action strip: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. Sits below collapsible-card so card chrome can host the strip without a cycle.
           - **`summary`** — Renders summary separator events in the JSONL viewer.
           - **`system`** — Renders system events in the JSONL viewer.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
           - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
           - **`tool-call`** [11 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
-          - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
           - **`user-image`** — Renders inline image thumbnails for user-image events.
           - **`user-text`** — Renders user text events in the JSONL viewer.
       - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.

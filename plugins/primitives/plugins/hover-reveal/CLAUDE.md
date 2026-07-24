@@ -23,8 +23,7 @@
     - `apps/sonata/progress/sections`
     - `config_v2/settings`
     - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/attachment`
-    - `conversations/conversation-view/jsonl-viewer/unknown`
+    - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `layouts/miller`
     - `page/audio`
     - `page/bookmark`
