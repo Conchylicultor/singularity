@@ -258,10 +258,9 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
-<<<<<<< .merge_file_sXAa1y
     - `ConfigV2.WebRegister`
-=======
->>>>>>> .merge_file_30Jsb5
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
     - `Staging.DiffRenderer` → `ReorderDiffRenderer`
   - Uses:
     - `config_v2.ConfigV2`

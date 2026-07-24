@@ -8967,7 +8967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
         - Uses:
           - `conversations/conversation-view.conversationPane`
-          - `conversations/conversations-view/data-view.SidebarDataView`
+          - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
           - `conversations/model-provider.useDefaultModel`
           - `conversations/pane-restore.loadRouteForConversation`
           - `conversations/pane-restore.reportCorruptSavedRoute`
@@ -8987,39 +8987,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.usePaneStore`
           - `shell.Shell`
       - Plugins:
-        - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the tab host mounted directly by the conversations-view mount point. Per-tab sub-plugins (Queue, History) contribute their tab into SidebarDataView.View.
+        - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
           - Web:
-            - Slots: `SidebarDataView.View` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
-            - Uses: `primitives/tabbed-view.defineTabbedView`
+            - Slots: `SidebarSources.SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
+            - Uses:
+              - `primitives/css/scroll.Scroll`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineDataViewSources`
+              - `primitives/data-view.MergedDataView`
             - Exports (types): `ConversationSidebarProps`
-            - Exports (values): `SidebarDataView`
+            - Exports (values):
+              - `ConversationsSidebarDataView`
+              - `SIDEBAR_VIEW`
+              - `SidebarSources`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversations-view`
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
           - Plugins:
-            - **`history`** — Contributes the History list (a server-delegated DataView reusing the all-conversations query infra) as the History tab of the `dataview` sidebar variant.
+            - **`history`** — Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
               - Web:
                 - Contributes:
-                  - `SidebarDataView.View` "History" → `SidebarDataViewBody`
+                  - `SidebarSources` "History" → `HistorySource`
                   - `conversations-sidebar-history-actions` "close" → `CloseConvAction`
                 - Uses:
                   - `conversations/all-conversations.conversationFieldDefs`
                   - `conversations/conversation-ui/item.ConversationItem`
-                  - `conversations/conversations-view/data-view.SidebarDataView`
+                  - `conversations/conversations-view/data-view.SidebarSources`
                   - `infra/endpoints.fetchEndpoint`
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/data-view.DataView`
-                  - `primitives/data-view.defineDataView`
                   - `primitives/data-view.defineItemActions`
                   - `primitives/live-state.matchResource`
                   - `primitives/live-state.useResource`
                   - `primitives/row-actions.RowActionButton`
-            - **`queue`** — Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.
+            - **`queue`** — Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Contributes:
-                  - `SidebarDataView.View` "Queue" → `SidebarQueueBody`
+                  - `SidebarSources` "Queue" → `QueueSource`
                   - `conversations-sidebar-queue-actions` "promote" → `PromoteAction`
                   - `conversations-sidebar-queue-actions` "step-down" → `StepDownAction`
                   - `conversations-sidebar-queue-actions` "demote" → `DemoteAction`
@@ -9028,15 +9032,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/all-conversations.conversationFieldDefs`
                   - `conversations/conversation-ui/item.ConversationItem`
-                  - `conversations/conversations-view/data-view.SidebarDataView`
+                  - `conversations/conversations-view/data-view.SidebarSources`
                   - `conversations/conversations-view/queue.applyReorder`
                   - `conversations/conversations-view/queue.classifyQueue`
                   - `conversations/conversations-view/queue.ReorderVars`
                   - `conversations/conversations-view/queue.TaskGroup`
                   - `infra/endpoints.fetchEndpoint`
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/data-view.DataView`
-                  - `primitives/data-view.defineDataView`
                   - `primitives/data-view.defineItemActions`
                   - `primitives/live-state.useResource`
                   - `primitives/optimistic-mutation.useOptimisticResource`
@@ -18928,8 +18929,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/tool-call/write`
               - `conversations/conversation-view/prompt-templates`
-              - `conversations/conversations-view/data-view/history`
-              - `conversations/conversations-view/data-view/queue`
+              - `conversations/conversations-view/data-view`
               - `conversations/recover`
               - `debug/broadcasts`
               - `debug/claude-cli-calls`
@@ -19288,7 +19288,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/attempt-view`
               - `tasks/task-attachments`
               - `tasks/task-dependencies`
-              - `tasks/task-deps-tree`
               - `tasks/task-description`
               - `tasks/task-detail`
               - `tasks/task-draft-form`
@@ -20424,7 +20423,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -20466,6 +20464,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-core.buildViewConfigContributions`
           - `primitives/data-view/view-core.buildViewDescriptors`
           - `primitives/data-view/view-core.EditableViewSwitcher`
+          - `primitives/data-view/view-core.ResolvedViewInstance`
           - `primitives/data-view/view-core.useViewModel`
           - `primitives/data-view/view-core.useViewVariants`
           - `primitives/element-size.useElementSize`
@@ -20496,6 +20495,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSection`
           - `DataViewSettingContribution`
           - `DataViewSettingsContextValue`
+          - `DataViewSourceBundle`
+          - `DataViewSourceContribution`
+          - `DataViewSourceProps`
+          - `DataViewSources`
           - `FieldCellProps`
           - `FieldDef`
           - `FieldExtensionContribution`
@@ -20523,6 +20526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActions`
           - `ItemActionsDescriptor`
           - `ManualOrderConfig`
+          - `MergedDataViewProps`
           - `SelectionConfig`
           - `ServerDataSourceResult`
           - `ServerDataSourceSpec`
@@ -20540,6 +20544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataView`
           - `DataViewSlots`
           - `defineDataView`
+          - `defineDataViewSources`
           - `defineFieldExtensions`
           - `defineItemActions`
           - `EditableCell`
@@ -20552,6 +20557,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isFilterGroup`
           - `isGroupableField`
           - `makeSortComparator`
+          - `MergedDataView`
           - `PANE_GUTTER_VAR`
           - `partitionIntoSections`
           - `pickPrimaryField`
@@ -20577,8 +20583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "build.history"
           - `ConfigV2.Register` "code-explorer.file-tree"
           - `ConfigV2.Register` "config_v2.settings.nav"
-          - `ConfigV2.Register` "conversations-sidebar-history"
-          - `ConfigV2.Register` "conversations-sidebar-queue"
+          - `ConfigV2.Register` "conversations-sidebar"
           - `ConfigV2.Register` "debug.boot-profiles"
           - `ConfigV2.Register` "debug.config-orphans"
           - `ConfigV2.Register` "debug.profiling.runtime"
@@ -20631,6 +20636,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations/agents`
           - `conversations/all-conversations`
+          - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
           - `debug/boot-profile`
@@ -20979,6 +20985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuContent`
               - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/css/ui-kit.DropdownMenuSection`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/css/ui-kit.Input`
               - `primitives/hover-reveal.hoverRevealClass`
@@ -21012,9 +21019,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `primitives/data-view`
           - Core:
             - Exports (types):
+              - `AddableSource`
               - `AddableViewType`
               - `ViewConfigRow`
               - `ViewInstance`
+              - `ViewSourceEntry`
               - `ViewTypeMeta`
           - Shared:
             - Exports (values): `viewsDescriptor`
@@ -23181,9 +23190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TabContribution`
         - Exports (values): `defineTabbedView`
       - Cross-plugin:
-        - Imported by:
-          - `conversations/conversations-view/data-view`
-          - `debug/trace/pane`
+        - Imported by: `debug/trace/pane`
     - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
       - Web:
         - Uses:
@@ -23456,7 +23463,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `primitives/data-view/view-core`
           - `primitives/tabbed-view`
-          - `tasks/task-deps-tree`
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
       - Web:
         - Uses: `primitives/css/ui-kit.cn`
@@ -23671,6 +23677,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
       - `Staging.DiffRenderer` → `ReorderDiffRenderer`
     - Uses:
       - `config_v2.ConfigV2`
@@ -23746,6 +23754,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "conversation.prompt-input"
       - `ConfigV2.Register` "conversations-sidebar-history-actions"
       - `ConfigV2.Register` "conversations-sidebar-queue-actions"
+      - `ConfigV2.Register` "conversations-sidebar-sources"
       - `ConfigV2.Register` "debug-app.sidebar"
       - `ConfigV2.Register` "debug-app.toolbar"
       - `ConfigV2.Register` "deploy.section"
@@ -23797,6 +23806,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "studio.sidebar"
       - `ConfigV2.Register` "studio.toolbar"
       - `ConfigV2.Register` "table-detail.section"
+      - `ConfigV2.Register` "task-deps-tree-sources"
       - `ConfigV2.Register` "task-deps-tree.actions"
       - `ConfigV2.Register` "task-detail.section"
       - `ConfigV2.Register` "task-draft-form.action"
@@ -25176,34 +25186,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-draft-form.TaskDraftPopover`
-    - **`task-deps-tree`** — Dependency tree section for the task detail: renders task_dependencies as a nesting = runs-after tree (with a switch to the read-only creation tree), atomic drag-to-reorder, per-row detach, and 'also after' fan-in chips.
+    - **`task-deps-tree`** — Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
       - Web:
         - Contributes:
           - `TaskDetailSlots.Section` "deps-tree" → `DepsTreeSection`
           - `task-deps-tree.actions` "detach" → `DetachAction`
+          - `task-deps-tree-sources` "Dependencies" → `DepsSource`
+          - `task-deps-tree-sources` "Created" → `CreatedSource`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/data-view.DataView`
+          - `primitives/data-view.DataViewSourceProps`
           - `primitives/data-view.defineDataView`
+          - `primitives/data-view.defineDataViewSources`
           - `primitives/data-view.defineItemActions`
           - `primitives/data-view.HierarchyConfig`
           - `primitives/data-view.ItemActionProps`
+          - `primitives/data-view.MergedDataView`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
-          - `primitives/view-switcher.useActiveViewId`
-          - `primitives/view-switcher.ViewSwitcher`
-          - `primitives/view-switcher.ViewSwitcherOption`
           - `tasks.patchTask`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
-          - `tasks/task-list.TasksSubtree`
+          - `tasks/task-list.buildTreeOptions`
+          - `tasks/task-list.clusterTaskHierarchy`
+          - `tasks/task-list.taskFields`
+          - `tasks/task-list.Tasks`
           - `tasks/task-status.STATUS_META`
           - `tasks/task-status.StatusBadge`
           - `tasks/task-status.StatusIcon`
@@ -25491,6 +25504,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.StatusBadge`
           - `tasks/task-status.StatusIcon`
         - Exports (values):
+          - `buildTreeOptions`
+          - `clusterTaskHierarchy`
+          - `taskFields`
           - `Tasks`
           - `TasksListView`
           - `TasksSubtree`
