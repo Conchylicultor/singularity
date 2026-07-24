@@ -33,7 +33,8 @@ export interface DepsHostProps {
  * contributed by this plugin's own `web/index.ts` — nothing ever imports
  * deps-tree for this, so the existing `task-deps-tree → task-list` import
  * direction is preserved (the Created source composes from task-list's exported
- * building blocks, never `<TasksSubtree>` itself).
+ * building blocks, which is the supported reuse path: a source's `render(bundle)`
+ * IS the inner DataView, so a component that owns its own cannot be a source).
  */
 export const DepsSources =
   defineDataViewSources<DepsHostProps>("task-deps-tree-sources");
@@ -91,8 +92,7 @@ export function DepsSource({
 /**
  * The Created source: the same cluster organised by its creation structure
  * (`folderId` forest) — read-only, ephemeral expand state, every node open by
- * default. Composed from task-list's exported building blocks, replicating
- * what `<TasksSubtree members readOnly>` passes to its inner DataView.
+ * default. Composed from task-list's exported building blocks.
  */
 export function CreatedSource({
   hostProps,

@@ -75,8 +75,7 @@ export const taskHierarchy: HierarchyConfig<TaskListItem> = {
 // per-row add affordances. Expand/collapse and parent mapping are preserved.
 const { onMove: _onMove, onCreate: _onCreate, ...readOnlyHierarchy } =
   taskHierarchy;
-export const readOnlyTaskHierarchy: HierarchyConfig<TaskListItem> =
-  readOnlyHierarchy;
+const readOnlyTaskHierarchy: HierarchyConfig<TaskListItem> = readOnlyHierarchy;
 
 // Cluster variant: also drop the expand hooks, so a scoped inspection tree (a
 // dependency+creation cluster) keeps expand state ephemeral instead of writing
@@ -91,11 +90,9 @@ export const clusterTaskHierarchy: HierarchyConfig<TaskListItem> =
   clusterHierarchy;
 
 export function buildTreeOptions({
-  rootTaskId,
   readOnly,
   defaultExpanded,
 }: {
-  rootTaskId?: string;
   readOnly?: boolean;
   defaultExpanded?: boolean;
 }): TreeViewOptions<TaskListItem> {
@@ -108,8 +105,7 @@ export function buildTreeOptions({
       ),
     expandAll: true,
     defaultExpanded,
-    rootId: rootTaskId,
-    addLabel: readOnly || rootTaskId ? null : "Add",
+    addLabel: readOnly ? null : "Add",
     toolbarStart: <Tasks.ListActions.Render />,
     // The per-row "Add item below" is an options-driven create affordance — drop
     // it under readOnly so no dead menu item survives the hierarchy's missing

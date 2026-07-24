@@ -7,7 +7,6 @@ import { LaunchAgentAction } from "./components/launch-agent-action";
 
 export { Tasks } from "./slots";
 export { TasksListView } from "./components/tasks-list-view";
-export { TasksSubtree } from "./components/tasks-subtree-view";
 export {
   taskFields,
   clusterTaskHierarchy,

@@ -42,7 +42,6 @@
     - `taskFields`
     - `Tasks`
     - `TasksListView`
-    - `TasksSubtree`
 - Cross-plugin:
   - Imported by:
     - `tasks/auto-start`

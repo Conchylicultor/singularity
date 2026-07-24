@@ -20465,7 +20465,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -20649,7 +20648,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "studio.release.history"
           - `ConfigV2.Register` "task-deps-tree"
           - `ConfigV2.Register` "tasks-list"
-          - `ConfigV2.Register` "tasks-subtree"
           - `ConfigV2.Register` "tweakcn.community-browser"
           - `ConfigV2.Register` "tweakcn.quick-theme"
           - `ConfigV2.Register` "workflows.definitions"
@@ -25554,7 +25552,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskFields`
           - `Tasks`
           - `TasksListView`
-          - `TasksSubtree`
       - Cross-plugin:
         - Imported by:
           - `tasks/auto-start`

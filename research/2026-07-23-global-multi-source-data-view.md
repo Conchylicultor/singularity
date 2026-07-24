@@ -463,7 +463,9 @@ DataView; nesting is structurally wrong.
 
 - Migrate Debug → Slow-Events (`debug.slow-events` tabbed-view over Events / Aggregates
   / Cluster DataViews) onto a merged surface.
-- Delete `TasksSubtree` + the `tasks-subtree` surface/config if it stays consumer-less.
+- ~~Delete `TasksSubtree` + the `tasks-subtree` surface/config if it stays consumer-less.~~
+  **Done** — it stayed consumer-less; see
+  [`research/2026-07-24-tasks-retire-tasks-subtree.md`](2026-07-24-tasks-retire-tasks-subtree.md).
 - Consider deleting `defineTabbedView` once debug migrates (its last consumer).
 
 ## Execution notes

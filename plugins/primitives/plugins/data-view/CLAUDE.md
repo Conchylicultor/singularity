@@ -869,7 +869,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
-    - `ConfigV2.WebRegister`
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses:
@@ -1053,7 +1052,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "studio.release.history"
     - `ConfigV2.Register` "task-deps-tree"
     - `ConfigV2.Register` "tasks-list"
-    - `ConfigV2.Register` "tasks-subtree"
     - `ConfigV2.Register` "tweakcn.community-browser"
     - `ConfigV2.Register` "tweakcn.quick-theme"
     - `ConfigV2.Register` "workflows.definitions"
