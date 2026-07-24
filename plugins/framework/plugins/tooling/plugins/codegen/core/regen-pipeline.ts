@@ -30,6 +30,14 @@ import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
  *   - DB migrations (`generateMigration`) — stateful, build-only.
  *   - `writeCentralRoutesManifest`, `central.json`, `propagateConfigToUser` —
  *     these write under `~/.singularity/`, not the repo tree.
+ *   - `seedAuthoredOverrides` (authored-override-seed.ts) — repo-tree, but
+ *     **deliberately build-only**, and this exception is load-bearing: it mints
+ *     `@review` markers, and `regen-generated` runs inside push's merge-driver
+ *     path, followed by `git add -A && git commit --amend`. A marker minted from
+ *     this shared pipeline would therefore be amended into a landing commit —
+ *     i.e. an unreviewed default lands, which is the exact failure the marker
+ *     exists to prevent. `regen-generated` asserts marker-FREE instead. Do not
+ *     "unify" it in here.
  *
  * Split into two functions to preserve build's interleaving of DB/central steps:
  * build runs registry codegen early (before central spawns + migrations), then

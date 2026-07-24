@@ -55,11 +55,18 @@ There is **no code synthesis** of default view-instances. The displayed
 instances come **only** from the authored `config.views` rows — when config has
 zero rows the runtime returns an empty instance list and `<DataView>` renders a
 `Placeholder` ("No views configured — author `config/<plugin>/<id>.jsonc`")
-instead of crashing. The build-time **`data-view:configs-authored` check**
-(`plugins/primitives/plugins/data-view/check/index.ts`, the reorder
-`configs-authored` twin) **fails by default** until each DataView has a
-hand-authored `config/<plugin>/<id>.jsonc` — the forcing function that an agent
-compose the views in config rather than relying on a code fallback.
+instead of crashing. The forcing function that an agent compose the views in
+config rather than rely on a code fallback is the views descriptor's config_v2
+**`requiresAuthoredOverride`** opt-in (in `view-core`'s `views-descriptor.ts`,
+carrying the authoring guidance as prose): `./singularity build` **seeds**
+`config/<plugin>/<id>.jsonc` from its origin and stamps a `// @review` marker
+into it, and the generic **`config:overrides-authored`** check
+(`plugins/config_v2/check/`) fails while that marker is present, echoing the
+descriptor's guidance out of the file. This is the reorder twin — one check now
+serves both families. It also closes the hole the old bespoke
+`data-view:configs-authored` presence check had: a `{"views": []}` file passed it
+while the DataView rendered "No views configured" at runtime. The marker tests
+*review*, which is the real requirement.
 
 ### Adoption is enforced (`no-adhoc-row-list`)
 
@@ -72,7 +79,7 @@ homogeneous domain records must be a `<DataView>`; genuine transient chrome
 row-rendering machinery itself (this plugin's view children, `primitives/tree`,
 `reorder/editor`) is permanently exempt via the rule's `ignores`. So the two
 checks bracket the choice: `no-adhoc-row-list` fires when you avoid DataView,
-`configs-authored` fires until you finish adopting it.
+`config:overrides-authored` fires until you finish adopting it.
 
 **Terse authored rows.** A config row is authored as just `{ name, view }`; the
 resolver (`normalizeRows` in `view-core`'s `use-views-config.ts`) derives `id`

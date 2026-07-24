@@ -57,6 +57,24 @@ export function viewsDescriptor(
       promotableToGit: true,
       scope: "app",
       source: "view",
+      // Config is the SINGLE SOURCE OF TRUTH for a surface's views — there is no
+      // code synthesis of default view-instances, so a DataView whose config has
+      // zero rows renders a "No views configured" placeholder at runtime.
+      // `./singularity build` seeds the override; these lines ride along as the
+      // file's own comments and are what `config:overrides-authored` echoes back
+      // when the seeded values have not yet been reviewed.
+      requiresAuthoredOverride: {
+        guidance: [
+          'Author "views" as terse { name, view } rows — one per view-type the',
+          "call site's `views={[…]}` whitelist enables, plus extra named",
+          "sort/filter views where the domain warrants one.",
+          '"view" is { type, sort?, filter?, …opts }; "sort" is a list of',
+          '{ fieldId, direction }; "filter" is a FilterGroup tree.',
+          "Give every row an explicit bare-slug id — it keys the saved per-view",
+          "row order, so a derived one would orphan it on rename.",
+          "Worked example: config/apps/sonata/library/sonata.library.jsonc",
+        ],
+      },
       fields: {
         views: listField({
           label: "Views",

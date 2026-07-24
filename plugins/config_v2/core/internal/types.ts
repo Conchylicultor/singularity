@@ -42,4 +42,15 @@ export interface ConfigDescriptor<F extends FieldsRecord = FieldsRecord> {
   // (defaults to `manual`). Surfaced as a filterable field + row tag in the
   // settings config nav.
   readonly source?: ConfigSource;
+  // When set, this descriptor's committed git-layer override
+  // (`config/<tree>/<name>.jsonc`) is MANDATORY, not optional: the build seeds a
+  // missing one from the origin and re-marks a stale one, in both cases with a
+  // `@review` marker the author must delete — that deletion IS the claim that
+  // the values are deliberate. Absent = today's behaviour (override optional,
+  // nothing seeded).
+  //
+  // `guidance` is descriptor-supplied prose, written into the seeded file as
+  // comment lines. The seeding engine never authors family-specific text, so a
+  // new family that owes an authored override costs zero engine edits.
+  readonly requiresAuthoredOverride?: { guidance: string[] };
 }

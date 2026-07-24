@@ -8,6 +8,7 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
   scope?: "app";
   promotableToGit?: boolean;
   source?: ConfigSource;
+  requiresAuthoredOverride?: { guidance: string[] };
 }): ConfigDescriptor<F> {
   for (const key of Object.keys(opts.fields)) {
     if (key.includes(".")) {
@@ -15,6 +16,16 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
         `defineConfig: field name "${key}" must not contain "." (used as key separator).`,
       );
     }
+  }
+
+  // The seeded/re-marked override carries the descriptor's own prose as its
+  // instructions — an empty `guidance` would produce a bare marker the author
+  // has no way to act on, so it is a defect at declaration time, not a silent
+  // degradation at build time.
+  if (opts.requiresAuthoredOverride?.guidance.length === 0) {
+    throw new Error(
+      `defineConfig: "${opts.name ?? "config"}" sets requiresAuthoredOverride with empty guidance — supply the prose the author is meant to act on.`,
+    );
   }
 
   // .passthrough() for parity with object/list: unknown keys are preserved, not
@@ -35,5 +46,6 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
     scope: opts.scope,
     promotableToGit: opts.promotableToGit,
     source: opts.source ?? "manual",
+    requiresAuthoredOverride: opts.requiresAuthoredOverride,
   });
 }

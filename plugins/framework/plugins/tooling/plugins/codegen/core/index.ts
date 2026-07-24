@@ -71,6 +71,15 @@ export {
   type OriginDefaultsPreparer,
 } from "./config-origin-gen";
 
+// Build-ONLY seeding of the mandatory (`requiresAuthoredOverride`) config
+// overrides, plus the marker scan `regen-generated` asserts on. Deliberately NOT
+// part of `regenerateManifestCodegen` — see the note in regen-pipeline.ts.
+export {
+  seedAuthoredOverrides,
+  listReviewMarkedOverrides,
+  type AuthoredOverrideSeedResult,
+} from "./authored-override-seed";
+
 // Importing this module registers the reorder contribution catalog as the
 // default origin-annotations preparer (side effect at load). Both the build
 // step and the `config-origins-in-sync` check import this barrel, so both

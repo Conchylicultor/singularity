@@ -10,7 +10,7 @@ import { runComposeServeStage } from "./internal/compose-serve";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, generateCompositionRegistry, clearCompositionRegistries, COMPOSITION_NAME_RE, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, seedAuthoredOverrides, generateCompositionRegistry, clearCompositionRegistries, COMPOSITION_NAME_RE, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { resolveComposition, flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
@@ -1070,6 +1070,22 @@ export function registerBuild(program: Command) {
       // profiler spans are threaded through `onStep`.
       console.log("Generating plugins doc...");
       await regenerateManifestCodegen({ root, onStep: codegenStep });
+
+      // 4b'. Seed / re-mark the MANDATORY config overrides (descriptors that set
+      // `requiresAuthoredOverride`). Runs after the origin pass above (it reads
+      // each origin's hash + body off disk) and before propagation, so the user
+      // layer never sees a half-seeded git layer. Build-ONLY on purpose: it mints
+      // `@review` markers, and the shared pipeline also runs from
+      // `regen-generated` inside push's amend path — see regen-pipeline.ts.
+      endSpan = buildProfilerStart("seedAuthoredOverrides", "build:codegen", "seed authored config overrides");
+      const seedResult = await seedAuthoredOverrides({ root });
+      endSpan();
+      for (const rel of seedResult.seeded) {
+        console.log(`[config-v2] seeded required override config/${rel} (marked @review)`);
+      }
+      for (const rel of seedResult.remarked) {
+        console.log(`[config-v2] re-marked stale override config/${rel} (marked @review)`);
+      }
 
       // 4c. Propagate git config to user config dir (~/.singularity/config/<worktree>/)
       endSpan = buildProfilerStart("propagateConfig", "build:codegen", "propagate config to user");

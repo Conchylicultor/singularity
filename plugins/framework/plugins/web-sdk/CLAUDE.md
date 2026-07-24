@@ -88,6 +88,24 @@ function MyLayout() {
 }
 ```
 
+**Every `defineRenderSlot` is reorderable, so it owes a reviewed config override.** The
+recipe is one build plus one edit — you never author the file, locate an origin, or type a
+hash:
+
+```
+1. write the defineRenderSlot
+2. ./singularity build      → SEEDS config/<defining-plugin>/<slotId>.jsonc
+                              (real // @hash, full catalog, a `// @review` marker),
+                              then fails `config:overrides-authored` on that marker
+3. open the file: arrange "items" for how the slot renders, DELETE the // @review line
+4. ./singularity build
+```
+
+Before any build, `./singularity check reorderable-slots-in-sync` already names the exact
+override path a new slot will owe. If the slot's order should never be user-curated it is
+headless — use `defineMountSlot`, which is not reorderable and owes nothing. Details:
+[`plugins/reorder/authoring-overrides.md`](../../../reorder/authoring-overrides.md).
+
 #### `<Slot.Dispatch {...props}/>` — single match (use `defineDispatchSlot`)
 
 Selects **one** contribution whose `match` satisfies the props, renders it isolated.

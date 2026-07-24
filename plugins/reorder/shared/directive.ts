@@ -48,6 +48,23 @@ export function reorderDirectiveDescriptor(
     name: slotId,
     promotableToGit: true,
     source: "reorder",
+    // A slot's on-screen order must be a deliberate, committed layout — never
+    // the natural order contributions happen to load in. `./singularity build`
+    // seeds the override (and re-marks it when the catalog shifts underneath);
+    // these lines ride along as the file's own comments, and are the whole of
+    // what `config:overrides-authored` echoes back. They are read by a human at
+    // the moment of arranging, so keep them short and imperative.
+    requiresAuthoredOverride: {
+      guidance: [
+        'Arrange "items" for how this slot ACTUALLY renders — a sidebar is a',
+        "vertical list, a toolbar a horizontal bar, a pane a stack of blocks.",
+        "Look at the surface, then order for that reading direction.",
+        'Node forms: "pluginId:id" (an item, terse) |',
+        '{ "item": "pluginId:id", "hidden": true } (drop it from the slot) |',
+        '{ "type": "spacer", "id": "<unique-id>" } (a blank gap).',
+        "At most one spacer per slot.",
+      ],
+    },
     fields: {
       items: reorderTreeField({ label: "Items" }),
     },

@@ -11,9 +11,11 @@
     - `config_v2.computeHash`
     - `config_v2.configFileOwner`
     - `config_v2.effective`
+    - `config_v2.hasReviewMarker`
     - `config_v2.propagate`
     - `config_v2.readonlyProxy`
     - `config_v2.readTypedConfig`
+    - `config_v2.REVIEW_MARKER`
     - `config_v2.stringifyConfigValue`
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`
@@ -41,6 +43,7 @@
     - `plugin-meta/plugin-tree.PluginNode`
     - `plugin-meta/plugin-tree.PluginTree`
   - Exports (types):
+    - `AuthoredOverrideSeedResult`
     - `BootCriticalOwner`
     - `CodegenStep`
     - `CollectedRawEntry`
@@ -96,6 +99,7 @@
     - `generateTokenGroupVars`
     - `isAppContent`
     - `listNamedCompositionRegistries`
+    - `listReviewMarkedOverrides`
     - `loadConfigDescriptorsByOriginPath`
     - `parseCustomUtilities`
     - `parseNamedCompositionRegistryFileName`
@@ -124,6 +128,7 @@
     - `resolveImportSpecifier`
     - `resolveOriginAnnotations`
     - `resolveOriginDefaults`
+    - `seedAuthoredOverrides`
     - `setDefaultOriginAnnotations`
     - `setDefaultOriginAnnotationsPreparer`
     - `setDefaultOriginDefaults`

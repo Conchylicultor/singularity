@@ -52,8 +52,10 @@ function newId(): string {
  * is derived on read (`normalizeRows`) and order is the array position. When
  * config has zero rows the
  * engine returns an empty instance list and the host renders a placeholder. The
- * build-time `data-view:configs-authored` check is the forcing function that an
- * agent author the config.
+ * forcing function that an agent author the config is the descriptor's
+ * `requiresAuthoredOverride` opt-in: `./singularity build` seeds the config file
+ * with a `// @review` marker, and `config:overrides-authored` fails until the
+ * rows are reviewed and the marker deleted.
  *
  * The engine treats each row's `view` as an **opaque `VariantValue`** — it never
  * reads or writes `sort`/`filter`. The host layers those on through `viewFor` +

@@ -40,6 +40,7 @@ export {
   validationIssues,
 } from "./internal/tier-logic";
 export { setConfigField, forkScope, deleteScope, forkDescriptorScope, removeDescriptorScope, configSnapshot } from "./internal/endpoints";
+export { REVIEW_MARKER, hasReviewMarker } from "./internal/review-marker";
 export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";
 export { configFileOwner } from "./internal/config-file-owner";
 export {

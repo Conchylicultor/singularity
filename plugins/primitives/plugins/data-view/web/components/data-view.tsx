@@ -136,9 +136,11 @@ export function DataViewShellFrame(props: {
 
   // Config is the single source of truth: zero authored view-instances → render
   // an honest placeholder rather than an empty shell. The build-time
-  // `data-view:configs-authored` check is the real forcing function; this keeps
-  // the pane from crashing if a config is authored-but-empty. Early-returning
-  // here (before the body mounts) is the body's only gate.
+  // `config:overrides-authored` check is the real forcing function (the views
+  // descriptor sets `requiresAuthoredOverride`, so the build seeds the config
+  // and marks it for review); this keeps the pane from crashing if a config is
+  // authored-but-empty. Early-returning here (before the body mounts) is the
+  // body's only gate.
   if (!activeInstance) {
     return (
       <Stack gap="none" ref={rootRef}>

@@ -335,7 +335,8 @@ export async function loadConfigDescriptorsByOriginPath(opts: {
   return result;
 }
 
-function walkJsoncFiles(dir: string, baseDir: string, out: string[]): void {
+/** Every `*.jsonc` under `dir`, as paths relative to `baseDir` (forward slashes). */
+export function walkJsoncFiles(dir: string, baseDir: string, out: string[]): void {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);

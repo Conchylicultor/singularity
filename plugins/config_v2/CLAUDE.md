@@ -191,6 +191,52 @@ Adding a field to an existing config (including a `listField` item or `objectFie
 1. Every `.origin.jsonc` in `config/` matches current `defineConfig` defaults
 2. Every `.jsonc` override has a `// @hash` matching its current origin
 
+`config:overrides-authored` (`check/overrides-authored.ts`) — see
+[mandatory overrides](#mandatory-overrides-requiresauthoredoverride) below: a pure
+filesystem scan of `config/**/*.jsonc` (excluding the generated `.origin`/`.ancestor`
+siblings) that fails on any file still carrying the seeded `// @review` marker.
+`alwaysRun`, so it fails `--skip-checks` builds too, and never cached — the marker is
+minted by the build itself, after that run's tree hash was taken.
+
+### Mandatory overrides (`requiresAuthoredOverride`)
+
+A descriptor whose committed override must be **deliberate, not defaulted** declares
+it:
+
+```ts
+defineConfig({
+  name: slotId,
+  requiresAuthoredOverride: {
+    guidance: ["Arrange \"items\" for how this slot renders (sidebar =", "vertical list, toolbar = horizontal bar, …)"],
+  },
+  …
+})
+```
+
+`./singularity build` then does the mechanical half: it **seeds** a missing
+`config/<tree>/<name>.jsonc` from its origin — same `// @hash`, same body, same legend
+comments — with a one-line `// @review` marker plus the descriptor's `guidance` lines
+inserted after the hash header; and it **re-marks + re-stamps** an existing override
+whose origin hash moved underneath it (naming the delta in the marker line). The human
+half is: arrange the values, delete the marker line.
+
+`guidance` is **descriptor-supplied prose**, so the engine and the check never name a
+config family — `config:overrides-authored` just echoes each offending file's own marker
+block back. A third family that opts in needs zero edits to either. Today's two
+consumers are reorder's `reorderDirectiveDescriptor` (per reorderable slot) and
+data-view's `viewsDescriptor` (per DataView surface); each replaced a bespoke
+presence-only check of its own.
+
+Why *review* rather than *presence*: seeding makes absence self-healing (delete a
+required override and the next build re-seeds it, marked, which fails), and a stale hash
+stops being discharged by retyping it — retyping was acknowledgement, not review.
+
+Seeding lives in a **build-only** codegen module, never in the shared
+`regenerateManifestCodegen` pipeline: `regen-generated` runs inside push's merge-driver
+path followed by `git add -A && git commit --amend`, so a marker minted there would land
+unreviewed. It asserts marker-free instead. Design:
+[`research/2026-07-23-global-authored-override-seeding.md`](../../research/2026-07-23-global-authored-override-seeding.md).
+
 ### Internal architecture
 
 - **`jsoncConfigProxy`** — synchronous read/write with `// @hash` header tracking. Used for propagation, `setConfig`, and `reloadValues`.
@@ -320,6 +366,7 @@ The three aggregate live resources — `config-v2.scopes` (one global `{}` map o
     - `forkDescriptorScope`
     - `forkScope`
     - `hasConflict`
+    - `hasReviewMarker`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
     - `orphanFileSchema`
@@ -330,6 +377,7 @@ The three aggregate live resources — `config-v2.scopes` (one global `{}` map o
     - `readonlyProxy`
     - `readTypedConfig`
     - `removeDescriptorScope`
+    - `REVIEW_MARKER`
     - `scopeAppId`
     - `setConfigField`
     - `stringifyConfigValue`
