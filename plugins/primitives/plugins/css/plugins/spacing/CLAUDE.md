@@ -404,6 +404,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/tokens/shape`
     - `ui/tokens/sidebar-palette`
     - `ui/tokens/type-scale`
+    - `ui/tree-disclosure/column`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`
 

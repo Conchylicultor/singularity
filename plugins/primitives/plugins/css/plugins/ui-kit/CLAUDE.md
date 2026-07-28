@@ -533,6 +533,9 @@ structurally unrepresentable.
     - `ui/theme-engine`
     - `ui/theme-engine/quick-theme`
     - `ui/tokens/shadow`
+    - `ui/tree-disclosure/column`
+    - `ui/tree-disclosure/dimmed-leaf`
+    - `ui/tree-disclosure/merged`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`
 

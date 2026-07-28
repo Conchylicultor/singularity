@@ -211,6 +211,7 @@ the outcome too, with no separate code path.
     - `primitives/prompt-editor`
     - `primitives/tabbed-view`
     - `primitives/text-editor`
+    - `primitives/tree`
     - `reorder`
     - `reports`
     - `review/plugin-changes`

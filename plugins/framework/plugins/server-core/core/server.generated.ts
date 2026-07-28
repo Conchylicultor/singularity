@@ -333,6 +333,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tokens/plugins/shape", id: "ui.tokens.shape", loader: () => import("@plugins/ui/plugins/tokens/plugins/shape/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/sidebar-palette", id: "ui.tokens.sidebar-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/sidebar-palette/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "ui/plugins/tree-disclosure", id: "ui.tree-disclosure", loader: () => import("@plugins/ui/plugins/tree-disclosure/server"), dependsOn: ["ui/plugins/variant-region"] },
   { pluginPath: "ui/plugins/tweakcn/plugins/community-browser", id: "ui.tweakcn.community-browser", loader: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/server"), dependsOn: ["database", "infra/plugins/endpoints", "ui/plugins/tweakcn"] },
   { pluginPath: "ui/plugins/tweakcn", id: "ui.tweakcn", loader: () => import("@plugins/ui/plugins/tweakcn/server"), dependsOn: ["database", "infra/plugins/endpoints"] },
   { pluginPath: "ui/plugins/variant-region", id: "ui.variant-region", loader: () => import("@plugins/ui/plugins/variant-region/server"), dependsOn: ["config_v2"] },

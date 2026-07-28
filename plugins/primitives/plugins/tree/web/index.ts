@@ -10,6 +10,10 @@ export type {
 } from "./internal/row-chrome";
 export { TreeRowChrome } from "./internal/tree-row-chrome";
 export type { TreeRowChromeProps } from "./internal/tree-row-chrome";
+export { TreeDisclosureToggle } from "./internal/tree-disclosure-toggle";
+export type { TreeDisclosureToggleProps } from "./internal/tree-disclosure-toggle";
+export { Tree } from "./slots";
+export type { TreeDisclosureContribution } from "./slots";
 export { RenameInput } from "./internal/rename-input";
 export type { RenameInputProps } from "./internal/rename-input";
 export {

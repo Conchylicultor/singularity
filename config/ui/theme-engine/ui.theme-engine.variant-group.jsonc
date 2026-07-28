@@ -1,4 +1,4 @@
-// @hash cd7afae3a25f
+// @hash 4da0fc6f107e
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -7,6 +7,7 @@
     "ui.sidebar-framing:sidebar-framing",
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.tab-bar.customizer:tab-bar",
+    "ui.tree-disclosure:tree-disclosure",
     "apps-core.surface.floating:floating-titlebar",
     "ui.tokens.shape:shape",
     "ui.tokens.sidebar-palette:sidebar-palette",

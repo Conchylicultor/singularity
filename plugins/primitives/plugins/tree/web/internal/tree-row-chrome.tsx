@@ -4,10 +4,15 @@ import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
 } from "@dnd-kit/core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import type { TreeDisclosureProps } from "../../core";
+import { Tree } from "../slots";
+import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
 
 export type TreeRowChromeProps = {
   depth: number;
@@ -57,6 +62,49 @@ export type TreeRowChromeProps = {
 };
 
 /**
+ * The current (and default) icon-bearing disclosure, extracted verbatim from
+ * the row below. Used when no `Tree.Disclosure` is contributed, so rows render
+ * identically even if the tree-disclosure plugin is not loaded. The `merged`
+ * variant of tree-disclosure mirrors this byte-for-byte.
+ *
+ * Notion-style merged slot: icon at rest, chevron on row hover, both sharing
+ * one size-5 box. The icon is purely visual (the row click navigates); the
+ * overlaid chevron button owns the toggle.
+ */
+function DefaultMergedDisclosure({
+  icon,
+  isOpen,
+  expandable,
+  onToggle,
+}: TreeDisclosureProps) {
+  return (
+    <Center as="span" axis="both" className="relative size-5">
+      <Center
+        as="span"
+        axis="both"
+        className={cn(
+          expandable &&
+            "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
+        )}
+      >
+        {icon}
+      </Center>
+      {expandable && (
+        <TreeDisclosureToggle
+          isOpen={isOpen}
+          onToggle={onToggle}
+          // eslint-disable-next-line layout/no-adhoc-layout -- chevron button overlays the icon slot full-bleed (icon at rest, chevron on hover)
+          className={cn(
+            "absolute inset-0",
+            "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
+          )}
+        />
+      )}
+    </Center>
+  );
+}
+
+/**
  * Pure presentational tree-row chrome: indentation, a fixed row height, and a
  * reserved chevron slot. No hooks, no context, no dnd-kit *logic* — the
  * editable RowChrome computes the drag source via dnd-kit and passes the
@@ -89,6 +137,19 @@ export function TreeRowChrome({
   leafChevron = true,
 }: TreeRowChromeProps) {
   const expandable = hasChildren || leafChevron;
+  // A UI plugin can contribute the icon-bearing leading disclosure (merged /
+  // dimmed-leaf / column). Exactly one is expected — its Region internally
+  // dispatches to the active variant. With none, fall back to the inline
+  // default merged disclosure.
+  const disclosures = Tree.Disclosure.useContributions();
+  const disclosure = disclosures[0];
+  const disclosureProps: TreeDisclosureProps = {
+    icon,
+    hasChildren,
+    isOpen,
+    expandable,
+    onToggle,
+  };
   return (
     <Stack
       direction="row"
@@ -110,40 +171,18 @@ export function TreeRowChrome({
       style={{ paddingLeft: depth * indentStep + 4 }}
     >
       {icon != null ? (
-        // Notion-style merged slot: icon at rest, chevron on row hover, both
-        // sharing one size-5 box. The icon is purely visual (the row click
-        // navigates); the overlaid chevron button owns the toggle.
-        <Center as="span" axis="both" className="relative size-5">
-          <Center
-            as="span"
-            axis="both"
-            className={cn(
-              expandable &&
-                "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
-            )}
-          >
-            {icon}
-          </Center>
-          {expandable && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle?.();
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              aria-label={isOpen ? "Collapse" : "Expand"}
-              // eslint-disable-next-line layout/no-adhoc-layout -- chevron button overlays the icon slot full-bleed (icon at rest, chevron on hover); centers its glyph
-              className={cn(
-                "absolute inset-0 flex items-center justify-center rounded-md",
-                "hover:bg-background/60",
-                "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-              )}
-            >
-              <CollapsibleChevron open={isOpen} className="size-4" />
-            </button>
-          )}
-        </Center>
+        // useContributions() seals the `component` field, so the disclosure
+        // can't be rendered as <Disclosure/>; route it through renderIsolated
+        // (which unseals and applies the error-boundary middleware).
+        disclosure ? (
+          renderIsolated(
+            Tree.Disclosure.id,
+            disclosure as unknown as Contribution,
+            disclosureProps,
+          )
+        ) : (
+          <DefaultMergedDisclosure {...disclosureProps} />
+        )
       ) : expandable ? (
         <button
           type="button"

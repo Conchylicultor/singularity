@@ -12,6 +12,7 @@
   - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
   - **`theme-toggle`** — Toolbar toggle for light/dark mode.
   - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
+  - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
   - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
   - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
 

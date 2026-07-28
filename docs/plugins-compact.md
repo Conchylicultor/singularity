@@ -587,6 +587,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
     - **`theme-toggle`** — Toolbar toggle for light/dark mode.
     - **`tokens`** [12 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
+    - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
+      - Plugins:
+        - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).
+        - **`dimmed-leaf`** — Dimmed-leaf tree disclosure — the merged box, with childless rows' icons desaturated so parents read stronger.
+        - **`merged`** — Merged tree disclosure — icon and chevron share one box (icon at rest, chevron on hover), Notion style.
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
       - Plugins:
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.

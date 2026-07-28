@@ -4219,6 +4219,22 @@
       "name": "@singularity/plugin-ui-tokens-type-scale",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tree-disclosure": {
+      "name": "@singularity/plugin-ui-tree-disclosure",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tree-disclosure/plugins/column": {
+      "name": "@singularity/plugin-ui-tree-disclosure-column",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tree-disclosure/plugins/dimmed-leaf": {
+      "name": "@singularity/plugin-ui-tree-disclosure-dimmed-leaf",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tree-disclosure/plugins/merged": {
+      "name": "@singularity/plugin-ui-tree-disclosure-merged",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tweakcn": {
       "name": "@singularity/plugin-ui-tweakcn",
       "version": "0.0.1",
@@ -7039,6 +7055,14 @@
     "@singularity/plugin-ui-tokens-sidebar-palette": ["@singularity/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
 
     "@singularity/plugin-ui-tokens-type-scale": ["@singularity/plugin-ui-tokens-type-scale@workspace:plugins/ui/plugins/tokens/plugins/type-scale"],
+
+    "@singularity/plugin-ui-tree-disclosure": ["@singularity/plugin-ui-tree-disclosure@workspace:plugins/ui/plugins/tree-disclosure"],
+
+    "@singularity/plugin-ui-tree-disclosure-column": ["@singularity/plugin-ui-tree-disclosure-column@workspace:plugins/ui/plugins/tree-disclosure/plugins/column"],
+
+    "@singularity/plugin-ui-tree-disclosure-dimmed-leaf": ["@singularity/plugin-ui-tree-disclosure-dimmed-leaf@workspace:plugins/ui/plugins/tree-disclosure/plugins/dimmed-leaf"],
+
+    "@singularity/plugin-ui-tree-disclosure-merged": ["@singularity/plugin-ui-tree-disclosure-merged@workspace:plugins/ui/plugins/tree-disclosure/plugins/merged"],
 
     "@singularity/plugin-ui-tweakcn": ["@singularity/plugin-ui-tweakcn@workspace:plugins/ui/plugins/tweakcn"],
 
