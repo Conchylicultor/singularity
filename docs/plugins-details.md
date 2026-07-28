@@ -6193,7 +6193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.op-wedge-watchdog`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.op-wedge-watchdog`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -12211,7 +12211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
-            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
             - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
             - Uses:
               - `config_v2/fields.Fields`
@@ -18322,6 +18322,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-graph`
               - `tasks/task-status`
               - `ui/tab-bar`
+              - `ui/tree-disclosure/column`
+              - `ui/tree-disclosure/dimmed-leaf`
+              - `ui/tree-disclosure/merged`
         - **`clip`** — Clipping layout primitive: <Clip axis fill> hides overflow without scrolling. Sibling of Scroll, kept orthogonal.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -19384,6 +19387,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/shape`
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
+              - `ui/tree-disclosure/column`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
         - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
@@ -20333,6 +20337,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine`
               - `ui/theme-engine/quick-theme`
               - `ui/tokens/shadow`
+              - `ui/tree-disclosure/column`
+              - `ui/tree-disclosure/dimmed-leaf`
+              - `ui/tree-disclosure/merged`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
         - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.
@@ -23137,6 +23144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/prompt-editor`
           - `primitives/tabbed-view`
           - `primitives/text-editor`
+          - `primitives/tree`
           - `reorder`
           - `reports`
           - `review/plugin-changes`
@@ -23435,6 +23443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/segmented-progress-bar/dots`
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
       - Web:
+        - Slots: `Tree.Disclosure` ← `ui.tree-disclosure`
         - Uses:
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.ExpandAllButton`
@@ -23459,6 +23468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/search.filterTree`
           - `primitives/search.SearchInput`
+          - `primitives/slot-render.renderIsolated`
           - `primitives/virtual-rows.VirtualRows`
         - Exports (types):
           - `ExpandableRow`
@@ -23467,6 +23477,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RowChromeProps`
           - `RowControls`
           - `RowMenuItem`
+          - `TreeDisclosureContribution`
+          - `TreeDisclosureToggleProps`
           - `TreeItem`
           - `TreeListContextValue`
           - `TreeListProps`
@@ -23475,6 +23487,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `RenameInput`
           - `RowChrome`
+          - `Tree`
+          - `TreeDisclosureToggle`
           - `TreeList`
           - `TreeRowChrome`
           - `useOptionalTreeListContext`
@@ -23488,6 +23502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `DropZone`
           - `ExpandChange`
+          - `TreeDisclosureProps`
           - `TreeNode`
         - Exports (values):
           - `buildTree`
@@ -23502,6 +23517,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `primitives/data-view/tree`
           - `tasks/task-list`
+          - `ui/tree-disclosure`
+          - `ui/tree-disclosure/column`
+          - `ui/tree-disclosure/dimmed-leaf`
+          - `ui/tree-disclosure/merged`
     - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
       - Web:
         - Uses:
@@ -26167,7 +26186,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Web:
         - Slots:
-          - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+          - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.GlobalPreset` ← `ui.tokens`
           - `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`
@@ -26756,6 +26775,55 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `typeScaleConfig`
               - `typeScaleGroup`
+    - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
+      - Web:
+        - Slots: `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`, `ui.tree-disclosure.dimmed-leaf`, `ui.tree-disclosure.merged`
+        - Contributes:
+          - `ConfigV2.WebRegister`
+          - `DynamicEnum.Options` "Tree disclosure variant"
+          - `ThemeEngine.VariantGroup` "Tree disclosure" → `Picker`
+          - `Tree.Disclosure` "Disclosure" → `Region`
+        - Uses:
+          - `primitives/tree.Tree`
+          - `ui/variant-region.defineVariantRegionWeb`
+        - Exports (values): `TreeDisclosure`
+      - Server:
+        - Contributes: `ConfigV2.Register` "tree-disclosure"
+        - Uses: `ui/variant-region.variantRegionServerContribution`
+      - Core:
+        - Uses: `ui/variant-region.defineVariantRegion`
+        - Exports (values): `treeDisclosure`
+      - Cross-plugin:
+        - Imported by:
+          - `ui/tree-disclosure/column`
+          - `ui/tree-disclosure/dimmed-leaf`
+          - `ui/tree-disclosure/merged`
+      - Plugins:
+        - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).
+          - Web:
+            - Contributes: `TreeDisclosure.Variant` "Chevron column" → `ColumnDisclosure`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/tree.TreeDisclosureToggle`
+              - `ui/tree-disclosure.TreeDisclosure`
+        - **`dimmed-leaf`** — Dimmed-leaf tree disclosure — the merged box, with childless rows' icons desaturated so parents read stronger.
+          - Web:
+            - Contributes: `TreeDisclosure.Variant` "Dimmed leaves" → `DimmedLeafDisclosure`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/tree.TreeDisclosureToggle`
+              - `ui/tree-disclosure.TreeDisclosure`
+        - **`merged`** — Merged tree disclosure — icon and chevron share one box (icon at rest, chevron on hover), Notion style.
+          - Web:
+            - Contributes: `TreeDisclosure.Variant` "Merged" → `MergedDisclosure`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/tree.TreeDisclosureToggle`
+              - `ui/tree-disclosure.TreeDisclosure`
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
       - Web:
         - Contributes:
@@ -26869,5 +26937,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/app-rail-framing`
           - `ui/sidebar-framing`
+          - `ui/tree-disclosure`
 
 <!-- AUTOGENERATED:END -->
