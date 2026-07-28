@@ -12,6 +12,21 @@ slot components can call `useLexicalComposerContext()`).
 Feature-specific behaviors live in sub-plugins that contribute via the
 Plugin slot.
 
+## Node extensions
+
+A `NodeExtension` is the one declaration that makes a token round-trip: its
+`deserializePattern` turns raw markdown into a node, `serializeNode` turns the
+node back into raw markdown. The editor core applies that registry on **every**
+way text enters the editor, so an extension is never wired per-entry-point:
+
+- the `value` prop round-trip (`applyMarkdownToEditor`),
+- the imperative caret insert (`insertRef` → `$insertMarkdownSnippet`),
+- **paste** (`ExtensionPastePlugin`) — pasted text carrying an extension token
+  materializes the node instead of landing as literal characters. It gates on
+  `hasNodeExtensionToken`, so a paste with no token falls through untouched to
+  Lexical's default handler, and it sits at `COMMAND_PRIORITY_LOW`: below the
+  image/file paste handlers, above the default insert.
+
 ## Sub-plugins
 
 - **`paste-images`** — Image paste/drop support. Registers an `ImageNode`

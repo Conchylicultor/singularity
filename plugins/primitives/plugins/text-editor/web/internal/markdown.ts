@@ -87,6 +87,21 @@ function $lineToNodes(
   return nodes;
 }
 
+// Does this raw snippet carry at least one node-extension token? The gate the
+// paste path uses to decide between "deserialize into nodes" and "let the
+// editor insert it as plain text" — same registry, same patterns as
+// `$lineToNodes`, so the two can never disagree about what is a token.
+export function hasNodeExtensionToken(
+  text: string,
+  extensions: readonly NodeExtension[] = getNodeExtensions(),
+): boolean {
+  // Fresh, flagless RegExp per test: `deserializePattern` may carry /g, whose
+  // `lastIndex` is stateful across calls.
+  return extensions.some((ext) =>
+    new RegExp(ext.deserializePattern.source).test(text),
+  );
+}
+
 export function applyMarkdownToEditor(
   editor: LexicalEditor,
   markdown: string,

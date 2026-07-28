@@ -12,6 +12,7 @@
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `debug/live-state-churn/emit`
     - `debug/render-profiler`
+    - `improve/element-picker`
     - `infra/events-test`
     - `page/editor`
     - `page/editor-collab`

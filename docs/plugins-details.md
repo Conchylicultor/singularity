@@ -13533,6 +13533,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
+              - `improve/element-picker`
               - `infra/events-test`
               - `page/editor`
               - `page/editor-collab`
@@ -13856,6 +13857,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UI_CONTEXT_FIELDS`
           - `UI_CONTEXT_RE`
           - `viteCollectedDir`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:

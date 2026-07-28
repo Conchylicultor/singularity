@@ -11,6 +11,7 @@ import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "../internal/decorator-nav-plugin";
 import { DecoratorBlockPlugin } from "../internal/decorator-block-plugin";
+import { ExtensionPastePlugin } from "../internal/extension-paste-plugin";
 import { TextEditorSlots, useMergedNodeExtensions } from "../slots";
 import type { NodeExtension } from "../internal/node-extensions";
 import {
@@ -95,6 +96,7 @@ export function TextEditor({
       <PluginSlot onError={onError} />
       <DecoratorNavPlugin />
       <DecoratorBlockPlugin />
+      <ExtensionPastePlugin extensions={extensions} />
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}
