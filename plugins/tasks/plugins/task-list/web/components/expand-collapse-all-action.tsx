@@ -1,49 +1,41 @@
-import { useCallback } from "react";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
-import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
+import {
+  useOptionalTreeListContext,
+  useSubtreeExpandAll,
+  type TreeItem,
+  type TreeListContextValue,
+} from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
-import { patchTask } from "@plugins/tasks/web";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
 function ExpandCollapseAllActionInner({
-  rows,
-  taskId,
-  hasChildren,
+  ctx,
+  rootId,
 }: {
-  rows: readonly TaskListItem[];
-  taskId: string;
-  hasChildren: boolean;
+  ctx: TreeListContextValue<TreeItem>;
+  rootId: string;
 }) {
-  // The tree primitive's ExpandableRow speaks `parentId`; project the tasks'
-  // folder hierarchy onto it at this boundary.
-  const mappedRows = rows.map((t) => ({ ...t, parentId: t.folderId }));
-  const patch = useCallback(
-    (id: string, expanded: boolean) => patchTask(id, { expanded }),
-    [],
+  // `ctx.rows` are the tree's projected rows — already
+  // `{ id, parentId, rank, expanded }`, i.e. `ExpandableRow` — and
+  // `ctx.setExpanded` writes the view's own device-local expand map. So there is
+  // nothing to subscribe to and no folderId → parentId projection to do here.
+  const { willCollapse, toggle } = useSubtreeExpandAll(
+    ctx.rows,
+    rootId,
+    ctx.setExpanded,
   );
-  const { willCollapse, toggle } = useSubtreeExpandAll(mappedRows, taskId, patch);
-
-  if (!hasChildren) return null;
-
-  return (
-    <ExpandAllButton allExpanded={!willCollapse} onToggle={toggle} />
-  );
+  return <ExpandAllButton allExpanded={!willCollapse} onToggle={toggle} />;
 }
 
 export function ExpandCollapseAllAction({
   row,
   hasChildren,
 }: ItemActionProps<TaskListItem>) {
-  const taskId = row.id;
-  const result = useResource(tasksResource);
-  // Return null while pending (no flicker of the button with empty rows).
-  if (!hasChildren) return null;
-  return (
-    <ResourceView resource={result}>
-      {(rows) => (
-        <ExpandCollapseAllActionInner rows={rows} taskId={taskId} hasChildren={hasChildren} />
-      )}
-    </ResourceView>
-  );
+  // Non-throwing context read: this action is contributed to an item-action slot
+  // that EVERY view renders (list / table / gallery / tree), and the tasks
+  // surface ships a `recent` LIST instance. Outside a tree the action hides
+  // itself — expand-all is meaningless in a flat list.
+  const ctx = useOptionalTreeListContext();
+  if (!ctx || !hasChildren) return null;
+  return <ExpandCollapseAllActionInner ctx={ctx} rootId={row.id} />;
 }

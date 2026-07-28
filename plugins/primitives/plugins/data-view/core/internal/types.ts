@@ -1,6 +1,7 @@
 import { type ComponentType, type ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
@@ -67,6 +68,12 @@ export interface HierarchyConfig<TRow> {
   getRank: (row: TRow) => Rank;
   /** Server-persisted expand state. Omit → tree manages expand locally. */
   isExpanded?: (row: TRow) => boolean;
+  /**
+   * Stays SINGLE-ROW while the tree primitive's own `setExpanded` seam is
+   * batched: this is the consumer-facing side with many implementors, so the
+   * tree view adapter fans a batch out to N calls here rather than making every
+   * consumer speak batches.
+   */
   onToggleExpanded?: (id: string, next: boolean) => void | Promise<void>;
   /**
    * DnD reorder/reparent. Omit → read-only nav tree (no drag). `dest.parentId`
@@ -440,8 +447,10 @@ export interface DataViewRenderProps<TRow> {
   /** This view's local expand map — for hierarchical views whose data source has
    * no server-persisted expand state. Persisted in ViewState (localStorage). */
   expanded?: Record<string, boolean>;
-  /** Persist local expand state for a row (writes THIS view's ViewState). */
-  setExpanded?: (id: string, next: boolean) => void;
+  /** Persist local expand state (writes THIS view's ViewState). Batch-shaped:
+   *  the whole gesture lands in ONE localStorage write, so expand-all over a
+   *  large tree costs one serialization rather than one per row. */
+  setExpanded?: (changes: readonly ExpandChange[]) => void;
   /** Device-local set of collapsed group-by section keys (absence = expanded).
    *  Flat views render group headers and hide a section's members when collapsed. */
   collapsedSections?: ReadonlySet<string>;

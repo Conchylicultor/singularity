@@ -27,7 +27,6 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   if (body.iconSvgNodes === null || typeof body.iconSvgNodes === "string") {
     patch.iconSvgNodes = body.iconSvgNodes;
   }
-  if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   if (body.parentId === null || typeof body.parentId === "string") {
     if (body.parentId === id) {
       throw new HttpError(400, "Cannot parent an agent to itself");
@@ -47,12 +46,10 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     .returning({ id: _agents.id });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) throw new HttpError(404, "Not found");
-  if (typeof body.parentId === "string" && body.parentId.length > 0) {
-    await db
-      .update(_agents)
-      .set({ expanded: true, updatedAt: new Date() })
-      .where(eq(_agents.id, body.parentId));
-  }
+  // No destination force-expand on a re-parent: expand/collapse is device-local
+  // view state owned by the data-view primitive, not a column. `TreeList.
+  // onDragEnd` opens a collapsed drop target client-side, and the destination
+  // folder's `updatedAt` is not a fact about the folder.
 
   if (body.prompt === null || typeof body.prompt === "string") {
     const [{ prompt } = { prompt: null }] = await db

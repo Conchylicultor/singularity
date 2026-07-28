@@ -15,6 +15,7 @@ export type { RenameInputProps } from "./internal/rename-input";
 export {
   useTreeRow,
   useTreeListContext,
+  useOptionalTreeListContext,
 } from "./internal/use-tree-row";
 export type {
   RowControls,

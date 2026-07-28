@@ -138,6 +138,26 @@ active-id / query / expand demoted to device-local. The localStorage reader stay
 tolerant of legacy `view-state` blobs that still carry `sort`/`filter` keys (they
 are ignored).
 
+**The expand map is the home for tree collapse state — do not put it on a domain
+entity.** Collapse is per-`(surface, view-instance, row)` render state, and the
+map above already keys on exactly that triple. Storing it as an entity column
+instead (an `expanded` field on the row's own table) is an anti-pattern with three
+concrete failure modes, all of which the repo has actually hit:
+
+- **One flag cannot serve two views.** Two view instances over the same rows — or
+  a scoped sub-tree of them — fight over a single value, forcing a consumer-side
+  "strip the expand hooks" workaround.
+- **It writes the domain.** A collapse becomes a DB write plus a change-feed
+  recompute plus a live-state push to every client, and it stamps the row's
+  `updatedAt` — so a purely local UI gesture rewrites a visible, sortable field.
+- **It does not bound.** Expand-all is inherently `O(nodes-with-children)` and, unlike
+  `view-order`'s ranks, has no invariant to exploit for a bounded write.
+
+Note the precedence in `tree/web/internal/project-rows.ts`: a consumer-supplied
+`hierarchy.isExpanded` **shadows** this map entirely. That is the only reason a
+consumer would appear not to use it. See
+`research/2026-07-28-global-tree-collapse-state-as-view-state.md`.
+
 **Per-instance options sub-form.** A view-type's optional `configSchema`
 (`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
 web-side `variantField({ useVariants })` from the live contributions
@@ -209,7 +229,16 @@ A data source can declare itself hierarchical by passing `hierarchy` (a
 tree) become selectable; absent → the host drops them from the switcher. The
 `HierarchyConfig` carries accessors (`getParentId`, `getRank`, `isExpanded`) and
 mutations (`onToggleExpanded`, `onMove`, `onCreate`) — all optional
-except the two accessors, so a read-only nav tree supplies just those two. The
+except the two accessors, so a read-only nav tree supplies just those two.
+
+**Omit `isExpanded`/`onToggleExpanded` unless the source genuinely owns expand as
+domain data** (e.g. a document toggle block, where collapse is page content and is
+serialized). Supplying them shadows the primitive's own per-view-instance expand
+map — see the anti-pattern note under "State split" above. They are also
+independently optional, so supplying only one yields a silently dead chevron
+(the write goes to the view map, the read comes from the row); supply both or
+neither. The
+
 `FieldDef.primary` flag selects the tree row label field (shared
 `pickPrimaryField` heuristic). Inline rename of the primary label is no longer a
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree

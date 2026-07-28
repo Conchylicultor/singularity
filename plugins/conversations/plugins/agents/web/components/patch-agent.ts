@@ -4,7 +4,6 @@ import { updateAgent } from "@plugins/conversations/plugins/agents/core";
 
 type AgentPatch = {
   name?: string;
-  expanded?: boolean;
   parentId?: string | null;
   rank?: Rank;
 };

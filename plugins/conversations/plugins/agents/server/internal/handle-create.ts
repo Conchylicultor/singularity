@@ -27,12 +27,10 @@ export const handleCreate = implement(createAgent, async ({ body }) => {
       iconSvgNodes: body.iconSvgNodes ?? null,
       rank: rank.toJSON(),
     });
-  if (parentId) {
-    await db
-      .update(_agents)
-      .set({ expanded: true, updatedAt: new Date() })
-      .where(eq(_agents.id, parentId));
-  }
+  // No parent force-expand here: expand/collapse is device-local view state owned
+  // by the data-view primitive, not a column. The tree reveals the new child
+  // client-side (`useTreeRow.addChild` expands the row it created under), so the
+  // parent's `updatedAt` no longer moves just because a child was added.
   const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(500, "Failed to retrieve created agent");

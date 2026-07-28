@@ -112,11 +112,13 @@ export function AgentsList({
         onRowActivate={(a) =>
           onSelect ? onSelect(a.id) : openPane(agentDetailPane, { id: a.id }, { mode: "push" })
         }
+        // No expand hooks: expand/collapse is per-(surface, view-instance, row)
+        // device-local render state owned by the data-view primitive, never a
+        // domain field — so collapsing a node costs no PATCH and leaves the
+        // agent's `updatedAt` alone.
         hierarchy={{
           getParentId: (a) => a.parentId,
           getRank: (a) => a.rank,
-          isExpanded: (a) => a.expanded,
-          onToggleExpanded: (id, next) => patchAgent(id, { expanded: next }),
           onMove: (id, dest) => patchAgent(id, dest),
           onCreate: createAgentRow,
         }}

@@ -1464,6 +1464,13 @@
       "tag": "20260724_223844_99be7fcd__default_model_opus_5",
       "hash": "99be7fcd",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1785253046000,
+      "tag": "20260728_153726_ad01ba22__drop_expanded_column",
+      "hash": "ad01ba22",
+      "breakpoints": true
     }
   ]
 }

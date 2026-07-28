@@ -35,7 +35,6 @@ export const UpdateTaskBodySchema = z.object({
   description: z.string().nullable().optional(),
   drop: z.boolean().optional(),
   hold: z.boolean().optional(),
-  expanded: z.boolean().optional(),
   folderId: z.string().nullable().optional(),
   rank: RankSchema.optional(),
 });
@@ -77,7 +76,6 @@ export const TaskResponseSchema = z.object({
   folderId: z.string().nullable(),
   groupId: z.string().nullable(),
   rank: z.string(),
-  expanded: z.boolean(),
   active: z.boolean(),
   author: z.string().nullable(),
   createdAt: dateString(),

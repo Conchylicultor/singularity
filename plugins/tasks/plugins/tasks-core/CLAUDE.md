@@ -23,6 +23,16 @@ pgViews add (`status`, `active`, `finishedAt`, `dependencies`, `worktreePath`,
 These schemas describe the VIEW row shapes the live-state resources publish, so
 they are intentionally richer than `entity.schema` (the base table row).
 
+**Tree collapse is not a task field.** There is deliberately no `expanded` column:
+expand/collapse is per-`(surface, view-instance, row)` device-local render state
+owned by the data-view primitive, so a collapse costs no write and never touches
+`updatedAt` (which is a visible, sortable field on the task list). The column, its
+patch field, and the two "auto-expand the parent folder when a child is filed"
+blocks in `mutations/tasks.ts` were removed together — the reveal they provided is
+now the tree primitive's generic add-child / drag-reparent reveal. Do not
+reintroduce it; see `plugins/primitives/plugins/data-view/CLAUDE.md` § State split
+and `research/2026-07-28-global-tree-collapse-state-as-view-state.md`.
+
 Keeping the field records + public schemas in `core/` is load-bearing: tasks-core
 is web-imported, but `defineEntity` is server-only (`resolveFieldStorage` needs
 the `fields.storage` contributions, unregistered in the browser). So

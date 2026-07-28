@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import type { ExpandChange } from "../../core";
 
 export type ExpandableRow = {
   id: string;
@@ -40,7 +41,7 @@ export interface UseSubtreeExpandAllReturn {
 export function useSubtreeExpandAll(
   rows: readonly ExpandableRow[],
   rootId: string,
-  patch: (id: string, expanded: boolean) => Promise<void>,
+  setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>,
 ): UseSubtreeExpandAllReturn {
   const nodes = useMemo(
     () => subtreeWithChildren(rows, rootId),
@@ -53,13 +54,14 @@ export function useSubtreeExpandAll(
     async (e?: React.MouseEvent) => {
       e?.stopPropagation();
       const next = !willCollapse;
-      await Promise.all(
+      // ONE call for the whole subtree — the reason the seam is batch-shaped.
+      await setExpanded(
         nodes
           .filter((n) => n.expanded !== next)
-          .map((n) => patch(n.id, next)),
+          .map((n) => ({ id: n.id, expanded: next })),
       );
     },
-    [nodes, willCollapse, patch],
+    [nodes, willCollapse, setExpanded],
   );
 
   return { willCollapse, toggle };

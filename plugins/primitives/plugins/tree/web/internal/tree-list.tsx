@@ -9,6 +9,7 @@ import {
   computeDrop,
   isDescendant,
   type DropZone,
+  type ExpandChange,
   type TreeNode,
 } from "../../core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -37,7 +38,13 @@ export type TreeListProps<T extends TreeItem> = {
   selectedId?: string;
   rootId?: string;
   onSelect: (id: string) => void;
-  onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
+  /**
+   * Apply a whole batch of expand/collapse changes. Batch-shaped on purpose: a
+   * single gesture (expand-all, the reveal-on-select ancestor walk, a drop into
+   * a collapsed folder) touches N rows, and every layer below must apply them in
+   * ONE update rather than N. Passing `[]` is legal and does nothing.
+   */
+  setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
   /**
    * DnD reorder/reparent. Omit for a read-only tree — the drag handle disappears.
    * `dest.rank` is computed over `rows`; `dest.targetId`/`dest.zone` carry the
@@ -101,7 +108,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     selectedId,
     rootId,
     onSelect,
-    onToggleExpanded,
+    setExpanded,
     onMove,
     onCreate,
     Row,
@@ -147,12 +154,20 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     });
   }, [rows, optimisticExpanded]);
 
-  const wrappedOnToggleExpanded = useCallback(
-    (id: string, next: boolean) => {
-      setOptimisticExpanded((prev) => new Map(prev).set(id, next));
-      return onToggleExpanded(id, next);
+  const wrappedSetExpanded = useCallback(
+    (changes: readonly ExpandChange[]) => {
+      if (changes.length === 0) return;
+      // ONE setState for the WHOLE batch. Expand-all over a large tree is a
+      // single gesture over N rows; folding it row-by-row would copy a map
+      // growing to N entries N times.
+      setOptimisticExpanded((prev) => {
+        const next = new Map(prev);
+        for (const c of changes) next.set(c.id, c.expanded);
+        return next;
+      });
+      return setExpanded(changes);
     },
-    [onToggleExpanded],
+    [setExpanded],
   );
 
   const createAtRoot = useCallback(
@@ -240,12 +255,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     nodesWithChildren.length > 0 && nodesWithChildren.every((r) => r.expanded);
   const expandAll = useCallback(async () => {
     const next = !allExpanded;
-    await Promise.all(
+    await wrappedSetExpanded(
       nodesWithChildren
         .filter((r) => r.expanded !== next)
-        .map(async (r) => wrappedOnToggleExpanded(r.id, next)),
+        .map((r) => ({ id: r.id, expanded: next })),
     );
-  }, [nodesWithChildren, allExpanded, wrappedOnToggleExpanded]);
+  }, [nodesWithChildren, allExpanded, wrappedSetExpanded]);
 
   // The DnD shell (DndContext, sensors, active-id lifecycle, DragOverlay chip,
   // and the windowed measuring strategy) is lifted into `RankReorderDndContext`.
@@ -281,6 +296,18 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       ) {
         return;
       }
+      // A drop into a COLLAPSED destination parent would make the dragged row
+      // vanish: a drag never changes `selectedRowId`, so the reveal-on-select
+      // effect below never runs for a reparent. Open the destination in the same
+      // batched write that carries the optimistic overlay (idempotent — a
+      // redundant expand of an already-open folder is a no-op we skip anyway).
+      const destParent =
+        dest.parentId === null
+          ? undefined
+          : rows.find((r) => r.id === dest.parentId);
+      if (destParent && !destParent.expanded) {
+        void wrappedSetExpanded([{ id: destParent.id, expanded: true }]);
+      }
       // The raw positional intent alongside the computed rank. A `child` drop
       // reparents under the target and lands last, which as neighbour intent is
       // "after the end of the parent's child list" — i.e. a null target.
@@ -290,7 +317,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
         zone: zone === "child" ? "after" : zone,
       });
     },
-    [rows, onMove],
+    [rows, onMove, wrappedSetExpanded],
   );
 
   // Auto-expand collapsed ancestors when selectedId changes so the row is visible.
@@ -304,15 +331,20 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     const byId = new Map(rows.map((r) => [r.id, r]));
     if (!byId.has(selectedId)) return;
     lastRevealedId.current = selectedId;
+    // Collect the whole collapsed-ancestor chain first, then write it ONCE —
+    // the walk is one gesture, not one gesture per ancestor.
+    const changes: ExpandChange[] = [];
     let cur = byId.get(selectedId)!.parentId;
     while (cur) {
       const parent = byId.get(cur);
       if (!parent) break;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal-on-select: expands collapsed ancestors of selectedId so the row is visible; wrappedOnToggleExpanded fires setOptimisticExpanded (optimistic) AND the onToggleExpanded server callback, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
-      if (!parent.expanded) void wrappedOnToggleExpanded(cur, true);
+      if (!parent.expanded) changes.push({ id: cur, expanded: true });
       cur = parent.parentId;
     }
-  }, [selectedId, rows, wrappedOnToggleExpanded]);
+    if (changes.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal-on-select: expands the collapsed ancestors of selectedId in one batched call so the row is visible; wrappedSetExpanded fires setOptimisticExpanded (optimistic) AND the setExpanded write callback, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
+    void wrappedSetExpanded(changes);
+  }, [selectedId, rows, wrappedSetExpanded]);
 
   const showSearchInput = !!toolbar?.search && !hideSearchInput;
   const hasToolbar = showExpandAll || !!toolbar?.start || showSearchInput;
@@ -325,7 +357,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
-      onToggleExpanded: wrappedOnToggleExpanded,
+      setExpanded: wrappedSetExpanded,
       onCreate,
       Row,
       takeInitialReveal,
@@ -340,7 +372,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
-      wrappedOnToggleExpanded,
+      wrappedSetExpanded,
       onCreate,
       Row,
       takeInitialReveal,

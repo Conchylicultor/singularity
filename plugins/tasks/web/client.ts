@@ -14,7 +14,6 @@ export type TaskPatch = Partial<{
   description: string | null;
   drop: boolean;
   hold: boolean;
-  expanded: boolean;
   folderId: string | null;
   rank: Rank;
 }>;

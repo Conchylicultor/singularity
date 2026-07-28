@@ -33,7 +33,6 @@ export const UpdateAgentBodySchema = z.object({
   icon: z.string().nullable().optional(),
   iconColor: z.string().nullable().optional(),
   iconSvgNodes: z.string().nullable().optional(),
-  expanded: z.boolean().optional(),
   parentId: z.string().nullable().optional(),
   rank: RankSchema.optional(),
 });

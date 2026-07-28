@@ -248,7 +248,6 @@ export const tasksResource = queryResource(tasksDescriptor, {
     author: tasks.author,
     droppedAt: tasks.droppedAt,
     heldAt: tasks.heldAt,
-    expanded: tasks.expanded,
     rank: tasks.rank,
     createdAt: tasks.createdAt,
     updatedAt: tasks.updatedAt,

@@ -16,7 +16,7 @@ import {
   type HierarchyConfig,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
+import type { ExpandChange, TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
   RowChrome,
   TreeList,
@@ -411,6 +411,29 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [hierOnCreate],
   );
 
+  // Expand write. Two destinations, one seam: a consumer that persists expand
+  // state itself (`hierarchy.onToggleExpanded`), else this view's own ViewState
+  // (localStorage) via the host's `setExpanded`.
+  //
+  // `HierarchyConfig.onToggleExpanded` deliberately stays SINGLE-ROW while
+  // `TreeListProps.setExpanded` is batched: the consumer seam has many callers
+  // and the TreeList seam has exactly one, so batching the 1-caller side and
+  // fanning out here is the cheaper boundary — the same adapter shape as
+  // `wrappedOnMove` / `wrappedOnCreate` above.
+  const hierOnToggleExpanded = hierarchy?.onToggleExpanded;
+  const setTreeExpanded = useCallback(
+    async (changes: readonly ExpandChange[]) => {
+      if (hierOnToggleExpanded) {
+        await Promise.all(
+          changes.map(async (c) => hierOnToggleExpanded(c.id, c.expanded)),
+        );
+        return;
+      }
+      setExpanded?.(changes);
+    },
+    [hierOnToggleExpanded, setExpanded],
+  );
+
   if (!hierarchy) return null;
   if (sortedProjected.length === 0) return <>{props.emptyState}</>;
 
@@ -424,11 +447,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const onMove =
     sortActive || groupActive || !hierOnMove ? undefined : wrappedOnMove;
 
-  // Expand fallback: when the data source has no server-persisted expand state,
-  // persist it in this view's ViewState (localStorage) via the host.
-  const onToggleExpanded =
-    hierarchy.onToggleExpanded ??
-    ((id: string, next: boolean) => setExpanded?.(id, next));
   // `onMove`/`onCreate` are optional: omitting them yields a read-only tree —
   // TreeList drops the drag source and every Add affordance (no inert handlers).
   // Respect an *explicit* `addLabel: null` (hide the root footer) — `??` would
@@ -463,7 +481,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         const original = originalById.get(id);
         if (original !== undefined) props.onRowActivate?.(original);
       }}
-      onToggleExpanded={onToggleExpanded}
+      setExpanded={setTreeExpanded}
       onMove={onMove}
       onCreate={hierOnCreate ? wrappedOnCreate : undefined}
       Row={Row}
@@ -495,12 +513,15 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     const showExpandAll = !!options.expandAll && nodesWithChildren.length > 0;
     const allExpanded =
       nodesWithChildren.length > 0 && nodesWithChildren.every((p) => p.expanded);
+    // The grouped path renders one TreeList per section, so expand-all is hoisted
+    // here and bypasses TreeList entirely — it still writes the FULL projected
+    // set (every section) in a single batched call.
     const toggleExpandAll = async () => {
       const next = !allExpanded;
-      await Promise.all(
+      await setTreeExpanded(
         nodesWithChildren
           .filter((p) => p.expanded !== next)
-          .map(async (p) => onToggleExpanded(p.id, next)),
+          .map((p) => ({ id: p.id, expanded: next })),
       );
     };
     const showToolbar = showExpandAll || !!options.toolbarStart;

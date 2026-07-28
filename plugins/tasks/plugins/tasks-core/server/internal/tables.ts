@@ -44,7 +44,6 @@ const tasksEntity = defineEntity("tasks", taskFields, {
       references: { column: (): AnyPgColumn => tasksEntity.table.id, onDelete: "set null" },
     },
     titleAuto: { default: true },
-    expanded: { default: false },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
   },

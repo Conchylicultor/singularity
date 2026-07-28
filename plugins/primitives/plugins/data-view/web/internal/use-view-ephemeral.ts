@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 
 /**
  * Device-local per-instance **render** state: each instance's `{ query, expanded }`.
@@ -78,7 +79,8 @@ export interface EphemeralViewState {
   /** Raw per-instance local blob — query/expanded/collapsedSections (device-local). */
   localFor: (viewId: string) => LocalViewState;
   setQuery: (viewId: string, query: string) => void;
-  setExpanded: (viewId: string, id: string, next: boolean) => void;
+  /** Apply a whole expand/collapse batch in ONE localStorage write. */
+  setExpanded: (viewId: string, changes: readonly ExpandChange[]) => void;
   /** Collapse/expand a group-by section (device-local; absence = expanded). */
   setSectionCollapsed: (viewId: string, key: string, collapsed: boolean) => void;
 }
@@ -119,11 +121,16 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
   );
 
   const setExpanded = useCallback(
-    (viewId: string, id: string, next: boolean) => {
-      writeLocal(viewId, (prev) => ({
-        ...prev,
-        expanded: { ...prev.expanded, [id]: next },
-      }));
+    (viewId: string, changes: readonly ExpandChange[]) => {
+      if (changes.length === 0) return;
+      // `writeLocal` JSON.stringifies the WHOLE per-surface map, so the batch
+      // must land in a single mutate: a per-row call would re-serialize a map
+      // growing to N keys N times — quadratic on expand-all over a large tree.
+      writeLocal(viewId, (prev) => {
+        const expanded = { ...prev.expanded };
+        for (const c of changes) expanded[c.id] = c.expanded;
+        return { ...prev, expanded };
+      });
     },
     [writeLocal],
   );

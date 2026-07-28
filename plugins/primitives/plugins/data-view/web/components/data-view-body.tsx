@@ -297,7 +297,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           aggregate: aggregate as DataViewRenderProps<unknown>["aggregate"],
           selection,
           expanded: activeState.expanded,
-          setExpanded: (id, next) => viewModel.setExpanded(activeViewId, id, next),
+          setExpanded: (changes) => viewModel.setExpanded(activeViewId, changes),
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
             viewModel.setSectionCollapsed(activeViewId, key, collapsed),

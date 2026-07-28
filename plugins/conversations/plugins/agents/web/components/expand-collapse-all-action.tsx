@@ -1,38 +1,41 @@
-import { useCallback } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
+import {
+  useOptionalTreeListContext,
+  useSubtreeExpandAll,
+  type TreeItem,
+  type TreeListContextValue,
+} from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { agentsResource } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
-import { patchAgent } from "./patch-agent";
 
 export function ExpandCollapseAllAction({
   row,
   hasChildren,
 }: ItemActionProps<Agent>) {
-  const agentId = row.id;
-  const result = useResource(agentsResource);
-
-  if (!hasChildren || result.pending) return null;
-
-  return <ExpandCollapseAllActionInner agentId={agentId} rows={result.data} />;
+  // Non-throwing context read: this action is contributed to an item-action slot
+  // that EVERY view renders (list / table / gallery / tree), so it must be legal
+  // to ask "am I inside a tree?" from a flat one. Outside a tree the action
+  // hides itself — expand-all is meaningless there.
+  const ctx = useOptionalTreeListContext();
+  if (!ctx || !hasChildren) return null;
+  return <ExpandCollapseAllActionInner ctx={ctx} rootId={row.id} />;
 }
 
 function ExpandCollapseAllActionInner({
-  agentId,
-  rows,
+  ctx,
+  rootId,
 }: {
-  agentId: string;
-  rows: Agent[];
+  ctx: TreeListContextValue<TreeItem>;
+  rootId: string;
 }) {
-  const patch = useCallback(
-    (id: string, expanded: boolean) => patchAgent(id, { expanded }),
-    [],
+  // `ctx.rows` are the tree's projected rows — already
+  // `{ id, parentId, rank, expanded }`, i.e. `ExpandableRow` — and
+  // `ctx.setExpanded` writes the view's own device-local expand map. So the
+  // agents live-state subscription this used to need is gone.
+  const { willCollapse, toggle } = useSubtreeExpandAll(
+    ctx.rows,
+    rootId,
+    ctx.setExpanded,
   );
-  const { willCollapse, toggle } = useSubtreeExpandAll(rows, agentId, patch);
-
-  return (
-    <ExpandAllButton allExpanded={!willCollapse} onToggle={toggle} />
-  );
+  return <ExpandAllButton allExpanded={!willCollapse} onToggle={toggle} />;
 }

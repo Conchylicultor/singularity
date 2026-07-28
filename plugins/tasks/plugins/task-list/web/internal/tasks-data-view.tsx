@@ -60,32 +60,25 @@ export const taskFields: FieldDef<TaskListItem>[] = [
   },
 ];
 
+// No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
+// local render state owned by the data-view primitive — never a domain field —
+// so a collapse gesture costs no DB write and never touches `updatedAt`.
 export const taskHierarchy: HierarchyConfig<TaskListItem> = {
   getParentId: (t) => t.folderId,
   getRank: (t) => t.rank,
-  isExpanded: (t) => t.expanded,
-  onToggleExpanded: (id, next) => patchTask(id, { expanded: next }),
   onMove: (id, dest) =>
     patchTask(id, { folderId: dest.parentId, rank: dest.rank }),
   onCreate: createTaskRow,
 };
 
-// Read-only variant: drop the two mutating hooks. Omitting `onMove` disables
-// drag in the tree primitive; omitting `onCreate` removes the root "Add" and
-// per-row add affordances. Expand/collapse and parent mapping are preserved.
-const { onMove: _onMove, onCreate: _onCreate, ...readOnlyHierarchy } =
+// Cluster variant: drop the two mutating hooks for a scoped inspection tree (a
+// dependency+creation cluster). Omitting `onMove` disables drag in the tree
+// primitive; omitting `onCreate` removes the root "Add" and per-row add
+// affordances. Isolation from the main Tasks list is automatic — the primitive
+// keys its expand map by view instance — so nothing has to be stripped for it.
+// Pairs with `buildTreeOptions({ defaultExpanded: true })`.
+const { onMove: _onMove, onCreate: _onCreate, ...clusterHierarchy } =
   taskHierarchy;
-const readOnlyTaskHierarchy: HierarchyConfig<TaskListItem> = readOnlyHierarchy;
-
-// Cluster variant: also drop the expand hooks, so a scoped inspection tree (a
-// dependency+creation cluster) keeps expand state ephemeral instead of writing
-// the shared `expanded` DB flag — collapsing a node here must not collapse it in
-// the main Tasks list. Pairs with `buildTreeOptions({ defaultExpanded: true })`.
-const {
-  isExpanded: _isExpanded,
-  onToggleExpanded: _onToggleExpanded,
-  ...clusterHierarchy
-} = readOnlyTaskHierarchy;
 export const clusterTaskHierarchy: HierarchyConfig<TaskListItem> =
   clusterHierarchy;
 

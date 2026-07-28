@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
-import type { TreeNode } from "../../core";
+import type { ExpandChange, TreeNode } from "../../core";
 import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
 
@@ -21,7 +21,9 @@ export type TreeListContextValue<T extends TreeItem> = {
   pendingFocusId: string | null;
   clearPendingFocus: () => void;
   onSelect: (id: string) => void;
-  onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
+  /** Batched expand write (see `TreeListProps.setExpanded`) — a single-row
+   *  toggle wraps itself in a 1-element array. */
+  setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
   /** Omitted for a read-only tree — `canCreate` is then false and Add disappears. */
   onCreate?: (args: {
     parentId: string | null;
@@ -63,14 +65,27 @@ export function TreeListProvider<T extends TreeItem>({
   );
 }
 
+/**
+ * Non-throwing read of the tree context: `null` outside a `<TreeList>`. The
+ * primitive form — a component that may be rendered by a NON-tree surface (a
+ * per-item action contributed to every view of a DataView, say) can only ask
+ * "am I inside a tree?" if asking is legal outside one.
+ */
+export function useOptionalTreeListContext<
+  T extends TreeItem = TreeItem,
+>(): TreeListContextValue<T> | null {
+  const ctx = useContext(TreeListContext);
+  return ctx === null ? null : (ctx as TreeListContextValue<T>);
+}
+
 export function useTreeListContext<
   T extends TreeItem = TreeItem,
 >(): TreeListContextValue<T> {
-  const ctx = useContext(TreeListContext);
+  const ctx = useOptionalTreeListContext<T>();
   if (!ctx) {
     throw new Error("useTreeListContext must be used inside <TreeList>");
   }
-  return ctx as TreeListContextValue<T>;
+  return ctx;
 }
 
 /** Stable element-type wrapper for one tree row. Its identity is constant, so a
@@ -164,7 +179,7 @@ export function useTreeRow<T extends TreeItem>(
 
   const select = useCallback(() => ctx.onSelect(node.id), [ctx, node.id]);
   const toggleExpanded = useCallback(
-    () => void ctx.onToggleExpanded(node.id, !isOpen),
+    () => void ctx.setExpanded([{ id: node.id, expanded: !isOpen }]),
     [ctx, node.id, isOpen],
   );
   const consumeAutoFocus = useCallback(
@@ -177,6 +192,11 @@ export function useTreeRow<T extends TreeItem>(
     if (!create) return;
     const id = await create({ parentId: node.id });
     if (!id) return;
+    // Reveal the new child by expanding THIS row directly, rather than leaning on
+    // the reveal-on-select effect: `onSelect` is a no-op until the created row
+    // lands in `rows` (a live-state round-trip), so on a collapsed folder the
+    // child would be created invisibly. Expanding the parent needs no round-trip.
+    await ctx.setExpanded([{ id: node.id, expanded: true }]);
     pendingFocus.set(id);
     ctx.onSelect(id);
   }, [ctx, node.id]);

@@ -36,7 +36,6 @@ export const taskFields = {
   author: nullable(textField()),
   droppedAt: nullable(dateField()),
   heldAt: nullable(dateField()),
-  expanded: boolField(),
   rank: rankField(),
   createdAt: dateField(),
   updatedAt: dateField(),

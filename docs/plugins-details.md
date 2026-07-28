@@ -6978,6 +6978,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
+          - `primitives/tree.TreeItem`
+          - `primitives/tree.TreeListContextValue`
+          - `primitives/tree.useOptionalTreeListContext`
           - `primitives/tree.useSubtreeExpandAll`
           - `shell.Shell`
         - Exports (types): `SystemAgentDescriptor`
@@ -23471,6 +23474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RowChrome`
           - `TreeList`
           - `TreeRowChrome`
+          - `useOptionalTreeListContext`
           - `useSubtreeExpandAll`
           - `useTreeListContext`
           - `useTreeRow`
@@ -23480,6 +23484,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.Rank`
         - Exports (types):
           - `DropZone`
+          - `ExpandChange`
           - `TreeNode`
         - Exports (values):
           - `buildTree`
@@ -25565,6 +25570,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `primitives/slot-render.defineRenderSlot`
+          - `primitives/tree.TreeItem`
+          - `primitives/tree.TreeListContextValue`
+          - `primitives/tree.useOptionalTreeListContext`
           - `primitives/tree.useSubtreeExpandAll`
           - `tasks.patchTask`
           - `tasks/task-status.STATUS_META`

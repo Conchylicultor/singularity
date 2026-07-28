@@ -28,7 +28,6 @@ export interface UpdateTaskPatch {
   description?: string | null;
   drop?: boolean;
   hold?: boolean;
-  expanded?: boolean;
   // Re-file under a different folder (display-only hierarchy, not a dependency).
   folderId?: string | null;
   rank?: Rank;
@@ -49,12 +48,10 @@ export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) 
     rank: rank.toJSON(),
     description: input.description ?? null,
   });
-  if (folderId) {
-    await exec
-      .update(_tasks)
-      .set({ expanded: true, updatedAt: new Date() })
-      .where(eq(_tasks.id, folderId));
-  }
+  // No parent force-expand here: expand/collapse is device-local view state
+  // owned by the data-view primitive, not a column. The tree reveals a new child
+  // client-side (`useTreeRow.addChild` expands the row it created under), so the
+  // folder's `updatedAt` no longer moves just because a child was filed into it.
   const [full] = await exec.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // New tasks emit their first-ever status (typically "new"). Subscribers
   // bound via `where({ taskId })` only register after creation, so this
@@ -83,7 +80,6 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     dbPatch.heldAt = patch.hold ? new Date() : null;
     if (patch.hold) dbPatch.droppedAt = null;
   }
-  if (typeof patch.expanded === "boolean") dbPatch.expanded = patch.expanded;
   if (patch.folderId === null || typeof patch.folderId === "string") {
     if (patch.folderId === id) {
       throw new Error("Cannot file a task into itself");
@@ -106,12 +102,10 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     .returning({ id: _tasks.id });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return null;
-  if (typeof patch.folderId === "string" && patch.folderId.length > 0) {
-    await db
-      .update(_tasks)
-      .set({ expanded: true, updatedAt: new Date() })
-      .where(eq(_tasks.id, patch.folderId));
-  }
+  // No destination force-expand on a re-file, for the same reason as in
+  // `createTask`: the tree opens a collapsed drop target itself
+  // (`TreeList.onDragEnd`), and the destination folder's `updatedAt` is not a
+  // fact about the folder.
   await emitStatusChangeIfChanged(id, before);
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess

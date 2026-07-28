@@ -6,6 +6,7 @@ import type {
   AddableSource,
   ViewSourceEntry,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
+import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { FilterGroup, SortRule, ViewState } from "../../core";
 import type { DataViewContribution } from "../slots";
 import { cyclePrimarySort } from "./sort-cycle";
@@ -42,7 +43,8 @@ export interface ViewModel {
   /** Set (or clear with `null`) THIS view's group-by field. */
   setGroupBy: (id: string, fieldId: string | null) => void;
   setQuery: (id: string, q: string) => void;
-  setExpanded: (id: string, k: string, v: boolean) => void;
+  /** Apply a whole expand/collapse batch to THIS view (one localStorage write). */
+  setExpanded: (id: string, changes: readonly ExpandChange[]) => void;
   /** Device-local collapsed group-by section keys for THIS view. */
   collapsedSectionsFor: (id: string) => ReadonlySet<string>;
   /** Collapse/expand a group-by section for THIS view (device-local). */

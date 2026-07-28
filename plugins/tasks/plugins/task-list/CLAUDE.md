@@ -31,6 +31,9 @@
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
+    - `primitives/tree.TreeItem`
+    - `primitives/tree.TreeListContextValue`
+    - `primitives/tree.useOptionalTreeListContext`
     - `primitives/tree.useSubtreeExpandAll`
     - `tasks.patchTask`
     - `tasks/task-status.STATUS_META`

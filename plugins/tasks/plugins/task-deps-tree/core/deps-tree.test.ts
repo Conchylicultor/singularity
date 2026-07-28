@@ -22,7 +22,6 @@ function task(
     author: "user",
     droppedAt: null,
     heldAt: null,
-    expanded: false,
     rank: Rank.from("a0"),
     createdAt: new Date("2026-07-10T00:00:00Z"),
     updatedAt: new Date("2026-07-10T00:00:00Z"),
