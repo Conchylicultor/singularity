@@ -11771,6 +11771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.isMain`
           - `infra/paths.SINGULARITY_DIR`
           - `infra/worktree.ensureMainWorktreeRoot`
+          - `infra/worktree.gitWorktreesDir`
           - `infra/worktree.isCanonicalWorktreePath`
           - `infra/worktree.removeWorktree`
           - `infra/worktree.removeWorktreeSpec`
@@ -15444,6 +15445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `COMPOSITION_MARKER_FILE`
           - `derivePushPhases`
           - `ensureMainWorktreeRoot`
+          - `gitWorktreesDir`
           - `hasCompositionMarker`
           - `isCanonicalWorktreePath`
           - `isWorktreeOpActive`

@@ -1,16 +1,20 @@
 import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { bulkDeleteWorktrees } from "../../shared/endpoints";
+import { orphanDirPath } from "./dirs";
 import { reapAttempt } from "./reap";
 
 const CONCURRENCY = 4;
 
 async function deleteOne(id: string): Promise<{ id: string; ok: true } | { id: string; ok: false; error: string }> {
+  // Same resolution as handle-delete: attempt row first, canonical dir orphan
+  // second, neither ⇒ refuse before any filesystem or database step runs.
   const attempt = await getAttempt(id);
-  if (!attempt) return { id, ok: false, error: "Attempt not found" };
+  const worktreePath = attempt?.worktreePath ?? (await orphanDirPath(id));
+  if (!worktreePath) return { id, ok: false, error: "No such attempt or worktree" };
 
   try {
-    await reapAttempt(id, { worktreePath: attempt.worktreePath });
+    await reapAttempt(id, { worktreePath });
   } catch (e) {
     return { id, ok: false, error: String(e) };
   }

@@ -4,6 +4,7 @@ import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { type WorktreeEntry } from "../../shared/endpoints";
 import { dirExists } from "./reap";
+import { canClassifyOrphans, dirAgeMs, readWorktreeDirs, type WorktreeDir } from "./dirs";
 import { getGitHygiene, isTaskDeletable, isSafeToReap } from "./safety";
 
 const CONCURRENCY = 50;
@@ -71,6 +72,45 @@ async function buildEntry(
   };
 }
 
+// A canonical worktree dir on disk with NO attempt row to describe it. Listed
+// so the pane shows every worktree that exists, not only the attempt-backed ones
+// — these are precisely the dirs nothing else surfaces, and the reaper now
+// reclaims them, so the UI must be able to show one before it disappears.
+//
+// `isSafe` is computed with the SAME `isSafeToReap` predicate as every other row
+// (a missing task reads as deletable), so the badge keeps meaning "nothing to
+// lose" everywhere. It deliberately does NOT mirror the reaper's 90-day floor for
+// dir orphans — no row's `isSafe` has ever mirrored the hard floor, which exists
+// to reap abandoned work, not to certify it as safe.
+async function buildOrphanEntry(dir: WorktreeDir, dbSet: Set<string>): Promise<WorktreeEntry> {
+  const now = Date.now();
+  const ageMs = await dirAgeMs(dir.path, now);
+  const dbPresent = dbSet.has(dir.name);
+  const { unpushedCount, isDirty } = await getGitHygiene(dir.path);
+
+  return {
+    attemptId: dir.name,
+    taskId: "",
+    taskTitle: "(no attempt row)",
+    taskStatus: "orphan",
+    attemptStatus: "orphan",
+    worktreePath: dir.path,
+    createdAt: new Date(now - ageMs).toISOString(),
+    dirExists: true,
+    dbExists: dbPresent,
+    unpushedCount,
+    isDirty,
+    isSafe: isSafeToReap({
+      dirExists: true,
+      dbPresent,
+      unpushedCount,
+      isDirty,
+      taskDeletable: true,
+      ageMs,
+    }),
+  };
+}
+
 // Streamed NDJSON: each computed worktree row is emitted as it completes,
 // followed by a terminal `{ end: true }` sentinel. Streaming keeps the socket
 // alive past Bun's 10s idleTimeout (1257 worktrees × git status >> 10s) and lets
@@ -79,7 +119,7 @@ async function buildEntry(
 // stream in completion order and the client sorts.
 export function handleList(): Response {
   return ndjsonResponse(async (emit) => {
-    await ensureMainWorktreeRoot();
+    const root = await ensureMainWorktreeRoot();
 
     // One catalog query for all DB names instead of an N+1 `databaseExists`
     // per attempt — with 2000+ attempts the per-row query was the dominant
@@ -95,6 +135,19 @@ export function handleList(): Response {
     await pMap(attempts, CONCURRENCY, async (attempt) => {
       emit({ item: await buildEntry(attempt, taskMap, dbSet) });
     });
+
+    // Dir orphans last: everything above is attempt-anchored, so a dir with no
+    // attempt row was invisible here (and to the reaper) until now. The attempt
+    // ids already emitted are what makes a dir an orphan, hence the second pass.
+    // Skipped entirely where the attempts table is a stale fork — see
+    // canClassifyOrphans; the pane then lists exactly what it always did.
+    if (canClassifyOrphans()) {
+      const seen = new Set(attempts.map((a) => a.id));
+      const orphanDirs = (await readWorktreeDirs(root)).filter((d) => !seen.has(d.name));
+      await pMap(orphanDirs, CONCURRENCY, async (dir) => {
+        emit({ item: await buildOrphanEntry(dir, dbSet) });
+      });
+    }
 
     emit({ end: true });
   });

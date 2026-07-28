@@ -32,6 +32,7 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `COMPOSITION_MARKER_FILE`
     - `derivePushPhases`
     - `ensureMainWorktreeRoot`
+    - `gitWorktreesDir`
     - `hasCompositionMarker`
     - `isCanonicalWorktreePath`
     - `isWorktreeOpActive`

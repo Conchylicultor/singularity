@@ -43,6 +43,7 @@
     - `infra/paths.isMain`
     - `infra/paths.SINGULARITY_DIR`
     - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.gitWorktreesDir`
     - `infra/worktree.isCanonicalWorktreePath`
     - `infra/worktree.removeWorktree`
     - `infra/worktree.removeWorktreeSpec`

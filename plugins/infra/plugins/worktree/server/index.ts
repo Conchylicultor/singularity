@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export {
   ensureMainWorktreeRoot,
+  gitWorktreesDir,
   worktreePathFor,
   isCanonicalWorktreePath,
   setupWorktree,

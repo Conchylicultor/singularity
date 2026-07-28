@@ -8,6 +8,7 @@ import {
   worktreesDir,
 } from "@plugins/infra/plugins/worktree/server";
 import { dirExists } from "./reap";
+import { canClassifyOrphans, dirAgeMs, readWorktreeDirs, WORKTREE_NAME_RE } from "./dirs";
 import { getGitHygiene, isSafeToReap, isTaskDeletable } from "./safety";
 
 // Abandonment backstop. Deliberately status-agnostic: it fires even for a task
@@ -17,16 +18,6 @@ import { getGitHygiene, isSafeToReap, isTaskDeletable } from "./safety";
 // reaping held worktrees out from under them well before they came back — but a
 // hard cleanup is still a hard cleanup, so the floor is raised, not removed.
 export const AUTO_REAP_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
-
-// Canonical worktree-id shape (attempt id == fork DB name == registry entry
-// name): `att-<epoch>-<suffix>` / `claude-<epoch>-<suffix>`, plus the legacy
-// suffix-less `claude-<epoch>` form still present in the registry. The single
-// `-[a-z0-9]+` suffix group (no extra dashes) excludes the per-build data files
-// that share the dir (`<name>-build-profile.json`, `<name>-build-logs-<id>.json`)
-// and the reserved `singularity`/`central` namespaces and `*__forking` temps
-// (owned by the database.fork-temp-sweep job). One source of truth for both the
-// fork-DB orphan filter and the registry-file orphan filter below.
-const WORKTREE_NAME_RE = /^(att|claude)-\d+(-[a-z0-9]+)?$/;
 
 // Canonical-shaped registry entry names on disk (new `<name>/` subdir or legacy
 // flat `<name>.json`) under the gateway registry dir. A missing dir (ENOENT)
@@ -156,6 +147,32 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
     if (seenAttemptIds.has(name) || targets.has(name)) continue; // covered/active already
     if (!(await dirExists(await worktreePathFor(name)))) {
       targets.set(name, { id: name }); // no worktree dir: a true orphan
+    }
+  }
+
+  // Dir orphans: a canonical worktree dir PRESENT on disk with no attempt row.
+  // Every branch above is anchored to an attempt row, and the two orphan branches
+  // fire only when the dir is already gone — so this state was unreachable, and
+  // the 90-day backstop above could never fire on it. Such a dir sat on disk
+  // forever (~1 GB of node_modules each once built), which is exactly what the
+  // hard floor exists to prevent.
+  //
+  // Deliberately gated at the hard floor ONLY, never the 72h clean path: with no
+  // attempt row there is no `active` flag to consult and no task to classify, so
+  // age is the only evidence of abandonment available. The floor is also what
+  // makes the setupWorktree race benign — a dir whose attempt row has not been
+  // written yet is 90 days too young to be collected here.
+  //
+  // Gated on canClassifyOrphans even though the reap job is already main-only:
+  // this is the one branch that removes a dir git still tracks and a task may
+  // still own, so an absent attempt row must mean "abandoned", not "this DB is a
+  // fork that never saw the row". Belt-and-braces against a future perWorktree.
+  if (canClassifyOrphans()) {
+    for (const { name, path } of await readWorktreeDirs(root)) {
+      if (seenAttemptIds.has(name) || targets.has(name)) continue;
+      if ((await dirAgeMs(path, now)) >= AUTO_REAP_AGE_MS) {
+        targets.set(name, { id: name, worktreePath: path });
+      }
     }
   }
 

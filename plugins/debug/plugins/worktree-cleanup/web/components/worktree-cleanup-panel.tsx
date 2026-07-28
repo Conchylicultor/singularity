@@ -45,6 +45,9 @@ function StatusBadge({ status }: { status: string }) {
     in_progress: "bg-info/10 text-info",
     need_action: "bg-warning/10 text-warning",
     attempted: "bg-muted text-muted-foreground",
+    // A worktree dir on disk with no attempt row behind it — nothing but the
+    // checkout itself is left to describe it.
+    orphan: "bg-warning/10 text-warning",
   };
   return (
     <Badge colorClass={color[status]} className="inline-block">

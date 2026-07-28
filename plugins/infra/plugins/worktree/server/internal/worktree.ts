@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
@@ -6,25 +7,54 @@ import { withWorktreeMutateSlot } from "./mutate-gate";
 
 let cachedRepoRoot: string | null = null;
 
+// The absolute paths git currently tracks as worktrees, in git's own order (the
+// main worktree first). One parser for every `worktree list --porcelain` reader,
+// so "which paths does git know about" is answered the same way everywhere.
+//
+// Throws on a nonzero exit rather than reporting an empty list: callers read
+// ABSENCE from this list as meaning, so a git failure that degraded to `[]`
+// would read as "git tracks nothing" — which in removeWorktree selects the
+// recursive-delete branch. A failure here must never be mistaken for evidence.
+async function worktreeListPaths(argv: string[]): Promise<string[]> {
+  const proc = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe" });
+  const [text, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  await proc.exited;
+  if (proc.exitCode !== 0) {
+    throw new Error(
+      `git worktree list failed (exit ${proc.exitCode}): ${stderr.trim() || "<no stderr>"}`,
+    );
+  }
+  return text
+    .split("\n")
+    .filter((l) => l.startsWith("worktree "))
+    .map((l) => l.slice("worktree ".length).trim());
+}
+
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
 // current worktree — `git rev-parse --show-toplevel` would return the latter
 // when the server runs inside a worktree.
 export async function ensureMainWorktreeRoot(): Promise<string> {
   if (cachedRepoRoot) return cachedRepoRoot;
-  const proc = Bun.spawn([GIT, "worktree", "list", "--porcelain"], {
-    stdout: "pipe",
-  });
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  const firstLine = text.split("\n").find((l) => l.startsWith("worktree "));
-  if (!firstLine) throw new Error("Could not determine main worktree root");
-  cachedRepoRoot = firstLine.slice("worktree ".length).trim();
+  const [mainPath] = await worktreeListPaths([GIT, "worktree", "list", "--porcelain"]);
+  if (!mainPath) throw new Error("Could not determine main worktree root");
+  cachedRepoRoot = mainPath;
   return cachedRepoRoot;
+}
+
+// The parent dir every agent worktree lives directly under. The single
+// definition that both `worktreePathFor` (construction) and
+// `isCanonicalWorktreePath` (validation) derive from, so the two can never
+// disagree about where worktrees live.
+export function gitWorktreesDir(repoRoot: string): string {
+  return join(repoRoot, ".claude", "worktrees");
 }
 
 export async function worktreePathFor(id: string): Promise<string> {
   const root = await ensureMainWorktreeRoot();
-  return `${root}/.claude/worktrees/${id}`;
+  return join(gitWorktreesDir(root), id);
 }
 
 // The inverse of `worktreePathFor`: a real agent worktree always lives as a
@@ -33,7 +63,7 @@ export async function worktreePathFor(id: string): Promise<string> {
 // system created, so it must never be adopted as an attempt nor handed to
 // `git worktree remove`.
 export function isCanonicalWorktreePath(path: string, repoRoot: string): boolean {
-  return dirname(path) === join(repoRoot, ".claude", "worktrees");
+  return dirname(path) === gitWorktreesDir(repoRoot);
 }
 
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
@@ -86,6 +116,36 @@ export async function removeWorktree(wtPath: string): Promise<void> {
   // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
   // as `add` — one shared budget bounds add+remove contention across all callers.
   await withWorktreeMutateSlot(async () => {
+    // A dir can outlive its git registration (a `git worktree prune` after the dir
+    // was made unreachable, an interrupted removal, a repo re-clone). `git worktree
+    // remove` fails hard on such a dir — "is not a working tree" — so the strategy
+    // is chosen from an explicit registration check rather than discovered from a
+    // nonzero exit, which would be indistinguishable from a real failure.
+    //
+    // Read INSIDE the gate: registration is exactly the state a concurrent
+    // add/remove mutates, so checking it outside would race a holder of the slot
+    // and pick a strategy for a repo state that no longer holds.
+    const registered = (
+      await worktreeListPaths([GIT, "-C", repoRoot, "worktree", "list", "--porcelain"])
+    ).includes(wtPath);
+    if (!registered) {
+      // Unregistered leftover: git will not touch it, so the dir itself is the
+      // only thing left to reclaim. Re-assert the canonical-path invariant here
+      // rather than trusting the caller — this branch is a recursive delete, and
+      // the guard must sit at the syscall, not one frame above it.
+      if (!isCanonicalWorktreePath(wtPath, repoRoot)) {
+        throw new Error(
+          `refusing to remove non-canonical worktree path ${wtPath} (not a direct child of ${gitWorktreesDir(repoRoot)})`,
+        );
+      }
+      await rm(wtPath, { recursive: true, force: true });
+      // Drop any stale administrative entry left behind in .git/worktrees.
+      await Bun.spawn(backgroundArgv([GIT, "-C", repoRoot, "worktree", "prune"]), {
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exited;
+      return;
+    }
     // Demoted (darwinbg): removal is cleanup/reap work, never interactive.
     const proc = Bun.spawn(
       backgroundArgv([GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"]),
