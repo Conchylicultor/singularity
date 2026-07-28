@@ -2,16 +2,13 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import {
-  CheckboxIndicator,
-  RadioIndicator,
-} from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { AnswerForm } from "./answer-form";
+import { OptionBody, OptionRow } from "./option-row";
 import { findAnswerTurn } from "./awaiting";
 import {
   parseAnswerMap,
@@ -21,25 +18,6 @@ import {
   type ParsedAnswer,
   type Question,
 } from "./answer-model";
-
-export function Indicator({
-  selected,
-  multi,
-}: {
-  selected: boolean;
-  multi: boolean;
-}) {
-  // A checkbox (multi) and a radio (single) are semantic fixed shapes that must
-  // stay a square / circle under every Shape preset. The selection-indicator
-  // primitive owns those fixed shapes, so this just picks the right one.
-  return multi ? (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt nudges the indicator to align with the first line of multi-line label text (no named margin utility)
-    <CheckboxIndicator checked={selected} className="mt-0.5" />
-  ) : (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt nudges the indicator to align with the first line of multi-line label text (no named margin utility)
-    <RadioIndicator checked={selected} className="mt-0.5" />
-  );
-}
 
 function summaryFor(questions: Question[], firstAnswerParts: string[]) {
   return (
@@ -186,40 +164,26 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                 {q.question}
               </Text>
               <Stack gap="xs">
-                {q.options.map((opt, oi) => {
-                  const isSelected = selected.has(opt.label);
-                  return (
-                    <div
-                      key={oi}
-                      className={`flex gap-sm ${isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm" : hasAnswer ? "pl-2xs opacity-60" : "pl-2xs"}`}
-                    >
-                      <Indicator selected={isSelected} multi={q.multiSelect} />
-                      <div className="min-w-0 flex-1">
-                        <Text as="p" variant="caption" className="font-medium">
-                          {opt.label}
-                        </Text>
-                        <Text as="p" variant="caption" tone="muted">
-                          {opt.description}
-                        </Text>
-                        {opt.preview && (
-                          <pre
-                            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
-                            className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
-                          >
-                            {opt.preview}
-                          </pre>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {q.options.map((opt, oi) => (
+                  <OptionRow
+                    key={oi}
+                    selected={selected.has(opt.label)}
+                    multi={q.multiSelect}
+                    dimmed={hasAnswer}
+                  >
+                    <OptionBody
+                      label={opt.label}
+                      description={opt.description}
+                      preview={opt.preview}
+                    />
+                  </OptionRow>
+                ))}
                 {otherText != null && (
-                  <div className="flex gap-sm rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm">
-                    <Indicator selected multi={q.multiSelect} />
+                  <OptionRow selected multi={q.multiSelect}>
                     <Text as="p" variant="caption" className="italic text-foreground">
                       {otherText}
                     </Text>
-                  </div>
+                  </OptionRow>
                 )}
                 {notes != null && (
                   <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">

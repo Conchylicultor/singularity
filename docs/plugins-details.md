@@ -8461,11 +8461,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `infra/endpoints.useEndpointMutation`
                       - `primitives/css/badge.Badge`
+                      - `primitives/css/fill.Fill`
                       - `primitives/css/selection-indicator.CheckboxIndicator`
                       - `primitives/css/selection-indicator.RadioIndicator`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
+                      - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.Input`
                       - `primitives/live-state.useResource`
                       - `primitives/persistent-draft.useDraft`
@@ -18499,6 +18501,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/editor`
               - `auth/apple-signing/setup-wizard`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversations-view`
               - `debug/timeline`
               - `debug/trace/pane`

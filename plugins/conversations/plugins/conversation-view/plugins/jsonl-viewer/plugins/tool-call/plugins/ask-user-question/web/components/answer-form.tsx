@@ -5,7 +5,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
-import { Indicator } from "./ask-user-question-tool-view";
+import { OptionBody, OptionRow } from "./option-row";
 import { type Question } from "./answer-model";
 
 // Persisted shape: `selected` is a string[] (not a Set) so the draft survives a
@@ -186,49 +186,26 @@ export function AnswerForm({
               {q.question}
             </Text>
             <Stack gap="xs">
-              {q.options.map((opt, oi) => {
-                const isSelected = isOptionActive(answer, q, opt.label);
-                return (
-                  <button
-                    key={oi}
-                    type="button"
-                    onClick={() =>
-                      toggleOption(qi, opt.label, q.multiSelect)
-                    }
-                    className={`flex w-full gap-sm text-left transition-colors ${
-                      isSelected
-                        ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
-                        : "rounded-md py-xs pl-2xs hover:bg-muted/50"
-                    }`}
-                  >
-                    <Indicator selected={isSelected} multi={q.multiSelect} />
-                    <div className="min-w-0 flex-1 select-text">
-                      <Text as="p" variant="caption" className="font-medium">
-                        {opt.label}
-                      </Text>
-                      <Text as="p" variant="caption" tone="muted">
-                        {opt.description}
-                      </Text>
-                      {opt.preview && (
-                        <pre
-                          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
-                          className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
-                        >
-                          {opt.preview}
-                        </pre>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-              <div
-                className={`flex items-center gap-sm ${
-                  otherActive
-                    ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
-                    : "pl-2xs"
-                }`}
+              {q.options.map((opt, oi) => (
+                <OptionRow
+                  key={oi}
+                  selected={isOptionActive(answer, q, opt.label)}
+                  multi={q.multiSelect}
+                  onClick={() => toggleOption(qi, opt.label, q.multiSelect)}
+                >
+                  <OptionBody
+                    label={opt.label}
+                    description={opt.description}
+                    preview={opt.preview}
+                  />
+                </OptionRow>
+              ))}
+              {/* Not a button — the row's own control is the input it wraps. */}
+              <OptionRow
+                selected={otherActive}
+                multi={q.multiSelect}
+                align="center"
               >
-                <Indicator selected={otherActive} multi={q.multiSelect} />
                 <Input
                   value={answer.otherText}
                   onChange={(e) =>
@@ -236,9 +213,9 @@ export function AnswerForm({
                   }
                   onFocus={() => focusOther(qi, q.multiSelect)}
                   placeholder="Other…"
-                  className="text-caption h-7 flex-1"
+                  className="text-caption h-7 w-full"
                 />
-              </div>
+              </OptionRow>
             </Stack>
           </div>
         );
