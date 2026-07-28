@@ -38,6 +38,19 @@ export function orderStepsForDisplay<T extends { success: boolean }>(steps: read
   return [...steps.filter((s) => s.success), ...steps.filter((s) => !s.success)];
 }
 
+// The console half of the two renderers above, so every command that runs the
+// heavy section (`build`, `build-composition`) writes a byte-identical
+// transcript instead of re-deriving the ordering + stream routing. Each line
+// keeps its own stream, so a step's stderr still reaches stderr.
+export function printStepBlocks(steps: readonly BuildStepLog[]): void {
+  for (const step of orderStepsForDisplay(steps)) {
+    for (const { text, stream } of renderStepBlock(step)) {
+      if (stream === "stderr") process.stderr.write(`${text}\n`);
+      else process.stdout.write(`${text}\n`);
+    }
+  }
+}
+
 // Pure. Returns the full banner. `pointers` are always the final lines so an
 // agent reading only `| tail` lands on the log paths.
 export function renderVerdict(v: Verdict): string {

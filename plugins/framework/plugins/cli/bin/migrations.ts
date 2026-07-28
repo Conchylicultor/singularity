@@ -9,7 +9,6 @@ import {
 } from "fs";
 import { join, resolve } from "path";
 import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { libpqEnv } from "./paths";
 import {
   promptKey,
   runDrizzleKitWithPrompts,
@@ -32,6 +31,49 @@ export type {
   MigrationAnswer,
   DrizzlePromptResult,
 } from "./migrations-interactive";
+
+/**
+ * Parse a `--migration-answers <json>` argv value into the answer list
+ * `generateMigration` consumes. Lives HERE, beside `MigrationAnswer` itself,
+ * rather than in one command: every command that can drive a migration
+ * (`build`, `build-composition`) takes the same flag, and a second hand-rolled
+ * copy of this validator is exactly how the three divergent `readDatabaseConfig`
+ * readers this plan started by unifying came about.
+ *
+ * MAY TERMINATE THE PROCESS: exits 1 on malformed input. That is argv
+ * validation — it runs before any artifact exists and owes no cleanup.
+ */
+export function parseMigrationAnswers(raw: string): MigrationAnswer[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    console.error(
+      `Error: --migration-answers is not valid JSON.\n` +
+        `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
+    );
+    process.exit(1);
+  }
+  if (!Array.isArray(parsed)) {
+    console.error(
+      `Error: --migration-answers must be a JSON array.\n` +
+        `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
+    );
+    process.exit(1);
+  }
+  for (let i = 0; i < parsed.length; i++) {
+    const entry = parsed[i];
+    if (entry.action === "create") continue;
+    if (entry.action === "rename" && typeof entry.from === "string") continue;
+    console.error(
+      `Error: --migration-answers[${i}] is invalid: ${JSON.stringify(entry)}\n` +
+        `Each entry must be {"action":"create"} or {"action":"rename","from":"<source_name>"}.\n`,
+    );
+    process.exit(1);
+  }
+  return parsed as MigrationAnswer[];
+}
 
 /**
  * One persisted answer in a `meta/<tag>_answers.json` sidecar. Carries the
@@ -215,9 +257,14 @@ export async function generateMigration(opts: {
   const result = await runDrizzleKitWithPrompts({
     cmd,
     cwd,
+    // No PG* env: `generate` is a pure snapshot diff against ./data and opens no
+    // connection, and drizzle.config.ts no longer reads the database config at
+    // all. Passing libpqEnv() here is what made this step ENOENT on a host with
+    // no ~/.singularity/database.json. SINGULARITY_WORKTREE stays: the schema
+    // files are import-safe without it (client.ts defers the throw to the first
+    // query), but keeping it leaves the dev loop byte-identical.
     env: {
       ...process.env,
-      ...libpqEnv(),
       SINGULARITY_WORKTREE: worktreeName,
     },
     answers: migrationAnswers ?? null,

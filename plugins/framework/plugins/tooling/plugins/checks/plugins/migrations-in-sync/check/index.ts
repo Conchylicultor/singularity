@@ -1,31 +1,19 @@
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
 import { basename, join, relative, resolve } from "path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+// Reach the config reader through the database CORE barrel, not admin/server:
+// the admin pool module throws at import time when SINGULARITY_WORKTREE is
+// unset, which is the norm in a tooling/check subprocess. The core barrel
+// exposes exactly the config→env helpers for non-backend consumers and is
+// import-safe by design (same precedent as
+// plugins/database/plugins/migrations/check/index.ts). This used to be a
+// hand-inlined third copy of the reader.
+import { libpqEnv } from "@plugins/database/core";
 import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const PROMPT_RE = /Is .+? (column in .+? table|table|schema|enum|view|sequence|role|policy) created or renamed/;
-
-const DATABASE_CONFIG_PATH = join(SINGULARITY_DIR, "database.json");
-
-function libpqEnv(): Record<string, string> {
-  let config: { connection: { host: string; port: number; user: string } };
-  try {
-    config = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) throw err;
-    config = {
-      connection: { host: "localhost", port: 5432, user: process.env.USER ?? "postgres" },
-    };
-  }
-  return {
-    PGHOST: process.env.PGHOST ?? config.connection.host,
-    PGPORT: process.env.PGPORT ?? String(config.connection.port),
-    PGUSER: process.env.PGUSER ?? config.connection.user,
-  };
-}
 
 function listSql(dir: string): string[] {
   return readdirSync(dir)

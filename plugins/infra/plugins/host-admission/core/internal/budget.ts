@@ -147,10 +147,21 @@ export interface CpuBudget {
  * independent formula: `B = max(1, min(floor(ceiling − reserved), floor(ram /
  * unit)))`. The reserved interactive floor is `max(1, floor(B / 3))`; the
  * background lane gets the rest.
+ *
+ * **Small hosts (`B === 1`) collapse the lane split.** On a host whose ceiling
+ * the reserved pools already exceed — a 4-core/8 GB VPS, i.e. any target the
+ * release artifact ships to — `rawCpuResidual()` goes negative, `B` floors to 1,
+ * and the reserved interactive floor claims that one slot, leaving the background
+ * lane a window of 0. That is not a budget, it is a deadlocked pool, and
+ * `defineHostPool` (rightly) refuses to build it — which made the whole app
+ * unbootable on such a host rather than merely slow. With a single slot there is
+ * nothing to partition: the honest degenerate is one shared slot, so the
+ * background window floors to 1 and the pool behaves as unlaned. The reserved
+ * interactive floor only becomes meaningful again at `B >= 2`.
  */
 export function cpuBudget(): CpuBudget {
   const B = Math.max(1, rawCpuResidual());
   const reservedInteractive = Math.max(1, Math.floor(B / 3));
-  const backgroundLimit = B - reservedInteractive;
+  const backgroundLimit = Math.max(1, B - reservedInteractive);
   return { B, reservedInteractive, backgroundLimit };
 }

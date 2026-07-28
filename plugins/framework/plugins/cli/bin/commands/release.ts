@@ -474,23 +474,46 @@ export function registerRelease(program: Command) {
         console.log(`Releasing composition "${opts.composition}" (${platform})`);
         console.log(`  Output: ${out}`);
 
-        // ── 1. Composition build (reuse the F1 build pipeline) ───────────────
-        // Shell out to the build command so we reuse migrations + web build +
-        // codegen verbatim. `--no-restart` (no gateway to restart) and
-        // `--skip-checks` (a release build is downstream of checks; the staged
-        // closure is what we verify). `--allow-main` so a release can be cut
-        // from the main worktree too.
+        // ── 1. Composition artifact phase (hermetic) ─────────────────────────
+        // `build-composition` is the ARTIFACT half of `./singularity build`:
+        // filtered composition registries, generated migration SQL and the web
+        // dist — exactly the three outputs staged below — with the dev-cluster
+        // DEPLOY half structurally absent (no Postgres readiness, no worktree DB
+        // fork, no gateway spec/restart/health probe, no compose-serve, no
+        // `build_runs` ledger). Both commands drive the SAME module
+        // (commands/internal/app-artifacts.ts), so the phase a release runs and
+        // the phase a dev build runs cannot drift. Rationale:
+        // research/2026-07-28-cli-hermetic-artifact-phase.md.
+        //
+        // It is still SHELLED OUT TO rather than called in-process, and that is
+        // the CORRECTNESS BOUNDARY, not an implementation detail: this module
+        // statically imports plugin barrels (resolveIconSvgNodes,
+        // runAssetMirrorPrewarm, propagateConfigToUser, buildPluginTree), and ESM
+        // imports are hoisted and evaluated before this action body runs — so by
+        // now Bun's module cache has those barrels FROZEN. Stage 2's
+        // `regenerateManifestCodegen` arms `setPreBarrelImportGuard` before the
+        // first barrel import; in a pre-frozen process that guard never fires,
+        // `generateConfigOrigins` re-imports stale barrels and
+        // `pruneOrphanedConfigFiles` deletes a freshly-authored config override.
+        // A fresh process is what makes that impossible.
+        //
+        // Versus the nested `build --composition --no-restart --skip-checks
+        // --allow-main` this replaces: no `--allow-main` (a release no longer has
+        // to routinise the DANGER flag on every cut from main — the branch guard
+        // it defeated exists to stop agents DEPLOYING from main, and there is no
+        // deploy here), no compose-serve pass, and no build_runs row /
+        // worktree-op marker / build-progress entry — a release is not a build
+        // run and no longer shows up in the build Gantt as one. The old
+        // `--skip-checks` validation set (always-run checks + one incremental tsc
+        // per runtime entrypoint) still runs, from the same shared module.
         console.log("\n[1/5] Building composition (filtered registries + web dist)...");
         await run(
           [
             "bun",
             join(root, "plugins/framework/plugins/cli/bin/index.ts"),
-            "build",
+            "build-composition",
             "--composition",
             opts.composition,
-            "--no-restart",
-            "--skip-checks",
-            "--allow-main",
           ],
           { cwd: root },
         );
@@ -652,7 +675,7 @@ export function registerRelease(program: Command) {
         // closure's `prewarm` contributions declare, no app-specific code. Runs
         // here, before any target-specific packing, so it covers both --target
         // web (packStagedTree tars it) and --target tauri (wrapTauri embeds the
-        // staged tree as a resource). Phase 1's `build --composition` already
+        // staged tree as a resource). Phase 1's `build-composition` already
         // regenerated the filtered prewarm.composition.generated the runner reads.
         console.log("\n[3.5] Pre-warming asset-mirror caches for the composition closure...");
         await runAssetMirrorPrewarm({

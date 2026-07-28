@@ -3,6 +3,7 @@ import { isOpCommand, maybeReexecUnderInspector } from "./inspect";
 import { installOrphanGuard, ORPHAN_EXIT_CODE } from "./orphan-guard";
 import { registerApplyMigrations } from "./commands/apply-migrations";
 import { registerBuild } from "./commands/build";
+import { registerBuildComposition } from "./commands/build-composition";
 import { registerCheck } from "./commands/check";
 import { registerDb } from "./commands/db";
 import { registerPush } from "./commands/push";
@@ -32,6 +33,7 @@ program.name("singularity").description("Singularity agent CLI");
 
 registerApplyMigrations(program);
 registerBuild(program);
+registerBuildComposition(program);
 registerCheck(program);
 registerDb(program);
 registerPush(program);

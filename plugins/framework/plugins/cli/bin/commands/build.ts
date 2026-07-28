@@ -1,30 +1,36 @@
 import type { Command } from "commander";
 import os from "node:os";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { rename, rm } from "fs/promises";
+import { rename } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { adaptiveTimeoutMs } from "./adaptive-timeout";
-import { acquireBuildLock } from "../build-lock";
-import { distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./internal/dist-publish";
+import { sweepDistLeftovers } from "./internal/dist-publish";
+import {
+  acquireArtifactLock,
+  buildAndPublishWebDist,
+  fastValidationJobs,
+  generateAppSources,
+  maxRssLine,
+  prepareCompositionSources,
+  resolveFrontendMode,
+  type ArtifactHooks,
+  type HeavyJob,
+  type StepResult,
+} from "./internal/app-artifacts";
 import { runComposeServeStage } from "./internal/compose-serve";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
-import { generateMigration, type MigrationAnswer } from "../migrations";
-import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, seedAuthoredOverrides, generateCompositionRegistry, clearCompositionRegistries, COMPOSITION_NAME_RE, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { resolveComposition, flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
-import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
+import { parseMigrationAnswers } from "../migrations";
+import { collectAllPlugins, propagateConfigToUser, COMPOSITION_NAME_RE } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
-import { getMainRepoRoot, getWorktreeRoot, spawnCaptured, spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import { getMainRepoRoot, getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath, materializeWarmBase, publishWarmBase, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import { runChecks, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { listDatabases, forkTempPrefix } from "@plugins/database/plugins/admin/server";
+import { libpqEnv, readDatabaseConfig } from "@plugins/database/core";
 import {
-  libpqEnv,
-  readDatabaseConfig,
   worktreeDataDir,
   worktreeArtifacts,
   PG_LOG_FILE,
@@ -32,13 +38,11 @@ import {
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile, createSpanCollector } from "../profiler";
 import { openBuildProgress, finishBuildProgress } from "../build-progress";
-import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
-import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
-import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
-import { createValveDeps, holdThroughValve, shouldRequeue, valveGates, type ValveDeps } from "../admission-valve";
+import { type Lane } from "@plugins/infra/plugins/host-admission/core";
+import { createValveDeps, valveGates, type ValveDeps } from "../admission-valve";
 import { laneFor, publishLane } from "../lane";
 import { pushBuildStepLog, writeBuildLogs, createStepLogCollector } from "../build-logs-writer";
-import { renderStepBlock, orderStepsForDisplay, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
+import { printStepBlocks, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
@@ -48,38 +52,6 @@ import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server
 // canonical TS copy lives in codegen's plugin-registry-gen.ts).
 const NAME_REGEX = COMPOSITION_NAME_RE;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
-
-function parseMigrationAnswers(raw: string): MigrationAnswer[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    console.error(
-      `Error: --migration-answers is not valid JSON.\n` +
-        `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
-    );
-    process.exit(1);
-  }
-  if (!Array.isArray(parsed)) {
-    console.error(
-      `Error: --migration-answers must be a JSON array.\n` +
-        `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
-    );
-    process.exit(1);
-  }
-  for (let i = 0; i < parsed.length; i++) {
-    const entry = parsed[i];
-    if (entry.action === "create") continue;
-    if (entry.action === "rename" && typeof entry.from === "string") continue;
-    console.error(
-      `Error: --migration-answers[${i}] is invalid: ${JSON.stringify(entry)}\n` +
-        `Each entry must be {"action":"create"} or {"action":"rename","from":"<source_name>"}.\n`,
-    );
-    process.exit(1);
-  }
-  return parsed as MigrationAnswer[];
-}
 
 interface CentralRoutesManifest {
   backend: string;
@@ -132,94 +104,6 @@ async function writeCentralRoutesManifest(root: string): Promise<void> {
   const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(manifest, null, 2) + "\n");
   await rename(tmp, CENTRAL_ROUTES_FILE);
-}
-
-async function exec(
-  cmd: string[],
-  cwd: string,
-  env?: Record<string, string>,
-): Promise<{ maxRssBytes: number | undefined }> {
-  const { exitCode, resourceUsage } = await spawnPassthrough(cmd, {
-    cwd,
-    env: env ? { ...process.env, ...env } : undefined,
-  });
-  if (exitCode !== 0) {
-    process.exit(1);
-  }
-  return { maxRssBytes: resourceUsage.maxRssBytes };
-}
-
-
-interface StepOutput {
-  lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
-  exitCode: number;
-  /** Peak RSS of the child (bytes), when the runtime reported rusage. */
-  maxRssBytes: number | undefined;
-}
-
-// Lines are rebuilt AFTER exit as stdout-lines then stderr-lines. The old piped
-// version interleaved the two streams in arrival order, but that order was a
-// nondeterministic pipe race anyway — grouping per stream is the honest framing.
-async function execBuffered(
-  cmd: string[],
-  cwd: string,
-  env?: Record<string, string>,
-  background = false,
-): Promise<StepOutput> {
-  const result = await spawnCaptured(cmd, {
-    cwd,
-    env: env ? { ...process.env, ...env } : undefined,
-    background,
-  });
-  const lines: StepOutput["lines"] = [];
-  for (const line of result.stdout.split("\n")) {
-    if (line) lines.push({ text: line, stream: "stdout" });
-  }
-  for (const line of result.stderr.split("\n")) {
-    if (line) lines.push({ text: line, stream: "stderr" });
-  }
-  return { lines, exitCode: result.exitCode, maxRssBytes: result.resourceUsage.maxRssBytes };
-}
-
-// One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
-// (console + build.log). The calibration input for host-admission's per-holder
-// footprint constants (@plugins/infra/plugins/host-admission/core PER_UNIT_BYTES)
-// and any future per-build memory budget.
-//
-// Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B) — deliberately, because
-// PER_UNIT_BYTES is decimal (2.7e9). Dividing by 2**30 and labelling the result
-// "GB" (as this did) understates the true byte count by ~7 %, which silently
-// corrupts anyone calibrating the constant by reading these lines.
-function maxRssLine(label: string, maxRssBytes: number | undefined): string | null {
-  if (maxRssBytes == null) return null;
-  const gb = maxRssBytes / 1e9;
-  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
-  return `${label}: maxRSS ${amount}`;
-}
-
-interface StepResult {
-  id: string;
-  label: string;
-  lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
-  durationMs: number;
-  success: boolean;
-}
-
-/**
- * Returned from inside the host grant when the post-acquire duress re-check
- * fires: the heavy section did NOT run, and `withHostGrant`'s `finally` releases
- * the share on the way out — so the caller can re-hold at the valve and try
- * again. A `unique symbol` so it can never collide with a real `StepResult[]`.
- */
-const REQUEUE = Symbol("requeue");
-
-function printStepResults(results: StepResult[]): void {
-  for (const result of orderStepsForDisplay(results)) {
-    for (const { text, stream } of renderStepBlock(result)) {
-      if (stream === "stderr") process.stderr.write(`${text}\n`);
-      else process.stdout.write(`${text}\n`);
-    }
-  }
 }
 
 async function getCurrentBranch(): Promise<string> {
@@ -291,6 +175,17 @@ async function databaseReady(name: string): Promise<boolean> {
 /**
  * Wait for the database to be reachable. Skipped when no managed services
  * are configured (externally managed DB, assumed ready).
+ *
+ * INTENTIONAL BEHAVIOR DELTA (recorded, not accidental): this used to call the
+ * CLI's own ENOENT-throwing copy of `readDatabaseConfig`, so a missing
+ * `~/.singularity/database.json` crashed HERE with a bare filesystem error.
+ * Against the single tolerant reader it now falls through the
+ * `services.length === 0` branch above ("externally managed DB") and the real,
+ * actionable error comes from `waitForWorktreeDatabase` further down — which
+ * knows *which* database it wanted and why. On any dev host `database.json`
+ * always exists (`./singularity start` writes it), so no dev-loop invocation
+ * changes; the delta only shows up on a bare host, where the old error named
+ * the wrong problem.
  */
 async function waitForPg(): Promise<void> {
   const config = readDatabaseConfig();
@@ -617,76 +512,38 @@ export function registerBuild(program: Command) {
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
     .option(
-      "--composition <name>",
-      "Build THIS checkout as the named composition (filtered singleton registry, monolithic frontend) — the release path. Unrelated to the auto-serve stage; see --serve-composition.",
-    )
-    .option(
       "--serve-composition <name>",
       "Force ONE composition through the compose-serve stage regardless of its autoBuild toggle (main checkout only; artifact mode only; skips the deactivation sweep). Composes a per-composition dist + empty DB served at http://<name>.localhost:9000.",
     )
     .option(
       "--monolith",
-      "Force the monolithic vite build instead of the default per-plugin web artifacts (rollback escape hatch; also SINGULARITY_WEB_MONOLITH=1). Composition/release builds are always monolithic.",
+      "Force the monolithic vite build instead of the default per-plugin web artifacts (rollback escape hatch; also SINGULARITY_WEB_MONOLITH=1).",
     )
     .option(
       "--artifacts",
-      "Accepted no-op: per-plugin web artifacts are the DEFAULT (kept so pre-flip invocations, incl. SINGULARITY_WEB_ARTIFACTS=1, don't break). Never active for --composition/release builds.",
+      "Accepted no-op: per-plugin web artifacts are the DEFAULT (kept so pre-flip invocations, incl. SINGULARITY_WEB_ARTIFACTS=1, don't break).",
     )
     .option(
       "--no-minify",
       "Artifact mode only: skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
     )
-    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string; serveComposition?: string; artifacts?: boolean; monolith?: boolean; minify: boolean }) => {
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; serveComposition?: string; artifacts?: boolean; monolith?: boolean; minify: boolean }) => {
       // Mark this process as a build: dist-comparing checks (map-in-sync) skip
       // while the dist they'd inspect is the one this build replaces.
       markBuildInProgress();
 
-      // Frontend mode. Per-plugin web artifacts are the DEFAULT for normal
-      // (agent-branch and main) builds; the monolithic vite build is the
-      // rollback escape hatch. Precedence: explicit flag > env > default.
-      // Composition builds are ALWAYS monolithic regardless of flags/env — the
-      // release pipeline shells out to `build --composition <name>`, so this
-      // unconditional branch is its hard guard. `--artifacts` /
-      // SINGULARITY_WEB_ARTIFACTS=1 remain accepted no-ops from the opt-in
-      // phase, except where explicitly contradictory (fail loudly).
-      if (opts.artifacts && opts.composition) {
-        console.error(
-          "ERROR: --artifacts cannot be combined with --composition (release/composition builds stay monolithic).",
-        );
-        process.exit(1);
-      }
-      if (opts.artifacts && opts.monolith) {
-        console.error("ERROR: --artifacts and --monolith are contradictory.");
-        process.exit(1);
-      }
-      const frontendMode: { artifacts: boolean; why: string } = opts.composition
-        ? { artifacts: false, why: "composition/release builds are always monolithic" }
-        : opts.monolith
-          ? { artifacts: false, why: "--monolith" }
-          : opts.artifacts
-            ? { artifacts: true, why: "--artifacts" }
-            : process.env.SINGULARITY_WEB_MONOLITH === "1"
-              ? { artifacts: false, why: "SINGULARITY_WEB_MONOLITH=1" }
-              : { artifacts: true, why: "default" };
-      const artifactsMode = frontendMode.artifacts;
-      console.log(
-        `Frontend mode: ${artifactsMode ? "web artifacts" : "monolithic vite build"} (${frontendMode.why})`,
-      );
-
-      // Per-step wrapper for the shared codegen pipeline: keeps build's per-step
-      // profiler granularity while the ordered call list lives in codegen core
-      // (shared with `regen-generated`). `pluginDocs` historically lived under
-      // the `build:validation` phase; every other codegen step under
-      // `build:codegen` — preserve that mapping.
-      const codegenStep: CodegenStep = async (id, label, run) => {
-        const phase = id === "pluginDocs" ? "build:validation" : "build:codegen";
-        const end = buildProfilerStart(id, phase, label);
-        try {
-          await run();
-        } finally {
-          end();
-        }
-      };
+      // `build` deploys a CHECKOUT into the live dev cluster; it never builds a
+      // composition. (`--serve-composition` below is unrelated — it composes
+      // OTHER namespaces from main's artifact fleet after main itself deploys.)
+      // Producing a composition's artifact set is `./singularity
+      // build-composition`, which shares this module's stages.
+      const artifactsMode = resolveFrontendMode({
+        composition: null,
+        monolith: opts.monolith,
+        artifacts: opts.artifacts,
+        env: process.env,
+        log: (line) => console.log(line),
+      }).artifacts;
 
       let endSpan = buildProfilerStart("ensureHooksPath", "build:preflight", "ensureHooksPath");
       await ensureHooksPath();
@@ -735,7 +592,7 @@ export function registerBuild(program: Command) {
         if (!artifactsMode) {
           console.error(
             "ERROR: --serve-composition requires artifact mode (it composes over the artifact fleet). " +
-              "Drop --monolith / --composition / SINGULARITY_WEB_MONOLITH=1.",
+              "Drop --monolith / SINGULARITY_WEB_MONOLITH=1.",
           );
           process.exit(1);
         }
@@ -878,7 +735,7 @@ export function registerBuild(program: Command) {
 
       endSpan = buildProfilerStart("acquireBuildLock", "build:setup", "acquire build lock");
       const webDir = resolve(root, WEB_CORE_RELATIVE);
-      await profiler.wait("build-lock", () => acquireBuildLock(resolve(webDir, ".build.lock")));
+      await profiler.wait("build-lock", () => acquireArtifactLock(webDir));
       // Build lock granted — flip the marker from waiting to running so the UI
       // clocks build time from here, not from the queued wait.
       setWorktreeOpPhase(name, "build", "running");
@@ -940,45 +797,31 @@ export function registerBuild(program: Command) {
         }
       };
 
-      // 1. Install dependencies. Required before the gateway can find the
-      // platform-specific embedded-postgres binaries under
-      // plugins/infra/plugins/database/node_modules/@embedded-postgres/.
-      endSpan = buildProfilerStart("bunInstall", "build:setup", "bun install");
-      console.log("Installing dependencies...");
-      const install = await exec(["bun", "install"], root);
-      endSpan({ maxRssBytes: install.maxRssBytes });
-      recordFootprint("bun install", install.maxRssBytes);
+      // build's observability seam into the shared app-artifact pipeline. These
+      // ARE the profiler / console / footprint sinks used everywhere else in
+      // this action, so every span id, phase, label and `maxRSS` line the
+      // pipeline emits is build's own, by construction rather than by copying.
+      const hooks: ArtifactHooks = {
+        span: buildProfilerStart,
+        pushSpan: pushBuildSpan,
+        log: (line) => console.log(line),
+        recordFootprint,
+      };
 
-      // 1b–2a. Registry-level repo-tree codegen: barrel-import auto-stubs (from
-      // .d.ts files) then the plugin registry. Must happen before central is
-      // spawned so its plugins.generated.ts is in sync. Shared with the push-time
-      // `regen-generated` normalize step via the codegen core pipeline so a full
-      // build after a push reproduces the exact same tree. Per-step profiler
-      // spans are threaded through `onStep` so build keeps its granularity.
-      console.log("Generating plugin registry...");
-      await regenerateRegistryCodegen({ root, onStep: codegenStep });
-
-      // 2a'. Composition build-gating. With `--composition`, emit gitignored
-      // filtered registries (the bundle's hard closure) beside the committed
-      // full ones; the web/server import seams select the filtered file. Without
-      // the flag, clear any stale filtered registries so the runtimes revert to
-      // the full committed set. The committed `<dir>.generated.ts` files are
-      // never touched either way, so the build stays byte-identical.
-      endSpan = buildProfilerStart("compositionRegistry", "build:codegen", "composition registry");
-      if (opts.composition) {
-        const items = compositionsConfig.fields.manifests.defaultValue;
-        const item = items.find((m) => m.id === opts.composition);
-        if (!item) throw new Error(`Unknown composition "${opts.composition}". Known: ${items.map((m) => m.id).join(", ")}`);
-        const allManifests = items.map(manifestItemToManifest);
-        const flat = flattenManifest(manifestItemToManifest(item), allManifests);
-        const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
-        const bundle = resolveComposition(tree, flat).bundle;
-        await generateCompositionRegistry({ root, bundle });
-        console.log(`Composition "${opts.composition}": ${bundle.size} plugins in closure.`);
-      } else {
-        await clearCompositionRegistries({ root });
-      }
-      endSpan();
+      // Stage 1 — dependencies + registry-level codegen + composition registry.
+      // Runs before central is spawned below (its plugins.generated.ts must be
+      // in sync). See ./internal/app-artifacts.ts.
+      //
+      // `composition: null` is load-bearing, not a placeholder: it is what makes
+      // stage 1 run `clearCompositionRegistries`, so a filtered singleton
+      // registry left behind by a `build-composition` / release in this checkout
+      // is swept and the runtimes revert to the full committed set. A dev build
+      // that skipped it would silently serve the previous release's closure.
+      await prepareCompositionSources({
+        root,
+        composition: null,
+        hooks,
+      });
 
       // 2b. Refresh the central-routes manifest so the gateway knows which
       // path prefixes are owned by central plugins.
@@ -1042,50 +885,24 @@ export function registerBuild(program: Command) {
         }
       }
 
-      // 3. Regenerate DB migrations from plugin schema files
-      endSpan = buildProfilerStart("generateMigration", "build:database", "generate migrations");
-      console.log("Generating DB migrations...");
-      const migration = await generateMigration({
+      // Stage 2 — DB migrations + manifest-level codegen + the mandatory
+      // config-override seed. Runs AFTER the DB interlude above (drizzle's
+      // generate is stateful) and BEFORE propagation below, which reads the
+      // freshly-seeded git layer. May terminate the process on a migration
+      // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
+      await generateAppSources({
         root,
         worktreeName: name,
-        migrationName: opts.migrationName,
-        resetMigration: opts.resetMigration,
-        customMigration: opts.customMigration,
-        migrationAnswers: opts.migrationAnswers
-          ? parseMigrationAnswers(opts.migrationAnswers)
-          : undefined,
+        migration: {
+          name: opts.migrationName,
+          reset: opts.resetMigration,
+          custom: opts.customMigration,
+          answers: opts.migrationAnswers
+            ? parseMigrationAnswers(opts.migrationAnswers)
+            : undefined,
+        },
+        hooks,
       });
-      endSpan({ maxRssBytes: migration.maxRssBytes });
-      recordFootprint("drizzle generate", migration.maxRssBytes);
-
-      // 4–4b. Manifest-level repo-tree codegen: plugin docs → reorderable-slots
-      // → data-views → token-group-vars → config-origins. Run AFTER migrations
-      // (DB-stateful, interleaved above) but as ONE ordered pipeline shared with
-      // the push-time `regen-generated` normalize step (codegen core), so a full
-      // build after a push reproduces the exact same tree. The load-bearing
-      // ordering constraints (docs first → reusable enriched tree; slots/views
-      // before origins → they register the config_v2 directives origins depend
-      // on; token-group-vars before the CSS single-owner checks; origins LAST)
-      // live in the pipeline module as the authoritative record. Per-step
-      // profiler spans are threaded through `onStep`.
-      console.log("Generating plugins doc...");
-      await regenerateManifestCodegen({ root, onStep: codegenStep });
-
-      // 4b'. Seed / re-mark the MANDATORY config overrides (descriptors that set
-      // `requiresAuthoredOverride`). Runs after the origin pass above (it reads
-      // each origin's hash + body off disk) and before propagation, so the user
-      // layer never sees a half-seeded git layer. Build-ONLY on purpose: it mints
-      // `@review` markers, and the shared pipeline also runs from
-      // `regen-generated` inside push's amend path — see regen-pipeline.ts.
-      endSpan = buildProfilerStart("seedAuthoredOverrides", "build:codegen", "seed authored config overrides");
-      const seedResult = await seedAuthoredOverrides({ root });
-      endSpan();
-      for (const rel of seedResult.seeded) {
-        console.log(`[config-v2] seeded required override config/${rel} (marked @review)`);
-      }
-      for (const rel of seedResult.remarked) {
-        console.log(`[config-v2] re-marked stale override config/${rel} (marked @review)`);
-      }
 
       // 4c. Propagate git config to user config dir (~/.singularity/config/<worktree>/)
       endSpan = buildProfilerStart("propagateConfig", "build:codegen", "propagate config to user");
@@ -1093,26 +910,18 @@ export function registerBuild(program: Command) {
       await propagateConfigToUser({ root, worktreeName: name, singularityDir: SINGULARITY_DIR });
       endSpan();
 
-      // 3c–5. Run validation (checks) and the Vite build in parallel. They are
-      // independent: checks read source files, Vite compiles into a staging
-      // dir. On failure, the staging dir is cleaned up and nothing is published.
+      // 3c–5. Run validation (checks) and the frontend build in parallel, then
+      // publish — the shared app-artifact pipeline's stage 3
+      // (./internal/app-artifacts.ts). They are independent: checks read source
+      // files, the frontend compiles into a staging dir. On failure the staging
+      // dir is cleaned up and nothing is published.
       // The `typescript` check type-checks every target (including the runtime
       // entrypoints), so we no longer run separate runtime tsc passes here — that
       // double-checked cli/server-core/central-core on every build. With
-      // `--skip-checks` the check doesn't run, so we still guard server
-      // type-safety with a single incremental tsc over the runtime entrypoints.
-      const stagingPath = distStagingPath(resolve(webDir, "dist"));
-      const stagingName = basename(stagingPath);
-
-      console.log("Running checks, type-checking, and building frontend in parallel...");
-
-      // Gate this heavy section (eslint + tsc + vite) behind a host CPU GRANT so
-      // concurrent builds across worktrees don't thrash the machine. A main build
-      // takes the interactive lane (its reserved floor is unreachable by agent
-      // work, so it's never blocked by agent builds); an agent build takes the
-      // background lane. The grant's `units` are subdivided across everything the
-      // build fans out into (type-check workers, tsc, vite) — nothing re-acquires
-      // host-wide. See @plugins/infra/plugins/host-admission.
+      // `--skip-checks` the check doesn't run, so `fastValidationJobs` still
+      // guards server type-safety with a single incremental tsc over the runtime
+      // entrypoints.
+      //
       // (`lane` is derived once, up-front, next to the op record it also feeds.)
       // Publish the lane from the same fact (so any inheriting subprocess sees
       // it) BEFORE runChecks runs in-process below. See ../lane.ts.
@@ -1131,226 +940,55 @@ export function registerBuild(program: Command) {
       // `background` option (spawn-priority's backgroundArgv under the hood).
       const backgroundBuild = branch !== "main";
 
-      // The heavy section itself: everything the host CPU grant covers (checks +
-      // tsc + vite), running on the grant it is handed. Extracted so the acquire
-      // around it can be a retry loop (below) without the body moving.
-      //
-      // buildId (computed up-front, before the "started" build-log record) is
-      // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id
-      // below — bundle and server agree by construction (no chicken-and-egg).
-      const runHeavySection = async (grant: Grant): Promise<StepResult[]> => {
-        const parallel: Array<Promise<StepResult>> = [];
-
-        if (!opts.skipChecks) {
-          parallel.push(
-            (async (): Promise<StepResult> => {
-              const lines: StepResult["lines"] = [];
-              const start = performance.now();
-              const ok = await runChecks(undefined, {
-                // The build's host CPU grant — type-check spends it per worker.
-                grant,
-                // Full, untruncated check output lands here; the buffered
-                // `lines` (console + build.log) stay summarized.
-                logFile: join(worktreeDataDir(name), "check.log"),
-                onCheckDone: (id, durationMs, wallStartMs) => {
-                  pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
-                },
-                log: (line, stream) => {
-                  lines.push({ text: line, stream });
-                },
-              });
-              return {
-                id: "checks",
-                label: "checks",
-                lines,
-                durationMs: Math.round(performance.now() - start),
-                success: ok,
-              };
-            })(),
-          );
-        }
-
-        if (opts.skipChecks) {
-          // Cheap, structural checks opt into running even on the fast path
-          // (`--skip-checks`), so codegen-coupled obligations — e.g. a
-          // newly-reorderable slot that still owes an authored override —
-          // fail at build instead of slipping silently to `push`. Selected
-          // generically via the `alwaysRun` flag (never by naming a check).
-          const alwaysRunIds = (await listAllChecks())
-            .filter((c) => c.alwaysRun)
-            .map((c) => c.id);
-          // Guard: runChecks([]) falls through to running ALL checks.
-          if (alwaysRunIds.length > 0) {
-            parallel.push(
-              (async (): Promise<StepResult> => {
-                const lines: StepResult["lines"] = [];
-                const start = performance.now();
-                const ok = await runChecks(alwaysRunIds, {
-                  grant,
-                  logFile: join(worktreeDataDir(name), "check.log"),
-                  onCheckDone: (id, durationMs, wallStartMs) => {
-                    pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
-                  },
-                  log: (line, stream) => {
-                    lines.push({ text: line, stream });
-                  },
-                });
-                return {
-                  id: "checks",
-                  label: "checks (always-run)",
-                  lines,
-                  durationMs: Math.round(performance.now() - start),
-                  success: ok,
-                };
-              })(),
-            );
-          }
-
-          const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
-          for (const target of runtimeTargets) {
-            parallel.push(
-              (async (): Promise<StepResult> => {
-                const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
-                const start = performance.now();
-                // Identical flags to the `typescript` check so both share one
-                // `.tsbuildinfo` per target without options-hash churn.
-                const buildInfo = tsBuildInfoPath(root, target.name);
-                // Feed and read the same host-global warm-base pool the
-                // `type-check` check uses, so the fast path is not a second,
-                // divergent incremental lineage.
-                materializeWarmBase(root, target.name);
-                // Spend a grant unit per runtime tsc — a heavy child like a
-                // type-check worker — so the fast-path (--skip-checks) fan-out
-                // is bounded by the same grant as everything else.
-                const output = await grant.run(() =>
-                  execBuffered(
-                    [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
-                    target.dir,
-                    undefined,
-                    backgroundBuild,
-                  ),
-                );
-                end({ maxRssBytes: output.maxRssBytes });
-                // Only a clean exit is a trustworthy base here: unlike the
-                // check's workers, a nonzero tsc exit covers crashes and bad
-                // invocations as well as plain diagnostics, so we cannot tell a
-                // valid program state from a torn one.
-                if (output.exitCode === 0) publishWarmBase(root, target.name);
-                const rss = maxRssLine(`tsc ${target.name}`, output.maxRssBytes);
-                if (rss) output.lines.push({ text: rss, stream: "stdout" });
-                return {
-                  id: `tsc:${target.name}`,
-                  label: `tsc ${target.name}`,
-                  lines: output.lines,
-                  durationMs: Math.round(performance.now() - start),
-                  success: output.exitCode === 0,
-                };
-              })(),
-            );
-          }
-        }
-
-        if (artifactsMode) {
-          // Per-plugin artifact pipeline, in-process, into the SAME staging
-          // dir the monolith would use — the atomic publish below is shared.
-          // Grant-gated like the vite build it replaces: the pipeline's
-          // internal fan-out (per-plugin vite builds on a cold store) is the
-          // same class of heavy work, so it spends a unit of the build's CPU
-          // budget rather than running on top of it.
-          parallel.push(
-            (async (): Promise<StepResult> => {
-              const end = buildProfilerStart("viteBuild", "build:frontend", "web artifacts");
-              const start = performance.now();
-              const lines: StepResult["lines"] = [];
-              let success = true;
-              try {
-                const result = await grant.run(() =>
-                  runWebArtifactsPipeline({
-                    root,
-                    stagingDir: stagingPath,
-                    minify: opts.minify,
-                    buildId,
-                    log: (line) => lines.push({ text: line, stream: "stdout" }),
-                    onStage: async (id, label, run) => {
-                      const endStage = buildProfilerStart(id, "build:frontend", label);
-                      try {
-                        return await run();
-                      } finally {
-                        endStage();
-                      }
-                    },
-                  }),
-                );
-                lines.push({
-                  text:
-                    `web artifacts: ${result.builtArtifacts} built, ${result.reusedArtifacts} reused ` +
-                    `(${result.webArtifacts} web + ${result.coreArtifacts} core), ` +
-                    `${result.vendorSpecs} vendors, ${result.preloads} preloads`,
-                  stream: "stdout",
-                });
-              } catch (err) {
-                success = false;
-                const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
-                for (const line of message.split("\n")) {
-                  lines.push({ text: line, stream: "stderr" });
-                }
-              }
-              end();
-              return {
-                id: "viteBuild",
-                label: "web artifacts",
-                lines,
-                durationMs: Math.round(performance.now() - start),
-                success,
-              };
-            })(),
-          );
-        } else {
-          parallel.push(
-            (async (): Promise<StepResult> => {
-              const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
-              const start = performance.now();
-              // Vite is one of the heavy children the grant covers: spend a unit
-              // for it so it shares the build's CPU budget with the type-check
-              // workers rather than running on top of it.
-              const output = await grant.run(() =>
-                execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }, backgroundBuild),
-              );
-              end({ maxRssBytes: output.maxRssBytes });
-              const rss = maxRssLine("vite build", output.maxRssBytes);
-              if (rss) output.lines.push({ text: rss, stream: "stdout" });
-              return {
-                id: "viteBuild",
-                label: "vite build",
-                lines: output.lines,
-                durationMs: Math.round(performance.now() - start),
-                success: output.exitCode === 0,
-              };
-            })(),
-          );
-        }
-
-        return await Promise.all(parallel);
+      // The FULL checks pass stays HERE rather than moving into the shared
+      // pipeline: it is build-specific observability — the untruncated
+      // `check.log` plus a per-check `pushBuildSpan` that draws the build
+      // Gantt's `build:checks` lane. Validation is not artifact production, so
+      // stage 3 takes it as a companion job sharing its ONE host grant.
+      const fullChecksJob: HeavyJob = async (grant) => {
+        const lines: StepResult["lines"] = [];
+        const start = performance.now();
+        const ok = await runChecks(undefined, {
+          // The build's host CPU grant — type-check spends it per worker.
+          grant,
+          // Full, untruncated check output lands here; the buffered
+          // `lines` (console + build.log) stay summarized.
+          logFile: join(worktreeDataDir(name), "check.log"),
+          onCheckDone: (id, durationMs, wallStartMs) => {
+            pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
+          },
+          log: (line, stream) => {
+            lines.push({ text: line, stream });
+          },
+        });
+        return {
+          id: "checks",
+          label: "checks",
+          lines,
+          durationMs: Math.round(performance.now() - start),
+          success: ok,
+        };
       };
+
+      // The `--skip-checks` validation set (always-run checks + one incremental
+      // tsc per runtime entrypoint) is shared with the hermetic caller, so
+      // neither can drift on what a fast artifact build still proves.
+      const companions: HeavyJob[] = opts.skipChecks
+        ? await fastValidationJobs({
+            root,
+            checkLogFile: join(worktreeDataDir(name), "check.log"),
+            background: backgroundBuild,
+            hooks,
+          })
+        : [fullChecksJob];
 
       // Duress admission valve: a background-lane build is held BEFORE it
       // queues for the host grant while the host duress latch is fresh, so no
-      // new heavy work starts into a memory/congestion storm (event-driven
-      // wait, 30-min sticky fail-open). Interactive (main), push, and the
-      // detached auto-build are never held. See ../admission-valve.ts and
+      // new heavy work starts into a memory/congestion storm. Interactive
+      // (main), push, and the detached auto-build are never held. The hold /
+      // post-acquire requeue loop itself lives in stage 3 — see
+      // ./internal/app-artifacts.ts, ../admission-valve.ts and
       // research/2026-07-11-global-fleet-memory-admission-duress-valve.md.
-      //
-      // That hold covers only the PRE-QUEUE window. A build that entered the
-      // grant's flock queue while the host was CALM can sit parked in it while
-      // duress trips, and would otherwise walk straight into the storm — so the
-      // acquire is a retry loop whose re-check happens INSIDE the grant, the
-      // moment the slots are actually held. On a hit the closure returns
-      // REQUEUE, `withHostGrant`'s `finally` releases the share, and we re-hold
-      // at the valve. Barging is documented behaviour of the pool, so there is
-      // no FIFO position to lose. `shouldRequeue` skips the re-check after a
-      // fail-open hold — without that the loop would spin forever, since a
-      // failed-open valve returns immediately while duress is still fresh. See
-      // gap (a) in research/2026-07-12-global-host-admission-memory-dimension.md.
       const gated = valveGates(lane, process.env);
 
       // Drive the `duress-valve` wait off the valve's OWN hold bracket — the
@@ -1371,41 +1009,32 @@ export function registerBuild(program: Command) {
         },
       };
 
-      const acquireAndRunHeavySection = async (): Promise<StepResult[]> => {
-        // Profile the full admission wait (valve holds + grant queueing, across
-        // requeues) — without a span this wait is an unexplained hole in the
-        // build Gantt (a contended build once sat here ~5 min, unattributed).
-        // The op record splits what this single span necessarily merges: one
-        // `host-grant` wait per requeue cycle, each distinct from the valve's.
-        const endGrantWait = buildProfilerStart(
-          "acquireHostGrant",
-          "build:setup",
-          "wait for host CPU grant",
-        );
-        for (;;) {
-          const outcome = await holdThroughValve({ gated }, valveDeps);
-          const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
-            { lane, max: cpuBudget().B, hooks: profiler.grantHooks() },
-            async (grant) => {
-              if (shouldRequeue(gated, outcome, isUnderDuress())) return REQUEUE;
-              endGrantWait();
-              return await runHeavySection(grant);
-            },
-          );
-          if (result !== REQUEUE) return result;
-          console.log(
-            "build admission: duress tripped while queued for the host grant — " +
-              "released the grant, re-holding at the valve...",
-          );
-        }
-      };
-      const stepResults = await acquireAndRunHeavySection();
-
-      for (const result of stepResults) {
-        pushBuildStepLog(result);
-      }
-
-      printStepResults(stepResults);
+      // Stage 3 — the heavy section under ONE host CPU grant, then the atomic
+      // dist publish. `onSteps` fires the instant the section completes (before
+      // the failure check and before anything is published), which is exactly
+      // where this action used to push + print them, so `stepResults` is
+      // populated for the verdict funnels below on BOTH paths.
+      let stepResults: StepResult[] = [];
+      const artifact = await buildAndPublishWebDist({
+        root,
+        webDir,
+        buildId,
+        composition: null,
+        artifactsMode,
+        minify: opts.minify,
+        lane,
+        background: backgroundBuild,
+        companions,
+        admission: { gated, deps: valveDeps, grantHooks: profiler.grantHooks() },
+        onSteps: (steps) => {
+          stepResults = steps;
+          for (const result of steps) {
+            pushBuildStepLog(result);
+          }
+          printStepBlocks(steps);
+        },
+        hooks,
+      });
 
       const buildUrl = `http://${name}.localhost:9000`;
 
@@ -1454,40 +1083,18 @@ export function registerBuild(program: Command) {
         steps: stepRoster(),
       });
 
-      const failedSteps = stepResults.filter((r) => !r.success);
-      const failures = failedSteps.map((r) => r.label);
-
-      if (failures.length > 0) {
-        await rm(stagingPath, { recursive: true, force: true });
-        await failBuild(
+      // Stage 3 removed its own staging dir before returning, so nothing was
+      // published and there is nothing left to reclaim here.
+      if (!artifact.ok) {
+        return await failBuild(
           [
             `NOT DEPLOYED. Nothing was published; ${buildUrl} still serves the previous build.`,
             `The frontend compiled, but the artifact was discarded.`,
           ],
-          failures,
+          artifact.failedLabels,
         );
       }
-
-      // Write the commit hash at build time so the server can report drift.
-      const commitProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
-        cwd: root,
-        stdout: "pipe",
-      });
-      const buildCommit = commitProc.stdout.toString().trim();
-      if (buildCommit) {
-        writeFileSync(resolve(stagingPath, ".build-commit"), buildCommit + "\n");
-      }
-
-      // The build id baked into the bundle, so the server can detect stale tabs.
-      writeFileSync(resolve(stagingPath, ".build-id"), buildId + "\n");
-
-      // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap — see
-      // ./internal/dist-publish.ts for the mechanics (this supersedes the
-      // earlier move-aside scheme, which left a real gap between two renames).
-      endSpan = buildProfilerStart("atomicPublish", "build:frontend", "atomic publish");
-      const livePath = resolve(webDir, "dist");
-      await publishDistAtomic({ dir: livePath, stagingPath });
-      endSpan();
+      const { livePath, buildCommit } = artifact;
 
       // 6. Write registry JSON
       endSpan = buildProfilerStart("registerWorktree", "build:deploy", "register worktree");

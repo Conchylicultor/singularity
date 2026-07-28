@@ -167,6 +167,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - Exports (values):
     - `buildConnectionString`
     - `DATABASE_CONFIG_PATH`
+    - `libpqEnv`
     - `readDatabaseConfig`
 - Cross-plugin:
   - Imported by:

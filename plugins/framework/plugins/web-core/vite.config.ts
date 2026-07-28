@@ -83,8 +83,9 @@ export default defineConfig(async () => {
         // at the IMPORT SEAM via a build-time alias branch — NOT a runtime
         // `import.meta.env` ternary. A runtime ternary would make Rollup bundle
         // BOTH registries and ship all ~540 plugins (silent failure). The
-        // filtered file is gitignored and only exists after a `--composition`
-        // build; with no VITE_COMPOSITION we resolve the committed full registry,
+        // filtered file is gitignored and only exists after a
+        // `./singularity build-composition` (a plain `build` clears it); with no
+        // VITE_COMPOSITION we resolve the committed full registry,
         // so a plain build stays byte-identical.
         "@composition-web-registry": process.env.VITE_COMPOSITION
           ? path.join(webSdkCore, "web.composition.generated.ts")

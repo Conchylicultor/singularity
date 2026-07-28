@@ -418,7 +418,7 @@ export async function generatePluginRegistry(opts: {
 // byte-identical and `plugins-registry-in-sync` + `git status` stay clean.
 //
 // Two flavors share one generator:
-//   - SINGLETON `<dir>.composition.generated.ts` — the `build --composition` /
+//   - SINGLETON `<dir>.composition.generated.ts` — the `build-composition` /
 //     release path, where the whole checkout IS the composition.
 //   - PER-NAME `<dir>.composition.<name>.generated.ts` — the auto-serve path,
 //     where main's checkout serves several compositions at once and each
@@ -494,7 +494,7 @@ export async function generateCompositionRegistry(opts: {
   /**
    * When set, emit per-name siblings (`<dir>.composition.<name>.generated.ts`)
    * for the served runtimes instead of the singletons — the auto-serve path,
-   * which leaves `build --composition` (release) untouched.
+   * which leaves `build-composition` (release) untouched.
    */
   name?: string;
   // Optional prebuilt context so one build shares ONE tree walk across several

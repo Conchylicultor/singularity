@@ -6,8 +6,8 @@ content-addressed vite lib-mode artifact under `~/.singularity/web-artifacts/`;
 the compose step assembles `dist/` (inline import map + entry + preloads +
 symlinks into the store). This is the DEFAULT frontend mode of
 `./singularity build`; `--monolith` / `SINGULARITY_WEB_MONOLITH=1` force the
-monolithic vite build, and `--composition`/release builds are always
-monolithic. Design/history:
+monolithic vite build, and `./singularity build-composition` (the release path)
+is always monolithic. Design/history:
 `research/2026-07-15-global-per-plugin-web-artifacts.md`.
 
 Key invariants:

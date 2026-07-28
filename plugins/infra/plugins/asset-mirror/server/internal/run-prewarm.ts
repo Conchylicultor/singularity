@@ -4,7 +4,7 @@ import type { AssetMirrorPrewarm } from "../../core";
 import { mirrorFetchToDisk } from "./fetch-to-disk";
 
 // The composition-filtered prewarm registry is gitignored and present only after
-// a `./singularity build --composition <name>`. Held in a variable (not a string
+// a `./singularity build-composition --composition <name>`. Held in a variable (not a string
 // literal pointing at the maybe-absent file) so tsc never tries to resolve the
 // gitignored module, and gated on `existsSync` so a plain build no-ops without a
 // caught import error — mirrors `server-core/bin/plugins-active.ts`.

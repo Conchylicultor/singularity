@@ -53,9 +53,12 @@ line at the top of every build):
   force it with `./singularity build --monolith` or `SINGULARITY_WEB_MONOLITH=1`.
   Precedence: explicit flag > env > default. `--artifacts` /
   `SINGULARITY_WEB_ARTIFACTS=1` are accepted no-ops from the opt-in phase.
-- **Release/composition builds are ALWAYS monolithic** — `--composition` (and
-  therefore `./singularity release`, which shells out to it) unconditionally
-  uses the optimized Rollup build regardless of flags/env.
+- **Release/composition builds are ALWAYS monolithic** — `./singularity
+  build-composition` (and therefore `./singularity release`, which shells out to
+  it) unconditionally uses the optimized Rollup build regardless of flags/env.
+  The rule lives in `resolveFrontendMode` in the CLI's
+  `commands/internal/app-artifacts.ts`, shared with `build` — which has no
+  composition of its own and passes `composition: null`.
 
 The bundle-analysis and `manualChunks` guidance below applies to the monolithic
 mode (and to release bundles); in artifact mode, eager-boot bytes are governed

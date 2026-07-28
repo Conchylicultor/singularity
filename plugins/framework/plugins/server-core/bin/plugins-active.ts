@@ -9,7 +9,7 @@ import { join } from "path";
 //      checkout. Absent for a normal git-worktree name — that is NOT an error,
 //      it just falls through.
 //   2. `server.composition.generated.ts` — the singleton emitted by
-//      `./singularity build --composition <name>` / release checkouts, where
+//      `./singularity build-composition --composition <name>` / release checkouts, where
 //      the whole checkout IS the composition.
 //   3. `server.generated.ts` — the full committed registry.
 //
