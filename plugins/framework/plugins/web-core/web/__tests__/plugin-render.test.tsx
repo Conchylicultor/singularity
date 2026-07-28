@@ -22,5 +22,10 @@ it(
       }
     }
   },
-  30_000,
+  // Generous on purpose, and NOT a performance budget: this test imports the
+  // ENTIRE web plugin graph, so vite's cold transform of every barrel happens
+  // inside the timed window (~25s warm, more cold or on a loaded host). At the
+  // old 30s it passed warm and failed cold — a red suite that says nothing about
+  // the invariant it guards (every plugin loads, every contribution well-formed).
+  180_000,
 );

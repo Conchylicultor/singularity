@@ -7,14 +7,8 @@ import {
   resetDeferredLoadStateForTests,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  createPaneStore,
-  type PaneStore,
-  Pane,
-  PaneStoreContext,
-  setLiveStore,
-  usePaneRoute,
-} from "@plugins/primitives/plugins/pane/web";
+import { type PaneStore, Pane, usePaneRoute } from "@plugins/primitives/plugins/pane/web";
+import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 const indexPane = Pane.define({
   id: "st-index",
@@ -57,19 +51,16 @@ function setNullHistory(): void {
 
 let store: PaneStore;
 beforeEach(() => {
-  store = createPaneStore({ live: true });
-  setLiveStore(store);
+  store = createTestSurfaceStore();
   resetDeferredLoadStateForTests();
 });
 afterEach(() => cleanup());
 
 function mount(plugins: Parameters<typeof PluginProvider>[0]["plugins"]) {
   return (
-    <PluginProvider plugins={plugins}>
-      <PaneStoreContext.Provider value={store}>
-        <Probe basePath="/app" />
-      </PaneStoreContext.Provider>
-    </PluginProvider>
+    <TestSurface store={store} plugins={plugins}>
+      <Probe basePath="/app" />
+    </TestSurface>
   );
 }
 

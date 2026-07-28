@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import { Pane, PaneResolveGuard } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneResolveGuard, type PaneStore } from "@plugins/primitives/plugins/pane/web";
+import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // Regression: a resolve hook whose live-state resource flips transiently back to
 // `pending` (e.g. an HTTP-fallback refetch failing under memory pressure) must
@@ -23,22 +24,40 @@ const testPane = Pane.define({
   component: () => <div data-testid="pane-body">resolved</div>,
 });
 
+// The guard's Loading / Not-Found chrome calls `useClose()` / `usePromote()`,
+// which read the surface's pane store — so the guard must be mounted in a
+// surface, not bare. A background store keeps this suite off the URL entirely:
+// it drives the resolve hook directly and has no route to derive. With an empty
+// route both hooks return null, so no promote/close button renders.
+let store: PaneStore;
+
+beforeEach(() => {
+  store = createTestSurfaceStore({ live: false });
+});
+
 afterEach(() => {
   cleanup();
   resolveResult = { pending: true, found: false };
 });
 
+/** Mount the guard for `id` in a surface. Returned so a case can re-render it. */
+function guard(id: string) {
+  return (
+    <TestSurface store={store}>
+      <PaneResolveGuard pane={testPane._internal} params={{ id }} />
+    </TestSurface>
+  );
+}
+
 describe("sticky resolve guard", () => {
   it("keeps the pane mounted when a resolved resource flips back to pending", () => {
     resolveResult = { pending: false, found: true };
-    const { getByTestId, queryByText, rerender } = render(
-      <PaneResolveGuard pane={testPane._internal} params={{ id: "a" }} />,
-    );
+    const { getByTestId, queryByText, rerender } = render(guard("a"));
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // Transient error: settled resource flips back to pending.
     resolveResult = { pending: true, found: false };
-    rerender(<PaneResolveGuard pane={testPane._internal} params={{ id: "a" }} />);
+    rerender(guard("a"));
 
     // The pane body is still mounted; no Loading fallback swapped in.
     expect(getByTestId("pane-body")).toBeTruthy();
@@ -47,14 +66,12 @@ describe("sticky resolve guard", () => {
 
   it("downgrades to Not Found on a settled miss even after it was found (real deletion)", () => {
     resolveResult = { pending: false, found: true };
-    const { getByTestId, queryByTestId, getByText, rerender } = render(
-      <PaneResolveGuard pane={testPane._internal} params={{ id: "a" }} />,
-    );
+    const { getByTestId, queryByTestId, getByText, rerender } = render(guard("a"));
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // The resource settles with the row gone — a genuine deletion.
     resolveResult = { pending: false, found: false };
-    rerender(<PaneResolveGuard pane={testPane._internal} params={{ id: "a" }} />);
+    rerender(guard("a"));
 
     expect(queryByTestId("pane-body")).toBeNull();
     expect(getByText("Not Found")).toBeTruthy();
@@ -63,15 +80,13 @@ describe("sticky resolve guard", () => {
   it("resets stickiness when params change (a swap re-roots the pane in place)", () => {
     // Resolve task "a".
     resolveResult = { pending: false, found: true };
-    const { getByTestId, queryByTestId, getAllByText, queryByText, rerender } = render(
-      <PaneResolveGuard pane={testPane._internal} params={{ id: "a" }} />,
-    );
+    const { getByTestId, queryByTestId, getAllByText, queryByText, rerender } = render(guard("a"));
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // Swap to task "b" while its resource is still loading. Stickiness from "a"
     // must NOT leak: the guard shows Loading for the new, unresolved identity.
     resolveResult = { pending: true, found: false };
-    rerender(<PaneResolveGuard pane={testPane._internal} params={{ id: "b" }} />);
+    rerender(guard("b"));
 
     expect(queryByTestId("pane-body")).toBeNull();
     expect(queryByText("Not Found")).toBeNull();

@@ -560,6 +560,45 @@ The router rebuilds its lookup table from the
 removing a `Pane.Register({ pane })` entry from a plugin's
 `contributions` array.
 
+## Testing
+
+The jsdom suites live in `web/__tests__/` and run via `bun run test:dom
+plugins/primitives/plugins/pane` (manual — nothing runs them automatically).
+
+**Mount a pane surface with `TestSurface` from `./surface-fixture`; never
+hand-pick the contexts your component happens to need.** The fixture wraps the
+real `PaneSurfaceProvider`, so a context that moves into the surface reaches
+every suite at once:
+
+```tsx
+import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+
+let store: PaneStore;
+beforeEach(() => { store = createTestSurfaceStore(); });
+
+render(
+  <TestSurface store={store} plugins={[testPlugin]}>
+    <ComponentUnderTest />
+  </TestSurface>,
+);
+```
+
+Two rules the fixture encodes, both of which have bitten:
+
+- **A store is not optional.** `PaneStoreContext` has no default (see
+  `usePaneStore`), so anything reaching a route hook — including a pane's
+  Loading / Not-Found chrome, via `useClose()`/`usePromote()` — throws without a
+  surface above it. Suites written before that change sat broken for weeks,
+  because nothing re-runs them.
+- **`live: true` for anything URL-derived.** `handleLocationChange` early-returns
+  for a background store, so a `live: false` store never reads
+  `window.location` and every deep-link case resolves empty. Conversely, pass
+  `createTestSurfaceStore({ live: false })` when the suite restores a route by
+  hand and must not have it re-parsed away from the URL.
+
+Suites that only drive a `PaneStore` object (`pane-isolation`, `history-sink`)
+need no surface at all — the fixture adds nothing there.
+
 ## Not yet implemented (deferred)
 
 - `keepalive` for heavy panes — switching slots remounts by default.

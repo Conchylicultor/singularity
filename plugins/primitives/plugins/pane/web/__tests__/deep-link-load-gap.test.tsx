@@ -9,13 +9,12 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   createPaneStore,
-  defaultStore,
   Pane,
-  PaneStoreContext,
-  setLiveStore,
+  type PaneStore,
   usePaneRoute,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // Regression: a cold deep-link reload must not flash the app's index/landing
 // pane at the deep-link URL.
@@ -104,9 +103,9 @@ function setPath(pathname: string): void {
 function resolveAt(pathname: string): string {
   setPath(pathname);
   const { getByTestId } = render(
-    <PluginProvider plugins={[testPlugin]}>
+    <TestSurface store={store} plugins={[testPlugin]}>
       <Probe basePath="/app" />
-    </PluginProvider>,
+    </TestSurface>,
   );
   return getByTestId("out").textContent ?? "";
 }
@@ -127,8 +126,12 @@ function RegistrySync() {
   return null;
 }
 
+// A fresh live surface store per case: the route lives in the store, so a
+// shared one would carry the previous case's resolved route into the next.
+let store: PaneStore;
+
 beforeEach(() => {
-  setLiveStore(defaultStore);
+  store = createTestSurfaceStore();
   // The deferred-load signal is a module-global singleton shared across cases in
   // this file — reset it so completion/failure set by one test never leaks into
   // the next (each case starts un-settled, matching a cold boot).
@@ -137,7 +140,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  setLiveStore(defaultStore);
   Object.defineProperty(window, "location", {
     configurable: true,
     writable: true,
@@ -180,9 +182,9 @@ describe("deep-link load gap", () => {
     // layout would show its loading fallback).
     setPath("/app/thing/123");
     const first = render(
-      <PluginProvider plugins={[testPlugin]}>
+      <TestSurface store={store} plugins={[testPlugin]}>
         <Probe basePath="/app" />
-      </PluginProvider>,
+      </TestSurface>,
     );
     expect(first.getByTestId("out").textContent).toBe("null");
     first.unmount();
@@ -190,9 +192,9 @@ describe("deep-link load gap", () => {
     // The deferred plugin arrives (target pane now registered) ⇒ the SAME URL
     // re-resolves to the target pane, not the index and not null.
     const second = render(
-      <PluginProvider plugins={[targetPlugin]}>
+      <TestSurface store={store} plugins={[targetPlugin]}>
         <Probe basePath="/app" />
-      </PluginProvider>,
+      </TestSurface>,
     );
     expect(second.getByTestId("out").textContent).toBe("deep-link-test-target");
   });
@@ -203,34 +205,34 @@ describe("deep-link load gap", () => {
 // asserted in isolation from any renderer.
 describe("tri-state route store", () => {
   it("no-clobber: an unresolved URL parse does NOT wipe a resolved non-empty route until settled", () => {
-    const store = createPaneStore({ live: false });
-    store.setBasePath("/app");
+    const bgStore = createPaneStore({ live: false });
+    bgStore.setBasePath("/app");
     // A route restored from persistence / prior navigation whose panes aren't in
     // the registry (cold boot: the deferred tier hasn't loaded them yet).
-    store.restoreRoute([{ paneId: "never-registered-pane", params: {} }]);
-    expect(store.getRouteState().kind).toBe("resolved");
+    bgStore.restoreRoute([{ paneId: "never-registered-pane", params: {} }]);
+    expect(bgStore.getRouteState().kind).toBe("resolved");
 
     // Pre-settle: a pre-registry parse of an unresolvable URL must be ignored —
     // clobbering here is exactly the historical cold-boot bug.
-    store.syncRouteFromUrl("/nope/xyz");
-    expect(store.getRouteState().kind).toBe("resolved");
+    bgStore.syncRouteFromUrl("/nope/xyz");
+    expect(bgStore.getRouteState().kind).toBe("resolved");
 
     // Post-settle: the genuinely dead link now wins, so it can surface as
     // NotFound instead of leaving a stale pane on screen.
     markDeferredLoadComplete();
-    store.syncRouteFromUrl("/nope/xyz");
-    expect(store.getRouteState().kind).toBe("unresolved");
+    bgStore.syncRouteFromUrl("/nope/xyz");
+    expect(bgStore.getRouteState().kind).toBe("unresolved");
   });
 
   it("history.state.pending round-trips a pending route without re-parsing the URL", () => {
-    const store = createPaneStore({ live: true });
-    store.setBasePath("/app");
+    const liveStore = createPaneStore({ live: true });
+    liveStore.setBasePath("/app");
     // A back/forward landing on a pending entry: the URL is preserved in
     // history.state.pending, so the store restores `unresolved` directly.
     setPath("/app/x/y");
     setHistoryState({ pending: "x/y" });
-    store.handleLocationChange();
-    const state = store.getRouteState();
+    liveStore.handleLocationChange();
+    const state = liveStore.getRouteState();
     expect(state.kind).toBe("unresolved");
     expect(state.kind === "unresolved" ? state.rawPath : null).toBe("x/y");
   });
@@ -240,15 +242,16 @@ describe("tri-state route store", () => {
     // registry (a leftover history.state from an old bundle). `usePaneRoute`
     // returns null (the layout renders NotFound), NOT the index pane.
     markDeferredLoadComplete();
-    const store = createPaneStore({ live: false });
-    store.setBasePath("/app");
-    store.restoreRoute([{ paneId: "stale-from-old-bundle", params: {} }]);
+    // Deliberately NOT live: `handleLocationChange` early-returns for a
+    // background store, so the restored route survives the surface's registry
+    // sync instead of being re-parsed away from `window.location`.
+    const staleStore = createPaneStore({ live: false });
+    staleStore.setBasePath("/app");
+    staleStore.restoreRoute([{ paneId: "stale-from-old-bundle", params: {} }]);
     const { getByTestId } = render(
-      <PluginProvider plugins={[testPlugin]}>
-        <PaneStoreContext.Provider value={store}>
-          <Probe basePath="/app" />
-        </PaneStoreContext.Provider>
-      </PluginProvider>,
+      <TestSurface store={staleStore} plugins={[testPlugin]}>
+        <Probe basePath="/app" />
+      </TestSurface>,
     );
     expect(getByTestId("out").textContent).toBe("null");
   });

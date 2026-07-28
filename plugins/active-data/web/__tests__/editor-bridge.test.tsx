@@ -31,6 +31,12 @@ const plugin = {
 
 afterEach(cleanup);
 
+// The chip appears only after Lexical mounts and decorates the initial state —
+// several async ticks. testing-library's default `findBy` window is 1s, which
+// holds when this file runs alone but not when it shares the host with the rest
+// of the DOM suite (whole-suite runs failed here on a mid-init empty editor).
+const MOUNT_TIMEOUT = { timeout: 10_000 };
+
 describe("active-data inline tags render as chips in the Lexical editor", () => {
   it("deserializes an inline token into a chip via the generic node bridge", async () => {
     render(
@@ -39,7 +45,7 @@ describe("active-data inline tags render as chips in the Lexical editor", () => 
       </PluginProvider>,
     );
     // The token becomes a decorator chip; its component renders.
-    const chip = await screen.findByTestId("chip");
+    const chip = await screen.findByTestId("chip", undefined, MOUNT_TIMEOUT);
     expect(chip.textContent).toBe("@mention-bob");
   });
 
@@ -49,7 +55,7 @@ describe("active-data inline tags render as chips in the Lexical editor", () => 
         <TextEditor value="hi @mention-bob there" onChange={() => {}} />
       </PluginProvider>,
     );
-    await screen.findByTestId("chip");
+    await screen.findByTestId("chip", undefined, MOUNT_TIMEOUT);
     // The bridge wraps every inline chip in a generic × removal affordance.
     expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
   });
@@ -62,7 +68,7 @@ describe("active-data inline tags render as chips in the Lexical editor", () => 
     );
     // The chip still renders, but no removal × in a non-editable editor (mirrors
     // read surfaces, which render the contribution directly without the bridge).
-    await screen.findByTestId("chip");
+    await screen.findByTestId("chip", undefined, MOUNT_TIMEOUT);
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
   });
 });
