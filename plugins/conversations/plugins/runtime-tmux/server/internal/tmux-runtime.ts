@@ -274,6 +274,11 @@ const SEP = "\t";
 // dropped/early keystroke). A second Enter on an already-empty box is a no-op,
 // so retry is safe. Timeouts are generous because many concurrent agents slow
 // tmux/Ink.
+//
+// Both timeouts are VERIFICATION outcomes, not delivery failures: they report
+// and return, because by then the keystrokes are already in the pane and only
+// the transcript can say whether the agent took them. pasteTurn throws only
+// when a tmux command itself fails — i.e. when the text provably never left us.
 const SUBMIT_POLL_INTERVAL_MS = 75;
 const SUBMIT_ENTER_RETRY_MS = 500;
 const PASTE_COMMIT_TIMEOUT_MS = 5_000;
@@ -393,9 +398,24 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
     if (Date.now() + SUBMIT_POLL_INTERVAL_MS >= submitDeadline) break;
     await Bun.sleep(SUBMIT_POLL_INTERVAL_MS);
   }
-  throw new Error(
-    `tmux pasteTurn for ${conversationId}: draft did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter`,
-  );
+
+  // Unverified, NOT failed — and the difference is why this reports instead of
+  // throwing. Everything with a side effect already happened: the text is in
+  // the pane and Enter has been sent (repeatedly). What ran out of time is the
+  // capture-pane READ that confirms the box cleared — and under host duress
+  // (spawn-bound polls, a lagging Ink render) that read loses the race against
+  // a submit that did land. Throwing here surfaced a delivered turn to the
+  // client as `HTTP 500 — Failed to send`, next to the message itself. The
+  // pending-turn client owns this exact verdict already: it holds the record in
+  // `posted` and resolves it against the transcript, which is the only ground
+  // truth for "did the agent get it" — routing to `unconfirmed` + its own
+  // report if it never lands. So the honest outcome is a 200 plus this report.
+  void recordReport({
+    kind: "crash",
+    source: "server-caught",
+    message: `tmux pasteTurn for ${conversationId}: draft did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter; submission unverified (transcript decides)`,
+    data: { errorType: "TmuxSubmitError", label: "tmux-runtime.pasteTurn" },
+  });
 }
 
 /**

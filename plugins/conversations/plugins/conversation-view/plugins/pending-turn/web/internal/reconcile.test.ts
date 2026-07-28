@@ -125,14 +125,54 @@ describe("matchPendingTurns", () => {
     expect(records[1]!.state).toBe("posted");
   });
 
-  test("terminal records are left untouched", () => {
+  test("a failed record whose text IS in the transcript is delivered, not failed", () => {
+    // The send landed and only its verification failed (tmux submit-verify
+    // timing out under load, a 500 raised after the paste). The transcript is
+    // ground truth in both directions, so the failure card retires here.
+    const failed = rec({
+      id: "f",
+      state: "failed-post",
+      failureKind: "http",
+      errorMessage: "HTTP 500",
+    });
+    const { records, changed } = matchPendingTurns([failed], [userText("hello world")]);
+    expect(changed).toBe(true);
+    expect(records[0]!.state).toBe("sent");
+  });
+
+  test("an unconfirmed record that lands late is delivered too", () => {
+    const late = rec({ id: "u", state: "unconfirmed", reported: true });
+    const { records } = matchPendingTurns([late], [userText("hello world")]);
+    expect(records[0]!.state).toBe("sent");
+  });
+
+  test("a failed record found parked in the queue drops its failure metadata", () => {
+    const failed = rec({
+      id: "f",
+      state: "failed-post",
+      failureKind: "http",
+      errorMessage: "HTTP 500",
+    });
+    const { records } = matchPendingTurns([failed], [enqueue("hello world")]);
+    expect(records[0]!.state).toBe("queued");
+    expect(records[0]!.failureKind).toBeUndefined();
+    expect(records[0]!.errorMessage).toBeUndefined();
+  });
+
+  test("a failed record never steals the event of an in-flight sibling", () => {
+    // Records are oldest-first and each event binds once: the failed record
+    // consumes the row it matches, the sibling stays in flight.
     const failed = rec({ id: "f", state: "failed-post" });
-    const unconfirmed = rec({ id: "u", state: "unconfirmed" });
-    const { records, changed } = matchPendingTurns(
-      [failed, unconfirmed],
-      [userText("hello world")],
-    );
+    const inFlight = rec({ id: "p" });
+    const { records } = matchPendingTurns([failed, inFlight], [userText("hello world")]);
+    expect(records.map((r) => r.state)).toEqual(["sent", "posted"]);
+  });
+
+  test("a failed record with no transcript row stays failed", () => {
+    const failed = rec({ id: "f", state: "failed-post", errorMessage: "HTTP 500" });
+    const { records, changed } = matchPendingTurns([failed], [userText("something else")]);
     expect(changed).toBe(false);
-    expect(records.map((r) => r.state)).toEqual(["failed-post", "unconfirmed"]);
+    expect(records[0]!.state).toBe("failed-post");
+    expect(records[0]!.errorMessage).toBe("HTTP 500");
   });
 });

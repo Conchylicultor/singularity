@@ -30,10 +30,13 @@ export interface MatchOutcome {
  * - Stamps `baselineUserText` (the count of `user-text` events) on records that
  *   have none yet — a pre-existing identical row can never match, because only
  *   events past the baseline are candidates.
- * - Matches each in-flight record (`sending` / `posted` / `queued`) against
- *   `user-text` events past its baseline (→ `sent`), falling back to
- *   `queue-operation` enqueue events whose content matches (→ `queued`).
- *   The user-text match takes precedence.
+ * - Matches every unresolved record against `user-text` events past its
+ *   baseline (→ `sent`), falling back to `queue-operation` enqueue events whose
+ *   content matches (→ `queued`). The user-text match takes precedence.
+ *   "Unresolved" includes the FAILED states (`failed-post` / `unconfirmed`):
+ *   the transcript is ground truth in BOTH directions, so a turn the CLI took
+ *   before the POST reported a failure is a delivered turn, and its failure
+ *   card retires here rather than stranding beside the delivered message.
  * - A per-pass consumed-index set (records oldest-first, events earliest-first)
  *   guarantees two identical in-flight messages bind to DISTINCT events.
  *   Already-matched records (`sent` during its flash window, `queued`) re-consume
@@ -102,15 +105,27 @@ export function matchPendingTurns(
       takeEnqueue(target);
       return rec;
     }
-    if (rec.state === "sending" || rec.state === "posted") {
-      if (takeUserText(target, baseline)) {
-        changed = true;
-        return { ...rec, state: "sent" as const, matchedAt: now };
-      }
-      if (takeEnqueue(target)) {
-        changed = true;
-        return { ...rec, state: "queued" as const };
-      }
+    // Everything else — in-flight (`sending` / `posted`) and failed
+    // (`failed-post` / `unconfirmed`) alike. A failed record is matchable for
+    // the same reason a matched record outranks a late POST error in the store:
+    // the POST outcome is not the truth channel. A send whose side effect
+    // landed and whose *verification* then failed (tmux submit-verify timing
+    // out under load, a 500 raised after the paste, a torn connection) shows up
+    // in the transcript regardless — and when it does, it was delivered.
+    if (takeUserText(target, baseline)) {
+      changed = true;
+      return { ...rec, state: "sent" as const, matchedAt: now };
+    }
+    if (takeEnqueue(target)) {
+      changed = true;
+      // Parked in the CLI's prompt queue: the native queue-op row takes over
+      // the display. Failure metadata is dropped with the failed state.
+      return {
+        ...rec,
+        state: "queued" as const,
+        failureKind: undefined,
+        errorMessage: undefined,
+      };
     }
     return rec;
   });

@@ -27,9 +27,13 @@ import {
 //
 // Never-revert (vocabulary borrowed from primitives/optimistic-mutation): the
 // transcript is ground truth; once a record matched (`sent`/`queued`) a late
-// POST outcome can only enrich it, never regress it. Failures are manual-retry
-// only — the tmux paste race can strand text in the CLI input box, so re-send
-// must be a deliberate user action.
+// POST outcome can only enrich it, never regress it. This holds SYMMETRICALLY —
+// a POST failure that lands first is not final either: the matcher keeps
+// `failed-post`/`unconfirmed` records in play, so a turn the agent actually
+// received retires its own failure card (see reconcile.ts). Only the transcript
+// resolves a record; no POST outcome, in either direction, is the last word.
+// Failures are manual-retry only — the tmux paste race can strand text in the
+// CLI input box, so re-send must be a deliberate user action.
 //
 // Multi-tab: all tabs render the shared records; only `ownerTabId === getTabId()`
 // drives the POST promise and the deadline timer. `deadlineAt` is absolute, so

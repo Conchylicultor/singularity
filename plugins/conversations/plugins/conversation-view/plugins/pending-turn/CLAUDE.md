@@ -13,8 +13,14 @@ State machine per record: `sending → posted → queued/sent`, with
 90s confirmation deadline elapses without a transcript match (the tmux
 paste-race symptom — files one deduped `turn-unconfirmed` report on entry).
 Never-revert: the transcript is ground truth; a late POST outcome can only
-enrich a matched record. Failures are **manual retry only** — the paste race can
-strand text in the CLI input box, so re-send must be deliberate.
+enrich a matched record. This holds **symmetrically** — a POST failure is not
+final either. `failed-post`/`unconfirmed` records stay matchable, so a turn the
+agent actually received (its *verification* failed, not its delivery: a tmux
+submit-verify timeout, a 500 raised after the paste, a torn connection) retires
+its own failure card on the next reconcile instead of stranding beside the
+delivered message. Nothing but the transcript resolves a record. Failures are
+**manual retry only** — the paste race can strand text in the CLI input box, so
+re-send must be deliberate.
 
 Matching (`internal/reconcile.ts`, pure, bun:test-covered): normalized-text
 identity (image `@<path>` tokens stripped mirroring the transcript parser,
