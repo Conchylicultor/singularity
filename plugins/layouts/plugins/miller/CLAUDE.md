@@ -136,16 +136,11 @@ not yet supported — see the open question in
     - `primitives/pane.PaneBasePathContext`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.PaneLayoutContext`
-    - `primitives/pane.PaneMatch`
-    - `primitives/pane.PaneMatchContext`
     - `primitives/pane.PaneResolveGuard`
     - `primitives/pane.PaneStore`
-    - `primitives/pane.setBasePath`
-    - `primitives/pane.usePaneRoute`
+    - `primitives/pane.usePaneMatch`
     - `primitives/pane.usePaneStore`
-    - `primitives/pane.useRenderSync`
     - `primitives/pane.useRoute`
-    - `primitives/pane.useSyncPaneRegistry`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `primitives/surface-id.useSurfaceTabId`

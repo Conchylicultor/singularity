@@ -6,6 +6,7 @@
 
 - Description: Agent manager app shell and layout.
 - Sub-plugins:
+  - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
   - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
   - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
   - **`worktree-switcher`** — Current worktree namespace label in the global action bar.

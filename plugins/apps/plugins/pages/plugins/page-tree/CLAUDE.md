@@ -12,8 +12,10 @@
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
     - `PageTree.Fields` ← `apps.pages.starred`
     - `pageDetailPane.Actions`
+    - `pagesTreePane.Actions`
   - Contributes:
     - `Pane.Register` "page-detail"
+    - `Pane.Register` "pages-tree"
     - `Pages.Sidebar` "Pages" → `PagesSidebar`
     - `PageDetail.Section` → `BacklinksSection`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
@@ -72,12 +74,16 @@
     - `createPageWithSeed`
     - `PageDetail`
     - `pageDetailPane`
+    - `pagesTreePane`
     - `PageTree`
 - Core:
   - Uses: `primitives/pane.defineRoute`
-  - Exports (values): `pageDetailRoute`
+  - Exports (values):
+    - `pageDetailRoute`
+    - `pagesTreeRoute`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/pages-nav`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/pages/starred`

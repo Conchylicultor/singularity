@@ -10,6 +10,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
+        - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
         - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
@@ -337,7 +338,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
     - **`full-pane`** — Full-pane layout renderer. Paints only the active pane (route.at(-1)) full-surface — the screen-stack navigation model, mounted by full-surface apps.
-    - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Resolves the route once and provides the shared match context.
+    - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Reads the surface's already-resolved match.
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
     - **`route-fallback`** — Loading placeholder for an unmatched pane route while the deferred plugin tier is still loading; renders null once loading settles so a genuinely-invalid URL falls through to not-found.
 

@@ -8,6 +8,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/tabs`
+    - `apps/agent-manager/pages-nav`
     - `apps/pages/history`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `debug/live-state-churn/emit`

@@ -21,6 +21,7 @@
 //   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
 
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
+  "apps/plugins/agent-manager/plugins/pages-nav",
   "apps/plugins/agent-manager/plugins/welcome",
   "apps/plugins/browser/plugins/bookmarks",
   "apps/plugins/browser/plugins/history",

@@ -104,6 +104,13 @@ params is explicit: `ancestorPane.useParams()`.
 
 ## Query the route from outside a pane
 
+The route match is a property of the **surface**, not of the layout renderer
+that paints the main area. `PaneSurfaceProvider` resolves it once and provides
+it to the whole surface subtree, so a sidebar, a pane toolbar and a pane body
+all read the same match. (Before that hoist the three layout renderers each
+owned the provider, and a sidebar — a *sibling* of the renderer — silently read
+`null` forever. Highlights simply never lit.)
+
 Use `useRouteEntry()` / `useRouteEntries()` to check whether a pane
 is present in the current route and read its params — without reaching
 into `_internal` or importing `usePaneMatch()`:
@@ -123,6 +130,15 @@ const lastConv = convEntries.at(-1);
 Each entry exposes `{ instanceId, params, fullParams }`. Use
 `instanceId` with `pane.close(instanceId)` when you need to close the
 specific instance you found.
+
+**Outside every surface there is no route to read.** Global chrome (the action
+bar at `Core.Root`, `Apps.TabBarActions`) is not inside any
+`PaneSurfaceProvider`, so these hooks throw there rather than returning a
+plausible-looking `null` — the same policy as `usePaneStore()`. `null` stays a
+legitimate *in-surface* answer ("this pane is not in the route"); the two used
+to be the same value, which is exactly how the dead highlights went unnoticed.
+Global chrome navigates with `navigate()` from
+`@plugins/apps-core/plugins/tabs/web`.
 
 ## Non-URL state: `options` and `hint`
 
@@ -664,6 +680,7 @@ See "Open questions" in the design doc.
     - `framework/tooling/e2e-harness.numArg`
     - `framework/tooling/e2e-harness.report`
     - `framework/tooling/e2e-harness.requireArg`
+    - `framework/tooling/e2e-harness.snap`
     - `framework/tooling/e2e-harness.withBrowser`
 - Cross-plugin:
   - Imported by:

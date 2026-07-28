@@ -165,6 +165,10 @@
       "name": "@singularity/plugin-apps-agent-manager",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/agent-manager/plugins/pages-nav": {
+      "name": "@singularity/plugin-apps-agent-manager-pages-nav",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/agent-manager/plugins/shell": {
       "name": "@singularity/plugin-apps-agent-manager-shell",
       "version": "0.0.1",
@@ -5081,6 +5085,8 @@
     "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
 
     "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
+
+    "@singularity/plugin-apps-agent-manager-pages-nav": ["@singularity/plugin-apps-agent-manager-pages-nav@workspace:plugins/apps/plugins/agent-manager/plugins/pages-nav"],
 
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
 

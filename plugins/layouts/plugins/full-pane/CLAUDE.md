@@ -20,15 +20,15 @@ the active pane and renders it through `PaneResolveGuard`, which gates on
 
 ## Public API
 
-- `<FullPane match?>` — the renderer.
+- `<FullPane/>` — the renderer. It takes no props.
 
 Mount it directly as an app's `Apps.App.component` for a pure full-surface app
-(e.g. Sonata). It self-resolves the route and provides `PaneMatchContext`.
-
-The optional `match` prop is for the mixing host (`@plugins/layouts/plugins/host`):
-when an app uses both layouts, the host resolves the route once and passes the
-`match` down, so Full-pane consumes it without a second registry sync or a
-duplicate `PaneMatchContext` provider. Standalone callers omit it.
+(e.g. Sonata), or let the mixing host (`@plugins/layouts/plugins/host`) pick it.
+Either way it is a **pure consumer**: the route match is resolved once per
+surface by `PaneSurfaceProvider` and read here via `usePaneMatch()`. The
+renderer neither syncs the pane registry nor provides `PaneMatchContext` — the
+match belongs to the surface (which also wraps the sidebar and toolbar), not to
+whichever renderer happens to paint the main area.
 
 Pane authors never import this plugin — they register panes with the regular
 `Pane.define` + `Pane.Register` flow. **Layout is the renderer's concern, never
@@ -44,13 +44,10 @@ declared on the pane.**
     - `layouts/route-fallback.DeferredRouteFallback`
     - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/pane.PaneBasePathContext`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.PaneLayoutContext`
-    - `primitives/pane.PaneMatch`
-    - `primitives/pane.PaneMatchContext`
     - `primitives/pane.PaneResolveGuard`
-    - `primitives/pane.usePaneRoute`
+    - `primitives/pane.usePaneMatch`
   - Exports (values): `FullPane`
 - Cross-plugin:
   - Imported by:

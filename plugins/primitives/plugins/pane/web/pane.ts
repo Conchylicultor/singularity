@@ -1026,6 +1026,14 @@ export const PaneLoadScopeContext = createContext<string>("");
  * route hooks and the base path through `PaneBasePathContext`, so wrapping a
  * subtree in this provider rebinds its entire route to `store` with no renderer
  * changes. Phase 2 mounts one `PaneSurfaceProvider` per tab.
+ *
+ * It ALSO resolves the route once for the whole surface and provides
+ * {@link PaneMatchContext} (see {@link SurfaceMatchProvider}). The match is a
+ * property of the *surface*, not of the layout renderer that happens to paint
+ * the main area: a sidebar or a toolbar is a SIBLING of the renderer's subtree,
+ * so while the renderers owned the provider every route read from chrome
+ * silently saw no match. Resolving here makes that class of bug
+ * unrepresentable.
  */
 export function PaneSurfaceProvider({
   store,
@@ -1063,11 +1071,41 @@ export function PaneSurfaceProvider({
         createElement(
           PaneLoadScopeContext.Provider,
           { value: loadScopePrefix ?? "" },
-          createElement(SurfaceIdContext.Provider, { value: surfaceId }, children),
+          createElement(
+            SurfaceIdContext.Provider,
+            { value: surfaceId },
+            createElement(SurfaceMatchProvider, { basePath, children }),
+          ),
         ),
       ),
     ),
   );
+}
+
+/**
+ * Resolves this surface's route match ONCE and provides it to the whole surface
+ * subtree — sidebar, toolbar and main area alike.
+ *
+ * It is a separate component on purpose: `PaneSurfaceProvider`'s own hooks run
+ * ABOVE the `PaneStoreContext.Provider` it renders, so a `usePaneRoute()` call
+ * there would read the OUTER store context (null at the top level → throw, or a
+ * parent surface's store). Mounting the resolve below both the store and the
+ * base-path providers is what makes it read this surface's own store.
+ *
+ * `usePaneRoute` is not a pure read — it also sets the store's base path and
+ * syncs the pane registry (both render-phase). Doing that here means the whole
+ * preamble runs before ANY of the app subtree renders, instead of after the
+ * sidebar has already painted.
+ */
+function SurfaceMatchProvider({
+  basePath,
+  children,
+}: {
+  basePath: string;
+  children: ReactNode;
+}): ReactNode {
+  const match = usePaneRoute(basePath);
+  return createElement(PaneMatchContext.Provider, { value: match }, children);
 }
 
 // ---------------------------------------------------------------------------
@@ -1176,15 +1214,43 @@ function extractOwnParams(
 // Router contexts.
 // ---------------------------------------------------------------------------
 
-export const PaneMatchContext = createContext<PaneMatch | null>(null);
+// Three-state on purpose, mirroring `PaneStoreContext`:
+//   `PaneMatch` — the route resolved to this set of panes.
+//   `null`      — resolved, but there is no match (pending URL / not-found). A
+//                 LEGITIMATE in-surface answer.
+//   `undefined` — no `PaneSurfaceProvider` above us at all. A wiring bug.
+//
+// Collapsing the last two into one `null` is what let the Pages sidebar's
+// active-page highlight stay dead for months: "there is no surface" and "this
+// pane is not in the route" were the same value, so the broken case looked
+// exactly like the normal one. See {@link useMatchOrThrow}.
+export const PaneMatchContext = createContext<PaneMatch | null | undefined>(undefined);
 export const PaneInstanceContext = createContext<number | undefined>(undefined);
 
+/**
+ * The single read of {@link PaneMatchContext}. Turns "rendered outside every
+ * pane surface" into a loud throw and returns the honest `PaneMatch | null` for
+ * everything inside one.
+ */
+function useMatchOrThrow(): PaneMatch | null {
+  const match = useContext(PaneMatchContext);
+  if (match === undefined) {
+    throw new Error(
+      "No <PaneSurfaceProvider> in the tree: this component renders outside " +
+        "every pane surface (global chrome such as the action bar), so it has " +
+        "no pane route to read. Use the cross-app navigate() from " +
+        "@plugins/apps-core/plugins/tabs/web instead.",
+    );
+  }
+  return match;
+}
+
 export function usePaneMatch(): PaneMatch | null {
-  return useContext(PaneMatchContext);
+  return useMatchOrThrow();
 }
 
 export function useCurrentPane(): PaneInternal | null {
-  const match = useContext(PaneMatchContext);
+  const match = useMatchOrThrow();
   const instanceId = useContext(PaneInstanceContext);
   if (!match || instanceId === undefined) return null;
   return match.panes.find(e => e.instanceId === instanceId)?.pane ?? null;
@@ -1346,11 +1412,11 @@ function makePaneObject(
   const { actionsSlot } = internal;
 
   function useParams(): Record<string, string> {
-    const match = useContext(PaneMatchContext);
+    const match = useMatchOrThrow();
     const instanceId = useContext(PaneInstanceContext);
     if (!match) {
       throw new Error(
-        `Pane "${internal.id}".useParams() called outside the pane layout renderer.`,
+        `Pane "${internal.id}".useParams() called with no resolved route in this surface.`,
       );
     }
     if (instanceId !== undefined) {
@@ -1368,7 +1434,7 @@ function makePaneObject(
 
   /** This pane's own MatchEntry, or null when it is not in the current match. */
   function useOwnEntry(): MatchEntry | null {
-    const match = useContext(PaneMatchContext);
+    const match = useMatchOrThrow();
     const instanceId = useContext(PaneInstanceContext);
     if (!match) return null;
     if (instanceId !== undefined) {
@@ -1391,7 +1457,7 @@ function makePaneObject(
   }
 
   function useRouteEntry(): PaneRouteEntry | null {
-    const match = useContext(PaneMatchContext);
+    const match = useMatchOrThrow();
     if (!match) return null;
     const entry = match.panes.find((e) => e.pane === internal);
     if (!entry) return null;
@@ -1399,7 +1465,7 @@ function makePaneObject(
   }
 
   function useRouteEntries(): PaneRouteEntry[] {
-    const match = useContext(PaneMatchContext);
+    const match = useMatchOrThrow();
     if (!match) return [];
     return match.panes
       .filter((e) => e.pane === internal)

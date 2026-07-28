@@ -3,11 +3,9 @@ import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/w
 import { scrollChildIntoView } from "@plugins/primitives/plugins/auto-scroll/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
-  type PaneMatch,
   PaneBasePathContext,
   PaneInstanceContext,
-  PaneMatchContext,
-  usePaneRoute,
+  usePaneMatch,
   usePaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -16,16 +14,11 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Column } from "./column";
 
-export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
+export function MillerColumns() {
+  // Label only — the match itself comes from the surface.
   const basePath = useContext(PaneBasePathContext);
   const store = usePaneStore();
-
-  // Always run the self-resolve hooks to keep hook order stable; it is cheap
-  // and idempotent. When a `match` prop is supplied (by the mixing host) we use
-  // it instead and skip the `PaneMatchContext` provider, since the host has
-  // already provided both the resolved match and the context.
-  const selfMatch = usePaneRoute(basePath);
-  const match = provided ?? selfMatch;
+  const match = usePaneMatch();
 
   const ref = useRef<HTMLDivElement>(null);
   const lastLength = useRef(0);
@@ -66,7 +59,7 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   // nowhere to drag it, so suppress the drag handle (and its grab cursor).
   const canReorder = match.panes.length > 1;
 
-  const body = (
+  return (
     <PluginErrorBoundary slot="layouts.miller" label={basePath}>
       {/* The horizontal flex row IS the x-scroll container: the SortableItem
           columns are its direct flex children, and the growth effect reveals
@@ -121,14 +114,5 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
         </SortableList>
       </div>
     </PluginErrorBoundary>
-  );
-
-  // Standalone: provide the resolved match as context. Under the mixing host
-  // (`match` prop supplied) the host already provides it — wrapping again would
-  // be redundant, so render the body directly.
-  return provided ? (
-    body
-  ) : (
-    <PaneMatchContext.Provider value={match}>{body}</PaneMatchContext.Provider>
   );
 }

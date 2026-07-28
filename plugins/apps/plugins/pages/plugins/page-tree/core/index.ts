@@ -1,1 +1,1 @@
-export { pageDetailRoute } from "./routes";
+export { pageDetailRoute, pagesTreeRoute } from "./routes";

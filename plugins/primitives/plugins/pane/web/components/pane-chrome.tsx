@@ -12,7 +12,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneScroll } from "./pane-scroll";
 import { ToolbarItem, type PaneHeaderZones } from "./pane-header-item";
-import { PaneMatchContext, type PaneMatch, type AnyPane } from "../pane";
+import { usePaneMatch, type PaneMatch, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
 
@@ -70,7 +70,7 @@ interface PaneChromeProps {
  */
 export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
-  const match = useContext(PaneMatchContext);
+  const match = usePaneMatch();
   const fallbackTitle = chromeTitle(pane, match);
   const layoutCtx = useContext(PaneLayoutContext);
   const { contentOwnsTopChrome, leadingControl } = useContext(SurfaceChromeContext);

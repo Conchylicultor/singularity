@@ -1,11 +1,4 @@
-import { useContext } from "react";
-import {
-  PaneBasePathContext,
-  setBasePath,
-  useRenderSync,
-  useRoute,
-  useSyncPaneRegistry,
-} from "@plugins/primitives/plugins/pane/web";
+import { useRoute } from "@plugins/primitives/plugins/pane/web";
 import { MillerColumns } from "./miller-columns";
 
 /**
@@ -16,21 +9,16 @@ import { MillerColumns } from "./miller-columns";
  * (e.g. Sonata) mount this instead, so global actions that open panes — the
  * theme customizer, etc. — work there too.
  *
- * It always syncs the pane registry (even with no pane open) so that
- * `openPane` from a global action never throws "Unknown pane". When a pane is
- * present it renders MillerColumns in an opaque, absolutely-positioned overlay;
- * otherwise it renders nothing and the host app stays fully interactive. The
- * overlay sits below the floating action bar (`z-popover`), so the action that
- * opened the pane remains reachable to toggle it closed. The host's container
- * must be positioned (`relative`).
+ * The surface (`PaneSurfaceProvider`) already sets this store's base path and
+ * syncs the pane registry, so `openPane` from a global action never throws
+ * "Unknown pane" here either. When a pane is present this renders MillerColumns
+ * in an opaque, absolutely-positioned overlay; otherwise it renders nothing and
+ * the host app stays fully interactive. The overlay sits below the floating
+ * action bar (`z-popover`), so the action that opened the pane remains
+ * reachable to toggle it closed. The host's container must be positioned
+ * (`relative`).
  */
 export function PaneOverlayHost() {
-  const basePath = useContext(PaneBasePathContext);
-  useRenderSync(() => {
-    setBasePath(basePath);
-  }, [basePath]);
-  useSyncPaneRegistry();
-
   const match = useRoute();
   const hasPane = !!match && match.panes.length > 0;
   if (!hasPane) return null;

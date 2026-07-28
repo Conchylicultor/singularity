@@ -173,6 +173,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
+        - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
+          - Web:
+            - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
+            - Uses:
+              - `apps/pages/page-tree.pagesTreePane`
+              - `conversations/conversation-view/action-bar.Conversation`
+              - `primitives/css/ui-kit.Button`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.baseUrl`
+              - `framework/tooling/e2e-harness.numArg`
+              - `framework/tooling/e2e-harness.requireArg`
+              - `framework/tooling/e2e-harness.snap`
+              - `framework/tooling/e2e-harness.withBrowser`
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
@@ -1415,8 +1429,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
               - `PageTree.Fields` ← `apps.pages.starred`
               - `pageDetailPane.Actions`
+              - `pagesTreePane.Actions`
             - Contributes:
               - `Pane.Register` "page-detail"
+              - `Pane.Register` "pages-tree"
               - `Pages.Sidebar` "Pages" → `PagesSidebar`
               - `PageDetail.Section` → `BacklinksSection`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
@@ -1475,12 +1491,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createPageWithSeed`
               - `PageDetail`
               - `pageDetailPane`
+              - `pagesTreePane`
               - `PageTree`
           - Core:
             - Uses: `primitives/pane.defineRoute`
-            - Exports (values): `pageDetailRoute`
+            - Exports (values):
+              - `pageDetailRoute`
+              - `pagesTreeRoute`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/pages-nav`
               - `apps/pages/content-search`
               - `apps/pages/history`
               - `apps/pages/starred`
@@ -7442,7 +7462,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Web:
-            - Slots: `Conversation.ActionBar` ← `code-explorer`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.dependent-count`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
+            - Slots: `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`, `code-explorer`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.dependent-count`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
             - Uses:
               - `primitives/css/spacing.Stack`
               - `primitives/slot-render.defineRenderSlot`
@@ -7451,6 +7471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Conversation`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/pages-nav`
               - `code-explorer`
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/docs-button`
@@ -13529,6 +13550,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/tabs`
+              - `apps/agent-manager/pages-nav`
               - `apps/pages/history`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `debug/live-state-churn/emit`
@@ -15500,13 +15522,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/route-fallback.DeferredRouteFallback`
           - `primitives/css/ui-kit.PortalForwardProvider`
           - `primitives/error-boundary.PluginErrorBoundary`
-          - `primitives/pane.PaneBasePathContext`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.PaneLayoutContext`
-          - `primitives/pane.PaneMatch`
-          - `primitives/pane.PaneMatchContext`
           - `primitives/pane.PaneResolveGuard`
-          - `primitives/pane.usePaneRoute`
+          - `primitives/pane.usePaneMatch`
         - Exports (values): `FullPane`
       - Cross-plugin:
         - Imported by:
@@ -15514,15 +15533,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/shell`
           - `apps/website/shell`
           - `layouts/host`
-    - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Resolves the route once and provides the shared match context.
+    - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Reads the surface's already-resolved match.
       - Web:
         - Uses:
           - `layouts/full-pane.FullPane`
           - `layouts/miller.MillerColumns`
           - `primitives/pane.AnyPane`
-          - `primitives/pane.PaneBasePathContext`
-          - `primitives/pane.PaneMatchContext`
-          - `primitives/pane.usePaneRoute`
+          - `primitives/pane.usePaneMatch`
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
@@ -15540,16 +15557,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneBasePathContext`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.PaneLayoutContext`
-          - `primitives/pane.PaneMatch`
-          - `primitives/pane.PaneMatchContext`
           - `primitives/pane.PaneResolveGuard`
           - `primitives/pane.PaneStore`
-          - `primitives/pane.setBasePath`
-          - `primitives/pane.usePaneRoute`
+          - `primitives/pane.usePaneMatch`
           - `primitives/pane.usePaneStore`
-          - `primitives/pane.useRenderSync`
           - `primitives/pane.useRoute`
-          - `primitives/pane.useSyncPaneRegistry`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
           - `primitives/surface-id.useSurfaceTabId`
@@ -20039,6 +20051,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
+              - `apps/agent-manager/pages-nav`
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
@@ -22441,6 +22454,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/e2e-harness.numArg`
           - `framework/tooling/e2e-harness.report`
           - `framework/tooling/e2e-harness.requireArg`
+          - `framework/tooling/e2e-harness.snap`
           - `framework/tooling/e2e-harness.withBrowser`
       - Cross-plugin:
         - Imported by:

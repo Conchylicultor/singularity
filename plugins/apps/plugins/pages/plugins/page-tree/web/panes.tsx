@@ -3,7 +3,11 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
-import { pageDetailRoute } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
+import {
+  pageDetailRoute,
+  pagesTreeRoute,
+} from "@plugins/apps/plugins/pages/plugins/page-tree/core";
+import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import {
   BlockEditor,
   PageContentColumn,
@@ -56,6 +60,28 @@ export const pageDetailPane = Pane.define({
   // Main surface: aux panes opened to the right never steal the tab title.
   titleOwner: true,
 });
+
+export const pagesTreePane = Pane.define({
+  // The page tree as a Miller column, so pages can be browsed from anywhere
+  // (a conversation, another app) without switching to the Pages app. The body
+  // is the `Pages.Sidebar` slot itself — the very render slot the Pages app's
+  // shell paints — so search, tree, trash and every future contribution appear
+  // here for free and this pane never names a contributor.
+  route: pagesTreeRoute,
+  component: PagesTreeBody,
+  // Nav-column width (the repo's list-column convention); detail panes run wider.
+  width: 320,
+  // NO `titleOwner`: this is a nav column. `pageDetailPane` owns the tab title,
+  // so opening a page from here titles the tab with the page.
+});
+
+function PagesTreeBody(): ReactElement {
+  return (
+    <PaneChrome pane={pagesTreePane} title="Pages">
+      <Pages.Sidebar.Render>{(item) => <item.component />}</Pages.Sidebar.Render>
+    </PaneChrome>
+  );
+}
 
 /** The page's title from the global pages resource, or undefined while loading. */
 function usePageTitle({ pageId }: { pageId: string }): string | undefined {

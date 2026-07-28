@@ -260,6 +260,7 @@ structurally unrepresentable.
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
+    - `apps/agent-manager/pages-nav`
     - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
