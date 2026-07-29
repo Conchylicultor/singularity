@@ -50,8 +50,8 @@ tmpdir sweep (repo convention).
   failed command can never be read as empty success.
 - **`spawnPassthrough(argv, { cwd, env, background, onSpawn }?)`** —
   exec-shaped spawn: stdout/stderr `"inherit"`, stdin `"ignore"`. `onSpawn`
-  exposes `{ pid, kill }` synchronously for signal forwarding (inspect.ts's
-  self re-exec). Returns `{ exitCode, signalCode, resourceUsage }`.
+  exposes `{ pid, kill }` synchronously for signal forwarding. Returns
+  `{ exitCode, signalCode, resourceUsage }`.
 - **`getWorktreeRoot(cwd?)` / `getMainRepoRoot(cwd?)`** — THE canonical git
   root helpers (`git rev-parse --show-toplevel` /
   `dirname(resolve(git rev-parse --git-common-dir))`), collapsing the ~51-file
@@ -72,8 +72,13 @@ a polling loop, and it does not absorb anything: the kill surfaces as
 Use it only where the CALLER owns a deadline it must honor — the first such
 site is `infra/ssh`, whose child talks to an arbitrary remote host and can wedge
 mid-handshake (past TCP connect, which is all OpenSSH's `ConnectTimeout`
-bounds), hanging an HTTP request forever. For everything else the ceiling stays
-the fleet's: op-wedge-watchdog's job, not a local timer's.
+bounds), hanging an HTTP request forever. For everything else there is now **no
+ceiling at all** — the fleet-level one (`debug/op-wedge-watchdog`) was retired
+2026-07-28 because every wedge it reported was a false positive
+(`research/2026-07-28-global-retire-op-wedge-watchdog.md`). A hung child with no
+`timeoutMs` hangs until a human notices and kills it; adding a local timer is
+still the wrong fix for a caller that owns no deadline, because it would absorb
+the hang instead of surfacing it.
 
 ## Deliberate non-goals
 
@@ -95,9 +100,14 @@ git-grep-safety), never an inline disable.
 ## Stage 2
 
 `plugins/**/server/**` (~65 sites, 38 files) is temporarily lint-ignored and
-migrates in batches once Stage 1 demonstrably stops the field `cli-op-wedge`
-reports — see the plan doc's deferred annex. Each batch shrinks the server
-ignore glob. The `pg_dump → pg_restore` stdin chaining is the known streaming
+migrates in batches once Stage 1 is confirmed to have stopped field wedges — see
+the plan doc's deferred annex. The automated instrument that was to confirm it
+(the `cli-op-wedge` report) was retired 2026-07-28 — every row it ever filed was
+a false positive; see
+`research/2026-07-28-global-retire-op-wedge-watchdog.md`. The criterion is now
+the absence of an observed field wedge (an op that never returns / a gridlocked
+fleet), diagnosed by hand off the progress-log heartbeat. Each batch shrinks the
+server ignore glob. The `pg_dump → pg_restore` stdin chaining is the known streaming
 exception there (stays piped or moves to a fifo/file handoff).
 
 ## Boundaries

@@ -9,7 +9,7 @@ import type { SpawnPassthroughOptions, SpawnPassthroughResult } from "./types";
  *
  * A non-zero exit is a RESULT — callers branch (most `process.exit(1)`).
  * `onSpawn` exposes `{ pid, kill }` synchronously for signal forwarding
- * (e.g. inspect.ts relaying SIGINT/SIGTERM to its re-exec).
+ * (relaying SIGINT/SIGTERM from the parent so a kill never strands the child).
  */
 export async function spawnPassthrough(
   argv: string[],

@@ -89,7 +89,6 @@ same threshold and can't desync in a row.
     - `debug/live-state-health`
     - `debug/memory`
     - `debug/op-rate`
-    - `debug/op-wedge-watchdog`
     - `debug/profiling/ops`
     - `debug/queue`
     - `debug/queue-health`

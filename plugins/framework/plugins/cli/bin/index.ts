@@ -1,6 +1,5 @@
 import { program } from "commander";
-import { isOpCommand, maybeReexecUnderInspector } from "./inspect";
-import { installOrphanGuard, ORPHAN_EXIT_CODE } from "./orphan-guard";
+import { installOrphanGuard, isOpCommand, ORPHAN_EXIT_CODE } from "./orphan-guard";
 import { registerApplyMigrations } from "./commands/apply-migrations";
 import { registerBuild } from "./commands/build";
 import { registerBuildComposition } from "./commands/build-composition";
@@ -14,17 +13,9 @@ import { registerServeApp } from "./commands/serve-app";
 import { registerStart } from "./commands/start";
 import { runCli } from "./run-cli";
 
-// Op commands re-exec once under `bun --inspect` (pre-armed wedge forensics —
-// see ./inspect.ts). When the re-exec ran, the child already executed the
-// command; this process only mirrors its exit code.
-if (await maybeReexecUnderInspector()) {
-  process.exit(process.exitCode ?? 0);
-}
-
-// Past the re-exec block only when THIS process runs the command: the inspected
-// worker (backstop if the wrapper is SIGKILLed and the worker reparents to 1),
-// or the direct op when the inspector is disabled (its ppid is the shell — the
-// primary guard there).
+// A long-running op runs in THIS process, whose ppid is the invoking shell —
+// so it observes its own orphaning directly. Terminate when that shell dies, so
+// an orphaned op never holds a host lock (the push mutex worst case) forever.
 if (isOpCommand(process.argv[2])) {
   installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
 }

@@ -128,7 +128,6 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `readOpRecords`
 - Cross-plugin:
   - Imported by:
-    - `debug/op-wedge-watchdog`
     - `debug/profiling/ops`
     - `stats/pushes`
 - Core:

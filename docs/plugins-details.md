@@ -6193,7 +6193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.op-wedge-watchdog`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -6378,7 +6378,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/config-orphans`
       - `debug/live-state-churn/monitor`
       - `debug/op-rate`
-      - `debug/op-wedge-watchdog`
       - `debug/paging-probe`
       - `debug/queue-health`
       - `debug/read-set-shrink`
@@ -10542,42 +10541,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `opRateConfig`
           - `OpRatePayloadSchema`
           - `OpTimePayloadSchema`
-    - **`op-wedge-watchdog`** — CLI op-wedge report renderer: a one-line Debug → Reports summary for the cli-op-wedge kind (CPU verdict, live-child count, partial-capture marker), plus the op-wedge-watchdog budget/capture config registration. Op-wedge watchdog: a main-only per-minute scheduled job that sweeps every worktree's CLI op markers off shared disk and, for a `./singularity {build,check,push}` whose pid is alive past the budget (default 15 min), runs capture-then-reap: native forensics from the LIVE wedged process (sample, recursive child tree with per-pid CPU-delta ratios, lsof, whole-table twice-sampled CPU delta) naming the SPECIMEN — the max-ratio spinning member of marker∪descendants, which for a marker-less nested op is a descendant, not the marker — then a JS-level interrogation over the specimen's own pre-armed inspector, then reaps the whole tree (descendants deepest-first, identity-verified, SIGTERM→SIGKILL; marker last) so one wedge cannot gridlock the fleet nor leave a burning orphan, and files ONE deduped cli-op-wedge report per (worktree, op, pid). Duress-exempt, since a wedged op is itself a cause of host duress.
-      - Web:
-        - Contributes:
-          - `ConfigV2.WebRegister`
-          - `Reports.KindView` → `OpWedgeSummary`
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/inline.Inline`
-          - `reports.Reports`
-      - Server:
-        - Contributes:
-          - `ConfigV2.Register` "op-wedge-watchdog"
-          - `report-kind` "cli-op-wedge"
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `config_v2.getConfig`
-          - `debug/profiling/op-log.readOpRecords`
-          - `infra/jobs.defineJob`
-          - `infra/paths.PS`
-          - `infra/paths.SINGULARITY_DIR`
-          - `infra/paths.worktreeDataDir`
-          - `infra/worktree.resolveActiveWorktreeOps`
-          - `infra/worktree.WorktreeOpInfo`
-          - `reports.recordReport`
-          - `reports.ReportKind`
-        - Register: `defineJob('debug.op-wedge-watchdog-monitor')`
-      - Core:
-        - Uses:
-          - `config_v2.defineConfig`
-          - `fields/bool/config.boolField`
-          - `fields/int/config.intField`
-        - Exports (types): `OpWedgePayload`
-        - Exports (values):
-          - `OpWedgePayloadSchema`
-          - `opWedgeWatchdogConfig`
     - **`paging-probe`** — Paging-probe web presence: registers the twin-probe config (enable, fat heap size, touch slice, GC cadence, QoS boost) for Settings -> Config. Twin-probe paging-victim discriminator: three main-only child processes with controlled heap shapes (lean / fat-idle / fat-touch) measure event-loop lag under host memory pressure, so divergence between them separates scheduling from cold-page-fault mechanisms. Config-gated, OFF by default; writes paging-probe-<variant>.jsonl.
       - Web:
         - Contributes: `ConfigV2.WebRegister`
@@ -10749,7 +10712,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `readOpRecords`
           - Cross-plugin:
             - Imported by:
-              - `debug/op-wedge-watchdog`
               - `debug/profiling/ops`
               - `stats/pushes`
           - Core:
@@ -11985,7 +11947,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/boot-watchdog`
               - `debug/live-state-churn/monitor`
               - `debug/op-rate`
-              - `debug/op-wedge-watchdog`
               - `debug/paging-probe`
               - `debug/queue-health`
               - `debug/read-set-shrink`
@@ -12434,7 +12395,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/boot-watchdog`
               - `debug/live-state-churn/monitor`
               - `debug/op-rate`
-              - `debug/op-wedge-watchdog`
               - `debug/paging-probe`
               - `debug/queue-health`
               - `debug/sentinel`
@@ -14886,7 +14846,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/boot-watchdog`
           - `debug/live-state-churn/monitor`
           - `debug/op-rate`
-          - `debug/op-wedge-watchdog`
           - `debug/queue-health`
           - `debug/read-set-shrink`
           - `debug/session-divergence`
@@ -15010,7 +14969,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/health-monitor`
           - `debug/heap-snapshot`
           - `debug/memory`
-          - `debug/op-wedge-watchdog`
           - `debug/paging-probe`
           - `debug/profiling/build`
           - `debug/profiling/op-log`
@@ -15477,7 +15435,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/runtime-tmux`
           - `debug/broadcasts`
           - `debug/memory`
-          - `debug/op-wedge-watchdog`
           - `debug/profiling/ops`
           - `debug/worktree-cleanup`
           - `infra/git-watcher`
@@ -18115,7 +18072,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/live-state-health`
               - `debug/memory`
               - `debug/op-rate`
-              - `debug/op-wedge-watchdog`
               - `debug/profiling/ops`
               - `debug/queue`
               - `debug/queue-health`
@@ -18582,7 +18538,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/live-state-churn/monitor`
               - `debug/live-state-health`
               - `debug/op-rate`
-              - `debug/op-wedge-watchdog`
               - `debug/queue`
               - `debug/queue-health`
               - `debug/read-set-shrink`
@@ -24031,7 +23986,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.op-wedge-watchdog`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
@@ -24106,7 +24061,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/duress-shed`
       - `debug/live-state-churn/monitor`
       - `debug/op-rate`
-      - `debug/op-wedge-watchdog`
       - `debug/queue-health`
       - `debug/read-set-shrink`
       - `debug/reports`

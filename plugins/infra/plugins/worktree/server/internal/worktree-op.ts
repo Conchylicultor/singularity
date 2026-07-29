@@ -43,9 +43,9 @@ export interface WorktreeOpInfo {
   // The CLI process running the op. Every marker already carries it (it is the
   // liveness key markerInfoFromParsed probes), and it is the ONLY stable handle
   // on the running process — so it is surfaced rather than dropped. Without it a
-  // consumer that needs process identity (the op-wedge watchdog, which must
-  // `sample`/`ps` the wedged process and dedupe per pid) would have to re-parse
-  // the marker files by hand, re-deriving paths this module owns.
+  // consumer that needs process identity (to `sample`/`ps` a suspect op by hand)
+  // would have to re-parse the marker files itself, re-deriving paths this
+  // module owns.
   pid: number;
   startedAt: string;
   phase: WorktreeOpPhase;
@@ -56,13 +56,6 @@ export interface WorktreeOpInfo {
   // whatever the marker carries. Lets the UI clock work time separately from the
   // wait spent queued for the lock.
   runningAt: string | null;
-  // The op's pre-armed inspector ws URL (`localhost:<port>/<token>`), recorded
-  // by markWorktreeOpStart when the CLI launched under `bun --inspect` (see
-  // cli/bin/inspect.ts). Surfaced for the same reason `pid` is: it is the only
-  // handle a consumer (the op-wedge watchdog's JS interrogation) has on the
-  // running process's inspector, and re-parsing marker JSON by hand would fork
-  // the format away from this module. null when the op was not armed.
-  inspect: string | null;
 }
 
 // The root holding every worktree's per-worktree singularity state (the `ops/`
@@ -103,13 +96,6 @@ export function markWorktreeOpStart(
   phase: WorktreeOpPhase = "running",
 ): void {
   mkdirSync(opsDir(slug), { recursive: true });
-  // CLI ops launch pre-armed with `bun --inspect=localhost:<port>/<token>`
-  // (cli/bin/inspect.ts). Recording the ws URL here is what makes a live wedge
-  // capturable: the op-wedge watchdog dumps this marker verbatim, so the
-  // forensics name where to point the inspector client. Absent when the
-  // kill-switch disabled arming (or for a non-CLI writer).
-  const inspect =
-    process.execArgv.find((a) => a.startsWith("--inspect="))?.slice("--inspect=".length) ?? null;
   writeFileSync(
     opFile(slug, op),
     JSON.stringify({
@@ -117,7 +103,6 @@ export function markWorktreeOpStart(
       pid: process.pid,
       startedAt: new Date().toISOString(),
       phase,
-      ...(inspect !== null ? { inspect } : {}),
     }),
   );
 }
@@ -182,7 +167,6 @@ type MarkerJson = {
   startedAt?: unknown;
   phase?: unknown;
   runningAt?: unknown;
-  inspect?: unknown;
 };
 
 // Pure: turn a parsed marker into its WorktreeOpInfo, or null if it names a dead
@@ -200,7 +184,6 @@ function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo 
     // Builds/checks stamp their own runningAt on the lock grant; for pushes it is
     // overridden by derivePushPhases from the authoritative holder file.
     runningAt: typeof parsed.runningAt === "string" ? parsed.runningAt : null,
-    inspect: typeof parsed.inspect === "string" ? parsed.inspect : null,
   };
 }
 

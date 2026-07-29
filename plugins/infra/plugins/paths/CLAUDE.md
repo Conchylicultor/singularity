@@ -40,7 +40,6 @@
     - `debug/health-monitor`
     - `debug/heap-snapshot`
     - `debug/memory`
-    - `debug/op-wedge-watchdog`
     - `debug/paging-probe`
     - `debug/profiling/build`
     - `debug/profiling/op-log`

@@ -76,7 +76,6 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `debug/live-state-churn/monitor`
     - `debug/live-state-health`
     - `debug/op-rate`
-    - `debug/op-wedge-watchdog`
     - `debug/queue`
     - `debug/queue-health`
     - `debug/read-set-shrink`

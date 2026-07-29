@@ -40,7 +40,6 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `debug/boot-watchdog`
     - `debug/live-state-churn/monitor`
     - `debug/op-rate`
-    - `debug/op-wedge-watchdog`
     - `debug/paging-probe`
     - `debug/queue-health`
     - `debug/read-set-shrink`

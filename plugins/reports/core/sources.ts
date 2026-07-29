@@ -15,7 +15,6 @@ export const SERVER_REPORT_SOURCES = [
   "server-boot-budget-monitor",
   "server-boot-monitor",
   "server-boot-watchdog",
-  "server-op-wedge-watchdog",
   "server-session-monitor",
   "server-duress-shed",
   "server-duress-monitor",

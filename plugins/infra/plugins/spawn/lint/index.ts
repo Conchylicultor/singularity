@@ -15,9 +15,13 @@ export default {
    *   production spawn code always lives outside tests, which the rule still
    *   guards. (Mirrors sink-safety's test exemption.)
    * - Plugin server trees: Stage 2 — the server-side migration (~65 sites) is
-   *   deferred until Stage 1 demonstrably stops the field cli-op-wedge reports;
-   *   tracked by the Stage-2 follow-up task. TEMPORARY: each Stage-2 batch
-   *   shrinks this glob.
+   *   deferred until Stage 1 is confirmed to have stopped field wedges. The
+   *   automated instrument that was to confirm it (the `cli-op-wedge` report) was
+   *   retired 2026-07-28 — every row it ever filed was a false positive; see
+   *   research/2026-07-28-global-retire-op-wedge-watchdog.md. The criterion is now
+   *   the absence of an observed field wedge (an op that never returns / a
+   *   gridlocked fleet), diagnosed by hand off the progress-log heartbeat.
+   *   Tracked by the Stage-2 follow-up task. TEMPORARY: each batch shrinks this glob.
    * - `migrations-interactive.ts`: the ONE genuinely streaming site —
    *   drizzle-kit's interactive create-vs-rename prompts must be parsed from
    *   live stdout while keystrokes are written back to stdin, which is

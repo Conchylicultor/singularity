@@ -6,7 +6,7 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
-  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.op-wedge-watchdog`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `primitives/slot-render.defineDispatchSlot`
@@ -81,7 +81,6 @@
     - `debug/duress-shed`
     - `debug/live-state-churn/monitor`
     - `debug/op-rate`
-    - `debug/op-wedge-watchdog`
     - `debug/queue-health`
     - `debug/read-set-shrink`
     - `debug/reports`

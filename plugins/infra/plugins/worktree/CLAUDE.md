@@ -64,7 +64,6 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `conversations/runtime-tmux`
     - `debug/broadcasts`
     - `debug/memory`
-    - `debug/op-wedge-watchdog`
     - `debug/profiling/ops`
     - `debug/worktree-cleanup`
     - `infra/git-watcher`

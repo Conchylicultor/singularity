@@ -43,7 +43,6 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `debug/boot-watchdog`
     - `debug/live-state-churn/monitor`
     - `debug/op-rate`
-    - `debug/op-wedge-watchdog`
     - `debug/paging-probe`
     - `debug/queue-health`
     - `debug/sentinel`

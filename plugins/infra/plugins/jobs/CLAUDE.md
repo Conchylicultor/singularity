@@ -129,7 +129,6 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `debug/boot-watchdog`
     - `debug/live-state-churn/monitor`
     - `debug/op-rate`
-    - `debug/op-wedge-watchdog`
     - `debug/queue-health`
     - `debug/read-set-shrink`
     - `debug/session-divergence`
