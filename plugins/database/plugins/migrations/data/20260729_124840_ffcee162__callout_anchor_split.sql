@@ -33,6 +33,10 @@
 -- is a no-op. (Guarding statement 3 on the rank's shape would NOT be idempotent:
 -- 'a0' is both a legitimate rank and one that ends in '0'.)
 
+-- (`expanded` below is `page_blocks.expanded`, which is alive and well — the
+-- concurrent `drop_expanded_column` migration only drops it from `agents` and
+-- `tasks`.)
+
 -- 1. Mint the anchor beside each callout, parked one character past its rank.
 --    deleted_at / trash_entry_id are copied so a trashed callout's anchor is not
 --    resurrected as a live row.
