@@ -17,8 +17,19 @@
   // Each view's `id` is authored explicitly (enforced by the
   // `config-stable-list-ids` check): view ids key `data_view_row_order`, so a
   // derived/auto id would shift on rename/edit and orphan the saved order.
+  //
+  // `groupBy: "origin"` on Pages segregates pages written by an automated
+  // session (the contributed `origin` enum from `agent-origin`) into their own
+  // **Agent** section, below **Mine**. The tree partitions ROOTS only and every
+  // descendant follows its root's section, so a subtree is never split. Unmarked
+  // pages project "user", so there is no "None" bucket. Trade-off: grouping
+  // suspends the tree's drag-reorder — see the agent-origin plugin's CLAUDE.md.
   "views": [
-    { "id": "pages", "name": "Pages", "view": { "type": "tree", "visibleFields": ["title"] } },
+    {
+      "id": "pages",
+      "name": "Pages",
+      "view": { "type": "tree", "visibleFields": ["title"], "groupBy": "origin" }
+    },
     {
       "id": "favorites",
       "name": "Favorites",

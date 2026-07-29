@@ -8,8 +8,9 @@ import { _blocks } from "./tables";
 import { computePageId } from "./page-id";
 import { notifyBlockChange } from "./notify";
 import { parseBlockData } from "./parse-block-data";
+import { BlockLifecycle } from "./document-hooks";
 
-export const handleCreateBlock = implement(createBlock, async ({ body }) => {
+export const handleCreateBlock = implement(createBlock, async ({ body, req }) => {
   const id = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let parentId = body.parentId ?? null;
   let rank;
@@ -57,6 +58,13 @@ export const handleCreateBlock = implement(createBlock, async ({ body }) => {
       .where(eq(_blocks.id, parentId));
   }
   await notifyBlockChange({ pageId, type: body.type, blockId: id });
+  // The row exists and the change has fanned out: contributors may now derive
+  // state from it (provenance markers, indexes). Generic dispatch — the handler
+  // never names a contributor, and a throwing hook fails the create loudly
+  // rather than leaving a half-derived row behind a swallowed error.
+  for (const hook of BlockLifecycle.AfterCreate.getContributions()) {
+    await hook.afterCreate({ id, type: body.type, parentId, pageId }, req);
+  }
   const [row] = await db
     .select()
     .from(_blocks)

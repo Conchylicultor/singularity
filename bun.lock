@@ -340,6 +340,10 @@
       "name": "@singularity/plugin-apps-pages",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/agent-origin": {
+      "name": "@singularity/plugin-apps-pages-agent-origin",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/content-search": {
       "name": "@singularity/plugin-apps-pages-content-search",
       "version": "0.0.1",
@@ -5237,6 +5241,8 @@
     "@singularity/plugin-apps-mail-thread-list": ["@singularity/plugin-apps-mail-thread-list@workspace:plugins/apps/plugins/mail/plugins/thread-list"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
+
+    "@singularity/plugin-apps-pages-agent-origin": ["@singularity/plugin-apps-pages-agent-origin@workspace:plugins/apps/plugins/pages/plugins/agent-origin"],
 
     "@singularity/plugin-apps-pages-content-search": ["@singularity/plugin-apps-pages-content-search@workspace:plugins/apps/plugins/pages/plugins/content-search"],
 

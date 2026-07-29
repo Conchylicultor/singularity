@@ -41,6 +41,7 @@ export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
 export type {
+  BlockCreateHook,
   BlockDeleteHook,
   BlockTrashHook,
   BlockRestoreHook,

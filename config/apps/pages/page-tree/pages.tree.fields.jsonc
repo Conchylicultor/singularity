@@ -1,13 +1,19 @@
-// @hash 7d359e7db820
+// @hash 89c4a86ca593
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   //
   // Field extensions folded into the pages-sidebar DataView schema, in fold order.
-  // `starred` is a filter-only dimension (hidden from every view's body via each
-  // view instance's `visibleFields`), and is what the Favorites view filters on.
+  // Both are filter/group-only dimensions — hidden from every view's body via each
+  // view instance's `visibleFields`, so neither renders a chip on a row.
+  //
+  // `starred` is what the Favorites view filters on.
+  // `origin` is what the Pages tree groups on: it splits the tree into a `Mine`
+  // section and an `Agent` section holding pages an automated session created.
+  // It sorts after `starred` so the Filter pill lists the older dimension first.
   "items": [
-    "apps.pages.starred:starred"
+    "apps.pages.starred:starred",
+    "apps.pages.agent-origin:origin"
   ]
 }

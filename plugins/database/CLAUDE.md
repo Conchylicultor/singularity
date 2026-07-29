@@ -182,6 +182,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `apps/mail/mailbox`
     - `apps/mail/sync`
     - `apps/mail/thread-list`
+    - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/sonata/library`

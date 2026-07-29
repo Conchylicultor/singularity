@@ -1050,6 +1050,7 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `plugins/page/plugins/editor/server/internal/tables.ts`
   - Exports (types):
     - `Block`
+    - `BlockCreateHook`
     - `BlockDeleteHook`
     - `BlockRestoreHook`
     - `BlocksChangedPayload`
@@ -1230,6 +1231,7 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `pageIdFromUrl`
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/pages/page-tree`
@@ -1278,6 +1280,7 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `page/url-paste`
     - `page/video`
   - Extended by:
+    - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
     - `apps/pages/starred` (table `page_blocks_ext_starred`)
     - `apps/story/marker` (table `page_blocks_ext_story`)
   - Endpoint callers: `editor-collab`

@@ -735,6 +735,7 @@ reaching for a heavier entity cache.
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
     - `apps/mail/thread-list`
+    - `apps/pages/agent-origin`
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`

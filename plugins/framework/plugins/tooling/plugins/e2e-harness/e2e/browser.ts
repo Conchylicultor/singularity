@@ -7,12 +7,25 @@
  * for B. None of them closed the browser in a `finally`, so any mid-script throw
  * leaked a Chromium process — `withBrowser` fixes that for every caller at once.
  */
+import { basename } from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { flag } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
+
+/**
+ * The running script, as a provenance label: `plugins/…/copy-paste-verify.ts`
+ * → `"e2e:copy-paste-verify"`. Derived from argv rather than passed in — a
+ * per-script argument is one more thing to remember, and the one that gets
+ * forgotten is the one that leaks a page into the user's sidebar.
+ */
+function originSource(): string {
+  const entry = process.argv[1];
+  if (!entry) return "e2e";
+  return `e2e:${basename(entry).replace(/\.[tj]sx?$/, "")}`;
+}
 
 export interface SessionOptions {
   viewport?: { width: number; height: number };
@@ -51,6 +64,17 @@ export async function withBrowser<T>(fn: (h: Harness) => Promise<T>): Promise<T>
         const context = await browser.newContext({
           viewport: opts.viewport ?? { ...DEFAULT_VIEWPORT },
           colorScheme: opts.colorScheme ?? detectOsColorScheme(),
+          // Provenance, declared once for the whole harness. `extraHTTPHeaders`
+          // applies to EVERY request the context issues — including the SPA's
+          // own `fetch` calls — so this single line marks all existing scripts,
+          // every future script, and ad-hoc `screenshot.ts --click` drives, with
+          // nothing to opt into and nothing to remember. Server-side, the
+          // agent-origin plugin turns the mark into a swept, segregated page.
+          // See research/2026-07-29-global-agent-origin-provenance-for-pages.md.
+          extraHTTPHeaders: {
+            "x-singularity-origin": "agent",
+            "x-singularity-origin-source": originSource(),
+          },
         });
         const page = await context.newPage();
         const label = opts.label ?? "";

@@ -1333,6 +1333,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `apps/mail/mailbox`
     - **`pages`** — Notion-like pages app.
       - Plugins:
+        - **`agent-origin`** — Agent-origin provenance for pages: contributes an `origin` enum field (Mine / Agent) into the Pages sidebar DataView, so pages written by an automated session segregate into their own `[Agent]` section of the tree. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, a bounded live resource exposes the marker set to the Pages sidebar's `origin` field, and a 24h retention sweep trashes the marked pages.
+          - Web:
+            - Contributes: `PageTree.Fields` "origin" → `OriginField`
+            - Uses:
+              - `apps/pages/page-tree.PageTree`
+              - `primitives/live-state.useWindowResource`
+            - Exports (types): `AgentPageRow`
+            - Exports (values):
+              - `AgentPageRowSchema`
+              - `agentPagesResource`
+          - Server:
+            - Contributes:
+              - `resource.declare` "pages-origin"
+              - `page.editor.block.afterCreate`
+            - Uses:
+              - `database.db`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/query-resource.windowQueryResource`
+              - `infra/retention.defineRetention`
+              - `page/editor._blocks`
+              - `page/editor.BlockLifecycle`
+              - `page/editor.deleteBlocksSubtree`
+            - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
+            - Entity extension of: `page/editor` (table `page_blocks_ext_origin`)
+            - Exports (values):
+              - `agentPagesServerResource`
+              - `pageBlocksOrigin`
+            - Register: `defineJob('retention.page_blocks_ext_origin')`
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
@@ -1428,7 +1456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PageDetail.Section` ← `apps.pages.page-tree`, `apps.story.pages-integration`
               - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
-              - `PageTree.Fields` ← `apps.pages.starred`
+              - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
               - `pageDetailPane.Actions`
               - `pagesTreePane.Actions`
             - Contributes:
@@ -1508,6 +1536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/pages-nav`
+              - `apps/pages/agent-origin`
               - `apps/pages/content-search`
               - `apps/pages/history`
               - `apps/pages/prompt-origin`
@@ -9634,6 +9663,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/mail/mailbox`
       - `apps/mail/sync`
       - `apps/mail/thread-list`
+      - `apps/pages/agent-origin`
       - `apps/pages/content-search`
       - `apps/pages/history`
       - `apps/sonata/library`
@@ -14414,6 +14444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/health`
+          - `apps/pages/agent-origin`
           - `apps/pages/starred`
           - `apps/sonata/playback-history`
           - `apps/sonata/rich/key-mode`
@@ -15168,6 +15199,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/deploy/health`
           - `apps/mail/reading-pane`
+          - `apps/pages/agent-origin`
           - `apps/pages/starred`
           - `apps/story/generation`
           - `build`
@@ -15200,6 +15232,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markCascadeBounded`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/agent-origin`
           - `debug/boot-profile`
           - `debug/slow-ops`
           - `debug/trace/engine`
@@ -16020,6 +16053,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugins/page/plugins/editor/server/internal/tables.ts`
         - Exports (types):
           - `Block`
+          - `BlockCreateHook`
           - `BlockDeleteHook`
           - `BlockRestoreHook`
           - `BlocksChangedPayload`
@@ -16200,6 +16234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pageIdFromUrl`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/agent-origin`
           - `apps/pages/content-search`
           - `apps/pages/history`
           - `apps/pages/page-tree`
@@ -16248,6 +16283,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/url-paste`
           - `page/video`
         - Extended by:
+          - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
           - `apps/pages/starred` (table `page_blocks_ext_starred`)
           - `apps/story/marker` (table `page_blocks_ext_story`)
         - Endpoint callers: `editor-collab`
@@ -22028,6 +22064,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/reading-pane`
           - `apps/mail/sync-status`
           - `apps/mail/thread-list`
+          - `apps/pages/agent-origin`
           - `apps/pages/history`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`

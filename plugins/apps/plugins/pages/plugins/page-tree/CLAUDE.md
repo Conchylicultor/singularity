@@ -34,7 +34,7 @@ is no channel through which it could. See
     - `PageDetail.Section` ← `apps.pages.page-tree`, `apps.story.pages-integration`
     - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
-    - `PageTree.Fields` ← `apps.pages.starred`
+    - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
     - `pageDetailPane.Actions`
     - `pagesTreePane.Actions`
   - Contributes:
@@ -114,6 +114,7 @@ is no channel through which it could. See
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/pages-nav`
+    - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`
     - `apps/pages/prompt-origin`

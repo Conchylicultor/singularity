@@ -148,6 +148,7 @@ check would have been a patch on a footgun.
     - `markCascadeBounded`
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/agent-origin`
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`
