@@ -81,6 +81,7 @@ genuine transient-chrome list escapes with
     - `apps/mail/thread-list`
     - `apps/pages/content-search`
     - `apps/pages/page-tree`
+    - `apps/pages/prompt-origin`
     - `apps/pages/trash`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`

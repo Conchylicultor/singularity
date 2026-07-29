@@ -35,6 +35,7 @@ case) and intentionally does not compose it.
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversations-view`
     - `debug/timeline`
+    - `page/prompt/block`
     - `primitives/bar`
     - `primitives/css/row`
     - `primitives/error-boundary`

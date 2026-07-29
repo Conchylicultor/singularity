@@ -18,6 +18,7 @@
     - `page/editor`
     - `page/editor-collab`
     - `page/image`
+    - `page/prompt/block`
     - `primitives/css/ui-kit`
     - `primitives/networking`
     - `primitives/overscroll-hint`

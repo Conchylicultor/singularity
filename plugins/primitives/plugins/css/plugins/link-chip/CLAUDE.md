@@ -16,6 +16,7 @@
     - `active-data/plugin-link`
     - `active-data/task`
     - `active-data/task-link`
+    - `apps/pages/prompt-origin`
     - `apps/studio/compositions`
     - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/release/release-artifact`

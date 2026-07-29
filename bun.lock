@@ -352,6 +352,10 @@
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/prompt-origin": {
+      "name": "@singularity/plugin-apps-pages-prompt-origin",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/shell": {
       "name": "@singularity/plugin-apps-pages-shell",
       "version": "0.0.1",
@@ -3007,6 +3011,18 @@
       "name": "@singularity/plugin-page-page-link",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/prompt": {
+      "name": "@singularity/plugin-page-prompt",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/prompt/plugins/block": {
+      "name": "@singularity/plugin-page-prompt-block",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/prompt/plugins/link": {
+      "name": "@singularity/plugin-page-prompt-link",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/quote": {
       "name": "@singularity/plugin-page-quote",
       "version": "0.0.1",
@@ -5228,6 +5244,8 @@
 
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
+    "@singularity/plugin-apps-pages-prompt-origin": ["@singularity/plugin-apps-pages-prompt-origin@workspace:plugins/apps/plugins/pages/plugins/prompt-origin"],
+
     "@singularity/plugin-apps-pages-shell": ["@singularity/plugin-apps-pages-shell@workspace:plugins/apps/plugins/pages/plugins/shell"],
 
     "@singularity/plugin-apps-pages-starred": ["@singularity/plugin-apps-pages-starred@workspace:plugins/apps/plugins/pages/plugins/starred"],
@@ -6483,6 +6501,12 @@
     "@singularity/plugin-page-numbered-list": ["@singularity/plugin-page-numbered-list@workspace:plugins/page/plugins/numbered-list"],
 
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
+
+    "@singularity/plugin-page-prompt": ["@singularity/plugin-page-prompt@workspace:plugins/page/plugins/prompt"],
+
+    "@singularity/plugin-page-prompt-block": ["@singularity/plugin-page-prompt-block@workspace:plugins/page/plugins/prompt/plugins/block"],
+
+    "@singularity/plugin-page-prompt-link": ["@singularity/plugin-page-prompt-link@workspace:plugins/page/plugins/prompt/plugins/link"],
 
     "@singularity/plugin-page-quote": ["@singularity/plugin-page-quote@workspace:plugins/page/plugins/quote"],
 

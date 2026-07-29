@@ -66,6 +66,7 @@ composes last.
     - `debug/trace/pane`
     - `debug/trace/spans`
     - `debug/trace/stall`
+    - `page/prompt/block`
     - `primitives/data-view`
     - `primitives/error-boundary`
     - `primitives/setup-steps`

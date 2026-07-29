@@ -7,7 +7,7 @@
 - Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
 - Web:
   - Slots:
-    - `TaskDetailSlots.Section` ← `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`
+    - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`
     - `taskDetailPane.Actions`
     - `tasksRootPane.Actions`
   - Contributes:
@@ -37,6 +37,7 @@
   - Imported by:
     - `active-data/task`
     - `active-data/task-link`
+    - `apps/pages/prompt-origin`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/markdown-extensions`
     - `conversations/conversation-view/tasks-panel`

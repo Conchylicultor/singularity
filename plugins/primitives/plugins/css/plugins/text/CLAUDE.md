@@ -361,6 +361,7 @@ fixed raw size escapes per-site via
     - `page/links`
     - `page/math/equation`
     - `page/math/inline`
+    - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`
     - `plugin-meta/facets/contributions/render-detail`

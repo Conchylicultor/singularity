@@ -119,6 +119,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/mail/thread-list`
     - `apps/pages/history`
     - `apps/pages/page-tree`
+    - `apps/pages/prompt-origin`
     - `apps/pages/trash`
     - `apps/pages/welcome`
     - `apps/pages/welcome/quick-create`
@@ -312,6 +313,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `page/links`
     - `page/math/inline`
     - `page/page-link`
+    - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`
     - `plugin-meta/facets/contributions/render-detail`

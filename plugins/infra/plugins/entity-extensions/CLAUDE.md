@@ -87,6 +87,7 @@ If no data needs preserving, accept the auto-generated migration as-is.
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
+    - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `tasks/auto-start`
     - `tasks/task-category`

@@ -1503,10 +1503,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/pages-nav`
               - `apps/pages/content-search`
               - `apps/pages/history`
+              - `apps/pages/prompt-origin`
               - `apps/pages/starred`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/story/pages-integration`
+        - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
+          - Web:
+            - Contributes: `TaskDetailSlots.Section` "prompt-origin" → `PromptOriginSection`
+            - Uses:
+              - `apps/pages/page-tree.pageDetailPane`
+              - `page/prompt/link.usePromptTaskLink`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/link-chip.LinkChip`
+              - `primitives/css/row.SectionHeaderRow`
+              - `primitives/css/spacing.Stack`
+              - `primitives/live-state.useResource`
+              - `primitives/pane.useOpenPane`
+              - `tasks/task-detail.TaskDetailSlots`
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.
           - Web:
             - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.trash`
@@ -7363,6 +7377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
+              - `page/prompt/block`
               - `tasks/attempt-view`
               - `tasks/task-events`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
@@ -7456,6 +7471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view`
           - `conversations/summary`
           - `debug/profiling/ops`
+          - `page/prompt/block`
           - `primitives/launch`
           - `review`
           - `stats/cost`
@@ -9648,6 +9664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `page/editor-collab`
       - `page/inline-date`
       - `page/links`
+      - `page/prompt/link`
       - `plugin-meta/plugin-health`
       - `primitives/data-view/custom-columns`
       - `primitives/data-view/view-order`
@@ -13527,6 +13544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
+              - `page/prompt/block`
               - `primitives/css/ui-kit`
               - `primitives/networking`
               - `primitives/overscroll-hint`
@@ -14253,6 +14271,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/editor-collab`
           - `page/inline-page-link`
+          - `page/prompt/link`
           - `page/turn-into-page`
           - `plugin-meta/composition`
           - `plugin-meta/plugin-health`
@@ -14378,6 +14397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
+          - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `tasks/auto-start`
           - `tasks/task-category`
@@ -15123,6 +15143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-progress`
           - `conversations/conversation-view/notes`
           - `conversations/conversations-view/queue`
+          - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `shell/notifications`
           - `tasks/auto-start`
@@ -15832,7 +15853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses:
@@ -16164,6 +16185,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/math/inline`
           - `page/numbered-list`
           - `page/page-link`
+          - `page/prompt/block`
           - `page/quote`
           - `page/read-only-view`
           - `page/sub-page`
@@ -16643,6 +16665,106 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `pageLinkBlock`
+    - **`prompt`** — Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.
+      - Plugins:
+        - **`block`** — Prompt block type: block text plus a launch control that turns it into an agent run, and chips for the conversations it launched. Prompt block type: registers its `data` schema (plain block text) at the server write boundary.
+          - Web:
+            - Contributes: `Editor.Block` "prompt" → `PromptBlock`
+            - Uses:
+              - `conversations/conversation-ui/item.ConversationItem`
+              - `conversations/conversation-view.conversationPane`
+              - `page/editor.BLOCK_INSET`
+              - `page/editor.BlockRendererProps`
+              - `page/editor.BlockTextEditor`
+              - `page/editor.Editor`
+              - `page/prompt/link.createPromptTask`
+              - `page/prompt/link.useBlockPromptTasks`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/launch.LaunchControl`
+              - `primitives/live-state.useResource`
+              - `primitives/pane.useOpenPane`
+            - Exports (values): `promptBlock`
+          - Server:
+            - Contributes: `page.block-data` "prompt"
+            - Uses: `page/editor.Editor`
+          - Core:
+            - Uses:
+              - `page/editor.defineBlock`
+              - `page/editor.textBlockSchema`
+            - Exports (values):
+              - `promptBlock`
+              - `promptDataSchema`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.arg`
+              - `framework/tooling/e2e-harness.baseUrl`
+              - `framework/tooling/e2e-harness.report`
+              - `framework/tooling/e2e-harness.snap`
+              - `framework/tooling/e2e-harness.withBrowser`
+              - `page/editor.openBlankPage`
+        - **`link`** — Task↔prompt-block link: reads the tasks a prompt block launched (useBlockPromptTasks) and the page/block a task came from (usePromptTaskLink), and creates a provenance-stamped task (createPromptTask). No UI of its own. Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the block-keyed and task-keyed live reads over it, the create-task endpoint, and the Pages task category.
+          - Server:
+            - Contributes:
+              - `resource.declare` "prompt-block-tasks"
+              - `resource.declare` "prompt-task-origins"
+              - `taskCategory` "pages"
+            - Uses:
+              - `database.db`
+              - `infra/endpoints.implement`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/query-resource.queryResource`
+              - `tasks/task-category.setTaskCategory`
+              - `tasks/task-category.TaskCategory`
+              - `tasks/task-title.scheduleTaskTitleUpdate`
+              - `tasks/task-title.synthesiseTitleFallback`
+              - `tasks/tasks-core._tasks`
+              - `tasks/tasks-core.createTask`
+            - DB schema: `plugins/page/plugins/prompt/plugins/link/server/internal/tables.ts`
+            - Entity extension of: `tasks/tasks-core` (table `tasks_ext_prompt_block`)
+            - Exports (values):
+              - `blockPromptTasksServerResource`
+              - `createTaskFromPromptBlock`
+              - `getPromptTaskOrigin`
+              - `PAGES_CATEGORY_ID`
+              - `promptBlock`
+              - `promptTaskOriginsServerResource`
+            - Resources:
+              - `prompt-block-tasks` (keyed)
+              - `prompt-task-origins` (keyed)
+            - Routes: `POST /api/prompt-blocks/tasks`
+          - Web:
+            - Uses:
+              - `infra/endpoints.fetchEndpoint`
+              - `primitives/live-state.useResource`
+            - Exports (types):
+              - `PromptTaskLink`
+              - `PromptTaskOrigin`
+            - Exports (values):
+              - `createPromptTask`
+              - `useBlockPromptTasks`
+              - `usePromptTaskLink`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/pages/prompt-origin`
+              - `page/prompt/block`
+          - Shared:
+            - Exports (types):
+              - `CreatePromptBlockTaskBody`
+              - `PromptTaskLink`
+              - `PromptTaskOrigin`
+            - Exports (values):
+              - `blockPromptTasksResource`
+              - `createPromptBlockTask`
+              - `PromptTaskLinkSchema`
+              - `PromptTaskOriginSchema`
+              - `promptTaskOriginsResource`
     - **`quote`** — Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "quote" → `QuoteBlock`
@@ -18344,6 +18466,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
+              - `apps/pages/prompt-origin`
               - `apps/studio/compositions`
               - `apps/studio/compositions/entry-points`
               - `apps/studio/compositions/membership-summary`
@@ -18366,6 +18489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/contention`
               - `debug/trace/gates`
               - `fields/tags/inline`
+              - `page/prompt/block`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/facets/slots/render-contributions`
@@ -18472,6 +18596,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/pane`
               - `debug/trace/spans`
               - `debug/trace/stall`
+              - `page/prompt/block`
               - `primitives/data-view`
               - `primitives/error-boundary`
               - `primitives/setup-steps`
@@ -18632,6 +18757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversations-view`
               - `debug/timeline`
+              - `page/prompt/block`
               - `primitives/bar`
               - `primitives/css/row`
               - `primitives/error-boundary`
@@ -18650,6 +18776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/plugin-link`
               - `active-data/task`
               - `active-data/task-link`
+              - `apps/pages/prompt-origin`
               - `apps/studio/compositions`
               - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/release/release-artifact`
@@ -18860,6 +18987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/thread-list`
               - `apps/pages/content-search`
               - `apps/pages/page-tree`
+              - `apps/pages/prompt-origin`
               - `apps/pages/trash`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
@@ -19057,6 +19185,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/thread-list`
               - `apps/pages/history`
               - `apps/pages/page-tree`
+              - `apps/pages/prompt-origin`
               - `apps/pages/trash`
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
@@ -19250,6 +19379,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/links`
               - `page/math/inline`
               - `page/page-link`
+              - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
               - `plugin-meta/facets/contributions/render-detail`
@@ -19480,6 +19610,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `history/dialog`
               - `infra/events-test`
               - `page/editor`
+              - `page/prompt/block`
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/command-palette`
@@ -19731,6 +19862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/links`
               - `page/math/equation`
               - `page/math/inline`
+              - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
               - `plugin-meta/facets/contributions/render-detail`
@@ -19870,6 +20002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `fields/enum/inline`
               - `fields/tags/inline`
+              - `page/prompt/block`
               - `primitives/data-view`
               - `primitives/data-view/view-core`
               - `primitives/filter-chips`
@@ -20181,6 +20314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/image`
               - `page/math/equation`
               - `page/math/inline`
+              - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
               - `page/video`
@@ -21711,6 +21845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
           - `conversations/conversations-view`
           - `debug/reports`
+          - `page/prompt/block`
           - `reports/launch-fix`
           - `screenshot`
           - `tasks/attempt-view`
@@ -21825,6 +21960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/thread-list`
           - `apps/pages/history`
           - `apps/pages/page-tree`
+          - `apps/pages/prompt-origin`
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
@@ -21913,6 +22049,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
+          - `page/prompt/block`
+          - `page/prompt/link`
           - `page/read-only-view`
           - `plugin-meta/plugin-health`
           - `primitives/data-view/custom-columns`
@@ -22454,6 +22592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/thread-list`
           - `apps/pages/content-search`
           - `apps/pages/page-tree`
+          - `apps/pages/prompt-origin`
           - `apps/pages/shell`
           - `apps/pages/welcome`
           - `apps/pages/welcome/quick-create`
@@ -22545,6 +22684,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/host`
           - `layouts/miller`
           - `layouts/route-fallback`
+          - `page/prompt/block`
           - `plugin-meta/contributions-table`
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
@@ -25207,6 +25347,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/agents`
           - `improve`
+          - `page/prompt/link`
           - `tasks`
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
@@ -25309,7 +25450,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
       - Web:
         - Slots:
-          - `TaskDetailSlots.Section` ← `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`
+          - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`
           - `taskDetailPane.Actions`
           - `tasksRootPane.Actions`
         - Contributes:
@@ -25339,6 +25480,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data/task`
           - `active-data/task-link`
+          - `apps/pages/prompt-origin`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/markdown-extensions`
           - `conversations/conversation-view/tasks-panel`
@@ -25660,7 +25802,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('task-title.on-conversation-created')`
           - `defineJob('task-title.on-user-turn-sent')`
       - Cross-plugin:
-        - Imported by: `tasks`
+        - Imported by:
+          - `page/prompt/link`
+          - `tasks`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
         - Contributes:
@@ -25914,6 +26058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/session-divergence`
           - `debug/slow-ops/cluster`
           - `debug/worktree-cleanup`
+          - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `review/plugin-changes`
           - `stats/cost`
@@ -25938,6 +26083,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-effort` (table `tasks_ext_effort`)
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
+          - `page/prompt/link` (table `tasks_ext_prompt_block`)
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:

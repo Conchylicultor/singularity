@@ -422,6 +422,7 @@ structurally unrepresentable.
     - `page/image`
     - `page/math/equation`
     - `page/math/inline`
+    - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`
     - `page/video`

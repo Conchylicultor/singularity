@@ -236,6 +236,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `page/editor-collab`
     - `page/inline-date`
     - `page/links`
+    - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`

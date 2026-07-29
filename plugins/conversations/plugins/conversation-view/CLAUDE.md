@@ -95,6 +95,7 @@
     - `conversations/conversations-view`
     - `conversations/summary`
     - `debug/profiling/ops`
+    - `page/prompt/block`
     - `primitives/launch`
     - `review`
     - `stats/cost`

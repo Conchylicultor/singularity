@@ -58,6 +58,7 @@
     - `debug/timeline`
     - `fields/enum/inline`
     - `fields/tags/inline`
+    - `page/prompt/block`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
     - `primitives/filter-chips`

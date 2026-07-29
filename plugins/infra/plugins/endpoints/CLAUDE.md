@@ -331,6 +331,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `page/editor`
     - `page/editor-collab`
     - `page/inline-page-link`
+    - `page/prompt/link`
     - `page/turn-into-page`
     - `plugin-meta/composition`
     - `plugin-meta/plugin-health`

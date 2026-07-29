@@ -737,6 +737,7 @@ reaching for a heavier entity cache.
     - `apps/mail/thread-list`
     - `apps/pages/history`
     - `apps/pages/page-tree`
+    - `apps/pages/prompt-origin`
     - `apps/pages/starred`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
@@ -825,6 +826,8 @@ reaching for a heavier entity cache.
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`
+    - `page/prompt/block`
+    - `page/prompt/link`
     - `page/read-only-view`
     - `plugin-meta/plugin-health`
     - `primitives/data-view/custom-columns`

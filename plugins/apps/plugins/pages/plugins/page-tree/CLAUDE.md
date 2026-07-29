@@ -86,6 +86,7 @@
     - `apps/agent-manager/pages-nav`
     - `apps/pages/content-search`
     - `apps/pages/history`
+    - `apps/pages/prompt-origin`
     - `apps/pages/starred`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`

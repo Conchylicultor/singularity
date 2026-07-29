@@ -43,6 +43,7 @@ defined in exactly one place. The distinct export buys two things:
     - `apps-core/surface/floating`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
+    - `apps/pages/prompt-origin`
     - `apps/studio/compositions`
     - `apps/studio/compositions/entry-points`
     - `apps/studio/compositions/membership-summary`
@@ -65,6 +66,7 @@ defined in exactly one place. The distinct export buys two things:
     - `debug/trace/contention`
     - `debug/trace/gates`
     - `fields/tags/inline`
+    - `page/prompt/block`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/routes/render-detail`
     - `plugin-meta/facets/slots/render-contributions`

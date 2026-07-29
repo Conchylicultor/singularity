@@ -354,6 +354,7 @@ env shim needed. `compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(.
     - `conversations/conversation-progress`
     - `conversations/conversation-view/notes`
     - `conversations/conversations-view/queue`
+    - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `shell/notifications`
     - `tasks/auto-start`

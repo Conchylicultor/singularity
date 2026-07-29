@@ -107,6 +107,7 @@ a real density-scaling utility backed by `--pad-card`), or
     - `history/dialog`
     - `infra/events-test`
     - `page/editor`
+    - `page/prompt/block`
     - `page/read-only-view`
     - `primitives/collapsible-wrap`
     - `primitives/command-palette`

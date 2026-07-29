@@ -65,6 +65,7 @@ directly — it is no longer re-exported here.)
     - `conversations/conversation-view/op-status`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
+    - `page/prompt/block`
     - `tasks/attempt-view`
     - `tasks/task-events`
 

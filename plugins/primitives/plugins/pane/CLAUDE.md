@@ -748,6 +748,7 @@ See "Open questions" in the design doc.
     - `apps/mail/thread-list`
     - `apps/pages/content-search`
     - `apps/pages/page-tree`
+    - `apps/pages/prompt-origin`
     - `apps/pages/shell`
     - `apps/pages/welcome`
     - `apps/pages/welcome/quick-create`
@@ -839,6 +840,7 @@ See "Open questions" in the design doc.
     - `layouts/host`
     - `layouts/miller`
     - `layouts/route-fallback`
+    - `page/prompt/block`
     - `plugin-meta/contributions-table`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`

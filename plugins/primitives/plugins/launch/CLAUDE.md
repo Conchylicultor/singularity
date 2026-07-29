@@ -50,6 +50,7 @@
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversations-view`
     - `debug/reports`
+    - `page/prompt/block`
     - `reports/launch-fix`
     - `screenshot`
     - `tasks/attempt-view`
