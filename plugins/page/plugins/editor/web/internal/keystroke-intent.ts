@@ -12,7 +12,6 @@
 import {
   childrenOf,
   nextVisibleLine,
-  PAGE_BLOCK_TYPE,
   prevVisibleLine,
   type BlockNode,
 } from "../../core";
@@ -53,6 +52,15 @@ export type KeyIntent =
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
   | { type: "mergeNext" } // delete at end → merge the next visible line up into this block
   | { type: "outdent" } // backspace at start when indented, or shift+tab
+  /**
+   * Backspace at the start of a container anchor's FIRST child: dissolve the
+   * container (`blockId` is the ANCHOR's id, not the caret's block) and promote
+   * its children into its slot. Not the generic `outdent` rung: `outdentOne`
+   * adopts the followers, so outdenting the first child would pop it out of the
+   * box AND take the rest of the container's content with it as its own
+   * children — a re-nesting nobody asked for.
+   */
+  | { type: "unwrap"; blockId: string }
   | { type: "indent" } // tab
   | { type: "nav"; dir: "up" | "down" | "left" | "right" }
   | { type: "selectBlock"; extend?: "up" | "down" } // shift+arrow at a visual edge
@@ -64,6 +72,31 @@ export interface IntentContext {
   nodes: BlockNode[];
   /** The block whose editor fired the keystroke. */
   blockId: string;
+  /**
+   * Does this node's TYPE carry editable text? Resolved from the block handle's
+   * derived `acceptsText` (`"text" in schema.shape`) by the consumer, because the
+   * resolver may not name a block type and cannot see the registry.
+   *
+   * Both structural deletions across a line break gate on it. Merging text INTO a
+   * void row writes `data.text` onto a schema that has none — a 400 at the write
+   * boundary — and merging one AWAY deletes a row whose content is not text (a
+   * sub-page's whole subtree, a container's box). This one predicate replaces the
+   * two hardcoded `PAGE_BLOCK_TYPE` comparisons that used to guard it, so the
+   * same protection now covers every void type: container anchors, `divider`,
+   * `image`, `embed`, `file` — for which Delete at the end of the line directly
+   * above was a live 400 (and, for an anchor, dissolved the box in one keypress).
+   *
+   * An UNRESOLVED type (no registered handle) is treated as text-less: refusing
+   * demotes the keystroke to a caret move, while wrongly assuming text would hand
+   * the write boundary a payload it rejects.
+   */
+  acceptsText(node: BlockNode): boolean;
+  /**
+   * Is this node a container ANCHOR (`BlockHandle.anchor`) — a row that renders
+   * no line of its own, whose content IS its children? Supplied the same way as
+   * `acceptsText`, from the block handle.
+   */
+  isAnchor(node: BlockNode): boolean;
   /**
    * The current block's declarative edit policy, resolved once at the consumer
    * from the block's handle (no prop drilling). `asChild`/`childType`/`splitInto`
@@ -96,6 +129,18 @@ export interface IntentContext {
  */
 function isIndented(node: BlockNode): boolean {
   return node.parentId !== null && node.parentId !== node.pageId;
+}
+
+/**
+ * The container ANCHOR `node` is the first child of, or null. Rank-first among
+ * the anchor's children, so a later child is not one (its Backspace has a visible
+ * line above it inside the box and takes the ordinary ladder).
+ */
+function firstChildAnchor(ctx: IntentContext, node: BlockNode): BlockNode | null {
+  if (node.parentId === null) return null;
+  const parent = ctx.nodes.find((n) => n.id === node.parentId);
+  if (!parent || !ctx.isAnchor(parent)) return null;
+  return childrenOf(ctx.nodes, parent.id)[0]?.id === node.id ? parent : null;
 }
 
 function hasPrevSibling(nodes: BlockNode[], node: BlockNode): boolean {
@@ -164,20 +209,34 @@ export function resolveKeystroke(
       if (!caret.atStart || !caret.collapsed) return { type: "passthrough" };
       // Backspace deletes the nearest visible thing to the LEFT of the caret: a
       // type marker (bullet, checkbox, …) is visually nearest → reset the type;
-      // indentation is next → outdent one level; then the line break above → merge
-      // into the previous visible line; nothing left → step out (same as ArrowLeft).
+      // then the enclosing structure → dissolve the container (its first child) or
+      // outdent one level; then the line break above → merge into the previous
+      // visible line; nothing left → step out (same as ArrowLeft).
       const p = ctx.editPolicy;
       if (p?.resetToOnBackspaceAtStart && node.type !== p.resetToOnBackspaceAtStart)
         return { type: "convertTo", to: p.resetToOnBackspaceAtStart };
+      // "Indentation" that is really a CONTAINER: the first child of an anchor
+      // escapes the box by dissolving it, not by outdenting. This rung must sit
+      // ABOVE the generic `isIndented` one because an anchor's child satisfies it
+      // — and `outdentOne` would adopt the container's remaining lines as the
+      // escaping block's own children (see the `unwrap` intent's doc), silently
+      // re-nesting content the user never asked to nest.
+      //
+      // Only the FIRST child: it is the one whose escape would take the whole
+      // box with it. A later line inside the container is an ordinary indented
+      // block with lines of its own above it, so it keeps the generic rung.
+      const anchor = firstChildAnchor(ctx, node);
+      if (anchor) return { type: "unwrap", blockId: anchor.id };
       if (isIndented(node)) return { type: "outdent" };
       // Merge lands on the previous VISIBLE line (`applyMerge`'s own resolution),
       // so gate on that line, not the previous sibling: over a spliced multi-page
       // union it can belong to ANOTHER page (the last inner block of an expanded
       // sub-page above), and a structural merge must never span two pages. A
-      // same-page page row (a collapsed sub-page shell) is equally unmergeable —
-      // the reducer refuses to write text onto page data.
+      // same-page TEXT-LESS line is equally unmergeable — the reducer refuses to
+      // write text onto a schema that has none (a page shell row, a container
+      // anchor, a divider/image/embed/file).
       const prev = prevVisibleLine(ctx.nodes, node);
-      if (prev && prev.pageId === node.pageId && prev.type !== PAGE_BLOCK_TYPE)
+      if (prev && prev.pageId === node.pageId && ctx.acceptsText(prev))
         return { type: "merge" };
       // No same-page line to merge into: the first top-level block, or a page
       // boundary directly above. Backspace here means exactly what ArrowLeft
@@ -197,12 +256,16 @@ export function resolveKeystroke(
       // nothing is nearer. The pulled-up line must be a same-page content line:
       // over a spliced multi-page union the next visible line can belong to
       // ANOTHER page (the outer page's next block after the last inner one), and
-      // a page shell row is void — the reducer refuses to merge either. Nothing
-      // mergeable below → step forward out of the block list (the exact mirror
-      // of Backspace's `nav left`); the keystroke is still consumed even when no
-      // caret surface follows.
+      // a TEXT-LESS line has nothing to pull up — the reducer refuses to merge
+      // either. That second gate is `acceptsText`, not a page-row comparison:
+      // the line below can equally be a container anchor (merging it away would
+      // dissolve the box from one keypress) or a divider/image/embed/file, all of
+      // which used to resolve to `mergeNext` and 400 at the write boundary.
+      // Nothing mergeable below → step forward out of the block list (the exact
+      // mirror of Backspace's `nav left`); the keystroke is still consumed even
+      // when no caret surface follows.
       const next = nextVisibleLine(ctx.nodes, node);
-      if (!next || next.pageId !== node.pageId || next.type === PAGE_BLOCK_TYPE)
+      if (!next || next.pageId !== node.pageId || !ctx.acceptsText(next))
         return { type: "nav", dir: "right" };
       return { type: "mergeNext" };
     }

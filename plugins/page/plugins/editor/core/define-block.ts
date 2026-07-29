@@ -170,8 +170,44 @@ export interface BlockHandle<T> {
    * When "always", the editor shows the collapse chevron for this block type even
    * when it has no children yet (used by the toggle block). Omitted = the chevron
    * appears only when the block actually has children.
+   *
+   * "never" hides the chevron AND makes the stored `expanded` flag INERT at
+   * flatten time. Required by `anchor` types: a block that renders no line of its
+   * own has no chevron left to reopen it, so a stored `expanded: false` (which
+   * every creation path mints — `applySplit`, `applyInsert`, any patch replay)
+   * would hide its children behind nothing. Making the flag inert is a guarantee;
+   * "every creation path sets `expanded: true`" is not.
    */
-  collapsible?: "always";
+  collapsible?: "always" | "never";
+  /**
+   * This block type is a container ANCHOR: it renders no line of its own. Its
+   * content IS its children. The surface collapses its row to zero height while
+   * it has visible children and paints its decoration in the indent gutter left
+   * of the first child; with no children the row falls back to a single empty
+   * line, so the container is never an invisible, unclickable row. Generic — the
+   * editor core never names a block type.
+   *
+   * It lives in `core` because the pure REDUCER needs it (`BlockOpContext`'s
+   * `anchorTypes`: the empty-anchor prune and the split/merge refusals) and the
+   * server has no slots. The *decoration component* rides on the web
+   * `Editor.BlockFrame` contribution instead — so a type cannot claim anchorhood
+   * without actually registering as a container — and a `./singularity check`
+   * pins the two together (a handle declaring `anchor: true` whose plugin
+   * contributes no anchor component fails the check).
+   */
+  anchor?: true;
+  /**
+   * Converting a block INTO this type is a WRAP, not a type swap: the origin row
+   * keeps its id, type, data and children and becomes the FIRST CHILD of a newly
+   * minted row of this type. Both rows are minted in ONE patch, so it is one undo
+   * entry.
+   *
+   * Keeping the origin's id is load-bearing — its per-block content `Y.Doc`, its
+   * `Y.UndoManager` and its registered `BlockFocusHandle` are all keyed by block
+   * id, so the caret simply stays put. Generic — resolved inside `convertTo`, so
+   * every caller (`/` menu, gutter-`+` draft, Turn-into, url-paste) is unchanged.
+   */
+  wrapOnConvert?: true;
   /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST
@@ -212,7 +248,9 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   splitInto?: string;
   dataOnSplit?(data: z.infer<S>): z.infer<S>;
   toggle?: { field: string; doneClassName?: string };
-  collapsible?: "always";
+  collapsible?: "always" | "never";
+  anchor?: true;
+  wrapOnConvert?: true;
   splitChildWhenExpanded?: { childType: string };
 }): BlockHandle<z.infer<S>> & TextLens<S> {
   // Computed once at definition: text-bearing-ness is a fact of the schema.
@@ -246,6 +284,8 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     dataOnSplit: opts.dataOnSplit,
     toggle: opts.toggle,
     collapsible: opts.collapsible,
+    anchor: opts.anchor,
+    wrapOnConvert: opts.wrapOnConvert,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
   };
   // The conditional `TextLens<S>` cannot be proved from the value: the runtime

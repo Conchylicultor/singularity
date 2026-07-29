@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type ComponentType, type CSSProperties, type ReactNode } from "react";
 import {
   MdImage,
   MdLink as MdLinkIcon,
@@ -8,10 +8,11 @@ import {
   MdVideocam,
   MdInsertDriveFile,
   MdWidgets,
-  MdLightbulb,
 } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Text, type TextVariant } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset, insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
@@ -20,9 +21,12 @@ import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/p
 import {
   Editor,
   PageIcon,
+  useBlockAnchors,
+  useFramedBlockTypes,
   BLOCK_INDENT,
   BLOCK_INSET,
   MARKER_GUTTER,
+  type BlockAnchorProps,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import type { BlockHandle, BlockTextVariant } from "@plugins/page/plugins/editor/core";
@@ -73,30 +77,12 @@ function DiffWrap({ kind, children }: { kind?: BlockDiffKind; children: ReactNod
 // Block content renderers
 // ---------------------------------------------------------------------------
 
-/** Callout tint per semantic color — mirrors the callout block's COLOR_BG. */
-const CALLOUT_BG: Record<string, string> = {
-  default: "bg-muted",
-  info: "bg-info/15",
-  success: "bg-success/15",
-  warning: "bg-warning/15",
-  danger: "bg-destructive/15",
-};
-/** Callout icon color per semantic color — mirrors the callout block's COLOR_TEXT. */
-const CALLOUT_TEXT: Record<string, string> = {
-  default: "text-muted-foreground",
-  info: "text-info",
-  success: "text-success",
-  warning: "text-warning",
-  danger: "text-destructive",
-};
-
 /**
  * Renders one text-bearing block faithfully (text, headings, lists, to-do,
- * toggle, quote, callout): the structural chrome from handle metadata + the rich
- * text via RunsRenderer. Mirrors `BlockTextRenderer` + `BlockTextEditor`'s
- * marker-gutter layout. Two block types carry their own box chrome and are
- * matched by type here (the quote left-border, the callout tinted box) — the
- * editor renders them with the same dedicated wrappers.
+ * toggle, quote): the structural chrome from handle metadata + the rich text via
+ * RunsRenderer. Mirrors `BlockTextRenderer` + `BlockTextEditor`'s marker-gutter
+ * layout. One block type carries its own box chrome and is matched by type here
+ * (the quote left-border) — the editor renders it with the same wrapper.
  */
 function TextLikeBlock({
   handle,
@@ -112,41 +98,6 @@ function TextLikeBlock({
   ordinal: number;
 }) {
   const checked = handle.toggle ? Boolean(data[handle.toggle.field]) : false;
-
-  // The callout has its own leading-icon marker + tinted box.
-  if (handle.type === "callout") {
-    const color = typeof data.color === "string" ? data.color : "default";
-    const iconNodes = Array.isArray(data.iconSvgNodes)
-      ? (data.iconSvgNodes as Parameters<typeof PageIcon>[0]["nodes"])
-      : null;
-    return (
-      <>
-        <Inset x={BLOCK_INSET} y="xs">
-          {/* eslint-disable-next-line radius/no-adhoc-radius -- rounded-md token matches the callout block chrome */}
-          <div className={cn("rounded-md", CALLOUT_BG[color] ?? CALLOUT_BG.default)}>
-            <Inset x={BLOCK_INSET} className="flex gap-xs">
-              <div
-                className={cn("flex flex-none select-none justify-center py-xs", CALLOUT_TEXT[color] ?? CALLOUT_TEXT.default)}
-                style={{ minWidth: MARKER_GUTTER }}
-              >
-                <PageIcon nodes={iconNodes} fallback={MdLightbulb} className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <Text
-                  as="div"
-                  variant="body"
-                  className={cn(insetClass({ r: BLOCK_INSET }), "py-xs whitespace-pre-wrap break-words")}
-                >
-                  <RunsRenderer value={data.text} />
-                </Text>
-              </div>
-            </Inset>
-          </div>
-        </Inset>
-        {children}
-      </>
-    );
-  }
 
   let marker: ReactNode = null;
   if (handle.toggle) {
@@ -342,11 +293,17 @@ function NodeView({
   node,
   ordinal,
   handles,
+  framedTypes,
+  anchors,
   diff,
 }: {
   node: ReadOnlyNode;
   ordinal: number;
   handles: BlockHandle<unknown>[];
+  /** Container block types, derived from the live `Editor.BlockFrame` registry. */
+  framedTypes: ReadonlySet<string>;
+  /** Container-anchor decorations, from the same `Editor.BlockFrame` registry. */
+  anchors: ReadonlyMap<string, ComponentType<BlockAnchorProps>>;
   diff?: Map<string, BlockDiffKind>;
 }) {
   const handle = handles.find((h) => h.type === node.type);
@@ -360,7 +317,13 @@ function NodeView({
       // One depth of the editor's per-depth indent: the child forest's content
       // box starts `BLOCK_INDENT` right of this block's.
       <div style={{ paddingLeft: BLOCK_INDENT }}>
-        <ForestView forest={node.children} handles={handles} diff={diff} />
+        <ForestView
+          forest={node.children}
+          handles={handles}
+          framedTypes={framedTypes}
+          anchors={anchors}
+          diff={diff}
+        />
       </div>
     ) : null;
 
@@ -380,6 +343,53 @@ function NodeView({
       <>
         <MediaBlock type={node.type} data={data} />
         {children}
+      </>
+    );
+  } else if (handle?.anchor === true) {
+    // A container ANCHOR (the callout) renders NO line of its own: its content IS
+    // its children, and all it paints is a decoration in the indent gutter left
+    // of the first child. Must precede the text-like arm — an anchor's `data`
+    // carries no `text`, so it would otherwise land on the "Unknown block"
+    // placeholder card, exactly the trap `PAGE_BLOCK_TYPE` above documents.
+    //
+    // Generic, by design: this branch names no block type. The decoration comes
+    // from the same `Editor.BlockFrame` registration that paints the box, so a
+    // second container type needs zero changes here.
+    //
+    // The geometry falls out on this surface. There is no hover rail (`inset: 0`)
+    // and children are already indented by one `BLOCK_INDENT`, so a zero-height
+    // `relative` wrapper with the decoration pinned at its left edge puts the
+    // glyph in exactly the column the editor puts it in — with none of the
+    // control-collision the editable surface has to resolve.
+    const Anchor = anchors.get(node.type);
+    body = (
+      <>
+        {/* Zero height: an absolutely-pinned child contributes none, so the
+            decoration and the first child share one visual line. */}
+        <div className="relative">
+          {Anchor ? (
+            <Pin to="top-left" className="py-xs" style={{ width: BLOCK_INDENT }}>
+              {/* `id` is the container's address for the anchor's structural
+                  actions; with no `editor` there are none, and a read-only node
+                  may legitimately carry no id at all. */}
+              {/* eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Anchor` is a registry LOOKUP into the memoized `useBlockAnchors()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset. */}
+              <Anchor id={node.id ?? ""} type={node.type} data={node.data} />
+            </Pin>
+          ) : null}
+        </div>
+        {children ?? (
+          // Read-only children always render expanded, so `children` is null only
+          // when the container is genuinely childless — and then both the row and
+          // its frame would be zero height, i.e. an invisible box. One empty body
+          // line is the same fallback the editor's anchored row renders. The
+          // space below is a NON-BREAKING one: a lone collapsible space would
+          // leave the div zero height, which is the very thing this fixes.
+          <Inset l={BLOCK_INSET}>
+            <Text as="div" variant="body" className="py-xs">
+              {" "}
+            </Text>
+          </Inset>
+        )}
       </>
     );
   } else if (isTextLike(handle) && hasText(data)) {
@@ -403,16 +413,35 @@ function NodeView({
     );
   }
 
-  return <DiffWrap kind={kind}>{body}</DiffWrap>;
+  // A container block type paints a frame over its own line AND its subtree.
+  // The frame takes no children (it is a backdrop, never a wrapper — see
+  // `BlockFrameProps`), so this surface positions it as a full-bleed layer
+  // behind the node's content. `inset` is 0: there is no hover rail here, so
+  // the content edge `C` is simply the renderer's left edge.
+  const framed = framedTypes.has(node.type) ? (
+    <Overlay
+      behind={<Editor.BlockFrame.Dispatch type={node.type} data={node.data} inset={0} />}
+    >
+      {body}
+    </Overlay>
+  ) : (
+    body
+  );
+
+  return <DiffWrap kind={kind}>{framed}</DiffWrap>;
 }
 
 function ForestView({
   forest,
   handles,
+  framedTypes,
+  anchors,
   diff,
 }: {
   forest: ReadOnlyNode[];
   handles: BlockHandle<unknown>[];
+  framedTypes: ReadonlySet<string>;
+  anchors: ReadonlyMap<string, ComponentType<BlockAnchorProps>>;
   diff?: Map<string, BlockDiffKind>;
 }) {
   const ordinals: number[] = [];
@@ -431,6 +460,8 @@ function ForestView({
           node={node}
           ordinal={ordinals[i] ?? 1}
           handles={handles}
+          framedTypes={framedTypes}
+          anchors={anchors}
           diff={diff}
         />
       ))}
@@ -445,8 +476,12 @@ function ForestView({
  *
  * Fidelity:
  *  - Text-bearing blocks (text, heading-1/2/3, bulleted/numbered list, to-do,
- *    toggle, quote, callout) render fully faithfully — heading size, marker,
- *    checkbox, rich text.
+ *    toggle, quote) render fully faithfully — heading size, marker, checkbox,
+ *    rich text.
+ *  - Container blocks render through the SAME `Editor.BlockFrame` contribution
+ *    the editor uses: the box as a full-bleed backdrop, and — for a void
+ *    container ANCHOR (the callout) — its decoration pinned in the gutter left of
+ *    its first child. No block type is named here.
  *  - Self-contained media (image, code-block, divider) render a faithful static
  *    equivalent, and sub-pages render as an inert icon+title chip.
  *  - Exotic blocks (embed, equation, bookmark, audio, video, file) render a clean
@@ -458,5 +493,15 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
     () => contributions.map((c) => c.block as BlockHandle<unknown>),
     [contributions],
   );
-  return <ForestView forest={forest} handles={handles} diff={diff} />;
+  const framedTypes = useFramedBlockTypes();
+  const anchors = useBlockAnchors();
+  return (
+    <ForestView
+      forest={forest}
+      handles={handles}
+      framedTypes={framedTypes}
+      anchors={anchors}
+      diff={diff}
+    />
+  );
 }

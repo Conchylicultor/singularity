@@ -41,7 +41,7 @@ export function MarkdownShortcutPlugin({
       type: string;
       empty?: () => unknown;
       acceptsText: boolean;
-      collapsible?: "always";
+      collapsible?: "always" | "never";
     }[] = [];
     for (const c of contributions) {
       for (const prefix of c.block.markdownPrefixes ?? []) {

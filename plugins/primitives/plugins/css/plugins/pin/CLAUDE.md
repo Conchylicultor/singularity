@@ -89,6 +89,7 @@ offsets expressible on the semantic ramp.
     - `page/editor`
     - `page/file`
     - `page/image`
+    - `page/read-only-view`
     - `page/video`
     - `primitives/css/row`
     - `primitives/data-view/gallery`

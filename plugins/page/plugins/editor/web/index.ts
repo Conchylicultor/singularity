@@ -1,12 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { Editor } from "./slots";
-export type { BlockContribution } from "./slots";
+export { Editor, useFramedBlockTypes, useBlockAnchors } from "./slots";
+export type { BlockContribution, BlockFrameMeta } from "./slots";
 export { MarkButton } from "./components/mark-button";
 export type { MarkButtonProps } from "./components/mark-button";
 export { useFormatToolbar } from "./internal/format-toolbar-context";
 export type { FormatToolbarValue } from "./internal/format-toolbar-context";
-export type { BlockEditorAPI, BlockRendererProps } from "./types";
+export type {
+  BlockAnchorProps,
+  BlockEditorAPI,
+  BlockFrameProps,
+  BlockRendererProps,
+} from "./types";
 export { BlockEditor } from "./components/block-editor";
 export type { BlockEditorHandle } from "./components/block-editor";
 export type { CaretSurface, CaretSurfaceRef } from "./caret-surface";

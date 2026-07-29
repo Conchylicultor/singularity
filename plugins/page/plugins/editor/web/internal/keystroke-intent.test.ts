@@ -55,8 +55,29 @@ function tree(): BlockNode[] {
   ];
 }
 
+/**
+ * The block-TYPE facts the resolver takes as input, standing in for the block
+ * handle registry the consumer resolves them from. The resolver never names a
+ * type, so these fixtures ARE the registry for these specs:
+ *
+ * - `acceptsText` is false for every void schema — the page shell row, a
+ *   container anchor, and a divider alike. It replaced two hardcoded
+ *   `PAGE_BLOCK_TYPE` comparisons, so the page-boundary specs below are
+ *   re-expressed through it with byte-identical outcomes, and the anchor/divider
+ *   cases are the same rung reached by the types that used to fall through it.
+ * - `isAnchor` marks the container types (here: `callout`).
+ */
+const VOID_TYPES = new Set(["page", "callout", "divider"]);
+const ANCHOR_TYPES = new Set(["callout"]);
+/** The same anchor set as the reducer's `BlockOpContext` (trajectory replay). */
+const ANCHOR_CTX = { anchorTypes: ANCHOR_TYPES };
+const TYPE_FACTS = {
+  acceptsText: (n: BlockNode) => !VOID_TYPES.has(n.type),
+  isAnchor: (n: BlockNode) => ANCHOR_TYPES.has(n.type),
+};
+
 function ctx(blockId: string, over: Partial<IntentContext> = {}): IntentContext {
-  return { nodes: tree(), blockId, ...over };
+  return { nodes: tree(), blockId, ...TYPE_FACTS, ...over };
 }
 
 function caret(over: Partial<CaretContext> = {}): CaretContext {
@@ -177,6 +198,7 @@ describe("Enter", () => {
     // Empty == the live caret sits at both the start and the end of the block.
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
       nodes,
+      ...TYPE_FACTS,
       blockId: "B",
       editPolicy: { breakOutOnEmptyEnter: "text" },
     });
@@ -203,6 +225,7 @@ describe("Enter", () => {
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
       nodes,
+      ...TYPE_FACTS,
       blockId: "A1",
       editPolicy: { breakOutOnEmptyEnter: "text" },
     });
@@ -241,6 +264,7 @@ describe("Enter", () => {
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 1, atEnd: false }), {
       nodes,
+      ...TYPE_FACTS,
       blockId: "B",
       editPolicy: { dataOnSplit: (d) => ({ ...(d as object), checked: false }) },
     });
@@ -253,6 +277,7 @@ describe("Enter", () => {
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
+      ...TYPE_FACTS,
       blockId: "B",
       editPolicy: { splitInto: "text", dataOnSplit: (d) => ({ ...(d as object), swapped: true }) },
     });
@@ -265,6 +290,7 @@ describe("Enter", () => {
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
+      ...TYPE_FACTS,
       blockId: "B",
       editPolicy: { asChild: true, childType: "text", dataOnSplit: (d) => ({ ...(d as object), swapped: true }) },
     });
@@ -278,6 +304,7 @@ describe("Enter", () => {
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
+      ...TYPE_FACTS,
       blockId: "B",
       editPolicy: { asChild: true, dataOnSplit: (d) => ({ ...(d as object), checked: false }) },
     });
@@ -320,6 +347,7 @@ describe("Backspace", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes,
+        ...TYPE_FACTS,
         blockId: "B",
         editPolicy: { resetToOnBackspaceAtStart: "text" },
       }),
@@ -346,6 +374,7 @@ describe("Backspace", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes,
+        ...TYPE_FACTS,
         blockId: "A1",
         editPolicy: { resetToOnBackspaceAtStart: "text" },
       }),
@@ -507,12 +536,17 @@ function runTrajectory(
   for (let guard = 0; guard < 10; guard++) {
     const intent = resolveKeystroke(key, NO_SHIFT, caret(caretOver), {
       nodes,
+      ...TYPE_FACTS,
       blockId,
       editPolicy,
     });
     seq.push(intent.type);
     if (intent.type === "outdent") {
-      nodes = applyBlockOp(nodes, { kind: "outdent", blockIds: [blockId] });
+      nodes = applyBlockOp(nodes, { kind: "outdent", blockIds: [blockId] }, ANCHOR_CTX);
+    } else if (intent.type === "unwrap") {
+      // The container dissolves and its children are promoted into its slot —
+      // the caret's block keeps its id, so the next press re-resolves against it.
+      nodes = applyBlockOp(nodes, { kind: "unwrap", blockId: intent.blockId }, ANCHOR_CTX);
     } else if (intent.type === "convertTo") {
       nodes = nodes.map((n) => (n.id === blockId ? { ...n, type: intent.to } : n));
     } else if (intent.type === "mergeNext") {
@@ -521,7 +555,7 @@ function runTrajectory(
       const node = nodes.find((n) => n.id === blockId)!;
       const next = nextVisibleLine(nodes, node);
       if (!next) break; // unreachable: mergeNext implies a next line exists
-      nodes = applyBlockOp(nodes, { kind: "merge", blockId: next.id });
+      nodes = applyBlockOp(nodes, { kind: "merge", blockId: next.id }, ANCHOR_CTX);
     } else {
       break; // merge / split / nav / noop — a trajectory ends here
     }
@@ -583,6 +617,37 @@ describe("trajectories", () => {
     ]);
   });
 
+  test("Backspace: first line of a callout below a text block → [unwrap, merge]", () => {
+    // page ▸ A ("a"), CA(anchor) ▸ [X, Y]. The first press dissolves the box —
+    // X and Y become plain siblings after A, NOT X adopting Y — so the second
+    // press is the ordinary merge into the line above.
+    const rankCA = Rank.between(Rank.from(rankA), null).toJSON();
+    const kid1 = Rank.between(null, null).toJSON();
+    const kid2 = Rank.between(Rank.from(kid1), null).toJSON();
+    const nodes: BlockNode[] = [
+      mk("A", PAGE, rankA, { text: "a" }),
+      { ...mk("CA", PAGE, rankCA), type: "callout", expanded: true },
+      mk("X", "CA", kid1, { text: "x" }),
+      mk("Y", "CA", kid2, { text: "y" }),
+    ];
+    expect(runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true })).toEqual([
+      "unwrap",
+      "merge",
+    ]);
+  });
+
+  test("Backspace: formatted first line of a LEADING callout → [convertTo, unwrap, nav]", () => {
+    // page ▸ CA(anchor) ▸ X(bulleted-list). Marker strips, the box dissolves,
+    // and X — now the first top-level line — has nothing above it to merge into.
+    const nodes: BlockNode[] = [
+      { ...mk("CA", PAGE, rankA), type: "callout", expanded: true },
+      { ...mk("X", "CA", rankChild, { text: "item" }), type: "bulleted-list" },
+    ];
+    expect(
+      runTrajectory(nodes, "X", "Backspace", { resetToOnBackspaceAtStart: "text" }, { atStart: true }),
+    ).toEqual(["convertTo", "unwrap", "nav"]);
+  });
+
   test("Delete: repeated at the end of a block with a subtree flattens it one line per press → [mergeNext, mergeNext, nav]", () => {
     // page ▸ P (expanded, ├ C1 └ C2). Delete at the end of P pulls each next
     // visible line up in turn; once P is the only line left it steps out (nav).
@@ -606,6 +671,13 @@ describe("trajectories", () => {
 // blocks into ONE flat array, each row carrying its own `pageId` (nearest page
 // ancestor). Structural intents must never span two pages — the resolver gates
 // merge/mergeNext/outdent on the ROW's page, never a context scalar.
+//
+// The page SHELL row is refused by the second gate, `acceptsText`, which is a
+// property of its (text-less) schema — not by a `type === "page"` comparison,
+// which the resolver no longer makes. Every outcome below is unchanged from when
+// it was one; that is exactly what makes this describe the regression test for
+// the generalization. `void lines` below covers the types the old comparison
+// silently let through.
 // ---------------------------------------------------------------------------
 
 describe("multi-page union boundaries", () => {
@@ -636,7 +708,7 @@ describe("multi-page union boundaries", () => {
   }
 
   test("shift+Tab on an inner page's top-level block → noop (not indented, no cross-page outdent)", () => {
-    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes: union(), blockId: "B" })).toEqual({
+    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes: union(), ...TYPE_FACTS, blockId: "B" })).toEqual({
       type: "noop",
     });
   });
@@ -644,7 +716,7 @@ describe("multi-page union boundaries", () => {
   test("shift+Tab on a genuinely nested inner block → outdent (within its own page)", () => {
     const nodes = union().map((n) => (n.id === "B" ? { ...n, expanded: true } : n));
     nodes.push({ ...mk("E", "B", rankChild, { text: "ee" }), pageId: "S" });
-    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes, blockId: "E" })).toEqual({
+    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes, ...TYPE_FACTS, blockId: "E" })).toEqual({
       type: "outdent",
     });
   });
@@ -652,6 +724,7 @@ describe("multi-page union boundaries", () => {
   test("empty-Enter on an inner page's top-level block → split, not a cross-page outdent", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
       nodes: union(),
+      ...TYPE_FACTS,
       blockId: "B",
       editPolicy: { breakOutOnEmptyEnter: "text" },
     });
@@ -662,15 +735,17 @@ describe("multi-page union boundaries", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes: union(),
+        ...TYPE_FACTS,
         blockId: "D",
       }),
     ).toEqual({ type: "nav", dir: "left" });
   });
 
-  test("Backspace at D below a COLLAPSED sub-page → nav left (a page shell row is unmergeable)", () => {
+  test("Backspace at D below a COLLAPSED sub-page → nav left (a page shell row carries no text)", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes: union({ expanded: false }),
+        ...TYPE_FACTS,
         blockId: "D",
       }),
     ).toEqual({ type: "nav", dir: "left" });
@@ -680,6 +755,7 @@ describe("multi-page union boundaries", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes: union(),
+        ...TYPE_FACTS,
         blockId: "B",
       }),
     ).toEqual({ type: "nav", dir: "left" });
@@ -689,6 +765,7 @@ describe("multi-page union boundaries", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes: union(),
+        ...TYPE_FACTS,
         blockId: "C",
       }),
     ).toEqual({ type: "merge" });
@@ -698,6 +775,7 @@ describe("multi-page union boundaries", () => {
     expect(
       resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
         nodes: union(),
+        ...TYPE_FACTS,
         blockId: "A",
       }),
     ).toEqual({ type: "nav", dir: "right" });
@@ -707,6 +785,7 @@ describe("multi-page union boundaries", () => {
     expect(
       resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
         nodes: union(),
+        ...TYPE_FACTS,
         blockId: "C",
       }),
     ).toEqual({ type: "nav", dir: "right" });
@@ -716,9 +795,173 @@ describe("multi-page union boundaries", () => {
     expect(
       resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
         nodes: union(),
+        ...TYPE_FACTS,
         blockId: "B",
       }),
     ).toEqual({ type: "mergeNext" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Void lines: the types the OLD `type === PAGE_BLOCK_TYPE` gate silently let
+// through. `nextVisibleLine` happily returns a container anchor or a divider, so
+// Delete at the end of the line directly above one used to resolve to
+// `mergeNext` — which writes `data.text` onto a schema that has none (a 400 at
+// the write boundary) and, for an anchor, deletes the container out from under
+// its children, dissolving the box on ONE keypress. `acceptsText` demotes both
+// to a plain caret move.
+// ---------------------------------------------------------------------------
+
+describe("void lines (acceptsText)", () => {
+  const rankVoid = Rank.between(Rank.from(rankA), null).toJSON();
+
+  /** page ▸ A ("hello"), V (a void row of `type`), B. */
+  function withVoid(type: string, opts: { expanded?: boolean } = {}): BlockNode[] {
+    return [
+      mk("A", PAGE, rankA, { text: "hello" }),
+      { ...mk("V", PAGE, rankVoid), type, expanded: opts.expanded ?? false },
+      mk("B", PAGE, rankB),
+    ];
+  }
+
+  test("Delete at the end of the line above a container ANCHOR → nav right", () => {
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes: withVoid("callout"),
+        ...TYPE_FACTS,
+        blockId: "A",
+      }),
+    ).toEqual({ type: "nav", dir: "right" });
+  });
+
+  test("Delete at the end of the line above a DIVIDER → nav right", () => {
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes: withVoid("divider"),
+        ...TYPE_FACTS,
+        blockId: "A",
+      }),
+    ).toEqual({ type: "nav", dir: "right" });
+  });
+
+  test("Delete above an EXPANDED anchor still resolves on its first CHILD, which is text → mergeNext", () => {
+    // The anchor renders no line, but `nextVisibleLine` does not skip it — see
+    // the design doc's deliberate non-goal. With children it returns the anchor
+    // itself (the first visible child comes after), so this is still `nav right`;
+    // once the caret is INSIDE the box the ordinary ladder applies.
+    const nodes = [
+      ...withVoid("callout", { expanded: true }),
+      mk("V1", "V", rankChild, { text: "inside" }),
+    ];
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "A",
+      }),
+    ).toEqual({ type: "nav", dir: "right" });
+    // From the anchor's own child, the next visible line is the text block B.
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "V1",
+      }),
+    ).toEqual({ type: "mergeNext" });
+  });
+
+  test("Backspace at the start of the line BELOW a divider → nav left (nothing to merge into)", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: withVoid("divider"),
+        ...TYPE_FACTS,
+        blockId: "B",
+      }),
+    ).toEqual({ type: "nav", dir: "left" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Container anchors: escaping the box. The generic ladder would resolve "start
+// of the first child" to the `isIndented` → outdent rung, and `outdentOne`
+// adopts the followers — so the first line would pop out of the box AND take
+// the rest of the container's content with it as its own children. `unwrap`
+// dissolves only the container.
+// ---------------------------------------------------------------------------
+
+describe("container anchors", () => {
+  const rankCA = Rank.between(Rank.from(rankA), null).toJSON();
+  const kid1 = Rank.between(null, null).toJSON();
+  const kid2 = Rank.between(Rank.from(kid1), null).toJSON();
+
+  /** page ▸ A ("hello"), CA(callout anchor) ▸ [X, Y]. */
+  function boxed(childType = "text"): BlockNode[] {
+    return [
+      mk("A", PAGE, rankA, { text: "hello" }),
+      { ...mk("CA", PAGE, rankCA), type: "callout", expanded: true },
+      { ...mk("X", "CA", kid1, { text: "first" }), type: childType },
+      mk("Y", "CA", kid2, { text: "second" }),
+    ];
+  }
+
+  test("Backspace at the start of an anchor's FIRST child → unwrap the anchor", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: boxed(),
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toEqual({ type: "unwrap", blockId: "CA" });
+  });
+
+  test("the unwrap rung beats outdent, which would re-nest the box's other lines", () => {
+    // Sanity-check the alternative the rung exists to avoid: outdenting X adopts
+    // its follower Y as X's own child.
+    const outdented = applyBlockOp(boxed(), { kind: "outdent", blockIds: ["X"] }, ANCHOR_CTX);
+    expect(outdented.find((n) => n.id === "Y")!.parentId).toBe("X");
+    // Unwrapping instead leaves both lines as plain siblings at CA's level.
+    const unwrapped = applyBlockOp(boxed(), { kind: "unwrap", blockId: "CA" }, ANCHOR_CTX);
+    expect(unwrapped.find((n) => n.id === "X")!.parentId).toBe(PAGE);
+    expect(unwrapped.find((n) => n.id === "Y")!.parentId).toBe(PAGE);
+    expect(unwrapped.some((n) => n.id === "CA")).toBe(false);
+  });
+
+  test("a LATER child is NOT the unwrap rung — it takes the generic indentation rung", () => {
+    // Only the FIRST child dissolves the box. A later line inside it is an
+    // ordinary indented block, so Backspace at its start resolves exactly as it
+    // does for any nested block: outdent (which, for a line inside a container,
+    // means leaving the box). Unchanged pre-existing behavior — deliberately not
+    // touched here; Notion would instead merge it into the line above, which is
+    // a separate change to the generic ladder.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: boxed(),
+        ...TYPE_FACTS,
+        blockId: "Y",
+      }),
+    ).toEqual({ type: "outdent" });
+  });
+
+  test("the marker still strips first: a formatted first child resets its type before unwrapping", () => {
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: boxed("bulleted-list"),
+        ...TYPE_FACTS,
+        blockId: "X",
+        editPolicy: { resetToOnBackspaceAtStart: "text" },
+      }),
+    ).toEqual({ type: "convertTo", to: "text" });
+  });
+
+  test("a first child of an ORDINARY block still outdents (the rung is anchor-only)", () => {
+    const nodes = boxed().map((n) => (n.id === "CA" ? { ...n, type: "toggle" } : n));
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toEqual({ type: "outdent" });
   });
 });
 

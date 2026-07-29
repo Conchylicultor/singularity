@@ -13567,6 +13567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/render-profiler`
               - `improve/element-picker`
               - `infra/events-test`
+              - `page/callout`
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
@@ -15788,18 +15789,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.defineBlock`
           - `page/editor.textDataSchema`
         - Exports (values): `bulletedListBlock`
-    - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
+    - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
       - Web:
-        - Contributes: `Editor.Block` "callout" → `CalloutBlock`
+        - Contributes:
+          - `Editor.Block` "callout" → `CalloutNoRow`
+          - `Editor.BlockFrame` "callout" → `CalloutFrame`
         - Uses:
-          - `page/editor.BLOCK_INSET`
-          - `page/editor.BlockRendererProps`
-          - `page/editor.BlockTextEditor`
+          - `page/editor.BlockAnchorProps`
+          - `page/editor.BlockEditorAPI`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
+          - `page/editor.useBlockEditor`
           - `primitives/css/center.Center`
           - `primitives/css/row.Row`
-          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/ui-kit.cn`
@@ -15815,12 +15817,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.SvgNodeSchema`
-          - `page/editor.textBlockSchema`
         - Exports (types): `CalloutColor`
         - Exports (values):
           - `CALLOUT_COLORS`
           - `calloutBlock`
           - `calloutDataSchema`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
+          - `page/editor.blockText`
+          - `page/editor.caretState`
+          - `page/editor.openBlankPage`
     - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button. Code block type: registers its `data` schema (code + language) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "code-block" → `CodeBlock`
@@ -15885,6 +15896,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.BlockFrame` ← `page.callout`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses:
@@ -15923,6 +15935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/popover.InlinePopoverProps`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/select-scope.ContentScope`
+          - `primitives/slot-render.defineDispatchSlot`
           - `primitives/slot-render.defineOrderedDispatchSlot`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.OrderedDispatchContribution`
@@ -15937,9 +15950,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.TopLevelEntry`
           - `reorder.useReorderedEntries`
         - Exports (types):
+          - `BlockAnchorProps`
           - `BlockContribution`
           - `BlockEditorAPI`
           - `BlockEditorHandle`
+          - `BlockFrameMeta`
+          - `BlockFrameProps`
           - `BlockPasteHandler`
           - `BlockRendererProps`
           - `BlockSection`
@@ -15974,8 +15990,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageOptionsList`
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
+          - `useBlockAnchors`
           - `useBlockEditor`
           - `useFormatToolbar`
+          - `useFramedBlockTypes`
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
           - `usePageOptions`
@@ -16059,6 +16077,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockMarkdown`
           - `BlockNode`
           - `BlockOp`
+          - `BlockOpContext`
           - `BlockPatch`
           - `BlockTextVariant`
           - `BulkDeleteBlocksBody`
@@ -16817,14 +16836,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.BLOCK_INDENT`
           - `page/editor.BLOCK_INSET`
+          - `page/editor.BlockAnchorProps`
           - `page/editor.colorCssValue`
           - `page/editor.Editor`
           - `page/editor.MARKER_GUTTER`
           - `page/editor.PageIcon`
+          - `page/editor.useBlockAnchors`
+          - `page/editor.useFramedBlockTypes`
           - `page/math/render.KatexMath`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
+          - `primitives/css/overlay.Overlay`
+          - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/selection-indicator.CheckboxIndicator`
           - `primitives/css/spacing.Inset`
@@ -18852,6 +18876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `page/editor`
               - `page/embed`
+              - `page/read-only-view`
         - **`pin`** — Point-anchored absolute positioning primitive: <Pin to offset> places a child at a corner/edge-center/center of a relative parent. Sibling of Overlay.
           - Web:
             - Uses:
@@ -18897,6 +18922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/file`
               - `page/image`
+              - `page/read-only-view`
               - `page/video`
               - `primitives/css/row`
               - `primitives/data-view/gallery`

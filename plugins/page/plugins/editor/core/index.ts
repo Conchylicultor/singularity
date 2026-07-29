@@ -51,7 +51,7 @@ export {
   runsOfNode,
   withRuns,
 } from "./block-ops";
-export type { BlockOp, BlockNode } from "./block-ops";
+export type { BlockOp, BlockOpContext, BlockNode } from "./block-ops";
 
 export {
   BlockPatchSchema,

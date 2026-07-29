@@ -81,3 +81,23 @@
 .block-gutter-control {
   top: calc(var(--gutter-first-line-center, calc(var(--space-xs) + var(--doc-lh-body) / 2)) - 0.625rem);
 }
+
+/*
+ * Container-ANCHOR decoration column (the callout icon).
+ *
+ * Same vertical seat as `.block-gutter-control` above — center on the first
+ * rendered line — but the line is BORROWED. An anchor renders no line of its
+ * own (its content is its children), so `--gutter-first-line-center` on its row
+ * is resolved from its FIRST VISIBLE CHILD's handle, not its own: an H1 first
+ * child seats the icon on the H1's line, an image/divider child on whatever
+ * center that block declares. block-row sets the var; this only centers a
+ * BLOCK_INDENT-square box on it (half of 1.5rem = 0.75rem above).
+ *
+ * The row itself is zero-height while it has visible children, so this box is
+ * absolutely positioned and escapes the row — that is what puts the anchor and
+ * its first child on ONE visual line.
+ */
+.block-anchor {
+  top: calc(var(--gutter-first-line-center, calc(var(--space-xs) + var(--doc-lh-body) / 2)) - 0.75rem);
+  height: 1.5rem;
+}

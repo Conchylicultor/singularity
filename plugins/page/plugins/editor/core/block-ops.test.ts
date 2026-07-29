@@ -25,6 +25,7 @@ import {
   textOf,
   type BlockNode,
   type BlockOp,
+  type BlockOpContext,
 } from "./block-ops";
 import { coalesce, mergeRuns, runsLength, splitRuns, type RichText } from "./rich-text";
 
@@ -88,13 +89,14 @@ function assertPageIdInvariant(before: BlockNode[], after: BlockNode[]): void {
 /**
  * Run an op and assert the universal invariants: input frozen + deep-equal
  * after (not mutated), rank ordering strictly ascending, pageId preserved.
- * Returns the result for op-specific assertions.
+ * Returns the result for op-specific assertions. `ctx` is omitted by every
+ * pre-anchor case — the default is byte-identical to a context-free call.
  */
-function run(blocks: BlockNode[], op: BlockOp): BlockNode[] {
+function run(blocks: BlockNode[], op: BlockOp, ctx?: BlockOpContext): BlockNode[] {
   const snapshot = structuredClone(blocks);
   Object.freeze(blocks);
   blocks.forEach((b) => Object.freeze(b));
-  const result = applyBlockOp(blocks, op);
+  const result = applyBlockOp(blocks, op, ctx);
   // Input not mutated.
   expect(blocks).toEqual(snapshot);
   assertRankOrdering(result);
@@ -231,6 +233,90 @@ describe("split", () => {
     expect(ids(out, "B")).toEqual(["NEW", "K1"]);
     expect(newNode.pageId).toBe(b.pageId);
     expect(newNode.expanded).toBe(false);
+  });
+
+  // `data` belongs to a TYPE. A cross-type tail that inherited the origin's
+  // payload handed the write boundary keys the target's strict schema rejects
+  // (400 `Unrecognized key(s)`) — which is what a container block's
+  // `splitChildWhenExpanded: {childType: "text"}` produces on every Enter.
+  // Latent until a block type carried more than `{text}`: every earlier
+  // cross-type split (heading → text, list → text) was between structurally
+  // identical schemas.
+  //
+  // The fixture is a `to-do` (`{text, checked}`) — any type whose data carries
+  // more than `{text}` pins the rule, which is generic and names no type.
+  const dataBearing = (expanded: boolean): BlockNode => ({
+    id: "C",
+    pageId: "page-1",
+    parentId: null,
+    type: "to-do",
+    data: { text: [{ text: "Heads up" }], checked: true },
+    rank: a,
+    expanded,
+  });
+
+  test("asChild split into a DIFFERENT type does not inherit the origin's data", () => {
+    const out = run([dataBearing(true)], {
+      kind: "split",
+      blockId: "C",
+      position: 8,
+      newId: "NEW",
+      asChild: true,
+      childType: "text",
+    });
+    const newNode = out.find((x) => x.id === "NEW")!;
+    expect(newNode.type).toBe("text");
+    expect(Object.keys(newNode.data as object).sort()).toEqual(["text"]);
+    // The origin keeps its own payload untouched.
+    const origin = out.find((x) => x.id === "C")!;
+    expect(origin.data).toMatchObject({ checked: true });
+  });
+
+  test("asChild split into the SAME type still inherits the origin's data", () => {
+    const out = run([dataBearing(true)], {
+      kind: "split",
+      blockId: "C",
+      position: 8,
+      newId: "NEW",
+      asChild: true,
+    });
+    const newNode = out.find((x) => x.id === "NEW")!;
+    expect(newNode.type).toBe("to-do");
+    expect(newNode.data).toMatchObject({ checked: true });
+  });
+
+  test("sibling split into a DIFFERENT type does not inherit the origin's data", () => {
+    const out = run([dataBearing(false)], {
+      kind: "split",
+      blockId: "C",
+      position: 8,
+      newId: "NEW",
+      siblingType: "text",
+    });
+    const newNode = out.find((x) => x.id === "NEW")!;
+    expect(newNode.type).toBe("text");
+    expect(Object.keys(newNode.data as object).sort()).toEqual(["text"]);
+  });
+
+  test("explicit tailData still wins over the same/cross-type rule", () => {
+    const todo: BlockNode = {
+      id: "T",
+      pageId: "page-1",
+      parentId: null,
+      type: "to-do",
+      data: { text: [{ text: "done thing" }], checked: true },
+      rank: a,
+      expanded: false,
+    };
+    const out = run([todo], {
+      kind: "split",
+      blockId: "T",
+      position: 10,
+      newId: "NEW",
+      tailData: { text: [], checked: false },
+    });
+    const newNode = out.find((x) => x.id === "NEW")!;
+    expect(newNode.data).toMatchObject({ checked: false });
   });
 
   test("mid-text → sibling carrying trailing text", () => {
@@ -1096,6 +1182,199 @@ describe("move", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Container anchors (`BlockOpContext.anchorTypes`) + the `unwrap` op
+// ---------------------------------------------------------------------------
+
+/**
+ * An anchor is a container that renders no line of its own — its content IS its
+ * children. The reducer learns which types those are ONLY from the op context,
+ * never from a type name, so the fixtures use a made-up type: if any of these
+ * pass because the reducer recognised `"callout"`, the abstraction has leaked.
+ */
+const ANCHOR = "container";
+const withAnchors: BlockOpContext = { anchorTypes: new Set([ANCHOR]) };
+
+function anchorNode(id: string, parentId: string | null, rank: string): BlockNode {
+  // Void payload: an anchor's schema carries appearance only, never `text`.
+  return { ...mk(id, parentId, rank, { expanded: true, type: ANCHOR }), data: { color: "info" } };
+}
+
+function pageRow(id: string, parentId: string | null, rank: string): BlockNode {
+  return { ...mk(id, parentId, rank, { type: PAGE_BLOCK_TYPE }), data: { title: id, icon: null } };
+}
+
+describe("anchors — split / merge refusals", () => {
+  test("split refuses an anchor as origin, and it is the CONTEXT that refuses", () => {
+    const blocks = [anchorNode("A", null, a), mk("C1", "A", a)];
+    const op: BlockOp = { kind: "split", blockId: "A", position: 0, newId: "NEW" };
+    expect(run(blocks, op, withAnchors)).toBe(blocks);
+    // Same op, no context: an ordinary split. The refusal is not a type-name
+    // special case — drop `anchorTypes` and the reducer is exactly as before.
+    expect(run(blocks, op)).not.toBe(blocks);
+  });
+
+  test("merge refuses an anchor as SOURCE (Delete at the end of the line above a container)", () => {
+    // `nextVisibleLine` happily returns the anchor, so `mergeNext` issues
+    // `merge` with the ANCHOR as the merging block — which would delete the
+    // container out from under its children on one keypress.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [mk("T0", null, r1, { text: "above" }), anchorNode("A", null, r2), mk("C1", "A", a)];
+    const op: BlockOp = { kind: "merge", blockId: "A" };
+    expect(run(blocks, op, withAnchors)).toBe(blocks);
+    expect(run(blocks, op).find((b) => b.id === "A")).toBeUndefined(); // unguarded: gone
+  });
+
+  test("merge refuses an anchor as the resolved TARGET (Backspace at the start of the first child)", () => {
+    // The first child's previous visible line is its PARENT — the anchor. A
+    // merge there writes `data.text` onto a void schema (400) and dissolves the
+    // box. Escaping a container is `unwrap`, not `merge`.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [mk("T0", null, r1), anchorNode("A", null, r2), mk("C1", "A", a, { text: "first" })];
+    const op: BlockOp = { kind: "merge", blockId: "C1" };
+    expect(run(blocks, op, withAnchors)).toBe(blocks);
+    expect(run(blocks, op).find((b) => b.id === "C1")).toBeUndefined(); // unguarded: merged into A
+  });
+
+  test("merge refuses an anchor reached as a COLLAPSED previous sibling", () => {
+    // The other way `prevVisibleLine` lands on an anchor: it stops descending at
+    // a collapsed container, so the block below one resolves to the anchor row.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [
+      { ...anchorNode("A", null, r1), expanded: false },
+      mk("T2", null, r2, { text: "below" }),
+      mk("C1", "A", a),
+    ];
+    expect(run(blocks, { kind: "merge", blockId: "T2" }, withAnchors)).toBe(blocks);
+  });
+});
+
+describe("anchors — the empty-anchor prune", () => {
+  test("outdenting an anchor's only child leaves it childless, and the prune removes it", () => {
+    const blocks = [anchorNode("A", null, a), mk("C1", "A", a, { text: "only" })];
+    const op: BlockOp = { kind: "outdent", blockIds: ["C1"] };
+
+    const out = run(blocks, op, withAnchors);
+    expect(out.find((b) => b.id === "A")).toBeUndefined();
+    expect(ids(out, null)).toEqual(["C1"]);
+
+    // Without the context the emptied container survives — today's behavior.
+    const bare = run(blocks, op);
+    expect(ids(bare, null)).toEqual(["A", "C1"]);
+    expect(ids(bare, "A")).toEqual([]);
+  });
+
+  test("deleting the last child prunes the container; a container that still has one survives", () => {
+    const c1 = a;
+    const c2 = after(c1);
+    const blocks = [anchorNode("A", null, a), mk("C1", "A", c1), mk("C2", "A", c2)];
+    const oneLeft = run(blocks, { kind: "delete", blockId: "C1" }, withAnchors);
+    expect(ids(oneLeft, "A")).toEqual(["C2"]);
+    const emptied = run(oneLeft, { kind: "delete", blockId: "C2" }, withAnchors);
+    expect(emptied).toEqual([]);
+  });
+
+  test("the prune runs to a fixed point through NESTED containers", () => {
+    // A1 > A2 > C1. Removing C1 empties A2, which empties A1.
+    const blocks = [anchorNode("A1", null, a), anchorNode("A2", "A1", a), mk("C1", "A2", a)];
+    const out = run(blocks, { kind: "delete", blockId: "C1" }, withAnchors);
+    expect(out).toEqual([]);
+  });
+
+  test("NEVER prunes a childless page row, even when the context names the page type", () => {
+    // The catastrophic false positive: an empty page is legitimate content, and
+    // deleting one here would FK-cascade a whole sub-page away from a keystroke.
+    // The guard is unconditional, so even a pathological context cannot reach it.
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    const blocks = [pageRow("PG", null, r1), anchorNode("A", null, r2), mk("T", null, r3)];
+    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", afterId: "T" }, {
+      anchorTypes: new Set([PAGE_BLOCK_TYPE, ANCHOR]),
+    });
+    expect(out.find((b) => b.id === "PG")).toBeDefined();
+    expect(out.find((b) => b.id === "PG")!.data).toEqual({ title: "PG", icon: null });
+    // Non-vacuous: the ordinary empty anchor in the same forest WAS pruned, by
+    // the same pass, on an op that named neither of them.
+    expect(out.find((b) => b.id === "A")).toBeUndefined();
+  });
+});
+
+describe("unwrap", () => {
+  test("promotes the children into the container's slot: order, ids, types and subtrees intact", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    const c1 = a;
+    const c2 = after(c1);
+    const c3 = after(c2);
+    const blocks = [
+      mk("T0", null, r1),
+      anchorNode("A", null, r2),
+      mk("T2", null, r3),
+      mk("C1", "A", c1, { text: "first" }),
+      mk("C2", "A", c2, { type: "heading-1", expanded: true }),
+      mk("C3", "A", c3),
+      mk("G1", "C2", a), // C2's own subtree rides along untouched
+    ];
+    const out = run(blocks, { kind: "unwrap", blockId: "A" }, withAnchors);
+
+    expect(out.find((b) => b.id === "A")).toBeUndefined();
+    // The children occupy exactly the slot the container held (`run` already
+    // asserted strictly-ascending sibling ranks, so this order IS rank order).
+    expect(ids(out, null)).toEqual(["T0", "C1", "C2", "C3", "T2"]);
+    // Identity preserved: ids, types, text and whole subtrees.
+    expect(textOf(out.find((b) => b.id === "C1")!)).toBe("first");
+    expect(out.find((b) => b.id === "C2")!.type).toBe("heading-1");
+    expect(ids(out, "C2")).toEqual(["G1"]);
+
+    for (const id of ["C1", "C2", "C3"]) {
+      const rk = Rank.from(out.find((b) => b.id === id)!.rank);
+      // Strictly inside the container's former neighbourhood…
+      expect(Rank.compare(Rank.from(r1), rk)).toBe(-1);
+      expect(Rank.compare(rk, Rank.from(r3))).toBe(-1);
+      // …and strictly ABOVE the container's own rank: the server applies the
+      // UPDATEs (promoted children) before the DELETE (container), so an equal
+      // rank would violate the live `(parent_id, rank)` unique index.
+      expect(Rank.compare(Rank.from(r2), rk)).toBe(-1);
+    }
+  });
+
+  test("a nested container's children are promoted into its PARENT container, not to top level", () => {
+    const blocks = [
+      anchorNode("A1", null, a),
+      mk("X", "A1", a),
+      anchorNode("A2", "A1", after(a)),
+      mk("C1", "A2", a),
+    ];
+    const out = run(blocks, { kind: "unwrap", blockId: "A2" }, withAnchors);
+    expect(ids(out, "A1")).toEqual(["X", "C1"]);
+    expect(ids(out, null)).toEqual(["A1"]);
+  });
+
+  test("unwrapping a childless block is a plain delete", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [mk("T0", null, r1), mk("T1", null, r2)];
+    const out = run(blocks, { kind: "unwrap", blockId: "T0" });
+    expect(ids(out, null)).toEqual(["T1"]);
+  });
+
+  test("refuses a page row (unwrapping one would delete the sub-page and strand its content)", () => {
+    const blocks = [pageRow("PG", null, a), mk("T", null, after(a))];
+    const out = run(blocks, { kind: "unwrap", blockId: "PG" });
+    expect(out).toBe(blocks);
+  });
+
+  test("an unknown id is a no-op", () => {
+    const blocks = [mk("T", null, a)];
+    expect(run(blocks, { kind: "unwrap", blockId: "nope" })).toBe(blocks);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Sub-pages inline: page rows are members of the content forest
 // ---------------------------------------------------------------------------
 
@@ -1657,5 +1936,82 @@ describe("split ∘ merge round-trip", () => {
     }
     // Non-vacuity: the forest is dense enough that most nodes have a next line.
     expect(checks).toBeGreaterThan(3000);
+  });
+
+  test("split ∘ merge round-trips over an ANCHOR-bearing forest with `anchorTypes` supplied (~300 seeds)", () => {
+    // The anchors are real members of the forest — parents of the split target,
+    // its siblings, its ancestors — so the guards and the prune are live for
+    // every seed. Equality stays STRUCTURAL: merge mints fresh ranks, so
+    // comparing rank strings would fail even on a correct round-trip.
+    let rounds = 0;
+    let withAnchorRounds = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const rand = rng(seed);
+      const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand);
+      if (rows.some((b) => b.type === ANCHOR)) withAnchorRounds++;
+      // A page row is not a legal split target (guarded), and neither is an
+      // anchor — it hosts no text surface.
+      const targets = rows.filter((b) => b.type !== PAGE_BLOCK_TYPE && b.type !== ANCHOR);
+      if (targets.length === 0) continue;
+      const target = targets[Math.floor(rand() * targets.length)]!;
+      const len = runsLength(runsOfNode(target));
+      const position = len === 0 ? 0 : 1 + Math.floor(rand() * len);
+
+      const split = applyBlockOp(rows, { kind: "split", blockId: target.id, position, newId: "RT" }, withAnchors);
+      const tail = split.find((b) => b.id === "RT")!;
+      expect(prevVisibleLine(split, tail)?.id).toBe(target.id);
+
+      const merged = applyBlockOp(split, { kind: "merge", blockId: "RT" }, withAnchors);
+      expect(merged.find((b) => b.id === "RT")).toBeUndefined();
+      expect(canonicalForest(merged)).toEqual(canonicalForest(rows));
+      rounds++;
+    }
+    expect(rounds).toBeGreaterThan(250);
+    // Non-vacuity: the fixture space really does contain anchors.
+    expect(withAnchorRounds).toBeGreaterThan(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// `BlockOpContext` — the default is byte-identical to today
+// ---------------------------------------------------------------------------
+
+/**
+ * Retype a random subset of the fuzz forest's CHILD-BEARING content nodes into
+ * container anchors. Child-bearing by construction, because a childless anchor
+ * is pruned on the first op — which is correct behavior, but would make a
+ * round-trip against the *unpruned* original forest compare unequal for a reason
+ * that has nothing to do with split/merge.
+ */
+function anchorize(rows: BlockNode[], rand: () => number): BlockNode[] {
+  const parents = new Set(rows.map((b) => b.parentId));
+  return rows.map((b) =>
+    b.type !== PAGE_BLOCK_TYPE && parents.has(b.id) && rand() < 0.5
+      ? { ...b, type: ANCHOR }
+      : b,
+  );
+}
+
+describe("BlockOpContext", () => {
+  test("an omitted / empty `anchorTypes` is byte-identical to a context-free call (~500 seeds)", () => {
+    // The property that keeps every test, property test and fuzz seed above
+    // valid: the context is purely additive. Run over every op kind.
+    for (let seed = 1; seed <= 500; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 15));
+      const op = randomOp(rand, rows, seed);
+      const base = applyBlockOp(rows, op);
+      expect(applyBlockOp(rows, op, {})).toEqual(base);
+      expect(applyBlockOp(rows, op, { anchorTypes: new Set() })).toEqual(base);
+    }
+  });
+
+  test("a context naming types ABSENT from the forest changes nothing either", () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 15));
+      const op = randomOp(rand, rows, seed);
+      expect(applyBlockOp(rows, op, withAnchors)).toEqual(applyBlockOp(rows, op));
+    }
   });
 });

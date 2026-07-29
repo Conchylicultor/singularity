@@ -87,6 +87,30 @@ describe("isReflected", () => {
     ).toBe(false);
   });
 
+  test("unwrap: BOTH the container's removal and every promoted child", () => {
+    // The base has A and B at top level: read as "the container C is gone and B
+    // was promoted to where the effect predicted".
+    const rankB = String(blocks.find((b) => b.id === "B")!.rank);
+    const e: OpEffect = {
+      kind: "unwrap",
+      id: "C",
+      moves: [{ id: "B", parentId: null, rank: rankB }],
+    };
+    expect(isReflected(blocks, e)).toBe(true);
+    // Container still present ⇒ not absorbed, even though the child is placed.
+    expect(isReflected([...blocks, mk("C", null, after(rankB))], e)).toBe(false);
+    // Container gone but the child NOT promoted (another client hard-deleted the
+    // subtree) ⇒ not absorbed either. This is why a bare `remove` under-describes
+    // the op: it would drop a replay whose promotion never happened.
+    expect(isReflected([mk("A", null, a)], e)).toBe(false);
+  });
+
+  test("unwrap: an EMPTY move list is not vacuous — the removal still has to hold", () => {
+    const e: OpEffect = { kind: "unwrap", id: "A", moves: [] };
+    expect(isReflected(blocks, e)).toBe(false); // A is still there
+    expect(isReflected([mk("B", null, after(a))], e)).toBe(true);
+  });
+
   test("reparent: every listed move must be reflected (a bulk indent/outdent)", () => {
     const rankA = String(blocks.find((b) => b.id === "A")!.rank);
     const rankB = String(blocks.find((b) => b.id === "B")!.rank);
@@ -225,6 +249,34 @@ describe("chained compose", () => {
     expect(del.effect).toEqual({ kind: "remove", id: "P1" });
 
     expect(merge.op.kind).toBe("merge");
+  });
+
+  test("unwrap: the effect names the container AND its promoted children", () => {
+    // page ▸ A, CA(container) ▸ [X, Y]. The children are not named by the op, so
+    // the builder reads them off the pre-op forest.
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const k2 = after(k1);
+    const rows = [
+      mk("A", null, r1, { text: "a" }),
+      mk("CA", null, r2, { type: "callout", expanded: true }),
+      mk("X", "CA", k1, { text: "x" }),
+      mk("Y", "CA", k2, { text: "y" }),
+    ];
+    const anchors = new Set(["callout"]);
+    const v = buildOverlayOp({ kind: "unwrap", blockId: "CA" }, rows, anchors);
+    if (v.tag !== "op" || v.effect.kind !== "unwrap") throw new Error("expected an unwrap effect");
+    expect(v.effect.id).toBe("CA");
+    expect(v.effect.moves.map((m) => m.id)).toEqual(["X", "Y"]);
+    expect(v.effect.moves.every((m) => m.parentId === null)).toBe(true);
+
+    // …and the predicted placement is exactly what applying the op produces, so
+    // the op confirms against its own result.
+    const applied = applyOverlayOp(rows, v, anchors);
+    expect(isReflected(applied, v.effect)).toBe(true);
+    // Idempotency guard: replaying it onto that base drops the entry.
+    expect(() => applyOverlayOp(applied, v, anchors)).toThrow(OpNoLongerApplies);
   });
 });
 

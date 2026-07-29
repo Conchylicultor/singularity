@@ -42,7 +42,9 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef } = useBlockEditor();
+  const { rowsRef, unwrapBlock } = useBlockEditor();
+  const unwrapRef = useRef(unwrapBlock);
+  unwrapRef.current = unwrapBlock;
   // The block-type registry: every block's static handle config (incl. the edit
   // policy and split-into-child flag). Resolved here, not prop-drilled.
   const contributions = Editor.Block.useContributions();
@@ -122,6 +124,13 @@ export function KeyboardPlugin({
           event.preventDefault();
           api.outdent();
           return true;
+        case "unwrap":
+          // The target is the CONTAINER (an anchor row that holds no caret and
+          // has no `BlockEditorAPI` of its own), so this goes through the
+          // editor-wide entry point rather than this block's api.
+          event.preventDefault();
+          unwrapRef.current(intent.blockId);
+          return true;
         case "indent":
           event.preventDefault();
           api.indent();
@@ -146,8 +155,10 @@ export function KeyboardPlugin({
       // Resolve the current block's declarative edit policy from the registry.
       // `splitChildWhenExpanded` is render-state-dependent (the live `expanded`
       // flag), so it folds into the same policy here rather than being drilled.
+      const handleOf = (type: string) =>
+        contributionsRef.current.find((c) => c.block.type === type)?.block;
       const node = nodes.find((b) => b.id === blockIdRef.current);
-      const handle = contributionsRef.current.find((c) => c.block.type === node?.type)?.block;
+      const handle = handleOf(node?.type ?? "");
       const editPolicy = {
         asChild: handle?.splitChildWhenExpanded && node?.expanded ? true : undefined,
         childType: handle?.splitChildWhenExpanded?.childType,
@@ -161,6 +172,13 @@ export function KeyboardPlugin({
       const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
         nodes,
         blockId: blockIdRef.current,
+        // Type facts from the same registry, resolved per node (the ladders ask
+        // about OTHER blocks — the line above, the line below, the parent — not
+        // just this one). An unregistered type is text-less and not an anchor:
+        // refusing only demotes a structural keystroke to a caret move, whereas
+        // assuming text would hand the write boundary a payload it rejects.
+        acceptsText: (n) => handleOf(n.type)?.acceptsText === true,
+        isAnchor: (n) => handleOf(n.type)?.anchor === true,
         editPolicy,
       });
       return execute(intent, event, caret);

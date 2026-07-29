@@ -99,7 +99,47 @@ export type BlockOp =
       parentId?: string | null;
     }
   | { kind: "delete"; blockId: string }
+  /**
+   * Dissolve a container in place: delete `blockId` and PROMOTE its children into
+   * the slot it occupied among its own former siblings. Children keep their ids,
+   * types, `data` and subtrees — only `parentId` and `rank` change — and their
+   * order is preserved.
+   *
+   * This is how the caret escapes a container. The generic Backspace ladder would
+   * otherwise resolve "start of the first child" to its `isIndented` → **outdent**
+   * rung, and `outdentOne` adopts the followers: the first line would pop out of
+   * the box AND take the rest of the container's content with it as its own
+   * children — silently re-nesting content the user never asked to nest. Correct
+   * for a one-line container, wrong for every other one. `unwrap` removes only the
+   * container.
+   */
+  | { kind: "unwrap"; blockId: string }
   | { kind: "move"; blockId: string; parentId: string | null; rank: string };
+
+/**
+ * Type facts the pure reducer cannot derive from the forest alone. Parameterized
+ * on DATA rather than importing a slot — the precedent `core/markdown.ts` sets
+ * ("Parameterized on `handles`, not a slot import, so it stays a leaf both
+ * runtimes can call"): the web side builds it from the `Editor.Block`
+ * contributions, the server from its own block registry, and neither runtime's
+ * registry leaks into the other.
+ *
+ * Every field is optional and the default (`{}` — an empty anchor set) makes
+ * `applyBlockOp` byte-identical to a context-free call. That is the property that
+ * keeps every existing test, property test and fuzz seed valid.
+ */
+export interface BlockOpContext {
+  /**
+   * Block types declaring `BlockHandle.anchor` — containers that render no line
+   * of their own. The reducer needs them for three things: refusing to split one
+   * (it hosts no text), refusing to merge into or away one (same), and pruning a
+   * container the last child just left.
+   */
+  anchorTypes?: ReadonlySet<string>;
+}
+
+/** The default context: no anchor types, i.e. today's behavior exactly. */
+const NO_ANCHORS: ReadonlySet<string> = new Set<string>();
 
 /**
  * Zod discriminated union mirroring `BlockOp`, for server body validation. The
@@ -132,6 +172,7 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     parentId: z.string().nullable().optional(),
   }),
   z.object({ kind: z.literal("delete"), blockId: z.string() }),
+  z.object({ kind: z.literal("unwrap"), blockId: z.string() }),
   z.object({
     kind: z.literal("move"),
     blockId: z.string(),
@@ -341,6 +382,11 @@ export function opBlockIds(op: BlockOp): string[] {
     case "merge":
     case "delete":
     case "move":
+    // `unwrap` also re-ranks the promoted children, deliberately omitted here —
+    // the same documented under-approximation as split's adopted children and
+    // merge's rewritten target: less cascade-confirmation coverage, never a
+    // wrong drop.
+    case "unwrap":
       return [op.blockId];
     case "indent":
     case "outdent":
@@ -356,13 +402,31 @@ export function opBlockIds(op: BlockOp): string[] {
  * Apply a single block op to the full in-memory page block list, purely. Never
  * mutates `blocks` (returns a new array with new node objects for changed
  * nodes), and never changes a surviving node's `pageId` (in-page invariant).
+ *
+ * `ctx` carries the type facts the forest cannot supply (today: which types are
+ * container anchors). It defaults to `{}`, which is byte-identical to a
+ * context-free call — see `BlockOpContext`.
  */
-export function applyBlockOp(blocks: BlockNode[], op: BlockOp): BlockNode[] {
+export function applyBlockOp(
+  blocks: BlockNode[],
+  op: BlockOp,
+  ctx: BlockOpContext = {},
+): BlockNode[] {
+  const anchorTypes = ctx.anchorTypes ?? NO_ANCHORS;
+  const next = applyOp(blocks, op, anchorTypes);
+  return pruneEmptyAnchors(next, anchorTypes);
+}
+
+function applyOp(
+  blocks: BlockNode[],
+  op: BlockOp,
+  anchorTypes: ReadonlySet<string>,
+): BlockNode[] {
   switch (op.kind) {
     case "split":
-      return applySplit(blocks, op);
+      return applySplit(blocks, op, anchorTypes);
     case "merge":
-      return applyMerge(blocks, op);
+      return applyMerge(blocks, op, anchorTypes);
     case "indent":
       return foldIndent(blocks, op.blockIds).next;
     case "outdent":
@@ -371,14 +435,62 @@ export function applyBlockOp(blocks: BlockNode[], op: BlockOp): BlockNode[] {
       return applyInsert(blocks, op);
     case "delete":
       return applyDelete(blocks, op);
+    case "unwrap":
+      return applyUnwrap(blocks, op);
     case "move":
       return applyMove(blocks, op);
+  }
+}
+
+/**
+ * Drop every container anchor the forest left childless. An anchor's content IS
+ * its children, so a childless one is an empty box the user cannot have meant to
+ * keep — the last child leaving (outdent, move, merge, delete) is what dissolves
+ * the container.
+ *
+ * A POST-PASS derived from the CURRENT forest at application time, never a flag
+ * minted at intent time — the same argument `applySplit`'s adoption comment
+ * makes: ops apply against the current forest (the optimistic overlay replays
+ * onto a refreshed base, and the server applies against its own load), so a
+ * decision frozen when the keystroke fired could contradict the forest by the
+ * time the op actually applies. Deriving keeps it true at the moment of
+ * application, byte-identical on client and server.
+ *
+ * Iterated to a fixed point because anchors nest: an anchor whose only child was
+ * an anchor is itself empty once that one goes.
+ *
+ * A `PAGE_BLOCK_TYPE` row is NEVER pruned, whatever `anchorTypes` says — an
+ * empty page is legitimate content, and deleting one here would FK-cascade a
+ * whole sub-page away from a keystroke. That is the catastrophic false positive,
+ * so it is guarded explicitly and pinned by test.
+ *
+ * Known gap, deliberate: an `insert` op naming an anchor type mints a childless
+ * anchor that this pass immediately removes. Anchors are never born that way —
+ * the wrap mints the anchor and its first child in ONE patch (not an op) — and
+ * the paths that CAN leave an empty anchor (`bulkDelete` / `bulkMove` / `paste`)
+ * bypass the reducer entirely on both sides, where the surface's one-line
+ * childless fallback makes the result visible and deletable rather than a ghost.
+ */
+function pruneEmptyAnchors(
+  blocks: BlockNode[],
+  anchorTypes: ReadonlySet<string>,
+): BlockNode[] {
+  if (anchorTypes.size === 0) return blocks; // identity: today's behavior
+  let next = blocks;
+  for (;;) {
+    const parents = new Set(next.map((b) => b.parentId));
+    const doomed = next
+      .filter((b) => anchorTypes.has(b.type) && b.type !== PAGE_BLOCK_TYPE && !parents.has(b.id))
+      .map((b) => b.id);
+    if (doomed.length === 0) return next;
+    next = remove(next, doomed);
   }
 }
 
 function applySplit(
   blocks: BlockNode[],
   op: Extract<BlockOp, { kind: "split" }>,
+  anchorTypes: ReadonlySet<string>,
 ): BlockNode[] {
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
@@ -387,6 +499,11 @@ function applySplit(
   // stamping it. Structurally unreachable (the renderer registers no text
   // surface, so Enter can't originate here) — the guard is the belt.
   if (block.type === PAGE_BLOCK_TYPE) return blocks;
+  // Same belt, same argument, for a container anchor: it renders no line, hosts
+  // no text surface and registers no focus handle, so Enter cannot originate in
+  // one. A split there would write `data.text` onto a void schema (400 at the
+  // write boundary) and mint a second empty container.
+  if (anchorTypes.has(block.type)) return blocks;
 
   // Live callers pass authoritative `op.runs`; the `runsOfNode` fallback (lagged
   // `data.text` projection) is the pure reducer's basis (tests / non-live).
@@ -473,10 +590,20 @@ function applySplit(
   next = replace(next, updatedBlock);
 
   // Tail data: `op.tailData` is the authoritative per-type-transformed payload
-  // (e.g. a checked to-do → unchecked tail), resolved at the intent layer;
-  // absent = inherit the origin's data (today's behavior). `.text` is always
-  // overwritten with the split-off `afterRuns`.
-  const newData = { ...asObject(op.tailData !== undefined ? op.tailData : block.data), text: afterRuns };
+  // (e.g. a checked to-do → unchecked tail), resolved at the intent layer.
+  // Absent, the origin's data is inherited — but ONLY when the tail is the SAME
+  // type. `data` belongs to a type: carrying a callout's `{icon, color,
+  // iconSvgNodes}` onto a `text` tail hands the write boundary a payload its
+  // strict schema rejects outright (400 `Unrecognized key(s)`), which is exactly
+  // what a container's `splitChildWhenExpanded: {childType: "text"}` produces on
+  // every Enter. A cross-type tail therefore starts from `{}` and lets the
+  // target schema's own defaults fill it in. This stayed latent until a block
+  // type carried more than `{text}`: every earlier cross-type split (heading →
+  // text, list → text) happened to be between structurally identical schemas.
+  const inheritsData = newType === block.type;
+  const tailBase =
+    op.tailData !== undefined ? op.tailData : inheritsData ? block.data : {};
+  const newData = { ...asObject(tailBase), text: afterRuns };
   const newNode: BlockNode = {
     id: op.newId,
     pageId: block.pageId,
@@ -498,6 +625,7 @@ function applySplit(
 function applyMerge(
   blocks: BlockNode[],
   op: Extract<BlockOp, { kind: "merge" }>,
+  anchorTypes: ReadonlySet<string>,
 ): BlockNode[] {
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
@@ -505,6 +633,9 @@ function applyMerge(
   // block — which would take the whole sub-page (and its FK-cascaded content)
   // with it, from a keystroke.
   if (block.type === PAGE_BLOCK_TYPE) return blocks;
+  // A container anchor carries no text either, and merging it away would delete
+  // the container out from under its children. Escaping a container is `unwrap`.
+  if (anchorTypes.has(block.type)) return blocks;
 
   // Merge into the previous VISIBLE line (the deepest last expanded descendant
   // of the prev sibling, or the parent when the block is a first child), not the
@@ -517,6 +648,13 @@ function applyMerge(
   // row whose subtree lives in another `page_id` partition). Neither is
   // representable — refuse.
   if (prev.type === PAGE_BLOCK_TYPE) return blocks;
+  // Merging INTO a container anchor would write `data.text` onto a void schema
+  // (400 at the write boundary) and adopt this block's children under a row that
+  // renders no line — i.e. dissolve the box from one keypress. This is the live
+  // hazard the two guards above are only the belt for: `nextVisibleLine` happily
+  // returns an anchor, so Delete at the end of the line ABOVE a container
+  // resolves here. Refusing demotes it to a plain caret move.
+  if (anchorTypes.has(prev.type)) return blocks;
 
   // Concatenate runs into prev (coalescing the seam). `op.runs` is the live
   // merging runs on the live path; `runsOfNode` (lagged projection) is only the
@@ -798,6 +936,47 @@ function applyDelete(
   if (!block) return blocks;
   const ids = new Set(subtreeIds(blocks, op.blockId));
   return remove(blocks, ids);
+}
+
+/**
+ * Dissolve a container: delete the block and promote its children into the slot
+ * it occupied among its own former siblings, order preserved. Ids, types, `data`
+ * and whole subtrees ride along untouched — only `parentId` and `rank` change.
+ * A childless block is simply deleted.
+ *
+ * The rank window mirrors `applyMerge`'s `intoParent` adoption branch byte for
+ * byte, and for its reason: the lower bound is the block's OWN rank, not its
+ * previous sibling's. The server write applies the UPDATEs (the promoted
+ * children) BEFORE the DELETE (of the container), so the container's rank is
+ * still live under the shared parent while the children are re-ranked — and a
+ * window of `(prevSibling, next)` provably CAN mint exactly it (`nBetween("a0",
+ * "a2", 1)` is `"a1"`), violating the `(parent_id, rank)` live-unique index.
+ * Minting strictly ABOVE the container's rank cannot collide, and lands in the
+ * same visual slot since the container is going away.
+ */
+function applyUnwrap(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "unwrap" }>,
+): BlockNode[] {
+  const block = byId(blocks, op.blockId);
+  if (!block) return blocks;
+  // Unwrapping a page row would promote its content across the page boundary
+  // (rows whose `parent_id` and `page_id` disagree) and delete the sub-page.
+  if (block.type === PAGE_BLOCK_TYPE) return blocks;
+
+  const promoted = childrenOf(blocks, block.id);
+  const nextAfterBlock = nextSibling(blocks, block);
+  const ranks = Rank.nBetween(
+    Rank.from(block.rank),
+    nextAfterBlock ? Rank.from(nextAfterBlock.rank) : null,
+    promoted.length,
+  );
+
+  let next = blocks;
+  promoted.forEach((child, i) => {
+    next = replace(next, { ...child, parentId: block.parentId, rank: ranks[i]!.toJSON() });
+  });
+  return remove(next, [block.id]);
 }
 
 function applyMove(

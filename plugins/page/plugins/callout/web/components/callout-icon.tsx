@@ -1,13 +1,13 @@
 import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { MdLightbulb } from "react-icons/md";
+import { MdDelete, MdLightbulb, MdRemoveCircleOutline } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { PageIcon, useBlockEditor, type BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 import { CALLOUT_COLORS, type CalloutColor } from "../../core";
 
 /** Solid swatch dot per semantic color, shown in the color row of the popover. */
@@ -26,33 +26,54 @@ export interface CalloutIconChange {
 }
 
 /**
- * The callout's leading icon: a glyph that opens a popover to pick a semantic
- * color and a Material Design icon. Mirrors `PageIconButton` / `AvatarPicker`.
- * Lives inside the editor's contenteditable, so the trigger and swatches
- * preventDefault on mousedown to keep the caret put (like the to-do checkbox).
+ * The callout's icon on an EDITABLE surface: the container's one and only
+ * affordance.
+ *
+ * An anchor row renders no hover rail — its three slots would coincide with its
+ * first child's, on the same visual line, and the child must keep its own handle
+ * (see `page/editor`'s "A container that owns no text"). So everything an
+ * ordinary block gets from the gutter drag handle has to live here: the surface
+ * owns drag-to-move (the column this renders into is the draggable), and this
+ * popover owns the rest — appearance (colour, icon, reset) plus the two
+ * structural actions, mirroring `BlockActionsMenu`'s shape and its
+ * `onMouseDown`-preventDefault commit.
+ *
+ * "Remove callout" DISSOLVES the container and promotes its children into its
+ * slot (`unwrapBlock`) — the escape hatch that keeps the content. "Delete"
+ * removes the callout and its whole subtree, exactly as the block-actions menu's
+ * Delete does for any other block. Two different intents that a single
+ * "delete the container" would conflate.
+ *
+ * The trigger sits beside a live caret, so it `preventDefault`s its mousedown to
+ * keep that caret put (like the to-do checkbox). It fills the surface-owned
+ * `BLOCK_INDENT` column exactly — it must not size or place itself.
  */
 export function CalloutIcon({
+  blockId,
   color,
   icon,
   iconSvgNodes,
+  editor,
   onChange,
   className,
 }: {
+  blockId: string;
   color: CalloutColor;
   icon: string | null;
   iconSvgNodes: SvgNode[] | null;
+  editor: BlockEditorAPI;
   onChange: (next: Partial<CalloutIconChange>) => void;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const { unwrapBlock } = useBlockEditor();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         onMouseDown={(e) => e.preventDefault()}
-        // eslint-disable-next-line layout/no-adhoc-layout -- flex-none + self-start are per-child overrides positioning the trigger as a rigid, top-aligned leading glyph within the callout block's row (owned by the parent, not this file)
         className={cn(
-          "hover:bg-accent size-7 flex-none self-start rounded-md py-xs outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "hover:bg-accent size-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring",
           className,
         )}
         aria-label="Callout icon and color"
@@ -104,6 +125,37 @@ export function CalloutIcon({
           className="text-muted-foreground"
         >
           Reset
+        </Row>
+
+        {/* Structural actions — the block-actions menu this container has no
+            gutter handle to open. Same `onMouseDown` + preventDefault commit as
+            `BlockActionsMenu`'s Delete, so the press never blurs a live caret. */}
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- hairline separator's own inset between the menu's zones, matching the Reset divider above */}
+        <div className="my-1 h-px bg-border" />
+        <Row
+          size="sm"
+          hover="accent"
+          icon={<MdRemoveCircleOutline />}
+          onMouseDown={(e: React.MouseEvent) => {
+            e.preventDefault();
+            unwrapBlock(blockId);
+            setOpen(false);
+          }}
+        >
+          Remove callout
+        </Row>
+        <Row
+          size="sm"
+          hover="accent"
+          className="text-destructive"
+          icon={<MdDelete />}
+          onMouseDown={(e: React.MouseEvent) => {
+            e.preventDefault();
+            editor.remove();
+            setOpen(false);
+          }}
+        >
+          Delete
         </Row>
       </PopoverContent>
     </Popover>

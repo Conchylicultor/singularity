@@ -42,6 +42,7 @@ import {
 } from "./internal/optimistic-block-ops";
 import { landCaret } from "./internal/caret-landing";
 import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-surface";
+import { useAnchorTypes, useBlockHandles } from "./internal/block-handles";
 import { useMemoryBlockStore, type BlockStore } from "./block-store";
 import { CompositeServerProviderHost } from "./composite-block-store";
 import type { BlockEditorAPI } from "./types";
@@ -54,11 +55,15 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   merge: "Merge blocks",
   indent: "Indent blocks",
   outdent: "Outdent blocks",
+  unwrap: "Remove container",
   move: "Move block",
 };
 
-/** The block id the user is "on" for an op, used to restore focus on undo/redo. */
-function opFocusId(op: BlockOp): string | null {
+/**
+ * The block id the user is "on" for an op, used to restore focus on undo/redo.
+ * Takes the PRE-op rows because some ops focus a block they do not name.
+ */
+function opFocusId(op: BlockOp, before: Block[]): string | null {
   switch (op.kind) {
     case "insert":
     case "split":
@@ -67,6 +72,12 @@ function opFocusId(op: BlockOp): string | null {
     case "delete":
     case "move":
       return op.blockId;
+    case "unwrap":
+      // The container VANISHES, so focusing `op.blockId` would land focus on a
+      // row that no longer exists (i.e. on <body>). The caret belongs on the
+      // first promoted child — the line the user was standing on when Backspace
+      // dissolved the box, and the row that now occupies the container's slot.
+      return childrenOf(toNodes(before), op.blockId)[0]?.id ?? null;
     case "indent":
     case "outdent":
       // A bulk indent/outdent is driven from block-SELECTION mode, where focus
@@ -76,9 +87,33 @@ function opFocusId(op: BlockOp): string | null {
   }
 }
 
+/**
+ * The origin row's `data` for a WRAP, given the payload the `convertTo` caller
+ * passed for the (now container) target type. The origin keeps its own type and
+ * therefore its own `data` — the caller's payload belongs to the container — with
+ * ONE exception: a caller that supplied a `text` key resolved it against the
+ * ORIGIN's live content (the `/` menu strips the `/query` and hands back the
+ * remaining runs), so that key is overlaid. Callers with nothing to say about
+ * text (Turn-into, and any void target whose `empty()` has no `text`) leave the
+ * origin's data byte-identical.
+ */
+function withConvertText(originData: unknown, convertData: unknown): unknown {
+  if (typeof convertData !== "object" || convertData === null || !("text" in convertData)) {
+    return originData;
+  }
+  return {
+    ...((originData as Record<string, unknown> | null) ?? {}),
+    text: (convertData as { text: unknown }).text,
+  };
+}
+
 /** Run the pure reducer over full rows and project back to `Block[]`. */
-function fromOpResult(before: Block[], op: BlockOp): Block[] {
-  return fromNodes(applyBlockOp(toNodes(before), op), before);
+function fromOpResult(
+  before: Block[],
+  op: BlockOp,
+  anchorTypes: ReadonlySet<string>,
+): Block[] {
+  return fromNodes(applyBlockOp(toNodes(before), op, { anchorTypes }), before);
 }
 
 /**
@@ -228,6 +263,18 @@ interface BlockEditorContextValue {
   indentBlocks: (blockIds: string[]) => void;
   /** Lift each of `blockIds` out to its parent's level — the selection-mode Shift+Tab. */
   outdentBlocks: (blockIds: string[]) => void;
+  /**
+   * Dissolve the CONTAINER `blockId`: delete it and promote its children into the
+   * slot it occupied, order preserved. How the caret escapes a container box —
+   * Backspace at the start of an anchor's first child resolves here, and a
+   * container's own chrome (the callout icon menu's "Remove callout") uses the
+   * same entry point.
+   *
+   * Takes a block id because the caller is usually standing in a DIFFERENT block
+   * (the anchor renders no line and holds no caret), which is also why it lives
+   * on the context rather than on a single block's `BlockEditorAPI`.
+   */
+  unwrapBlock: (blockId: string) => void;
   /** Bulk operations on a set of selected block ids (see server endpoints). */
   bulkDelete: (ids: string[]) => void;
   bulkMove: (args: {
@@ -431,6 +478,12 @@ export function BlockEditorProviderInner({
 }) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [blockMenuDraftId, setBlockMenuDraftId] = useState<string | null>(null);
+  // Block-type facts the pure reducer and `convertTo` cannot derive from the
+  // forest: which types are container anchors (the reducer's `BlockOpContext` —
+  // the store passes the SAME set, and so does the server) and the handle
+  // registry `convertTo` reads `wrapOnConvert`/`empty()` off.
+  const anchorTypes = useAnchorTypes();
+  const blockHandles = useBlockHandles();
   const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
   // The flanking surfaces are read only inside imperative callbacks, so mirror
   // them into refs rather than threading them through `makeBlockAPI`'s deps.
@@ -662,22 +715,32 @@ export function BlockEditorProviderInner({
     [record, focusBlock],
   );
 
-  // THE single chokepoint for any single-row mutation. Snapshot the current rows,
-  // apply `transform` to just the target row, diff into a minimal forward/reverse
-  // patch pair, optionally `record` it on the unified stack, then dispatch the
-  // forward patch through the SAME optimistic-patch pipeline as structural ops.
-  // Every single-row writer (`projectText`, the block API's `update`/`convertTo`/
-  // `setExpanded`) funnels through here, so forward apply and undo/redo are always
-  // symmetric and a no-op diff records and dispatches nothing. Undo/redo restore
-  // focus to the mutated block (at `caretOffset` when given). `coalesceKey` merges
-  // run-together edits into one undo step; `record: false` keeps a mutation off the
-  // stack (view state) while still flowing it through the optimistic pipeline.
-  const commitRow = useCallback(
+  // THE single chokepoint for any DIRECT row-set mutation (everything that is not
+  // a `BlockOp`). Snapshot the current rows, apply `transform` to the whole array,
+  // diff into a minimal forward/reverse patch pair, optionally `record` it on the
+  // unified stack, then dispatch the forward patch through the SAME
+  // optimistic-patch pipeline as structural ops. `diffBlocks`/`patchesFromDiff`
+  // already operate over the whole array, so widening the chokepoint from one row
+  // to the row SET preserves the property verbatim: forward apply and undo/redo
+  // stay symmetric by construction, and a no-op diff records and dispatches
+  // nothing.
+  //
+  // Every such writer funnels through here — `projectText`, the block API's
+  // `update`/`setExpanded`, and `convertTo` in BOTH of its shapes (a plain type
+  // swap, and the `wrapOnConvert` wrap, which mints the container row and
+  // reparents the origin in ONE patch, hence ONE undo entry).
+  //
+  // Undo/redo restore focus to `focusId` (at `caretOffset` when given).
+  // `coalesceKey` merges run-together edits into one undo step; `record: false`
+  // keeps a mutation off the stack (view state) while still flowing it through
+  // the optimistic pipeline.
+  const commitRows = useCallback(
     (
-      blockId: string,
-      transform: (b: Block) => Block,
+      transform: (rows: Block[]) => Block[],
       opts: {
         label: string;
+        /** Block to re-focus on undo/redo; null when no row owns the caret. */
+        focusId: string | null;
         coalesceKey?: string;
         caretOffset?: number;
         record?: boolean;
@@ -691,11 +754,12 @@ export function BlockEditorProviderInner({
       },
     ) => {
       const before = rowsRef.current;
-      const after = before.map((b) => (b.id === blockId ? transform(b) : b));
+      const after = transform(before);
       const patches = patchesFromDiff(diffBlocks(before, after));
       const undoPatch = patches.undo;
       const redoPatch = opts.updateOnly ? { ...patches.redo, updateOnly: true } : patches.redo;
       if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
+      const { focusId } = opts;
       if (opts.record !== false) {
         record({
           label: opts.label,
@@ -703,17 +767,43 @@ export function BlockEditorProviderInner({
           undo: () => {
             dispatchPatch(undoPatch);
             // Undo/redo reveals the mutated block — it may be off-screen.
-            queueMicrotask(() => focusBlock(blockId, opts.caretOffset, { scroll: true }));
+            if (focusId) {
+              queueMicrotask(() => focusBlock(focusId, opts.caretOffset, { scroll: true }));
+            }
           },
           redo: () => {
             dispatchPatch(redoPatch);
-            queueMicrotask(() => focusBlock(blockId, opts.caretOffset, { scroll: true }));
+            if (focusId) {
+              queueMicrotask(() => focusBlock(focusId, opts.caretOffset, { scroll: true }));
+            }
           },
         });
       }
       dispatchPatch(redoPatch);
     },
     [record, dispatchPatch, focusBlock],
+  );
+
+  // The one-row case of `commitRows`: rewrite exactly the target row and land
+  // undo/redo focus on it.
+  const commitRow = useCallback(
+    (
+      blockId: string,
+      transform: (b: Block) => Block,
+      opts: {
+        label: string;
+        coalesceKey?: string;
+        caretOffset?: number;
+        record?: boolean;
+        updateOnly?: boolean;
+      },
+    ) => {
+      commitRows((rows) => rows.map((b) => (b.id === blockId ? transform(b) : b)), {
+        ...opts,
+        focusId: blockId,
+      });
+    },
+    [commitRows],
   );
 
   // `content doc → data.text` projection write (see the interface doc). NEVER
@@ -806,16 +896,20 @@ export function BlockEditorProviderInner({
       ) {
         return;
       }
-      const after = fromOpResult(before, {
-        kind: "move",
-        blockId: id,
-        parentId: dest.parentId,
-        rank: dest.rank.toJSON(),
-      });
+      const after = fromOpResult(
+        before,
+        {
+          kind: "move",
+          blockId: id,
+          parentId: dest.parentId,
+          rank: dest.rank.toJSON(),
+        },
+        anchorTypes,
+      );
       recordStructural(before, after, OP_LABELS.move, id);
       store.move(id, { parentId: dest.parentId, rank: dest.rank, targetId, zone });
     },
-    [store, recordStructural],
+    [store, recordStructural, anchorTypes],
   );
 
   // Apply a single tree op optimistically AND record it for structural undo. The
@@ -828,7 +922,7 @@ export function BlockEditorProviderInner({
   const dispatchOp = useCallback(
     (op: BlockOp) => {
       const before = rowsRef.current;
-      const after = fromOpResult(before, op);
+      const after = fromOpResult(before, op, anchorTypes);
       // An op the reducer fully refused (Tab on a first child, Shift+Tab at top
       // level, a bulk indent whose whole run is blocked) changes nothing. Drop it
       // here rather than dispatching: an empty-effect overlay would read as
@@ -838,10 +932,10 @@ export function BlockEditorProviderInner({
       if (diff.inserted.length === 0 && diff.updated.length === 0 && diff.deleted.length === 0) {
         return;
       }
-      recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op));
-      store.dispatch(buildOverlayOp(op, before));
+      recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op, before));
+      store.dispatch(buildOverlayOp(op, before, anchorTypes));
     },
-    [store, recordStructural],
+    [store, recordStructural, anchorTypes],
   );
 
   // Indent / outdent a SET of blocks (the selection roots). The single-block Tab
@@ -861,6 +955,16 @@ export function BlockEditorProviderInner({
     [dispatchOp],
   );
 
+  // Dissolve a container in place (see the context field's doc). A plain
+  // `dispatchOp`, so it is optimistic, recorded as one undo entry, and refused as
+  // a no-op when `blockId` is gone or is a page row.
+  const unwrapBlock = useCallback(
+    (blockId: string) => {
+      dispatchOp({ kind: "unwrap", blockId });
+    },
+    [dispatchOp],
+  );
+
   // Overlay-dispatch triplet shared by the split / offscreen-merge executors:
   // snapshot the current rows, compute the after-state with the SAME pure
   // `applyBlockOp` the store applies, dispatch through the store (instant
@@ -871,11 +975,11 @@ export function BlockEditorProviderInner({
   const applyOverlay = useCallback(
     (op: BlockOp): { before: Block[]; after: Block[] } => {
       const before = rowsRef.current;
-      const after = fromOpResult(before, op);
-      store.dispatch(buildOverlayOp(op, before));
+      const after = fromOpResult(before, op, anchorTypes);
+      store.dispatch(buildOverlayOp(op, before, anchorTypes));
       return { before, after };
     },
-    [store],
+    [store, anchorTypes],
   );
 
   // Focus a freshly-minted block by its known id. If its text editor has already
@@ -922,6 +1026,66 @@ export function BlockEditorProviderInner({
       );
     },
     [pageId, dispatchOp, focusNew],
+  );
+
+  // The `wrapOnConvert` half of `convertTo`: mint a container row of `type` and
+  // make `blockId` its FIRST CHILD, in ONE patch through the shared row-set
+  // chokepoint — hence ONE undo entry, and the reducer's childless-anchor prune
+  // is never observed mid-flight (there is no intermediate state where the
+  // container exists without its child).
+  //
+  // The ORIGIN keeps its id, type, `data`, children and rank. Keeping the id is
+  // load-bearing, not an optimization: its `page_block_docs` Yjs doc, its
+  // `Y.UndoManager` and its registered `BlockFocusHandle` are all keyed by block
+  // id, so the caret simply stays put — no `focusNew`, no remount race. The NEW
+  // id goes to the container, which is void and never opens a content doc, so
+  // the doc-init FK gate applies to neither row.
+  //
+  // The container takes a FRESH rank strictly before the origin's, never the
+  // origin's own: reusing it would need the ranks to be parked (two rows briefly
+  // sharing one `(parent_id, rank)` slot), and the in-memory store has no
+  // `parkRanks` — it applies the patch verbatim.
+  const wrapInContainer = useCallback(
+    (blockId: string, type: string, containerData: unknown, convertData: unknown) => {
+      const containerId = crypto.randomUUID();
+      commitRows(
+        (rows) => {
+          const origin = rows.find((b) => b.id === blockId);
+          if (!origin) return rows;
+          const nodes = toNodes(rows);
+          const siblings = childrenOf(nodes, origin.parentId);
+          const index = siblings.findIndex((s) => s.id === origin.id);
+          const prev = index > 0 ? siblings[index - 1] : undefined;
+          const container: Block = {
+            id: containerId,
+            pageId: origin.pageId,
+            parentId: origin.parentId,
+            type,
+            data: containerData,
+            // Anchors declare `collapsible: "never"`, so a stored `false` would be
+            // inert anyway — but mint it open so any consumer reading the flag
+            // raw agrees with what the surface renders.
+            expanded: true,
+            rank: Rank.between(
+              prev ? Rank.from(prev.rank) : null,
+              Rank.from(String(origin.rank)),
+            ),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          return [
+            ...rows.map((b) =>
+              b.id === blockId
+                ? { ...b, parentId: containerId, data: withConvertText(b.data, convertData) }
+                : b,
+            ),
+            container,
+          ];
+        },
+        { label: "Wrap in container", focusId: blockId },
+      );
+    },
+    [commitRows],
   );
 
   // Merge `sourceId`'s content + subtree into the previous VISIBLE line and
@@ -975,13 +1139,13 @@ export function BlockEditorProviderInner({
         // `applyOverlay`) precisely because its ordering is deferred.
         const append = targetHandle.appendRunsAtEnd;
         const before = rowsRef.current;
-        const after = fromOpResult(before, op);
+        const after = fromOpResult(before, op, anchorTypes);
         queueMicrotask(() => {
           // `captureBlockDocEdit` runs `append` synchronously (surgery uses
           // `discrete: true`), so a throw propagates out of the microtask
           // BEFORE the dispatch — the source row is never removed.
           const docEdit = captureBlockDocEdit(target.id, () => append(mergingRuns));
-          store.dispatch(buildOverlayOp(op, before));
+          store.dispatch(buildOverlayOp(op, before, anchorTypes));
           recordStructuralWithDocEdit(before, after, OP_LABELS.merge, sourceId, docEdit, {
             blockId: sourceId,
             runs: mergingRuns,
@@ -1020,7 +1184,7 @@ export function BlockEditorProviderInner({
         );
       }
     },
-    [store, applyOverlay, recordStructuralWithDocEdit],
+    [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes],
   );
 
   const makeBlockAPI = useCallback(
@@ -1040,6 +1204,16 @@ export function BlockEditorProviderInner({
         commitRow(blockId, (b) => ({ ...b, expanded }), { label: "Toggle collapse", record: false });
       },
       convertTo(type: string, data: unknown, opts?: { expanded?: boolean }) {
+        // Converting INTO a `wrapOnConvert` type is a WRAP, not a type swap: mint
+        // a container row and make THIS block its first child, keeping this
+        // block's id, type, data, children and rank. Resolved here so no caller
+        // changes — the `/` menu, the gutter-`+` draft, Turn-into and `url-paste`
+        // all keep calling `convertTo(type, data)`.
+        const target = blockHandles.get(type);
+        if (target?.wrapOnConvert) {
+          wrapInContainer(blockId, type, target.empty?.() ?? {}, data);
+          return;
+        }
         // Type conversion IS a recorded document edit. Its forward apply now flows
         // through the same optimistic patch pipeline as its undo/redo via `commitRow`
         // (which no-ops a missing/unchanged block on its own).
@@ -1227,6 +1401,8 @@ export function BlockEditorProviderInner({
       recordStructural,
       recordStructuralWithDocEdit,
       mergeBlock,
+      blockHandles,
+      wrapInContainer,
     ],
   );
 
@@ -1251,6 +1427,7 @@ export function BlockEditorProviderInner({
       move,
       indentBlocks,
       outdentBlocks,
+      unwrapBlock,
       bulkDelete,
       bulkMove,
       bulkDuplicate,
@@ -1286,6 +1463,7 @@ export function BlockEditorProviderInner({
       move,
       indentBlocks,
       outdentBlocks,
+      unwrapBlock,
       bulkDelete,
       bulkMove,
       bulkDuplicate,

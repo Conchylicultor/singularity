@@ -1,11 +1,20 @@
 import { z } from "zod";
 import { MdLightbulb } from "react-icons/md";
-import { defineBlock, SvgNodeSchema, textBlockSchema } from "@plugins/page/plugins/editor/core";
+import { defineBlock, SvgNodeSchema } from "@plugins/page/plugins/editor/core";
 
 export const CALLOUT_COLORS = ["default", "info", "success", "warning", "danger"] as const;
 export type CalloutColor = (typeof CALLOUT_COLORS)[number];
 
-export const calloutDataSchema = textBlockSchema({
+/**
+ * A callout is a VOID container: it owns appearance only, never content.
+ *
+ * The schema deliberately does NOT compose `textBlockSchema`. `acceptsText` is
+ * *derived* from the schema (`"text" in schema.shape`), so voidness falls out
+ * with no new flag, and the write boundary's strict parse then rejects a stray
+ * `text` key outright — which is what makes the data migration's own guard
+ * (`WHERE data ? 'text'`) idempotent rather than aspirational.
+ */
+export const calloutDataSchema = z.object({
   // Material Design icon key (highlights the current icon in the picker grid).
   icon: z.string().nullable().default(null),
   // The icon's extracted SVG child-tree, rendered without importing any icon module.
@@ -20,9 +29,18 @@ export const calloutBlock = defineBlock({
   label: "Callout",
   icon: MdLightbulb,
   aliases: ["note", "info", "warning", "tip", "aside", "highlight", "banner"],
-  empty: () => ({ text: [], icon: null, iconSvgNodes: null, color: "default" as CalloutColor }),
-  placeholder: "Type something…",
-  // The tinted box adds an `Inset y="xs"` on top of the text editor's own `py-xs`,
-  // so the first line sits one extra `--space-xs` lower than a plain text block.
-  gutterFirstLineCenter: "calc(var(--space-xs) * 2 + var(--doc-lh-body) / 2)",
+  empty: () => ({ icon: null, iconSvgNodes: null, color: "default" as CalloutColor }),
+  // The callout renders NO line of its own: its content IS its children, and the
+  // surface paints its icon in the indent gutter left of the first child. That is
+  // what makes converting a child to a heading (or splitting it with Enter) a
+  // plain operation on an ordinary block that cannot touch the container.
+  anchor: true,
+  // `/callout` on an existing block WRAPS it — the origin keeps its id, type,
+  // data and children and becomes the anchor's first child — rather than retyping
+  // it. So a heading, to-do, image or code block can be put in a callout, and the
+  // caret never moves (block-id-keyed content doc / undo manager / focus handle).
+  wrapOnConvert: true,
+  // An anchor has no chevron to reopen it, and every creation path mints
+  // `expanded: false`. Making the stored flag inert is the only guarantee.
+  collapsible: "never",
 });

@@ -54,17 +54,20 @@ import {
   parseMarkdownToForest,
   defaultTextHandle,
   type Block,
+  type BlockHandle,
   type SerializedBlock,
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
-import { Editor } from "../slots";
+import { Editor, useFramedBlockTypes } from "../slots";
+import { computeFrameSpans, type FlatBlock, type FrameSpan } from "../internal/block-frames";
+import { useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
 import { useBlockSelection, type BlockSelectionActions } from "../internal/use-block-selection";
-import { BlockRow } from "./block-row";
-import { BLOCK_GUTTER } from "../internal/page-column";
+import { BlockRow, gutterFirstLineCenter } from "./block-row";
+import { BLOCK_GUTTER, blockContentLeft } from "../internal/page-column";
 import { FileDropOverlay } from "./file-drop-overlay";
 import {
   resolveBlockPasteHandler,
@@ -73,7 +76,6 @@ import {
 } from "../internal/block-paste-handlers";
 import { BLOCKS_MIME } from "../internal/clipboard";
 
-type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
 /** The editor drops *between* rows only — it has no tree `child` reparent zone. */
 type SiblingZone = Extract<DropZone, "before" | "after">;
 type DropTarget = { id: string; zone: SiblingZone };
@@ -82,7 +84,19 @@ type DropTarget = { id: string; zone: SiblingZone };
 // flat list of keyed siblings (rather than nesting children inside their parent's
 // DOM) keeps every block in the same React parent, so indent/outdent/move only
 // reorder keyed elements — the Lexical editor instance (and its focus) survives.
-function flattenTree(nodes: TreeNode<Block>[], depth: number, out: FlatBlock[]): void {
+//
+// `alwaysExpanded` is the set of types whose handle declares
+// `collapsible: "never"` — their stored `expanded` flag is IGNORED here. That is
+// what makes the flag inert rather than dangerous: a type with no chevron (an
+// anchor renders no line at all) could otherwise be left permanently collapsed,
+// hiding its children behind nothing, and every creation path mints `false`
+// (`applySplit`, `applyInsert`, any patch replay writes it verbatim).
+function flattenTree(
+  nodes: TreeNode<Block>[],
+  depth: number,
+  out: FlatBlock[],
+  alwaysExpanded: ReadonlySet<string>,
+): void {
   // `ordinal` is the 1-based position within the maximal run of consecutive
   // same-type siblings (resets on type change). Each recursive call into a
   // node's children starts a fresh counter, so numbering resets per level.
@@ -91,11 +105,76 @@ function flattenTree(nodes: TreeNode<Block>[], depth: number, out: FlatBlock[]):
   for (const node of nodes) {
     ordinal = node.type === prevType ? ordinal + 1 : 1;
     prevType = node.type;
-    out.push({ block: node, depth, hasChildren: node.children.length > 0, ordinal });
+    const expanded = node.expanded || alwaysExpanded.has(node.type);
+    out.push({
+      block: node,
+      depth,
+      hasChildren: node.children.length > 0,
+      ordinal,
+      firstVisibleChildType: expanded ? node.children[0]?.type ?? null : null,
+    });
     // Skip a collapsed node's subtree so its children stay hidden. `expanded`
     // defaults true for every existing row, so current documents are unchanged.
-    if (node.expanded) flattenTree(node.children, depth + 1, out);
+    if (expanded) flattenTree(node.children, depth + 1, out, alwaysExpanded);
   }
+}
+
+/**
+ * Each flat index's RAIL SEAT: the content edge its hover controls hang back
+ * from. For an unframed row that is its own content edge; for a row inside one
+ * or more container frames it is the OUTERMOST one's — so the controls sit
+ * outside the box and leave the container's own decoration column free. See
+ * `internal/page-column.ts` for why that is forced rather than preferred.
+ *
+ * `computeFrameSpans` walks the flatten in order, so an enclosing frame (which
+ * necessarily starts at a lower index) is always emitted BEFORE the frames it
+ * contains: the first span covering an index is its outermost one.
+ */
+function computeRailLefts(
+  flat: readonly FlatBlock[],
+  spans: readonly FrameSpan[],
+): number[] {
+  const out = flat.map((f) => blockContentLeft(f.depth));
+  const seated = new Array<boolean>(flat.length).fill(false);
+  for (const span of spans) {
+    const left = blockContentLeft(span.depth);
+    for (let i = span.start; i <= span.end; i += 1) {
+      if (seated[i]) continue;
+      seated[i] = true;
+      out[i] = left;
+    }
+  }
+  return out;
+}
+
+/**
+ * A container ANCHOR's BORROWED first-line center. The anchor renders no line of
+ * its own, so `--gutter-first-line-center` — derived from a row's own handle —
+ * is structurally unknowable for it; hardcoding the body center puts the glyph
+ * ~6px high against an H1 child and tens of px off against a divider/image child
+ * that declares its own center, and the error grows with the density preset.
+ *
+ * The flatten is depth-first, so an anchor's first visible child is ALWAYS the
+ * immediately-following entry — walk forward through nested anchors to the first
+ * row that actually renders a line, and read that handle's seat. An anchor with
+ * no visible children terminates the walk on itself and takes its own (default)
+ * seat, which is exactly the one-line fallback box it renders.
+ */
+function borrowedFirstLineCenters(
+  flat: readonly FlatBlock[],
+  handleOf: (type: string) => BlockHandle<unknown> | undefined,
+): (string | undefined)[] {
+  return flat.map((f, i) => {
+    if (handleOf(f.block.type)?.anchor !== true) return undefined;
+    let j = i;
+    while (
+      flat[j]!.firstVisibleChildType !== null &&
+      handleOf(flat[j]!.block.type)?.anchor === true
+    ) {
+      j += 1;
+    }
+    return gutterFirstLineCenter(handleOf(flat[j]!.block.type));
+  });
 }
 
 // Find the rendered block row under a vertical pointer position, plus whether the
@@ -111,7 +190,14 @@ function rowAtPointer(y: number): DropTarget | null {
     if (!id) continue;
     const r = el.getBoundingClientRect();
     const zone: SiblingZone = y < r.top + r.height / 2 ? "before" : "after";
-    if (y >= r.top && y <= r.bottom) return { id, zone };
+    // A container ANCHOR row is ZERO height while its children are visible, and
+    // its single pixel line coincides with its first child's top. Without the
+    // guard it "contains" that line, wins on DOM order, and resolves to `after`
+    // — i.e. AFTER the anchor but BEFORE its children, which reads as "outside
+    // the box": the visual opposite of dropping before the container. The
+    // nearest-distance fallback below still reaches it (and resolves `before`),
+    // which is what keeps "drop above a leading callout" possible at all.
+    if (r.height > 0 && y >= r.top && y <= r.bottom) return { id, zone };
     const dist = y < r.top ? r.top - y : y - r.bottom;
     if (dist < nearestDist) {
       nearestDist = dist;
@@ -295,16 +381,25 @@ function BlockEditorInner({
   // ShortcutManager untouched, regardless of which DOM element (a contenteditable,
   // the selection container, or <body> after a structural undo) holds the caret.
 
+  // Block handles, read once here: the flatten needs them (which types ignore
+  // their stored `expanded`) and so does `insertFirstBlock` below.
+  const contributions = Editor.Block.useContributions();
+
   const { rows, flat } = useMemo(() => {
     if (pending) {
       return { rows: [] as Block[], flat: [] as FlatBlock[] };
     }
+    const alwaysExpanded = new Set(
+      contributions
+        .filter((c) => c.block.collapsible === "never")
+        .map((c) => c.block.type),
+    );
     const sorted = [...blocks].sort((a, b) => Rank.compare(a.rank, b.rank));
     const tree = buildTree(sorted);
     const out: FlatBlock[] = [];
-    flattenTree(tree, 0, out);
+    flattenTree(tree, 0, out, alwaysExpanded);
     return { rows: sorted, flat: out };
-  }, [blocks, pending]);
+  }, [blocks, pending, contributions]);
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
@@ -318,7 +413,6 @@ function BlockEditorInner({
   // isn't one. `insertFirstBlock` reuses `onEmptyClick`'s rule for the trailing
   // block, mirrored to the leading one: never stack a second blank paragraph on
   // top of an existing one.
-  const contributions = Editor.Block.useContributions();
   useImperativeHandle(
     handleRef,
     () => ({
@@ -383,8 +477,12 @@ function SelectionLayer({
     allowAttachments,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
-  const contributions = Editor.Block.useContributions();
-  const handles = useMemo(() => contributions.map((c) => c.block), [contributions]);
+  // ONE `type → handle` view of the `Editor.Block` registry (`useBlockHandles`),
+  // shared by the per-type lookups below and the list consumers (markdown
+  // serialize/parse, `defaultTextHandle`). Both derive from the same
+  // registrations, so a second local `handles.find(...)` was only a slower copy.
+  const handleMap = useBlockHandles();
+  const handles = useMemo(() => [...handleMap.values()], [handleMap]);
 
   // The minimal subtree roots of the selection: bulk structural ops act on these,
   // descendants follow implicitly. Recomputed on every selection/row change so the
@@ -646,7 +744,16 @@ function SelectionLayer({
         // branch below — never a bare `focusBlock`, whose `focus()` restores the
         // block's last caret position (right for a structural re-focus, wrong
         // for a click that means "the very top of the page").
-        if (!focusBlockBoundary(firstId, "start")) applyRange(firstId, firstId);
+        //
+        // `focusBlockBoundary` returns false for a row that registered no focus
+        // handle — a container ANCHOR has no line to focus, so it never does.
+        // Advance to the first row that CAN take a caret before falling back to
+        // selecting: clicking above a leading callout must open the top of the
+        // page, not select the callout.
+        for (const f of flat) {
+          if (focusBlockBoundary(f.block.id, "start")) return;
+        }
+        applyRange(firstId, firstId);
         return;
       }
       if (y > lastEl.getBoundingClientRect().bottom) {
@@ -921,6 +1028,33 @@ function SelectionLayer({
 
   const selectedCount = selectedIds.size;
 
+  // Container block types (callout, …) paint a decorated box over their own row
+  // plus their visible subtree. The box is a SIBLING of the rows, spanning them
+  // by grid line number — never an ancestor. See `internal/block-frames.ts`:
+  // wrapping the rows would change their DOM parent on every Tab across a frame
+  // boundary, remounting the block's Lexical instance and losing the caret.
+  const framedTypes = useFramedBlockTypes();
+  const frameSpans = useMemo(
+    () => computeFrameSpans(flat, framedTypes),
+    [flat, framedTypes],
+  );
+
+  // Per-row geometry the ROWS must not derive themselves (see
+  // `internal/page-column.ts`): where each row seats its hover rail, and — for a
+  // container anchor — the first-line center it borrows from its first child.
+  const handleOf = useCallback(
+    (type: string) => handleMap.get(type),
+    [handleMap],
+  );
+  const railLefts = useMemo(
+    () => computeRailLefts(flat, frameSpans),
+    [flat, frameSpans],
+  );
+  const anchorCenters = useMemo(
+    () => borrowedFirstLineCenters(flat, handleOf),
+    [flat, handleOf],
+  );
+
   return (
     <SelectionControlProvider value={selectionControl}>
       <DndContext
@@ -1018,26 +1152,71 @@ function SelectionLayer({
                 page-column's BLOCK_GUTTER), so this wrapper zeroes its own left
                 padding and hands the full inset to the rows; the matching right
                 gutter stays here, keeping the text measure symmetric. */}
+            {/* A single-column CSS grid, with EVERY row placed explicitly on its
+                own line. That is what lets a container's frame be a sibling that
+                merely spans lines `start..end` instead of an ancestor wrapping
+                the rows — so a block crossing a frame boundary keeps its DOM
+                parent (and its live Lexical instance + caret). Rows are placed
+                explicitly rather than auto-flowed so the frames, which ARE
+                explicitly placed, cannot perturb their order. */}
             <div
               ref={contentRef}
-              className={cn("relative", contentClassName)}
+              // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
+              className={cn("relative grid grid-cols-1", contentClassName)}
               style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
             >
-              {flat.map((f) => (
-                <BlockRow
+              {/* Frames first in DOM order so they paint BEHIND the rows they
+                  span (equal stacking level → document order decides).
+
+                  A container ANCHOR's block-selection highlight rides on THIS
+                  wrapper rather than on its row: the row is zero height, so a
+                  ring on it is invisible and one ArrowDown in selection mode
+                  reads as a dead keypress. Ringing the whole box is also simply
+                  the right visual — selecting a callout selects the callout. The
+                  wrapper stays `pointer-events-none`. */}
+              {frameSpans.map((span) => (
+                <div
+                  key={`frame:${span.block.id}`}
+                  // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
+                  className={cn(
+                    "pointer-events-none relative col-start-1",
+                    handleOf(span.block.type)?.anchor === true &&
+                      selectedIds.has(span.block.id) &&
+                      "bg-primary/10 ring-primary/30 rounded-md ring-1",
+                  )}
+                  style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
+                >
+                  <Editor.BlockFrame.Dispatch
+                    type={span.block.type}
+                    data={span.block.data}
+                    inset={blockContentLeft(span.depth)}
+                  />
+                </div>
+              ))}
+              {flat.map((f, i) => (
+                <div
                   key={f.block.id}
-                  block={f.block}
-                  depth={f.depth}
-                  hasChildren={f.hasChildren}
-                  ordinal={f.ordinal}
-                  isDragging={
-                    activeId === f.block.id ||
-                    (bulkDrag?.subtree.has(f.block.id) ?? false)
-                  }
-                  dropZone={
-                    activeDropTarget?.id === f.block.id ? activeDropTarget.zone : null
-                  }
-                />
+                  // eslint-disable-next-line layout/no-adhoc-layout -- explicit grid line placement keeps rows ordered independently of the frames; not a ramp-expressible anchor
+                  className="col-start-1"
+                  style={{ gridRow: i + 1 }}
+                >
+                  <BlockRow
+                    block={f.block}
+                    depth={f.depth}
+                    hasChildren={f.hasChildren}
+                    hasVisibleChildren={f.firstVisibleChildType !== null}
+                    ordinal={f.ordinal}
+                    railLeft={railLefts[i]!}
+                    borrowedFirstLineCenter={anchorCenters[i]}
+                    isDragging={
+                      activeId === f.block.id ||
+                      (bulkDrag?.subtree.has(f.block.id) ?? false)
+                    }
+                    dropZone={
+                      activeDropTarget?.id === f.block.id ? activeDropTarget.zone : null
+                    }
+                  />
+                </div>
               ))}
               {marquee && (
                 <div

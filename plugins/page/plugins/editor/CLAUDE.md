@@ -65,6 +65,17 @@ of `C`, inside each row's own padding so the `+` / drag / chevron controls are
 hoverable. That rail is editable-surface-only: `read-only-view` has no rail, so its
 `C` is simply the renderer's left edge. `BLOCK_INSET` is shared by both.
 
+A row seats those controls against the content edge of its **outermost enclosing
+container frame** — which for an unframed row is its own. A container that owns no
+text (the callout anchor) paints its decoration in the `BLOCK_INDENT` column at its
+own `C`, which is exactly where its first child's chevron would sit under the naive
+rule; the child's row is later in DOM order at the same `z-raised` level, so the
+decoration would be not merely overlapped but **unclickable**. Seating the enclosed
+rows' rail at the frame's edge puts the controls *outside* the box and leaves that
+column free. `BlockRow` takes the resolved `railLeft` as a prop and still computes
+no geometry itself — `block-editor.tsx` derives it from the `frameSpans` it already
+has.
+
 **Hosts never compute the edge.** `BLOCK_GUTTER` is deliberately *not* exported from
 the web barrel — a host that adds it to whatever padding its own wrapper carries is
 exactly how the title and the block text drifted onto different edges (and why the
@@ -80,10 +91,100 @@ Never splice a ramp step into a class name (`` `pl-${BLOCK_INSET}` ``): Tailwind
 an `@utility` only for literal tokens it can scan. Use `<Inset>`, or `insetClass()`
 from the spacing primitive when you only have a `className`.
 
-Two known deviations from the invariant, both pre-existing: the callout tint and the
-code background sit at `C + BLOCK_INSET` rather than bleeding to `C` (their `px`
-wrapper is outside the decoration), and the quote's 2px border pushes its text to
-`C + 2 + BLOCK_INSET`.
+Two known deviations from the invariant: the code background sits at
+`C + BLOCK_INSET` rather than bleeding to `C` (its `px` wrapper is outside the
+decoration), and the quote's 2px border pushes its text to `C + 2 + BLOCK_INSET`.
+(The callout tint was a third until it became a container frame — the frame gets
+`C` handed to it as `inset`, so it now bleeds correctly.)
+
+`blockContentLeft(depth)` is the one derivation of `C` in the editable surface's
+row coordinates. A container frame insets its decoration to it, and the editor
+evaluates it — at a row's own depth, or at its outermost enclosing frame's — to
+hand each `BlockRow` its `railLeft`; nobody re-derives `BLOCK_GUTTER + depth *
+BLOCK_INDENT` by hand.
+
+## Container frames (the one exception to the flat list)
+
+The forest renders as a **flat list of sibling rows**, and `flattenTree`'s comment
+says why: every block stays in the same React parent, so indent/outdent/move only
+reorder keyed elements and a block's Lexical instance (and its focus) survives.
+The direct consequence is that a block renderer can only ever paint its OWN row —
+a block's children are not its DOM children, so it cannot draw a box around them.
+
+`Editor.BlockFrame` is the seam for the other half. A block type that contributes
+one becomes a **container**: `internal/block-frames.ts` groups its visible
+subtree — always a contiguous run in a depth-first flatten — and hands it to the
+contribution as `children`, which paints the box around the lot. A collapsed
+container still gets a frame around its own row (the box must not blink out when
+you collapse it), and containers nest.
+
+Three rules keep the exception from eating the rule it excepts:
+
+- **Only contributing types are grouped.** The framed-type set is derived from
+  the slot's own registered matches (`useFramedBlockTypes`), not from a separate
+  flag that could drift from it, and `groupFrames` short-circuits to the
+  byte-identical flat mapping when the set is empty. Every non-container block
+  keeps the flat guarantee exactly as before.
+- **A frame is appearance only, and horizontal geometry is not its to touch.**
+  Vertical padding is fine (it shifts rows down, harmlessly). Left padding or a
+  left border in the *flow* is not: rows seat their gutter controls against a
+  content edge the SURFACE computed (this frame's, for the rows inside it), so
+  shifting the flow would strand them. Decorations inset to the `inset` prop
+  instead.
+- **Geometry keeps reading the DOM.** Drag/drop, drop zones and the marquee all
+  measure live rects via `[data-block-id]` + `getBoundingClientRect()`, never
+  React tree position, so an extra wrapper perturbs none of them.
+
+The cost this buys back: moving a block INTO or OUT OF a frame changes its DOM
+parent, which remounts its Lexical instance. It fires only on that transition
+(never per keystroke), and the content `Y.Doc` is ref-counted with a deferred
+destroy so text survives; `e2e/indent-caret-verify.ts` is the caret spec.
+
+`read-only-view` renders the forest recursively, so it dispatches the same slot
+with `inset: 0` (no hover rail there) — one contribution, both surfaces.
+
+### A container that owns no text: the anchor row
+
+A frame-contributing block can go one step further and own **no line of its own**:
+`BlockHandle.anchor` says its content *is* its children. The callout is the one
+today — a void `{icon, iconSvgNodes, color}` payload whose first line is an
+ordinary `text` child, so converting that child to a heading cannot touch the
+container, and Enter inside it is a plain sibling split rather than a second
+callout.
+
+Four rules, each closing a failure the naive version has:
+
+- **Zero height only while it has visible children.** `computeFrameSpans`
+  deliberately spans a childless container over its own row alone (the box must
+  not blink out when you collapse it) — at zero height that paints a 0px frame
+  over a 0px row, i.e. an invisible, unclickable, undeletable ghost. With no
+  children the row falls back to one empty line instead.
+- **`collapsible: "never"`**, and the flatten treats those types as expanded
+  regardless of the stored flag. There is no chevron left to reopen a collapsed
+  anchor, and "creation sets `expanded: true`" is not a guarantee — `applySplit`
+  and `applyInsert` both mint `false`, and a patch replay writes it verbatim.
+  Making the flag *inert* is.
+- **The decoration lives in the row layer, never the frame.** Frames are emitted
+  before the rows and are `pointer-events-none`, so an interactive control there
+  is hit-tested under the following row. The anchor component rides on the
+  `Editor.BlockFrame` contribution (`BlockFrameMeta.anchor`) precisely so it
+  cannot drift from who actually paints a box, but the *surface* mounts it — in
+  the `BLOCK_INDENT` column at `C`, seated on the first visible child's borrowed
+  first-line centre, since an anchor has no line of its own to measure.
+- **An anchor row renders no rail.** Its three slots would coincide with its first
+  child's, on the same visual line, and the child must keep its own handle. The
+  container is dragged and menued through its decoration instead.
+
+`BlockHandle.anchor` is a **core** fact because the reducer needs it (`BlockOpContext.anchorTypes`
+drives the split/merge refusals and the childless-anchor prune) and the server has
+no slots; the *component* is a web contribution. `page-editor:anchor-has-decoration`
+fails a handle that declares one without the other.
+
+Escaping the box is `unwrap` (`core/block-ops.ts`): Backspace at the start of an
+anchor's first child dissolves the container and promotes its children into its
+slot. The generic `isIndented` → outdent rung would instead pop that child out
+*and adopt the remaining siblings as its children*, silently re-nesting content
+nobody asked to nest.
 
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 
@@ -827,6 +928,7 @@ tests). The whole document lives in React state and is discarded on unmount.
 - Web:
   - Slots:
     - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+    - `Editor.BlockFrame` ← `page.callout`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
   - Uses:
@@ -865,6 +967,7 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `primitives/popover.InlinePopoverProps`
     - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/select-scope.ContentScope`
+    - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineOrderedDispatchSlot`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.OrderedDispatchContribution`
@@ -879,9 +982,12 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `reorder.TopLevelEntry`
     - `reorder.useReorderedEntries`
   - Exports (types):
+    - `BlockAnchorProps`
     - `BlockContribution`
     - `BlockEditorAPI`
     - `BlockEditorHandle`
+    - `BlockFrameMeta`
+    - `BlockFrameProps`
     - `BlockPasteHandler`
     - `BlockRendererProps`
     - `BlockSection`
@@ -916,8 +1022,10 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `PageOptionsList`
     - `registerBlockPasteHandler`
     - `registerBlockTextExtension`
+    - `useBlockAnchors`
     - `useBlockEditor`
     - `useFormatToolbar`
+    - `useFramedBlockTypes`
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
     - `usePageOptions`
@@ -1001,6 +1109,7 @@ tests). The whole document lives in React state and is discarded on unmount.
     - `BlockMarkdown`
     - `BlockNode`
     - `BlockOp`
+    - `BlockOpContext`
     - `BlockPatch`
     - `BlockTextVariant`
     - `BulkDeleteBlocksBody`

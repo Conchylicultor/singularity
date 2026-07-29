@@ -5,6 +5,7 @@ import { applyBlockOpEndpoint } from "../../core/endpoints";
 import { applyBlockOp, opBlockIds } from "../../core/block-ops";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
+import { Editor as BlockRegistry } from "./block-registry";
 import { loadPageBlocks } from "./forest";
 import { rowToNode, reconcileBlocks } from "./reconcile";
 import { notifyStructuralChange } from "./notify-structural-change";
@@ -21,10 +22,30 @@ import { deleteBlocksSubtree } from "./trash-blocks";
  * tree/rank math lives in the reducer; this handler only diffs + persists +
  * notifies. Replaces the per-keystroke split/merge/indent/outdent handlers.
  */
+/**
+ * The reducer's type facts, derived from the server's OWN block registry — the
+ * mirror of the web side's `useAnchorTypes()` over `Editor.Block`. Both runtimes
+ * must hand `applyBlockOp` the same set: the client predicts the forest with it
+ * (the optimistic overlay) and this handler commits with it, so a disagreement
+ * would make an op apply differently on each side and never confirm.
+ *
+ * Recomputed per request rather than memoized at module eval: contributions are
+ * collected at boot, well after this module is evaluated, and the set is a
+ * filter over a couple of dozen handles (see `block-registry.ts` on why no eager
+ * mirror lives there).
+ */
+function anchorTypes(): ReadonlySet<string> {
+  return new Set(
+    BlockRegistry.BlockData.getContributions()
+      .filter((h) => h.anchor)
+      .map((h) => h.type),
+  );
+}
+
 export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ params, body }) => {
   const rows = await loadPageBlocks(params.pageId);
   const before = rows.map(rowToNode);
-  const after = applyBlockOp(before, body);
+  const after = applyBlockOp(before, body, { anchorTypes: anchorTypes() });
 
   const { inserted, updated, deletedIds } = reconcileBlocks(before, after);
 

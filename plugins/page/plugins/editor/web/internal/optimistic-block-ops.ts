@@ -12,8 +12,19 @@
 
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { applyBlockOp, opBlockIds, type BlockNode, type BlockOp, type BlockPatch } from "../../core";
+import {
+  applyBlockOp,
+  childrenOf,
+  opBlockIds,
+  type BlockNode,
+  type BlockOp,
+  type BlockOpContext,
+  type BlockPatch,
+} from "../../core";
 import type { Block } from "../../core";
+
+/** Where one block landed, as the reducer predicted it. */
+type PredictedMove = { id: string; parentId: string | null; rank: string };
 
 /**
  * A compact fingerprint of what an op produces, captured at dispatch against the
@@ -29,7 +40,24 @@ export type OpEffect =
   // A list, not one id: indent/outdent are set operations (a single Tab is the
   // one-element case). Only blocks that ACTUALLY moved are listed, so an op the
   // reducer partially refused still confirms on exactly what it did.
-  | { kind: "reparent"; moves: { id: string; parentId: string | null; rank: string }[] };
+  | { kind: "reparent"; moves: PredictedMove[] }
+  /**
+   * `unwrap` → the container `id` is gone AND each of its former children sits at
+   * its predicted parent+rank. Both halves, conjoined: the op has TWO effects on
+   * the rows and either one alone mis-describes it.
+   *
+   * Not a bare `remove`: an anchor that vanished with its children still absent
+   * (another client hard-deleted the subtree) would read as absorbed, so the
+   * replay would drop an op whose promotion never happened. Not a bare
+   * `reparent` either: the promotion alone can be true while the empty container
+   * row survives. The conjunction is exactly "the forest already looks like the
+   * unwrap ran", which is what the apply-guard and confirmation both ask.
+   *
+   * `moves` may legitimately be EMPTY (a childless container unwraps to a plain
+   * delete) — unlike `reparent`, that is not vacuous here, because the removal
+   * conjunct still has to hold.
+   */
+  | { kind: "unwrap"; id: string; moves: PredictedMove[] };
 
 /**
  * The overlay `Vars` carried by `useOptimisticResource`. Two variants share the
@@ -88,12 +116,19 @@ export function isReflected(blocks: Block[], e: OpEffect): boolean {
     case "reparent":
       // `moves` is never empty (a no-op op is never dispatched — `dispatchOp`
       // drops it), so this is not vacuously true.
-      return e.moves.every((m) =>
-        blocks.some(
-          (b) => b.id === m.id && b.parentId === m.parentId && String(b.rank) === m.rank,
-        ),
-      );
+      return e.moves.every((m) => movedTo(blocks, m));
+    case "unwrap":
+      // Both halves: the container gone AND every promoted child where the
+      // reducer put it (see the effect's doc for why neither alone will do).
+      return !blocks.some((b) => b.id === e.id) && e.moves.every((m) => movedTo(blocks, m));
   }
+}
+
+/** Does `blocks` place `m.id` at exactly the predicted parent + rank? */
+function movedTo(blocks: Block[], m: PredictedMove): boolean {
+  return blocks.some(
+    (b) => b.id === m.id && b.parentId === m.parentId && String(b.rank) === m.rank,
+  );
 }
 
 /**
@@ -220,14 +255,28 @@ export function fromNodes(nodes: BlockNode[], prev: Block[]): Block[] {
  * this entry (preventing a double apply on the own-push-before-resolve window).
  * Otherwise apply: a structural `op` through the shared reducer (node adapter),
  * or a `patch` directly onto the rows.
+ *
+ * `anchorTypes` is the reducer's `BlockOpContext` — it MUST be the same set the
+ * server passes (both derive it from their own block-handle registry), or the op
+ * applies differently on each side and can never confirm. Defaulting to none is
+ * byte-identical to a context-free call.
  */
-export function applyOverlayOp(blocks: Block[], v: BlockOverlayOp): Block[] {
+export function applyOverlayOp(
+  blocks: Block[],
+  v: BlockOverlayOp,
+  anchorTypes?: ReadonlySet<string>,
+): Block[] {
   if (v.tag === "patch") {
     if (isPatchReflected(blocks, v.patch)) throw new OpNoLongerApplies();
     return applyPatch(blocks, v.patch);
   }
   if (isReflected(blocks, v.effect)) throw new OpNoLongerApplies();
-  return fromNodes(applyBlockOp(toNodes(blocks), v.op), blocks);
+  return fromNodes(applyBlockOp(toNodes(blocks), v.op, opCtx(anchorTypes)), blocks);
+}
+
+/** `BlockOpContext` from the optional anchor-type set (`{}` when absent). */
+function opCtx(anchorTypes: ReadonlySet<string> | undefined): BlockOpContext {
+  return anchorTypes ? { anchorTypes } : {};
 }
 
 /** Build the overlay vars for a minimal patch (the undo/redo inverse path). */
@@ -238,9 +287,14 @@ export function buildPatchOverlayOp(patch: BlockPatch): BlockOverlayOp {
 /**
  * Build the overlay op for `op`, capturing its effect from the CURRENT
  * optimistic `rows` (post prior-pending ops) — this is what makes chained ops
- * compose.
+ * compose. `anchorTypes` must match what `applyOverlayOp` (and the server) use;
+ * it is read here because the prediction runs the reducer.
  */
-export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
+export function buildOverlayOp(
+  op: BlockOp,
+  rows: Block[],
+  anchorTypes?: ReadonlySet<string>,
+): BlockOverlayOp {
   switch (op.kind) {
     case "split":
     case "insert":
@@ -249,6 +303,16 @@ export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
     case "merge":
     case "delete":
       return { tag: "op", op, effect: { kind: "remove", id: op.blockId } };
+    case "unwrap": {
+      // The container goes away AND its children are promoted, so the effect
+      // carries both. The moved set is the container's CHILDREN, which the op
+      // does not name (`opBlockIds` deliberately under-approximates it), so read
+      // them off the pre-op forest.
+      const nodes = toNodes(rows);
+      const promoted = childrenOf(nodes, op.blockId).map((c) => c.id);
+      const moves = predictMoves(nodes, op, promoted, anchorTypes);
+      return { tag: "op", op, effect: { kind: "unwrap", id: op.blockId, moves } };
+    }
     case "indent":
     case "outdent":
     case "move": {
@@ -259,16 +323,30 @@ export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
       // parent+rank is unchanged, so listing them would make the apply-guard
       // read the op as already-absorbed.
       const nodes = toNodes(rows);
-      const before = new Map(nodes.map((b) => [b.id, b]));
-      const after = new Map(applyBlockOp(nodes, op).map((b) => [b.id, b]));
-      const moves = opBlockIds(op).flatMap((id) => {
-        const next = after.get(id);
-        const prev = before.get(id);
-        if (!next) return []; // vanished after apply (defensive; shouldn't happen)
-        if (prev && prev.parentId === next.parentId && prev.rank === next.rank) return [];
-        return [{ id, parentId: next.parentId, rank: next.rank }];
-      });
+      const moves = predictMoves(nodes, op, opBlockIds(op), anchorTypes);
       return { tag: "op", op, effect: { kind: "reparent", moves } };
     }
   }
+}
+
+/**
+ * Where `ids` land once `op` is applied, as the reducer predicts it. Blocks that
+ * did not actually move are omitted: their parent+rank is unchanged, so listing
+ * them would make the apply-guard read the op as already-absorbed.
+ */
+function predictMoves(
+  nodes: BlockNode[],
+  op: BlockOp,
+  ids: readonly string[],
+  anchorTypes: ReadonlySet<string> | undefined,
+): PredictedMove[] {
+  const before = new Map(nodes.map((b) => [b.id, b]));
+  const after = new Map(applyBlockOp(nodes, op, opCtx(anchorTypes)).map((b) => [b.id, b]));
+  return ids.flatMap((id) => {
+    const next = after.get(id);
+    const prev = before.get(id);
+    if (!next) return []; // vanished after apply (defensive; shouldn't happen)
+    if (prev && prev.parentId === next.parentId && prev.rank === next.rank) return [];
+    return [{ id, parentId: next.parentId, rank: next.rank }];
+  });
 }

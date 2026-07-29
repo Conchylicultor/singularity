@@ -50,6 +50,7 @@ import {
   toNodes,
   type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
+import { useAnchorTypes } from "./internal/block-handles";
 
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 
@@ -120,10 +121,19 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // reconciled by the WS push. The captured `effect` drives both the idempotency
   // apply-guard (in `applyOverlayOp`) and content-based confirmation here.
   const params = useMemo(() => ({ pageId }), [pageId]);
+  // The reducer's type facts, derived from the block-handle registry. The SERVER
+  // derives the same set from its own registry and passes it to the same
+  // `applyBlockOp`; if the two ever disagreed, an op would predict one forest
+  // here and commit another there, and could never confirm.
+  const anchorTypes = useAnchorTypes();
+  const apply = useCallback(
+    (blocks: Block[], v: BlockOverlayOp) => applyOverlayOp(blocks, v, anchorTypes),
+    [anchorTypes],
+  );
   const optimistic = useOptimisticResource<Block[], BlockOverlayOp, { pageId: string }>({
     resource: blocksResource,
     params,
-    apply: applyOverlayOp,
+    apply,
     // Structural ops keep their own `op` endpoint; undo/redo patches POST to the
     // generic `patch` endpoint. Both flow through this one instance so the
     // overlay + freeze pipeline (and confirmation) is shared.
@@ -262,6 +272,9 @@ export function useMemoryBlockStore({
   // later render, so reading the ids "after `setRows`" would read the pre-write
   // value. Never mint ids inside the updater; compute, commit, then return.
   const rowsRef = useRef<Block[]>(initialBlocks);
+  // Same reducer facts as the server path — an in-memory document must apply an
+  // op exactly as a persisted one does (see `useServerBlockStore`).
+  const anchorTypes = useAnchorTypes();
   const commit = useCallback((next: Block[]) => {
     rowsRef.current = next;
     setRowsState(next);
@@ -273,13 +286,13 @@ export function useMemoryBlockStore({
       // apply-guard throws `OpNoLongerApplies` when the base already reflects the
       // op/patch — in memory that means a no-op replay, so keep the current rows.
       try {
-        commit(applyOverlayOp(rowsRef.current, v));
+        commit(applyOverlayOp(rowsRef.current, v, anchorTypes));
       } catch (err) {
         if (err instanceof OpNoLongerApplies) return;
         throw err;
       }
     },
-    [commit],
+    [commit, anchorTypes],
   );
 
   const move = useCallback(
@@ -291,17 +304,21 @@ export function useMemoryBlockStore({
       const cur = rowsRef.current;
       commit(
         fromNodes(
-          applyBlockOp(toNodes(cur), {
-            kind: "move",
-            blockId: id,
-            parentId: dest.parentId,
-            rank: dest.rank.toJSON(),
-          }),
+          applyBlockOp(
+            toNodes(cur),
+            {
+              kind: "move",
+              blockId: id,
+              parentId: dest.parentId,
+              rank: dest.rank.toJSON(),
+            },
+            { anchorTypes },
+          ),
           cur,
         ),
       );
     },
-    [commit],
+    [commit, anchorTypes],
   );
 
   const bulkDelete = useCallback(

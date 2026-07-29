@@ -243,6 +243,10 @@ export function resolveOpOwnerPage(
     case "split":
     case "merge":
     case "delete":
+    // `unwrap` writes only within one page: it deletes the container and
+    // re-ranks its children under the container's OWN parent, all rows of the
+    // container's page. So the container's owner is the whole op's owner.
+    case "unwrap":
     case "move":
       return rowOwnerPage(rows, op.blockId);
     case "indent":

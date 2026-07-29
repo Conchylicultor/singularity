@@ -63,17 +63,20 @@ export const SEED_DOC: SerializedBlock[] = [
     expanded: false,
     children: [],
   },
+  // A callout is a VOID CONTAINER: it owns `{icon, iconSvgNodes, color}` and no
+  // text at all. Its content is an ordinary `text` CHILD — the same shape the
+  // `callout_anchor_split` data migration rewrites stored rows into. A seed that
+  // still put the copy in `data.text` would render an empty box here (and 400 at
+  // the write boundary on a persisted surface).
   {
     type: "callout",
-    data: {
-      text: [
-        { text: "Everything here is in-memory — nothing you type is saved or sent anywhere." },
-      ],
-      icon: null,
-      iconSvgNodes: null,
-      color: "info",
-    },
-    expanded: false,
-    children: [],
+    data: { icon: null, iconSvgNodes: null, color: "info" },
+    expanded: true,
+    children: [
+      text(
+        "text",
+        "Everything here is in-memory — nothing you type is saved or sent anywhere.",
+      ),
+    ],
   },
 ];

@@ -1,6 +1,9 @@
+import { existsSync } from "fs";
+import { join } from "path";
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
+import { importBarrel, registerBarrelStubs } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 
@@ -10,6 +13,7 @@ import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core
 // `docLabel: (h) => h.type` — which is the join key this check is built on.
 const WEB_BLOCK_SLOT = "page.editor.block"; // Editor.Block  (web dispatch _slotId)
 const SERVER_BLOCK_DATA_SLOT = "page.block-data"; // Editor.BlockData (server _kind)
+const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFrame (web dispatch _slotId)
 
 // The `editor` plugin ITSELF registers `Editor.BlockData("page")` (page rows are
 // written by editor server code directly, so page creation must not depend on the
@@ -119,4 +123,124 @@ const check: Check = {
   },
 };
 
-export default check;
+/**
+ * A container ANCHOR's two halves must agree.
+ *
+ * `BlockHandle.anchor: true` lives in `core` because the pure REDUCER needs it
+ * (the empty-anchor prune, the split/merge refusals) and the server has no
+ * slots. The DECORATION it implies — the glyph the surface paints in the indent
+ * gutter — is a React component, so it rides on the web `Editor.BlockFrame`
+ * contribution (see `web/slots.ts` for why it rides there and not on a slot of
+ * its own). Two declarations, each where it is needed, and nothing in the type
+ * system ties them together.
+ *
+ * A handle claiming anchorhood with no decoration is not cosmetic: the reducer
+ * treats the type as a void container (its row renders no line, and while it has
+ * visible children the surface collapses that row to ZERO height), while the
+ * surface paints nothing into the column — an invisible container. This check is
+ * what stops the two from silently disagreeing.
+ *
+ * Both facts are read by IMPORTING the same web barrels the docgen tree already
+ * imports (a static source scan cannot recover `anchor` off
+ * `Editor.Block({ match: fooBlock.type, block: fooBlock })`, and ad-hoc marker
+ * scanning is banned outright). The barrel module is Bun-cached, so re-importing
+ * after `buildEnrichedTree` costs nothing.
+ */
+const anchorHasDecoration: Check = {
+  id: "page-editor:anchor-has-decoration",
+  description:
+    "every block handle declaring `anchor: true` has a matching `anchor` component on its plugin's `Editor.BlockFrame` contribution",
+  async run(): Promise<CheckResult> {
+    const root = await getWorktreeRoot();
+    const tree = await buildEnrichedTree(root);
+    registerBarrelStubs(root);
+
+    // Only plugins that actually contribute a block renderer can declare a
+    // handle, so the candidate set comes from the contributions facet rather
+    // than a directory sweep — a block type living outside `plugins/page` is
+    // covered for free.
+    const candidateDirs = new Set<string>();
+    for (const [dir, node] of tree.byDir) {
+      const facet = getFacet(node, contributionsFacetDef);
+      if (!facet) continue;
+      for (const c of facet.runtime) {
+        if (
+          c.kind === "slot" &&
+          (c.slotId === WEB_BLOCK_SLOT || c.slotId === WEB_BLOCK_FRAME_SLOT)
+        ) {
+          // A web slot contribution can only have come from a web barrel; the
+          // guard is belt-and-braces so a tree oddity cannot turn into a throw.
+          if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
+          break;
+        }
+      }
+    }
+
+    if (candidateDirs.size === 0) {
+      return {
+        ok: false,
+        message:
+          "No web `Editor.Block` / `Editor.BlockFrame` contributions found in the enriched plugin " +
+          "tree — the barrel-imported contributions facet is empty, so the anchor↔decoration " +
+          "invariant could not be verified. This is a check/tooling failure, not a clean pass.",
+      };
+    }
+
+    // type -> the plugin ids declaring `anchor: true` on its handle.
+    const anchorTypes = new Map<string, string[]>();
+    // types whose `Editor.BlockFrame` contribution supplies an `anchor` component.
+    const decorated = new Set<string>();
+
+    for (const dir of candidateDirs) {
+      const mod = await importBarrel(join(dir, "web", "index.ts"));
+      const def = mod.default as { contributions?: unknown } | undefined;
+      const contributions = def?.contributions;
+      if (!Array.isArray(contributions)) continue;
+      for (const raw of contributions) {
+        const c = raw as {
+          _slotId?: string;
+          match?: unknown;
+          anchor?: unknown;
+          block?: { type?: unknown; anchor?: unknown };
+        };
+        if (c._slotId === WEB_BLOCK_SLOT) {
+          const type = c.block?.type;
+          if (typeof type === "string" && c.block?.anchor === true) {
+            const list = anchorTypes.get(type) ?? [];
+            list.push(tree.byDir.get(dir)?.id ?? dir);
+            anchorTypes.set(type, list);
+          }
+        } else if (c._slotId === WEB_BLOCK_FRAME_SLOT) {
+          if (typeof c.match === "string" && c.anchor) decorated.add(c.match);
+        }
+      }
+    }
+
+    const missing = [...anchorTypes.entries()]
+      .filter(([type]) => !decorated.has(type))
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    if (missing.length === 0) return { ok: true };
+
+    const lines = missing.map(
+      ([type, plugins]) =>
+        `  block type "${type}" (declared by: ${[...new Set(plugins)].sort().join(", ")}) ` +
+        "declares `anchor: true` but contributes no `anchor` component on `Editor.BlockFrame`",
+    );
+    return {
+      ok: false,
+      message:
+        `${missing.length} anchor block type(s) render no decoration, so their container is ` +
+        `invisible (the row collapses to zero height and nothing paints the gutter column):\n${lines.join("\n")}`,
+      hint:
+        "Add the decoration to the SAME `Editor.BlockFrame` contribution that makes the type a " +
+        "container:\n" +
+        "  Editor.BlockFrame({ match: <handle>.type, component: <Frame>, anchor: <Anchor> })\n" +
+        "The anchor component takes `BlockAnchorProps` ({ type, data, editor? }) and renders " +
+        "appearance + interaction only — the surface owns its position. Alternatively drop " +
+        "`anchor: true` from the handle if the type really does render its own line.",
+    };
+  },
+};
+
+export default [check, anchorHasDecoration];
