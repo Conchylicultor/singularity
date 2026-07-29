@@ -52,15 +52,14 @@ function DepsTreeSectionLoaded({
     [allTasks, taskId],
   );
 
-  // Self-hide with the original trigger: the task must take part in a dependency
-  // edge (either direction) OR have created children. When it does, the cluster
-  // adds the surrounding creation context (creator, siblings) for both views.
-  const self = allTasks.find((t) => t.id === taskId);
-  const hasDepEdge =
-    (self?.dependencies.length ?? 0) > 0 ||
-    allTasks.some((t) => t.dependencies.includes(taskId));
-  const hasFolderChildren = allTasks.some((t) => t.folderId === taskId);
-  if (!hasDepEdge && !hasFolderChildren) return null;
+  // Self-hide is a property of the CLUSTER, never of the selected task's own
+  // edges. This section renders `memberIds`, so gating on anything else lets the
+  // two drift: a deps-tree move rewires only the moved task's dependency edges,
+  // which a task-scoped gate reads as "no longer relevant" and hides the section
+  // — while the member set it was rendering did not change at all. Deriving the
+  // gate from the rendered set makes that class of bug impossible: the section
+  // hides exactly when there is nothing but the task itself to draw.
+  if (memberIds.size <= 1) return null;
 
   // ONE merged DataView surface: the Dependencies / Created organisations are
   // contributed sources, unified under a single switcher + config file.

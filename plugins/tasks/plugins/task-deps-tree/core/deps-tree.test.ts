@@ -79,6 +79,27 @@ describe("taskClusterIds", () => {
     expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "X", "Y"));
   });
 
+  test("detaching a dependency edge does not change the member set", () => {
+    // The rule the deps tree must obey: rewiring the tree NEVER changes the set
+    // of tasks it lists, only their nesting. A > B > C, all created under A —
+    // moving C to the top level drops its dependency edge, and every member
+    // still sees the same three tasks from every seed.
+    const before = [
+      task("A"),
+      task("B", ["A"], { folderId: "A" }),
+      task("C", ["B"], { folderId: "A" }),
+    ];
+    const after = [
+      task("A"),
+      task("B", ["A"], { folderId: "A" }),
+      task("C", [], { folderId: "A" }),
+    ];
+    for (const seed of ["A", "B", "C"]) {
+      expect(taskClusterIds(before, seed)).toEqual(members("A", "B", "C"));
+      expect(taskClusterIds(after, seed)).toEqual(members("A", "B", "C"));
+    }
+  });
+
   test("isolated task yields just itself; unknown root yields empty", () => {
     const tasks = [task("A"), task("B", ["X"]), task("X")];
     expect(taskClusterIds(tasks, "A")).toEqual(members("A"));
