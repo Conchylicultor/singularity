@@ -1,6 +1,7 @@
 import { basename, resolve } from "path";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
 import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { MIGRATIONS_PLUGIN_DIR } from "../../core/internal/schema-glob-patterns";
 
 // Inlined minimal Check shape (mirrors the sibling migration checks) to avoid a
 // cross-plugin import of the framework Check type from a check file.
@@ -11,8 +12,6 @@ type Check = {
   alwaysRun?: boolean;
   run(): Promise<CheckResult>;
 };
-
-const MIGRATIONS_PLUGIN_DIR = "plugins/database/plugins/migrations";
 
 const schemaFilesLoadableCheck: Check = {
   id: "schema-files-loadable",

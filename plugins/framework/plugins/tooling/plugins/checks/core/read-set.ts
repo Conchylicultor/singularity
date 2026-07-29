@@ -205,18 +205,32 @@ export async function loadTreeSnapshot(root: string, treeHash: string): Promise<
 // could flip the verdict with NO recorded tree-fact change → a stale PASS. Adding
 // the prefix pins it. (Its runtime-facet code path is skipped by boundaries'
 // `skipBarrelImport`, but hashing the whole subtree is the sound superset.)
+//
+// `migrations/core/` + `migrations/drizzle.config.ts`. `schema-files-loadable` and
+// `table-defs-in-schema-glob` enumerate their scan surface through
+// `schemaGlobFiles()`, whose glob patterns are now a CONSTANT in
+// `plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts` —
+// code, invisible to the `FileSystemView`. Narrowing a pattern would shrink the
+// inspected file set with NO recorded tree-fact change → a stale PASS on a
+// narrowed domain. Scoped to `core/` and the config file specifically, NOT the
+// whole migrations plugin: that would swallow `data/*.sql`, flipping `sourceHash`
+// on every migration commit and over-invalidating every input-keyed check
+// (`type-check` included) for a reason unrelated to their verdicts. (Neither check
+// is `inputKeyed` today — this closes the landmine before someone flips them.)
 const CHECK_SOURCE_PREFIXES = [
   "plugins/framework/plugins/tooling/",
   "plugins/plugin-meta/plugins/parse-utils/",
   "plugins/plugin-meta/plugins/plugin-tree/",
+  "plugins/database/plugins/migrations/core/",
+  "plugins/database/plugins/migrations/drizzle.config.ts",
 ];
 
 /**
  * sha256 over the sorted `"<path>\0<blobSha>"` of every file under the
- * check-logic prefixes (`CHECK_SOURCE_PREFIXES`: the whole `tooling/` tree plus
- * `parse-utils/`). Any edit to the runner, a shared check helper, an individual
- * check's code, OR the masking/parsing logic a grepCode verdict depends on flips
- * it → a stored PASS keyed on it is invalidated. A thin wrapper over
+ * check-logic prefixes — see `CHECK_SOURCE_PREFIXES` above for the exact set and
+ * the soundness argument for each entry. Any edit to the runner, a shared check
+ * helper, an individual check's code, OR any non-tree logic a check's verdict
+ * depends on flips it → a stored PASS keyed on it is invalidated. A thin wrapper over
  * `TreeSnapshot.checkSourceHash()` (which memoises), exposed as a free function
  * so `validate`/tests can name it directly.
  */

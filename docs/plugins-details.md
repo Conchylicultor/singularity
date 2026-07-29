@@ -9899,7 +9899,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DestructiveKind`
         - Exports (values):
           - `classifyMigrationSql`
-          - `parseSchemaGlobs`
           - `schemaGlobFiles`
       - Structure:
         - Non-standard folders: `data/`

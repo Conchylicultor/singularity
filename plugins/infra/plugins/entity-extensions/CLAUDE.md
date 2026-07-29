@@ -28,7 +28,7 @@ const row = await agentAutoLaunch.get(agentId);
 await agentAutoLaunch.delete(agentId);
 ```
 
-Creates `agents_ext_auto_launch(parent_id text PK FK CASCADE, enabled bool NOT NULL DEFAULT false, created_at, updated_at)`. Drizzle-kit picks the table up via the `tables.ts` glob in `server/drizzle.config.ts` — no central registration.
+Creates `agents_ext_auto_launch(parent_id text PK FK CASCADE, enabled bool NOT NULL DEFAULT false, created_at, updated_at)`. Drizzle-kit picks the table up via the `tables.ts` pattern in `SCHEMA_GLOBS` (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) — no central registration.
 
 The handle exposes `.table` for same-plugin raw queries (live-state resource loaders that read all rows, complex SQL composition keyed by columns other than `parentId`). Cross-plugin imports of the underlying pgTable are blocked by the plugin-boundary checker (R4) because the table stays in `internal/`.
 

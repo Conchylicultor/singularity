@@ -15,6 +15,7 @@ import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-all
 import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleKitGenerateOnlyCheck from "./drizzle-kit-generate-only";
+import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
 
 // Inlined minimal Check shape (mirrors the other plugin-contributed checks, e.g.
 // data-migration-dml-only / migration-hashes-unique) to avoid a cross-plugin
@@ -132,4 +133,5 @@ export default [
   schemaFilesLoadableCheck,
   forkSchemaDriftCheck,
   drizzleKitGenerateOnlyCheck,
+  drizzleConfigSchemaGlobsCheck,
 ];

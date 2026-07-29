@@ -6,8 +6,14 @@ drizzle-kit's schema glob (`server/**/internal/tables.ts`, `tables-*.ts`,
 a `pgTable(...)` — or a table-factory call like `defineLink(...)` — in any other
 server file is invisible to migration generation: drizzle treats the table as
 dropped and emits a spurious `DROP TABLE` with no error. The glob-matched file
-set is read from `drizzle.config.ts` (single source of truth, no duplication),
-and the set of table factories lives in the `TABLE_FACTORIES` const in
+set is enumerated by `schemaGlobFiles()` from **`SCHEMA_GLOBS`**
+(`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) —
+the one declaration `drizzle.config.ts` also builds its `schema:` array from, so
+this check and migration generation provably scan the same file set (the
+`database-migrations:drizzle-config-schema-globs` check proves it). Nothing is
+parsed out of the config's text any more: that parse could silently yield a
+subset, narrowing this check's domain while it kept reporting green. The set of
+table factories lives in the `TABLE_FACTORIES` const in
 `check/index.ts` — register a new server-defined factory there (both `name` and
 `definedIn`) so the footgun can't be reintroduced silently.
 

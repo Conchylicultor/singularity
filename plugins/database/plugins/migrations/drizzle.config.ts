@@ -1,4 +1,8 @@
 import { defineConfig } from "drizzle-kit";
+import {
+  REPO_ROOT_FROM_MIGRATIONS_DIR,
+  SCHEMA_GLOBS,
+} from "./core/internal/schema-glob-patterns";
 
 /**
  * CODEGEN config for `drizzle-kit generate` — and ONLY that subcommand.
@@ -29,15 +33,13 @@ export default defineConfig({
   // directly, not through plugin index.ts files (which would pull in handlers,
   // routes, and other server init code that shouldn't run during codegen).
   //
-  // NOTE: this array is also parsed as TEXT by `core/internal/schema-glob.ts`
-  // (the single source of truth for "which files drizzle-kit discovers"), so it
-  // must stay a plain array of string literals.
-  schema: [
-    "../../../../plugins/**/server/**/internal/tables.ts",
-    "../../../../plugins/**/server/**/internal/tables-*.ts",
-    "../../../../plugins/**/server/**/internal/schema.ts",
-    "../../../../plugins/**/server/**/internal/schema-*.ts",
-  ],
+  // SCHEMA_GLOBS is the single source of truth, shared verbatim with
+  // `core/internal/schema-glob.ts` (the enumerator the schema-glob checks use). The
+  // patterns are repo-root-relative; drizzle-kit anchors a relative glob at its CWD,
+  // which is this directory — hence the prefix. NEVER inline a literal array here: the
+  // `database-migrations:drizzle-config-schema-globs` check proves this equals
+  // SCHEMA_GLOBS and fails loudly if it doesn't.
+  schema: SCHEMA_GLOBS.map((g) => `${REPO_ROOT_FROM_MIGRATIONS_DIR}/${g}`),
   out: "./data",
   dbCredentials: { url: "postgres://codegen@codegen.invalid/codegen" },
 });

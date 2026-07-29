@@ -1,44 +1,21 @@
 /**
  * Unit tests for the pure path-classification helpers of the
- * `table-defs-in-schema-glob` check: the drizzle-config glob parser and the
- * candidate predicate that decides which server files are in scope.
+ * `table-defs-in-schema-glob` check: the candidate predicate that decides which
+ * server files are in scope, and the imperative-table read-handle exemption.
+ *
+ * The glob set itself is no longer parsed out of anything — it is the
+ * `SCHEMA_GLOBS` constant, proved equal to drizzle.config.ts's evaluated
+ * `schema:` array by the `database-migrations:drizzle-config-schema-globs` check.
  *
  * Run with `bun test` from the repo root.
  */
 
 import { test, expect } from "bun:test";
-import { parseSchemaGlobs } from "@plugins/database/plugins/migrations/core";
 import {
   isCandidatePath,
   parseImperativeTableNameConsts,
   isImperativeReadHandle,
 } from "./index";
-
-const DRIZZLE_CONFIG_SCHEMA = `
-export default defineConfig({
-  dialect: "postgresql",
-  schema: [
-    "../../../../plugins/**/server/**/internal/tables.ts",
-    "../../../../plugins/**/server/**/internal/tables-*.ts",
-    "../../../../plugins/**/server/**/internal/schema.ts",
-    "../../../../plugins/**/server/**/internal/schema-*.ts",
-  ],
-  out: "./data",
-});
-`;
-
-test("parseSchemaGlobs extracts the four schema globs", () => {
-  expect(parseSchemaGlobs(DRIZZLE_CONFIG_SCHEMA)).toEqual([
-    "../../../../plugins/**/server/**/internal/tables.ts",
-    "../../../../plugins/**/server/**/internal/tables-*.ts",
-    "../../../../plugins/**/server/**/internal/schema.ts",
-    "../../../../plugins/**/server/**/internal/schema-*.ts",
-  ]);
-});
-
-test("parseSchemaGlobs returns null when the array is absent", () => {
-  expect(parseSchemaGlobs("export default defineConfig({ dialect: 'postgresql' });")).toBeNull();
-});
 
 // Sample paths use the real `improve` plugin so the `plugin-refs-resolve` check
 // (which validates every `plugins/...` string literal repo-wide) stays happy —
