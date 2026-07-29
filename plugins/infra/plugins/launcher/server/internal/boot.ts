@@ -58,6 +58,83 @@ const LOGS_DIR = join(SINGULARITY_DIR, "logs");
 // panics and any crash before slog is wired up. Truncated on each start so it
 // can't grow unbounded; the last crash survives until the next launch.
 const GATEWAY_STDIO_LOG = join(LOGS_DIR, "gateway-stdio.log");
+// The gateway's own rotating slog sink. Only ever read as a FALLBACK when the
+// stdio log has nothing (see gatewayLogTail): it carries prior sessions too, so
+// its tail may describe a boot that is not this one.
+const GATEWAY_SLOG_LOG = join(LOGS_DIR, "gateway.log");
+
+/**
+ * Host preconditions the whole stack depends on, asserted before anything is
+ * spawned or written. This is the home for them: each is a property of the
+ * machine, knowable in microseconds, whose violation otherwise surfaces minutes
+ * later as an unrelated downstream symptom (a socket ENOENT, a readiness
+ * timeout). Add further preconditions here rather than letting them be
+ * rediscovered at runtime.
+ *
+ * Today there is exactly one. Postgres' `initdb` refuses to run as the root OS
+ * user, so as root the embedded cluster — and therefore every backend — cannot
+ * start at all. This is not a corner case: the deploy plugin defaults `sshUser`
+ * to "root" (plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts)
+ * and the Hetzner provider prose walks the operator into a root shell, so the
+ * platform's own default deploy path lands them in the one account under which
+ * the bundle cannot run.
+ */
+export function assertSupportedHost(): void {
+  // `process.getuid` is undefined off POSIX; an absent uid cannot be root,
+  // which is the only thing this check is about.
+  if (process.getuid?.() === 0) {
+    throw new Error(
+      [
+        "Refusing to run as root: Postgres' initdb refuses to run as the root OS user, so the embedded cluster (and every backend behind it) cannot start.",
+        "Create a non-root user and run this as them, e.g.:",
+        "  adduser --disabled-password --gecos '' singularity",
+        "  chown -R singularity:singularity <bundle dir>",
+        "  su - singularity -c '<bundle dir>/launch'",
+      ].join("\n"),
+    );
+  }
+}
+
+/**
+ * The last `lines` non-empty lines of a log file, or null when there is nothing
+ * to quote. Absence is a legitimate state here — the gateway can die before it
+ * opens a log — not a failure, so callers fall through to the next source;
+ * every other read error propagates.
+ */
+function readLogTail(path: string, lines: number): string | null {
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  const kept = raw
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line !== "")
+    .slice(-lines);
+  return kept.length > 0 ? kept.join("\n") : null;
+}
+
+const GATEWAY_LOG_TAIL_LINES = 20;
+
+/**
+ * The gateway's last output, for embedding in a launcher error.
+ *
+ * `gateway-stdio.log` FIRST and by design: `spawnGatewayDaemon` opens it with
+ * mode "w", so it is truncated on every start and holds exactly THIS boot's
+ * output with no scrollback to read past — and the gateway writes its fatal
+ * service-start error to stderr precisely so it lands there. The rotating
+ * `gateway.log` is only the fallback: correct, but it also holds earlier
+ * sessions, so its tail can describe a different boot.
+ */
+function gatewayLogTail(): string {
+  const tail =
+    readLogTail(GATEWAY_STDIO_LOG, GATEWAY_LOG_TAIL_LINES) ??
+    readLogTail(GATEWAY_SLOG_LOG, GATEWAY_LOG_TAIL_LINES);
+  return tail ?? `(no output in ${GATEWAY_STDIO_LOG} or ${GATEWAY_SLOG_LOG})`;
+}
 
 /**
  * The gateway pidfile under an arbitrary install root. Used by teardown to find a
@@ -400,6 +477,84 @@ export function spawnGatewayDaemon(opts: {
   return gw.pid;
 }
 
+// Generous: the gateway does not bind its listener until its supervisor has
+// brought EVERY managed service up (StartAll precedes ListenAndServe), and a
+// cold `initdb` on a fresh host legitimately takes tens of seconds. Nothing
+// waits this out in the failure case: the per-tick pid check below turns a
+// gateway that died into an immediate throw, so the deadline only covers the
+// narrow "alive but never listened" hang.
+const GATEWAY_READY_TIMEOUT_MS = 120_000;
+
+/**
+ * Block until the gateway is serving, failing FAST and with the real reason if
+ * it is not going to.
+ *
+ * The gateway exits non-zero when a managed service fails to start, so "the
+ * gateway is listening" implies "every managed service came up" — which makes
+ * this the one place the whole stack's startup can be gated. Polling only for
+ * the listener (or worse, for the PG socket downstream) converts a precise
+ * diagnosis emitted at t=0 into an unrelated timeout at t=90s; checking the pid
+ * on every tick converts it back.
+ */
+export async function awaitGatewayReady(opts: {
+  pid: number;
+  port: number;
+}): Promise<void> {
+  const { pid, port } = opts;
+  await retryUntil(
+    async () => {
+      // Death check FIRST, every tick — this is the case worth reporting fast,
+      // and its evidence (the gateway's own last output) is already on disk.
+      if (!isRunning(pid)) {
+        throw new Error(
+          `Gateway exited during startup (PID ${pid}). Last output:\n${gatewayLogTail()}`,
+        );
+      }
+      return (await isGatewayListening(port)) ? true : null;
+    },
+    {
+      delay: exponential({ initial: 100, max: 1_000 }),
+      deadline: GATEWAY_READY_TIMEOUT_MS,
+      onDeadline: () => {
+        throw new Error(
+          `Gateway (PID ${pid}) is running but never listened on port ${port} within ${GATEWAY_READY_TIMEOUT_MS}ms. Last output:\n${gatewayLogTail()}`,
+        );
+      },
+    },
+  );
+}
+
+/**
+ * The supervisor's recorded failure reason for a managed service, or null when
+ * there is none to report. `ServiceSnapshot.error` is populated only for a
+ * failed service, so a healthy one legitimately has no `error` field.
+ *
+ * Called ONLY while composing an error that is about to be thrown, so it never
+ * throws itself: an unreachable gateway, a non-200, or a snapshot without
+ * `error` all mean "nothing to add here" — never a failure a caller could act
+ * on. Letting a probe failure escape would replace a real diagnosis with a
+ * worse one.
+ */
+async function readServiceError(
+  port: number,
+  service: string,
+): Promise<string | null> {
+  try {
+    const resp = await fetch(
+      `http://localhost:${port}/gateway/services/${service}/status`,
+      { signal: AbortSignal.timeout(1000) },
+    );
+    if (!resp.ok) return null;
+    const snapshot = (await resp.json()) as { error?: unknown };
+    return typeof snapshot.error === "string" && snapshot.error !== ""
+      ? snapshot.error
+      : null;
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- enrichment-only probe on an error path (same precedent as isGatewayListening): any network/parse error means the gateway has nothing to add to the error already being thrown
+  } catch {
+    return null;
+  }
+}
+
 // Generous: a preview's PG is a from-scratch `initdb` running ALONGSIDE the full
 // dev stack (CPU/IO contention), so the cold cluster-create path can exceed 30s.
 // This launcher constant is release/preview-only — distinct from the database
@@ -411,10 +566,16 @@ const PG_READY_TIMEOUT_MS = 90_000;
  * The admin pool connects DIRECT to PG (5433 socket), independent of PgBouncer,
  * so this gates on the cluster being up before any DB is created. Fails loud on
  * deadline.
+ *
+ * Pass `port` (the gateway's) so the deadline path can quote the supervisor's
+ * recorded reason. That covers the residual case `awaitGatewayReady` cannot:
+ * the gateway came up — so every managed service DID start — and PG died
+ * afterwards, which is a watchdog concern the gateway deliberately survives.
  */
 export async function awaitPgReady(
-  deadlineMs: number = PG_READY_TIMEOUT_MS,
+  opts: { deadlineMs?: number; port?: number } = {},
 ): Promise<void> {
+  const deadlineMs = opts.deadlineMs ?? PG_READY_TIMEOUT_MS;
   let lastErr: unknown = null;
   await retryUntil(
     async () => {
@@ -430,9 +591,18 @@ export async function awaitPgReady(
     {
       delay: exponential({ initial: 100, max: 1_000 }),
       deadline: deadlineMs,
-      onDeadline: () => {
+      // Async: `retryUntil` returns whatever `onDeadline` returns, and its own
+      // result is awaited by us — so the rejection propagates as a throw.
+      onDeadline: async () => {
+        const supervisorErr =
+          opts.port === undefined
+            ? null
+            : await readServiceError(opts.port, "postgres");
         throw new Error(
-          `Postgres did not become reachable within ${deadlineMs}ms`,
+          `Postgres did not become reachable within ${deadlineMs}ms` +
+            (supervisorErr === null
+              ? ""
+              : `; gateway supervisor reports: ${supervisorErr}`),
           { cause: lastErr },
         );
       },
@@ -493,11 +663,15 @@ async function awaitAppReady(name: string, port: number): Promise<void> {
  *   2. ensureDatabaseConfig — write the release database.json under the root.
  *   3. Spawn the gateway daemon (inherits SINGULARITY_DIR, listens on `port`);
  *      the gateway is the sole supervisor of embedded PG + PgBouncer.
- *   4. awaitPgReady — poll the admin pool until the cluster is up.
- *   5. ensureDatabase(name) — CREATE DATABASE if absent (idempotent).
- *   6. writeWorktreeSpec — written LAST, so the gateway only discovers the app
+ *   4. awaitGatewayReady — the gateway is serving, which (because it exits on a
+ *      failed service start) means every managed service came up. Gating here
+ *      rather than on the PG socket is what makes a service that refused to
+ *      start surface as itself instead of as a downstream timeout.
+ *   5. awaitPgReady — poll the admin pool until the cluster is up.
+ *   6. ensureDatabase(name) — CREATE DATABASE if absent (idempotent).
+ *   7. writeWorktreeSpec — written LAST, so the gateway only discovers the app
  *      after its DB exists; the spawned backend migrates the empty DB on boot.
- *   7. awaitAppReady — poll health/ready until the backend serves.
+ *   8. awaitAppReady — poll health/ready until the backend serves.
  */
 export async function bootSelfContainedApp(opts: {
   name: string;
@@ -529,9 +703,12 @@ export async function bootSelfContainedApp(opts: {
     logLevel,
     defaultNamespace: name,
   });
-  log(`Gateway started (PID ${pid}); waiting for Postgres...`);
+  log(`Gateway started (PID ${pid}); waiting for it to serve...`);
 
-  await awaitPgReady();
+  await awaitGatewayReady({ pid, port });
+  log("Gateway is serving; waiting for Postgres...");
+
+  await awaitPgReady({ port });
   await ensureDatabase(name);
 
   // Spec last: the gateway's fsnotify watcher only discovers the namespace once

@@ -1,9 +1,11 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export {
+  assertSupportedHost,
   readPid,
   isRunning,
   isGatewayListening,
+  awaitGatewayReady,
   hasPgBouncerPackage,
   pgbouncerService,
   pgbouncerConnection,

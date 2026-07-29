@@ -113,6 +113,14 @@ Each service has a `start` command (executed synchronously), a `ready` probe (`{
 1. `Supervisor.StartAll(ctx)` runs synchronously in main — for each service, executes the start command, waits for the readiness probe to succeed, then arms the watchdog goroutine.
 2. `central` worktree is eagerly spawned in a goroutine — by this point services are ready, so central plugins can connect immediately.
 
+### A startup failure is fatal; a mid-session death is not
+
+If `StartAll` fails, the gateway logs the error, writes it to stderr, and **exits non-zero**. It does not fall through to serving. A gateway whose managed Postgres never came up can serve static files and nothing else, so "continuing" bought nothing: it converted a startup failure that names its cause (`initdb: error: cannot be run as root`) into an unrelated-looking timeout 90 seconds later in a different process (`connect ENOENT …/.s.PGSQL.5433`). The stderr write is load-bearing, not redundant with `gateway.log`: the launcher opens `gateway-stdio.log` in `"w"` mode, so that file is truncated per start and holds exactly this boot's fatal error with no scrollback to read past — it is what the launcher quotes back to the operator's terminal. A malformed `database.json` is fatal for the same reason; a **missing** one is not, since that is the legitimate externally-managed-database case.
+
+Because `StartAll` runs before `ListenAndServe`, **"the gateway is listening" implies "every managed service came up"** — which is what lets the launcher (`boot.ts`, `awaitGatewayReady`) wait on the gateway port rather than on a service's socket, and fail in seconds with the real cause.
+
+The **watchdog deliberately does not share this policy.** A service that dies mid-session records its reason and the gateway stays up: killing it would tear down every live backend over a transient blip. Startup and steady state are different situations and get different answers — at startup nothing is running yet, so exiting costs nothing and buys a precise diagnosis.
+
 ### Watchdog
 
 Each service's watchdog dials its readiness probe every N seconds (default 2). On failure, attempts one re-execution of the start command. If that also fails, marks the service Crashed and stops watching.
@@ -121,6 +129,8 @@ Each service's watchdog dials its readiness probe every N seconds (default 2). O
 
 - `GET /gateway/services` — JSON array of all services with their states
 - `GET /gateway/services/<name>/status` — JSON object for one service
+
+Both carry an optional `error` alongside `name`/`state`: the reason the service last crashed (start-command stderr, or the readiness timeout), recorded atomically with the state transition by `setCrashed`. It is `omitempty`, so a healthy service's JSON is unchanged from before the field existed, and reaching `running` clears it. A `crashed` state with no reason attached is an absorbable failure — a value a consumer cannot act on — which is exactly what left the original incident undiagnosable.
 
 If `database.json` is missing or has an empty `services` array, the supervisor does nothing (equivalent to using an externally managed database).
 

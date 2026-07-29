@@ -101,6 +101,26 @@ function readReleaseManifest(): ReleaseManifest {
 }
 
 async function main(): Promise<void> {
+  // Imported AFTER env is set (see the ordering constraint at the top of this
+  // file), so the launcher's path constants freeze under the release root.
+  const {
+    assertSupportedHost,
+    bootSelfContainedApp,
+    writeReleaseDatabaseConfig,
+    seedReleaseAssetMirror,
+    seedReleaseConfig,
+  } = await import("@plugins/infra/plugins/launcher/server");
+
+  // Host preconditions first, before anything is read, written or spawned: a
+  // root launch cannot start Postgres, and every later symptom of that is a
+  // misdirecting downstream timeout. This is the earliest seam available — the
+  // check lives behind the barrel the ordering constraint forbids importing
+  // until the env is frozen, so the two module-level `mkdtempSync` calls above
+  // still run and leave two empty /tmp dirs on a refused launch. Accepted:
+  // restructuring the env preamble to avoid them would trade a correctness
+  // constraint for cosmetics.
+  assertSupportedHost();
+
   const manifest = readReleaseManifest();
   const name = manifest.composition;
   // PORT env override lets an operator pick the listen port without rebuilding;
@@ -109,11 +129,6 @@ async function main(): Promise<void> {
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error(`Invalid port: ${process.env.PORT ?? manifest.port}`);
   }
-
-  // Imported AFTER env is set, so the launcher's path constants freeze under the
-  // release root.
-  const { bootSelfContainedApp, writeReleaseDatabaseConfig, seedReleaseAssetMirror, seedReleaseConfig } =
-    await import("@plugins/infra/plugins/launcher/server");
 
   // Write the release database.json FIRST, so bootSelfContainedApp's internal
   // ensureDatabaseConfig sees the file already present and no-ops (a release has

@@ -29,8 +29,11 @@ Worktree backends read connection params from `~/.singularity/database.json` (au
 `GET /gateway/services/postgres/status` returns the gateway supervisor's state for the postgres service:
 
 ```json
-{ "name": "postgres", "state": "running" | "starting" | "stopped" | "crashed" }
+{ "name": "postgres", "state": "running" | "starting" | "stopped" | "crashed",
+  "error": "start command failed: exit status 1: initdb: error: cannot be run as root" }
 ```
+
+`error` is optional and present only on a failure — a `running` service's JSON is exactly the two fields. It carries the supervisor's recorded reason for the crash (start-command stderr, or the readiness timeout), so `crashed` is a state a consumer can act on rather than a bare fact. A cluster that fails to start at *gateway boot* never reaches this endpoint at all: the gateway exits non-zero instead of listening (see [`gateway/CLAUDE.md`](../../../../gateway/CLAUDE.md), "Service supervision"). This field is for the cluster that died *after* a healthy start.
 
 ## What this plugin does NOT do
 

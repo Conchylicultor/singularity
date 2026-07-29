@@ -10,6 +10,8 @@ One-time environment setup for developing Singularity.
 | Go                  | >= 1.22 | `brew install go`              |
 | Postgres client CLI | 18      | `brew install postgresql@18`   |
 
+**Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./singularity start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' singularity`, `chown -R` the install dir, then `su - singularity`).
+
 The Postgres **server** is bundled (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`). The Postgres **client tools** (`pg_dump`, `pg_restore`, `pg_dumpall`) are not bundled yet and must be on PATH — they're used to fork worktree databases and to run the one-time auto-migration from system PG. They'll be bundled in a follow-up so this prerequisite goes away.
 
 ## Postgres

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -99,6 +100,20 @@ func setupLogging(cfg Config) {
 	slog.SetDefault(slog.New(h))
 }
 
+// fatal reports an unrecoverable startup failure and exits non-zero.
+//
+// It writes to BOTH slog (gateway.log, for the operator who knows to look) and
+// os.Stderr. The stderr write is load-bearing, not belt-and-braces: the launcher
+// redirects the gateway's stdout/stderr to gateway-stdio.log opened in "w" mode,
+// so that file is truncated on every start and therefore holds exactly this
+// boot's fatal error with no scrollback to read past. That is the file the
+// launcher quotes back to the terminal the operator is already watching.
+func fatal(stderrMsg string, logMsg string, err error) {
+	slog.Error(logMsg, "err", err)
+	fmt.Fprintf(os.Stderr, "%s\n", stderrMsg)
+	os.Exit(1)
+}
+
 func main() {
 	cfg := parseFlags()
 	setupLogging(cfg)
@@ -128,8 +143,13 @@ func main() {
 	dbConfigPath := filepath.Join(dataDir, "database.json")
 	sup, err := NewSupervisor(dbConfigPath)
 	if err != nil {
-		slog.Error("supervisor: failed to load config; continuing without services", "err", err)
-		sup = &Supervisor{}
+		// A malformed database.json is a misconfiguration, not a signal. The
+		// benign "I manage my own database" case is a *missing* file, which
+		// NewSupervisor already answers with an empty supervisor — so reaching
+		// here means the operator wrote a config we could not honour, and
+		// silently managing nothing would hide that behind a later timeout.
+		fatal(fmt.Sprintf("gateway: fatal: bad managed-service config %s: %v", dbConfigPath, err),
+			"supervisor: failed to load config", err)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -152,11 +172,21 @@ func main() {
 	go reg.Reconcile(ctx)
 
 	// Start supervised services (e.g. embedded Postgres) before backends.
-	// Backends assume services are reachable; the supervisor must bring them
-	// up first. If a service fails, log loudly but keep serving —
-	// /gateway/services will show the failure so operators can tell.
+	// Backends assume services are reachable; the supervisor must bring them up
+	// first — so a service that fails to start is fatal, not a warning. A
+	// gateway whose managed Postgres never came up can serve static files and
+	// nothing else: continuing would trade a startup failure that names its
+	// cause ("initdb: error: cannot be run as root") for a timeout 90s later
+	// that names nothing. Because this runs before ListenAndServe, "the gateway
+	// is listening" now implies "every managed service came up" — which is what
+	// lets the launcher wait on the port instead of on a service's socket.
+	//
+	// The watchdog deliberately does NOT share this policy: a service dying
+	// mid-session records its reason and the gateway stays up, since killing it
+	// would tear down every live backend over a transient blip.
 	if err := sup.StartAll(ctx); err != nil {
-		slog.Error("supervisor: start failed; continuing without managed services", "err", err)
+		fatal(fmt.Sprintf("gateway: fatal: managed service failed to start: %v", err),
+			"supervisor: start failed", err)
 	}
 
 	// Eagerly spawn `central` so plugins that load on boot (auth, secrets) are

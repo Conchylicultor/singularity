@@ -97,12 +97,31 @@ type Service struct {
 	probe     ReadyProbe
 	mu        sync.Mutex
 	state     ServiceState
+	lastErr   string // why the service last crashed; empty unless state is Crashed
 	watchStop chan struct{}
 }
 
+// setState transitions the service. Reaching ServiceRunning clears lastErr here
+// rather than at each call site: a running service by definition has no
+// outstanding failure, and centralizing the clear means a future transition
+// cannot forget it and leave a stale reason attached to a healthy service.
+// Crash transitions go through setCrashed, which carries the reason.
 func (s *Service) setState(st ServiceState) {
 	s.mu.Lock()
 	s.state = st
+	if st == ServiceRunning {
+		s.lastErr = ""
+	}
+	s.mu.Unlock()
+}
+
+// setCrashed marks the service crashed together with the error that caused it,
+// atomically. A `crashed` state with no reason is a value no consumer can act
+// on — the launcher and /gateway/services both need the text, not just the fact.
+func (s *Service) setCrashed(err error) {
+	s.mu.Lock()
+	s.state = ServiceCrashed
+	s.lastErr = err.Error()
 	s.mu.Unlock()
 }
 
@@ -112,10 +131,25 @@ func (s *Service) getState() ServiceState {
 	return s.state
 }
 
+// snapshot reads state and lastErr under one lock, so the reported reason
+// always belongs to the reported state.
+func (s *Service) snapshot() ServiceSnapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return ServiceSnapshot{
+		Name:  s.config.Name,
+		State: s.state.String(),
+		Error: s.lastErr,
+	}
+}
+
 // ServiceSnapshot is the JSON shape returned by /gateway/services.
 type ServiceSnapshot struct {
 	Name  string `json:"name"`
 	State string `json:"state"`
+	// omitempty keeps a healthy service's JSON byte-identical to what it was
+	// before the field existed — consumers only ever see `error` on a failure.
+	Error string `json:"error,omitempty"`
 }
 
 // Supervisor manages a set of services read from database.json.
@@ -192,15 +226,16 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 	slog.Info("supervisor: starting service", "name", svc.config.Name)
 
 	if err := execStartCommand(svc.config); err != nil {
-		svc.setState(ServiceCrashed)
+		svc.setCrashed(err)
 		return err
 	}
 
 	// Verify readiness by polling the probe (the start command may return
 	// before the daemon is fully reachable).
 	if !waitForReady(ctx, svc.probe, startReadyTimeout) {
-		svc.setState(ServiceCrashed)
-		return fmt.Errorf("service did not become ready within %s", startReadyTimeout)
+		err := fmt.Errorf("service did not become ready within %s", startReadyTimeout)
+		svc.setCrashed(err)
+		return err
 	}
 
 	svc.setState(ServiceRunning)
@@ -262,10 +297,7 @@ func (sup *Supervisor) StopAll() {
 func (sup *Supervisor) List() []ServiceSnapshot {
 	out := make([]ServiceSnapshot, 0, len(sup.services))
 	for _, svc := range sup.services {
-		out = append(out, ServiceSnapshot{
-			Name:  svc.config.Name,
-			State: svc.getState().String(),
-		})
+		out = append(out, svc.snapshot())
 	}
 	return out
 }
@@ -274,10 +306,8 @@ func (sup *Supervisor) List() []ServiceSnapshot {
 func (sup *Supervisor) Get(name string) *ServiceSnapshot {
 	for _, svc := range sup.services {
 		if svc.config.Name == name {
-			return &ServiceSnapshot{
-				Name:  svc.config.Name,
-				State: svc.getState().String(),
-			}
+			snap := svc.snapshot()
+			return &snap
 		}
 	}
 	return nil
@@ -325,12 +355,12 @@ func (sup *Supervisor) runWatchdog(ctx context.Context, svc *Service, stop <-cha
 			svc.setState(ServiceStarting)
 			if err := execStartCommand(svc.config); err != nil {
 				slog.Error("supervisor: re-start failed; not retrying", "name", svc.config.Name, "err", err)
-				svc.setState(ServiceCrashed)
+				svc.setCrashed(err)
 				return
 			}
 			if !waitForReady(ctx, svc.probe, startReadyTimeout) {
 				slog.Error("supervisor: re-started but service not ready; marking crashed", "name", svc.config.Name)
-				svc.setState(ServiceCrashed)
+				svc.setCrashed(fmt.Errorf("re-started but service did not become ready within %s", startReadyTimeout))
 				return
 			}
 			svc.setState(ServiceRunning)

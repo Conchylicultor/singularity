@@ -3,12 +3,14 @@ import { join } from "path";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { SINGULARITY_DIR } from "../paths";
 import {
+  assertSupportedHost,
   readPid,
   isRunning,
   isGatewayListening,
   ensureDatabaseConfig,
   buildOrLocateGateway,
   spawnGatewayDaemon,
+  awaitGatewayReady,
 } from "@plugins/infra/plugins/launcher/server";
 
 const LOGS_DIR = join(SINGULARITY_DIR, "logs");
@@ -27,6 +29,10 @@ export function registerStart(program: Command) {
       "info",
     )
     .action(async (opts: { force?: boolean; logLevel: string }) => {
+      // Same host preconditions as a release launch: the dev gateway supervises
+      // the same embedded cluster, so the same machine facts have to hold.
+      assertSupportedHost();
+
       const existingPid = readPid();
       const pidAlive = existingPid !== null && isRunning(existingPid);
 
@@ -86,6 +92,12 @@ export function registerStart(program: Command) {
         port: DEFAULT_PORT,
         logLevel: opts.logLevel,
       });
+
+      // Wait for the gateway to actually serve before claiming success. It is
+      // spawned detached, and it exits when a managed service fails to start —
+      // so printing unconditionally reported success for an already-dead
+      // gateway, and left the operator to discover it via whatever broke next.
+      await awaitGatewayReady({ pid, port: DEFAULT_PORT });
 
       console.log(`Gateway started (PID ${pid})`);
       console.log(`  Logs:    ${LOGS_DIR}/`);

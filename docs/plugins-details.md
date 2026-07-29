@@ -14928,6 +14928,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree.writeWorktreeSpec`
           - `infra/worktree.ZeroCacheSpec`
         - Exports (values):
+          - `assertSupportedHost`
+          - `awaitGatewayReady`
           - `awaitPgReady`
           - `bootSelfContainedApp`
           - `buildOrLocateGateway`
