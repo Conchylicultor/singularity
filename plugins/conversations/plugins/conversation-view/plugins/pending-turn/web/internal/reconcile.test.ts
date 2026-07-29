@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { matchPendingTurns, normalizeForMatch } from "./reconcile";
-import type { PendingTurnRecord } from "./store";
+import {
+  matchPendingTurns,
+  normalizeForMatch,
+  sweepPendingTurns,
+  type SweepContext,
+} from "./reconcile";
+import type { PendingTurnRecord, PendingTurnState } from "./store";
 
 function rec(over: Partial<PendingTurnRecord> = {}): PendingTurnRecord {
   return {
@@ -174,5 +179,119 @@ describe("matchPendingTurns", () => {
     expect(changed).toBe(false);
     expect(records[0]!.state).toBe("failed-post");
     expect(records[0]!.errorMessage).toBe("HTTP 500");
+  });
+
+  test("an enqueue match retires the confirmation deadline", () => {
+    // `queued` is transcript-confirmed: there is nothing left for the deadline
+    // to catch, and an inherited (already elapsed) one would trip instantly.
+    const late = rec({ state: "posted", deadlineAt: 500 });
+    const { records } = matchPendingTurns([late], [enqueue("hello world")], 9_000);
+    expect(records[0]!.state).toBe("queued");
+    expect(records[0]!.deadlineAt).toBeUndefined();
+  });
+});
+
+const CTX: SweepContext = { now: 10_000, tabId: "tab", liveInflight: new Set() };
+
+describe("sweepPendingTurns", () => {
+  test("drops reconciled records — the real user-text row is the feedback", () => {
+    const { records, changed } = sweepPendingTurns([rec({ state: "sent" })], CTX);
+    expect(changed).toBe(true);
+    expect(records).toHaveLength(0);
+  });
+
+  test("adopts an owner-tab send left mid-flight by a reload", () => {
+    const { records, reports } = sweepPendingTurns([rec({ state: "sending" })], CTX);
+    expect(records[0]!.state).toBe("unconfirmed");
+    expect(reports).toHaveLength(1);
+  });
+
+  test("leaves a send whose POST is still live in this tab alone", () => {
+    const { changed } = sweepPendingTurns([rec({ state: "sending" })], {
+      ...CTX,
+      liveInflight: new Set(["r1"]),
+    });
+    expect(changed).toBe(false);
+  });
+
+  test("an elapsed deadline on a posted record trips unconfirmed, once", () => {
+    const first = sweepPendingTurns([rec({ state: "posted", deadlineAt: 9_000 })], CTX);
+    expect(first.records[0]!.state).toBe("unconfirmed");
+    expect(first.reports).toHaveLength(1);
+    // The deadline is spent, so a second pass is inert and files nothing more.
+    const second = sweepPendingTurns(first.records, CTX);
+    expect(second.changed).toBe(false);
+    expect(second.reports).toHaveLength(0);
+  });
+
+  test("never revokes a transcript-resolved record, whatever the deadline says", () => {
+    // A queued record is parked in the CLI's own prompt queue — the transcript
+    // says so. No deadline may take that back.
+    const queued = rec({ state: "queued", deadlineAt: 1 });
+    const { records, changed, reports } = sweepPendingTurns([queued], CTX);
+    expect(changed).toBe(false);
+    expect(records[0]!.state).toBe("queued");
+    expect(reports).toHaveLength(0);
+  });
+});
+
+describe("the reconcile transition is a fixed point", () => {
+  // The pane drives this pipeline from a render effect and the store notifies
+  // its React subscribers whenever a pass reports `changed` — so a pair of
+  // transitions that can undo each other is an unbounded synchronous update
+  // loop (React "Maximum update depth exceeded"), not a cosmetic flip-flop.
+  // Every state must therefore settle in ONE pass against a fixed transcript.
+  const pass = (records: PendingTurnRecord[], events: JsonlEvent[]) => {
+    const matched = matchPendingTurns(records, events, CTX.now);
+    const swept = sweepPendingTurns(matched.records, CTX);
+    return { records: swept.records, changed: matched.changed || swept.changed };
+  };
+
+  const STATES: PendingTurnState[] = [
+    "sending",
+    "posted",
+    "queued",
+    "sent",
+    "failed-post",
+    "unconfirmed",
+  ];
+  const TRANSCRIPTS: [string, JsonlEvent[]][] = [
+    ["empty", []],
+    ["enqueued", [enqueue("hello world")]],
+    ["delivered", [userText("hello world")]],
+    ["enqueued then delivered", [enqueue("hello world"), userText("hello world")]],
+    ["unrelated", [userText("something else"), enqueue("something else")]],
+  ];
+
+  for (const state of STATES) {
+    for (const [label, events] of TRANSCRIPTS) {
+      test(`${state} + ${label} settles in one pass`, () => {
+        // Worst case for the deadline paths: an elapsed deadline and a live
+        // POST nowhere to be found — exactly the shape that used to ping-pong.
+        const start = [
+          rec({ state, deadlineAt: 1, reported: state === "unconfirmed" }),
+        ];
+        const first = pass(start, events);
+        const second = pass(first.records, events);
+        expect(second.changed).toBe(false);
+        expect(second.records).toBe(first.records);
+      });
+    }
+  }
+
+  test("regression: an unconfirmed record still parked in the queue settles", () => {
+    // The crash: the matcher promoted unconfirmed → queued off the enqueue row,
+    // the sweep demoted it straight back on the inherited elapsed deadline, and
+    // each lap committed + notified inside the pane's effect.
+    const stuck = rec({
+      state: "unconfirmed",
+      reported: true,
+      deadlineAt: 1,
+      errorMessage: "Not confirmed",
+    });
+    const first = pass([stuck], [enqueue("hello world")]);
+    expect(first.changed).toBe(true);
+    expect(first.records[0]!.state).toBe("queued");
+    expect(pass(first.records, [enqueue("hello world")]).changed).toBe(false);
   });
 });

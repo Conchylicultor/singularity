@@ -8,7 +8,15 @@ import { postConversationTurn } from "@plugins/conversations/core";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { report } from "@plugins/reports/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { matchPendingTurns } from "./reconcile";
+import {
+  CONFIRM_DEADLINE_MS,
+  isTerminal,
+  isTranscriptResolved,
+  matchPendingTurns,
+  sweepPendingTurns,
+  toUnconfirmed,
+  UNCONFIRMED_MESSAGE,
+} from "./reconcile";
 import {
   clearPendingTurns,
   pendingTurnsKey,
@@ -38,6 +46,11 @@ import {
 // Multi-tab: all tabs render the shared records; only `ownerTabId === getTabId()`
 // drives the POST promise and the deadline timer. `deadlineAt` is absolute, so
 // any tab's reconcile pass can adopt an orphaned record whose owner tab closed.
+//
+// This module owns the SIDE EFFECTS only — storage, timers, the POST, the
+// report. The record→record transition itself lives in reconcile.ts as two pure
+// passes (match, then sweep), where it is bun:test-covered for the idempotence
+// the render-effect driver depends on. See that file's header.
 // ---------------------------------------------------------------------------
 
 export type PendingTurnState =
@@ -72,20 +85,12 @@ export interface PendingTurnRecord {
 }
 
 const POST_TIMEOUT_MS = 30_000;
-const CONFIRM_DEADLINE_MS = 90_000;
-const RECORD_TTL_MS = 7 * 24 * 60 * 60 * 1000; // matches persistent-draft's default
 const MAX_RECORDS_PER_CONV = 10;
-
-const UNCONFIRMED_MESSAGE =
-  "Not confirmed — the agent may not have received this message. Check the terminal.";
-const INTERRUPTED_MESSAGE = "Send interrupted — status unknown";
 
 interface ConvEntry {
   records: PendingTurnRecord[];
   listeners: Set<() => void>;
   timers: Map<string, ReturnType<typeof setTimeout>>;
-  /** Last isWorking seen by reconcile — read by the deadline timer callback. */
-  lastWorking: boolean;
 }
 
 const EMPTY: PendingTurnRecord[] = [];
@@ -107,7 +112,6 @@ function getEntry(conversationId: string): ConvEntry {
     records: stored.length ? stored : EMPTY,
     listeners: new Set(),
     timers: new Map(),
-    lastWorking: false,
   };
   entries.set(conversationId, entry);
   // Attached for the tab's lifetime (bounded by conversations viewed). Our own
@@ -160,39 +164,22 @@ function updateRecord(
   commit(conversationId, entry, next);
 }
 
-function isTerminal(rec: PendingTurnRecord): boolean {
-  return (
-    rec.state === "failed-post" ||
-    (rec.state === "unconfirmed" && rec.reported === true)
-  );
-}
-
-/** Transition to `unconfirmed`, filing the one deduped report (latched). */
-function toUnconfirmed(
+/** The one deduped `turn-unconfirmed` report; latched by `reported` upstream. */
+function fileUnconfirmedReport(
   conversationId: string,
   rec: PendingTurnRecord,
-  message: string,
-): PendingTurnRecord {
-  if (!rec.reported) {
-    void report({
-      kind: "turn-unconfirmed",
-      source: "client-turn-unconfirmed",
-      data: {
-        conversationId,
-        textPreview: (rec.resolvedText ?? rec.text).slice(0, 120),
-        elapsedMs: Date.now() - rec.createdAt,
-      },
-      message: "Turn not confirmed in transcript",
-      url: window.location.href,
-    });
-  }
-  return {
-    ...rec,
-    state: "unconfirmed",
-    errorMessage: message,
-    failureKind: undefined,
-    reported: true,
-  };
+): void {
+  void report({
+    kind: "turn-unconfirmed",
+    source: "client-turn-unconfirmed",
+    data: {
+      conversationId,
+      textPreview: (rec.resolvedText ?? rec.text).slice(0, 120),
+      elapsedMs: Date.now() - rec.createdAt,
+    },
+    message: "Turn not confirmed in transcript",
+    url: window.location.href,
+  });
 }
 
 // --- timers ----------------------------------------------------------------
@@ -201,8 +188,9 @@ function toUnconfirmed(
 // deadline moved by another tab re-arms instead of tripping early.
 
 function timerDelayFor(rec: PendingTurnRecord, now: number): number | null {
+  // `posted` only: a transcript-resolved record carries no deadline at all.
   if (
-    (rec.state === "posted" || rec.state === "queued") &&
+    rec.state === "posted" &&
     rec.deadlineAt != null &&
     rec.ownerTabId === getTabId()
   ) {
@@ -244,27 +232,17 @@ function onTimer(conversationId: string, recordId: string): void {
   const rec = entry.records.find((r) => r.id === recordId);
   if (!rec) return;
   const now = Date.now();
-  if (rec.state !== "posted" && rec.state !== "queued") return;
+  if (rec.state !== "posted") return;
   if (rec.deadlineAt == null) return;
   if (now < rec.deadlineAt) {
     // Deadline moved (e.g. extended by another tab) — re-arm the remainder.
     applyTimers(conversationId, entry);
     return;
   }
-  if (rec.state === "queued" && entry.lastWorking) {
-    // The agent is mid-turn: a queued prompt is EXPECTED to sit undelivered
-    // until the turn ends, so tripping unconfirmed would misfire on every long
-    // turn. Push the deadline out; delivery (user-text) or an idle reconcile
-    // resolves it.
-    updateRecord(conversationId, recordId, (r) => ({
-      ...r,
-      deadlineAt: now + CONFIRM_DEADLINE_MS,
-    }));
-    return;
-  }
-  updateRecord(conversationId, recordId, (r) =>
-    toUnconfirmed(conversationId, r, UNCONFIRMED_MESSAGE),
-  );
+  const { record, report: shouldReport } = toUnconfirmed(rec, UNCONFIRMED_MESSAGE);
+  if (record === rec) return;
+  if (shouldReport) fileUnconfirmedReport(conversationId, rec);
+  updateRecord(conversationId, recordId, () => record);
 }
 
 // --- POST leg --------------------------------------------------------------
@@ -288,7 +266,11 @@ async function runPost(
         ...r,
         resolvedText: res.resolvedText,
         postedAt: now,
-        deadlineAt: r.deadlineAt ?? now + CONFIRM_DEADLINE_MS,
+        // A record the transcript already resolved has nothing left to confirm,
+        // so the POST response must not arm a deadline behind it.
+        deadlineAt: isTranscriptResolved(r.state)
+          ? undefined
+          : (r.deadlineAt ?? now + CONFIRM_DEADLINE_MS),
       };
       return r.state === "sending"
         ? { ...enriched, state: "posted" as const }
@@ -331,7 +313,9 @@ export function sendPendingTurn(conversationId: string, text: string): string {
   // still routes through unconfirmed (one report) — no send vanishes silently.
   while (next.length > MAX_RECORDS_PER_CONV) {
     const oldest = next.shift()!;
-    if (!isTerminal(oldest)) toUnconfirmed(conversationId, oldest, UNCONFIRMED_MESSAGE);
+    if (isTerminal(oldest)) continue;
+    const { report: shouldReport } = toUnconfirmed(oldest, UNCONFIRMED_MESSAGE);
+    if (shouldReport) fileUnconfirmedReport(conversationId, oldest);
   }
   commit(conversationId, entry, next);
   inflightPosts.add(record.id);
@@ -375,60 +359,29 @@ export function dismissPendingTurn(conversationId: string, recordId: string): vo
 
 /**
  * The reconcile pass — called by the transcript pane on every events change.
- * Order matters: transcript match first, then reload-recovery / absolute
- * deadline, then the TTL sweep (so a matched record lands `sent` before any
- * retirement, and a non-terminal expiry routes through unconfirmed + report).
+ * Pure transition (match, then sweep) plus this module's side effects. Order
+ * matters: transcript match first, so a record that matched THIS pass lands
+ * `sent` before the sweep can consider retiring it.
+ *
+ * Convergence is the pure half's contract, not a caller obligation: a pass that
+ * reports `changed` really did change the records, so the commit → notify →
+ * re-reconcile cycle the pane drives always terminates.
  */
 export function reconcilePendingTurns(
   conversationId: string,
   events: JsonlEvent[],
-  isWorking: boolean,
 ): void {
   const entry = getEntry(conversationId);
-  entry.lastWorking = isWorking;
   if (entry.records.length === 0) return;
   const now = Date.now();
   const matched = matchPendingTurns(entry.records, events, now);
-  let changed = matched.changed;
-  const tabId = getTabId();
-  const kept: PendingTurnRecord[] = [];
-  for (let rec of matched.records) {
-    if (rec.state === "sent") {
-      // Reconciled: the real user-text row IS the feedback — no extra
-      // indicator, the record is simply dropped.
-      changed = true;
-      continue;
-    }
-    if (
-      rec.state === "sending" &&
-      rec.ownerTabId === tabId &&
-      !inflightPosts.has(rec.id)
-    ) {
-      // Owner-tab reload found the record mid-send with no live POST: the
-      // outcome is unknown and auto-resend is forbidden — surface it.
-      rec = toUnconfirmed(conversationId, rec, INTERRUPTED_MESSAGE);
-      changed = true;
-    } else if (
-      (rec.state === "posted" || rec.state === "queued") &&
-      rec.deadlineAt != null &&
-      now >= rec.deadlineAt
-    ) {
-      // Absolute deadline: any tab adopts an orphaned record here.
-      if (rec.state === "queued" && isWorking) {
-        rec = { ...rec, deadlineAt: now + CONFIRM_DEADLINE_MS };
-      } else {
-        rec = toUnconfirmed(conversationId, rec, UNCONFIRMED_MESSAGE);
-      }
-      changed = true;
-    }
-    if (now - rec.createdAt > RECORD_TTL_MS) {
-      if (!isTerminal(rec)) rec = toUnconfirmed(conversationId, rec, UNCONFIRMED_MESSAGE);
-      changed = true;
-      continue; // swept
-    }
-    kept.push(rec);
-  }
-  if (changed) commit(conversationId, entry, kept);
+  const swept = sweepPendingTurns(matched.records, {
+    now,
+    tabId: getTabId(),
+    liveInflight: inflightPosts,
+  });
+  for (const rec of swept.reports) fileUnconfirmedReport(conversationId, rec);
+  if (matched.changed || swept.changed) commit(conversationId, entry, swept.records);
   // Ensure timers are armed even when nothing changed (reload within deadline).
   else applyTimers(conversationId, entry);
 }

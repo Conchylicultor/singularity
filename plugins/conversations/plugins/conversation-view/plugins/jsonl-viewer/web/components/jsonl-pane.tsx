@@ -181,8 +181,8 @@ function JsonlPaneInner({
   const pendingTurns = usePendingTurns(conversation.id);
   useEffect(() => {
     if (pendingTurns.length === 0) return;
-    reconcilePendingTurns(conversation.id, events, isWorking);
-  }, [conversation.id, events, isWorking, pendingTurns]);
+    reconcilePendingTurns(conversation.id, events);
+  }, [conversation.id, events, pendingTurns]);
 
   const totals = useMemo(() => aggregateUsage(events), [events]);
   // Plugin-contributed hide predicates. Computed over the full `events` so the

@@ -1,8 +1,86 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import type { PendingTurnRecord } from "./store";
+import type { PendingTurnRecord, PendingTurnState } from "./store";
 
-// Pure transcript-matching half of the pending-turn state machine. No storage,
-// no timers, no side effects — bun:test-covered in reconcile.test.ts.
+// The PURE half of the pending-turn state machine — the complete record→record
+// transition, in two passes: `matchPendingTurns` (transcript identity match)
+// then `sweepPendingTurns` (reload recovery, confirmation deadline, TTL). No
+// storage, no timers, no reporting, no clock: the store composes them and owns
+// every side effect. Both are bun:test-covered in reconcile.test.ts, including
+// the property that makes the pipeline safe to drive from a render effect:
+//
+//   IDEMPOTENCE — sweep(match(x)) is a fixed point. Running it twice reports
+//   `changed: false` the second time, for every state.
+//
+// That property is load-bearing, not cosmetic. The store commits (and notifies
+// its React subscribers) exactly when a pass reports `changed`, and the pane
+// re-runs the pass on every notify — so a transition pair that could ping-pong
+// is an unbounded synchronous update loop (React "Maximum update depth"). Two
+// rules keep the pipeline convergent, and both are enforced here rather than
+// left to each call site:
+//
+//   1. `changed` is DERIVED from record identity, never hand-set. A pass cannot
+//      claim a change it did not make, so a commit is never a no-op.
+//   2. `toUnconfirmed` is the single never-revert chokepoint: a record the
+//      transcript has already resolved can never be taken back by a deadline,
+//      a reload, or the TTL sweep.
+
+export const CONFIRM_DEADLINE_MS = 90_000;
+export const RECORD_TTL_MS = 7 * 24 * 60 * 60 * 1000; // matches persistent-draft's default
+
+export const UNCONFIRMED_MESSAGE =
+  "Not confirmed — the agent may not have received this message. Check the terminal.";
+export const INTERRUPTED_MESSAGE = "Send interrupted — status unknown";
+
+/**
+ * Transcript-resolved: the session log itself accounts for this record, either
+ * as a delivered turn (`sent`) or as a prompt parked in the CLI's queue
+ * (`queued`). The transcript is ground truth, so these states are terminal with
+ * respect to every failure path.
+ */
+export function isTranscriptResolved(state: PendingTurnState): boolean {
+  return state === "queued" || state === "sent";
+}
+
+/** Already settled as a failure — the TTL sweep re-reports only non-terminals. */
+export function isTerminal(rec: PendingTurnRecord): boolean {
+  return (
+    rec.state === "failed-post" ||
+    (rec.state === "unconfirmed" && rec.reported === true)
+  );
+}
+
+/**
+ * The ONE transition into `unconfirmed`. Every path that would otherwise strand
+ * a record — the confirmation deadline, an owner-tab reload, the TTL sweep, the
+ * FIFO overflow — routes through here, so never-revert holds by construction:
+ * a transcript-resolved record is returned untouched.
+ *
+ * Without this chokepoint the deadline could demote a `queued` record that the
+ * matcher had just promoted out of `unconfirmed`, and the two rules would cycle
+ * forever (each iteration a commit → notify → re-reconcile).
+ *
+ * `report` is true only on the first entry per episode; the caller files it.
+ */
+export function toUnconfirmed(
+  rec: PendingTurnRecord,
+  message: string,
+): { record: PendingTurnRecord; report: boolean } {
+  if (isTranscriptResolved(rec.state)) return { record: rec, report: false };
+  return {
+    record: {
+      ...rec,
+      state: "unconfirmed",
+      errorMessage: message,
+      failureKind: undefined,
+      // The deadline is spent. `deadlineAt != null` means "awaiting first
+      // transcript confirmation" — leaving an elapsed one behind is what let a
+      // re-matched record trip it a second time.
+      deadlineAt: undefined,
+      reported: true,
+    },
+    report: !rec.reported,
+  };
+}
 
 /**
  * Normalize text for identity matching against the transcript. The transcript
@@ -22,6 +100,16 @@ export interface MatchOutcome {
   /** New array; records untouched by this pass keep their object identity. */
   records: PendingTurnRecord[];
   changed: boolean;
+}
+
+/** Derives `changed` from identity so a pass can never claim a phantom change. */
+function outcome(
+  before: PendingTurnRecord[],
+  after: PendingTurnRecord[],
+): { records: PendingTurnRecord[]; changed: boolean } {
+  const changed =
+    before.length !== after.length || after.some((r, i) => r !== before[i]);
+  return { records: changed ? after : before, changed };
 }
 
 /**
@@ -62,7 +150,6 @@ export function matchPendingTurns(
 
   const consumedUser = new Set<number>();
   const consumedEnqueue = new Set<number>();
-  let changed = false;
 
   const takeUserText = (target: string, baseline: number): boolean => {
     const hit = userTexts.find(
@@ -85,7 +172,6 @@ export function matchPendingTurns(
     let rec = r;
     if (rec.baselineUserText == null) {
       rec = { ...rec, baselineUserText: userTexts.length };
-      changed = true;
     }
     const target = normalizeForMatch(rec.resolvedText ?? rec.text);
     const baseline = rec.baselineUserText ?? 0;
@@ -98,7 +184,6 @@ export function matchPendingTurns(
     }
     if (rec.state === "queued") {
       if (takeUserText(target, baseline)) {
-        changed = true;
         return { ...rec, state: "sent" as const, matchedAt: now };
       }
       // Still parked: re-consume its enqueue row for the same reason as above.
@@ -113,22 +198,90 @@ export function matchPendingTurns(
     // out under load, a 500 raised after the paste, a torn connection) shows up
     // in the transcript regardless — and when it does, it was delivered.
     if (takeUserText(target, baseline)) {
-      changed = true;
       return { ...rec, state: "sent" as const, matchedAt: now };
     }
     if (takeEnqueue(target)) {
-      changed = true;
       // Parked in the CLI's prompt queue: the native queue-op row takes over
-      // the display. Failure metadata is dropped with the failed state.
+      // the display. Failure metadata is dropped with the failed state, and so
+      // is the confirmation deadline — the transcript has confirmed this
+      // record, so there is nothing left for the deadline to catch.
       return {
         ...rec,
         state: "queued" as const,
         failureKind: undefined,
         errorMessage: undefined,
+        deadlineAt: undefined,
       };
     }
     return rec;
   });
 
-  return { records: changed ? next : records, changed };
+  return outcome(records, next);
+}
+
+export interface SweepContext {
+  now: number;
+  /** This tab's id — only the owner tab adopts its own interrupted sends. */
+  tabId: string;
+  /** Record ids whose POST promise is live in THIS tab. */
+  liveInflight: ReadonlySet<string>;
+}
+
+export interface SweepOutcome extends MatchOutcome {
+  /** Records that newly entered `unconfirmed` — the store files one each. */
+  reports: PendingTurnRecord[];
+}
+
+/**
+ * The post-match pass: drop reconciled records, adopt sends orphaned by a
+ * reload, trip the absolute confirmation deadline, and sweep the TTL. Runs on
+ * the matcher's output so a record that matched this very pass lands `sent`
+ * before any retirement can consider it.
+ *
+ * Only `posted` records carry a live deadline. `queued` is transcript-confirmed
+ * and therefore has none (see `toUnconfirmed`) — a prompt parked in the CLI's
+ * own queue is displayed by the native queue-op row, and it resolves when the
+ * CLI dequeues it into a `user-text` row.
+ */
+export function sweepPendingTurns(
+  records: PendingTurnRecord[],
+  { now, tabId, liveInflight }: SweepContext,
+): SweepOutcome {
+  const kept: PendingTurnRecord[] = [];
+  const reports: PendingTurnRecord[] = [];
+
+  const retire = (rec: PendingTurnRecord, message: string): PendingTurnRecord => {
+    const { record, report } = toUnconfirmed(rec, message);
+    if (report) reports.push(rec);
+    return record;
+  };
+
+  for (const original of records) {
+    let rec = original;
+    if (rec.state === "sent") {
+      // Reconciled: the real user-text row IS the feedback — no extra
+      // indicator, the record is simply dropped.
+      continue;
+    }
+    if (
+      rec.state === "sending" &&
+      rec.ownerTabId === tabId &&
+      !liveInflight.has(rec.id)
+    ) {
+      // Owner-tab reload found the record mid-send with no live POST: the
+      // outcome is unknown and auto-resend is forbidden — surface it.
+      rec = retire(rec, INTERRUPTED_MESSAGE);
+    } else if (rec.state === "posted" && rec.deadlineAt != null && now >= rec.deadlineAt) {
+      // Absolute deadline: any tab adopts an orphaned record here.
+      rec = retire(rec, UNCONFIRMED_MESSAGE);
+    }
+    if (now - rec.createdAt > RECORD_TTL_MS) {
+      // Swept — but never silently: a non-terminal casualty reports first.
+      if (!isTerminal(rec)) retire(rec, UNCONFIRMED_MESSAGE);
+      continue;
+    }
+    kept.push(rec);
+  }
+
+  return { ...outcome(records, kept), reports };
 }

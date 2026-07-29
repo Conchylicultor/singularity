@@ -22,16 +22,49 @@ delivered message. Nothing but the transcript resolves a record. Failures are
 **manual retry only** — the paste race can strand text in the CLI input box, so
 re-send must be deliberate.
 
-Matching (`internal/reconcile.ts`, pure, bun:test-covered): normalized-text
-identity (image `@<path>` tokens stripped mirroring the transcript parser,
-whitespace collapsed) against the server's `resolvedText`, gated by a per-record
-`baselineUserText` (pre-existing identical rows never match) and a per-pass
-consumed-index set (two identical in-flight messages bind distinct events;
-user-text → `sent` outranks queue-op enqueue → `queued`). The `jsonl-viewer`
-pane owns the events array and drives `reconcilePendingTurns` on every change;
-deadlines are absolute one-shot `setTimeout`s (owner tab arms them; any tab's
-reconcile can adopt an orphaned record). The TTL sweep (7d) never drops a
-non-terminal record silently — it routes through `unconfirmed` (report) first.
+Never-revert is **enforced, not merely documented**: `toUnconfirmed` in
+`internal/reconcile.ts` is the single transition into `unconfirmed`, and it
+returns a transcript-resolved (`queued`/`sent`) record untouched. Every path
+that could otherwise strand a record — the deadline timer, the owner-tab reload
+adoption, the TTL sweep, the FIFO overflow — routes through it. Consequently
+`deadlineAt != null` means exactly "awaiting first transcript confirmation": it
+lives only on `posted` records, is cleared the moment the transcript accounts
+for the record, and is never inherited across a match. Before that, a record
+promoted `unconfirmed → queued` off an enqueue row kept its already-elapsed
+deadline and was demoted straight back, and the two rules cycled forever — one
+commit + `notify` per lap, inside the pane's render effect, until React threw
+*Maximum update depth exceeded*.
+
+## The transition is pure; the store is only side effects
+
+`internal/reconcile.ts` holds the **whole** record→record transition as two pure
+passes — `matchPendingTurns` (transcript identity match) then
+`sweepPendingTurns` (reload adoption, deadline, TTL) — with no storage, timers,
+clock, or reporting. `store.ts` composes them and owns every effect. The split
+is not tidiness: the cycle above spanned the seam between a pure, tested matcher
+and an impure, untested sweep, so it was unreachable by any test.
+
+Matching: normalized-text identity (image `@<path>` tokens stripped mirroring
+the transcript parser, whitespace collapsed) against the server's
+`resolvedText`, gated by a per-record `baselineUserText` (pre-existing identical
+rows never match) and a per-pass consumed-index set (two identical in-flight
+messages bind distinct events; user-text → `sent` outranks queue-op enqueue →
+`queued`). The `jsonl-viewer` pane owns the events array and drives
+`reconcilePendingTurns` on every change; deadlines are absolute one-shot
+`setTimeout`s (owner tab arms them; any tab's reconcile can adopt an orphaned
+record). The TTL sweep (7d) never drops a non-terminal record silently — it
+routes through `unconfirmed` (report) first.
+
+**`sweep ∘ match` must be a fixed point**, and `reconcile.test.ts` asserts it
+across every state × transcript pair. The pane calls the pipeline from a render
+effect and the store notifies its `useSyncExternalStore` subscribers whenever a
+pass reports `changed`, so a transition pair that can undo each other is an
+unbounded *synchronous* update loop, not a cosmetic flip-flop. Two rules keep it
+convergent, both enforced in `reconcile.ts` rather than left to call sites: the
+never-revert chokepoint above, and `changed` **derived from record identity**
+(via `outcome()`) instead of hand-set — a pass cannot claim a change it did not
+make, so a commit is never a no-op. Adding a transition here means adding it to
+the fixed-point matrix.
 
 `PendingTurnCard` renders by state (replace, never duplicate): dimmed echo card
 for `sending`/`posted`, destructive/warning card with Retry + Copy-to-draft for
