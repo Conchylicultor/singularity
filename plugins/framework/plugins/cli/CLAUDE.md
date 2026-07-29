@@ -19,11 +19,18 @@ it is an ordered *stage sequence* rather than a helper, in
 | `apply-migrations` / `serve-app` | Runtime entrypoints a released bundle's launcher invokes. |
 | `db` / `start` | DB fork/list/drop admin, and the one-time gateway bring-up. |
 
-`build`, `check` and `push` are the **op commands** (`inspect.ts`'s
-`INSPECTED_COMMANDS`): long-running, so they re-exec once under `bun --inspect`
-for pre-armed wedge forensics and install the orphan guard. Nothing else does —
-adding a command there inserts a re-exec layer into its process tree, which is
-why `build-composition` is deliberately absent (it would land inside `release`'s).
+`build`, `check` and `push` are the **op commands** (`orphan-guard.ts`'s
+`OP_COMMANDS`): long-running and host-lock-holding, so they install the orphan
+guard, which exits the op once its invoking shell dies — an orphaned op must
+never sit on a host lock (the push mutex, worst case). That is now the *only*
+effect of membership. Nothing else is an op command; `build-composition` is
+deliberately absent, see its docblock.
+
+Op commands used to additionally re-exec themselves under `bun --inspect` so the
+op-wedge watchdog could attach a profiler. Both the watchdog and the re-exec were
+removed 2026-07-28 (every wedge the watchdog ever reported was a false positive —
+`research/2026-07-28-global-retire-op-wedge-watchdog.md`), so an op is now a
+single process, not a wrapper/worker pair.
 
 ## The artifact / deploy seam
 

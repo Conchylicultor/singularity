@@ -49,8 +49,13 @@ import { sweepDistLeftovers } from "./internal/dist-publish";
  * release streams this process's stdout as its progress), but no span, footprint
  * or step is persisted anywhere.
  *
- * NOT registered in `inspect.ts`'s INSPECTED_COMMANDS on purpose: that would
- * insert a re-exec layer into `release`'s process tree for no benefit.
+ * NOT an op command (`orphan-guard.ts`'s `OP_COMMANDS`) on purpose. The original
+ * reason was that op commands re-exec'd under `bun --inspect`, which would have
+ * inserted a re-exec layer into `release`'s process tree for no benefit; that
+ * re-exec was removed 2026-07-28 with the op-wedge watchdog, so membership today
+ * would only install the orphan guard. Still left out rather than re-litigated:
+ * `release` shells out to this command and owns its lifetime, so the foreground
+ * "my invoking shell died" guard is not the lifecycle this process has.
  *
  * ESM-FREEZE CONSTRAINT — load-bearing, see the app-artifacts docblock. This
  * file's transitive import set MUST stay a SUBSET of `build.ts`'s. Bun freezes a

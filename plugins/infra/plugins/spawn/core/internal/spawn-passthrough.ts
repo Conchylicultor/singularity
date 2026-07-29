@@ -4,8 +4,8 @@ import type { SpawnPassthroughOptions, SpawnPassthroughResult } from "./types";
 /**
  * Run a child to completion with stdout/stderr INHERITED (the child writes
  * straight to the parent's terminal — no JS streams, nothing to wedge) and
- * stdin ignored. For the exec-shaped sites: build steps, the push flow's
- * subprocesses, self re-execs.
+ * stdin ignored. For the exec-shaped sites: build steps and the push flow's
+ * subprocesses.
  *
  * A non-zero exit is a RESULT — callers branch (most `process.exit(1)`).
  * `onSpawn` exposes `{ pid, kill }` synchronously for signal forwarding
