@@ -462,7 +462,6 @@ alongside the Pages sidebar. One document-level stack covers BOTH text and
 structure — no per-block Lexical history.
 
 - **The editor's entries are mount-scoped.** `BlockEditorProvider` records through
-<<<<<<< .merge_file_hDKcQE
   `useScopedUndoRedo()`, so its entries drop off the stack when the editor unmounts.
   Required, not cosmetic: its thunks close over the per-`pageId` optimistic store and
   the per-block `Y.UndoManager`s, which die with the doc — so replaying one after
@@ -518,149 +517,53 @@ page-level consumers: page title, sidebar expand, cover).
 
 **Not recorded:** `setExpanded` — pure view state, dispatched with `record: false`
 because Notion doesn't undo collapse/expand (still optimistic, just off the stack).
-`bulkMove`, `bulkDuplicate`, and `paste` are not recorded *yet*: they mint server
-ids/ranks, so a clean inverse needs those endpoints to return their resulting rows
-(or to be diffed against the post-settle resource).
-=======
-  `useScopedUndoRedo()`, so every entry it pushes is tagged with this editor's
-  mount and **dropped from the stack when the editor unmounts**. Required, not
-  cosmetic: its thunks close over the per-`pageId` optimistic store and the
-  per-block `Y.UndoManager`s, which die with the doc — replaying one after unmount
-  would be a no-op at best and a patch dispatched into another page's overlay at
-  worst. Net effect (unchanged from when the provider lived here): edit page A,
-  navigate to B, Cmd+Z does not reach back into A — a Miller `swap` remounts the
-  column. Entries whose thunks are pure server calls (the sidebar's trash-restore)
-  are unscoped and survive the navigation.
-- **One stack, surface-level router (focus-independent).** There is no Lexical
-  `HistoryPlugin` (it was retired — a per-block parallel history is a layering
-  error: the `page_blocks` row tree, not a Lexical document, is the source of
-  truth). Cmd+Z / Cmd+Shift+Z / Cmd+Y are NOT routed per-block, and NOT registered
-  by the editor either: `TabSurface` mounts one `useUndoRedoShortcuts()` per tab,
-  registering surface-scoped (`surfaceId`-gated, `enableInInputs`) bindings on the
-  window-level `ShortcutManager` — one registration per surface, so the sidebar and
-  the body cannot race for the same key id. They fire whenever this tab is focused,
-  regardless of which DOM element holds the caret — a block contenteditable, the
-  selection container, or `<body>` after a structural undo deletes the focused
-  block. Nothing in `keyboard-plugin.tsx` / `block-editor.tsx`'s container
-  `onKeyDown` consumes those keys, so the native keydown bubbles out untouched (no
-  `HistoryPlugin` registers a Lexical `UNDO_COMMAND`). This replaces the old
-  focus-dependent routing whose breakage — Cmd+Z reaching neither handler once
-  focus fell to `<body>` — caused the original "redo does nothing" defect. Text and
-  structure interleave in true chronological order.
-- **Text edits are per-block `Y.UndoManager` items mirrored onto the stack.**
-  Text history lives in each block's content doc: the content-doc seam's
-  manager coalesces a typing run into ONE item, and `recordTextEdit` (in
-  `block-editor-context.tsx`) mirrors each new item 1:1 as a shared-stack
-  entry whose thunks call that entry's `um.undo()`/`um.redo()` (see the
-  per-block CRDT section below). There is no `data.text` text-autosave path —
-  rows only receive text through the debounced doc→`data.text` projection.
-- **Command-pattern patches, not snapshots.** Recording happens at the mutation
-  chokepoints in `block-editor-context.tsx`: snapshot `before = rowsRef.current`,
-  compute `after`, `diffBlocks(before, after)` (pure, `core/block-diff.ts`), derive
-  minimal forward/reverse `BlockPatch`es (`{ upserts, deleteIds }`), and `record`
-  thunks that re-apply them onto the CURRENT state. `recordPatchEntry` is the shared
-  helper (threads an optional `coalesceKey`); `recordStructural` calls it with none
-  (structural ops never coalesce). Entanglement-safe — undoing an old action never
-  clobbers later unrelated edits.
-- **One single-row chokepoint (`commitRow`).** Every *single-row* mutation funnels
-  through one internal helper — `commitRow(blockId, transform, opts)`: snapshot rows,
-  apply `transform` to just that row, diff into a minimal patch pair, optionally
-  `record` it (skipped when `opts.record === false`), then dispatch the forward patch
-  through the same optimistic pipeline. `projectText`, `BlockEditorAPI.update`,
-  `convertTo`, and `setExpanded` are all thin callers of it, so forward apply and
-  undo/redo are symmetric by construction and a new block type's `editor.update(...)`
-  is recorded automatically. (Multi-row structural ops still go through `dispatchOp`/
-  `move`/`bulkDelete` + `recordStructural`.)
-- **Same optimistic instance.** A `patch` overlay variant flows through the SAME
-  `useOptimisticResource` as forward ops (instant overlay + reconcile), POSTing to
-  `POST /api/pages/:pageId/blocks/patch` (`handle-patch-blocks.ts` — a blind
-  row-level upsert+delete writer sharing the op handler's delete-lifecycle and the
-  `notifyStructuralChange` notify path). Undo/redo thunks dispatch patches DIRECTLY
-  (never through the recording wrapper), and the primitive's re-entrancy guard
-  ignores `record` during replay. Bound editors never re-read `data.text` from a
-  patch — content flows exclusively through the block's `Y.Doc`.
-- **Non-text `data` edits ARE now recorded.** Every `BlockEditorAPI.update(data)`
-  edit — to-do `checked`, callout color, image src, etc. — routes through the shared
-  `commitRow` chokepoint (`coalesceKey: blockId`), so it is optimistic AND on the
-  unified stack; `convertTo`'s forward apply now flows through the same patch pipeline
-  as its undo/redo (no asymmetric `PATCH /api/blocks/:id` write). The editor no longer
-  uses `updateBlock` at all (`handle-update-block.ts` stays for the page-level
-  consumers: page title, sidebar expand, cover).
-- **NOT recorded:** `setExpanded` only — pure view state, dispatched with
-  `record: false` (Notion doesn't undo collapse/expand). It is still optimistic via
-  the patch pipeline, just never pushed onto the stack.
-- **Follow-up:** `bulkMove`, `bulkDuplicate`, and `paste` are NOT yet recorded.
-  For `bulkMove`/`bulkDuplicate` the reason still stands — they mint SERVER
-  ids/ranks, so a clean inverse needs those endpoints to return their resulting
-  rows (or to be diffed against the post-settle resource). **`paste` no longer
-  has that excuse**: since it became a `BlockOp` (below) its ids are minted
-  client-side and its after-state is exactly `applyBlockOp`'s output, so
-  recording it is now the same one-line `recordStructural` every other op gets —
-  it simply hasn't been wired, because the provider's `paste` delegates to
-  `store.paste` (which the composite store routes per owning page) rather than
-  to `dispatchOp`. `convertTo`, non-text `data` edits, single-block `move`
-  (client-known rank), `bulkDelete`, and all `dispatchOp` ops are recorded with
-  exact, purely-computed after-states; text edits are recorded as mirrored
-  `Y.UndoManager` items.
->>>>>>> .merge_file_UWBzgo
+`bulkMove` and `bulkDuplicate` are not recorded *yet*: they mint server ids/ranks,
+so a clean inverse needs those endpoints to return their resulting rows (or to be
+diffed against the post-settle resource). `paste` no longer has that excuse —
+since it became a `BlockOp` (below) its ids are minted client-side and its
+after-state is exactly `applyBlockOp`'s output, so recording it is the same
+one-line `recordStructural` every other op gets. It simply isn't wired, because
+the provider's `paste` delegates to `store.paste` (which the composite store
+routes per owning page) rather than to `dispatchOp`.
 
-## Paste is an op, and that is why it renders instantly
+## Paste is an op (`{ kind: "paste", forest, afterId, parentId }`)
 
-`paste` used to be the ONE editor mutation outside the optimistic pipeline: a
-bespoke `POST /blocks/paste` whose result the user did not see until the
-round-trip AND the live-state push had both landed. Measured on a 25-block
-paste: **561-789ms to first pixel, with a ~500ms main-thread freeze** as the
-push mounted every new block in one commit. Every other structural edit —
-split, merge, indent, outdent, insert, move — was instant. Pasting felt like
-the app had hung, because for half a second it had.
+Paste was once the ONE editor mutation outside the optimistic pipeline — a
+bespoke `POST /blocks/paste` the user waited on. A 25-block paste took 561-789ms
+to first pixel with a ~500ms main-thread freeze; it read as the app hanging.
 
-It is now `{ kind: "paste", forest, afterId, parentId }`, an ordinary `BlockOp`
-through the ordinary pipeline, and the whole fix rests on one idea:
+The load-bearing idea, and the thing not to undo:
 
-> **Identity is minted by the client and travels ON the node.** `split` and
-> `insert` already agreed between client and server because the client mints
-> `newId` and ships it. A forest needs that same guarantee for every node it
-> inserts, so `withMintedIds` (in `core/serialized-block.ts`) turns a
-> `SerializedBlock[]` into an `IdentifiedBlock[]`, and `planForestInsert`
-> consumes those ids instead of minting its own.
+> **Identity is minted client-side and travels ON the node.** `withMintedIds`
+> (`core/serialized-block.ts`) turns `SerializedBlock[]` into
+> `IdentifiedBlock[]`, and `planForestInsert` consumes those ids rather than
+> minting its own — the same agreement `split`/`insert` get from `newId`. With
+> ids agreed, both sides run the same planner and produce the same rows; ranks
+> still differ per side and the server's stay authoritative, as for every op.
 
-With ids agreed, both sides run the same `planForestInsert` over their own view
-and produce the same rows. Ranks still differ per side — each computes them
-against the sibling set it can see, and the server's are authoritative — which
-is exactly the contract every other op already lives under.
+Ids ride the node rather than a parallel `ids: string[]` **because a positional
+array breaks silently**: reorder a traversal on one side and the two sides insert
+*different blocks*, so the op can never confirm.
 
-Consequences worth knowing:
+- **`insertForest` is the DUPLICATE path only** (mints via `withMintedIds` at its
+  own boundary — `bulkDuplicate` has no client prediction to agree with). The
+  `/blocks/paste` endpoint is deleted: one write path for a forest insert.
+- **Anchorless paste inserts at the START of `parentId`**, where anchorless
+  `insert` appends. Inherited from the old endpoint's contract; only reachable on
+  an empty page, since real callers resolve an anchor via `pasteAnchorId`.
+- **`OpEffect.create` carries `ids: string[]`** — ROOT ids only. The forest lands
+  in ONE transaction, so a root's presence implies its descendants'; listing every
+  node would grow the confirmation scans with the paste for no extra power.
+  `opBlockIds` makes the same call.
+- **A missing anchor refuses the whole paste** (as `applyInsert` does for a
+  missing `afterId`) — guessing another parent would drop content somewhere the
+  user never asked for.
+- `insertScopePageId` is shared by `applyInsert`/`applyPaste` — one page-scope rule.
 
-- **Ids on the node, not in a parallel array.** A positional `ids: string[]`
-  consumed in traversal order would work until someone reordered a traversal on
-  one side; then client and server would silently be inserting *different
-  blocks* and the op could never confirm. Carrying the id on the node makes the
-  agreement structural.
-- **`insertForest` is now the DUPLICATE path only.** It still mints server-side
-  (`withMintedIds` at its own boundary) because `bulkDuplicate` has no client
-  prediction to agree with. The `/blocks/paste` endpoint and its handler are
-  deleted — there is one write path for a forest insert, not two.
-- **Anchorless paste inserts at the START of `parentId`**, where an anchorless
-  `insert` appends after the last child. That asymmetry is inherited verbatim
-  from the old paste endpoint's contract, and is only reachable on an empty page
-  — every real caller resolves an anchor through `pasteAnchorId` first.
-- **`OpEffect.create` carries `ids: string[]`**, not one id, so a forest insert
-  is expressible. Only the ROOT ids are listed: the planned forest is inserted in
-  ONE server transaction, so a root's presence already implies its descendants',
-  and listing every node would make the confirmation scans grow with the size of
-  the paste for no extra power. `opBlockIds` makes the same choice.
-- **A missing anchor refuses the whole paste** rather than falling back to some
-  other parent — the destination the user aimed at is gone, and guessing would
-  drop their content somewhere they did not ask for. Same rule `applyInsert`
-  holds for a missing `afterId`.
-- The page-scope rule (`insertScopePageId`) is now shared by `applyInsert` and
-  `applyPaste` instead of being restated per insert path.
-
-`e2e/paste-optimistic-verify.ts` is the executable spec, and it does not trust
-latency: it **stalls the op endpoint for 4s** and asserts the blocks are on
-screen long before the server could have answered, that exactly one op POST
-fired, that the confirming push neither duplicates nor drops them, and that they
-survive a reload.
+`e2e/paste-optimistic-verify.ts` is the executable spec and does NOT trust
+latency: it stalls the op endpoint 4s and asserts the blocks render long before
+the server could answer, one op POST fires, the push neither duplicates nor drops
+them, and they survive a reload.
 
 ## Per-block CRDT text (unconditional)
 
