@@ -22,7 +22,27 @@ export const SCHEMA_GLOBS = [
   "plugins/**/server/**/internal/schema-*.ts",
 ] as const;
 
-/** This plugin's repo-relative dir — drizzle-kit's cwd for every sanctioned invocation. */
+/**
+ * This plugin's repo-relative dir — drizzle-kit's cwd for every sanctioned
+ * invocation. Re-exported from `../index.ts`: three consumers outside this file
+ * need it, two of them in other plugins.
+ *   1. `../../check/internal/schema-files-loadable.ts` — the require-probe's cwd.
+ *   2. `framework/tooling/plugins/checks/plugins/migrations-in-sync` — spawns
+ *      `drizzle-kit generate` from here.
+ *   3. `framework/cli/bin/migrations.ts` — likewise, for the real build.
+ *
+ * The cwd is LOAD-BEARING, not incidental: drizzle-kit resolves every relative
+ * path in `drizzle.config.ts` against it — the `schema:` globs (re-anchored with
+ * REPO_ROOT_FROM_MIGRATIONS_DIR) and `out: "./data"`. Run it from the wrong
+ * directory and the globs expand to NOTHING, so drizzle-kit exits 0 having
+ * discovered no tables and generates no migration — a silent DROP, not an error.
+ * That is why this is one constant rather than a literal per call site.
+ *
+ * This is the repo-relative DEV-TREE source location. It is NOT the runtime
+ * migrations dir: the runner reads `SINGULARITY_MIGRATIONS_DIR ?? <its own
+ * dir>/../../data` (`server/internal/runner.ts`), which a released bundle points
+ * at `<bundle>/migrations/data`. No runtime path reads this constant.
+ */
 export const MIGRATIONS_PLUGIN_DIR = "plugins/database/plugins/migrations";
 
 /**

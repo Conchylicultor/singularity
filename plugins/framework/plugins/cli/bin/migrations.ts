@@ -8,6 +8,16 @@ import {
   writeFileSync,
 } from "fs";
 import { join, resolve } from "path";
+// The plugin dir is drizzle-kit's cwd, and every relative path in
+// drizzle.config.ts resolves against it (the `schema:` globs and `out`). Taken
+// from the migrations plugin rather than re-typed here: a drifted copy would run
+// generation from a directory where the globs match nothing, and drizzle-kit
+// exits 0 having discovered no tables — a silent DROP, not an error. Safe to
+// import at module eval: migrations/core is a side-effect-free leaf (unlike
+// @plugins/database/server, which throws without SINGULARITY_WORKTREE), and this
+// module is reached by BOTH build.ts and build-composition.ts, so the two import
+// closures grow together and cli:build-composition-import-subset stays green.
+import { MIGRATIONS_PLUGIN_DIR } from "@plugins/database/plugins/migrations/core";
 import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   promptKey,
@@ -253,7 +263,7 @@ export async function generateMigration(opts: {
   if (customMigration) cmd.push("--custom");
   if (migrationName) cmd.push("--name", migrationName);
 
-  const cwd = resolve(root, "plugins/database/plugins/migrations");
+  const cwd = resolve(root, MIGRATIONS_PLUGIN_DIR);
   const result = await runDrizzleKitWithPrompts({
     cmd,
     cwd,

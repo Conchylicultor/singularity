@@ -8,6 +8,12 @@ import { basename, join, relative, resolve } from "path";
 // plugins/database/plugins/migrations/check/index.ts). This used to be a
 // hand-inlined third copy of the reader.
 import { libpqEnv } from "@plugins/database/core";
+// The plugin dir is drizzle-kit's cwd, and every relative path in
+// drizzle.config.ts resolves against it (the `schema:` globs and `out`). Taking
+// it from the migrations plugin rather than re-typing the literal is what keeps
+// this check anchored where migration generation actually runs — a drifted copy
+// would glob nothing and drizzle-kit would exit 0 having found no tables.
+import { MIGRATIONS_PLUGIN_DIR } from "@plugins/database/plugins/migrations/core";
 import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -26,7 +32,7 @@ const check: Check = {
   description: "plugin schema files match committed migration files",
   async run() {
     const root = await getWorktreeRoot();
-    const migrationsPluginDir = resolve(root, "plugins/database/plugins/migrations");
+    const migrationsPluginDir = resolve(root, MIGRATIONS_PLUGIN_DIR);
     const committed = resolve(migrationsPluginDir, "data");
 
     const tmp = mkdtempSync(join(migrationsPluginDir, ".check-"));
