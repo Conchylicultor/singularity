@@ -8,9 +8,10 @@
 // `CREATE TABLE` must name one of the IMPERATIVE_PUBLIC_TABLES constants on its
 // line, so an unallowlisted imperative table cannot land at the push gate (the
 // DB-side orphaned-db-tables check only catches it later, on a reachable DB). To
-// add an imperative table: add its name constant below, include it in the
-// IMPERATIVE_PUBLIC_TABLES array, and interpolate that constant on the CREATE
-// TABLE line at the create site.
+// add an imperative table: add its name constant below, add it to the
+// IMPERATIVE_PUBLIC_TABLES record BY SHORTHAND (`{ MY_TABLE }`, never
+// `{ ALIAS: MY_TABLE }` — see that record's doc comment), and interpolate that
+// constant on the CREATE TABLE line at the create site.
 //
 // This list is for tables in the REAL worktree DB only. A test that just needs a
 // scratch table must NOT be added here: provision a throwaway database with
@@ -115,11 +116,29 @@ export const ATTEMPT_CONV_AGG_TABLE = "attempt_conv_agg";
 export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
 
 /**
- * The full allowlist of public tables created imperatively (outside drizzle).
- * The orphaned-db-tables check subtracts these from the live-table set so they
- * are never flagged as orphans.
+ * The full allowlist of public tables created imperatively (outside drizzle),
+ * keyed BY THE NAME OF THE CONSTANT that holds each table name.
+ *
+ * The shorthand form is load-bearing, not cosmetic. Two static checks enforce a
+ * TEXTUAL coupling on these constants:
+ *   - `imperative-create-table-allowlisted` — the create site must interpolate
+ *     the constant on its `CREATE TABLE` line (the table name itself never
+ *     appears there).
+ *   - `table-defs-in-schema-glob` — a `pgTable(...)` READ handle outside the
+ *     drizzle schema glob must pass the constant, never a string literal.
+ * Both therefore need the identifier NAMES, which a plain `string[]` of values
+ * does not publish — so each check used to regex them back out of THIS FILE'S
+ * TEXT, with two independently hand-rolled array-literal parsers that could
+ * silently disagree. Writing each entry as shorthand (`{ FOO }`, not
+ * `{ BAR: FOO }`) is what makes each key the identifier a call site must spell,
+ * so the names are declared data instead of a parse.
+ *
+ * `imperative-create-table-allowlisted` PROVES the shorthand invariant: every
+ * key must name an export of the `derived-views/core` barrel holding that exact
+ * value. A non-shorthand entry — or a constant missing from the barrel every
+ * create site imports it from — fails there, loudly, at the push gate.
  */
-export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
+export const IMPERATIVE_PUBLIC_TABLES = {
   MIGRATIONS_TABLE_NAME,
   DERIVED_VIEW_STATE_TABLE_NAME,
   LIVE_STATE_TRIGGER_STATE_TABLE,
@@ -128,4 +147,20 @@ export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
   TASK_LATEST_CONVERSATION_TABLE,
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
-];
+} as const satisfies Record<string, string>;
+
+/**
+ * The imperative table NAMES (the record's values). What a DB-side scan compares
+ * against `pg_stat_user_tables`: the orphaned-db-tables check subtracts these
+ * from the live-table set so they are never flagged as orphans.
+ */
+export const IMPERATIVE_PUBLIC_TABLE_NAMES: readonly string[] =
+  Object.values(IMPERATIVE_PUBLIC_TABLES);
+
+/**
+ * The constant IDENTIFIERS (the record's keys). What a create site must
+ * interpolate on its `CREATE TABLE` line, and what a sanctioned `pgTable(...)`
+ * read handle must pass — i.e. what the two static checks match textually.
+ */
+export const IMPERATIVE_PUBLIC_TABLE_CONSTS: readonly string[] =
+  Object.keys(IMPERATIVE_PUBLIC_TABLES);

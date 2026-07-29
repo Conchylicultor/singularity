@@ -1,22 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import type { CodeMatch } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
+  allowlistIdentifiers,
   findOffenders,
-  parseAllowlistIdentifiers,
   usesThrowawayTestDb,
 } from "./imperative-create-table-allowlisted";
 
-const SAMPLE_ALLOWLIST_SRC = `
-export const MIGRATIONS_TABLE_NAME = "__singularity_migrations";
-export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
-export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
-
-export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
-  MIGRATIONS_TABLE_NAME,
-  DERIVED_VIEW_STATE_TABLE_NAME,
-  LIVE_STATE_SNAPSHOT_TABLE,
-];
-`;
+// A stand-in for the shorthand `IMPERATIVE_PUBLIC_TABLES` record and the barrel
+// namespace it must agree with. Written out rather than imported so each half can
+// be perturbed independently below.
+const SAMPLE_MAPPING = {
+  MIGRATIONS_TABLE_NAME: "__singularity_migrations",
+  DERIVED_VIEW_STATE_TABLE_NAME: "derived_view_state",
+  LIVE_STATE_SNAPSHOT_TABLE: "live_state_snapshot",
+};
+const SAMPLE_EXPORTS: Record<string, unknown> = { ...SAMPLE_MAPPING, compileCreateView: () => "" };
 
 const m = (path: string, line: number, text: string): CodeMatch => ({ path, line, text });
 
@@ -25,30 +23,40 @@ const m = (path: string, line: number, text: string): CodeMatch => ({ path, line
 // is also exempt via ALLOWED_PATHS).
 const CT = "CREATE " + "TABLE";
 
-describe("parseAllowlistIdentifiers", () => {
-  test("extracts the identifier names listed in the array literal", () => {
-    expect(parseAllowlistIdentifiers(SAMPLE_ALLOWLIST_SRC)).toEqual(
+describe("allowlistIdentifiers", () => {
+  test("returns the record's keys when every one names a matching barrel export", () => {
+    expect(allowlistIdentifiers(SAMPLE_MAPPING, SAMPLE_EXPORTS)).toEqual(
       new Set(["MIGRATIONS_TABLE_NAME", "DERIVED_VIEW_STATE_TABLE_NAME", "LIVE_STATE_SNAPSHOT_TABLE"]),
     );
   });
 
-  test("ignores constants that are defined but NOT in the array", () => {
-    const src = `
-export const FOO_TABLE = "foo";
-export const BAR_TABLE = "bar";
-export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [FOO_TABLE];
-`;
-    expect(parseAllowlistIdentifiers(src)).toEqual(new Set(["FOO_TABLE"]));
+  test("ignores barrel exports that are not allowlist entries", () => {
+    // `compileCreateView` is exported from the same barrel but is not a table
+    // constant, so it must never become an allowlist identifier.
+    expect(allowlistIdentifiers(SAMPLE_MAPPING, SAMPLE_EXPORTS).has("compileCreateView")).toBe(false);
   });
 
-  test("throws when the array is missing", () => {
-    expect(() => parseAllowlistIdentifiers("export const x = 1;")).toThrow();
+  test("throws on a NON-SHORTHAND key (the alias names no export)", () => {
+    // `{ ALIAS: MIGRATIONS_TABLE_NAME }` — the value is right, the key is not the
+    // identifier a create site spells, so the textual coupling is broken.
+    const aliased = { ...SAMPLE_MAPPING, ALIAS: "__singularity_migrations" };
+    expect(() => allowlistIdentifiers(aliased, SAMPLE_EXPORTS)).toThrow(/ALIAS/);
   });
 
-  test("throws when the array is empty (would enforce a vacuous allowlist)", () => {
-    expect(() =>
-      parseAllowlistIdentifiers("export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [];"),
-    ).toThrow();
+  test("throws when a key names an export holding a DIFFERENT value", () => {
+    const skewed = { ...SAMPLE_EXPORTS, LIVE_STATE_SNAPSHOT_TABLE: "renamed_elsewhere" };
+    expect(() => allowlistIdentifiers(SAMPLE_MAPPING, skewed)).toThrow(
+      /LIVE_STATE_SNAPSHOT_TABLE/,
+    );
+  });
+
+  test("throws when a key is absent from the barrel (constant not re-exported)", () => {
+    const missing = { ...SAMPLE_MAPPING, NEW_TABLE: "new_table" };
+    expect(() => allowlistIdentifiers(missing, SAMPLE_EXPORTS)).toThrow(/NEW_TABLE/);
+  });
+
+  test("throws when the record is empty (would enforce a vacuous allowlist)", () => {
+    expect(() => allowlistIdentifiers({}, SAMPLE_EXPORTS)).toThrow();
   });
 });
 

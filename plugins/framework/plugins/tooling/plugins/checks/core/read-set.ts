@@ -217,12 +217,25 @@ export async function loadTreeSnapshot(root: string, treeHash: string): Promise<
 // on every migration commit and over-invalidating every input-keyed check
 // (`type-check` included) for a reason unrelated to their verdicts. (Neither check
 // is `inputKeyed` today — this closes the landmine before someone flips them.)
+//
+// `derived-views/core/`. Exactly the same shape, one plugin over.
+// `table-defs-in-schema-glob` exempts a `pgTable(<CONST>)` read handle whose name
+// argument is in `IMPERATIVE_PUBLIC_TABLE_CONSTS`, and
+// `imperative-create-table-allowlisted` requires a CREATE TABLE line to name one
+// of those constants. Both now IMPORT that list
+// (`derived-views/core/internal/imperative-tables.ts`) instead of regexing it out
+// of the file's text — so adding an entry widens an exemption as CODE, invisible
+// to the `FileSystemView`, with no recorded tree-fact change → a stale PASS on a
+// widened allowlist. Scoped to `core/` only: this plugin's `server/` holds the
+// view-rebuild logic, which no check's verdict depends on. (Neither check is
+// `inputKeyed` today either.)
 const CHECK_SOURCE_PREFIXES = [
   "plugins/framework/plugins/tooling/",
   "plugins/plugin-meta/plugins/parse-utils/",
   "plugins/plugin-meta/plugins/plugin-tree/",
   "plugins/database/plugins/migrations/core/",
   "plugins/database/plugins/migrations/drizzle.config.ts",
+  "plugins/database/plugins/derived-views/core/",
 ];
 
 /**

@@ -51,9 +51,40 @@ owning plugin's server `contributions`.
 Materialized views hold data and are stateful — they stay in the migration layer
 (`schema.ts`), not here. (None exist today.)
 
+## The imperative-table allowlist (`core/internal/imperative-tables.ts`)
+
+This plugin's `core` leaf is also the shared sink for `IMPERATIVE_PUBLIC_TABLES` —
+the allowlist of public tables created imperatively (`CREATE TABLE IF NOT EXISTS`)
+rather than through drizzle. It lives here because every consumer already depends
+on this leaf and it has no back-edge; see the module header for why it is *not* in
+`@plugins/database/core`.
+
+It is a **record keyed by the name of the constant** holding each table name, and
+both projections are derived from it, so they cannot drift:
+
+| export | is | consumed by |
+|---|---|---|
+| `IMPERATIVE_PUBLIC_TABLES` | the record | the shorthand guard in `imperative-create-table-allowlisted` |
+| `IMPERATIVE_PUBLIC_TABLE_NAMES` | its values (table names) | `orphaned-db-tables` (diffs against the live DB) |
+| `IMPERATIVE_PUBLIC_TABLE_CONSTS` | its keys (identifiers) | `imperative-create-table-allowlisted`, `table-defs-in-schema-glob` |
+
+**Write each entry shorthand — `{ MY_TABLE }`, never `{ ALIAS: MY_TABLE }`.** The
+two static checks enforce a *textual* coupling (the constant must appear on the
+`CREATE TABLE` line; a `pgTable` read handle must be passed the constant, not a
+string literal), so they need the identifier NAMES — which the old `string[]` of
+values did not publish, leaving each check to regex them back out of this file's
+text. The shorthand keys are what make those names declared data. The invariant is
+proved, not asserted: `imperative-create-table-allowlisted` checks that every key
+names an export of this `core` barrel holding that exact value, so an aliased key
+or a constant missing from the barrel fails loudly at the push gate. Adding a
+constant therefore means three edits: declare it, add it shorthand to the record,
+and re-export it from `core/index.ts`. See
+`research/2026-07-29-global-imperative-tables-declared-const-names.md`.
+
 ## Boundaries
 
-- `core/` — the `RegisteredView` type, `topoSortViews`, `compileCreateView`.
+- `core/` — the `RegisteredView` type, `topoSortViews`, `compileCreateView`, and
+  the imperative-table allowlist above.
   Pure sort + SQL compilation; may import `drizzle-orm`. No DB access, no
   registry state.
 - `server/` — the `View` server contribution (the registration surface other
@@ -86,6 +117,8 @@ Materialized views hold data and are stateful — they stay in the migration lay
     - `ATTEMPT_PUSH_AGG_TABLE`
     - `compileCreateView`
     - `DERIVED_VIEW_STATE_TABLE_NAME`
+    - `IMPERATIVE_PUBLIC_TABLE_CONSTS`
+    - `IMPERATIVE_PUBLIC_TABLE_NAMES`
     - `IMPERATIVE_PUBLIC_TABLES`
     - `LIVE_STATE_CHANGELOG_TABLE`
     - `LIVE_STATE_SNAPSHOT_TABLE`

@@ -1,5 +1,7 @@
 import { join } from "path";
 import { grepCode, type CodeMatch } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import * as derivedViewsCore from "@plugins/database/plugins/derived-views/core";
+import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling orphaned-tables check) to
@@ -12,10 +14,13 @@ type Check = {
   cacheSignature?(): string | null;
 };
 
-// The allowlist source of truth. We read this file's TEXT (not its values) to
-// recover the IDENTIFIER NAMES listed in the IMPERATIVE_PUBLIC_TABLES array,
-// because the create sites interpolate those identifiers as the table name and
-// the convention we enforce is that the identifier appears on the CREATE line.
+// The allowlist source of truth. What this check needs is the IDENTIFIER NAMES,
+// not the table names — the create sites interpolate the constant and the
+// convention enforced here is that the identifier appears on the CREATE line.
+// Those names are the KEYS of the shorthand `IMPERATIVE_PUBLIC_TABLES` record,
+// published as data; this check used to regex them out of that module's TEXT.
+// The path below is now MESSAGE-ONLY — it points a human at the file to edit; no
+// code reads it.
 const ALLOWLIST_SRC_REL =
   "plugins/database/plugins/derived-views/core/internal/imperative-tables.ts";
 
@@ -74,39 +79,45 @@ export function usesThrowawayTestDb(path: string, src: string): boolean {
 const CREATE_TABLE_RE = /\bCREATE\s+(?:UNLOGGED\s+)?TABLE\b/i;
 
 /**
- * PURE helper (exported for unit testing): extract the SCREAMING_CASE identifier
- * names listed inside the `IMPERATIVE_PUBLIC_TABLES = [ … ]` array literal of the
- * allowlist source. Throws if the array can't be located or is empty — an empty
- * id set would make the rule vacuous (every CREATE TABLE would be an offender for
- * the wrong reason, or — if inverted — none would), which is a parse error, not a
+ * PURE helper (exported for unit testing): the allowlist's identifier names —
+ * the KEYS of the `IMPERATIVE_PUBLIC_TABLES` record — after PROVING the shorthand
+ * invariant every consumer of those keys depends on: each key must name an export
+ * of the `derived-views/core` barrel holding that exact table name.
+ *
+ * The barrel is the right comparison target, not a convenience: every create site
+ * and `pgTable` read handle imports its constant from
+ * `@plugins/database/plugins/derived-views/core`, so "the key names a barrel
+ * export with this value" IS the coupling this check matches textually. A
+ * non-shorthand entry (`{ ALIAS: MY_TABLE }`) or a constant missing from the
+ * barrel breaks it — and would otherwise surface as a confusing false positive at
+ * a legitimate CREATE TABLE line rather than here, at the declaration.
+ *
+ * Throws rather than returning a partial set (matching the previous parser's
+ * fail-loud contract): a broken or empty allowlist would make the rule vacuous —
+ * every CREATE TABLE an offender for the wrong reason — which is an error, not a
  * clean state. Mirrors declaredTablesFromSnapshot's empty-set guard.
  */
-export function parseAllowlistIdentifiers(src: string): Set<string> {
-  // Anchor on the `const` DECLARATION, not the first textual occurrence — the
-  // module header (and other comments) mention IMPERATIVE_PUBLIC_TABLES in prose.
-  const decl = src.match(/\bconst\s+IMPERATIVE_PUBLIC_TABLES\b/);
-  if (decl?.index === undefined) {
-    throw new Error(`IMPERATIVE_PUBLIC_TABLES declaration not found in ${ALLOWLIST_SRC_REL}`);
-  }
-  const open = decl.index;
-  // Anchor on the `=` assignment so the `[]` in a `readonly string[]` type
-  // annotation (which precedes the array literal) is never mistaken for the list.
-  const eq = src.indexOf("=", open);
-  const lb = eq < 0 ? -1 : src.indexOf("[", eq);
-  const rb = src.indexOf("]", lb);
-  if (lb < 0 || rb < 0) {
+export function allowlistIdentifiers(
+  mapping: Record<string, string>,
+  barrelExports: Record<string, unknown>,
+): Set<string> {
+  const ids = Object.keys(mapping);
+  if (ids.length === 0) {
     throw new Error(
-      `IMPERATIVE_PUBLIC_TABLES array literal not found in ${ALLOWLIST_SRC_REL} — keep it a plain identifier list`,
+      `IMPERATIVE_PUBLIC_TABLES is empty in ${ALLOWLIST_SRC_REL} — refusing to enforce a vacuous allowlist`,
     );
   }
-  const body = src.slice(lb + 1, rb);
-  const ids = new Set(body.match(/\b[A-Z][A-Z0-9_]+\b/g) ?? []);
-  if (ids.size === 0) {
+  const broken = ids.filter((id) => barrelExports[id] !== mapping[id]);
+  if (broken.length > 0) {
     throw new Error(
-      `IMPERATIVE_PUBLIC_TABLES contains no identifier constants in ${ALLOWLIST_SRC_REL} — refusing to enforce a vacuous allowlist`,
+      `IMPERATIVE_PUBLIC_TABLES key(s) [${broken.join(", ")}] in ${ALLOWLIST_SRC_REL} do not name an ` +
+        `export of @plugins/database/plugins/derived-views/core holding that table name. Each entry must ` +
+        `be written SHORTHAND (\`{ MY_TABLE }\`, never \`{ ALIAS: MY_TABLE }\`) and its constant must be ` +
+        `re-exported from that barrel — the create sites import it from there, and the key is the ` +
+        `identifier this check requires on the CREATE TABLE line.`,
     );
   }
-  return ids;
+  return new Set(ids);
 }
 
 /**
@@ -138,9 +149,7 @@ const check: Check = {
   cacheSignature: () => null,
   async run() {
     const root = await getWorktreeRoot();
-    const allowlistIds = parseAllowlistIdentifiers(
-      await Bun.file(join(root, ALLOWLIST_SRC_REL)).text(),
-    );
+    const allowlistIds = allowlistIdentifiers(IMPERATIVE_PUBLIC_TABLES, derivedViewsCore);
 
     // maskStrings:false is load-bearing: the DDL lives INSIDE a template string,
     // so we must keep string interiors visible to see `CREATE TABLE` and the
@@ -174,8 +183,8 @@ const check: Check = {
       hint:
         `An imperatively-created public table (CREATE TABLE outside drizzle's tracked schema) must be ` +
         `registered in IMPERATIVE_PUBLIC_TABLES (${ALLOWLIST_SRC_REL}) or the orphaned-db-tables check ` +
-        `will flag it as dead schema on a later build. Add a name constant there, include it in the ` +
-        `IMPERATIVE_PUBLIC_TABLES array, and interpolate that constant by its canonical name on the ` +
+        `will flag it as dead schema on a later build. Add a name constant there, add it to the ` +
+        `IMPERATIVE_PUBLIC_TABLES record BY SHORTHAND, and interpolate that constant by its canonical name on the ` +
         `CREATE TABLE line (e.g. \`CREATE TABLE IF NOT EXISTS \${MY_TABLE} (…)\`). To create a tracked, ` +
         `drizzle-managed table instead, define it in the plugin's tables.ts and run ./singularity build. ` +
         `In a TEST that only needs a scratch table, provision a throwaway database with createTestDb ` +

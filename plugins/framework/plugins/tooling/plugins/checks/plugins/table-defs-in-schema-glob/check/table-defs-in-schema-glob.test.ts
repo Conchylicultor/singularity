@@ -3,19 +3,19 @@
  * `table-defs-in-schema-glob` check: the candidate predicate that decides which
  * server files are in scope, and the imperative-table read-handle exemption.
  *
- * The glob set itself is no longer parsed out of anything — it is the
+ * Neither input set is parsed out of anything any more. The glob set is the
  * `SCHEMA_GLOBS` constant, proved equal to drizzle.config.ts's evaluated
- * `schema:` array by the `database-migrations:drizzle-config-schema-globs` check.
+ * `schema:` array by the `database-migrations:drizzle-config-schema-globs` check;
+ * the imperative name constants are `IMPERATIVE_PUBLIC_TABLE_CONSTS`, the keys of
+ * the shorthand allowlist record, proved to name real barrel exports by the
+ * `imperative-create-table-allowlisted` check. So both are supplied here as plain
+ * literals — there is no extraction step left to unit-test.
  *
  * Run with `bun test` from the repo root.
  */
 
 import { test, expect } from "bun:test";
-import {
-  isCandidatePath,
-  parseImperativeTableNameConsts,
-  isImperativeReadHandle,
-} from "./index";
+import { isCandidatePath, isImperativeReadHandle } from "./index";
 
 // Sample paths use the real `improve` plugin so the `plugin-refs-resolve` check
 // (which validates every `plugins/...` string literal repo-wide) stays happy —
@@ -53,27 +53,11 @@ test("a non-server file is out of scope", () => {
 
 // --- imperative-table read-handle exemption ---
 
-const IMPERATIVE_TABLES_SOURCE = `
-export const MIGRATIONS_TABLE_NAME = "__singularity_migrations";
-export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
-export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
-  MIGRATIONS_TABLE_NAME,
-  DERIVED_VIEW_STATE_TABLE_NAME,
-  TASK_LATEST_CONVERSATION_TABLE,
-];
-`;
-
-test("parseImperativeTableNameConsts extracts the listed name constants", () => {
-  expect(parseImperativeTableNameConsts(IMPERATIVE_TABLES_SOURCE)).toEqual(
-    new Set(["MIGRATIONS_TABLE_NAME", "DERIVED_VIEW_STATE_TABLE_NAME", "TASK_LATEST_CONVERSATION_TABLE"]),
-  );
-});
-
-test("parseImperativeTableNameConsts returns empty (fail closed) when the array is absent", () => {
-  expect(parseImperativeTableNameConsts("export const x = 1;").size).toBe(0);
-});
-
-const names = parseImperativeTableNameConsts(IMPERATIVE_TABLES_SOURCE);
+const names = new Set([
+  "MIGRATIONS_TABLE_NAME",
+  "DERIVED_VIEW_STATE_TABLE_NAME",
+  "TASK_LATEST_CONVERSATION_TABLE",
+]);
 
 test("a pgTable read handle on an imperative name constant is exempt", () => {
   expect(

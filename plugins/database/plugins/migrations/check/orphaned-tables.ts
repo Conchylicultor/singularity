@@ -8,7 +8,7 @@ import { Pool } from "pg";
 import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
 // The imperative-public-table allowlist lives in the derived-views core leaf
 // (the shared sink) — see that module for why it is NOT in @plugins/database/core.
-import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
+import { IMPERATIVE_PUBLIC_TABLE_NAMES } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling migration-applies-clean check)
@@ -117,7 +117,7 @@ const check: Check = {
         `SELECT relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
       );
       const live = res.rows.map((r) => r.relname);
-      const orphans = computeOrphans(live, declared, IMPERATIVE_PUBLIC_TABLES);
+      const orphans = computeOrphans(live, declared, IMPERATIVE_PUBLIC_TABLE_NAMES);
       if (orphans.length === 0) return { ok: true };
       return {
         ok: false,

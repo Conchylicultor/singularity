@@ -1,7 +1,6 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
+import { IMPERATIVE_PUBLIC_TABLE_CONSTS } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -42,30 +41,22 @@ const FACTORY_DEFINITION_FILES = new Set(TABLE_FACTORIES.map((f) => f.definedIn)
 // loader still wants a typed handle. Because the table is never drizzle-managed,
 // the "silently vanishes from migration generation" footgun does not apply — the
 // author already knows it isn't migrated. So a `pgTable(<CONST>, ...)` whose name
-// argument is one of the IMPERATIVE_PUBLIC_TABLES name constants is allowed.
-const IMPERATIVE_TABLES_FILE =
-  "plugins/database/plugins/derived-views/core/internal/imperative-tables.ts";
-
-/**
- * Parse the constant identifiers listed in the `IMPERATIVE_PUBLIC_TABLES` array
- * literal — these are exactly the name constants a sanctioned imperative-table
- * read handle may pass to `pgTable(...)`. Returns the set of identifiers, or an
- * empty set if the array can't be located (the read-handle exemption then
- * applies to nothing — fail closed, never open).
- */
-export function parseImperativeTableNameConsts(sourceText: string): Set<string> {
-  const arrayMatch = sourceText.match(/IMPERATIVE_PUBLIC_TABLES[^=]*=\s*\[([^\]]*)\]/);
-  if (!arrayMatch) return new Set();
-  return new Set(
-    [...arrayMatch[1]!.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)].map((m) => m[0]),
-  );
-}
+// argument is one of the allowlist's name constants is allowed.
+//
+// `IMPERATIVE_PUBLIC_TABLE_CONSTS` publishes those identifiers as DATA (the keys
+// of the shorthand `IMPERATIVE_PUBLIC_TABLES` record). This check used to regex
+// them out of the allowlist module's TEXT, which shared the truncation and
+// prose-hijack hazards of the drizzle.config.ts parse deleted in
+// research/2026-07-29-global-drizzle-schema-glob-single-source.md — and a partial
+// parse silently dropped exemptions, flagging legitimate read handles. There is
+// no parse any more.
+const IMPERATIVE_NAME_CONSTS = new Set(IMPERATIVE_PUBLIC_TABLE_CONSTS);
 
 /**
  * True when a `pgTable(...)` match line is a sanctioned imperative-table read
- * handle: its first argument is one of the IMPERATIVE_PUBLIC_TABLES name
- * constants. Matches `pgTable(<IDENT>` (a bare identifier — string-literal names
- * are never imperative-table handles, those go through the schema glob).
+ * handle: its first argument is one of the allowlist's name constants. Matches
+ * `pgTable(<IDENT>` (a bare identifier — string-literal names are never
+ * imperative-table handles, those go through the schema glob).
  */
 export function isImperativeReadHandle(
   lineText: string,
@@ -98,13 +89,6 @@ const check: Check = {
     // enumerated by the shared migrations/core helper (fails loud if unparseable).
     const globFiles = new Set(schemaGlobFiles(root));
 
-    // The sanctioned imperative-table name constants (read once): a `pgTable`
-    // read handle on one of these is exempt — the table is created imperatively,
-    // not via drizzle, so it correctly lives outside the schema glob.
-    const imperativeNameConsts = parseImperativeTableNameConsts(
-      readFileSync(resolve(root, IMPERATIVE_TABLES_FILE), "utf-8"),
-    );
-
     const offenders = new Map<string, string>(); // key `path:line` → formatted line
 
     // 2. Rule 1 — a stray `pgTable(` in a candidate file that isn't a factory
@@ -119,7 +103,7 @@ const check: Check = {
     for (const m of pgTableMatches) {
       if (!isCandidatePath(m.path, globFiles)) continue;
       if (FACTORY_DEFINITION_FILES.has(m.path)) continue;
-      if (isImperativeReadHandle(m.text, imperativeNameConsts)) continue;
+      if (isImperativeReadHandle(m.text, IMPERATIVE_NAME_CONSTS)) continue;
       offenders.set(`${m.path}:${m.line}`, `${m.path}:${m.line}:${m.text}`);
     }
 

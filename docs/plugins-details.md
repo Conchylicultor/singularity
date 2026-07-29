@@ -9843,6 +9843,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ATTEMPT_PUSH_AGG_TABLE`
           - `compileCreateView`
           - `DERIVED_VIEW_STATE_TABLE_NAME`
+          - `IMPERATIVE_PUBLIC_TABLE_CONSTS`
+          - `IMPERATIVE_PUBLIC_TABLE_NAMES`
           - `IMPERATIVE_PUBLIC_TABLES`
           - `LIVE_STATE_CHANGELOG_TABLE`
           - `LIVE_STATE_SNAPSHOT_TABLE`
