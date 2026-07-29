@@ -197,6 +197,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/css/text.Text`
+              - `primitives/pane.currentRoutePath`
               - `shell.Shell`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -4786,6 +4787,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Apps.TabBar` ← `apps-core.tab-bar`
       - `Apps.TabBarActions` ← `shell.global-action-bar`
     - Uses:
+      - `primitives/pane.currentRoutePath`
       - `primitives/pane.stripBasePath`
       - `primitives/pane.useSurfaceAppId`
       - `primitives/slot-render.defineRenderSlot`
@@ -5274,12 +5276,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-instance.stampAppInstance`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/pane.createPaneStore`
+          - `primitives/pane.currentRoutePath`
           - `primitives/pane.defaultHistoryAdapter`
+          - `primitives/pane.HistoryAdapter`
+          - `primitives/pane.LocationChange`
+          - `primitives/pane.PaneHistoryState`
           - `primitives/pane.PaneOptions`
           - `primitives/pane.PaneSlot`
           - `primitives/pane.PaneStore`
           - `primitives/pane.ParsedRoute`
           - `primitives/pane.parseUrl`
+          - `primitives/pane.RouteState`
+          - `primitives/pane.SerializedSlot`
           - `primitives/pane.setHistoryAdapter`
           - `primitives/pane.setLiveStore`
           - `primitives/pane.stripBasePath`
@@ -11214,6 +11222,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/link-chip.LinkChip`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.registerSlowResourceReporter`
+          - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
           - `reports.Reports`
       - Server:
@@ -22515,6 +22524,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `buildRouteUrl`
           - `clearRoute`
           - `createPaneStore`
+          - `currentRoutePath`
           - `defaultHistoryAdapter`
           - `defaultStore`
           - `getBasePath`
@@ -22674,6 +22684,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/read-set`
           - `debug/render-profiler`
           - `debug/reports`
+          - `debug/slow-ops`
           - `debug/timeline`
           - `debug/trace/engine`
           - `debug/trace/pane`
@@ -22717,6 +22728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineApp`
           - `defineRoute`
           - `fillSegment`
+          - `normalizeRoutePath`
           - `normalizeSegmentPattern`
     - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.
       - Web:

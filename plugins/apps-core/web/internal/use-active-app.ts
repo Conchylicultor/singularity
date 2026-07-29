@@ -1,5 +1,8 @@
 import { useSyncExternalStore } from "react";
-import { useSurfaceAppId } from "@plugins/primitives/plugins/pane/web";
+import {
+  currentRoutePath,
+  useSurfaceAppId,
+} from "@plugins/primitives/plugins/pane/web";
 import { Apps } from "../slots";
 import { matchAppForPath } from "./resolve-app";
 import { useFocusedAppId } from "./focused-app-store";
@@ -16,7 +19,7 @@ export function usePathname(): string {
         window.removeEventListener("shell:navigate", cb);
       };
     },
-    () => window.location.pathname,
+    currentRoutePath,
     () => "/",
   );
 }

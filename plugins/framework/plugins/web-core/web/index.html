@@ -37,7 +37,11 @@
             localStorage.getItem("theme-engine:critical-css"),
           );
           if (env && env.v === 3 && env.entries) {
-            var path = location.pathname;
+            // Same canonicalization as `normalizeRoutePath` (pane/core): a
+            // hand-typed `//agents/x` must prefix-match `/agents` here exactly
+            // as it does in the app, or the pre-paint replay picks the global
+            // entry and the app repaints its own theme after first frame.
+            var path = location.pathname.replace(/\/{2,}/g, "/");
             var keys = [];
             for (var k in env.entries) {
               if (k !== "" && (path === k || path.indexOf(k + "/") === 0)) {

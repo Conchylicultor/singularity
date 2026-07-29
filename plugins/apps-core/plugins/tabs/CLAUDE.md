@@ -128,12 +128,18 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/app-instance.stampAppInstance`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/pane.createPaneStore`
+    - `primitives/pane.currentRoutePath`
     - `primitives/pane.defaultHistoryAdapter`
+    - `primitives/pane.HistoryAdapter`
+    - `primitives/pane.LocationChange`
+    - `primitives/pane.PaneHistoryState`
     - `primitives/pane.PaneOptions`
     - `primitives/pane.PaneSlot`
     - `primitives/pane.PaneStore`
     - `primitives/pane.ParsedRoute`
     - `primitives/pane.parseUrl`
+    - `primitives/pane.RouteState`
+    - `primitives/pane.SerializedSlot`
     - `primitives/pane.setHistoryAdapter`
     - `primitives/pane.setLiveStore`
     - `primitives/pane.stripBasePath`

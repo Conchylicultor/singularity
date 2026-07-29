@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { defineApp, defineRoute } from "./route";
+import { defineApp, defineRoute, normalizeRoutePath } from "./route";
 
 const agents = defineApp({ id: "agent-manager", basePath: "/agents", iconKey: "chat_bubble" });
 const rootApp = defineApp({ id: "home", basePath: "/", iconKey: "home" });
@@ -38,5 +38,38 @@ describe("route link builder", () => {
     const detail = defineRoute({ id: "d", segment: "r/:runId" });
     // @ts-expect-error — runId is required
     expect(() => detail.path({})).toThrow(/Missing param "runId"/);
+  });
+});
+
+describe("normalizeRoutePath", () => {
+  test("collapses a repeated leading slash — the scheme-relative crash", () => {
+    // `//agents/c/x` handed to replaceState resolves to `http://agents/c/x`
+    // (different origin ⇒ SecurityError), and misses `startsWith("/agents/")`.
+    expect(normalizeRoutePath("//agents/c/x")).toBe("/agents/c/x");
+    expect(normalizeRoutePath("///agents")).toBe("/agents");
+  });
+
+  test("collapses repeated slashes anywhere in the path", () => {
+    expect(normalizeRoutePath("/agents//c///x")).toBe("/agents/c/x");
+  });
+
+  test("guarantees a leading slash", () => {
+    expect(normalizeRoutePath("agents/c/x")).toBe("/agents/c/x");
+    expect(normalizeRoutePath("")).toBe("/");
+  });
+
+  test("leaves an already-canonical path (and its trailing slash) alone", () => {
+    expect(normalizeRoutePath("/")).toBe("/");
+    expect(normalizeRoutePath("/agents/c/x")).toBe("/agents/c/x");
+    expect(normalizeRoutePath("/agents/")).toBe("/agents/");
+  });
+
+  test("is idempotent, so re-normalizing is always safe", () => {
+    const once = normalizeRoutePath("//agents//c/x");
+    expect(normalizeRoutePath(once)).toBe(once);
+  });
+
+  test("does not decode or otherwise touch encoded segments", () => {
+    expect(normalizeRoutePath("//agents/c/a%2Fb%20c")).toBe("/agents/c/a%2Fb%20c");
   });
 });

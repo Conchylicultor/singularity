@@ -1,9 +1,10 @@
-import type {
-  HistoryAdapter,
-  LocationChange,
-  PaneHistoryState,
-  RouteState,
-  SerializedSlot,
+import {
+  currentRoutePath,
+  type HistoryAdapter,
+  type LocationChange,
+  type PaneHistoryState,
+  type RouteState,
+  type SerializedSlot,
 } from "@plugins/primitives/plugins/pane/web";
 import {
   getAppInstanceId,
@@ -152,7 +153,7 @@ export function makeShellHistoryAdapter(deps: ShellHistoryDeps): HistoryAdapter 
     //    entry takes the same path, for the same reason: the URL is the only
     //    part of it this instance can trust.
     if (!raw.tabId || !raw.appId || foreignInstance) {
-      const resolved = resolveAppForPath(window.location.pathname, deps.apps());
+      const resolved = resolveAppForPath(currentRoutePath(), deps.apps());
       const appId = resolved?.app.id ?? focused.appId;
       if (appId !== focused.appId) deps.rebuildAppInPlace(focused.tabId, appId);
       deps.restoreLiveRoute();

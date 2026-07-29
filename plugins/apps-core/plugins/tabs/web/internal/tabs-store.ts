@@ -4,6 +4,7 @@ import {
   mayAdoptLegacyPayload,
 } from "@plugins/primitives/plugins/app-instance/web";
 import {
+  currentRoutePath,
   stripBasePath,
   type PaneOptions,
   type PaneSlot,
@@ -158,7 +159,7 @@ function rawPathForTab(
   if (state.slots.length === 0) return "";
   if (tab.store.live) {
     return normalizeRawPath(
-      stripBasePath(window.location.pathname, tab.store.getBasePath()),
+      stripBasePath(currentRoutePath(), tab.store.getBasePath()),
     );
   }
   return prevRawByTab.get(tab.tabId);

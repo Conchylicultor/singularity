@@ -12,6 +12,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
 import {
   NotificationsProvider,
   ensureNotificationsClient,
@@ -78,7 +79,8 @@ function resolveActiveAppPrefix(
   // apps-core's matchAppForPath, whose `ActiveApp` param is the *sealed*
   // contribution shape (its `component` is opaque), which fights our raw
   // unsealed contributions. The match logic is identical (see resolve-app.ts).
-  const pathname = window.location.pathname;
+  // eslint-disable-next-line pane/no-raw-location-path -- pre-boot: `currentRoutePath()` lives in pane/web, which this eager boot root must not pull in; the pure core normalizer is the same canonicalization.
+  const pathname = normalizeRoutePath(window.location.pathname);
   const matched = [...apps]
     .sort((a, b) => b.path.length - a.path.length)
     .find((a) => pathname === a.path || pathname.startsWith(a.path + "/"));

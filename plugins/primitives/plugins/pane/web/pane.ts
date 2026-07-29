@@ -13,6 +13,7 @@ import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   fillSegment,
+  normalizeRoutePath,
   normalizeSegmentPattern,
   type AppRef,
   type InferParams,
@@ -617,7 +618,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // vouch for it. Rebuilt routes carry `hint = {}` and read canonical instead.
     const serialized: SerializedSlot[] = route.map(s => ({ paneId: s.paneId, params: s.params, options: s.options, uuid: s.uuid }));
     const fullUrl = applyBasePath(url);
-    if (fullUrl === window.location.pathname && replace) return;
+    if (fullUrl === currentRoutePath() && replace) return;
     // Emit a push/replace INTENT through the installed history adapter — the
     // pane primitive never touches `window.history` itself. The default adapter
     // writes `{ route }` verbatim; the shell adapter stamps `{ tabId, appId }`
@@ -784,9 +785,9 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       // otherwise keeps it `unresolved` (same rawPath ⇒ no-op) — so a genuine
       // back/forward to a still-pending entry is unaffected, but a late
       // registration is no longer permanently shut out.
-      syncRouteFromUrl(stripBasePath(window.location.pathname, currentBasePath));
+      syncRouteFromUrl(stripBasePath(currentRoutePath(), currentBasePath));
     } else {
-      const pathname = stripBasePath(window.location.pathname, currentBasePath);
+      const pathname = stripBasePath(currentRoutePath(), currentBasePath);
       syncRouteFromUrl(pathname);
     }
   }
@@ -1274,6 +1275,22 @@ function normalizeAppPath(path: string): string {
   return path === "/" ? "" : path.replace(/\/+$/, "");
 }
 
+/**
+ * THE sanctioned read of the browser's route path — `window.location.pathname`
+ * canonicalized by {@link normalizeRoutePath} (repeated `/` runs collapsed,
+ * exactly one leading `/`). Every routing consumer — app matching, base-path
+ * stripping, URL→route parsing, and the URL a history entry projects — goes
+ * through this, so a hand-typed `//agents/c/x` can neither throw a SecurityError
+ * on `replaceState` (scheme-relative resolution) nor silently match no app.
+ *
+ * Enforced by `lint/no-raw-location-path`: this is the only place in the repo
+ * that reads `location.pathname` directly.
+ */
+export function currentRoutePath(): string {
+  // eslint-disable-next-line pane/no-raw-location-path -- THE sanctioned reader
+  return normalizeRoutePath(window.location.pathname);
+}
+
 export function stripBasePath(pathname: string, basePath: string): string {
   const bp = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
   if (!bp) return pathname;
@@ -1302,7 +1319,7 @@ export function usePathname(): string {
         window.removeEventListener("shell:navigate", cb);
       };
     },
-    () => window.location.pathname,
+    currentRoutePath,
     () => "/",
   );
 }

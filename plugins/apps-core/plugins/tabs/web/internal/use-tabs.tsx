@@ -12,6 +12,7 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   createPaneStore,
+  currentRoutePath,
   parseUrl,
   setLiveStore,
   setHistoryAdapter,
@@ -271,7 +272,7 @@ export function bootTabs(
   // app/pane is focused on load. Resolve it up front (same source of truth as
   // the cross-app `navigate()`), so a reload or deep link always lands on the
   // URL's app, never the last-focused app from a previous session.
-  const resolved = resolveAppForPath(window.location.pathname, apps);
+  const resolved = resolveAppForPath(currentRoutePath(), apps);
   const urlAppId = resolved?.app.id ?? seedAppId;
   // Parse the URL into the tri-state route. A URL that matches no app (bare `/`,
   // or a stale link — apps-layout redirects it) is treated as a bare-root match,
@@ -846,8 +847,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     setHistoryAdapter(adapter);
     const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (focused) {
+      // `currentRoutePath()`, never the raw pathname: this replace-stamp is the
+      // FIRST history write of the session, and a raw `//agents/c/x` would
+      // resolve scheme-relative (`http://agents/c/x`) and throw SecurityError,
+      // bricking boot. The canonical form also re-writes the address bar in
+      // place, so a slash-mangled deep link self-heals into a working one.
       adapter.commit({
-        url: window.location.pathname,
+        url: currentRoutePath(),
         state: serializePaneState(focused.store.getRouteState()),
         mode: "replace",
       });

@@ -11,6 +11,7 @@ export {
   setBasePath,
   getBasePath,
   stripBasePath,
+  currentRoutePath,
   useRoute,
   useRouteState,
   usePaneTitle,

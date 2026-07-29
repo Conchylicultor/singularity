@@ -14,6 +14,7 @@
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/css/text.Text`
+    - `primitives/pane.currentRoutePath`
     - `shell.Shell`
 - Core:
   - Uses: `primitives/pane.defineApp`

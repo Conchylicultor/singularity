@@ -103,6 +103,30 @@ export function fillSegment(
 }
 
 // ---------------------------------------------------------------------------
+// Route-path canonicalization — the address bar is UNTRUSTED INPUT.
+//
+// `window.location.pathname` is whatever the user typed, pasted, or a bad link
+// carried. A pathname with repeated slashes (`//agents/c/x`) is not merely ugly:
+//
+//   • As a HISTORY URL it is a *scheme-relative* reference. `replaceState(s, "",
+//     "//agents/c/x")` resolves against the document to `http://agents/c/x` — a
+//     different origin — and the browser throws SecurityError, taking down boot.
+//   • As a MATCH KEY it silently misses. `"//agents/c/x".startsWith("/agents/")`
+//     is false, so the URL owns no app: the deep link resolves to nothing and
+//     falls back to the default app.
+//
+// Both failures come from reading the raw pathname, so the fix is one canonical
+// reader every routing consumer goes through — collapse repeated `/` runs and
+// guarantee exactly one leading `/`. The `pane/no-raw-location-path` lint rule
+// keeps it the only reader. Idempotent, so re-normalizing is always safe.
+// ---------------------------------------------------------------------------
+
+export function normalizeRoutePath(pathname: string): string {
+  const collapsed = pathname.replace(/\/{2,}/g, "/");
+  return collapsed.startsWith("/") ? collapsed : "/" + collapsed;
+}
+
+// ---------------------------------------------------------------------------
 // Segment match-pattern normalization — param *names* are erased, only their
 // structural shape survives. `s/:pageId` and `s/:serverId` both normalize to
 // `s/:`, so two panes that match the same URLs collide; `page/:pageId`

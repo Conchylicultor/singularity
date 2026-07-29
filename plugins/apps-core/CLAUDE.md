@@ -14,6 +14,7 @@
     - `Apps.TabBar` ← `apps-core.tab-bar`
     - `Apps.TabBarActions` ← `shell.global-action-bar`
   - Uses:
+    - `primitives/pane.currentRoutePath`
     - `primitives/pane.stripBasePath`
     - `primitives/pane.useSurfaceAppId`
     - `primitives/slot-render.defineRenderSlot`

@@ -4,6 +4,7 @@ import { useConfig } from "@plugins/config_v2/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { registerSlowResourceReporter } from "@plugins/primitives/plugins/live-state/web";
 import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { slowOpConfig } from "../../core";
 import { submitClientSlowOp } from "../../shared/endpoints";
@@ -32,10 +33,10 @@ export function SlowOpCollector() {
         {},
         {
           body: {
-            // No `caller`: page-load's `operation` IS `location.pathname`, so a
+            // No `caller`: page-load's `operation` IS the route path, so a
             // route caller would just duplicate the operation label.
             operationKind: "page-load",
-            operation: location.pathname,
+            operation: currentRoutePath(),
             durationMs,
             thresholdMs: t,
             // The browser's own boot decomposition rides along (trimmed to
@@ -77,7 +78,7 @@ export function SlowOpCollector() {
             // The route under which the element settled is the cheap, reliable
             // "who mounted this resource" attribution (resource key + params are
             // already in `operation`).
-            caller: { kind: "route", label: location.pathname },
+            caller: { kind: "route", label: currentRoutePath() },
             // Additive root-cause attribution: was the notifications transport
             // still coming up when this resource mounted, and how much of the
             // settle window was transport bring-up? Threads through so the report

@@ -76,6 +76,7 @@ the bar).
     - `primitives/css/link-chip.LinkChip`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.registerSlowResourceReporter`
+    - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `reports.Reports`
 - Server:
