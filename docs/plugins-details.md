@@ -14828,6 +14828,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/warmup`
           - `plugin-meta/plugin-tree`
           - `review/plugin-changes`
+    - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
+      - Core:
+        - Exports (types): `AttributeSource`
+        - Exports (values):
+          - `decodeHtmlText`
+          - `readHtmlAttr`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Server:
         - Contributes:

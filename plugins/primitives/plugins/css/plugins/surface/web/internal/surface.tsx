@@ -13,7 +13,11 @@ export interface SurfaceProps {
    *   - `overlay` — floats above everything: popovers, menus, floating panels
    */
   level: SurfaceLevel;
-  /** Element to render. Default "div"; "section"/"button"/"a"/"li" as needed. */
+  /**
+   * Element to render. Default "div"; "section"/"button"/"a"/"li" as needed.
+   * Purely a TAG choice — the surface is block-level regardless (see below), so
+   * an inline-by-default tag like "a" still paints as a proper box.
+   */
   as?: React.ElementType;
   /** Forwarded to the rendered element — DnD consumers depend on it (mirrors Card/Row). */
   ref?: React.Ref<HTMLElement>;
@@ -63,7 +67,16 @@ export function Surface({
       tabIndex={tabIndex ?? selectScopeProps.tabIndex}
       {...rest}
       onKeyDown={handleKeyDown}
-      className={cn(SURFACE_LEVELS[level], className)}
+      // `block` FIRST, so a consumer's own display class (`flex` / `grid` /
+      // `hidden`) still wins through tailwind-merge. A surface is a CONTAINED BOX,
+      // and `as` must not silently change what kind of box it is: `as="a"` renders
+      // an element that is `display: inline` by default, and an inline box holding
+      // block-level children is split into fragments — the browser then paints the
+      // bg/border/radius on the empty leading + trailing fragments instead of
+      // around the content, i.e. two stray slivers above and below and no card
+      // chrome at all. Owning the display here is what makes `as` purely a choice
+      // of TAG (semantics / interactivity), never of layout.
+      className={cn("block", SURFACE_LEVELS[level], className)}
     >
       {children}
     </Comp>

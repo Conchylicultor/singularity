@@ -1,6 +1,10 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
+  decodeHtmlText,
+  readHtmlAttr,
+} from "@plugins/infra/plugins/html-decode/core";
+import {
   parsePublicUrl,
   safeFetch,
   SsrfError,
@@ -26,6 +30,12 @@ interface ScrapedMeta {
  * `await transformed.text()` to drive the handlers to completion. A byte cap
  * stops accumulation once we've seen enough markup (handlers still run, but we
  * ignore further input).
+ *
+ * Every scraped value goes through `readHtmlAttr` / `decodeHtmlText` — the
+ * rewriter hands back raw markup source, so an og:title reaches the preview card
+ * as the literal `d&#x27;entretien` and an og:image URL's `&amp;` fetches the
+ * wrong query string unless decoded exactly once. See
+ * `@plugins/infra/plugins/html-decode` for why.
  */
 async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta> {
   const meta: ScrapedMeta = {};
@@ -41,9 +51,9 @@ async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta>
     .on("meta", {
       element(el) {
         if (bytesSeen > MAX_HTML_BYTES) return;
-        const property = el.getAttribute("property")?.toLowerCase();
-        const name = el.getAttribute("name")?.toLowerCase();
-        const content = el.getAttribute("content") ?? undefined;
+        const property = readHtmlAttr(el, "property")?.toLowerCase();
+        const name = readHtmlAttr(el, "name")?.toLowerCase();
+        const content = readHtmlAttr(el, "content");
         if (!content) return;
         const key = property ?? name;
         if (!key) return;
@@ -83,8 +93,8 @@ async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta>
     .on("link", {
       element(el) {
         if (bytesSeen > MAX_HTML_BYTES) return;
-        const rel = el.getAttribute("rel")?.toLowerCase() ?? "";
-        const href = el.getAttribute("href") ?? undefined;
+        const rel = readHtmlAttr(el, "rel")?.toLowerCase() ?? "";
+        const href = readHtmlAttr(el, "href");
         if (!href) return;
         // rel may be a space-separated token list (e.g. "shortcut icon").
         const rels = rel.split(/\s+/);
@@ -115,7 +125,10 @@ async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta>
   const transformed = rewriter.transform(res);
   await transformed.text(); // drive the stream to completion
 
-  titleCandidates.tag = titleText.trim() || undefined;
+  // Decoded once over the WHOLE accumulated string, never per chunk: the rewriter
+  // splits text on its own buffer boundaries, so a character reference can straddle
+  // two chunks and only reassembles here.
+  titleCandidates.tag = decodeHtmlText(titleText).trim() || undefined;
   meta.title = titleCandidates.og ?? titleCandidates.twitter ?? titleCandidates.tag;
   meta.description =
     descCandidates.og ?? descCandidates.twitter ?? descCandidates.meta;

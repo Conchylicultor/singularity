@@ -32,6 +32,27 @@ shadcn `PopoverContent` / `DropdownMenuContent` consume `SURFACE_LEVELS.overlay`
 one definition behind all three. Like `<Card>`, `<Surface>` bakes the Ctrl+A
 select-scope into its root.
 
+## `as` chooses the TAG, never the box (Surface owns `display`)
+
+A surface is a **contained box**, so `<Surface>` emits `block` itself — ahead of the
+level bundle and the consumer's `className`, so a real layout intent
+(`flex` / `grid` / `hidden`) still wins through tailwind-merge. `display` is
+deliberately *not* in `SURFACE_LEVELS`: the map is the elevation bundle
+(bg + border + radius + shadow), and `sunken` / `base` are tone-only.
+
+Without it, `as` silently changed the *box type* along with the tag, and the failure
+is invisible until it isn't: an `<a>` is `display: inline` by default, and an inline
+box containing block-level children is split into fragments, so the browser paints
+the background / border / radius on the **empty leading and trailing fragments**
+instead of around the content. The bookmark block shipped exactly that — two stray
+1px slivers above and below the card and no card chrome at all, which reads as a
+rendering artifact rather than a missing `display`. `<button>` (`inline-block`) hid
+the same hole, and every other `as="button"` card happened to be a flex/grid item,
+where the child is blockified anyway.
+
+`className` still owns the *flow*: `<Card as="dl" className="grid …">` and
+`<Card as="a" className="flex …">` are unchanged.
+
 ## Enforcement
 
 `lint/no-adhoc-surface.ts` fails `./singularity check` on the two disambiguable

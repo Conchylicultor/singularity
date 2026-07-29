@@ -316,6 +316,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
     - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
     - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
+    - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
     - **`jobs`** [load-bearing] — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
     - **`launcher`**
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.

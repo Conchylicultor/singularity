@@ -2,6 +2,7 @@ import {
   SsrfError,
   safeFetch,
 } from "@plugins/infra/plugins/safe-fetch/server";
+import { readHtmlAttr } from "@plugins/infra/plugins/html-decode/core";
 import {
   BROWSER_PROXY_NAV_MESSAGE,
   BROWSER_PROXY_PATH,
@@ -382,11 +383,16 @@ export async function handleProxy(req: Request): Promise<Response> {
     // call to the injected scheduler so it routes through the proxy navigate
     // path. A bare-delay reload (no url=) is left untouched — it just re-fetches
     // the current proxied document.
+    //
+    // Read through `readHtmlAttr`: the rewriter hands attributes back as raw
+    // markup source, so `content="0;url=https://x/?a=1&amp;b=2"` would otherwise
+    // parse into a URL carrying a literal `&amp;` — a different query string
+    // than the page meant.
     .on("meta", {
       element(el) {
-        const httpEquiv = el.getAttribute("http-equiv");
+        const httpEquiv = readHtmlAttr(el, "http-equiv");
         if (!httpEquiv || httpEquiv.trim().toLowerCase() !== "refresh") return;
-        const directive = parseMetaRefresh(el.getAttribute("content") ?? "");
+        const directive = parseMetaRefresh(readHtmlAttr(el, "content") ?? "");
         if (!directive) return;
         const abs = resolveHttp(directive.url, finalUrl);
         if (!abs) return;
