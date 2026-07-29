@@ -347,7 +347,6 @@ so the pane store never learns about tabs.
 URL parsing (`parseUrl`) is only a fallback for initial page load, shared deep
 links, and legacy history entries with no snapshot.
 
-<<<<<<< .merge_file_PrBeCw
 ### The address bar is untrusted input
 
 Every read of the browser's route path goes through **`currentRoutePath()`**
@@ -369,23 +368,10 @@ to the working URL. `pane/no-raw-location-path` keeps `currentRoutePath()` the
 only reader (tests and `e2e/` are exempt; the reader itself and web-core's
 pre-boot prefix match carry per-site disables).
 
-The shell mounts a layout renderer once (e.g. `<MillerColumns/>` from
-`@plugins/layouts/plugins/miller/web`, or `<FullPane/>`). The renderer
-reads the route via `useRoute()` and maps it to its arrangement — Miller
-lays the panes out as columns, root on the left and current pane on the
-right; Full-pane shows only the current pane (`match.panes.at(-1)`).
-
-The router rebuilds its lookup table from the
-`Pane.Register` contribution list synchronously on every render via
-`useSyncPaneRegistry()`, so adding or removing a pane is just adding or
-removing a `Pane.Register({ pane })` entry from a plugin's
-`contributions` array.
-=======
 The shell mounts a layout renderer once (`<MillerColumns/>` from
 `@plugins/layouts/plugins/miller/web`, or `<FullPane/>`), which reads the route
 via `useRoute()`. The router rebuilds its lookup table from the `Pane.Register`
 contribution list synchronously on every render via `useSyncPaneRegistry()`.
->>>>>>> .merge_file_FjbkT2
 
 ## Testing
 

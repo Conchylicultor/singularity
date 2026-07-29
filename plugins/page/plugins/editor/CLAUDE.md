@@ -74,7 +74,6 @@ Never splice a ramp step into a class name (`` `pl-${BLOCK_INSET}` ``): Tailwind
 an `@utility` only for literal tokens it can scan. Use `<Inset>`, or `insetClass()`
 from the spacing primitive when you only have a `className`.
 
-<<<<<<< .merge_file_pQ6Rzf
 Two known deviations from the invariant: the code background sits at
 `C + BLOCK_INSET` rather than bleeding to `C` (its `px` wrapper is outside the
 decoration), and the quote's 2px border pushes its text to `C + 2 + BLOCK_INSET`.
@@ -169,11 +168,6 @@ anchor's first child dissolves the container and promotes its children into its
 slot. The generic `isIndented` → outdent rung would instead pop that child out
 *and adopt the remaining siblings as its children*, silently re-nesting content
 nobody asked to nest.
-=======
-Two pre-existing deviations: the callout tint and code background sit at
-`C + BLOCK_INSET` rather than bleeding to `C` (their `px` wrapper is outside the
-decoration), and the quote's 2px border pushes its text to `C + 2 + BLOCK_INSET`.
->>>>>>> .merge_file_eYO279
 
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 

@@ -121,7 +121,6 @@ The localStorage reader stays tolerant of legacy `view-state` blobs that still
 carry `sort`/`filter` keys (they are ignored).
 
 **The expand map is the home for tree collapse state — do not put it on a domain
-<<<<<<< .merge_file_lUOQJC
 entity.** Collapse is per-`(surface, view-instance, row)` render state, and the
 map above already keys on exactly that triple. Storing it as an entity column
 instead (an `expanded` field on the row's own table) is an anti-pattern with three
@@ -142,16 +141,6 @@ consumer-supplied accessor left to shadow it, so a collapse simply cannot be
 domain data. See
 `research/2026-07-28-global-tree-collapse-state-as-view-state.md` and
 `research/2026-07-29-global-delete-hierarchy-expand-hooks.md`.
-=======
-entity.** Nothing enforces this. Collapse is per-`(surface, view-instance, row)`
-render state and the map above keys on exactly that triple; an `expanded` column
-on the row's own table instead cannot serve two view instances over the same rows,
-turns a local UI gesture into a DB write + change-feed recompute + live-state push
-that stamps `updatedAt`, and leaves expand-all unbounded. Note the precedence in
-`tree/web/internal/project-rows.ts`: a consumer-supplied `hierarchy.isExpanded`
-**shadows** this map entirely — the only reason a consumer would appear not to use
-it. See `research/2026-07-28-global-tree-collapse-state-as-view-state.md`.
->>>>>>> .merge_file_80p5ZK
 
 **Per-instance options sub-form.** A view-type's optional `configSchema`
 (`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
@@ -222,7 +211,6 @@ the source axis only decides *which data bundle* feeds the body.
 A data source can declare itself hierarchical by passing `hierarchy` (a
 `HierarchyConfig<TRow>`) to `<DataView>`. Present → hierarchical views (the
 tree) become selectable; absent → the host drops them from the switcher. The
-<<<<<<< .merge_file_lUOQJC
 `HierarchyConfig` carries two required accessors (`getParentId`, `getRank`), the
 optional reference-edge accessor (`getAliasParents`, below), and the optional
 mutations (`onMove`, `onCreate`) — so a read-only nav tree supplies just the two
@@ -242,21 +230,6 @@ it cannot be half-wired.
 
 The `FieldDef.primary` flag selects the tree row label field (shared
 `pickPrimaryField` heuristic). Inline rename of the primary label is no longer a
-=======
-`HierarchyConfig` carries accessors (`getParentId`, `getRank`, `isExpanded`) and
-mutations (`onToggleExpanded`, `onMove`, `onCreate`) — all optional
-except the two accessors, so a read-only nav tree supplies just those two.
-
-**Omit `isExpanded`/`onToggleExpanded` unless the source genuinely owns expand as
-domain data** (e.g. a document toggle block, where collapse is page content and is
-serialized). Supplying them shadows the primitive's own per-view-instance expand
-map — see the anti-pattern note above. They are also independently optional, so
-supplying only one yields a silently dead chevron (the write goes to the view map,
-the read comes from the row); supply both or neither.
-
-`FieldDef.primary` flag selects the tree row label field (shared
-`pickPrimaryField` heuristic). Inline rename of the primary label is **not** a
->>>>>>> .merge_file_80p5ZK
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
 renders an inline editor (the same `onEdit` contract the table/gallery/list use).
 
