@@ -16091,7 +16091,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/pages/:pageId/blocks/bulk-delete`
           - `POST /api/pages/:pageId/blocks/bulk-move`
           - `POST /api/pages/:pageId/blocks/bulk-duplicate`
-          - `POST /api/pages/:pageId/blocks/paste`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
@@ -16121,6 +16120,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BulkMoveBlocksBody`
           - `ColorToken`
           - `CreateBlockBody`
+          - `IdentifiedBlock`
           - `Mark`
           - `MdParseCtx`
           - `MdSerializeCtx`
@@ -16128,7 +16128,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageCover`
           - `PageData`
           - `PageRow`
-          - `PasteBlocksBody`
           - `RichText`
           - `RunsTokenExtension`
           - `RunsXmlTextOptions`
@@ -16163,6 +16162,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineBlock`
           - `deleteBlock`
           - `diffBlocks`
+          - `IdentifiedBlockSchema`
           - `isEmptyPatch`
           - `listBlocks`
           - `listPages`
@@ -16182,8 +16182,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pagesResource`
           - `parseMarkdownToForest`
           - `pasteAnchorId`
-          - `pasteBlocks`
-          - `PasteBlocksBodySchema`
           - `patchBlocks`
           - `patchesFromDiff`
           - `plainOf`
@@ -16212,6 +16210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TurnIntoPageBodySchema`
           - `updateBlock`
           - `UpdateBlockBodySchema`
+          - `withMintedIds`
           - `withRuns`
           - `xmlTextToRuns`
       - E2e:
