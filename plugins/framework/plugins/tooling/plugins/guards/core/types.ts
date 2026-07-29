@@ -26,4 +26,6 @@ export interface FileHint {
   name: string;
   match(filePath: string): boolean;
   message: string;
+  /** Tools this hint fires on. Omit for every file tool (incl. Read). */
+  tools?: ToolMatcher[];
 }

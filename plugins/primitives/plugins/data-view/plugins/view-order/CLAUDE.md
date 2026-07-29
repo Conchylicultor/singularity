@@ -8,12 +8,12 @@ restores it. No per-consumer wiring, no opt-in flag.
 `(dataViewId, viewId, rowKey)`: two view instances of the same surface hold two
 different orders, and a `+`-created view can be arranged independently. Because
 `viewId` is part of that key, every identity-bearing view config **must author an
-explicit `id`** on each view row (enforced by the `config-stable-list-ids`
-check) — a content-derived `auto-<hash>` id would shift on rename/filter-edit and
-orphan the `data_view_row_order` rows keyed on the old id. That is
-why this lives in the primitive rather than in each consumer's own rank column
-(the pre-existing `DataViewProps.manualOrder` seam, which a consumer owning a
-domain rank still uses and which still outranks this contributor).
+explicit `id`** on each view row (enforced by the `config-stable-list-ids` check) —
+a content-derived `auto-<hash>` id would shift on rename/filter-edit and orphan the
+`data_view_row_order` rows keyed on the old id. That is why this lives in the
+primitive rather than in each consumer's own rank column (the `DataViewProps.manualOrder`
+seam, which a consumer owning a domain rank still uses and which still outranks
+this contributor).
 
 **Dependency direction: this child imports the parent (`view-order → data-view`),
 never the reverse.** It contributes itself into the global
@@ -28,10 +28,9 @@ resource + one endpoint, injected back through a global slot.
   repo's fractional-index column type.
 - `rowOrderResource` — push-mode, keyed `{ dataViewId, viewId }`, emitting
   `{ rowKey, rank }[]` rank-ascending. The loader reads the table, so the **L4 DB
-  change-feed** recomputes it on every write; no notify / `dependsOn`. Because a
-  write only ever persists the moved row plus the seeds ahead of it (below), the
-  resource can only ever ship what was written — a view where the user arranged
-  the top three rows carries three rows, not the whole view.
+  change-feed** recomputes it on every write; no notify / `dependsOn`. It ships
+  only what was ever written — a view whose top three rows were arranged carries
+  three rows, not the whole view.
 - `POST /api/data-view/row-order` — the single endpoint. Body carries the drag's
   **bounded write set** (`writes: { rowKey, rank }[]`, rank-ascending), never the
   whole ordered key set. The server validates and upserts it; nothing is deleted.
@@ -47,15 +46,10 @@ as-is.
 
 ### Why a write is bounded, not a full replace
 
-The naive incremental rule (persist **only** the moved row; re-seed the rest each
-render) is **unstable**:
-
-> Rows A, B, C, none persisted → seeds `sA < sB < sC`. The user drags C between A
-> and B, and we persist only `C → r1` with `sA < r1 < sB`. On the next render A
-> and B are *still* unpersisted, so they re-seed after `max(persisted) = r1` —
-> and the display becomes **C, A, B**, not the **A, C, B** the user dropped.
-> Seeding at the top fails symmetrically. The root cause is re-deriving an
-> un-moved row's rank against an anchor the move itself displaced.
+The naive incremental rule — persist **only** the moved row, re-seed the rest each
+render — is **unstable**: an un-moved row's rank gets re-derived against an anchor
+the move itself displaced, so rows A,B,C (none persisted) with C dropped between A
+and B redisplay as **C,A,B**. (Seeding at the top fails symmetrically.)
 
 The stability this needs is guaranteed by a single **standing invariant** that
 `seedRanks` already maintains and every write must preserve:
@@ -63,19 +57,18 @@ The stability this needs is guaranteed by a single **standing invariant** that
 > **Persisted rows always display before seeded rows.** The seeds are a suffix,
 > in source order, appended after `max(persisted)`.
 
-A write is stable as long as it leaves that invariant true — and that is a
-*strictly smaller* obligation than persisting the whole view. The rule
-(`computeMoveWrites`): let the drag move row `X` before/after row `Y`, and let
-`next` be the post-move **display** sequence.
+A write is stable as long as it leaves that invariant true — a *strictly smaller*
+obligation than persisting the whole view. The rule (`computeMoveWrites`): let the
+drag move row `X` before/after row `Y`, and let `next` be the post-move **display**
+sequence.
 
 > **Persist `X`, plus every seed that lies before `X` in `next`, in `next`'s
 > order.** Everything after `X` stays seeded. Nothing is deleted.
 > Writes = `1 + (seeds now ahead of X)`.
 
-On the A,B,C counterexample the seed now ahead of `X`=C is `A`, so the write is
-`{ A, C }` — **2 rows**: `A` materialized as C's anchor, then C ranked after it.
-The next render re-seeds B after `max(persisted)` and the display holds at
-`A, C, B` — stable, without rewriting all of `tasks-list`. The cost is:
+On the A,B,C case the write is `{ A, C }` — A materialized as C's anchor, then C
+ranked after it; the next render re-seeds B after `max(persisted)` and the display
+holds at `A,C,B`. The cost:
 
 - a drag anywhere inside the already-arranged prefix → **1 row**;
 - a drag to the top of a never-arranged 3666-row view → **1 row**;
@@ -83,57 +76,46 @@ The next render re-seeds B after `max(persisted)` and the display holds at
   has, by definition, just declared an order for everything above the drop.
 
 `onMove` passes `orderedKeys` in **source** order; `computeMoveWrites` derives the
-display order itself and splices `X` there — see the display-order bug fix below.
+display order itself and splices `X` there.
 
-**The one subtle case (pinned by a test).** The materialized set is chosen by
-**position in `next`**, *not* by a source-order prefix of the same count. A seed
-dragged *downward* (`s_a` before `s_b`, `a < b`) must materialize the seeds that
-ended up ahead of it — reaching a source index *past* `X`'s own; "the first `m`
-seeds in source order" would silently no-op that drag. `order-ops.test.ts` pins
-both this downward-seed case and the original A,B,C flip.
+**The one subtle case.** The materialized set is chosen by **position in `next`**,
+*not* by a source-order prefix of the same count. A seed dragged *downward* must
+materialize the seeds that ended up ahead of it — reaching a source index *past*
+`X`'s own; "the first `m` seeds in source order" would silently no-op that drag.
+Pinned by `order-ops.test.ts` (downward-seed case + the A,B,C flip).
 
 #### Why the rank arithmetic can neither throw nor collide
 
-Materialized seeds are ranked `> max(persisted)`, so they sort after every
-pre-existing persisted row. `X` is ranked **last**, once its predecessors exist:
-
-- `pred` = the key immediately before `X` in `next` — always persisted by
-  construction (everything before `X` either already was, or was just
-  materialized), so it is a real rank.
-- `succ` = the key immediately after `X`, read from `persisted` — **not** the
-  just-minted set. A *seed* following `X` therefore reads as `null`: `X` becomes
-  the new `max(persisted)` and the untouched seeds re-seed after it, keeping the
-  invariant.
-
-So `pred < succ` always holds and `Rank.between(pred, succ)` never sees an
-inverted or equal pair — it cannot throw, and because ranks are dense-fractional
-it cannot collide with a sibling.
+Materialized seeds rank `> max(persisted)`; `X` is ranked **last**, once its
+predecessors exist. `pred` (the key before `X` in `next`) is always persisted by
+construction, so it is a real rank. `succ` (the key after `X`) is read from
+`persisted` — **not** the just-minted set — so a *seed* following `X` reads as
+`null`: `X` becomes the new `max(persisted)` and the untouched seeds re-seed after
+it, keeping the invariant. Hence `pred < succ` always holds, `Rank.between` never
+sees an inverted or equal pair (cannot throw), and dense-fractional ranks cannot
+collide with a sibling.
 
 Ranks are minted **client-side** (`Rank.between` / `Rank.nBetween` in
 `computeMoveWrites`), because the server cannot reproduce seeds — it does not know
 the view's source order. Precedent: `computeFlatReorder` (`primitives/rank/core`)
 mints client-side for the tree. Repeated `Rank.between` in the same gap grows key
-length (the dense re-rank the full replace used to run reset it every write); this
-is the same posture the tree and pages ranks already live with — no compaction
-job.
+length; same posture as the tree and pages ranks — no compaction job.
 
 #### Semantics this changes
 
 Only the **arranged prefix** freezes. Rows below it keep following the view's
 natural source order, and a **new row sorts into that tail naturally** rather than
-being appended last. Arranging the top of a list no longer commits you to an order
-for 3600 rows you never looked at.
+being appended last — arranging the top of a list no longer commits you to an
+order for 3600 rows you never looked at.
 
-#### `applyMove` operates on display order (a fixed bug)
+#### `applyMove` operates on display order
 
 `applyMove` splices `X` in the **display** order, not the source order — the order
-the user actually drags in. This matters because the two coincide *only* while
-`persisted` is empty. The old `onMove` spliced the **source** order, so the
-*second* drag on any view posted "source order with one row moved" and silently
-discarded the first drag's arrangement. `computeMoveWrites` derives the display
-order internally (it sorts `orderedKeys` by `seedRanks`), so the caller keeps
-handing it source order and the bug is gone by construction; the second-drag
-regression test pins it.
+the user actually drags in. The two coincide *only* while `persisted` is empty, so
+splicing source order silently discards the previous drag's arrangement from the
+second drag on. `computeMoveWrites` derives the display order internally (sorting
+`orderedKeys` by `seedRanks`), so the caller keeps handing it source order; pinned
+by the second-drag regression test in `order-ops.test.ts`.
 
 ### Why neighbour coordinates, not `dest.rank`
 
@@ -155,30 +137,26 @@ query: "" })`. That removes the "reordering a subset" problem entirely:
   an active search still resolves against the full ordered set (both `id` and
   `targetId` are members, and `computeMoveWrites` derives the display order from
   it), so the moved row lands adjacent to its target *globally* and no hidden row
-  is dropped — even though the write itself stays bounded. One write path — no
-  `scopeComplete` flag, no fallback endpoint.
+  is dropped. One write path — no `scopeComplete` flag, no fallback endpoint.
 - Editing the view's filter changes the ordered set, but a bounded write never
   deletes: a row that leaves the view keeps its persisted rank and re-appears at
   its old slot if it returns (see Retention).
 
 **Cost.** A drag writes `1 + (seeds now ahead of X)` rows — `O(gesture)`, not
-`O(view)` — and the live resource carries only what was ever written. The one
-case that still degrades to `O(|view|)` is a drop *deep into the never-arranged
-tail*, where the user has by definition just declared an order for the whole
-prefix above the drop; the `computeMoveWrites` cost gates pin the boundaries (row
-900 → top = 1 write; row 0 → before row 900 = 900 writes).
-
-Motivating history: under the old full-replace rule, one drag on `tasks-list`'s
-unfiltered "Recent" view persisted **3666 rows** and shipped that whole set to
-every client with the view open. That is now a 1-row write.
+`O(view)` — and the live resource carries only what was ever written. (The
+predecessor full-replace rule turned one drag on `tasks-list`'s "Recent" view into
+a **3666-row** write shipped to every client with the view open.) The one case
+that still degrades to `O(|view|)` is a drop *deep into the never-arranged tail*;
+the `computeMoveWrites` cost gates pin the boundaries (row 900 → top = 1 write;
+row 0 → before row 900 = 900 writes).
 
 ## Row keys
 
-`rowKey(row, 0)` is called with a **constant index**, because `FieldDef.value`
-gets no index. A surface whose row keys are index-derived therefore cannot persist
-an order (its keys would shift under the very reorder they encode). This is the
-identical documented edge case as `custom-columns`; every DataView in the repo
-passes an id-derived `rowKey`.
+`rowKey(row, 0)` is called with a **constant index**, because `FieldDef.value` gets
+no index. A surface whose row keys are index-derived therefore cannot persist an
+order (its keys would shift under the very reorder they encode) — the identical
+edge case as `custom-columns`; every DataView in the repo passes an id-derived
+`rowKey`.
 
 While the live resource is `pending` the contributor renders `render(null)` — an
 empty `persisted` map is indistinguishable from "never reordered", and seeding
@@ -191,32 +169,28 @@ user's arrangement.
 cascade is impossible: a deleted row leaves a stale order entry. There is
 **deliberately no sweep** — neither `defineRetention` nor `markFirehose` — for the
 same reason `data_view_custom_values` has none: the table is bounded by rows a
-user actually dragged, not by a firehose. There is **no self-GC**: a bounded write
-only ever upserts, so a key that has left the view is simply left in place.
+user actually dragged, not by a firehose. And no self-GC: a bounded write only
+ever upserts, so a key that has left the view is simply left in place.
 
-This is **display-safe**. `seedRanks` keys on membership in the ordered set, so a
-stale entry is invisible to the display — the only trace it leaves is holding
-`max(persisted)` slightly high, which lengthens subsequent seed keys by a
-character or two. It also makes `seedRanks`' own doc-comment finally true: a row
-the view filters out and later re-shows re-appears at its **old persisted slot**,
-which is exactly what the comment always claimed and what the old full replace
-silently contradicted (its next-drag replace would have dropped the absent key).
+This is **display-safe**: `seedRanks` keys on membership in the ordered set, so a
+stale entry is invisible to the display — its only trace is holding
+`max(persisted)` slightly high, lengthening subsequent seed keys by a character or
+two. It is also what makes the "a filtered-out row re-appears at its **old
+persisted slot**" guarantee true.
 
-The durable reclaim path is the already-filed **generic data-view row GC**, which
-this primitive cannot build alone (it cannot enumerate live `rowKey`s across
+The *only* durable reclaim path is the already-filed **generic data-view row GC**,
+which this primitive cannot build alone (it cannot enumerate live `rowKey`s across
 arbitrary consumers — that needs a way for a consumer to publish its live key
-set). It is now the *only* reclaim path for `data_view_row_order`, the identical
-posture as `data_view_custom_values`.
+set). Identical posture to `data_view_custom_values`.
 
 ## Tests
 
 - `core/internal/order-ops.test.ts` (bun:test, pure) — `seedRanks`, `applyMove`,
-  and `computeMoveWrites`: the A,B,C stability counterexample, the **downward-seed
-  case** (materialize by next-position, not a source prefix), the **second-drag
-  regression** (the move is over display order, not source), the **cost gates** (a
-  drag costs `O(gesture)`), and the **LCG round-trip property test** — the real
-  stability gate: folding a random drag's `writes` into `persisted` and re-seeding
-  reproduces the post-move display exactly, invariant intact.
+  `computeMoveWrites`: the A,B,C stability counterexample, the downward-seed case,
+  the second-drag regression, the cost gates, and the **LCG round-trip property
+  test** — the real stability gate: folding a random drag's `writes` into
+  `persisted` and re-seeding reproduces the post-move display exactly, invariant
+  intact.
   `bun test plugins/primitives/plugins/data-view/plugins/view-order/core`
 - `server/internal/handle-set-row-order.test.ts` (bun:test, real DB via
   `db-test-fixture` + the real migration chain) — the bounded upsert: a key absent

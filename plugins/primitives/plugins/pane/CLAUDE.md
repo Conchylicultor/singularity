@@ -1,14 +1,13 @@
 # Pane
 
-The unified pane primitive. One pane = one URL segment + one component.
-The runtime source of truth is the **route store** (`currentRoute:
-PaneSlot[]`), not the URL. The URL is derived for deep linking; on
-navigation the route is persisted in `history.state` so back/forward
-works without re-parsing. A layout renderer maps the route to a visible
-arrangement — Miller columns paints each pane as a column; Full-pane
-paints only the current pane. The route itself is layout-agnostic. Each
-pane is self-contained: it receives `options` / an optimistic `hint` from
-its opener and self-fetches any data it needs.
+The unified pane primitive. One pane = one URL segment + one component. The
+runtime source of truth is the **route store** (`currentRoute: PaneSlot[]`), not
+the URL: the URL is derived for deep linking, and the route is persisted in
+`history.state` so back/forward works without re-parsing. The route is
+layout-agnostic — a layout renderer maps it to an arrangement (Miller paints
+each pane as a column; Full-pane paints only the current pane). Each pane is
+self-contained: it receives `options` / an optimistic `hint` from its opener and
+self-fetches any data it needs.
 
 Design rationale lives in:
 
@@ -26,119 +25,62 @@ Design rationale lives in:
 
 ```ts
 // plugins/tasks/web/panes.ts
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-
 export const tasksRootPane = Pane.define({
-  id: "tasks-root",
-  segment: "tasks",
-  component: TasksRoot,
+  id: "tasks-root", segment: "tasks", component: TasksRoot,
 });
 
 export const taskDetailPane = Pane.define({
   id: "task-detail",
-  defaultAncestors: [tasksRootPane],  // hint: prepend tasksRootPane when opening from scratch
+  defaultAncestors: [tasksRootPane],  // prepend when opening from scratch
   segment: "t/:taskId",
   component: TaskDetail,
 });
 ```
 
-Then register each pane from your plugin's `index.ts`:
-
-```ts
-// plugins/tasks/web/index.ts
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { tasksRootPane, taskDetailPane } from "./panes";
-
-export default {
-  id: "tasks",
-  contributions: [
-    Pane.Register({ pane: tasksRootPane }),
-    Pane.Register({ pane: taskDetailPane }),
-    // …other contributions
-  ],
-} satisfies PluginDefinition;
-```
-
-`Pane.define` is a pure factory: it returns a typed `PaneObject` you
-can call (`.open(...)`, `.useParams()`, `.Actions(...)`) but does not
-register the pane with the matcher. `Pane.Register({ pane })` is what
-makes the URL routable. A defined-but-not-registered pane will compile
-fine but never match — register every pane your plugin owns.
+`Pane.define` is a pure factory: it returns a typed `PaneObject` (`.open()`,
+`.useParams()`, `.Actions()`) but does NOT make the URL routable. Register every
+pane your plugin owns with a `Pane.Register({ pane })` entry in the plugin's
+`contributions` array — a defined-but-unregistered pane compiles fine and never
+matches.
 
 Rules:
 
-- `id` is a stable string; used for slot keys and debug output.
-- `defaultAncestors` (optional) — a hint for `openPane` when no caller
-  context exists. When a pane is opened via `.open()` or `openPane()`
-  without being inside an existing route, the runtime prepends the listed
-  ancestors to build a complete route. This is purely a convenience for
-  "open from scratch" — it does NOT constrain where the pane can appear.
-  Any pane can appear at any position in the route.
-- `segment` is the pane's own URL fragment (no leading slash). Supports
-  `:param` and `:rest*` (wildcard). Omit for "no URL segment of my own".
-  **Segments with params must have a static prefix** (e.g. `t/:taskId`,
-  not bare `:taskId`) to avoid URL parsing ambiguity. Segments must be
-  globally unique across all registered panes.
-- `component` renders the pane body.
-- `width` (optional) — default column width in pixels for layout
-  renderers that arrange panes as columns (Miller). Last column flex-grows
-  regardless. Defaults to 400.
-- `options` (optional) — literal DEFAULTS record for opener-supplied UI
-  configuration. See **Non-URL state** below.
-- `hint` (optional) — `type<T>()` marker declaring the shape of an
-  optimistic, ephemeral mirror of server-owned state. See **Non-URL state**.
+- `defaultAncestors` is only a hint for opening from scratch (no caller
+  context) — it does NOT constrain where the pane can appear. Any pane can
+  appear at any position in the route.
+- `segment` is the pane's own URL fragment (no leading slash); supports `:param`
+  and `:rest*`. Omit for "no URL segment of my own". A bare leading `:param`
+  throws at define time (add a static prefix, e.g. `t/:taskId`); global
+  uniqueness is enforced by the `pane:segments-unique` check.
+- `width` (optional) — default column width in pixels for column layouts
+  (Miller). Last column flex-grows regardless. Defaults to 400.
+- `options` / `hint` — see **Non-URL state** below.
 
 ## Read params
 
-```tsx
-function TaskDetail() {
-  const { taskId } = taskDetailPane.useParams();           // typed, own-only
-  const task = useTask(taskId);                             // self-fetch
-  return <PaneChrome pane={taskDetailPane} title={task?.title}>…</PaneChrome>;
-}
-```
-
-`useParams()` is own-only: it returns only the `:name` segments from *this*
-pane's `segment`, not any inherited from ancestors. Reading an ancestor's
+`pane.useParams()` is **own-only**: it returns only the `:name` segments from
+*this* pane's `segment`, not any inherited from ancestors. Reading an ancestor's
 params is explicit: `ancestorPane.useParams()`.
 
 ## Query the route from outside a pane
 
 The route match is a property of the **surface**, not of the layout renderer
-that paints the main area. `PaneSurfaceProvider` resolves it once and provides
-it to the whole surface subtree, so a sidebar, a pane toolbar and a pane body
-all read the same match. (Before that hoist the three layout renderers each
-owned the provider, and a sidebar — a *sibling* of the renderer — silently read
-`null` forever. Highlights simply never lit.)
+that paints the main area. `PaneSurfaceProvider` resolves it once for the whole
+surface subtree, so a sidebar, a pane toolbar and a pane body all read the same
+match.
 
-Use `useRouteEntry()` / `useRouteEntries()` to check whether a pane
-is present in the current route and read its params — without reaching
-into `_internal` or importing `usePaneMatch()`:
-
-```tsx
-// Single entry (first match, or null if absent):
-const selectedId = taskDetailPane.useRouteEntry()?.params.taskId;
-
-// Boolean presence check:
-const isOpen = addServerPane.useRouteEntry() !== null;
-
-// Multiple instances (e.g. conversationPane can appear more than once):
-const convEntries = conversationPane.useRouteEntries();
-const lastConv = convEntries.at(-1);
-```
-
-Each entry exposes `{ instanceId, params, fullParams }`. Use
-`instanceId` with `pane.close(instanceId)` when you need to close the
-specific instance you found.
+Use `pane.useRouteEntry()` (first match, or `null`) / `pane.useRouteEntries()`
+(for panes that can appear more than once, e.g. `conversationPane`) to check
+presence and read params — without reaching into `_internal` or importing
+`usePaneMatch()`. Each entry is `{ instanceId, params, fullParams }`; pass
+`instanceId` to `pane.close(instanceId)` to close the specific instance found.
 
 **Outside every surface there is no route to read.** Global chrome (the action
 bar at `Core.Root`, `Apps.TabBarActions`) is not inside any
 `PaneSurfaceProvider`, so these hooks throw there rather than returning a
 plausible-looking `null` — the same policy as `usePaneStore()`. `null` stays a
-legitimate *in-surface* answer ("this pane is not in the route"); the two used
-to be the same value, which is exactly how the dead highlights went unnoticed.
-Global chrome navigates with `navigate()` from
-`@plugins/apps-core/plugins/tabs/web`.
+legitimate *in-surface* answer ("this pane is not in the route"). Global chrome
+navigates with `navigate()` from `@plugins/apps-core/plugins/tabs/web`.
 
 ## Non-URL state: `options` and `hint`
 
@@ -164,23 +106,12 @@ Declare the **defaults**, not a type. The default *is* the deep-link value,
 stated once:
 
 ```ts
-export const filePane = Pane.define({
-  id: "file",
-  segment: "f/:path",
-  component: FileBody,
-  options: { compact: false },
-});
-
-// Opening with a partial override:
-openPane(filePane, { path }, { mode: "push", options: { compact: true } });
-
-// Reading — TOTAL, never Partial, so there is nothing to `??`:
-function FileBody() {
-  const { compact } = filePane.useOptions();   // boolean
-}
+Pane.define({ id: "file", segment: "f/:path", component: FileBody, options: { compact: false } });
+openPane(filePane, { path }, { mode: "push", options: { compact: true } });  // partial override
 ```
 
-A pane that declares no `options` **rejects** them at the call site.
+`filePane.useOptions()` is **TOTAL**, never `Partial` — nothing to `??` at a
+read site. A pane that declares no `options` **rejects** them at the call site.
 
 ### `hint` — an optimistic mirror, structurally unwritable
 
@@ -189,13 +120,7 @@ It is absent on every route the browser rebuilt (deep link, reload,
 back/forward) and may be stale when present. **It is never a source of truth.**
 
 ```ts
-export const sonataPlayerPane = Pane.define({
-  id: "sonata-player",
-  segment: "song/:songId",
-  component: SonataPlayerSurface,
-  hint: type<{ title: string }>(),
-  useTitle: useSongTitle,
-});
+Pane.define({ …, hint: type<{ title: string }>(), useTitle: useSongTitle });
 
 openPane(sonataPlayerPane, { songId }, { mode: "root", hint: { title: song.title } });
 
@@ -223,49 +148,30 @@ hint.pick("title", canonical) ?? null                          // ✓ honest abs
 hint.pick("title", canonical) ?? <Placeholder>Untitled</…>     // ✓ a ReactNode is never a DB value
 ```
 
-> **Why this shape.** A deep-linked `/sonata/song/:id` once seeded an app-context
-> mirror with `input.title ?? "Untitled"`, and a chord-grid autosave wrote
-> `"Untitled"` over the real song name. `useInput()` made a possibly-absent
-> display hint look like ordinary pane data. See
+> **Why this shape.** The old `useInput()` made a possibly-absent display hint
+> look like ordinary pane data: a deep-linked song seeded an app-context mirror
+> with `input.title ?? "Untitled"` and a chord-grid autosave wrote `"Untitled"`
+> over the real name. See
 > `research/2026-07-10-global-pane-input-hint-vs-options.md` and
 > `research/2026-07-10-sonata-song-title-single-owner.md`.
 >
-> If an option's default would be a **lie about server state**
-> (`options: { title: "Untitled" }`), it is a hint, not an option.
+> The lint rule cannot decide the *declaration*: if an option's default would be
+> a **lie about server state** (`options: { title: "Untitled" }`), it is a hint,
+> not an option.
 
 ## Navigate
 
-```tsx
-// Top-level pane (no parent path segments):
-<button onClick={() => tasksRootPane.open({})}>Tasks</button>
-
-// Nested pane: open() takes the full ancestor+own param set, since the
-// router builds the URL from the pane's fullPath.
-<button
-  onClick={() => taskConversationPane.open({ taskId, convId })}
->Open</button>
-```
-
-`open(params)` pushes a new URL. `close()` navigates to the parent.
-`promote()` detaches from ancestors and makes this pane the root.
+`pane.open(params)` pushes a new URL and takes the **full ancestor + own** param
+set (the router builds the URL from the pane's `fullPath`). `close()` navigates
+to the parent, `promote()` detaches from ancestors and makes this pane the root,
 `back()`/`forward()` walk browser history.
 
 ### `useOpenPane` — caller-aware navigation
 
-Inside a pane component, `useOpenPane()` returns a function that knows
-the caller's position in the route:
-
-```tsx
-const openPane = useOpenPane();
-
-// Open to the right of me (default):
-openPane(taskDetailPane, { taskId }, { mode: "push" });
-
-// Insert to the left of me:
-openPane(attemptPane, { attemptId }, { mode: "push", side: "left" });
-```
-
+Inside a pane component, `useOpenPane()` returns an
+`openPane(pane, params, opts)` that knows the caller's position in the route.
 Modes:
+
 - `"root"` — replace the entire route with a fresh one rooted at target.
 - `"push"` — insert target relative to the caller. `side: "right"`
   (default) appends after the caller, truncating siblings to the right.
@@ -275,187 +181,94 @@ Modes:
 
 ## Chrome
 
-**Every pane wraps its body in `<PaneChrome pane={…}>`** — that's the
-convention, and there is no opt-out: `PaneChrome` ALWAYS renders a
-header `Bar` plus exactly one body scroll (`PaneScroll`), so a pane can
-never strand its own scrolling. PaneChrome renders a standard header:
-the title, optional left-side actions, optional right-side actions, a
-promote button (detach from ancestors and make root), and a × close
-button on the far right. Both promote and close only show when
-`depth > 0`.
+**Every pane wraps its body in `<PaneChrome pane={…}>`** — there is no opt-out:
+`PaneChrome` ALWAYS renders a header `Bar` plus exactly one body scroll
+(`PaneScroll`), so a pane can never strand its own scrolling. The standard
+header is: title, left Actions, right Actions, promote, × close. Promote and
+close only show when `depth > 0`.
 
-A pane whose body is its own UI (a sidebar list, a card grid, a
-`DataView`) simply gives `<PaneChrome>` a `title` and renders the body
-directly as children — the body is natural-height and the chrome's
-`PaneScroll` scrolls it. A pane that needs a **rich custom header**
-(transport / view-switcher / volume) opts into `chrome.header` (see
-**Custom header** below) — the header content changes, but the bar
-height, the body wrapper, and the single scroll do not.
+A pane that needs a **rich custom header** (transport / view-switcher / volume)
+opts into `chrome.header` (see **Custom header** below) — the header content
+changes, but the bar height, the body wrapper, and the single scroll do not.
 
-```tsx
-function TaskDetailBody() {
-  const { taskId } = taskDetailPane.useParams();
-  const task = useTask(taskId);                 // self-fetch
-  return (
-    <PaneChrome pane={taskDetailPane} title={task?.title}>
-      <TaskDetailSections taskId={taskId} />
-    </PaneChrome>
-  );
-}
-```
-
-Title resolution: the `title` prop wins; otherwise PaneChrome falls
-back to the pane's `chrome.title` config (`string | (params) =>
-string`). Use the prop when the title needs loaded data; use the config
-when it's static or derivable from URL params.
+Title resolution: the `title` prop wins; otherwise PaneChrome falls back to the
+pane's `chrome.title` config (`string | (params) => string`). Use the prop when
+the title needs loaded data; use the config when it's static or derivable from
+URL params.
 
 #### Tab / document title ownership (`titleOwner`)
 
-The pane's own header title (above) is distinct from the **tab/document
-title** — the label shown in the tab bar and mirrored into
-`document.title`. That one is resolved per route by the tab surface via
-`usePaneTitle` (the pane's `useTitle` hook, falling back to
-`chrome.title`), against the route's **title owner**: the FIRST pane in
-the route declaring `titleOwner: true` on `Pane.define`.
+The pane's own header title (above) is distinct from the **tab/document title**.
+That one is resolved per route by the tab surface via `usePaneTitle` (the pane's
+`useTitle` hook, falling back to `chrome.title`), against the route's **title
+owner**: the FIRST pane in the route declaring `titleOwner: true`.
 
-`titleOwner` marks a **main surface** — a pane whose entity is the
-identity of the page (a conversation, a task, a page, a song), as
-opposed to navigation lists/trees or auxiliary tool panes (file peek,
-review, terminal). First-owner-wins gives the right answer in both
-directions with a single static declaration:
+`titleOwner` marks a **main surface** — a pane whose entity is the identity of
+the page (a conversation, a task, a page, a song), as opposed to navigation
+lists/trees or auxiliary tool panes (file peek, review, terminal).
+First-owner-wins gives the right answer in both directions from one static
+declaration: aux panes stacked to the right never steal the title, and the same
+conversation pane opened as a drill-in under a task stays subordinate to it.
+Routes with no title owner fall back to the leaf pane (then the app index pane,
+then the app name).
 
-- `attempt / conv / file-peek` → the conversation titles the tab; aux
-  panes stacked to its right never steal it.
-- `tasks-root / task-detail / conv` → the task titles the tab; the same
-  conversation pane is a drill-in here, subordinate to the task.
-
-Routes with no title owner fall back to the leaf pane (then the app
-index pane, then the app name). Declaring `titleOwner` without a
-`useTitle`/`chrome.title` that actually resolves would pin the tab to
-the app name — give the owner a title source.
+Declaring `titleOwner` without a `useTitle`/`chrome.title` that actually
+resolves would pin the tab to the app name — give the owner a title source.
 
 #### Title typography is container-owned
 
-PaneChrome wraps the title region — string **or** node — in the
-canonical `<Text variant="label">` baseline (see `pane-chrome.tsx`). A
-title node therefore inherits the pane-title size by CSS inheritance and
-**must not set its own typography size** — per-segment weight/color
-(e.g. a breadcrumb's `font-medium`/muted) still composes on top, but the
-*size* comes from the container. This is the same container-enforced
-pattern as `control-size` (density via context) and `icon-auto`
-(em-based slot icons): the container declares it once so every title
-lands on the same size with zero per-pane effort.
+PaneChrome wraps the title region — string **or** node — in the canonical
+`<Text variant="label">` baseline (see `pane-chrome.tsx`). A title node
+therefore inherits the pane-title size and **must not set its own typography
+size** — per-segment weight/color (e.g. a breadcrumb's `font-medium`/muted)
+still composes on top, but the *size* comes from the container.
 
-Enforced by `lint/no-adhoc-pane-title.ts` — an inline `<Text variant>`
-inside a `PaneChrome title={…}` node fails `./singularity check` (raw
-`text-*`/`leading-*` is already banned everywhere by
-`text/no-adhoc-typography`; this closes the `<Text variant>` escape for
-titles specifically). Scope mirrors `no-adhoc-slot-icon-size`: inline
-JSX only, owner must be `PaneChrome`, no variable tracing. A deliberate
-override escapes per-site via
-`// eslint-disable-next-line pane/no-adhoc-pane-title -- reason`.
+Enforced by `lint/no-adhoc-pane-title` (an inline `<Text variant>` inside a
+`PaneChrome title={…}` node); raw `text-*`/`leading-*` is already banned
+everywhere by `text/no-adhoc-typography`.
 
 ### `PaneScroll` — the sanctioned pane-body scroll viewport
 
-`PaneScroll` (`import { PaneScroll } from
-"@plugins/primitives/plugins/pane/web"`) is the single sanctioned pane-body
-vertical scroll viewport — a dead-thin `<Scroll axis="y" fill h-full>`. The
-mental model is: **a pane body is exactly one `PaneScroll`; every header inside
-it is a `<Sticky>`** (from
+`PaneScroll` is the single sanctioned pane-body vertical scroll viewport — a
+dead-thin `<Scroll axis="y" fill h-full>`. The mental model is: **a pane body is
+exactly one `PaneScroll`; every header inside it is a `<Sticky>`** (from
 `@plugins/primitives/plugins/css/plugins/sticky/web`), so toolbars and section
 headers pin against this one viewport instead of each owning a nested scroller.
 
-`PaneChrome` always routes its body through `PaneScroll`, so any pane wrapped
-in `<PaneChrome>` gets the one sanctioned scroll for free and should not add its
-own `overflow-*`. A body with an inner header + scrollable region (so the
-chrome's `PaneScroll` is naturally inert) should still reach for `<PaneScroll>`
-on the inner region rather than re-deriving `overflow-y-auto min-h-0 flex-1`.
-`PaneScroll` forwards `ref` (for a host that needs the
-scroll-container element, e.g. an `IntersectionObserver` root) and the rest of
-`Scroll`'s surface (`hideScrollbar`, `isolate`, `as`, `className`).
-
-### Scroll responsibility
-
-PaneChrome's content wrapper is a `PaneScroll` (`overflow-y-auto`) — it scrolls
-by default. Pane bodies should not add `overflow-*` on their root div.
+`PaneChrome` always routes its body through `PaneScroll`, so pane bodies get the
+one sanctioned scroll for free and **should not add `overflow-*` on their root**:
 
 - **Simple content** → do nothing. PaneChrome scrolls.
-- **Header + scrollable body** → root is `flex h-full flex-col`.
-  Sub-header is fixed, body is `flex-1 min-h-0 overflow-auto`.
-  PaneChrome's scroll is naturally inert (`h-full` fills it exactly).
-- **Custom viewport** (terminal, canvas) → root is `h-full`.
+- **Header + scrollable body** → root is `flex h-full flex-col`; the inner
+  scrollable region is a `<PaneScroll>` (not a re-derived
+  `overflow-y-auto min-h-0 flex-1`). PaneChrome's scroll is naturally inert
+  (`h-full` fills it exactly).
+- **Custom viewport** (terminal, canvas) → root is `h-full`;
   `overflow-hidden` on root is acceptable as a defensive measure.
 
-Exception: if the pane needs a ref to the scroll container (e.g.
-IntersectionObserver root), it may keep its own `overflow-y-auto`
-div with `h-full` — PaneChrome's scroll stays inert.
+`PaneScroll` forwards `ref` (for a host that needs the scroll-container element,
+e.g. an `IntersectionObserver` root) and the rest of `Scroll`'s surface
+(`hideScrollbar`, `isolate`, `as`, `className`).
 
 ### Actions
 
-Each pane auto-creates an `Actions` slot. Other plugins contribute:
+Each pane auto-creates an `Actions` slot other plugins contribute to
+(`taskDetailPane.Actions({ component, position })`). `position` defaults to
+`"right"` (after the title spacer, with the rest of the toolbar); `"left"` sits
+immediately after the title — for status chips or context badges.
 
-```ts
-taskDetailPane.Actions({ component: RefreshButton });
-taskDetailPane.Actions({ component: StatusBadge, position: "left" });
-```
-
-`position` defaults to `"right"`. `"left"` sits immediately after the
-title — use it for status chips or context badges that follow the title.
-`"right"` sits after the title spacer with the rest of the toolbar.
-
-For the common ghost-icon-button case, use the shared
-`<PaneIconAction>`:
-
-```tsx
-import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
-import { MdRocketLaunch } from "react-icons/md";
-
-function OpenAppButton() {
-  const { taskId } = taskDetailPane.useParams();
-  return (
-    <PaneIconAction
-      label="Open app"
-      icon={MdRocketLaunch}
-      onClick={() => window.open(`/foo/${taskId}`)}
-    />
-  );
-}
-```
-
-`<PaneIconAction>` forwards refs so it composes with components that
-need a button ref. (Base UI Popover triggers don't take `asChild` — use
+For the common ghost-icon-button case, use the shared `<PaneIconAction label
+icon onClick>`; it forwards refs so it composes with components that need a
+button ref. (Base UI Popover triggers don't take `asChild` — use
 `<PopoverTrigger className={buttonVariants({variant:"ghost",size:"icon"})}>`
 directly when the trigger needs to be a popover.)
 
-### Hiding the close button
+### Hiding the close / promote buttons
 
-```ts
-Pane.define({
-  id: "task-detail",
-  parent: tasksRootPane,
-  path: ":taskId",
-  component: TaskDetailBody,
-  chrome: { close: false },
-});
-```
-
-Use this when the close button doesn't belong (e.g. a pane that
-already navigates somewhere else on close, or one whose parent isn't
-a meaningful "back" target).
-
-### Hiding the promote button
-
-```ts
-Pane.define({
-  id: "agent-side",
-  segment: "agent/:agentId",
-  component: AgentSideBody,
-  chrome: { promote: false },
-});
-```
-
-Use this for compact side-panels that have their own expand action
-(e.g. an Action button that opens the full detail pane as root).
+- `chrome: { close: false }` — when close has no meaningful destination (the
+  pane navigates elsewhere on close, or its parent isn't a "back" target).
+- `chrome: { promote: false }` — for compact side-panels with their own expand
+  action (e.g. a button that opens the full detail pane as root).
 
 ### Custom header (`chrome.header`)
 
@@ -475,22 +288,9 @@ export const MyToolbar = definePaneToolbar("myapp.toolbar");
 MyToolbar.Start({ id: "back", component: BackButton });
 MyToolbar.End({ id: "volume", component: VolumeControl });
 
-// the pane opts in:
-export const myPane = Pane.define({
-  id: "my-pane",
-  segment: "my/:id",
-  component: MyPaneBody,
-  chrome: { header: MyToolbar },
-});
+export const myPane = Pane.define({ …, chrome: { header: MyToolbar } });
 
-// the body renders directly under PaneChrome — NO header inside it:
-function MyPaneBody() {
-  return (
-    <PaneChrome pane={myPane}>
-      <MyContent />
-    </PaneChrome>
-  );
-}
+// the body renders directly under <PaneChrome pane={myPane}> — NO header in it.
 ```
 
 `PaneChrome` renders the `Start`/`End` zones INSIDE its standard
@@ -527,27 +327,27 @@ stays app-agnostic:
   `popstate` listener is its only caller — and rebuilds the in-memory state.
 
 Programmatic navigation ⇒ `shell:navigate`; browser traversal ⇒ `popstate`. A
-hard event contract, not idempotency-by-comparison. The **`defaultHistoryAdapter`**
-(standalone / tests) writes the route verbatim and restores it straight back
-into the live store via `handleLocationChange()`. The **tabs layer installs an
-app-aware adapter** (`setHistoryAdapter`) that widens every entry into a
-complete SNAPSHOT of what the user was looking at — `{ tabId, appId, route |
-pending }` — and restores the whole snapshot (refocus the tab, re-sync its app,
-restore the route) with zero URL parsing. `handleLocationChange` reads only
-`route`/`pending` and ignores the extra keys, so the primitive never learns
-about tabs. See the tabs `CLAUDE.md` for the snapshot model.
+hard event contract, not idempotency-by-comparison. The
+**`defaultHistoryAdapter`** (standalone / tests) writes the route verbatim and
+restores it straight back into the live store via `handleLocationChange()`. The
+**tabs layer installs an app-aware adapter** (`setHistoryAdapter`) that widens
+every entry into a complete SNAPSHOT of what the user was looking at —
+`{ tabId, appId, appInstance, route | pending }` — and restores it whole
+(refocus the tab, re-sync its app, restore the route) with zero URL parsing. See
+the tabs `CLAUDE.md` for the snapshot model.
 
-The shell adapter also stamps the **app instance** that wrote each entry
-(`appInstance`, from `primitives/app-instance`) — one running SPA app-state, of
-which a single browser tab hosts a sequence. An entry therefore names not just
-which tab it belonged to but which instance that tab id is meaningful in, so a
-cold boot can tell "restore the state this entry belongs to" from "this entry
-came from somewhere else". Still invisible to the pane store: it is one more
-ignored key on `history.state`.
+`appInstance` (from `primitives/app-instance`) names one running SPA app-state,
+of which a single browser tab hosts a sequence — so an entry says not just which
+tab it belonged to but which instance that tab id is meaningful in, letting a
+cold boot tell "restore the state this entry belongs to" from "this entry came
+from somewhere else". None of it reaches the primitive:
+`handleLocationChange` reads only `route`/`pending` and ignores the extra keys,
+so the pane store never learns about tabs.
 
 URL parsing (`parseUrl`) is only a fallback for initial page load, shared deep
 links, and legacy history entries with no snapshot.
 
+<<<<<<< .merge_file_PrBeCw
 ### The address bar is untrusted input
 
 Every read of the browser's route path goes through **`currentRoutePath()`**
@@ -580,6 +380,12 @@ The router rebuilds its lookup table from the
 `useSyncPaneRegistry()`, so adding or removing a pane is just adding or
 removing a `Pane.Register({ pane })` entry from a plugin's
 `contributions` array.
+=======
+The shell mounts a layout renderer once (`<MillerColumns/>` from
+`@plugins/layouts/plugins/miller/web`, or `<FullPane/>`), which reads the route
+via `useRoute()`. The router rebuilds its lookup table from the `Pane.Register`
+contribution list synchronously on every render via `useSyncPaneRegistry()`.
+>>>>>>> .merge_file_FjbkT2
 
 ## Testing
 
@@ -594,14 +400,8 @@ every suite at once:
 ```tsx
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
-let store: PaneStore;
-beforeEach(() => { store = createTestSurfaceStore(); });
-
-render(
-  <TestSurface store={store} plugins={[testPlugin]}>
-    <ComponentUnderTest />
-  </TestSurface>,
-);
+const store = createTestSurfaceStore();   // in beforeEach
+render(<TestSurface store={store} plugins={[testPlugin]}><ComponentUnderTest /></TestSurface>);
 ```
 
 Two rules the fixture encodes, both of which have bitten:
@@ -609,8 +409,7 @@ Two rules the fixture encodes, both of which have bitten:
 - **A store is not optional.** `PaneStoreContext` has no default (see
   `usePaneStore`), so anything reaching a route hook — including a pane's
   Loading / Not-Found chrome, via `useClose()`/`usePromote()` — throws without a
-  surface above it. Suites written before that change sat broken for weeks,
-  because nothing re-runs them.
+  surface above it.
 - **`live: true` for anything URL-derived.** `handleLocationChange` early-returns
   for a background store, so a `live: false` store never reads
   `window.location` and every deep-link case resolves empty. Conversely, pass

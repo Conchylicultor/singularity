@@ -9,14 +9,12 @@ full design rationale, planned field types, and storage model.
 import { defineConfig } from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { avatarField } from "@plugins/fields/plugins/avatar/plugins/config/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 
 export const myConfig = defineConfig("my-plugin", {
   fields: {
     enabled: boolField({ label: "Enabled", default: true }),
     name: textField({ label: "Display name" }),
-    icon: avatarField({ label: "Icon" }),
     items: listField({
       label: "Items",
       itemFields: {
@@ -27,9 +25,8 @@ export const myConfig = defineConfig("my-plugin", {
 });
 ```
 
-Each field carries its Zod schema, default value, and UI metadata. The
-settings pane renders fields automatically — no manual registration. Available
-field types live under `plugins/fields/plugins/`; see
+Each field carries its Zod schema, default value, and UI metadata; the settings pane
+renders them automatically. Field types live under `plugins/fields/plugins/`; see
 [fields/CLAUDE.md](plugins/fields/CLAUDE.md) to add new ones.
 
 ## Reading config
@@ -42,19 +39,15 @@ cache. `watchConfig(myConfig, cb)` notifies on changes.
 ## Descriptor provenance (`source`)
 
 Every `ConfigDescriptor` carries a `source: "manual" | "reorder" | "view"`, set by
-`defineConfig` (defaults to `"manual"`). It distinguishes **hand-authored** configs
-from the two **auto-generated** families — one descriptor per reorderable render
-slot (`reorderDirectiveDescriptor`, `source: "reorder"`) and one per DataView
-consumer (`viewsDescriptor`, `source: "view"`). It is named `source`, **not
-`origin`**, deliberately: `origin` already means the `.origin.jsonc` code/git layer
-throughout this plugin, so reusing it would collide.
+`defineConfig` (defaults to `"manual"`), distinguishing **hand-authored** configs from
+the two **auto-generated** families — one descriptor per reorderable render slot
+(`reorderDirectiveDescriptor`) and one per DataView consumer (`viewsDescriptor`). Named
+`source`, **not `origin`**: `origin` already means the `.origin.jsonc` layer here.
 
-`source` lives on the descriptor object only — it is **not** part of the config
-document or schema, so it never affects an origin `@hash` or
-`config-origins-in-sync`. The settings config nav surfaces it as a filterable
-`enum` field (filter by Authored / Reorder / View) and a per-row tag. When a new
-primitive starts generating descriptors, give it its own `source` value rather than
-leaving generated configs indistinguishable from authored ones.
+`source` lives on the descriptor object only — **not** in the config document or schema,
+so it never affects an origin `@hash` or `config-origins-in-sync`; the settings config nav
+surfaces it as a filterable `enum`. A new primitive that generates descriptors must give
+itself its own `source` value.
 
 ## Three-layer config model
 
@@ -71,7 +64,7 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/config/
 
 **Agent overrides:** Copy to `config/<plugin-tree>/<name>.jsonc`, edit values, keep the `// @hash` line from origin.
 
-**Conflict detection:** When origin regenerates with a new hash, the `config-origins-in-sync` check fails on any `.jsonc` override referencing the old hash. Agent must review origin changes, update the override, and set `// @hash` to the new origin hash.
+**Conflict detection:** when origin regenerates with a new hash, `config-origins-in-sync` fails on any `.jsonc` override still referencing the old one. Review the origin change, update the override, restamp `// @hash`.
 
 ### Layer 2: git → user (build-time)
 
@@ -83,7 +76,7 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/config/
 
 ### App scopes: per-app config in git
 
-A descriptor's config can be customized **per app** straight from version control — no code declares scopes; you commit a JSONC file at an `@app/<id>` path and `./singularity build` does the rest. An app at `http://<wt>.localhost:9000` whose id is `<id>` then resolves the scoped values; every other app keeps the base value.
+A descriptor's config can be customized **per app** straight from version control — no code declares scopes; you commit a JSONC file at an `@app/<id>` path and `./singularity build` does the rest. The app whose id is `<id>` then resolves the scoped values; every other app keeps the base value.
 
 **To customize app `<id>` for the descriptor at `<plugin-tree>` (config name `<name>`, usually `config`):**
 
@@ -97,78 +90,61 @@ This is the base-override workflow (Layer 1) one path segment deeper. Any regist
 
 **Reading a scoped value (consumer):** thread the app scope yourself — `config_v2` is app-agnostic. `useConfig(cfg, { scopeId: appId ? \`app:${appId}\` : undefined })` with `appId = useCurrentAppId()`. Committed scopes are pre-hydrated in the boot snapshot, so the scoped value paints on the first frame (no flash). On the server, `getConfig(cfg, "app:<id>")`.
 
-**Scoped read/write are symmetric — one authoritative signal.** Both ends key off the **same** server predicate, `scopeHasOwnConfig(descriptor, scopeId)` (the scope's origin OR override exists), so they can never disagree:
+**Scoped read/write are symmetric.** Both ends key off the **same** server predicate, `scopeHasOwnConfig(descriptor, scopeId)` (the scope's origin OR override exists), so they can never disagree:
 
-- **Read.** `useConfig` decides whether to read the scoped key purely from membership in the live `configV2ScopesResource` (`config-v2.scopes`, keyed by `{ path }`) — the list of scopes a descriptor has its own config for, recomputed from `scopeHasOwnConfig` and re-notified on every scoped-file change. It honors a scope whether it became real via a committed git scope, a theme fork, **or a plain scoped `setConfig` write**. While the list loads it falls back to the global value (the correct currently-shown value), never `descriptor.defaults`. Committed scopes' membership + values are boot-hydrated, so they paint scoped on the first frame.
-- **Write (fork-on-write).** A scoped `useSetConfig`/`setConfig` to a scope that has **no own config yet** auto-snapshots the current base into that scope's origin (same redacted snapshot `forkScope` writes) and then writes the override — no explicit fork ceremony. Writing to a scope makes it exist *and* readable. The only loud failure left is the legitimate one: a write when `./singularity build` was never run (no **base** origin at all) still throws "run ./singularity build".
+- **Read.** `useConfig` decides whether to read the scoped key purely from membership in the live `configV2ScopesResource` (`config-v2.scopes`, keyed by `{ path }`), recomputed from `scopeHasOwnConfig` on every scoped-file change — so a scope counts whether it became real via a committed git scope, a theme fork, **or a plain scoped `setConfig` write**. While the list loads it falls back to the global value, never `descriptor.defaults`. `useScopeForked` remains a read hook for the theme "Customize for app" toggle but does **not** gate `useConfig`.
+- **Write (fork-on-write).** A scoped `useSetConfig`/`setConfig` to a scope with **no own config yet** auto-snapshots the current base into that scope's origin (the same redacted snapshot `forkScope` writes) and then writes the override — no explicit fork ceremony. A write when no **base** origin exists at all still throws "run ./singularity build".
 
-There is **no** separate client heuristic for "is this scope active" — the old `forked`/committed-scope re-derivation is gone. `useScopeForked` remains a public read hook for the theme "Customize for app" toggle, but it no longer gates `useConfig`.
+**Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` recomputed each build, so its non-overridden fields track the git base as of the last build, not a runtime base edit. A runtime user fork layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global.
 
-**Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` (recomputed each build), so its non-overridden fields track the git base as of the last build — not a runtime base edit — consistent with every `forkScope` snapshot. A runtime user fork (theme "Customize for app" or fork-on-write) layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global.
-
-**Per-app scopes in settings:** the config detail pane is scope-aware. A scope tab bar at the top offers a **Base** tab plus one tab per app the descriptor is customized for (read live from `configV2ScopesResource`), each resolving its label + icon from `Apps.App.useContributions()` and carrying a warning **conflict dot** when that scope has a stale override. Selecting a tab re-keys every read (values, tiers, conflicts) and every write (`set-field`, `reset-field`, `acknowledge`/`merge`/`delete-override`, raw file) to that `scopeId`, so fields, tiers, the conflict banner, and "Reset all" all act on the selected scope. The **`+` App** button forks a brand-new per-descriptor customization (`fork-descriptor-scope`) for any app not yet customized, then selects it. On a non-Base tab a **Stop customizing** action (`remove-descriptor-scope`) drops the descriptor's whole per-app customization — distinct from "Reset all", which only reverts edits to the scoped origin — and falls back to Base via the live scopes resource.
+**Per-app scopes in settings:** the config detail pane is scope-aware — a **Base** tab plus one tab per customized app (live from `configV2ScopesResource`); selecting a tab re-keys every read and write to that `scopeId`. **`+` App** forks a new per-descriptor customization (`fork-descriptor-scope`); **Stop customizing** (`remove-descriptor-scope`) drops the descriptor's whole per-app customization — distinct from "Reset all", which only reverts edits to the scoped origin.
 
 ### Promoting a runtime edit to a git default (`promotableToGit`)
 
 Layers 1–2 flow code → git → user. The **staging** sub-plugin
-([`plugins/staging`](plugins/staging/CLAUDE.md)) adds the reverse arrow for
-opted-in descriptors: a runtime (user-layer) edit can be **promoted back into the
-committed git layer** as a "default for everyone". Mark a descriptor with
-`defineConfig({ promotableToGit: true, ... })` to enable it — the flag is the
-single generic contract; the staging primitive keys entirely off it (any
-registered descriptor with the flag is promotable, with zero staging-code
-changes).
+([`plugins/staging`](plugins/staging/CLAUDE.md)) adds the reverse arrow: a runtime
+(user-layer) edit **promoted back into the committed git layer** as a "default for
+everyone". `defineConfig({ promotableToGit: true, … })` is the single generic contract —
+the staging primitive keys entirely off it, so opting in needs zero staging-code changes.
 
-The flow is generic over `(pluginId, configName)` and the **full config
-document** (not a single field):
+The flow is generic over `(pluginId, configName)` and the **full config document** (not a
+single field):
 
-1. A consumer stages a candidate value via the staging web API
-   (`useStageConfigDefault` → `POST /api/config-v2/staged-defaults`, body
-   `{ pluginId, configName, value }`). The stage handler refuses anything whose
-   descriptor isn't registered with `promotableToGit: true` (`findPromotableDescriptor`
-   over `getAllDescriptors()` — the config_v2 registry *is* the allow-list).
-2. Staged rows live in `staged_config_default` (composite PK
-   `(plugin_id, config_name)`, last-write-wins) and stream to the UI via the
-   `config-v2-staged-defaults` live resource + an optimistic overlay. The review
-   pane's generic "Default for everyone" section lists them with a pluggable
-   before→after diff (`Staging.DiffRenderer` slot, `GenericConfigDiff` fallback)
-   and Apply / Discard / Apply-all controls.
-3. Apply enqueues the `config-v2.land-defaults` job (`dedup: "singleton"`): it
-   `safeParse`s the value against the descriptor schema, writes
-   `config/<plugin-tree>/<configName>.jsonc` with `// @hash` restamped against the
-   live origin (so the override is born in-sync), and `./singularity push`es it to
-   `main` from a throwaway worktree. Malformed rows are skipped + logged; only
-   landed keys are drained.
+1. Stage a candidate via `useStageConfigDefault`. The handler refuses any descriptor not
+   registered with `promotableToGit: true` — the config_v2 registry *is* the allow-list.
+2. Staged rows (`staged_config_default`, PK `(plugin_id, config_name)`, last-write-wins)
+   stream to the review pane's "Default for everyone" section with a pluggable
+   before→after diff (`Staging.DiffRenderer` slot, `GenericConfigDiff` fallback).
+3. Apply enqueues `config-v2.land-defaults`: `safeParse` against the descriptor schema,
+   write `config/<plugin-tree>/<configName>.jsonc` with `// @hash` restamped against the
+   live origin (born in-sync), then `./singularity push` from a throwaway worktree.
 
-Consumers own the value shape behind their own barrel (collection-consumer
-separation): **reorder** stages `{ items: tree }` per slot (and contributes the
-rich tree diff renderer); **composition** stages `{ manifests: [...] }` via its
-`usePromoteManifestsToGit()` hook. Neither the review section nor the staging
-primitive knows anything domain-specific.
+Consumers own the value shape behind their own barrel (collection-consumer separation):
+**reorder** stages `{ items: tree }` per slot (plus its tree diff renderer);
+**composition** stages `{ manifests: [...] }`. Neither the review section nor staging
+knows anything domain-specific.
 
 ### Hash chain
 
-Each layer's override records the hash of its origin (`// @hash` on line 1). Two independent hashes at the user layer:
-1. `// @hash` in git override → hash of git origin (tracks code changes)
-2. `// @hash` in user override → hash of user origin (tracks git config changes, which includes both code and agent overrides)
+Each layer's override records the hash of its *own* origin on line 1: a git override's `// @hash` tracks code changes; a user override's tracks git-config changes (code *and* agent overrides).
 
 ### Override semantics
 
-Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValues, [key]: newValue }` — always a complete document. `parseDocument` fills missing keys from defaults, so partial files degrade gracefully but the canonical write path always produces a full document.
+Overwrites are **full copies**, not deltas: `setConfig` writes `{ ...currentValues, [key]: newValue }`, always a complete document. `parseDocument` fills missing keys from defaults, so a hand-written partial file still degrades gracefully.
 
 ### Conflict precedence: origin wins until reconciled
 
-`effective(origin, overwrites)` normally returns the override when it exists. But when the override's `// @hash` is stale relative to its origin (a **conflict** — the origin moved underneath an override written against an older version), the **origin takes precedence** until the user manually reconciles. Reconciling = any of: edit a field (rewrites the override against the current origin), "Keep my values" / acknowledge-conflict (bumps the hash so the override wins again), "Accept new defaults" / delete-override (drops the override entirely), or **"Merge"** / merge-conflict (three-way merge — see below).
+`effective(origin, overwrites)` normally returns the override when it exists. But when the override's `// @hash` is stale (a **conflict** — the origin moved underneath an override written against an older version), the **origin takes precedence** until the user reconciles: edit a field (rewrites the override against the current origin), "Keep my values" / acknowledge-conflict (bumps the hash so the override wins again), "Accept new defaults" / delete-override (drops the override), or **"Merge"** / merge-conflict (below).
 
 ### Three-way merge (ancestor snapshot)
 
-"Keep my values" and "Accept new defaults" are all-or-nothing — they discard one side wholesale. The **Merge** resolver reconciles per field: a field only the user changed keeps the user's value, a field only the upstream changed takes the new default, and a field **both** changed differently is a true conflict left for manual resolution.
+"Keep my values" and "Accept new defaults" are all-or-nothing. The **Merge** resolver reconciles per field: only-user-changed keeps the user's value, only-upstream-changed takes the new default, and both-changed-differently is a true conflict left for manual resolution.
 
-A real three-way merge needs the **base** — the origin the override was written against. Only its hash lives in the `// @hash` header, and the user-layer origin (`~/.singularity/config/`) is propagated by build, not versioned, so the old content is otherwise unrecoverable. So `propagate()` **snapshots the base at the conflict transition**: when it is about to overwrite a user origin that an *in-sync* override depends on (`oldOrigin.hash === override.hash && override.hash !== newHash`), it first writes the old origin content to a sibling `<name>.ancestor.jsonc`. The predicate is idempotent — once the override is stale, `oldOrigin.hash !== override.hash`, so repeated builds never clobber the true base — and `propagateConfigToUser` deletes any orphaned ancestor on a no-conflict build.
+A three-way merge needs the **base** — the origin the override was written against — but only its hash lives in `// @hash`, and the user-layer origin is propagated by build, not versioned. So `propagate()` **snapshots the base at the conflict transition**: about to overwrite a user origin an *in-sync* override depends on (`oldOrigin.hash === override.hash && override.hash !== newHash`), it first writes the old origin to a sibling `<name>.ancestor.jsonc`. That predicate is idempotent — once the override is stale the hashes differ, so repeated builds never clobber the true base — and `propagateConfigToUser` deletes any orphaned ancestor on a no-conflict build.
 
-`threeWayMerge(base, ours, theirs)` (pure, in `tier-logic.ts`) returns the merged document plus the list of truly-conflicting keys. `computeAllConflicts` reads the ancestor when present and attaches `trueConflictKeys` to the `kind: "hash"` conflict entry; its presence is what makes the settings UI offer **Merge** and flag only those fields (legacy conflicts with no ancestor fall back to the binary Keep/Accept). `mergeConflictByPath` writes the merged document: with no true conflict it bumps the hash and deletes the ancestor (fully resolved); otherwise it keeps the stale hash so the conflict stays surfaced — re-running Merge after the user resolves the remaining fields is idempotent and finalizes it. The ancestor is also deleted by acknowledge-conflict and delete-override (every terminal resolution).
+`threeWayMerge(base, ours, theirs)` (pure, `tier-logic.ts`) returns the merged document plus the truly-conflicting keys. `computeAllConflicts` attaches `trueConflictKeys` to the `kind: "hash"` entry when an ancestor exists; its presence is what makes the UI offer **Merge** (legacy conflicts with no ancestor fall back to binary Keep/Accept). `mergeConflictByPath` bumps the hash and deletes the ancestor when nothing truly conflicts; otherwise it keeps the stale hash so the conflict stays surfaced, and re-running Merge finalizes it. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor.
 
-**Every config file on disk must carry a `// @hash` header.** It is the anchor conflict detection compares against; a file without one is corrupt, not a benign "untracked" override. This invariant is enforced loudly at both boundaries: `jsoncConfigProxy.read()` throws on a hashless file, and `setConfig` throws rather than fabricating a hashless override when no origin has been propagated (run `./singularity build` first). The hash chain therefore always exists — there is no "null hash wins" fallback.
+**Every config file on disk must carry a `// @hash` header** — the anchor conflict detection compares against; a hashless file is corrupt, not a benign "untracked" override. Enforced by throwing at both boundaries: `jsoncConfigProxy.read()` on a hashless file, and `setConfig` rather than fabricating a hashless override when no origin has been propagated. There is no "null hash wins" fallback.
 
 Because the running app resolves to origin during a conflict, the settings editor binds to `conflictEntry.overrideValues` (the user's override document on disk), not to `useConfig` (the resolved value) — otherwise the user could neither see nor fix their pending override.
 
@@ -176,14 +152,8 @@ Because the running app resolves to origin during a conflict, the settings edito
 
 Adding a field to an existing config (including a `listField` item or `objectField` sub-field) must not break documents stored before the field existed. Two mechanisms guarantee this:
 
-- **Default-backfill.** Every `FieldsRecord`→`z.object` composition (`fieldsToZodObject` from `@plugins/fields/core`, `listField`, `objectField`) wraps each field schema via `fieldSchemaWithDefault(field)` = `field.schema.default(field.defaultValue)`. `defineConfig` builds its schema as `fieldsToZodObject(fields).passthrough()` — `fieldsToZodObject` returns a strict object and config applies `.passthrough()` itself (unknown-key tolerance across schema evolution). A key missing from a stored document heals to that field's default — e.g. a preprompt stored before the `icon` avatarField was added reads back with the no-icon default rather than failing validation. The on-disk file self-heals on the next `setConfig` (canonical write is a full document).
-- **Invalid surfacing, not silent fallback.** When the effective document still fails the schema after backfill (a genuine break — a field's type changed under stored data, a bad hand edit), `readTypedConfig` resolves to defaults *and logs a warning*, while `computeAllConflicts` emits a `configV2ConflictEntrySchema` with `kind: "invalid"` carrying structured `issues` (each a `{ path: (string|number)[]; message }` — see `configV2ValidationIssueSchema`). The settings detail surfaces this with a destructive banner that, per issue, names the dotted path, the message, and the **offending value drilled from `overrideValues`**, plus **View diff** (stored-invalid vs defaults), **View raw** (all layers, User → Git → Origin), and **Reset to defaults** (delete-override) — so disappearing data is never silent and the bad field is pinpointed. Hash conflicts (`kind: "hash"`) take precedence when both apply. A missing document (no file on disk) is the legitimate defaults case, not an "invalid" one.
-
-### Benefits
-
-- `.origin.jsonc` always present → easy "revert to defaults" and diff display in settings UI
-- Hash chain → deterministic conflict detection at each layer
-- JSONC → human-readable, agent-editable, version-controllable
+- **Default-backfill.** Every `FieldsRecord`→`z.object` composition (`fieldsToZodObject`, `listField`, `objectField`) wraps each field schema via `fieldSchemaWithDefault(field)` = `field.schema.default(field.defaultValue)`, and `defineConfig` builds its schema as `fieldsToZodObject(fields).passthrough()` (`fieldsToZodObject` is strict; config adds the unknown-key tolerance). A key missing from a stored document heals to that field's default instead of failing validation; the file self-heals on the next `setConfig`.
+- **Invalid surfacing, not silent fallback.** When the effective document still fails the schema after backfill (a genuine break — a field's type changed under stored data, a bad hand edit), `readTypedConfig` resolves to defaults *and logs a warning*, while `computeAllConflicts` emits a `kind: "invalid"` entry carrying structured `issues` (`{ path, message }`, see `configV2ValidationIssueSchema`) that the settings detail renders as a destructive banner pinpointing each bad field — so disappearing data is never silent. Hash conflicts (`kind: "hash"`) take precedence when both apply. A missing document is the legitimate defaults case, not an "invalid" one.
 
 ### Checks
 
@@ -192,11 +162,15 @@ Adding a field to an existing config (including a `listField` item or `objectFie
 2. Every `.jsonc` override has a `// @hash` matching its current origin
 
 `config:overrides-authored` (`check/overrides-authored.ts`) — see
-[mandatory overrides](#mandatory-overrides-requiresauthoredoverride) below: a pure
-filesystem scan of `config/**/*.jsonc` (excluding the generated `.origin`/`.ancestor`
-siblings) that fails on any file still carrying the seeded `// @review` marker.
-`alwaysRun`, so it fails `--skip-checks` builds too, and never cached — the marker is
-minted by the build itself, after that run's tree hash was taken.
+[mandatory overrides](#mandatory-overrides-requiresauthoredoverride) below: a filesystem
+scan of `config/**/*.jsonc` (excluding the generated `.origin`/`.ancestor` siblings)
+failing on any file still carrying the seeded `// @review` marker. `alwaysRun` (fails
+`--skip-checks` builds too) and never cached — the marker is minted by the build itself,
+after that run's tree hash was taken.
+
+`config-v2:registrations-paired` (`check/registrations-paired.ts`) — every server
+`ConfigV2.Register` has a matching web `ConfigV2.WebRegister` at the same storePath, and
+vice versa.
 
 ### Mandatory overrides (`requiresAuthoredOverride`)
 
@@ -207,7 +181,7 @@ it:
 defineConfig({
   name: slotId,
   requiresAuthoredOverride: {
-    guidance: ["Arrange \"items\" for how this slot renders (sidebar =", "vertical list, toolbar = horizontal bar, …)"],
+    guidance: ["Arrange \"items\" for how this slot renders", "(sidebar = vertical list, toolbar = horizontal bar)"],
   },
   …
 })
@@ -216,35 +190,33 @@ defineConfig({
 `./singularity build` then does the mechanical half: it **seeds** a missing
 `config/<tree>/<name>.jsonc` from its origin — same `// @hash`, same body, same legend
 comments — with a one-line `// @review` marker plus the descriptor's `guidance` lines
-inserted after the hash header; and it **re-marks + re-stamps** an existing override
-whose origin hash moved underneath it (naming the delta in the marker line). The human
-half is: arrange the values, delete the marker line.
+after the hash header; and it **re-marks + re-stamps** an existing override whose origin
+hash moved underneath it. The human half is: arrange the values, delete the marker line.
 
-`guidance` is **descriptor-supplied prose**, so the engine and the check never name a
-config family — `config:overrides-authored` just echoes each offending file's own marker
-block back. A third family that opts in needs zero edits to either. Today's two
-consumers are reorder's `reorderDirectiveDescriptor` (per reorderable slot) and
-data-view's `viewsDescriptor` (per DataView surface); each replaced a bespoke
-presence-only check of its own.
+`guidance` is **descriptor-supplied prose**, so neither the engine nor the check ever
+names a config family — the check just echoes each offending file's own marker block back,
+and a new family that opts in needs zero edits to either. Today's consumers: reorder's
+`reorderDirectiveDescriptor` (per reorderable slot) and data-view's `viewsDescriptor`
+(per DataView surface).
 
 Why *review* rather than *presence*: seeding makes absence self-healing (delete a
 required override and the next build re-seeds it, marked, which fails), and a stale hash
 stops being discharged by retyping it — retyping was acknowledgement, not review.
 
-Seeding lives in a **build-only** codegen module, never in the shared
-`regenerateManifestCodegen` pipeline: `regen-generated` runs inside push's merge-driver
-path followed by `git add -A && git commit --amend`, so a marker minted there would land
-unreviewed. It asserts marker-free instead. Design:
+Seeding is **build-only** (never in the shared `regenerateManifestCodegen` pipeline)
+because `regen-generated` runs inside push's merge-driver path followed by an amend
+commit, so a marker minted there would land unreviewed; it asserts marker-free instead.
+Design:
 [`research/2026-07-23-global-authored-override-seeding.md`](../../research/2026-07-23-global-authored-override-seeding.md).
 
 ### Internal architecture
 
 - **`jsoncConfigProxy`** — synchronous read/write with `// @hash` header tracking. Used for propagation, `setConfig`, and `reloadValues`.
-- **`ConfigWatcher`** (`config-watcher.ts`) — `@parcel/watcher`-based file-change detection on `~/.singularity/config/`. Debounce (100ms) + ceiling (1s); the blanket 30s reconcile is **disabled** (`reconcileMs: null`). Config files only change in-process (`setConfig` / fork) or via `./singularity build` propagation, and parcel fires on every disk write regardless of writer, so a missed event is structurally impossible — the reconcile only produced an O(N²) idle re-read/recompute storm. Callbacks are `() => void` — the registry re-reads via `jsoncConfigProxy` on notification.
+- **`ConfigWatcher`** (`config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.singularity/config/`. Debounce (100ms) + ceiling (1s); the blanket 30s reconcile is deliberately **disabled** (`reconcileMs: null`) — config files only change in-process (`setConfig` / fork) or via build propagation and parcel fires on every disk write regardless of writer, so a missed event is structurally impossible and the reconcile only produced an O(N²) idle re-read storm. Callbacks are `() => void`; the registry re-reads via `jsoncConfigProxy` on notification.
 
 ### In-memory derived caches (scopes / conflict-paths / modified-counts)
 
-The three aggregate live resources — `config-v2.scopes` (one global `{}` map of storePath→scopeIds), `config-v2.conflict-paths` (set of conflicting storePaths), and `config-v2.modified-counts` (storePath→count) — are read by their loaders from **in-memory maps in `resource.ts`**, never by re-walking the filesystem or rescanning all descriptors per load. The authoritative predicates are still on disk (`scopeHasOwnConfig`, `computeDescriptorConflict`, effective-vs-default), but they are evaluated **only when a config file actually changes** (boot warm-up + the `refreshScopeMembers` / `refreshConflictPaths` / `refreshModifiedCount` calls in `registry.ts`'s notify path), each recomputing just the one changed descriptor and notifying iff its slice changed. So a subscribe / WS-reconnect-replay / boot-snapshot read is a pure memory read. `config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map.
+The three aggregate live resources — `config-v2.scopes` (storePath→scopeIds), `config-v2.conflict-paths`, `config-v2.modified-counts` — are read by their loaders from **in-memory maps in `resource.ts`**, never by re-walking the filesystem per load. The authoritative predicates stay on disk (`scopeHasOwnConfig`, `computeDescriptorConflict`, effective-vs-default) but are evaluated **only when a config file actually changes** (boot warm-up + `refreshScopeMembers` / `refreshConflictPaths` / `refreshModifiedCount` in `registry.ts`'s notify path), each recomputing the one changed descriptor and notifying iff its slice changed. `config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

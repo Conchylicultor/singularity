@@ -13,34 +13,24 @@ Plugins never import from each other's internals. They only import **slot defini
 
 ## Sharing code between web and server
 
-Before reaching for a slot, ask: is this **plain shared data/logic**, or a **genuinely open, runtime-collected set**?
+The rule is in the root `CLAUDE.md` → "Collection-consumer separation": a **closed list** both runtimes need is plain data in the plugin's `core/`; a **genuinely open, runtime-collected set** is a slot. Rule of thumb: *if you can write the whole list in one array today, it's `core/`; if a future plugin must add to it without editing your code, it's a slot.*
 
-**Default → `core/`.** Types, constants, pure functions, and *closed lists* that both runtimes need go in the plugin's `core/` (importable from `web/`, `server/`, and cross-plugin). One definition, one source of truth, zero sync machinery. A dropdown's options, a validation allowlist, an enum, an arg-builder — these are all `core/`.
-
-**Exception → slot + codegen.** Use a slot only when the set must be **open** (other plugins add entries) *and* collected at runtime. A slot lives in one runtime; bridging its contributions to the other runtime is what the generated registries solve, at the cost of a `*-in-sync` check. Don't pay that for a list you can fully enumerate today — that's an asymmetry you create, then have to patch.
-
-Rule of thumb: *if you can write the whole list in one array today, it's `core/`; if a future plugin must add to it without editing your code, it's a slot.*
+A slot lives in one runtime, so bridging its contributions to the other runtime costs a generated registry plus a `*-in-sync` check. Don't pay that for a set you can enumerate today — that's an asymmetry you create, then have to patch.
 
 ## How It Works
 
 ### Defining a slot
 
-A slot is created with `defineSlot<P>(id)`. It returns an object that is both:
+`defineSlot<P>(id)` (from `@plugins/framework/plugins/web-sdk/core`) returns an object that is both:
 
 1. **A factory** — call it with props to create a contribution: `MySlot({ title: "Hello", component: Hello })`
-2. **A hook** — call `.useContributions()` inside React to get all contributions targeting this slot
+2. **A hook** — `.useContributions()` inside React returns all contributions targeting this slot
 
-```typescript
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-
-export const MyPlugin = {
-  Panel: defineSlot<{ title: string; component: ComponentType }>("myplugin.panel"),
-};
-```
+Slots are grouped in a namespace object per plugin (`export const MyPlugin = { Panel: … }`) — see the `defineRenderSlot` example below, which has the same shape.
 
 ### Creating a plugin
 
-A plugin is a `PluginDefinition` — just `{ description, contributions? }`. There is no authored `name`: a plugin is identified solely by its `id`, which the loader derives from the hierarchy path and injects as `LoadedPlugin.id`. Any short label a UI needs is the id's leaf segment; user-facing titles belong to the contributions (an app's tooltip, a sidebar entry's title), not the plugin package.
+A plugin is a `PluginDefinition` — just `{ description, contributions? }`. There is no authored `name`: the loader derives the plugin's `id` from its hierarchy path and injects it as `LoadedPlugin.id`. User-facing titles belong to the contributions (an app's tooltip, a sidebar entry's title), not the plugin package.
 
 ```typescript
 import { type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
@@ -56,54 +46,42 @@ export default {
 
 ### Rendering contributions
 
-**Invariant:** `useContributions()` returns a sealed list — the `component` field is an
-opaque `SealedComponent` that **cannot be rendered directly** (`<c.component/>` is a
-compile error). All other fields (`id`, `order`, `title`, `icon`, `match`, `.length`
-checks, etc.) are fully readable. Rendering always goes through one of the approved
-primitives below, which automatically apply the error-boundary / reorder middleware
-chain so one broken contribution never crashes the whole surface.
+**Invariant:** `useContributions()` returns a sealed list — `component` is an opaque
+`SealedComponent` that **cannot be rendered directly** (`<c.component/>` is a compile
+error); every other field (`id`, `order`, `title`, `icon`, `match`, `.length`) is readable.
+Rendering goes through one of the primitives below, which apply the error-boundary /
+reorder middleware chain so one broken contribution never crashes the whole surface.
 
 #### `<Slot.Render/>` — render all contributions (use `defineRenderSlot`)
 
 ```typescript
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
-// slot definition
 export const MyPlugin = {
   Panel: defineRenderSlot<{ title: string; component: ComponentType }>("myplugin.panel"),
 };
 
 // render site — auto-renders every contribution, each isolated
-function MyLayout() {
-  return <MyPlugin.Panel.Render />;
-}
+<MyPlugin.Panel.Render />
 
 // or inject extra props via children callback (receives the real, unsealed component)
-function MyLayout() {
-  return (
-    <MyPlugin.Panel.Render>
-      {(item) => <item.component title={item.title} extraProp="x" />}
-    </MyPlugin.Panel.Render>
-  );
-}
+<MyPlugin.Panel.Render>
+  {(item) => <item.component title={item.title} extraProp="x" />}
+</MyPlugin.Panel.Render>
 ```
 
-**Every `defineRenderSlot` is reorderable, so it owes a reviewed config override.** The
-recipe is one build plus one edit — you never author the file, locate an origin, or type a
-hash:
+**Every `defineRenderSlot` is reorderable, so it owes a reviewed config override.** One
+build plus one edit — you never author the file, locate an origin, or type a hash:
 
-```
-1. write the defineRenderSlot
-2. ./singularity build      → SEEDS config/<defining-plugin>/<slotId>.jsonc
-                              (real // @hash, full catalog, a `// @review` marker),
-                              then fails `config:overrides-authored` on that marker
-3. open the file: arrange "items" for how the slot renders, DELETE the // @review line
-4. ./singularity build
-```
+1. write the `defineRenderSlot`
+2. `./singularity build` → seeds `config/<defining-plugin>/<slotId>.jsonc` (real `// @hash`,
+   full catalog, a `// @review` marker), then fails `config:overrides-authored` on the marker
+3. arrange `"items"` for how the slot renders, DELETE the `// @review` line
+4. `./singularity build`
 
-Before any build, `./singularity check reorderable-slots-in-sync` already names the exact
-override path a new slot will owe. If the slot's order should never be user-curated it is
-headless — use `defineMountSlot`, which is not reorderable and owes nothing. Details:
+`./singularity check reorderable-slots-in-sync` names the exact override path a new slot
+will owe, before any build. If the order should never be user-curated the slot is headless —
+use `defineMountSlot`, which is not reorderable and owes nothing. Details:
 [`plugins/reorder/authoring-overrides.md`](../../../reorder/authoring-overrides.md).
 
 #### `<Slot.Dispatch {...props}/>` — single match (use `defineDispatchSlot`)
@@ -132,22 +110,17 @@ function BlockRow(props: BlockProps) {
 }
 ```
 
-`.Dispatch` publishes whether it matched a contribution or fell through to its
-`fallback`. A descendant reads it with `useDispatchOutcome()` (also from
-`@plugins/primitives/plugins/slot-render/web`), which returns
-`{ slotId, key, matched } | null` for the **nearest** enclosing `.Dispatch`. That
-is the sanctioned way to react to "nothing handled this" — e.g. an affordance
-that only appears on unhandled rows. Do **not** hand-thread a `isFallback`/
-`trailing=` prop through each fallback component: that has to be re-wired for
-every fallback, and every new one starts out missing it. See
-[`slot-render/CLAUDE.md`](../../../primitives/plugins/slot-render/CLAUDE.md) for
-the exact contract.
+`.Dispatch` publishes whether it matched or fell through to `fallback`; a descendant reads
+`useDispatchOutcome()` (same barrel) → `{ slotId, key, matched } | null` for the **nearest**
+enclosing `.Dispatch`. That is the sanctioned way to react to "nothing handled this". Do
+**not** hand-thread an `isFallback`/`trailing=` prop through each fallback component — it
+has to be re-wired for every one, and every new fallback starts out missing it. Contract:
+[`slot-render/CLAUDE.md`](../../../primitives/plugins/slot-render/CLAUDE.md).
 
 #### `renderIsolated()` — bespoke selection, still isolated
 
 For cases where neither `.Render` nor `.Dispatch` can express the selection logic
-(e.g. tiered `supports()` checks). Import from
-`@plugins/primitives/plugins/slot-render/web`.
+(e.g. tiered `supports()` checks).
 
 ```typescript
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
@@ -159,43 +132,33 @@ if (match) return renderIsolated(FilePane.Renderer.id, match, { file });
 
 #### `UNSAFE_unsealSlotComponent()` — framework exemptions only
 
-Returns a raw, **non-isolated** `ComponentType`. Reserved for the three sites that
-structurally cannot route through the middleware chain:
-
-1. `web-core/web/App.tsx` — `Core.Root` (web-sdk cannot import slot-render; already hand-wrapped in `<PluginErrorBoundary>`).
-2. `error-boundary/web/components/plugin-error-boundary.tsx` — `ErrorBoundary.Action` renders inside the boundary's own fallback.
-3. `active-data/web/internal/*` — `ActiveData.Tag` components are spliced into a foreign ReactNode tree, not rendered as a flat slot list.
-
-Every call must carry a `// UNSAFE: <reason>` comment. Import from
-`@plugins/framework/plugins/web-sdk/core`.
+Returns a raw, **non-isolated** `ComponentType`. Reserved for the few sites that
+structurally cannot route through the middleware chain: `Core.Root` in `web-core/web/App.tsx`
+(web-sdk cannot import slot-render; already hand-wrapped in `<PluginErrorBoundary>`),
+`ErrorBoundary.Action` (renders inside the boundary's own fallback), and `active-data`'s tag
+components (spliced into a foreign ReactNode tree, not a flat slot list). Every call must
+carry a `// UNSAFE: <reason>` comment. Import from `@plugins/framework/plugins/web-sdk/core`.
 
 ### Registering a plugin
 
-Nothing to register by hand. Create the plugin's `web/index.ts` with a default
-export and run `./singularity build` — codegen walks the plugin tree and
-regenerates the registry (`core/web.generated.ts`, a `CollectedEntry[]` of
-`() => import(...)` loaders with `dependsOn` inferred from import statements). The
-`plugins-registry-in-sync` check fails on drift. This is the same discovery
-substrate every runtime uses (`server`, `central`, `check`, `lint`, `facet`) —
-each marks itself with `defineCollectedDir("<runtime>")` in its `core/`.
+Nothing to register by hand (root `CLAUDE.md` → "Registry exclusivity"). `./singularity
+build` regenerates `core/web.generated.ts` — a `CollectedEntry[]` of `() => import(...)`
+loaders with `dependsOn` inferred from import statements. Same discovery substrate for every
+runtime (`server`, `central`, `check`, `lint`, `facet`), each marked with
+`defineCollectedDir("<runtime>")` in its `core/`.
 
 ## Bootstrap Flow
 
-1. `web/src/main.tsx` renders `App`
-2. `App` wraps everything in `<PluginProvider plugins={plugins}>` which collects all contributions from all plugins into React context
-3. `App` renders `<RootRenderer>` which renders all `Core.Root` contributions
-4. The shell plugin contributes its `ShellLayout` to `Core.Root` — this is the app's main layout
-5. `ShellLayout` calls `Shell.Sidebar.useContributions()`, `Shell.Main.useContributions()`, etc. to render whatever other plugins contributed
+`main.tsx` renders `App` → `<PluginProvider plugins={plugins}>` collects every plugin's
+contributions into React context → `<RootRenderer>` renders all `Core.Root` contributions.
+Those layouts in turn call `.useContributions()` on the slots they define.
 
 ## Panes: use `Pane.define`
 
-For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. `Pane.define` declares a pane (path, component, typed params); `Pane.Register` contributes it to the router. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../plugins/primitives/plugins/pane/CLAUDE.md).
+For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. `Pane.define` declares a pane (path, component, typed params); `Pane.Register` contributes it to the router. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../../../primitives/plugins/pane/CLAUDE.md).
 
 ```typescript
-// plugins/terminal/web/panes.ts
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { TerminalComponent } from "./components/terminal";
-
+// web/panes.ts — the pane reads its own params via the binding it exports
 export const terminalPane = Pane.define({
   id: "terminal",
   path: "/terminal/:worktree",
@@ -205,118 +168,57 @@ export const terminalPane = Pane.define({
   },
 });
 
-// plugins/terminal/web/index.ts
-export default {
-  description: "Terminal panes.",
-  contributions: [Pane.Register({ pane: terminalPane })],
-} satisfies PluginDefinition;
+// web/index.ts
+contributions: [Pane.Register({ pane: terminalPane })]
 
-// Consumer:
+// consumer
 <button onClick={() => terminalPane.open({ worktree: path })}>Launch</button>
 ```
 
 ## Live state, networking, editable fields
 
-`@plugins/framework/plugins/web-sdk/core` is the **framework** only — slots, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
+`@plugins/framework/plugins/web-sdk/core` is the **framework** only — slots, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../../../primitives/):
 
 - `<PluginErrorBoundary>`, `ErrorBoundary.Action`, `boundaryReportSink` → `@plugins/primitives/plugins/error-boundary/web`
 - `useResource`, `NotificationsProvider`, `resourceDescriptor` → `@plugins/primitives/plugins/live-state/web` (and `…/core` or `…/shared` for resource declarations)
 - `useReconnectingWebSocket`, `ReconnectingEventSource`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
 - `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
 
-Raw `new EventSource(...)` in plugins is forbidden — use `ReconnectingEventSource` from the networking sub-plugin when consuming the gateway's external log SSE endpoint.
+Raw `new EventSource(...)` is forbidden (`./singularity check no-raw-event-source`) — use `ReconnectingEventSource` when consuming the gateway's external log SSE endpoint.
 
-For typed HTTP fetching, use the endpoints primitive (`@plugins/infra/plugins/endpoints/web`): `useEndpoint` (TanStack Query GET), `useEndpointMutation` (POST/PATCH/DELETE with auto-invalidation), or `fetchEndpoint` (imperative). Endpoint contracts are declared once in `core/endpoints.ts` with `defineEndpoint`; the server implements them with `implement()` from `@plugins/infra/plugins/endpoints/server`. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../../infra/plugins/endpoints/CLAUDE.md).
+For typed HTTP fetching, use the endpoints primitive (`@plugins/infra/plugins/endpoints/web`): `useEndpoint` (TanStack Query GET), `useEndpointMutation` (POST/PATCH/DELETE with auto-invalidation), or `fetchEndpoint` (imperative). Endpoint contracts are declared once in `core/endpoints.ts` with `defineEndpoint`; the server implements them with `implement()` from `@plugins/infra/plugins/endpoints/server`. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../../../infra/plugins/endpoints/CLAUDE.md).
 
 ## File Structure
 
+Root `CLAUDE.md` → "Folder Structure" covers the per-plugin runtime dirs. Inside them:
+
 ```
-plugins/
-├── framework/plugins/web-sdk/   # This package — framework primitives
-│   ├── core/                    # Public API (importable via @plugins/framework/plugins/web-sdk/core)
-│   │   ├── index.ts             # Barrel export
-│   │   ├── types.ts             # PluginDefinition, Contribution
-│   │   ├── slots.ts             # defineSlot(), Slot<P>, Core.Root
-│   │   ├── context.tsx          # PluginProvider, PluginRuntimeContext
-│   │   └── loader.ts            # loadPlugins()
-│   └── shared/                  # Private (topo sort)
-│       └── topo.ts
-├──
-└── {plugin-name}/
-    ├── web/              # Frontend code (compiled by web tsconfig)
-    │   ├── index.ts      # Default export: PluginDefinition
-    │   ├── slots.ts      # Optional: slots this plugin defines for others to extend
-    │   └── components/   # Internal React components (never imported by other plugins)
-    ├── server/           # Backend code (compiled by server tsconfig)
-    │   ├── index.ts      # Default export: ServerPluginDefinition; named exports are the public API for other plugins
-    │   └── internal/     # Handler implementations, business logic (never imported externally)
-    ├── core/             # Public API — types/utils importable cross-plugin (@plugins/foo/core)
-    │   └── index.ts      # Barrel re-exporting public types and values
-    ├── shared/           # Private DRY — shared between web/server within this plugin only (intra-plugin @plugins/foo/shared)
-    │   └── protocol.ts   # e.g. WebSocket message types, resource descriptors
-    └── scripts/          # Standalone entry points invoked outside the server/web build
-        └── start.ts      # e.g. DB lifecycle, future: server bootstrap, CLI entry points
-
-web/src/
-└── App.tsx               # PluginProvider + RootRenderer
+plugins/{name}/
+├── web/index.ts       # default export: PluginDefinition
+├── web/slots.ts       # optional: slots this plugin defines for others to extend
+├── web/components/    # internal React components — never inline them in index.ts
+├── server/index.ts    # default export: ServerPluginDefinition; named exports = public API
+├── server/internal/   # handlers, business logic — never imported externally
+└── scripts/           # standalone entry points invoked outside the server/web build
 ```
-
-> The web plugin registry is **not** hand-maintained. It is codegen'd to
-> `plugins/framework/plugins/web-sdk/core/web.generated.ts` (a `CollectedEntry[]`
-> of dynamic-import loaders) on every `./singularity build`, drift-checked by
-> `plugins-registry-in-sync`.
-
-## Path Aliases
-
-Configured in `web/vite.config.ts` and `web/tsconfig.app.json`:
-
-- `@plugins/*` → `plugins/*/`
-- `@/*` → `web/src/*`
-
-## The Shell Plugin
-
-`plugins/shell/web/` is the foundational plugin. It contributes to `Core.Root` and defines the standard layout slots:
-
-- `Shell.Sidebar` — `{ title, icon, component }`
-- `Shell.Main` — `{ title, component }`
-- `Shell.Toolbar` — `{ label, icon, onClick }`
-
-Empty regions are not rendered (collapsed). Most plugins will contribute to these Shell slots.
 
 ## Adding a New Plugin
 
-1. Create `plugins/{name}/web/index.ts`
-2. Import slots from the plugins you want to extend (e.g., `Shell` from `@plugins/shell/web`)
-3. Export a default `PluginDefinition` with contributions
-4. Run `./singularity build` — the plugin is discovered and added to the generated registry automatically (no manual registration)
-5. Optionally define your own slots in `plugins/{name}/web/slots.ts` for other plugins to extend
+Create `plugins/{name}/web/index.ts`, default-export a `PluginDefinition` whose
+contributions target slots imported from the plugins you extend, run `./singularity build`.
+Optionally define your own slots in `web/slots.ts`.
 
 ## Styling
 
-The app uses **Tailwind CSS v4** with **shadcn/ui** components. Theme tokens are defined in `web/src/app.css` using CSS variables.
-
-**All plugins must follow the styling guide: [`docs/styling.md`](docs/styling.md).** It covers colors, typography, spacing, component usage, and things to avoid. Read it before writing any UI code.
-
-### Quick reference
-
-- **Components**: Import shadcn from `@/components/ui/*`. Install new ones with `bunx shadcn@latest add <name>` from `web/`.
-- **Colors**: Semantic tokens only (`bg-background`, `text-muted-foreground`, etc.) — never hardcode.
-- **Icons**: `react-icons/md` — Material Design, accepts `{ className?: string }`.
-- **Conditional classes**: Use `cn()` from `@/lib/utils`, not template literals.
-
-### External dependencies
-
-The project uses bun workspaces. Shared dependencies (react, react-icons, lucide-react, types) are declared in the root `package.json` and available to all workspaces. Plugin-specific dependencies (e.g., `sonner` for the shell plugin, `@xterm/*` for the terminal plugin) are declared in that plugin's own `package.json`. Run `bun install` from the repo root.
+Read the `css` and `theme` SKILLs before any UI work (the root `CLAUDE.md` mandates both).
+Semantic tokens only — never hardcode colors. Icons come from `react-icons/md` (Material
+Design, `{ className?: string }`); `lucide-react` is banned by the `icon-safety` lint rule.
+UI primitives and `cn()` come from `@plugins/primitives/plugins/css/plugins/ui-kit/web` —
+see [`ui-kit/CLAUDE.md`](../../../primitives/plugins/css/plugins/ui-kit/CLAUDE.md).
 
 ## Umbrella Plugins
 
-An umbrella is a grouping shell that nests related sub-plugins under `plugins/`. It needs only:
-
-- `package.json` with a `"description"` field for documentation
-- `plugins/` subdirectory with child plugins
-- `CLAUDE.md` (auto-generated by `./singularity build`)
-
-No `web/index.ts` or `server/index.ts` required unless the umbrella itself has contributions, exports, or routes. The plugin-tree builder reads `singularity.description` from `package.json` as a fallback when no runtime barrel exists.
+An umbrella is a grouping shell that nests related sub-plugins under `plugins/`. It needs only a `package.json` with a `"description"`, the `plugins/` subdirectory, and its `CLAUDE.md` (auto-generated by `./singularity build`). No `web/index.ts` or `server/index.ts` unless the umbrella itself has contributions, exports, or routes.
 
 ## Key Design Decisions
 

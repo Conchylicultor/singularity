@@ -21,7 +21,9 @@ function collectHints(tool: string, toolInput: Record<string, unknown>, cwd: str
   let filePath = toolInput.file_path as string | undefined;
   if (!filePath) return [];
   if (!filePath.startsWith("/")) filePath = resolve(cwd, filePath);
-  return HINTS.filter((h) => h.match(filePath!)).map((h) => h.message);
+  return HINTS.filter(
+    (h) => (!h.tools || h.tools.includes(tool as ToolMatcher)) && h.match(filePath!),
+  ).map((h) => h.message);
 }
 
 export async function runHook(input: HookInput): Promise<void> {

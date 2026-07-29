@@ -1,11 +1,10 @@
 # engine
 
-The generic slow-event trace engine. It owns the **open registry** of perf-event
-classes, the `captureTrace()` entry point, and the durable `traces` store. It
-**never names a class** and the pane never names a class — adding a perf signal
-to every trace and the Gantt is one new plugin (a `defineTraceEventClass`
-contribution), zero engine edits. Mirrors reports' `ReportKindSpec` +
-`defineServerContribution`.
+The generic slow-event trace engine: the **open registry** of perf-event classes, the
+`captureTrace()` entry point, and the durable `traces` store. It **never names a
+class**, and neither does the pane — adding a perf signal to every trace and the
+Gantt is one new plugin (a `defineTraceEventClass` contribution), zero engine edits.
+Mirrors reports' `ReportKindSpec` + `defineServerContribution`.
 
 ## captureTrace — the one entry point
 
@@ -23,8 +22,7 @@ disabled / rate-limited. Two phases:
    instant*.
 2. **Detached async enrich + validate + persist**, under `runWithoutProfiling`
    so the engine's own IO (a class's enrich query, the row insert) never
-   re-feeds the profiler it was captured for — the same suppression discipline
-   as flight-recorder's old `trip.ts`.
+   re-feeds the profiler it was captured for.
 
 ## The TraceEventClass contract
 
@@ -43,31 +41,28 @@ A class contributes one snapshot section under `snapshot.events[id]`:
   `runWithoutProfiling`. Receives the phase-1 output and this class's ring slice
   (events overlapping `[windowStartMs, atMs]`). Use it for out-of-band reads that
   don't need the frozen instant (`contention` queries `pg_stat_activity` here).
-  Return `undefined` to skip the section for this trip — no error, no report —
-  the same skip semantics as `captureAtTrip`, so an enrich-only class that only
-  reacts to certain triggers (e.g. keyed on `trigger.kind`) opts out cleanly.
-  When absent, the phase-1 output — or, failing that, the ring slice — is
-  persisted directly.
+  Return `undefined` to skip the section for this trip — no error, no report — so a
+  class that only reacts to certain triggers opts out cleanly. When absent, the
+  phase-1 output — or, failing that, the ring slice — is persisted directly.
 - **`ring?: { max }`** — declare a bounded in-memory ring and the handle's
   `emit(event)` becomes live: a class that samples continuously (a future
   RAM/GC/CPU sampler) pushes `RingEvent`s, and the slice overlapping the trip
   window is persisted — **a Gantt lane for free**, no capture hook needed. A
-  class with no `ring` gets a no-op `emit` (forgetting `ring` fails loudly by its
-  events simply never appearing, never a throw).
+  class with no `ring` gets a no-op `emit` (forgetting `ring` shows up as its
+  events never appearing, never a throw).
 
-**Schema-validation isolation.** Each section is validated independently in the
-async phase. A class whose `captureAtTrip`/`enrich` throws, or whose output fails
-its `schema`, is **omitted** from `events` and a server error report is filed —
-loud (a report) and isolated (like a slot error boundary). One bad class never
-kills the whole snapshot and never fakes a section, so a *present* key is always
-valid. This is the noise-rules per-rule try/catch discipline applied to sections.
+**Schema-validation isolation** (covered by `server/internal/capture.test.ts`).
+Each section is validated independently in the async phase; a class whose
+`captureAtTrip`/`enrich` throws, or whose output fails its `schema`, is **omitted**
+from `events` and a server error report is filed. One bad class never kills the
+whole snapshot and never fakes a section, so a *present* key is always valid.
 
 ## Admission (the `trace` config)
 
-Checked before any capture work, all four knobs live-editable in Settings →
-Config (read synchronously at trip time via `getConfig` — in-memory, cheap, no
-restart). They govern *how often* a trigger persists — **not** what counts as
-slow (each producer owns its own threshold):
+Checked before any capture work (`server/internal/rate-limit.test.ts`); all four knobs
+live-editable in Settings → Config, read synchronously at trip time via `getConfig`.
+They govern *how often* a trigger persists — **not** what counts as slow (each
+producer owns its own threshold):
 
 - **`enabled`** — when off, `captureTrace` is a no-op (existing rows untouched).
 - **`cooldownMs`** (10 s) — min time between two traces for the same
@@ -81,23 +76,21 @@ slow (each producer owns its own threshold):
 
 Admission is shared across all trigger sources — a slow-span storm can consume
 the global budget and starve an op-time capture in the same minute. Acceptable:
-op-time runs on a 5-min cadence and retries next tick. If it bites, per-source
-budgets are a config-only extension.
+op-time runs on a 5-min cadence and retries next tick.
 
 ### Duress shedding (after admission)
 
 During a host **duress episode** (`infra/duress`), an admitted non-critical trip
-past the first-N-per-trigger grant is **shed**: the entire capture — including
-the synchronous coherent-instant phase, which is exactly the cost shedding
-exists to avoid — is skipped and the caller sees `null`, the same contract as a
-rate-limited trip. Only an accounting **stub** (`kind`/`label`/`wallTime`/
-`durationMs`) is buffered; its replay is a documented no-op (a trace's coherent
-instant is gone by flush time — no fake traces), and the stubs fold into the
-post-episode `duress-shed` summary report (kind registered by
-`debug/duress-shed`). The gate sits **after** admission so cooldown / rate-limit
-semantics stay primary — a cooldown rejection never consumes a first-N grant. A
-`critical` trigger (cluster onset, frozen-backend stall) bypasses the gate
-entirely: duress is precisely when that trace matters. See `internal/trace-shed.ts`.
+past the first-N-per-trigger grant is **shed**: the entire capture — including the
+synchronous coherent-instant phase, exactly the cost shedding exists to avoid — is
+skipped and the caller sees `null`, the same contract as a rate-limited trip. Only
+an accounting **stub** (`kind`/`label`/`wallTime`/`durationMs`) is buffered; its
+replay is a documented no-op (the coherent instant is gone by flush time — no fake
+traces), and the stubs fold into the post-episode `duress-shed` summary report. The
+gate sits **after** admission so cooldown / rate-limit semantics stay primary — a
+cooldown rejection never consumes a first-N grant. A `critical` trigger (cluster
+onset, frozen-backend stall) bypasses it entirely: duress is precisely when that
+trace matters. See `internal/trace-shed.ts`.
 
 ## Clock domains
 
@@ -112,81 +105,61 @@ Every snapshot stores **two clocks**, and mixing them is the classic trap:
 
 ## Storage & retention
 
-One `traces` row per trip (`server/internal/tables.ts`), the boot-profile
-storage precedent. The `traces` table and the `Trace` wire schema both derive
-from the single `traceFields` record (`core/fields.ts` via `defineEntity`), so a
-column/schema drift is unrepresentable. The full `TraceSnapshot` is one
-zod-pinned **jsonb** blob (`snapshot`) — written once, read whole by one pane,
-never queried per-span, and its `events` sections are class-owned open shapes, so
-normalizing would freeze the payloads into SQL and defeat the open registry. The
-flat `triggerKind` / `triggerLabel` / `durationMs` / `thresholdMs` columns are
-list metadata: `GET /api/traces` reads them and **never selects the (tens-of-KB)
-blob**.
+One `traces` row per trip (`server/internal/tables.ts`). The table and the `Trace`
+wire schema both derive from the single `traceFields` record (`core/fields.ts` via
+`defineEntity`), so column/schema drift is unrepresentable. The full `TraceSnapshot`
+is one zod-pinned **jsonb** blob (`snapshot`) — deliberately not normalized: its
+`events` sections are class-owned open shapes, and SQL columns would freeze them and
+defeat the open registry. The flat `triggerKind` / `triggerLabel` / `durationMs` /
+`thresholdMs` columns are list metadata: `GET /api/traces` reads them and **never
+selects the (tens-of-KB) blob**.
 
-- **`ExcludeFromChangeFeed` — yes.** A trace is inserted *exactly* when a span
-  tripped its slow threshold — i.e. when the system is already loaded. Wiring
-  per-statement live-state invalidation onto it would push a recompute cascade at
-  the worst moment and can self-amplify (slow → more traces → more notify →
-  slower) — the same recorded reason `slow_ops` is excluded. The Slow Events list
-  therefore **hydrates on open** (`GET /api/traces`, metadata only, newest first)
-  with a Refresh button, no live resource.
+- **`ExcludeFromChangeFeed` — yes.** A trace is inserted *exactly* when the system
+  is already loaded, so per-statement live-state invalidation would push a recompute
+  cascade at the worst moment and can self-amplify (slow → more traces → more notify
+  → slower) — the same recorded reason `slow_ops` is excluded. The Slow Events list
+  therefore hydrates on open (`GET /api/traces`, newest first), no live resource.
 - **7-day TTL sweep** (`debug.trace-cleanup`): a `defineJob`, `singleton`,
   `perWorktree`, daily cron. A trace is debugging evidence, not a durable
-  artifact; retention is a code constant (the `bootTraceCleanupJob` precedent),
-  not config.
+  artifact; retention is a code constant, not config.
 
 ## How to read a snapshot (the blocking-chain walk)
 
-Viewed in the **Debug → Slow Events** Gantt (the old flight-recorder dumped this
-to dead-end JSONL). The **trip row** is pinned first; the `spans` lanes,
-`gates` strip, and `contention` card fill in below. To find *what blocked the
-victim*:
+Viewed in the **Debug → Slow Events** Gantt. The **trip row** is pinned first; the
+`spans` lanes, `gates` strip, and `contention` card fill in below. To find *what
+blocked the victim*:
 
 1. **`trigger.detail.waits` names the layer** the victim queued on — e.g.
    `"heavy-read-acquire": 3500` means 3.5 s of the trip's wall-clock was spent
-   waiting on that gate, not on its own work. In the Gantt these are painted as
-   positioned *wait bands* over the victim's bar at their true offsets, colored per
-   layer — so the same gate lines up as one color across every co-queued row.
+   waiting on that gate, not on its own work. The Gantt paints these as positioned
+   *wait bands* at their true offsets, colored per layer — so the same gate lines
+   up as one color across every co-queued row.
 2. **The `gates` strip shows saturation at the same instant** — `active 4/4,
    queued 11` on that layer confirms the gate was the bottleneck. Gate names use
    the `chargeWait` layer vocabulary, so `trigger.detail.waits`, each span's
    `waits`, and the `gates` keys all join directly.
-3. **The `spans` tree names the holder — read it, don't guess it.** The spans
-   section is a **nested call-tree waterfall**: every span carries a per-instance
-   `id` / `parentId` minted by the recorder, so each row sits under the exact
-   parent *run* that opened it (two concurrent `flush`es draining the same loader
-   label are two rows under their own parents, not one bucket). The co-queuers are
-   the rows whose `waits` include the saturated layer; the **holder** is the one
+3. **The `spans` tree names the holder — read it, don't guess it.** The co-queuers
+   are the rows whose `waits` include the saturated layer; the **holder** is the one
    with dominant `selfMs`/`childMs` among them. Walk the trip row's subtree — its
    children are literally the work it was blocked behind. Click any bar for its
-   label, kind, t0/t1 (wall + relative), resolved ancestor chain, and
-   wait/child/self split in the bottom detail strip.
+   label, kind, t0/t1 (wall + relative), ancestor chain, and wait/child/self split.
+   (The nesting is exact, read off per-instance ids — see `trace/spans`.)
 4. **The `contention` card** distinguishes "queued behind a gate" from "the whole
    host was saturated" — a high `loadAvg` vs `cpuCount`, or a spike in pg
    backends, points at host/DB pressure rather than a single holder.
 
-Caveats surfaced in the UI. The *shape* of the tree is exact — nesting is read off
-instance ids, never inferred from time overlap — and wait bands sit at their true
-offsets, but the window it is drawn from is bounded:
-
-- **The ≥5 ms flight-ring floor.** Completed spans shorter than 5 ms never enter
-  the ring, so they are absent from the Gantt entirely.
-- **Orphan rows.** A span whose `parentId` resolves to nothing in the window
-  renders as a root, marked as such: its parent either closed in <5 ms (never
-  entered the ring) or it is a detached, fire-and-forget child that outlived its
-  parent. The row is real; only its edge is missing.
-- **The wait-band budget.** The recorder keeps at most `WAIT_BAND_CAP` bands per
-  `(entry, layer)`, dropping the smallest on overflow. `waitMs` stays the
-  authoritative total, so any wait whose position was dropped (or clamped off the
-  window edge) shows in the detail strip as `Nms unpositioned` — reported as text,
-  never painted. A trace captured before wait bands existed reads as *position not
-  captured (pre-wait-band trace)* and paints no band at all.
+The tree's shape and band offsets are exact, but the window it is drawn from is
+bounded by the recorder's own limits (the ≥5 ms flight-ring floor, unresolvable
+parents rendering as flagged orphan roots, the `WAIT_BAND_CAP` drop — see
+`infra/runtime-profiler`). Two of those surface as UI text: a wait whose position was
+dropped or clamped off the window edge reads `Nms unpositioned` (never painted), and
+a trace captured before wait bands existed reads *position not captured
+(pre-wait-band trace)* and paints no band at all.
 
 ## Adding a new event class
 
-Create a new sub-plugin under `trace/plugins/<class>/` (a `heap` / `gc` / `cpu`
-sampler) and list a `defineTraceEventClass` handle in its `server/index.ts`
-`contributions` array:
+Create a sub-plugin under `trace/plugins/<class>/` and list a `defineTraceEventClass`
+handle in its `server/index.ts` `contributions` array:
 
 ```ts
 // server/internal/class.ts
@@ -206,12 +179,10 @@ contributions: [heapClass.contribution],
 ```
 
 Then give it a `Trace.Lane` on the web side keyed by the same `id` (see
-`spans` / `gates` / `contention` for the three shapes: per-kind bars, an
-occupancy strip, a footer card). Skip the web lane and the class still shows up —
-the pane's `GenericEventLane` fallback renders unregistered sections as point
-markers + expandable JSON, so a new class is **visible by default, never
-silent**. No engine edit, no `*-in-sync` codegen: the snapshot is self-describing
-(its `events` keys) and the dispatch fallback covers the rest.
+`spans` / `gates` / `contention` for the three shapes: per-kind bars, an occupancy
+strip, a footer card). Skip the web lane and the class still shows up — the pane's
+`GenericEventLane` fallback renders unregistered sections as point markers +
+expandable JSON.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
