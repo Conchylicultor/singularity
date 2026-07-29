@@ -1,7 +1,11 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { defineExtension } from "./internal/define-extension";
-export type { EntityExtension } from "./internal/define-extension";
+export type {
+  EntityExtension,
+  ExtensionIndexBuilders,
+  ExtensionMeta,
+} from "./internal/define-extension";
 export { EntityExtensions } from "./internal/entity-extensions";
 
 export default {

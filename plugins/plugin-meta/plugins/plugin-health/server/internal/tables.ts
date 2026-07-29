@@ -27,7 +27,18 @@ const pluginHealthReviews = defineEntity(
 // drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
 export const _pluginHealthReviews = pluginHealthReviews.table;
 
-export const healthReviewExt = defineExtension(_tasks, "health_review", {
-  reviewId: text("review_id").notNull(),
-});
+// Which tasks belong to a review. The `review_id` index serves the only read
+// keyed on a foreign column — `handleGetTasksForReview` (see ./routes.ts),
+// `WHERE review_id = X` joined to `_tasks` on `parent_id`; the pk's implicit
+// btree covers the join side, not the filter.
+export const healthReviewExt = defineExtension(
+  _tasks,
+  "health_review",
+  {
+    reviewId: text("review_id").notNull(),
+  },
+  {
+    indexes: (t, b) => [b.index("review_id").on(t.reviewId)],
+  },
+);
 export const _tasksExtHealthReview = healthReviewExt.table;

@@ -33,10 +33,15 @@ The sanctioned shape for a foreign-column-keyed resource is the hand-written
 `ctx?.affectedIds` scoped-refill branch, copied from `pushesByAttemptResource`.
 It stays bounded: a FULL load is one block's launched tasks.
 
-The reverse `WHERE block_id = X` lookup is an unindexed seq scan over a table
-domain-bounded to one row per prompt-launched task. If it ever needs an index,
-the structural fix is an `indexes` option on `defineExtension` (filed as
-`task-1785249879009-19heph`), not a hand-written migration here.
+The reverse `WHERE block_id = X` lookup is indexed, declared through
+`defineExtension`'s `indexes` option as `(block_id, created_at)` — the extension
+table's only other index, since the pk's implicit btree covers `parent_id` alone.
+That column pair is what makes one index serve both of the resource's reads: the
+FULL load filters on `block_id` and returns oldest-first, so an ordered index
+scan can satisfy the `ORDER BY` without a sort, and the scoped refill
+(`block_id = X AND parent_id IN (…)`) seeks on the same leading column. Which
+plan the planner picks is its own call — while the table is small it may prefer
+a bitmap scan plus a sort, and the trailing column costs nothing either way.
 
 The second, task-keyed read (`promptTaskOriginsResource`) is a plain
 `queryResource` — bounded by the domain (at most one row per task, co-bounded

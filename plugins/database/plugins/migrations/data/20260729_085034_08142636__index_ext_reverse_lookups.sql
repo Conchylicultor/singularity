@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "tasks_ext_prompt_block_block_created_idx" ON "tasks_ext_prompt_block" USING btree ("block_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "tasks_ext_health_review_review_id_idx" ON "tasks_ext_health_review" USING btree ("review_id");

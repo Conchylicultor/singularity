@@ -32,6 +32,36 @@ Creates `agents_ext_auto_launch(parent_id text PK FK CASCADE, enabled bool NOT N
 
 The handle exposes `.table` for same-plugin raw queries (live-state resource loaders that read all rows, complex SQL composition keyed by columns other than `parentId`). Cross-plugin imports of the underlying pgTable are blocked by the plugin-boundary checker (R4) because the table stays in `internal/`.
 
+### `indexes`
+
+The table ships with exactly one index: the implicit btree behind the `parent_id` primary key. That covers every read the handle's own methods make, so **a table read only by `parent_id` needs no `indexes` at all**. Declare one only when the plugin composes a query off `.table` keyed by something else — that read is otherwise a seq scan, and there is no other supported way to add the index (generated migrations are never hand-edited).
+
+The optional 4th argument takes an `indexes` callback receiving the typed columns `t` and a builder pair `b`:
+
+```ts
+export const promptBlock = defineExtension(
+  _tasks,
+  "prompt_block",
+  {
+    pageId: text("page_id").notNull(),
+    blockId: text("block_id").notNull(),
+  },
+  {
+    // b.index("block_created") → index("tasks_ext_prompt_block_block_created_idx")
+    indexes: (t, b) => [b.index("block_created").on(t.blockId, t.createdAt)],
+  },
+);
+```
+
+**The name is derived, not authored.** The caller gives a short table-local suffix; the primitive prefixes the derived table name and appends `_idx`. An extension's table name is computed (`<parent>_ext_<name>`), so re-typing it as a string would be pure drift — a typo or a later parent rename yields a silently misleading index name that Postgres accepts without complaint. Binding the prefix makes a wrong name unrepresentable.
+
+`b.index` / `b.uniqueIndex` return **drizzle's own builders**, so the full surface stays available: `.on()`, `.using("gin", …)`, `.where(sql\`…\`)`, `.desc()`. `t` is keyed by JS property name and covers `parentId`, `createdAt` and `updatedAt` alongside the user's columns.
+
+Two module-eval throws guard the primitive's invariants:
+
+- **Reserved column names.** Declaring `parentId`, `createdAt` or `updatedAt` in `columns` used to silently produce an incoherent table (the spread order lets `parentId` lose to the user column while the timestamps win). It now throws, naming the key and the table.
+- **Identifier length.** `<table>_<suffix>_idx` past Postgres's 63-**byte** limit is silently truncated, which can collide with another index. It throws with the offending name and its byte length. The suffix shape is validated too (`/^[a-z0-9_]+$/`, non-empty).
+
 ## Wire-up
 
 Each consumer plugin owns its own:
@@ -65,7 +95,10 @@ If no data needs preserving, accept the auto-generated migration as-is.
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
-  - Exports (types): `EntityExtension`
+  - Exports (types):
+    - `EntityExtension`
+    - `ExtensionIndexBuilders`
+    - `ExtensionMeta`
   - Exports (values):
     - `defineExtension`
     - `EntityExtensions`
