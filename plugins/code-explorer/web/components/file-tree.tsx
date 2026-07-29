@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { MdFolder, MdInsertDriveFile } from "react-icons/md";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   DataView,
   defineDataView,
+  type DataViewId,
   type FieldDef,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -108,70 +109,36 @@ function buildFileRows(paths: readonly string[]): FileRow[] {
   return out;
 }
 
-/** Ancestor directory paths of a file path (excluding the file itself). */
-function ancestorsOf(path: string): string[] {
-  if (!path) return [];
-  const segments = path.split("/");
-  const out: string[] = [];
-  for (let i = 1; i < segments.length; i++) {
-    out.push(segments.slice(0, i).join("/"));
-  }
-  return out;
-}
+// No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
+// local render state owned by the data-view primitive, so this hierarchy closes
+// over nothing and is a module constant. Revealing the selected file's ancestor
+// directories is the tree primitive's own reveal-on-select, driven by
+// `selectedRowId` below.
+const hierarchy: HierarchyConfig<FileRow> = {
+  getParentId: (r) => r.parentId,
+  getRank: (r) => r.rank,
+};
 
 interface FileTreeProps {
   files: readonly string[];
   selectedPath: string;
   onSelect: (path: string) => void;
+  /**
+   * Which surface's view/filter/sort config and expand map this tree reads and
+   * writes. Defaults to the Explorer pane's own. A second surface rendering this
+   * tree MUST pass its own marker — sharing one would make filtering either tree
+   * filter both, and (paths overlapping) collapse a folder in both at once.
+   */
+  storageKey?: DataViewId;
 }
 
 export function FileTree({
   files,
   selectedPath,
   onSelect,
+  storageKey = FILE_TREE_VIEW,
 }: FileTreeProps) {
   const rows = useMemo(() => buildFileRows(files), [files]);
-
-  // Locally-tracked user-driven expand state (empty = all collapsed). The
-  // selected file's ancestors are *derived* on top of this set during render
-  // (see `effectiveExpanded`) so an externally-driven selection is always
-  // revealed without an extra render cycle.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  // The set actually rendered: the user's toggles unioned with the selection's
-  // ancestor directories. Derived in render (no state mirror, no effect) so a
-  // selection change reveals the file in the same commit it arrives.
-  const effectiveExpanded = useMemo(() => {
-    if (!selectedPath) return expanded;
-    const s = new Set(expanded);
-    for (const dir of ancestorsOf(selectedPath)) s.add(dir);
-    return s;
-  }, [expanded, selectedPath]);
-
-  const toggle = useCallback((id: string) => {
-    setExpanded((prev) => {
-      const set = new Set(prev);
-      if (set.has(id)) set.delete(id);
-      else set.add(id);
-      return set;
-    });
-  }, []);
-
-  const hierarchy = useMemo<HierarchyConfig<FileRow>>(
-    () => ({
-      getParentId: (r) => r.parentId,
-      getRank: (r) => r.rank,
-      isExpanded: (r) => effectiveExpanded.has(r.id),
-      onToggleExpanded: (id, next) =>
-        setExpanded((prev) => {
-          const set = new Set(prev);
-          if (next) set.add(id);
-          else set.delete(id);
-          return set;
-        }),
-    }),
-    [effectiveExpanded],
-  );
 
   // `name` is the primary (only-rendered-in-tree) field; `kind` is filter-only —
   // invisible in the tree body but usable in the "Filter" pill (Folder / File).
@@ -195,6 +162,7 @@ export function FileTree({
   const treeOptions = useMemo<TreeViewOptions<FileRow>>(
     () => ({
       expandAll: true,
+      expandOnActivate: (r) => r.isDir,
       leadingIcon: (r) =>
         r.isDir ? (
           <MdFolder className="size-4 text-info" />
@@ -205,15 +173,11 @@ export function FileTree({
     [],
   );
 
-  // A directory row toggles its own expand state on body click (the chevron does
-  // the same, stopping propagation so they never double-fire); a file row drives
-  // the host's selection.
+  // Only file rows reach here: a directory row's body click is routed to its own
+  // expand toggle by `expandOnActivate`, never to activation.
   const handleActivate = useCallback(
-    (row: FileRow) => {
-      if (row.isDir) toggle(row.id);
-      else onSelect(row.path);
-    },
-    [toggle, onSelect],
+    (row: FileRow) => onSelect(row.path),
+    [onSelect],
   );
 
   return (
@@ -222,7 +186,7 @@ export function FileTree({
       fields={fields}
       rowKey={(r) => r.id}
       views={["tree"]}
-      storageKey={FILE_TREE_VIEW}
+      storageKey={storageKey}
       hierarchy={hierarchy}
       selectedRowId={selectedPath || undefined}
       onRowActivate={handleActivate}

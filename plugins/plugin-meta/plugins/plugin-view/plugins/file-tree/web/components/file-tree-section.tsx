@@ -6,9 +6,16 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { defineDataView } from "@plugins/primitives/plugins/data-view/web";
 
 // Sentinel resolving to the current running server's own worktree root.
 const SELF_WORKTREE = "self";
+
+// This section's own DataView surface. It renders the same `FileTree` component
+// as the Explorer pane over an overlapping (plugin-relative) path space, so it
+// must not share the Explorer's marker: one id means one config, one filter and
+// one expand map for both.
+const SECTION_VIEW = defineDataView("plugin-view.file-tree");
 
 export function FileTreeSection({ node }: { node: PluginNode }) {
   const prefix = `plugins/${node.path}/`;
@@ -32,6 +39,7 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
       <Scroll axis="both" className="max-h-96 rounded-md border">
         <FileTree
           files={files}
+          storageKey={SECTION_VIEW}
           selectedPath={selected}
           onSelect={(rel) => {
             setSelected(rel);

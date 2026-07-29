@@ -10,6 +10,8 @@
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
     - `apps/pages/history`
+    - `apps/pages/page-tree`
+    - `code-explorer`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `debug/live-state-churn/emit`
     - `debug/render-profiler`

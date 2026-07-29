@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -24,12 +24,19 @@ import { ConfigRowBadge } from "./config-row-badge";
 
 const CONFIG_NAV_VIEW = defineDataView("config_v2.settings.nav");
 
+// No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
+// local render state owned by the data-view primitive — never a domain field —
+// so the nav's four authored view instances each keep their own collapse
+// instead of sharing one mount-local set. Pairs with `defaultExpanded: true`,
+// which reproduces the old empty-collapsed-set (everything expanded) start.
+const configHierarchy: HierarchyConfig<ConfigNavRow> = {
+  getParentId: (r) => r.parentId,
+  getRank: (r) => r.rank,
+};
+
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
-  // Collapsed group ids — a row is expanded unless its id is present. Starts
-  // empty (everything expanded), matching the pre-DataView nav.
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const { data: payload, isPending } = useEndpoint(getPluginTree, {});
 
@@ -118,8 +125,8 @@ export function ConfigNav() {
 
   const handleActivate = useCallback(
     (row: ConfigNavRow) => {
-      // Group / multi-config header rows have no config of their own — the
-      // chevron toggles them; a body click is a no-op.
+      // Narrowing only — `expandOnActivate` routes every registration-less row
+      // to a toggle, so activation never reaches one.
       if (!row.registration) return;
       openPane(
         configDetailPane,
@@ -128,22 +135,6 @@ export function ConfigNav() {
       );
     },
     [openPane],
-  );
-
-  const hierarchy = useMemo<HierarchyConfig<ConfigNavRow>>(
-    () => ({
-      getParentId: (r) => r.parentId,
-      getRank: (r) => r.rank,
-      isExpanded: (r) => !collapsed.has(r.id),
-      onToggleExpanded: (id, next) =>
-        setCollapsed((prev) => {
-          const set = new Set(prev);
-          if (next) set.delete(id);
-          else set.add(id);
-          return set;
-        }),
-    }),
-    [collapsed],
   );
 
   // Typed fields drive the data-view filter builder. `label` is the primary
@@ -186,6 +177,11 @@ export function ConfigNav() {
   const treeOptions = useMemo<TreeViewOptions<ConfigNavRow>>(
     () => ({
       expandAll: true,
+      defaultExpanded: true,
+      // Group / multi-config header rows have no config of their own, so a body
+      // click has nothing to open — it was inert. Route it to the chevron
+      // instead; `onRowActivate` then only ever sees a real config row.
+      expandOnActivate: (r) => !r.registration,
       trailing: (r) => (
         <ConfigRowBadge
           modifiedCount={modifiedCountOf(r)}
@@ -205,7 +201,7 @@ export function ConfigNav() {
       views={["tree"]}
       storageKey={CONFIG_NAV_VIEW}
       loading={isPending}
-      hierarchy={hierarchy}
+      hierarchy={configHierarchy}
       selectedRowId={selectedRowId}
       onRowActivate={handleActivate}
       searchAccessor={(r) => r.searchText}

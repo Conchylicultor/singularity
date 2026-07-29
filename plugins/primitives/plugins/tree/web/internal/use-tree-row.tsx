@@ -37,6 +37,10 @@ export type TreeListContextValue<T extends TreeItem> = {
    * view exactly once, while incidental row REmounts stay inert.
    */
   takeInitialReveal: () => boolean;
+  /** Activating (body-clicking) a matching row toggles its expansion instead of
+   *  selecting it (see `TreeListProps.expandOnActivate`). Absent → every row
+   *  selects, today's behavior. */
+  expandOnActivate?: (row: T) => boolean;
   /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
   multiSelect: boolean;
   /** True when `onCreate` is wired → RowChrome renders root + per-node Add. */
@@ -177,11 +181,23 @@ export function useTreeRow<T extends TreeItem>(
     [setRevealRef, setChildRef],
   );
 
-  const select = useCallback(() => ctx.onSelect(node.id), [ctx, node.id]);
   const toggleExpanded = useCallback(
     () => void ctx.setExpanded([{ id: node.id, expanded: !isOpen }]),
     [ctx, node.id, isOpen],
   );
+  // The `expandOnActivate` branch lives HERE, not at the `onSelect` seam, and
+  // that placement is load-bearing: `ctx.onSelect` is also called
+  // PROGRAMMATICALLY — by `createAtRoot` (tree-list.tsx), by `addChild` /
+  // `addBelow` below, and by the reveal path — and every one of those must keep
+  // navigating to the row it just created or revealed. Only a real body click
+  // routes through `select`, so only `select` may divert the gesture to a toggle.
+  const select = useCallback(() => {
+    if (ctx.expandOnActivate?.(node)) {
+      toggleExpanded();
+      return;
+    }
+    ctx.onSelect(node.id);
+  }, [ctx, node, toggleExpanded]);
   const consumeAutoFocus = useCallback(
     () => ctx.clearPendingFocus(),
     [ctx],

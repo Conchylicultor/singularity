@@ -74,6 +74,7 @@ function renderProps(
     state: { sort: [], query: "", filter: null },
     setSort: () => {},
     setFilter: () => {},
+    setExpanded: () => {},
     options: undefined,
   };
 }

@@ -94,6 +94,14 @@ export type TreeListProps<T extends TreeItem> = {
    */
   canCreate?: boolean;
   /**
+   * Activating (body-clicking) a matching row toggles its expansion instead of
+   * selecting it — the "click a folder to open it" affordance. Stateless by
+   * construction: it only routes the gesture, the expand value still lives in
+   * `rows[].expanded` and is written through `setExpanded`. Absent → every row
+   * selects, today's behavior.
+   */
+  expandOnActivate?: (row: T) => boolean;
+  /**
    * Opt-in checkbox multi-select. Present → each row renders a `SelectionCheckbox`
    * and a `SelectionBar` (with optional bulk `actions`) sits above the rows. The
    * select order is derived from the visible tree (DFS, skipping collapsed
@@ -116,6 +124,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     toolbar,
     addLabel = "Add",
     canCreate = true,
+    expandOnActivate,
     multiSelect,
   } = props;
 
@@ -134,42 +143,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     return v;
   }, []);
 
-  const [optimisticExpanded, setOptimisticExpanded] = useState<
-    Map<string, boolean>
-  >(() => new Map());
-
-  // Clear overrides once the server push confirms the value.
-  useEffect(() => {
-    if (optimisticExpanded.size === 0) return;
-    const stale = [...optimisticExpanded.entries()].filter(([id, v]) => {
-      const row = rows.find((r) => r.id === id);
-      return !row || row.expanded === v;
-    });
-    if (stale.length === 0) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- optimistic-cleanup: diffs local optimisticExpanded overrides against server truth (the rows prop) on each push and drops entries the server has confirmed, so the real value takes over; this is the canonical clear-optimistic-state-on-confirmation pattern — the rows prop is not live-state-backed here so useOptimisticResource doesn't apply, and no render-time derivation can decide which overrides became stale
-    setOptimisticExpanded((prev) => {
-      const next = new Map(prev);
-      stale.forEach(([id]) => next.delete(id));
-      return next;
-    });
-  }, [rows, optimisticExpanded]);
-
-  const wrappedSetExpanded = useCallback(
-    (changes: readonly ExpandChange[]) => {
-      if (changes.length === 0) return;
-      // ONE setState for the WHOLE batch. Expand-all over a large tree is a
-      // single gesture over N rows; folding it row-by-row would copy a map
-      // growing to N entries N times.
-      setOptimisticExpanded((prev) => {
-        const next = new Map(prev);
-        for (const c of changes) next.set(c.id, c.expanded);
-        return next;
-      });
-      return setExpanded(changes);
-    },
-    [setExpanded],
-  );
-
   const createAtRoot = useCallback(
     async (parentId: string | null) => {
       if (!onCreate) return;
@@ -182,19 +155,15 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [onCreate, onSelect],
   );
 
-  const scopedBase = useMemo(
+  // `rows[].expanded` is read straight through — no optimistic overlay. `setExpanded`
+  // has exactly one sink (the DataView host's `useViewEphemeral.setExpanded`, a
+  // synchronous `setState` batched into the same commit as the click) and cannot
+  // fail, so a click's new value is already in `rows` on the very next render.
+  // The overlay existed only for the deleted `HierarchyConfig.onToggleExpanded`,
+  // an async, failable write that could leave the chevron stale until a server push.
+  const scoped = useMemo(
     () => (rootId ? filterSubtree(rows, rootId) : [...rows]),
     [rows, rootId],
-  );
-  const scoped = useMemo(
-    () =>
-      optimisticExpanded.size === 0
-        ? scopedBase
-        : scopedBase.map((r) => {
-            const ov = optimisticExpanded.get(r.id);
-            return ov !== undefined ? { ...r, expanded: ov } : r;
-          }),
-    [scopedBase, optimisticExpanded],
   );
   const tree = useMemo(() => buildTree(scoped), [scoped]);
 
@@ -255,12 +224,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     nodesWithChildren.length > 0 && nodesWithChildren.every((r) => r.expanded);
   const expandAll = useCallback(async () => {
     const next = !allExpanded;
-    await wrappedSetExpanded(
+    await setExpanded(
       nodesWithChildren
         .filter((r) => r.expanded !== next)
         .map((r) => ({ id: r.id, expanded: next })),
     );
-  }, [nodesWithChildren, allExpanded, wrappedSetExpanded]);
+  }, [nodesWithChildren, allExpanded, setExpanded]);
 
   // The DnD shell (DndContext, sensors, active-id lifecycle, DragOverlay chip,
   // and the windowed measuring strategy) is lifted into `RankReorderDndContext`.
@@ -298,15 +267,15 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       }
       // A drop into a COLLAPSED destination parent would make the dragged row
       // vanish: a drag never changes `selectedRowId`, so the reveal-on-select
-      // effect below never runs for a reparent. Open the destination in the same
-      // batched write that carries the optimistic overlay (idempotent — a
-      // redundant expand of an already-open folder is a no-op we skip anyway).
+      // effect below never runs for a reparent. Open the destination in its own
+      // batched write (idempotent — a redundant expand of an already-open folder
+      // is a no-op we skip anyway).
       const destParent =
         dest.parentId === null
           ? undefined
           : rows.find((r) => r.id === dest.parentId);
       if (destParent && !destParent.expanded) {
-        void wrappedSetExpanded([{ id: destParent.id, expanded: true }]);
+        void setExpanded([{ id: destParent.id, expanded: true }]);
       }
       // The raw positional intent alongside the computed rank. A `child` drop
       // reparents under the target and lands last, which as neighbour intent is
@@ -317,7 +286,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
         zone: zone === "child" ? "after" : zone,
       });
     },
-    [rows, onMove, wrappedSetExpanded],
+    [rows, onMove, setExpanded],
   );
 
   // Auto-expand collapsed ancestors when selectedId changes so the row is visible.
@@ -342,9 +311,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       cur = parent.parentId;
     }
     if (changes.length === 0) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal-on-select: expands the collapsed ancestors of selectedId in one batched call so the row is visible; wrappedSetExpanded fires setOptimisticExpanded (optimistic) AND the setExpanded write callback, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
-    void wrappedSetExpanded(changes);
-  }, [selectedId, rows, wrappedSetExpanded]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal-on-select: expands the collapsed ancestors of selectedId in one batched call so the row is visible; `setExpanded` writes the host's expand map, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
+    void setExpanded(changes);
+  }, [selectedId, rows, setExpanded]);
 
   const showSearchInput = !!toolbar?.search && !hideSearchInput;
   const hasToolbar = showExpandAll || !!toolbar?.start || showSearchInput;
@@ -357,10 +326,11 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
-      setExpanded: wrappedSetExpanded,
+      setExpanded,
       onCreate,
       Row,
       takeInitialReveal,
+      expandOnActivate,
       multiSelect: !!multiSelect,
       canCreate: canCreate && !!onCreate,
       canReorder: !!onMove,
@@ -372,10 +342,11 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
-      wrappedSetExpanded,
+      setExpanded,
       onCreate,
       Row,
       takeInitialReveal,
+      expandOnActivate,
       multiSelect,
       canCreate,
       onMove,

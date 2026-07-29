@@ -1499,6 +1499,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `pageDetailRoute`
               - `pagesTreeRoute`
+          - E2e:
+            - Uses:
+              - `framework/tooling/e2e-harness.boot`
+              - `framework/tooling/e2e-harness.pathUrl`
+              - `framework/tooling/e2e-harness.report`
+              - `framework/tooling/e2e-harness.withBrowser`
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/pages-nav`
@@ -3945,7 +3951,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Explorer`
               - `explorerPane`
               - `PluginTree`
-              - `usePluginTree`
           - Cross-plugin:
             - Imported by:
               - `apps/studio/compositions/closure-tree`
@@ -3976,8 +3981,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Explorer.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
                 - Uses:
                   - `apps/studio/explorer.Explorer`
-                  - `apps/studio/explorer.usePluginTree`
                   - `primitives/css/center.Center`
+                  - `primitives/tree.TreeItem`
+                  - `primitives/tree.TreeListContextValue`
+                  - `primitives/tree.useOptionalTreeListContext`
+                  - `primitives/tree.useSubtreeExpandAll`
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
@@ -6139,6 +6147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.ResizablePanel`
       - `primitives/css/ui-kit.ResizablePanelGroup`
       - `primitives/data-view.DataView`
+      - `primitives/data-view.DataViewId`
       - `primitives/data-view.defineDataView`
       - `primitives/data-view.FieldDef`
       - `primitives/data-view.HierarchyConfig`
@@ -6165,6 +6174,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `getRangeFiles`
       - `resolveParentSha`
       - `resolveWorktreePath`
+  - E2e:
+    - Uses:
+      - `framework/tooling/e2e-harness.arg`
+      - `framework/tooling/e2e-harness.boot`
+      - `framework/tooling/e2e-harness.pathUrl`
+      - `framework/tooling/e2e-harness.report`
+      - `framework/tooling/e2e-harness.withBrowser`
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
@@ -13545,6 +13561,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
               - `apps/pages/history`
+              - `apps/pages/page-tree`
+              - `code-explorer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
@@ -17701,6 +17719,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view.PluginViewSlots`
               - `plugin-meta/plugin-view.Section`
               - `primitives/css/scroll.Scroll`
+              - `primitives/data-view.defineDataView`
               - `primitives/pane.useOpenPane`
         - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
           - Web:
@@ -20602,6 +20621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -20776,6 +20796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "mail-inbox"
           - `ConfigV2.Register` "page.links.backlinks"
           - `ConfigV2.Register` "pages-sidebar"
+          - `ConfigV2.Register` "plugin-view.file-tree"
           - `ConfigV2.Register` "prototypes.gallery"
           - `ConfigV2.Register` "sonata.library"
           - `ConfigV2.Register` "story.gallery"
@@ -20849,6 +20870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/inline`
           - `fields/text/table`
           - `page/links`
+          - `plugin-meta/plugin-view/file-tree`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/gallery`
           - `primitives/data-view/list`
@@ -23623,6 +23645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/story/story-core`
+          - `apps/studio/explorer/expand-collapse`
           - `conversations/agents`
           - `page/editor`
           - `primitives/data-view/tree`

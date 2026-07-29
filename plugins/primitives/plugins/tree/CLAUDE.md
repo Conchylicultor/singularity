@@ -13,12 +13,27 @@ A single chevron click passes a 1-element array.
 This is load-bearing, not tidiness. The write lands in the data-view primitive's
 per-surface expand map, whose setter `JSON.stringify`s the whole map inside its
 `setState` updater — so N single-row calls would be N serializations of a map
-growing to N keys (quadratic on a tree with hundreds of folders). The batch also
-folds into **one** `setOptimisticExpanded` updater here.
+growing to N keys (quadratic on a tree with hundreds of folders).
 
-`HierarchyConfig.onToggleExpanded(id, next)` (data-view) deliberately stays
-single-row; `data-view/tree` fans a batch out to N consumer calls, the same
-adapter shape as its `wrappedOnMove` / `wrappedOnCreate`.
+The batch has exactly **one** sink: that synchronous, localStorage-backed
+`setState`, batched into the same commit as the click and unable to fail. So
+`TreeList` reads `rows[].expanded` straight through — there is no optimistic
+overlay, because there is no async write to cover for.
+
+## `expandOnActivate` is consulted in `select`, not `onSelect`
+
+`TreeListProps.expandOnActivate(row)` diverts a row's activation to an expand
+toggle — the "click a folder to open it" affordance. It is **stateless**: it
+routes the gesture, it does not hold the value (`rows[].expanded` and
+`setExpanded` still do), so it cannot drift out of sync with the expand state
+the way a consumer-held expand accessor could.
+
+Its placement is load-bearing. The branch lives in `useTreeRow`'s `select` — the
+one path a real body click takes — and **not** at the `TreeList.onSelect` seam,
+because `onSelect` is also called *programmatically*: by `createAtRoot`, by
+`addChild` / `addBelow`, and by the reveal path. Diverting there would leave a
+row the user just created, or one the tree just revealed, silently
+un-navigated-to.
 
 ## Reveal: a row must never land somewhere invisible
 
@@ -119,6 +134,7 @@ outside a tree — notably a `data-view` item-action, which every view renders
 - Cross-plugin:
   - Imported by:
     - `apps/story/story-core`
+    - `apps/studio/explorer/expand-collapse`
     - `conversations/agents`
     - `page/editor`
     - `primitives/data-view/tree`

@@ -16,7 +16,7 @@ import {
   type HierarchyConfig,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { ExpandChange, TreeNode } from "@plugins/primitives/plugins/tree/core";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
   RowChrome,
   TreeList,
@@ -204,6 +204,13 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [props.options],
   );
 
+  // Expand has exactly ONE destination, unconditionally: this view's own
+  // ViewState expand map (localStorage), keyed per (surface, view-instance,
+  // row). A data source cannot redirect it — there is no consumer expand seam —
+  // so collapse is never domain data and two view instances never fight over one
+  // flag. `setExpanded` is required on the render props, so the host always
+  // supplies it; it is passed straight through to `TreeList` (and to the grouped
+  // path's hoisted expand-all) with no adapter in between.
   const { rows, rowKey, expanded, setExpanded } = props;
 
   // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
@@ -411,27 +418,13 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [hierOnCreate],
   );
 
-  // Expand write. Two destinations, one seam: a consumer that persists expand
-  // state itself (`hierarchy.onToggleExpanded`), else this view's own ViewState
-  // (localStorage) via the host's `setExpanded`.
-  //
-  // `HierarchyConfig.onToggleExpanded` deliberately stays SINGLE-ROW while
-  // `TreeListProps.setExpanded` is batched: the consumer seam has many callers
-  // and the TreeList seam has exactly one, so batching the 1-caller side and
-  // fanning out here is the cheaper boundary — the same adapter shape as
-  // `wrappedOnMove` / `wrappedOnCreate` above.
-  const hierOnToggleExpanded = hierarchy?.onToggleExpanded;
-  const setTreeExpanded = useCallback(
-    async (changes: readonly ExpandChange[]) => {
-      if (hierOnToggleExpanded) {
-        await Promise.all(
-          changes.map(async (c) => hierOnToggleExpanded(c.id, c.expanded)),
-        );
-        return;
-      }
-      setExpanded?.(changes);
-    },
-    [hierOnToggleExpanded, setExpanded],
+  // Unwraps the projection for the consumer's row-level predicate. An ALIAS row
+  // never toggles: it is a read-only reference leaf whose subtree lives at its
+  // canonical place, so there is nothing under it to open.
+  const optExpandOnActivate = options.expandOnActivate;
+  const wrappedExpandOnActivate = useCallback(
+    (p: Projected<unknown>) => !p.alias && !!optExpandOnActivate?.(p.__row),
+    [optExpandOnActivate],
   );
 
   if (!hierarchy) return null;
@@ -481,13 +474,16 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         const original = originalById.get(id);
         if (original !== undefined) props.onRowActivate?.(original);
       }}
-      setExpanded={setTreeExpanded}
+      setExpanded={setExpanded}
       onMove={onMove}
       onCreate={hierOnCreate ? wrappedOnCreate : undefined}
       Row={Row}
       dragOverlay={dragOverlay}
       addLabel={sectioned ? null : addLabel}
       canCreate={!!hierOnCreate}
+      expandOnActivate={
+        optExpandOnActivate ? wrappedExpandOnActivate : undefined
+      }
       multiSelect={
         props.selection ? { actions: props.selection.bulkActions } : undefined
       }
@@ -516,9 +512,9 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     // The grouped path renders one TreeList per section, so expand-all is hoisted
     // here and bypasses TreeList entirely — it still writes the FULL projected
     // set (every section) in a single batched call.
-    const toggleExpandAll = async () => {
+    const toggleExpandAll = () => {
       const next = !allExpanded;
-      await setTreeExpanded(
+      setExpanded(
         nodesWithChildren
           .filter((p) => p.expanded !== next)
           .map((p) => ({ id: p.id, expanded: next })),

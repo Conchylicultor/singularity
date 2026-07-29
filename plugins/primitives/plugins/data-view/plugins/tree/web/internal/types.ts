@@ -51,12 +51,20 @@ export interface TreeViewOptions<TRow> {
   /** Show the expand-all/collapse-all toolbar button. */
   expandAll?: boolean;
   /**
-   * Default expansion for nodes with no explicit expand state (neither a
-   * `hierarchy.isExpanded` value nor a local toggle). `true` opens every node by
-   * default — for small, derived trees whose point is to show the whole set —
-   * while staying collapsible (a user toggle still wins). Default `false`.
+   * Default expansion for nodes with no entry in the view's own expand map (i.e.
+   * the user has never toggled them). `true` opens every node by default — for
+   * small, derived trees whose point is to show the whole set — while staying
+   * collapsible (a user toggle still wins). Default `false`.
    */
   defaultExpanded?: boolean;
+  /**
+   * Rows for which activating (body-clicking) the row toggles its expansion
+   * instead of activating it — the "click a folder to open it" affordance
+   * (`onRowActivate` never fires for such a row). Stateless: it routes the
+   * gesture only; expand state still lives in the view's own expand map.
+   * Absent → every row activates, the default. Alias rows never toggle.
+   */
+  expandOnActivate?: (row: TRow) => boolean;
   /** Extra content rendered on the left of the tree's own toolbar row. */
   toolbarStart?: ReactNode;
   /** Per-row label className (e.g. done/dropped strikethrough styling). */

@@ -90,9 +90,14 @@ the lower-level building block.
   ungrouped path. The pure pieces (orphan-rule roots, field adaptation onto the
   projected wrapper, children-follow-their-root bucketing) live in
   `web/internal/group-rows.ts`, bun-tested alongside `project-rows`.
-- **Expand state** — server-persisted when `hierarchy.isExpanded` /
-  `onToggleExpanded` are supplied; otherwise managed in local component state
-  for the session (`DataViewRenderProps` does not expose `ViewState.setExpanded`).
+- **Expand state** — read **only** from the data-view primitive's own
+  per-`(surface, view-instance, row)` expand map (localStorage, so it survives
+  reload and differs per view instance), falling back to
+  `options.defaultExpanded`, then collapsed. `hierarchy` carries no expand
+  accessor, so a source cannot route this through its own store; every write —
+  a chevron, expand-all, the reveal-on-select ancestor walk — goes back as one
+  batch through `DataViewRenderProps.setExpanded`, which the host always
+  supplies (it is a required prop, not an optional one).
 - **Read-only sources** — when `onMove` / `onCreate` are omitted (and the primary
   field declares no `onEdit`) the
   view passes no handler to `TreeList`, so the row's drag source, every Add
@@ -147,6 +152,18 @@ the lower-level building block.
   no separate grip handle; this menu lives in the trailing actions cluster.)
 - `dragOverlay?(row)` — content shown in the floating drag chip.
 - `addLabel?` — root "Add" button label (`null` hides; default null when no `onCreate`).
+- `defaultExpanded?` — expansion for nodes the user has never toggled, i.e. with
+  no entry in the view's expand map. `true` opens the whole tree on first paint
+  (for small derived trees whose point is to show the entire set) while staying
+  collapsible, since a user toggle writes a map entry that wins. Default `false`.
+- `expandOnActivate?(row)` — rows whose activation (a body click) toggles
+  expansion **instead of** firing `onRowActivate` — the "click a folder to open
+  it" affordance (`(r) => r.isDir` in the code-explorer file tree,
+  `(r) => !r.registration` on the config nav's group headers). It is
+  **stateless**: it routes the gesture only, the value still lives in the view's
+  expand map, so unlike a consumer-held expand accessor it cannot be half-wired.
+  Alias rows never toggle — an alias is a reference leaf whose subtree lives at
+  its canonical place.
 
 Every row also renders a Notion-style hover-revealed "+" in its trailing actions
 cluster (add-child), shown whenever the source supplies `hierarchy.onCreate`.

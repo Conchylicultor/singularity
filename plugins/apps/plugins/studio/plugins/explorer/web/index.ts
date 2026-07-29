@@ -7,7 +7,6 @@ import { explorerPane } from "./panes";
 
 export { Explorer } from "./slots";
 export type { TreeRowBadgeContribution } from "./slots";
-export { usePluginTree } from "./context";
 // Exported so sibling Studio panes (e.g. compositions) can open the tinted
 // Explorer tree alongside their own controls via openPane. The pane object is a
 // pure factory; registration still happens via the Pane.Register below.

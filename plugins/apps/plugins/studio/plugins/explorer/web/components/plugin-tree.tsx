@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import {
   DataView,
@@ -10,7 +10,6 @@ import {
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Explorer } from "../slots";
-import { PluginTreeProvider } from "../context";
 import {
   flattenPluginTree,
   countDescendants,
@@ -21,30 +20,13 @@ const EXPLORER_VIEW = defineDataView("studio.explorer.tree");
 
 const RUNTIME_KEYS = ["web", "server", "central"] as const;
 
-function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
-  const set = new Set<string>();
-  function walk(ns: PluginNode[]) {
-    for (const n of ns) {
-      if (n.children.length > 0) {
-        set.add(n.id);
-        walk(n.children);
-      }
-    }
-  }
-  walk(nodes);
-  return set;
-}
-
-function collectSubtreeIds(node: PluginNode): string[] {
-  const ids: string[] = [];
-  if (node.children.length > 0) {
-    ids.push(node.id);
-    for (const child of node.children) {
-      ids.push(...collectSubtreeIds(child));
-    }
-  }
-  return ids;
-}
+// No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
+// local render state owned by the data-view primitive, so this hierarchy closes
+// over nothing and is a module constant.
+const hierarchy: HierarchyConfig<ExplorerRow> = {
+  getParentId: (r) => r.parentId,
+  getRank: (r) => r.rank,
+};
 
 interface PluginTreeProps {
   plugins: PluginNode[];
@@ -64,65 +46,7 @@ export function PluginTree({
   onSelect,
   storageKey = EXPLORER_VIEW,
 }: PluginTreeProps) {
-  // Host-owned expand state — all expandable ids initially, matching the
-  // pre-DataView behavior (everything expanded on first paint).
-  const [expanded, setExpanded] = useState<Set<string>>(() =>
-    collectAllExpandableIds(plugins),
-  );
-
-  const toggle = useCallback(
-    (id: string) =>
-      setExpanded((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      }),
-    [],
-  );
-
-  const expandDescendants = useCallback(
-    (node: PluginNode) =>
-      setExpanded((prev) => {
-        const next = new Set(prev);
-        for (const id of collectSubtreeIds(node)) next.add(id);
-        return next;
-      }),
-    [],
-  );
-
-  const collapseDescendants = useCallback(
-    (node: PluginNode) =>
-      setExpanded((prev) => {
-        const next = new Set(prev);
-        for (const id of collectSubtreeIds(node)) next.delete(id);
-        return next;
-      }),
-    [],
-  );
-
-  const ctxValue = useMemo(
-    () => ({ expanded, toggle, expandDescendants, collapseDescendants }),
-    [expanded, toggle, expandDescendants, collapseDescendants],
-  );
-
   const rows = useMemo(() => flattenPluginTree(plugins), [plugins]);
-
-  const hierarchy = useMemo<HierarchyConfig<ExplorerRow>>(
-    () => ({
-      getParentId: (r) => r.parentId,
-      getRank: (r) => r.rank,
-      isExpanded: (r) => expanded.has(r.id),
-      onToggleExpanded: (id, next) =>
-        setExpanded((prev) => {
-          const set = new Set(prev);
-          if (next) set.add(id);
-          else set.delete(id);
-          return set;
-        }),
-    }),
-    [expanded],
-  );
 
   // `name` is the primary (only-rendered-in-tree) field; the rest are
   // filter-only — invisible in the tree body but usable in the "Filter" pill.
@@ -167,6 +91,11 @@ export function PluginTree({
   const treeOptions = useMemo<TreeViewOptions<ExplorerRow>>(
     () => ({
       expandAll: true,
+      // The whole tree is expanded on first paint, matching the pre-DataView
+      // behavior. Strictly better than the seed it replaces: that was a lazy
+      // `useState` initializer that never re-seeded, so any node arriving after
+      // the first mount stayed collapsed.
+      defaultExpanded: true,
       // Both slots render a GROUP of contributions with no container of their
       // own — wrap each in a non-wrapping <Inline> so the accents / badges stay a
       // single-line cluster (the group-wrap axis, owned by container choice).
@@ -189,20 +118,18 @@ export function PluginTree({
   );
 
   return (
-    <PluginTreeProvider value={ctxValue}>
-      <DataView<ExplorerRow>
-        rows={rows}
-        fields={fields}
-        rowKey={(r) => r.id}
-        views={["tree", "table"]}
-        defaultView="tree"
-        storageKey={storageKey}
-        hierarchy={hierarchy}
-        selectedRowId={selected ?? undefined}
-        onRowActivate={(r) => onSelect(r.id)}
-        searchAccessor={(r) => r.searchText}
-        viewOptions={{ tree: treeOptions }}
-      />
-    </PluginTreeProvider>
+    <DataView<ExplorerRow>
+      rows={rows}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["tree", "table"]}
+      defaultView="tree"
+      storageKey={storageKey}
+      hierarchy={hierarchy}
+      selectedRowId={selected ?? undefined}
+      onRowActivate={(r) => onSelect(r.id)}
+      searchAccessor={(r) => r.searchText}
+      viewOptions={{ tree: treeOptions }}
+    />
   );
 }

@@ -145,18 +145,20 @@ instead (an `expanded` field on the row's own table) is an anti-pattern with thr
 concrete failure modes, all of which the repo has actually hit:
 
 - **One flag cannot serve two views.** Two view instances over the same rows — or
-  a scoped sub-tree of them — fight over a single value, forcing a consumer-side
-  "strip the expand hooks" workaround.
+  a scoped sub-tree of them, or the same tree on two devices — fight over a
+  single value, so collapsing in one silently collapses the other.
 - **It writes the domain.** A collapse becomes a DB write plus a change-feed
   recompute plus a live-state push to every client, and it stamps the row's
   `updatedAt` — so a purely local UI gesture rewrites a visible, sortable field.
 - **It does not bound.** Expand-all is inherently `O(nodes-with-children)` and, unlike
   `view-order`'s ranks, has no invariant to exploit for a bounded write.
 
-Note the precedence in `tree/web/internal/project-rows.ts`: a consumer-supplied
-`hierarchy.isExpanded` **shadows** this map entirely. That is the only reason a
-consumer would appear not to use it. See
-`research/2026-07-28-global-tree-collapse-state-as-view-state.md`.
+The map is the **only** source. `tree/web/internal/project-rows.ts` resolves a
+row's expansion as `expanded?.[id] ?? defaultExpanded ?? false` — there is no
+consumer-supplied accessor left to shadow it, so a collapse simply cannot be
+domain data. See
+`research/2026-07-28-global-tree-collapse-state-as-view-state.md` and
+`research/2026-07-29-global-delete-hierarchy-expand-hooks.md`.
 
 **Per-instance options sub-form.** A view-type's optional `configSchema`
 (`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
@@ -227,19 +229,24 @@ the source axis only decides *which data bundle* feeds the body.
 A data source can declare itself hierarchical by passing `hierarchy` (a
 `HierarchyConfig<TRow>`) to `<DataView>`. Present → hierarchical views (the
 tree) become selectable; absent → the host drops them from the switcher. The
-`HierarchyConfig` carries accessors (`getParentId`, `getRank`, `isExpanded`) and
-mutations (`onToggleExpanded`, `onMove`, `onCreate`) — all optional
-except the two accessors, so a read-only nav tree supplies just those two.
+`HierarchyConfig` carries two required accessors (`getParentId`, `getRank`), the
+optional reference-edge accessor (`getAliasParents`, below), and the optional
+mutations (`onMove`, `onCreate`) — so a read-only nav tree supplies just the two
+required accessors.
 
-**Omit `isExpanded`/`onToggleExpanded` unless the source genuinely owns expand as
-domain data** (e.g. a document toggle block, where collapse is page content and is
-serialized). Supplying them shadows the primitive's own per-view-instance expand
-map — see the anti-pattern note under "State split" above. They are also
-independently optional, so supplying only one yields a silently dead chevron
-(the write goes to the view map, the read comes from the row); supply both or
-neither. The
+**Expand is not one of them, and never can be.** There is no
+`isExpanded`/`onToggleExpanded` pair: collapse is always the primitive's own
+per-`(surface, view-instance, row)` map (see "State split" above), which makes
+the anti-pattern documented there unrepresentable rather than merely
+discouraged. It also retires the half-wired state the pair admitted — the two
+were independently optional, so supplying one gave a chevron whose write went to
+the view map and whose read came off the row: a silently dead toggle no check
+could catch. The "click a folder to open it" affordance that motivated a
+consumer-side accessor is now the **stateless** `expandOnActivate` predicate on
+the tree view's `options` (see the tree child's CLAUDE.md); carrying no state,
+it cannot be half-wired.
 
-`FieldDef.primary` flag selects the tree row label field (shared
+The `FieldDef.primary` flag selects the tree row label field (shared
 `pickPrimaryField` heuristic). Inline rename of the primary label is no longer a
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
 renders an inline editor (the same `onEdit` contract the table/gallery/list use).
@@ -898,6 +905,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses:
@@ -1072,6 +1080,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "mail-inbox"
     - `ConfigV2.Register` "page.links.backlinks"
     - `ConfigV2.Register` "pages-sidebar"
+    - `ConfigV2.Register` "plugin-view.file-tree"
     - `ConfigV2.Register` "prototypes.gallery"
     - `ConfigV2.Register` "sonata.library"
     - `ConfigV2.Register` "story.gallery"
@@ -1145,6 +1154,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `fields/text/inline`
     - `fields/text/table`
     - `page/links`
+    - `plugin-meta/plugin-view/file-tree`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`

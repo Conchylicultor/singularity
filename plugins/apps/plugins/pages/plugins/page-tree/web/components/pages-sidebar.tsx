@@ -178,9 +178,16 @@ export function PagesSidebar() {
           // re-sorted the sibling set — so a drop resolved against neighbours
           // the user never saw, or hit a cross-space duplicate rank and aborted.
           getRank: (b) => b.docRank,
-          isExpanded: (b) => b.expanded,
-          onToggleExpanded: (id, next) =>
-            void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
+          // No expand hooks — the sidebar chevron and the in-document sub-page
+          // arrow are deliberately decoupled. This chevron is device-local view
+          // state owned by the data-view primitive (per surface + view
+          // instance); `page_blocks.expanded` stays genuine DOCUMENT content,
+          // written only by the in-document arrow, which mounts the child
+          // page's full content inline in its parent's body. Coupling them
+          // meant a nav gesture embedded a child page in its parent's
+          // document, stamped `updatedAt`, and fanned out `blocksChanged` (a
+          // search reindex plus a history snapshot). Matches Notion, whose
+          // sidebar arrow only reveals nav children.
           // Positional intent only — never `dest.rank`. These rows are the
           // `type='page'` projection of the `page_blocks` forest, so a rank
           // computed over them collides with the content blocks sharing the

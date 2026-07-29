@@ -61,6 +61,10 @@ function mintAliasRanks(
  * Project each raw row → a `TreeItem`-shaped row, plus a map back to the
  * original so `TreeList` callbacks recover the concrete `TRow`. Pure: the same
  * inputs always yield the same projection (the caller memoizes).
+ *
+ * `expanded` comes only from the view's own per-(surface, view-instance, row)
+ * expand map, falling back to `defaultExpanded`: there is no consumer-supplied
+ * expand accessor, so a row's collapse state can never be domain data.
  */
 export function projectRows<TRow>(args: {
   rows: readonly TRow[];
@@ -91,11 +95,7 @@ export function projectRows<TRow>(args: {
       id,
       parentId,
       rank,
-      expanded:
-        hierarchy.isExpanded?.(row) ??
-        expanded?.[id] ??
-        defaultExpanded ??
-        false,
+      expanded: expanded?.[id] ?? defaultExpanded ?? false,
       alias: false,
       __row: row,
     });

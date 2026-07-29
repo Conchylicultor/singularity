@@ -35,6 +35,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "mail-inbox", pluginId: "apps.mail.inbox" },
   { id: "page.links.backlinks", pluginId: "page.links" },
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
+  { id: "plugin-view.file-tree", pluginId: "plugin-meta.plugin-view.file-tree" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },
   { id: "story.gallery", pluginId: "apps.story.shell" },
