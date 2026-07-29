@@ -83,6 +83,30 @@ export function useForcedCaretQuery(opts: UseForcedCaretQueryOpts): CaretQuery {
     return lexicalEditor.registerUpdateListener(sync);
   }, [lexicalEditor, sync]);
 
+  // Reset the active row on the CLOSE edge, so the next open always starts at
+  // the top.
+  //
+  // `sync` resets only when the QUERY changes, which is the trigger-char flow's
+  // reset: there, typing is what opens the menu, so a fresh open always brings a
+  // fresh query. The forced flow breaks that coupling — `url-paste` force-opens
+  // on an EMPTY block, so its query is `""` on every open and the reset never
+  // fires: dismiss with row 3 highlighted, paste again, and the menu reopens on
+  // row 3 with Enter committing it.
+  //
+  // Resetting on close rather than on open is what keeps this flash-free: while
+  // `active` is false the surface is unmounted, so the write lands with nothing
+  // rendered. Resetting on the open edge would paint one frame of the stale
+  // highlight first, and hoisting it into render is the render-phase `setState`
+  // this primitive exists to delete.
+  const wasActive = useRef(opts.active);
+  useEffect(() => {
+    if (wasActive.current && !opts.active) {
+      setActiveIndex(0);
+      lastQueryRef.current = null;
+    }
+    wasActive.current = opts.active;
+  }, [opts.active]);
+
   // FOCUS/BLUR flip the focus dimension. Non-consuming (`return false`) so they
   // never interfere with the editor's own focus handling; blur never latches.
   useEffect(() => {

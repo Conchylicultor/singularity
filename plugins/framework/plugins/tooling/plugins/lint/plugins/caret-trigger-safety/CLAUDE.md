@@ -23,7 +23,9 @@ signature of a bug patched independently four times.
 The primitive replaces the latch with a derivation, so there is no reset to
 forget. This rule exists so a fifth copy cannot be written.
 
-## The rule
+## The rule — two shapes
+
+### 1. Re-deriving open-state by hand
 
 Fires on a `*.registerUpdateListener(...)` call in a file that also contains a
 `*.lastIndexOf(...)` or `*.indexOf(...)` call, reporting on each listener.
@@ -38,6 +40,35 @@ The rule is deliberately cheap and syntactic. A file that both subscribes to
 editor updates and calls `indexOf` on an unrelated array would be a false
 positive; none exists today, and the fix in that case is to move the scan or the
 subscription, which is good hygiene regardless.
+
+### 2. Taking the surface without the keyboard
+
+Fires on an import of `caretAnchor` or `CaretTriggerMenu` from the caret-trigger
+barrel in a file that never calls `useCaretMenu`.
+
+Shape (1) only ever caught a menu that **re-derived** open-state. It could not
+see the cheaper deviation: adopting the primitive for the half you can *see*.
+`page/url-paste` did exactly that — its paste menu imported `caretAnchor` and
+hand-rolled a `FloatingSurface` with three `<Row onClick>`s. It rendered in the
+right place, so it looked adopted; it had no `activeIndex`, no arrow keys and no
+Enter, so it was mouse-only, and it duplicated Esc through its own
+`KEY_ESCAPE_COMMAND`. Nothing in shape (1) fires on it: there is no update
+listener and no `indexOf`, because the open signal is a paste event.
+
+That asymmetry is the point. Rendering is the visible half and gets copied;
+arrows / Enter / Esc / the pointerdown-timed `commit` are invisible until a user
+presses a key, so they get dropped — which is precisely the class of bug this
+plugin exists to make unwritable. Pairing the surface exports with `useCaretMenu`
+is the invariant that makes "it looks right" and "it works" the same condition.
+
+**Both producers satisfy it.** A menu whose open signal is not a trigger char
+(a paste, a button) is not an exception to the primitive — it is
+`useForcedCaretQuery`, the second producer of the same `CaretQuery` handle, which
+`useCaretMenu` consumes identically.
+
+The rule does not distinguish a "menu" from a caret-anchored surface with nothing
+selectable. There is no such surface today, and `caretAnchor` living in a menu
+primitive's barrel is what would need fixing first if one appeared.
 
 ## Sanctioned exception (on the `ignores` allowlist)
 

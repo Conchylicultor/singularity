@@ -13573,6 +13573,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor-collab`
               - `page/image`
               - `page/prompt/block`
+              - `page/url-paste`
               - `primitives/css/ui-kit`
               - `primitives/networking`
               - `primitives/overscroll-hint`
@@ -16956,8 +16957,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockTextPluginProps`
           - `page/editor.registerBlockTextExtension`
           - `primitives/css/row.Row`
-          - `primitives/floating-surface.FloatingSurface`
-          - `primitives/text-editor/caret-trigger.caretAnchor`
+          - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
+          - `primitives/text-editor/caret-trigger.useCaretMenu`
+          - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.boot`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
     - **`video`** — Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "video" → `VideoBlock`
@@ -21519,9 +21529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types): `FloatingSurfaceProps`
         - Exports (values): `FloatingSurface`
       - Cross-plugin:
-        - Imported by:
-          - `page/url-paste`
-          - `primitives/text-editor/caret-trigger`
+        - Imported by: `primitives/text-editor/caret-trigger`
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
       - Web:
         - Uses:

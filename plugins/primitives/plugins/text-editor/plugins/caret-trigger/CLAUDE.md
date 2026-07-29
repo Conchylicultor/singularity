@@ -83,11 +83,36 @@ where open-state comes from:
   the current block's own text filters the menu inline.
 - It does NOT participate in the single-owner arbiter — the `active` flag is
   externally single-owner by construction, so there is no candidacy to resolve.
+- **`activeIndex` resets on the CLOSE edge**, not on a query change. This is the
+  one place the two producers genuinely cannot share a rule. In the trigger-char
+  flow, typing is what opens the menu, so a fresh open always brings a fresh
+  query and the query-change reset in `sync` covers it. The forced flow breaks
+  that coupling: `url-paste` force-opens on an EMPTY block, so its query is `""`
+  on *every* open and the query-change reset never fires — dismiss with row 3
+  highlighted, paste again, and the menu reopens on row 3 with Enter committing
+  it. Resetting on close rather than on open is what keeps it flash-free: while
+  `active` is false the surface is unmounted, so the write lands with nothing
+  rendered, whereas an open-edge reset paints one frame of the stale highlight
+  first. (Hoisting it into render would be the render-phase `setState` this
+  primitive exists to delete.)
 
-This is the substrate for a BUTTON that opens a caret menu on the current block
-— the page editor's gutter `+`, which inserts an empty paragraph below, focuses
-it, flags it `active`, and lets its block force-open the same menu the `/`
-trigger opens. Same surface, same keyboard model, one filtered list.
+This is the substrate for any menu whose open signal is not a trigger char:
+
+- The page editor's gutter `+` — inserts an empty paragraph below, focuses it,
+  flags it `active`, and lets its block force-open the same menu the `/` trigger
+  opens. Same surface, same keyboard model, one filtered list.
+- `page/url-paste`'s bookmark / embed / plain-link menu — the PASTE event sets
+  `active`, and the block is empty so the query stays `""` (the three items are
+  fixed, not filtered).
+
+Both are the reason the forced producer exists rather than each menu going its
+own way. `url-paste` originally did go its own way: it imported `caretAnchor`
+and hand-rolled a `FloatingSurface` of `<Row onClick>`s, which rendered in the
+right place but had no `activeIndex`, no arrows and no Enter — a mouse-only
+menu, plus a duplicate `KEY_ESCAPE_COMMAND`. **A non-trigger-char open signal is
+not a reason to leave the primitive**; it is the `useForcedCaretQuery` case.
+`no-adhoc-caret-trigger` now enforces that: importing `caretAnchor` or
+`CaretTriggerMenu` without calling `useCaretMenu` is an error.
 
 ## The three gates (they are genuinely distinct)
 
@@ -187,6 +212,16 @@ bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigg
   so `FloatingSurface` would never paint. The derivation is where the bug lived.
   Note its `type()` helper appends to the **existing** TextNode — rebuilding the
   node mints a fresh `nodeKey` and legitimately resets the dismissal identity.
+- **`page/url-paste/e2e/url-paste-keyboard.ts` (playwright)** — the FORCED
+  producer end-to-end: arrows move the highlight, wrap at both ends, Esc
+  dismisses, a reopen starts back at row 0, and Enter commits the active row.
+  It lives with its consumer because it drives that consumer's paste flow, and
+  it exists because a menu with no keyboard model is a menu with *less* code,
+  not broken code — tsc and the unit tests both see a perfectly healthy file.
+  Two probe hazards it documents inline: caret-menu rows are `<div>`s, not
+  `<button>`s (`Row` infers its element from `href`/`onClick`, and these commit
+  on `onPointerDown`), and an unselected row's `hover:bg-accent` contains the
+  substring `bg-accent`, so the active-row probe must use `classList.contains`.
 - **`e2e/caret-trigger-wedge.ts` (playwright)** — all four triggers end-to-end in
   the real app, plus blur/refocus, the arbiter (`@friday [[bar` → only `[[`), and
   that `$$` still lets arrows move the caret. It creates and deletes its own

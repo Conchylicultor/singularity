@@ -1,11 +1,16 @@
 /**
  * Tests for the `no-adhoc-caret-trigger` lint rule. Run with `bun test`.
  *
- * The rule flags the hand-rolled caret-menu shape: scanning editor text for a
- * trigger (`lastIndexOf` / `indexOf`) from inside a Lexical
- * `registerUpdateListener`. Either half alone is legitimate — a bare update
- * listener is how the markdown shortcuts and the doc→row projection subscribe,
- * and a bare `indexOf` is just string work — so only the conjunction fires.
+ * The rule flags two shapes:
+ *
+ * 1. The hand-rolled caret-menu shape: scanning editor text for a trigger
+ *    (`lastIndexOf` / `indexOf`) from inside a Lexical `registerUpdateListener`.
+ *    Either half alone is legitimate — a bare update listener is how the markdown
+ *    shortcuts and the doc→row projection subscribe, and a bare `indexOf` is just
+ *    string work — so only the conjunction fires.
+ * 2. The half-adoption shape: importing the primitive's surface exports
+ *    (`caretAnchor` / `CaretTriggerMenu`) without calling `useCaretMenu`, i.e. a
+ *    caret menu with no keyboard model.
  */
 
 import { RuleTester } from "eslint";
@@ -27,6 +32,22 @@ ruleTester.run("no-adhoc-caret-trigger", rule as unknown as Parameters<RuleTeste
     `const idx = full.slice(0, caretOffset).lastIndexOf("[[");`,
     // The sanctioned consumer shape: no listener, no scan.
     `const caret = useCaretQuery({ id: "slash", trigger: "/" });`,
+    // Full adoption — the surface import is paired with the keyboard model.
+    `
+    import { CaretTriggerMenu, useCaretMenu, useCaretQuery } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+    const caret = useCaretQuery({ id: "slash", trigger: "/" });
+    const { surfaceOpen, commit } = useCaretMenu(caret, { itemCount: n, onCommit: pick });
+    `,
+    // Ditto via the FORCED producer (external open signal: a paste, a button).
+    `
+    import { CaretTriggerMenu, useCaretMenu, useForcedCaretQuery } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+    const caret = useForcedCaretQuery({ id: "url-paste", active: url !== null });
+    const { surfaceOpen } = useCaretMenu(caret, { itemCount: 3, onCommit: pick });
+    `,
+    // The non-surface exports carry no keyboard obligation on their own.
+    `import { atWordBoundary } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";`,
+    // A same-named import from an unrelated module is not the primitive.
+    `import { caretAnchor } from "./local-anchor";`,
     // `indexOf` on an array in a component that happens to also subscribe is the
     // one plausible false positive; it is accepted as the cost of a cheap rule.
     // (Documented, not tested — the rule deliberately reports it.)
@@ -65,6 +86,27 @@ ruleTester.run("no-adhoc-caret-trigger", rule as unknown as Parameters<RuleTeste
         b.registerUpdateListener(g);
       `,
       errors: [{ messageId: "adhocCaretTrigger" }, { messageId: "adhocCaretTrigger" }],
+    },
+    {
+      // The half-adoption shape: `url-paste`'s bug, verbatim. It took the
+      // primitive's caret anchor and hand-rolled the surface, so the menu had no
+      // arrows / Enter — mouse-only.
+      code: `
+        import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
+        import { caretAnchor } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+        const el = createElement(FloatingSurface, { anchor: caretAnchor(fallback), onDismiss: close }, rows);
+      `,
+      errors: [{ messageId: "caretSurfaceWithoutMenu", data: { name: "caretAnchor" } }],
+    },
+    {
+      // The menu COMPONENT without the hook is the same half-adoption: the
+      // surface renders and dismisses, but no key moves or commits.
+      code: `
+        import { CaretTriggerMenu, useCaretQuery } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+        const caret = useCaretQuery({ id: "x", trigger: "/" });
+        const el = createElement(CaretTriggerMenu, { caret, open: caret.open }, rows);
+      `,
+      errors: [{ messageId: "caretSurfaceWithoutMenu", data: { name: "CaretTriggerMenu" } }],
     },
   ],
 });
