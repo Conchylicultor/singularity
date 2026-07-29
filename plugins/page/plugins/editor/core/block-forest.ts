@@ -13,7 +13,7 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import type { BlockNode } from "./block-ops";
-import type { SerializedBlock } from "./serialized-block";
+import type { IdentifiedBlock, SerializedBlock } from "./serialized-block";
 
 /**
  * Build a portable `SerializedBlock` for a block and its descendants, reading a
@@ -62,11 +62,18 @@ export function rankWindow(
 }
 
 /**
- * Plan the insertion of a `SerializedBlock[]` forest under `parentId`, minting
- * fresh ids (`crypto.randomUUID()`) and child ranks (`Rank.nBetween`). The pure
- * core of the server's `insertForest`: returns new `BlockNode` descriptors
- * (parent-before-descendant order, a valid topological insert order) instead of
- * persisting them, plus the new top-level ids in order.
+ * Plan the insertion of an already-identified forest under `parentId`, minting
+ * child ranks (`Rank.nBetween`). The pure core of the server's `insertForest`:
+ * returns new `BlockNode` descriptors (parent-before-descendant order, a valid
+ * topological insert order) instead of persisting them, plus the new top-level
+ * ids in order.
+ *
+ * Ids come IN, on the nodes (`withMintedIds` is the one minting site). That is
+ * what makes this planner usable as a reducer step: the client and the server
+ * both run it over their own view of the forest and produce the same rows, the
+ * same contract `split`/`insert` hold with their `newId`. Ranks still differ per
+ * side — each computes them against the sibling set it can see, and the server's
+ * are authoritative.
  *
  * Top-level nodes use the caller-provided `rootRanks` (one per node); each node's
  * children get a fresh open interval (`Rank.nBetween(null, null)`), keeping keys
@@ -81,14 +88,14 @@ export function planForestInsert(args: {
   pageId: string | null;
   parentId: string | null;
   rootRanks: Rank[];
-  forest: SerializedBlock[];
+  forest: IdentifiedBlock[];
 }): { nodes: BlockNode[]; rootIds: string[] } {
   const { pageId, parentId, rootRanks, forest } = args;
   const nodes: BlockNode[] = [];
   const rootIds: string[] = [];
   for (let i = 0; i < forest.length; i++) {
     const node = forest[i]!;
-    const id = crypto.randomUUID();
+    const id = node.id;
     rootIds.push(id);
     nodes.push({
       id,

@@ -12,7 +12,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import { planForestInsert, rankWindow, serializeSubtree } from "./block-forest";
 import type { BlockNode } from "./block-ops";
-import type { SerializedBlock } from "./serialized-block";
+import { withMintedIds, type SerializedBlock } from "./serialized-block";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -75,7 +75,7 @@ describe("planForestInsert", () => {
       pageId: "page-1",
       parentId: "parent-1",
       rootRanks,
-      forest,
+      forest: withMintedIds(forest),
     });
 
     // 2 roots + 1 child = 3 nodes; all ids distinct.
@@ -98,7 +98,7 @@ describe("planForestInsert", () => {
       pageId: "page-1",
       parentId: "parent-1",
       rootRanks,
-      forest,
+      forest: withMintedIds(forest),
     });
     const root = nodes.find((n) => n.id === rootIds[0]!)!;
     expect(root.rank).toBe(rootRanks[0]!.toJSON());
@@ -115,7 +115,7 @@ describe("planForestInsert", () => {
       pageId: "page-1",
       parentId: "parent-1",
       rootRanks: Rank.nBetween(null, null, 1),
-      forest,
+      forest: withMintedIds(forest),
     });
     const child = nodes.find((n) => n.parentId === rootIds[0]!)!;
     expect(child.pageId).toBe("page-1");
@@ -134,7 +134,7 @@ describe("planForestInsert", () => {
       pageId: "page-1",
       parentId: "parent-1",
       rootRanks: Rank.nBetween(null, null, 1),
-      forest,
+      forest: withMintedIds(forest),
     });
     const pageNodeId = rootIds[0]!;
     const pageNode = nodes.find((n) => n.id === pageNodeId)!;
@@ -155,7 +155,7 @@ describe("planForestInsert", () => {
       pageId: "page-1",
       parentId: null,
       rootRanks: Rank.nBetween(null, null, 1),
-      forest,
+      forest: withMintedIds(forest),
     });
     const seen = new Set<string>();
     for (const n of nodes) {
@@ -260,7 +260,7 @@ describe("serializeSubtree", () => {
       pageId: "page-1",
       parentId: null,
       rootRanks: Rank.nBetween(null, null, 1),
-      forest: [original],
+      forest: withMintedIds([original]),
     });
     const round = serializeSubtree(nodes, rootIds[0]!);
     expect(round).toEqual(original);

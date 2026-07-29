@@ -339,7 +339,7 @@ describe("translateOpForStore", () => {
     const insert: BlockOverlayOp = {
       tag: "op",
       op: { kind: "insert", newId: "n1", type: "text", parentId: "link-1" },
-      effect: { kind: "create", id: "n1" },
+      effect: { kind: "create", ids: ["n1"] },
     };
     const outInsert = translateOpForStore(insert, m);
     expect(outInsert.tag === "op" && outInsert.op.kind === "insert" && outInsert.op.parentId).toBe(

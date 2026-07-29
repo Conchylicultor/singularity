@@ -2,6 +2,8 @@ import { z } from "zod";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { isDescendant, selectionRoots, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
+import { planForestInsert, rankWindow } from "./block-forest";
+import { IdentifiedBlockSchema, type IdentifiedBlock } from "./serialized-block";
 import {
   mergeRuns,
   plainOf,
@@ -114,7 +116,27 @@ export type BlockOp =
    * container.
    */
   | { kind: "unwrap"; blockId: string }
-  | { kind: "move"; blockId: string; parentId: string | null; rank: string };
+  | { kind: "move"; blockId: string; parentId: string | null; rank: string }
+  /**
+   * Insert a whole forest (a clipboard paste, a file drop) as a sibling run.
+   * The forest arrives with its ids ALREADY minted (`withMintedIds`), which is
+   * exactly what lets a paste be an op rather than a bespoke endpoint: both
+   * sides run `planForestInsert` over it and agree on every row's identity, so
+   * the client can overlay the result immediately and the server's push is a
+   * no-op confirmation instead of the first time the user sees their content.
+   */
+  | {
+      kind: "paste";
+      forest: IdentifiedBlock[];
+      /** Insert after this block, inheriting its parent. */
+      afterId: string | null;
+      /**
+       * Destination parent when `afterId` is null. The page's own id addresses
+       * the content top level (page rows are excluded from the reducer's
+       * forest, so a top-level insert is physically parented to the page).
+       */
+      parentId?: string | null;
+    };
 
 /**
  * Type facts the pure reducer cannot derive from the forest alone. Parameterized
@@ -179,11 +201,20 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     parentId: z.string().nullable(),
     rank: z.string(),
   }),
+  z.object({
+    kind: z.literal("paste"),
+    forest: z.array(IdentifiedBlockSchema),
+    afterId: z.string().nullable(),
+    parentId: z.string().nullable().optional(),
+  }),
 ]);
 
 // ---------------------------------------------------------------------------
 // Pure helpers — the single source of rank/tree math.
 // ---------------------------------------------------------------------------
+
+/** Nothing is leaving the sibling list — an insert bounds itself on every sibling. */
+const NO_EXCLUSIONS: ReadonlySet<string> = new Set<string>();
 
 /** Children of `parentId`, sorted ascending by rank. */
 export function childrenOf(blocks: BlockNode[], parentId: string | null): BlockNode[] {
@@ -391,6 +422,13 @@ export function opBlockIds(op: BlockOp): string[] {
     case "indent":
     case "outdent":
       return op.blockIds;
+    case "paste":
+      // ROOT ids only — the same deliberate under-approximation split/merge
+      // make. The whole planned forest is inserted in ONE transaction, so a
+      // root's presence already implies its descendants'; listing every node
+      // would make this (and the O(n) scans keyed off it) grow with the size
+      // of the paste for no extra confirmation power.
+      return op.forest.map((n) => n.id);
   }
 }
 
@@ -439,6 +477,8 @@ function applyOp(
       return applyUnwrap(blocks, op);
     case "move":
       return applyMove(blocks, op);
+    case "paste":
+      return applyPaste(blocks, op);
   }
 }
 
@@ -856,6 +896,69 @@ export function canOutdent(blocks: BlockNode[], blockIds: readonly string[]): bo
   return foldOutdent(blocks, blockIds).moved.length > 0;
 }
 
+/**
+ * The denormalized nearest page ancestor of a would-be child of `parentId` —
+ * the same rule as the server's `computePageId`, decided from the in-memory
+ * forest. Shared by every insert path (`insert`, `paste`) so a new row's page
+ * scope has exactly one definition.
+ *
+ * The reducer runs over a single page's *content* forest (`loadPageBlocks`
+ * excludes the page row itself), so:
+ *   - parent found, is a (sub-)page node → that page's id;
+ *   - parent found, content block        → inherit its pageId;
+ *   - parent NOT in the forest           → its id IS the page (a top-level
+ *     insert is parented to the page row, which is excluded), so the new
+ *     block's nearest page ancestor is `parentId`;
+ *   - no parent at all (root insert)     → null.
+ * Using `parent.pageId` unconditionally dropped a top-level block's pageId to
+ * null (a page's own pageId is null), hiding it from the page-scoped query.
+ */
+function insertScopePageId(blocks: BlockNode[], parentId: string | null): string | null {
+  const parent = parentId ? byId(blocks, parentId) : undefined;
+  if (!parent) return parentId;
+  return parent.type === PAGE_BLOCK_TYPE ? parent.id : parent.pageId;
+}
+
+/**
+ * Insert a whole identified forest as a contiguous sibling run, after `afterId`
+ * (inheriting its parent) or under `op.parentId`. Same id/rank algebra the
+ * server's `insertForest` runs — literally the same `planForestInsert` — so the
+ * optimistic overlay and the persisted rows differ only in the ranks each side
+ * minted against the sibling set it can see.
+ *
+ * A missing anchor refuses the whole paste (returns `blocks` unchanged), exactly
+ * as `applyInsert` refuses a missing `afterId`: the destination the user aimed
+ * at is gone, and guessing another one would drop their content somewhere they
+ * did not ask for.
+ */
+function applyPaste(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "paste" }>,
+): BlockNode[] {
+  if (op.forest.length === 0) return blocks;
+
+  const after = op.afterId ? byId(blocks, op.afterId) : undefined;
+  if (op.afterId && !after) return blocks;
+  const parentId = after ? after.parentId : op.parentId ?? null;
+
+  const [prev, nextRank] = rankWindow(blocks, parentId, op.afterId, NO_EXCLUSIONS);
+  const { nodes } = planForestInsert({
+    pageId: insertScopePageId(blocks, parentId),
+    parentId,
+    rootRanks: Rank.nBetween(prev, nextRank, op.forest.length),
+    forest: op.forest,
+  });
+
+  // Open the destination parent (if it is a row we hold) so the pasted blocks
+  // are visible — the same courtesy `applyInsert` does.
+  let next = blocks;
+  if (parentId) {
+    const parent = byId(next, parentId);
+    if (parent && !parent.expanded) next = replace(next, { ...parent, expanded: true });
+  }
+  return [...next, ...nodes];
+}
+
 function applyInsert(
   blocks: BlockNode[],
   op: Extract<BlockOp, { kind: "insert" }>,
@@ -891,23 +994,7 @@ function applyInsert(
     newParentId = op.parentId ?? null;
     const lastChild = lastOf(childrenOf(blocks, newParentId));
     newRank = Rank.between(lastChild ? Rank.from(lastChild.rank) : null, null);
-    // Denormalized nearest page ancestor — same rule as the server's
-    // `computePageId`. The reducer runs over a single page's *content* forest
-    // (`loadPageBlocks` excludes the page row itself), so:
-    //   - parent found, is a (sub-)page node → that page's id;
-    //   - parent found, content block        → inherit its pageId;
-    //   - parent NOT in the forest           → its id IS the page (a top-level
-    //     insert is parented to the page row, which is excluded), so the new
-    //     block's nearest page ancestor is `newParentId`;
-    //   - no parent at all (root insert)     → null.
-    // Using `parent.pageId` unconditionally dropped a top-level block's pageId to
-    // null (a page's own pageId is null), hiding it from the page-scoped query.
-    const parent = newParentId ? byId(blocks, newParentId) : undefined;
-    pageId = parent
-      ? parent.type === PAGE_BLOCK_TYPE
-        ? parent.id
-        : parent.pageId
-      : newParentId;
+    pageId = insertScopePageId(blocks, newParentId);
   }
 
   // Open the parent (if any) so the new block is visible.

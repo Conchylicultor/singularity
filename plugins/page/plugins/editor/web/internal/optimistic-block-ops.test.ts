@@ -63,8 +63,8 @@ describe("isReflected", () => {
   const blocks = [mk("A", null, a), mk("B", null, after(a))];
 
   test("create: true when the id is present, false when absent", () => {
-    expect(isReflected(blocks, { kind: "create", id: "A" })).toBe(true);
-    expect(isReflected(blocks, { kind: "create", id: "NEW" })).toBe(false);
+    expect(isReflected(blocks, { kind: "create", ids: ["A"] })).toBe(true);
+    expect(isReflected(blocks, { kind: "create", ids: ["NEW"] })).toBe(false);
   });
 
   test("remove: true when the id is absent, false when present", () => {
@@ -237,10 +237,10 @@ describe("chained compose", () => {
     };
 
     const split = expectOp(buildOverlayOp({ kind: "split", blockId: "P1", position: 1, newId: "S" }, rows));
-    expect(split.effect).toEqual({ kind: "create", id: "S" });
+    expect(split.effect).toEqual({ kind: "create", ids: ["S"] });
 
     const ins = expectOp(buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows));
-    expect(ins.effect).toEqual({ kind: "create", id: "I" });
+    expect(ins.effect).toEqual({ kind: "create", ids: ["I"] });
 
     const merge = expectOp(buildOverlayOp({ kind: "merge", blockId: "P2" }, rows));
     expect(merge.effect).toEqual({ kind: "remove", id: "P2" });

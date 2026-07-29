@@ -32,17 +32,17 @@ import {
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
-  pasteBlocks,
   planForestInsert,
   rankWindow,
   serializeSubtree,
-  PAGE_BLOCK_TYPE,
+  withMintedIds,
   type Block,
   type BlockNode,
   type SerializedBlock,
 } from "../core";
 import {
   applyOverlayOp,
+  buildPasteOverlayOp,
   isPatchReflected,
   isReflected,
   sameOverlayTarget,
@@ -109,6 +109,48 @@ export interface BlockStore {
     afterId: string | null;
     parentId?: string | null;
   }) => Promise<string[]>;
+}
+
+/**
+ * Paste, for EITHER store. A paste is a `BlockOp` like every other structural
+ * edit, so both implementations reduce to "mint the forest's ids, dispatch the
+ * op" and there is nothing left to diverge on.
+ *
+ * That is the whole point of the op form: the forest's identities are minted
+ * HERE, client-side, so the overlay can render the pasted blocks on the
+ * keystroke and the eventual server push is a confirmation rather than the
+ * first time the user sees their content. Before this, paste was the only
+ * editor mutation that POSTed and waited — a 25-block paste took ~600-800ms to
+ * show anything and froze the main thread for ~500ms while the push mounted
+ * every new block at once.
+ *
+ * `parentId` defaults to the PAGE's own id, not null: the reducer's forest
+ * excludes the page row, so the page id is how "the content top level" is
+ * addressed (see the `paste` op's `parentId` doc). Only a store knows its page.
+ *
+ * Resolves synchronously — the root ids are the ones just minted, not something
+ * the server has to hand back.
+ */
+function pasteThroughOps(
+  dispatch: (v: BlockOverlayOp) => void,
+  pageId: string,
+  args: {
+    blocks: SerializedBlock[];
+    afterId: string | null;
+    parentId?: string | null;
+  },
+): Promise<string[]> {
+  const forest = withMintedIds(args.blocks);
+  if (forest.length === 0) return Promise.resolve([]);
+  dispatch(
+    buildPasteOverlayOp({
+      kind: "paste",
+      forest,
+      afterId: args.afterId,
+      parentId: args.parentId ?? pageId,
+    }),
+  );
+  return Promise.resolve(forest.map((n) => n.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -206,19 +248,12 @@ export function useServerBlockStore(pageId: string): BlockStore {
   );
 
   const paste = useCallback(
-    async (args: {
+    (args: {
       blocks: SerializedBlock[];
       afterId: string | null;
       parentId?: string | null;
-    }): Promise<string[]> => {
-      const { rootIds } = await fetchEndpoint(
-        pasteBlocks,
-        { pageId },
-        { body: { ...args, parentId: args.parentId ?? null } },
-      );
-      return rootIds;
-    },
-    [pageId],
+    }): Promise<string[]> => pasteThroughOps(dispatch, pageId, args),
+    [dispatch, pageId],
   );
 
   return {
@@ -237,25 +272,6 @@ export function useServerBlockStore(pageId: string): BlockStore {
 // ---------------------------------------------------------------------------
 // In-memory store (authoritative, synchronous, no network).
 // ---------------------------------------------------------------------------
-
-/**
- * The denormalized nearest `type="page"` ancestor of a would-be child under
- * `parentId`, given the in-memory content nodes. Mirrors the server's
- * `computePageId` + the reducer's `applyInsert` rule: the synthetic page row is
- * NOT in the content array, so a `parentId` that isn't found IS the page (a
- * top-level insert is parented to the page block), whose id is therefore the
- * scope.
- */
-function insertScopePageId(
-  nodes: BlockNode[],
-  parentId: string | null,
-): string | null {
-  if (parentId === null) return null;
-  const parent = nodes.find((n) => n.id === parentId);
-  if (!parent) return parentId; // parentId is the (excluded) synthetic page row
-  if (parent.type === PAGE_BLOCK_TYPE) return parent.id;
-  return parent.pageId;
-}
 
 export function useMemoryBlockStore({
   pageId,
@@ -381,7 +397,7 @@ export function useMemoryBlockStore({
           pageId: root.pageId,
           parentId: root.parentId,
           rootRanks: Rank.nBetween(prev, next, 1),
-          forest: [serializeSubtree(nodes, rootId)],
+          forest: withMintedIds([serializeSubtree(nodes, rootId)]),
         });
         newNodes.push(...plan.nodes);
         rootIds.push(...plan.rootIds);
@@ -392,32 +408,16 @@ export function useMemoryBlockStore({
     [commit],
   );
 
+  // Byte-identical to the server store's paste: the SAME op through the SAME
+  // reducer, differing only in that `dispatch` here writes state synchronously
+  // instead of overlaying + POSTing.
   const paste = useCallback(
     (args: {
       blocks: SerializedBlock[];
       afterId: string | null;
       parentId?: string | null;
-    }): Promise<string[]> => {
-      if (args.blocks.length === 0) return Promise.resolve([]);
-      const cur = rowsRef.current;
-      const nodes = toNodes(cur);
-      // Insert after `afterId` (inheriting its parent), else under the requested
-      // `parentId`. A null parent means the page's content top level, which is
-      // physically parented to the synthetic page block.
-      const afterRow = args.afterId ? nodes.find((n) => n.id === args.afterId) : undefined;
-      const parentId = afterRow ? afterRow.parentId : args.parentId ?? pageId;
-      const [prev, next] = rankWindow(nodes, parentId, args.afterId, EMPTY_IDS);
-      const rootRanks = Rank.nBetween(prev, next, args.blocks.length);
-      const plan = planForestInsert({
-        pageId: insertScopePageId(nodes, parentId),
-        parentId,
-        rootRanks,
-        forest: args.blocks,
-      });
-      commit([...cur, ...fromNodes(plan.nodes, cur)]);
-      return Promise.resolve(plan.rootIds);
-    },
-    [commit, pageId],
+    }): Promise<string[]> => pasteThroughOps(dispatch, pageId, args),
+    [dispatch, pageId],
   );
 
   return {

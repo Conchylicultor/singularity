@@ -4,7 +4,6 @@ import { TrashOutcomeSchema } from "@plugins/infra/plugins/trash/core";
 import { BlockSchema, PageRowSchema } from "./schemas";
 import { BlockOpSchema } from "./block-ops";
 import { BlockPatchSchema } from "./block-diff";
-import { SerializedBlockSchema } from "./serialized-block";
 
 export const CreateBlockBodySchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -71,15 +70,6 @@ export const BulkDuplicateBlocksBodySchema = z.object({
 export type BulkDuplicateBlocksBody = z.infer<
   typeof BulkDuplicateBlocksBodySchema
 >;
-
-export const PasteBlocksBodySchema = z.object({
-  blocks: z.array(SerializedBlockSchema),
-  /** Insert after this block (same parent), or at the start of `parentId`. */
-  afterId: z.string().nullable(),
-  /** Target parent; null = page top level. Ignored when `afterId` is set. */
-  parentId: z.string().nullable().optional(),
-});
-export type PasteBlocksBody = z.infer<typeof PasteBlocksBodySchema>;
 
 // Pages are blocks of `type="page"`, in document order per sidebar sibling group
 // and carrying the derived `docRank` — the SAME shape and order as the `pages`
@@ -187,11 +177,5 @@ export const bulkMoveBlocks = defineEndpoint({
 export const bulkDuplicateBlocks = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/bulk-duplicate",
   body: BulkDuplicateBlocksBodySchema,
-  response: z.object({ rootIds: z.array(z.string()) }),
-});
-
-export const pasteBlocks = defineEndpoint({
-  route: "POST /api/pages/:pageId/blocks/paste",
-  body: PasteBlocksBodySchema,
   response: z.object({ rootIds: z.array(z.string()) }),
 });

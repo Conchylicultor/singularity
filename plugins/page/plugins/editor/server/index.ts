@@ -13,7 +13,6 @@ import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
 import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
-import { handlePasteBlock } from "./internal/handle-paste-block";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 import { untrashBlocks, purgeTrashedPages } from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
@@ -32,7 +31,6 @@ import {
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
-  pasteBlocks,
 } from "../core/endpoints";
 
 export { _blocks } from "./internal/tables";
@@ -68,7 +66,6 @@ export default {
     [bulkDeleteBlocks.route]: handleBulkDeleteBlock,
     [bulkMoveBlocks.route]: handleBulkMoveBlock,
     [bulkDuplicateBlocks.route]: handleBulkDuplicateBlock,
-    [pasteBlocks.route]: handlePasteBlock,
   },
   register: [
     blocksChanged,

@@ -7,7 +7,7 @@ import {
   rankWindow as rankWindowCore,
   serializeSubtree as serializeSubtreeCore,
 } from "../../core/block-forest";
-import type { SerializedBlock } from "../../core/serialized-block";
+import { withMintedIds, type SerializedBlock } from "../../core/serialized-block";
 import { rowToNode } from "./reconcile";
 import { _blocks } from "./tables";
 import { parseBlockData } from "./parse-block-data";
@@ -76,9 +76,15 @@ export function serializeSubtree(rows: BlockRow[], rootId: string): SerializedBl
 }
 
 /**
- * Insert a `SerializedBlock[]` forest under `parentId`, minting fresh ids and
- * ranks. The id/rank algebra is the pure `planForestInsert` (shared with the
- * in-memory store); this is the thin persistence loop over its planned nodes.
+ * Insert an id-less `SerializedBlock[]` forest under `parentId`, minting fresh
+ * ids and ranks. The id/rank algebra is the pure `planForestInsert`; this is
+ * the thin persistence loop over its planned nodes.
+ *
+ * Server-minted ids are what makes this the DUPLICATE path, not the paste one:
+ * a paste rides the `paste` `BlockOp` instead, whose forest arrives with ids
+ * already minted by the client (`withMintedIds`) so the client can overlay the
+ * result optimistically. Duplicate has no such client prediction to agree with
+ * — it is still a plain POST — so it mints here.
  * Top-level nodes use the caller-provided `rootRanks` (one per node); children
  * get a fresh open interval. Does not notify/emit — the caller does so once after
  * the surrounding transaction. Returns the new top-level ids in order.
@@ -97,7 +103,10 @@ export async function insertForest(
     forest: SerializedBlock[];
   },
 ): Promise<{ rootIds: string[] }> {
-  const { nodes, rootIds } = planForestInsert(args);
+  const { nodes, rootIds } = planForestInsert({
+    ...args,
+    forest: withMintedIds(args.forest),
+  });
   // Planned nodes are parent-before-descendant, so this insert order satisfies
   // the self-referential FK.
   for (const node of nodes) {

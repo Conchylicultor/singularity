@@ -57,6 +57,7 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   outdent: "Outdent blocks",
   unwrap: "Remove container",
   move: "Move block",
+  paste: "Paste blocks",
 };
 
 /**
@@ -84,6 +85,11 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
       // lives on the selection container, not in any block's editor. Undo/redo
       // then falls back to the patch's own first upsert.
       return op.blockIds.length === 1 ? (op.blockIds[0] ?? null) : null;
+    case "paste":
+      // A paste never moves the caret — it lands blocks after the anchor and
+      // leaves focus where it was (in the anchor block, or on the selection
+      // container). There is no "block the user is on" to restore.
+      return null;
   }
 }
 

@@ -32,7 +32,15 @@ await withBrowser(async (h) => {
 
   for (const word of ["alpha", "bravo", "charlie"]) {
     await page.keyboard.type(word);
+    // Settle either side of the Enter. A keystroke landing within ~20ms of a
+    // split can still be dropped (see the pre-seed note in the editor's
+    // CLAUDE.md), and typing back-to-back reliably loses each word's first
+    // character to the previous block under host load ("alphab" / "ravoc").
+    // That is a SETUP flake, not a copy/paste one — but it scrambles every
+    // assertion downstream, so make the fixture deterministic.
+    await page.waitForTimeout(150);
     await page.keyboard.press("Enter");
+    await page.waitForTimeout(150);
   }
   // Leave the trailing empty block; wait out the doc→data.text projection (~1s).
   await page.waitForTimeout(2000);

@@ -34,7 +34,11 @@ type PredictedMove = { id: string; parentId: string | null; rank: string };
  * falsely judged already-applied.
  */
 export type OpEffect =
-  | { kind: "create"; id: string } // split, insert → newId appears
+  // split, insert → the minted `newId` appears; paste → its minted ROOT ids do.
+  // A list rather than one id so a forest insert is expressible: the whole
+  // planned forest lands in one server transaction, so the roots' presence
+  // already implies their descendants'.
+  | { kind: "create"; ids: string[] }
   | { kind: "remove"; id: string } // merge, delete → blockId disappears
   // indent/outdent/move → every listed block sits at its predicted parent+rank.
   // A list, not one id: indent/outdent are set operations (a single Tab is the
@@ -109,8 +113,12 @@ export function sameOverlayTarget(a: BlockOverlayOp, b: BlockOverlayOp): boolean
 /** Has `blocks` already absorbed `e`? Single predicate for guard + confirmation. */
 export function isReflected(blocks: Block[], e: OpEffect): boolean {
   switch (e.kind) {
-    case "create":
-      return blocks.some((b) => b.id === e.id);
+    case "create": {
+      // `ids` is never empty (an empty paste is never dispatched), so this is
+      // not vacuously true.
+      const present = new Set(blocks.map((b) => b.id));
+      return e.ids.every((id) => present.has(id));
+    }
     case "remove":
       return !blocks.some((b) => b.id === e.id);
     case "reparent":
@@ -279,6 +287,19 @@ function opCtx(anchorTypes: ReadonlySet<string> | undefined): BlockOpContext {
   return anchorTypes ? { anchorTypes } : {};
 }
 
+/**
+ * Build the overlay vars for a `paste`. Split out from `buildOverlayOp` because
+ * a paste needs NO current-state snapshot: its effect is exactly the root ids
+ * the caller just minted, so there is nothing to predict off the rows. That is
+ * what lets a store dispatch a paste without threading its render-fresh rows
+ * through the callback.
+ */
+export function buildPasteOverlayOp(
+  op: Extract<BlockOp, { kind: "paste" }>,
+): BlockOverlayOp {
+  return { tag: "op", op, effect: { kind: "create", ids: op.forest.map((n) => n.id) } };
+}
+
 /** Build the overlay vars for a minimal patch (the undo/redo inverse path). */
 export function buildPatchOverlayOp(patch: BlockPatch): BlockOverlayOp {
   return { tag: "patch", patch };
@@ -299,7 +320,9 @@ export function buildOverlayOp(
     case "split":
     case "insert":
       // The new block is created.
-      return { tag: "op", op, effect: { kind: "create", id: op.newId } };
+      return { tag: "op", op, effect: { kind: "create", ids: [op.newId] } };
+    case "paste":
+      return buildPasteOverlayOp(op);
     case "merge":
     case "delete":
       return { tag: "op", op, effect: { kind: "remove", id: op.blockId } };

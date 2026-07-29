@@ -50,6 +50,7 @@ import {
   pasteAnchorId,
   textOf,
   planForestInsert,
+  withMintedIds,
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
@@ -340,7 +341,7 @@ function MemoryBlockEditor({
       pageId,
       parentId: pageId,
       rootRanks: Rank.nBetween(null, null, forest.length),
-      forest,
+      forest: withMintedIds(forest),
     });
     return fromNodes(nodes, []);
   }, [pageId, initialContent]);

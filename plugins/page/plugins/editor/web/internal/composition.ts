@@ -257,6 +257,11 @@ export function resolveOpOwnerPage(
       if (anchorId != null) return rowOwnerPage(rows, anchorId);
       return insertOwnerPage(rows, op.parentId ?? null, mounts, basePageId);
     }
+    case "paste":
+      // Same anchor rule as `insert` — a forest lands wherever a single block
+      // inserted at the same anchor would.
+      if (op.afterId != null) return rowOwnerPage(rows, op.afterId);
+      return insertOwnerPage(rows, op.parentId ?? null, mounts, basePageId);
   }
 }
 
@@ -350,7 +355,7 @@ export function translateOpForStore(
   if (byAnchor.size === 0) return v;
   let op = v.op;
   if (
-    (op.kind === "insert" || op.kind === "move") &&
+    (op.kind === "insert" || op.kind === "move" || op.kind === "paste") &&
     op.parentId != null &&
     byAnchor.has(op.parentId)
   ) {

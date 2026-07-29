@@ -28,6 +28,7 @@ import {
   type BlockOpContext,
 } from "./block-ops";
 import { coalesce, mergeRuns, runsLength, splitRuns, type RichText } from "./rich-text";
+import type { IdentifiedBlock } from "./serialized-block";
 
 // ---------------------------------------------------------------------------
 // Test factory + invariant helpers
@@ -1127,6 +1128,98 @@ describe("insert", () => {
     const blocks = [mk("SUB", null, a, { type: "page", pageId: "PAGE" })];
     const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", parentId: "SUB" });
     expect(out.find((b) => b.id === "NEW")!.pageId).toBe("SUB");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// paste
+// ---------------------------------------------------------------------------
+
+describe("paste", () => {
+  /** A one-node identified forest — the ids are the caller's, never minted here. */
+  const node = (
+    id: string,
+    children: IdentifiedBlock[] = [],
+    type = "text",
+  ): IdentifiedBlock => ({ id, type, data: {}, expanded: false, children });
+
+  test("afterId → the run lands between the anchor and its next sibling", () => {
+    const blocks = [mk("A", null, a), mk("B", null, after(a))];
+    const out = run(blocks, {
+      kind: "paste",
+      forest: [node("N1"), node("N2")],
+      afterId: "A",
+    });
+    expect(ids(out, null)).toEqual(["A", "N1", "N2", "B"]);
+    expect(out.find((b) => b.id === "N1")!.parentId).toBe(null);
+  });
+
+  test("the pasted ids are EXACTLY the ones handed in — never re-minted", () => {
+    // The whole point of the op form: the client mints, both reducers carry. If
+    // this ever re-minted, the client's overlay rows and the server's rows would
+    // be different blocks and the paste could never confirm.
+    const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
+    const out = run(blocks, {
+      kind: "paste",
+      forest: [node("ROOT", [node("KID")])],
+      afterId: "A",
+    });
+    expect(out.map((b) => b.id).sort()).toEqual(["A", "KID", "ROOT"]);
+    expect(out.find((b) => b.id === "KID")!.parentId).toBe("ROOT");
+  });
+
+  test("descendants inherit the page scope; a pasted sub-page scopes its own", () => {
+    const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
+    const out = run(blocks, {
+      kind: "paste",
+      forest: [node("SUB", [node("KID")], PAGE_BLOCK_TYPE), node("PLAIN", [node("K2")])],
+      afterId: "A",
+    });
+    expect(out.find((b) => b.id === "KID")!.pageId).toBe("SUB");
+    expect(out.find((b) => b.id === "K2")!.pageId).toBe("PAGE");
+  });
+
+  test("parentId addressing: the page row (absent from the forest) is the top level", () => {
+    // Same page-scope rule `insert` holds — the content forest excludes the page
+    // row, so a top-level paste is parented to it and scoped by its id.
+    //
+    // POSITION, though, deliberately differs from `insert`: an anchorless paste
+    // lands at the START of `parentId`'s children (`rankWindow(…, afterId=null)`
+    // → `[null, firstSibling]`), where an anchorless `insert` APPENDS after the
+    // last child. That is the paste endpoint's long-standing contract ("insert
+    // after `afterId`, or at the start of `parentId`") and every real caller
+    // supplies an anchor anyway — `pasteAnchorId` resolves one from the selection
+    // or the caret, so the anchorless branch is only reached on an empty page.
+    const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
+    const out = run(blocks, {
+      kind: "paste",
+      forest: [node("N1")],
+      afterId: null,
+      parentId: "PAGE",
+    });
+    expect(ids(out, "PAGE")).toEqual(["N1", "A"]);
+    expect(out.find((b) => b.id === "N1")!.pageId).toBe("PAGE");
+  });
+
+  test("pasting under a collapsed parent opens it, so the blocks are visible", () => {
+    const blocks = [mk("P", null, a, { expanded: false }), mk("K", "P", a)];
+    const out = run(blocks, {
+      kind: "paste",
+      forest: [node("N1")],
+      afterId: "K",
+    });
+    expect(out.find((b) => b.id === "P")!.expanded).toBe(true);
+  });
+
+  test("a missing anchor refuses the whole paste rather than guessing a home", () => {
+    const blocks = [mk("A", null, a)];
+    const out = run(blocks, { kind: "paste", forest: [node("N1")], afterId: "GONE" });
+    expect(out).toEqual(blocks);
+  });
+
+  test("an empty forest is an identity no-op", () => {
+    const blocks = [mk("A", null, a)];
+    expect(run(blocks, { kind: "paste", forest: [], afterId: "A" })).toEqual(blocks);
   });
 });
 

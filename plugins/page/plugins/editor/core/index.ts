@@ -16,7 +16,6 @@ export {
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
-  pasteBlocks,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
@@ -24,7 +23,6 @@ export {
   BulkDeleteBlocksBodySchema,
   BulkMoveBlocksBodySchema,
   BulkDuplicateBlocksBodySchema,
-  PasteBlocksBodySchema,
 } from "./endpoints";
 export type {
   CreateBlockBody,
@@ -34,7 +32,6 @@ export type {
   BulkDeleteBlocksBody,
   BulkMoveBlocksBody,
   BulkDuplicateBlocksBody,
-  PasteBlocksBody,
 } from "./endpoints";
 
 export {
@@ -82,8 +79,8 @@ export type { RunsTokenExtension } from "./runs-lexical";
 export { runsToXmlText, xmlTextToRuns } from "./runs-yjs";
 export type { RunsXmlTextOptions } from "./runs-yjs";
 
-export { SerializedBlockSchema } from "./serialized-block";
-export type { SerializedBlock } from "./serialized-block";
+export { SerializedBlockSchema, IdentifiedBlockSchema, withMintedIds } from "./serialized-block";
+export type { SerializedBlock, IdentifiedBlock } from "./serialized-block";
 
 export { serializeSubtree, rankWindow, planForestInsert } from "./block-forest";
 
