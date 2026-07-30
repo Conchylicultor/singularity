@@ -2554,6 +2554,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/route-teardown-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-route-teardown-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-scroll-safety",
       "version": "0.0.1",
@@ -6348,6 +6352,8 @@
     "@singularity/plugin-framework-tooling-lint-reactive-server-io": ["@singularity/plugin-framework-tooling-lint-reactive-server-io@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io"],
 
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-route-teardown-safety": ["@singularity/plugin-framework-tooling-lint-route-teardown-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/route-teardown-safety"],
 
     "@singularity/plugin-framework-tooling-lint-scroll-safety": ["@singularity/plugin-framework-tooling-lint-scroll-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-safety"],
 

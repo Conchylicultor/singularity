@@ -27,6 +27,7 @@
 import {
   baseUrl,
   report,
+  stallRoute,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
@@ -222,20 +223,11 @@ await withBrowser(async (h) => {
 
   // Only the structural-op POST is held. Everything else (live-state WS, doc
   // sync) keeps flowing, so this isolates "did the UI wait for the server".
-  //
-  // The stall is spent INSIDE the handler and the route is then continued — the
-  // handler is never unrouted. `page.unroute` does not wait for handlers already
-  // running, so tearing it down mid-stall (the assertions below finish in ~1s,
-  // well within the 4s) marks the route handled and the eventual `route.continue`
-  // throws "Route is already handled!" — with the op POST never delivered. Every
-  // later assertion then measures an overlay the server never confirmed, and
-  // passes anyway, because the never-revert policy keeps unconfirmed rows on
-  // screen. Stalling only the FIRST POST gets the same isolation with no race.
-  let opPosts = 0;
-  await page.route("**/api/pages/*/blocks/op", async (route) => {
-    opPosts++;
-    if (opPosts === 1) await new Promise((resolve) => setTimeout(resolve, STALL_MS));
-    await route.continue();
+  // `stallRoute` holds the FIRST match only and never unroutes — see its doc
+  // comment for why the hand-rolled route-then-unroute shape goes green without
+  // exercising the server.
+  const opRoute = await stallRoute(page, "**/api/pages/*/blocks/op", {
+    ms: STALL_MS,
   });
 
   const before = await blockTexts();
@@ -272,7 +264,7 @@ await withBrowser(async (h) => {
     `E: clone TEXT rendered before the server answered (${textAt}ms vs a ${STALL_MS}ms stall)`,
     textAt >= 0 && textAt < STALL_MS / 2,
   );
-  r.eq("E: the whole gesture was ONE op POST", opPosts, 1);
+  r.eq("E: the whole gesture was ONE op POST", opRoute.count, 1);
   r.eq("E: the optimistic rows are the doubled document", await blockTexts(), doubled);
 
   // ---- Let the server catch up; the push must CONFIRM, not duplicate ---------
@@ -282,7 +274,7 @@ await withBrowser(async (h) => {
     await blockTexts(),
     doubled,
   );
-  r.eq("E: still exactly one op POST after the push", opPosts, 1);
+  r.eq("E: still exactly one op POST after the push", opRoute.count, 1);
 
   // A reload proves the rows really persisted with the client-minted ids — the
   // one assertion the never-revert overlay cannot fake. Wait for a block to

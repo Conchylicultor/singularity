@@ -14,6 +14,51 @@
 
 import { drainDiagnostics } from "./diagnostics";
 
+/**
+ * Async errors with nowhere to land, collected process-wide.
+ *
+ * `finish()` ends the run with an explicit `process.exit(0)` when every
+ * assertion passed. That exit code WINS over the one the runtime would have set
+ * on its own — so an unhandled rejection printed to stderr at second 4 was
+ * followed, at second 9, by `ALL CHECKS PASSED` and exit 0. Anything that threw
+ * outside the script's own `await` chain was invisible to the verdict: a route
+ * handler, a listener, a detached promise in a helper.
+ *
+ * That is the same failure `promise-safety`'s rules exist to prevent — a script
+ * that goes green while asserting nothing — so an unhandled rejection is a
+ * FAILURE here, not a diagnostic. A verification script that reports success is
+ * cited as evidence; it must not be able to do that with an error in flight.
+ *
+ * Installing a listener suppresses the runtime's own reporting, so the handler
+ * prints the error itself. `uncaughtException` is deliberately NOT intercepted:
+ * a listener there would keep a process running past a genuinely fatal error,
+ * and an uncaught throw already fails the run loudly on its own.
+ *
+ * Known limit: a rejection is delivered on a later tick, so one raised after the
+ * script's final `await` can still land after `finish()` has exited. Everything
+ * raised during the run — which is every case this is aimed at — is caught.
+ */
+const asyncFailures: string[] = [];
+let watchingAsyncFailures = false;
+
+function watchAsyncFailures(): void {
+  if (watchingAsyncFailures) return;
+  watchingAsyncFailures = true;
+  process.on("unhandledRejection", (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    const line = `unhandled rejection — ${err.message}`;
+    asyncFailures.push(line);
+    console.log(`FAIL  ${line}`);
+    // A few frames of provenance: which handler / helper the throw came from is
+    // the whole question when the throw happened outside the script's own flow.
+    if (err.stack) {
+      for (const frame of err.stack.split("\n").slice(1, 4)) {
+        console.log(`      ${frame.trim()}`);
+      }
+    }
+  });
+}
+
 export interface Report {
   /** Predicate form. `detail` is printed only on failure. */
   ok(name: string, condition: boolean, detail?: string): void;
@@ -31,6 +76,7 @@ export interface Report {
 export function report(title?: string): Report {
   const failures: string[] = [];
   let passed = 0;
+  watchAsyncFailures();
   if (title) console.log(`\n=== ${title} ===`);
 
   const record = (name: string, detail?: string): void => {
@@ -73,6 +119,10 @@ export function report(title?: string): Report {
     },
 
     finish(): never {
+      // Fold in anything that threw outside the script's own await chain. These
+      // already printed a FAIL line when they were caught; adding them here is
+      // what stops the run exiting 0 with an error in flight.
+      failures.push(...asyncFailures);
       const total = passed + failures.length;
 
       // Non-fatal notices (a screenshot that could not be written, say) are

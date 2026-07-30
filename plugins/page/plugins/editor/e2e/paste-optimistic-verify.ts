@@ -21,6 +21,7 @@
 import {
   baseUrl,
   report,
+  stallRoute,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
@@ -80,11 +81,8 @@ await withBrowser(async (h) => {
   // ---- Stall the write endpoint, then paste ---------------------------------
   // Only the structural-op POST is held. Everything else (live-state WS, doc
   // sync) keeps flowing, so this isolates "did the UI wait for the server".
-  let opPosts = 0;
-  await page.route("**/api/pages/*/blocks/op", async (route) => {
-    opPosts++;
-    await new Promise((resolve) => setTimeout(resolve, STALL_MS));
-    await route.continue();
+  const opRoute = await stallRoute(page, "**/api/pages/*/blocks/op", {
+    ms: STALL_MS,
   });
 
   // Cmd+A selected EVERY block — the N typed ones plus the trailing empty — so
@@ -108,7 +106,7 @@ await withBrowser(async (h) => {
     `paste rendered before the server answered (${renderedAt}ms vs a ${STALL_MS}ms stall)`,
     renderedAt >= 0 && renderedAt < STALL_MS / 2,
   );
-  r.eq("the paste really did go through the op pipeline", opPosts, 1);
+  r.eq("the paste really did go through the op pipeline", opRoute.count, 1);
 
   // Content is correct while still unconfirmed — the overlay, not the push.
   const optimistic = await blockTexts();
@@ -120,8 +118,11 @@ await withBrowser(async (h) => {
   r.eq("the whole forest landed at once", optimistic.length, before * 2);
 
   // ---- Let the server catch up; the push must CONFIRM, not duplicate --------
-  await page.unroute("**/api/pages/*/blocks/op");
-  await page.waitForTimeout(STALL_MS + 3000);
+  // `release()` resolves once the held POST has actually been continued, so the
+  // wait below covers only the server's work and the push — not a guess at how
+  // much of the stall is left.
+  await opRoute.release();
+  await page.waitForTimeout(3000);
 
   const settled = await blockTexts();
   r.eq(
@@ -134,10 +135,18 @@ await withBrowser(async (h) => {
     settled.slice(before, before + 3),
     ["line 00", "line 01", "line 02"],
   );
+  // Releasing the stall must not have provoked a SECOND write. The count is the
+  // only thing standing between "the server confirmed the paste" and "the rows
+  // are still an unconfirmed overlay the never-revert policy is keeping around".
+  r.eq("still exactly one op POST after the push", opRoute.count, 1);
 
-  // A reload proves the rows really persisted with the client-minted ids.
+  // A reload proves the rows really persisted with the client-minted ids — the
+  // one assertion the never-revert overlay cannot fake. Wait for a block to
+  // MOUNT rather than for a fixed delay: a blind timeout reads an empty document
+  // whenever hydration is a beat slow, which fails as loudly as a lost paste.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(4000);
+  await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForTimeout(3000); // let the rest of the forest paint
   r.eq("the pasted blocks survive a reload", (await blockTexts()).length, before * 2);
 
   r.finish();
