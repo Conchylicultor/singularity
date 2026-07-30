@@ -16260,7 +16260,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/pages/:pageId/blocks/patch`
           - `POST /api/pages/:pageId/blocks/bulk-delete`
           - `POST /api/pages/:pageId/blocks/bulk-move`
-          - `POST /api/pages/:pageId/blocks/bulk-duplicate`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
@@ -16286,7 +16285,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockPatch`
           - `BlockTextVariant`
           - `BulkDeleteBlocksBody`
-          - `BulkDuplicateBlocksBody`
           - `BulkMoveBlocksBody`
           - `BulkMovePlacement`
           - `BulkMovePlan`
@@ -16323,8 +16321,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `blocksResource`
           - `bulkDeleteBlocks`
           - `BulkDeleteBlocksBodySchema`
-          - `bulkDuplicateBlocks`
-          - `BulkDuplicateBlocksBodySchema`
           - `bulkMoveBlocks`
           - `BulkMoveBlocksBodySchema`
           - `canIndent`
@@ -16340,6 +16336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteBlock`
           - `diffBlocks`
           - `IdentifiedBlockSchema`
+          - `inDocumentOrder`
           - `INLINE_SYNTAXES`
           - `isEmptyPatch`
           - `listBlocks`
@@ -16377,7 +16374,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serializeBlockRuns`
           - `SerializedBlockSchema`
           - `serializeForestToMarkdown`
-          - `serializeSubtree`
           - `sortMarks`
           - `splitRuns`
           - `SvgNodeSchema`

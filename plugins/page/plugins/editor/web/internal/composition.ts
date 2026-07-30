@@ -262,6 +262,12 @@ export function resolveOpOwnerPage(
       // inserted at the same anchor would.
       if (op.afterId != null) return rowOwnerPage(rows, op.afterId);
       return insertOwnerPage(rows, op.parentId ?? null, mounts, basePageId);
+    case "duplicate":
+      // Every clone lands after its own source, so the op's anchors ARE the
+      // selection roots: the single-page rule over them is byte-for-byte the
+      // cross-page refusal the routed `bulkDuplicate` used to apply at the store
+      // seam (same helper, same message).
+      return singleOwnerPage(rows, op.placements.map((p) => p.afterId));
   }
 }
 

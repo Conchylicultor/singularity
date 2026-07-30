@@ -2,13 +2,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
-import {
-  planForestInsert,
-  rankWindow as rankWindowCore,
-  serializeSubtree as serializeSubtreeCore,
-} from "../../core/block-forest";
+import { planForestInsert } from "../../core/block-forest";
 import { withMintedIds, type SerializedBlock } from "../../core/serialized-block";
-import { rowToNode } from "./reconcile";
 import { _blocks } from "./tables";
 import { parseBlockData } from "./parse-block-data";
 import { requireLiveParent, type BlockReadExecutor } from "./page-id";
@@ -67,24 +62,17 @@ export async function loadPageBlocks(
 }
 
 /**
- * Build a portable `SerializedBlock` for a block and its descendants, reading the
- * (already-loaded) page rows. Children are ordered by rank. Delegates to the pure
- * `core/block-forest` version after adapting `BlockRow`→`BlockNode`.
- */
-export function serializeSubtree(rows: BlockRow[], rootId: string): SerializedBlock {
-  return serializeSubtreeCore(rows.map(rowToNode), rootId);
-}
-
-/**
  * Insert an id-less `SerializedBlock[]` forest under `parentId`, minting fresh
  * ids and ranks. The id/rank algebra is the pure `planForestInsert`; this is
  * the thin persistence loop over its planned nodes.
  *
- * Server-minted ids are what makes this the DUPLICATE path, not the paste one:
- * a paste rides the `paste` `BlockOp` instead, whose forest arrives with ids
- * already minted by the client (`withMintedIds`) so the client can overlay the
- * result optimistically. Duplicate has no such client prediction to agree with
- * — it is still a plain POST — so it mints here.
+ * Server-minted ids make this the HISTORY-RESTORE path, and nothing else:
+ * `replacePageContent` is its one caller, and a restore genuinely has no client
+ * prediction to agree with (it wipes the page and rebuilds it from a snapshot,
+ * with fresh ids on purpose — see the invariant note there). Every *editing*
+ * forest insert — paste and duplicate alike — rides a `BlockOp` whose forest
+ * arrives with ids already minted by the client (`withMintedIds`), so the client
+ * can overlay the result optimistically and the server's push is a confirmation.
  * Top-level nodes use the caller-provided `rootRanks` (one per node); children
  * get a fresh open interval. Does not notify/emit — the caller does so once after
  * the surrounding transaction. Returns the new top-level ids in order.
@@ -121,21 +109,4 @@ export async function insertForest(
     });
   }
   return { rootIds };
-}
-
-/**
- * Resolve the rank window for inserting a contiguous run of siblings under
- * `parentId`, positioned immediately after `afterId` (or at the start when
- * `afterId` is null). `excludeIds` are blocks being moved out of this sibling
- * list (so they don't bound the window). Returns `[prevRank, nextRank]` as raw
- * Rank values for `Rank.nBetween`. Delegates to the pure `core/block-forest`
- * version after adapting `BlockRow`→`BlockNode`.
- */
-export function rankWindow(
-  rows: BlockRow[],
-  parentId: string | null,
-  afterId: string | null,
-  excludeIds: ReadonlySet<string>,
-): [Rank | null, Rank | null] {
-  return rankWindowCore(rows.map(rowToNode), parentId, afterId, excludeIds);
 }

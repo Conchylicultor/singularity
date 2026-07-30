@@ -6,8 +6,8 @@
  * the REAL migration chain, so the soft-delete columns and the partial unique
  * indexes are exactly what production applies:
  *
- *  - `requireLiveParent` / `computePageId` — the INSERT paths (create, paste,
- *    bulk-duplicate) cannot write a row without resolving its `page_id`.
+ *  - `requireLiveParent` / `computePageId` — the INSERT paths (create) cannot
+ *    write a row without resolving its `page_id`.
  *  - `loadLiveSiblings` — the REPARENT paths (move, bulk-move) cannot mint a
  *    rank without reading the destination sibling set.
  *
@@ -151,7 +151,7 @@ describe("requireLiveParent", () => {
   });
 });
 
-// ── The INSERT chokepoint (create / paste / bulk-duplicate) ────────────────
+// ── The INSERT chokepoint (create) ─────────────────────────────────────────
 
 describe("computePageId — the insert paths' guard", () => {
   test("rejects a trashed destination parent with 404, writing nothing", async () => {

@@ -31,7 +31,7 @@ import {
   type BlockOpContext,
 } from "./block-ops";
 import { coalesce, mergeRuns, runsLength, splitRuns, type RichText } from "./rich-text";
-import type { IdentifiedBlock } from "./serialized-block";
+import { withMintedIds, type IdentifiedBlock, type SerializedBlock } from "./serialized-block";
 
 // ---------------------------------------------------------------------------
 // Test factory + invariant helpers
@@ -1135,17 +1135,17 @@ describe("insert", () => {
 });
 
 // ---------------------------------------------------------------------------
-// paste
+// paste / duplicate — the two ops sharing the forest-insert arm
 // ---------------------------------------------------------------------------
 
-describe("paste", () => {
-  /** A one-node identified forest — the ids are the caller's, never minted here. */
-  const node = (
-    id: string,
-    children: IdentifiedBlock[] = [],
-    type = "text",
-  ): IdentifiedBlock => ({ id, type, data: {}, expanded: false, children });
+/** A one-node identified forest — the ids are the caller's, never minted here. */
+const node = (
+  id: string,
+  children: IdentifiedBlock[] = [],
+  type = "text",
+): IdentifiedBlock => ({ id, type, data: {}, expanded: false, children });
 
+describe("paste", () => {
   test("afterId → the run lands between the anchor and its next sibling", () => {
     const blocks = [mk("A", null, a), mk("B", null, after(a))];
     const out = run(blocks, {
@@ -1223,6 +1223,167 @@ describe("paste", () => {
   test("an empty forest is an identity no-op", () => {
     const blocks = [mk("A", null, a)];
     expect(run(blocks, { kind: "paste", forest: [], afterId: "A" })).toEqual(blocks);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// duplicate
+// ---------------------------------------------------------------------------
+
+describe("duplicate", () => {
+  /**
+   * An id-less clone shape. Built the way the provider builds one — a
+   * `SerializedBlock` handed to `withMintedIds` — rather than with hand-written
+   * ids, so "the clone's ids are fresh" is a fact about the reducer's output and
+   * not about the fixture's spelling.
+   */
+  const ser = (
+    text: string,
+    children: SerializedBlock[] = [],
+    opts: { type?: string; expanded?: boolean } = {},
+  ): SerializedBlock => ({
+    type: opts.type ?? "text",
+    data: { text },
+    expanded: opts.expanded ?? false,
+    children,
+  });
+
+  /**
+   * A subtree's shape in document order: one `depth·type:text[ ▾expanded]` line
+   * per node. Ids are deliberately absent — a clone's ids differ from its
+   * source's by construction, so shape is the only thing the two can share, and
+   * it is exactly what "cloned whole" means.
+   */
+  function shapeOf(blocks: BlockNode[], rootId: string, depth = 0): string[] {
+    const root = blocks.find((b) => b.id === rootId)!;
+    return [
+      `${"·".repeat(depth)}${root.type}:${textOf(root)}${root.expanded ? " ▾" : ""}`,
+      ...childrenOf(blocks, rootId).flatMap((c) => shapeOf(blocks, c.id, depth + 1)),
+    ];
+  }
+
+  /** The whole top-level forest's shape, for comparing two runs of the same op. */
+  function documentShape(blocks: BlockNode[]): string[] {
+    return childrenOf(blocks, null).flatMap((b) => shapeOf(blocks, b.id));
+  }
+
+  test("one root → the clone lands right after its source, cloned whole, with fresh ids", () => {
+    const blocks = [
+      mk("A", null, a, { expanded: true }),
+      mk("A1", "A", a, { expanded: true }),
+      mk("A1a", "A1", a),
+      mk("B", null, after(a)),
+    ];
+    const out = run(blocks, {
+      kind: "duplicate",
+      placements: [
+        {
+          afterId: "A",
+          forest: withMintedIds([
+            ser("A", [ser("A1", [ser("A1a")], { expanded: true })], { expanded: true }),
+          ]),
+        },
+      ],
+    });
+
+    // Immediately after its source, ahead of the source's next sibling.
+    const top = ids(out, null);
+    expect(top.length).toBe(3);
+    const cloneId = top[1]!;
+    expect([top[0], top[2]]).toEqual(["A", "B"]);
+
+    // The whole subtree came across — depth, order, types, text AND `expanded`
+    // (which `planForestInsert` carries per node, so a collapsed child stays
+    // collapsed and an open one stays open).
+    expect(shapeOf(out, cloneId)).toEqual(shapeOf(out, "A"));
+    expect(out.find((b) => b.id === cloneId)!.expanded).toBe(true);
+
+    // No id from the source subtree reappears in the clone's: every source id
+    // still occurs exactly once, the three added rows are the clone's own, and
+    // the whole document's ids stay unique.
+    const sourceIds = ["A", "A1", "A1a", "B"];
+    for (const id of sourceIds) {
+      expect(out.filter((b) => b.id === id).length).toBe(1);
+    }
+    expect(out.length).toBe(sourceIds.length + 3);
+    expect(new Set(out.map((b) => b.id)).size).toBe(out.length);
+  });
+
+  test("two ADJACENT sibling roots → A A' B B', and no two siblings share a rank", () => {
+    // The case the deleted server handler only asserted in a prose comment
+    // ("duplicating adjacent siblings never collides") and nothing tested. A' has
+    // to fit in the TIGHT open interval (rank A, rank B) while B' takes the open
+    // one after B — the one arrangement where a shared rank is even possible.
+    const blocks = [mk("A", null, a), mk("B", null, after(a))];
+    const cloneA = { afterId: "A", forest: withMintedIds([ser("A")]) };
+    const cloneB = { afterId: "B", forest: withMintedIds([ser("B")]) };
+    const out = run(blocks, { kind: "duplicate", placements: [cloneA, cloneB] });
+
+    // Each clone in its OWN source's slot, not appended after the selection.
+    expect(ids(out, null)).toEqual(["A", cloneA.forest[0]!.id, "B", cloneB.forest[0]!.id]);
+    const ranks = childrenOf(out, null).map((b) => b.rank);
+    expect(new Set(ranks).size).toBe(ranks.length);
+  });
+
+  test("the fold is order-independent: reversing the placements changes nothing", () => {
+    const blocks = [mk("A", null, a), mk("B", null, after(a))];
+    // Fresh ids per call — so what the two runs share can only be structure.
+    // The clone text is MARKED (a real clone's would equal its source's) purely
+    // so the digest can tell a clone from its source: with both reading "A", a
+    // clone landing in the wrong slot would compare equal.
+    const placements = () => [
+      { afterId: "A", forest: withMintedIds([ser("A*", [ser("A1*")])]) },
+      { afterId: "B", forest: withMintedIds([ser("B*")]) },
+    ];
+    const forward = run(blocks, { kind: "duplicate", placements: placements() });
+    const reversed = run(blocks, {
+      kind: "duplicate",
+      placements: placements().reverse(),
+    });
+
+    expect(documentShape(forward)).toEqual([
+      "text:A",
+      "text:A*",
+      "·text:A1*",
+      "text:B",
+      "text:B*",
+    ]);
+    expect(documentShape(reversed)).toEqual(documentShape(forward));
+    expect(reversed.length).toBe(forward.length);
+  });
+
+  test("a placement whose anchor is gone drops ONLY its own clone", () => {
+    // Deliberately unlike paste, which refuses the whole op: a placement names
+    // its destination explicitly, so a dead one costs exactly its own clone.
+    const blocks = [mk("A", null, a), mk("B", null, after(a))];
+    const dead = { afterId: "GONE", forest: withMintedIds([ser("X")]) };
+    const live = { afterId: "B", forest: withMintedIds([ser("B")]) };
+    const out = run(blocks, { kind: "duplicate", placements: [dead, live] });
+
+    expect(ids(out, null)).toEqual(["A", "B", live.forest[0]!.id]);
+    expect(out.some((b) => b.id === dead.forest[0]!.id)).toBe(false);
+  });
+
+  test("a cloned type=page root scopes its own descendants, not the outer page", () => {
+    // `planForestInsert`'s page rule, reached through the duplicate arm: the
+    // clone of a sub-page owns its descendants' `pageId`, while the clone itself
+    // stays in the page it was duplicated inside.
+    const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
+    const forest = withMintedIds([
+      ser("SUB", [ser("KID", [ser("GRANDKID")])], { type: PAGE_BLOCK_TYPE }),
+    ]);
+    const out = run(blocks, { kind: "duplicate", placements: [{ afterId: "A", forest }] });
+
+    const subId = forest[0]!.id;
+    expect(out.find((b) => b.id === subId)!.pageId).toBe("PAGE");
+    const kid = out.find((b) => b.parentId === subId)!;
+    expect(kid.pageId).toBe(subId);
+    expect(out.find((b) => b.parentId === kid.id)!.pageId).toBe(subId);
+  });
+
+  test("no placements is an identity no-op", () => {
+    const blocks = [mk("A", null, a)];
+    expect(run(blocks, { kind: "duplicate", placements: [] })).toEqual(blocks);
   });
 });
 

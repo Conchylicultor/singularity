@@ -35,9 +35,9 @@ type PredictedMove = { id: string; parentId: string | null; rank: string };
  * falsely judged already-applied.
  */
 export type OpEffect =
-  // split, insert → the minted `newId` appears; paste → its minted ROOT ids do.
-  // A list rather than one id so a forest insert is expressible: the whole
-  // planned forest lands in one server transaction, so the roots' presence
+  // split, insert → the minted `newId` appears; paste/duplicate → their minted
+  // ROOT ids do. A list rather than one id so a forest insert is expressible: the
+  // whole planned forest lands in one server transaction, so the roots' presence
   // already implies their descendants'.
   | { kind: "create"; ids: string[] }
   | { kind: "remove"; id: string } // merge, delete → blockId disappears
@@ -115,8 +115,8 @@ export function sameOverlayTarget(a: BlockOverlayOp, b: BlockOverlayOp): boolean
 export function isReflected(blocks: Block[], e: OpEffect): boolean {
   switch (e.kind) {
     case "create": {
-      // `ids` is never empty (an empty paste is never dispatched), so this is
-      // not vacuously true.
+      // `ids` is never empty (an op with an empty reducer diff — an empty paste
+      // or duplicate — is never dispatched), so this is not vacuously true.
       const present = new Set(blocks.map((b) => b.id));
       return e.ids.every((id) => present.has(id));
     }
@@ -360,19 +360,21 @@ function opCtx(anchorTypes: ReadonlySet<string> | undefined): BlockOpContext {
 }
 
 /**
- * Build the overlay vars for a `paste`. Split out from `buildOverlayOp` because
- * a paste needs NO current-state snapshot: its effect is exactly the root ids
- * the caller just minted, so there is nothing to predict off the rows.
+ * Build the overlay vars for a forest-insert op (`paste`, `duplicate`). Split out
+ * from `buildOverlayOp` because neither needs a current-state snapshot: the
+ * effect is exactly the root ids the caller just minted (`opBlockIds`' own
+ * answer for both kinds), so there is nothing to predict off the rows.
  *
  * Deliberately NOT exported — it is `buildOverlayOp`'s helper and nothing else.
- * With no exported paste-overlay builder and no `paste` on `BlockStore`, a paste
- * can only reach the pipeline through the provider's `dispatchOp`, which is the
- * one place that records an undo entry. Exporting it again re-opens the bypass.
+ * With no exported forest-overlay builder and neither op on `BlockStore`, a paste
+ * or a duplicate can only reach the pipeline through the provider's `dispatchOp`,
+ * which is the one place that records an undo entry. Exporting it again re-opens
+ * the bypass.
  */
-function buildPasteOverlayOp(
-  op: Extract<BlockOp, { kind: "paste" }>,
+function buildForestOverlayOp(
+  op: Extract<BlockOp, { kind: "paste" | "duplicate" }>,
 ): BlockOverlayOp {
-  return { tag: "op", op, effect: { kind: "create", ids: op.forest.map((n) => n.id) } };
+  return { tag: "op", op, effect: { kind: "create", ids: opBlockIds(op) } };
 }
 
 /** Build the overlay vars for a minimal patch (the undo/redo inverse path). */
@@ -397,7 +399,8 @@ export function buildOverlayOp(
       // The new block is created.
       return { tag: "op", op, effect: { kind: "create", ids: [op.newId] } };
     case "paste":
-      return buildPasteOverlayOp(op);
+    case "duplicate":
+      return buildForestOverlayOp(op);
     case "merge":
     case "delete":
       return { tag: "op", op, effect: { kind: "remove", id: op.blockId } };

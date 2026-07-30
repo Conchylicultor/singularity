@@ -15,14 +15,12 @@ export {
   patchBlocks,
   bulkDeleteBlocks,
   bulkMoveBlocks,
-  bulkDuplicateBlocks,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
   TurnIntoPageBodySchema,
   BulkDeleteBlocksBodySchema,
   BulkMoveBlocksBodySchema,
-  BulkDuplicateBlocksBodySchema,
 } from "./endpoints";
 export type {
   CreateBlockBody,
@@ -31,7 +29,6 @@ export type {
   TurnIntoPageBody,
   BulkDeleteBlocksBody,
   BulkMoveBlocksBody,
-  BulkDuplicateBlocksBody,
 } from "./endpoints";
 
 export {
@@ -41,6 +38,7 @@ export {
   canIndent,
   canOutdent,
   childrenOf,
+  inDocumentOrder,
   opBlockIds,
   pasteAnchorId,
   planBulkMove,
@@ -94,7 +92,7 @@ export type { RunsXmlTextOptions } from "./runs-yjs";
 export { SerializedBlockSchema, IdentifiedBlockSchema, withMintedIds } from "./serialized-block";
 export type { SerializedBlock, IdentifiedBlock } from "./serialized-block";
 
-export { serializeSubtree, rankWindow, planForestInsert } from "./block-forest";
+export { rankWindow, planForestInsert } from "./block-forest";
 
 export { defineBlock } from "./define-block";
 export type { BlockHandle, BlockTextVariant } from "./define-block";

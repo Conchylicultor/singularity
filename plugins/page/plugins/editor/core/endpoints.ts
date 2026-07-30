@@ -64,13 +64,6 @@ export const BulkMoveBlocksBodySchema = z.object({
 });
 export type BulkMoveBlocksBody = z.infer<typeof BulkMoveBlocksBodySchema>;
 
-export const BulkDuplicateBlocksBodySchema = z.object({
-  ids: z.array(z.string()),
-});
-export type BulkDuplicateBlocksBody = z.infer<
-  typeof BulkDuplicateBlocksBodySchema
->;
-
 // Pages are blocks of `type="page"`, in document order per sidebar sibling group
 // and carrying the derived `docRank` — the SAME shape and order as the `pages`
 // live resource, because both are `loadPages()`. Deliberately not the plain rank
@@ -172,10 +165,4 @@ export const bulkMoveBlocks = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/bulk-move",
   body: BulkMoveBlocksBodySchema,
   response: z.array(BlockSchema),
-});
-
-export const bulkDuplicateBlocks = defineEndpoint({
-  route: "POST /api/pages/:pageId/blocks/bulk-duplicate",
-  body: BulkDuplicateBlocksBodySchema,
-  response: z.object({ rootIds: z.array(z.string()) }),
 });

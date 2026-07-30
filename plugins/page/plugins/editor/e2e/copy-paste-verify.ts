@@ -23,6 +23,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { blockSelectionDriver } from "./support/block-selection";
 
 const base = baseUrl();
 const r = report();
@@ -30,6 +31,7 @@ const r = report();
 await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const { checkSelectionOwnsFocus, enterBlockSelection } = blockSelectionDriver(page, r);
 
   await openBlankPage(page, base, { settleMs: 3000 });
 
@@ -40,10 +42,12 @@ await withBrowser(async (h) => {
     // CLAUDE.md), and typing back-to-back reliably loses each word's first
     // character to the previous block under host load ("alphab" / "ravoc").
     // That is a SETUP flake, not a copy/paste one — but it scrambles every
-    // assertion downstream, so make the fixture deterministic.
-    await page.waitForTimeout(150);
+    // assertion downstream, so make the fixture deterministic. 150ms was not
+    // enough: measured 1 run in 2 losing the "b" of "bravo" and failing 7 of the
+    // 13 checks, every one of them structurally correct apart from that letter.
+    await page.waitForTimeout(250);
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(250);
   }
   // Leave the trailing empty block; wait out the doc→data.text projection (~1s).
   await page.waitForTimeout(2000);
@@ -62,49 +66,6 @@ await withBrowser(async (h) => {
   ]);
 
   const block = (i: number) => editableBlocks(page).nth(i);
-
-  // Entering block-selection mode is RACY, and losing the race silently swaps the
-  // code path under test. ~300-500ms after a click lands in a block, an async
-  // Lexical/@lexical/yjs focus steal drags DOM focus BACK into that block's
-  // contenteditable with no user input (task-1784221574192-phh891). That fires
-  // `useBlockSelection`'s onFocusCapture -> clearSelection(), destroying the block
-  // selection without a trace.
-  //
-  // Every clipboard handler in block-editor.tsx opens with
-  // `if (document.activeElement !== containerRef.current) return;`. Once the steal
-  // wins, that guard returns early and Cmd+V falls through to the per-block Lexical
-  // caret paste (block-forest-paste-plugin.tsx), which anchors on the caret's OWN
-  // block — so the assertion after it measures the caret path while claiming to
-  // measure block-selection mode, and can pass or fail for entirely the wrong
-  // reason. Hence: assert ownership immediately before EACH clipboard op. The steal
-  // is a wall-clock timer off the CLICK, so it can land between the Cmd+C and the
-  // Cmd+V — empirically it does, which makes a single check before the copy vacuous
-  // (the copy succeeds, only the paste is diverted).
-  async function checkSelectionOwnsFocus(label: string): Promise<void> {
-    const focusStolen = await page.evaluate(
-      () => document.activeElement?.getAttribute("contenteditable") === "true",
-    );
-    r.eq(
-      `${label}: block selection owns focus (not stolen back into a block — task-1784221574192-phh891)`,
-      focusStolen,
-      false,
-    );
-  }
-
-  // Settle past the steal BEFORE Escape (measured: click -> Escape -> Shift+Arrow
-  // back-to-back reliably loses the selection; ~200ms+ makes it stick), then prove
-  // focus actually stuck rather than trusting the sleep.
-  async function enterBlockSelection(
-    label: string,
-    blockIndex: number,
-    extendKey: string,
-  ): Promise<void> {
-    await block(blockIndex).click(); // caret in the block
-    await page.waitForTimeout(500); // outlast the async focus steal before Escape
-    await page.keyboard.press("Escape"); // -> selection mode, container focused
-    await page.keyboard.press(extendKey); // extend the range
-    await checkSelectionOwnsFocus(`${label} (copy)`);
-  }
 
   // ---- A: block-selection copy writes real text/plain ------------------------
   await enterBlockSelection("A", 0, "Shift+ArrowDown"); // "alpha" + "bravo"

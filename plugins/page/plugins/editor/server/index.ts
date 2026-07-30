@@ -12,7 +12,6 @@ import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
 import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
-import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 import { untrashBlocks, purgeTrashedPages } from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
@@ -30,7 +29,6 @@ import {
   patchBlocks,
   bulkDeleteBlocks,
   bulkMoveBlocks,
-  bulkDuplicateBlocks,
 } from "../core/endpoints";
 
 export { _blocks } from "./internal/tables";
@@ -65,7 +63,6 @@ export default {
     [patchBlocks.route]: handlePatchBlocks,
     [bulkDeleteBlocks.route]: handleBulkDeleteBlock,
     [bulkMoveBlocks.route]: handleBulkMoveBlock,
-    [bulkDuplicateBlocks.route]: handleBulkDuplicateBlock,
   },
   register: [
     blocksChanged,

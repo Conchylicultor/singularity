@@ -2,7 +2,8 @@
 //
 // Every mutation reachable from `useBlockEditor()` must put exactly ONE entry on
 // the unified undo stack — except the two deliberate exclusions (`setExpanded`,
-// `projectText`) and `bulkDuplicate`, which still mints its ids server-side.
+// `projectText`). There is no third case: no structural mutation is left
+// unrecorded, so a new one that records nothing has no precedent to hide behind.
 // This file is the guardrail: adding a mutation without recording it, or letting
 // an existing one silently stop mutating, fails here. Both halves are real
 // regressions this suite was written against — `paste` reached the store without
@@ -223,6 +224,13 @@ const RECORDED: [name: string, run: (h: Harness) => void][] = [
   [
     "paste",
     (h) => h.ctx().paste({ blocks: [node("P")], afterId: h.id("B") }),
+  ],
+  [
+    // TWO roots on purpose: one gesture is ONE `duplicate` op however many roots
+    // it clones, so a per-root dispatch (N entries, N undos) fails the quadruple
+    // — undo would restore only the last clone's placement.
+    "bulkDuplicate",
+    (h) => h.ctx().bulkDuplicate([h.id("A"), h.id("C")]),
   ],
   [
     "bulkMove",

@@ -1,39 +1,19 @@
 // Shared pure forest algebra for the block editor: the id/rank-minting insert
-// planner plus the two rank/tree helpers (`rankWindow`, `serializeSubtree`).
+// planner plus the `rankWindow` sibling-interval helper.
 //
 // Everything here operates on the reducer's JSON-pure `BlockNode` currency (rank
 // as the stored string form) — the SAME shape `applyBlockOp` consumes. This is
 // the single source of the bulk/paste/duplicate insert logic, shared verbatim by
 // BOTH the server handlers (which adapt `BlockRow`→`BlockNode` via `rowToNode`
-// then persist the planned nodes) and the in-memory block store (which appends
-// the planned nodes to its `useState` array). Zero divergence between the two.
+// then persist the planned nodes) and the reducer's own forest-insert arm
+// (`insertForestAt`, behind `paste` and `duplicate`). Zero divergence.
 //
 // Pure module (no React, no DB): unit-tested directly in `block-forest.test.ts`.
 
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import type { BlockNode } from "./block-ops";
-import type { IdentifiedBlock, SerializedBlock } from "./serialized-block";
-
-/**
- * Build a portable `SerializedBlock` for a block and its descendants, reading a
- * (already-loaded) node list. Children are ordered by rank. No ids/ranks/scope
- * survive — the shape re-mints cleanly on insert (see `planForestInsert`).
- */
-export function serializeSubtree(nodes: BlockNode[], rootId: string): SerializedBlock {
-  const root = nodes.find((n) => n.id === rootId);
-  if (!root) throw new Error(`serializeSubtree: block ${rootId} not found`);
-  const children = nodes
-    .filter((n) => n.parentId === rootId)
-    .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)))
-    .map((c) => serializeSubtree(nodes, c.id));
-  return {
-    type: root.type,
-    data: root.data,
-    expanded: root.expanded,
-    children,
-  };
-}
+import type { IdentifiedBlock } from "./serialized-block";
 
 /**
  * Resolve the rank window for inserting a contiguous run of siblings under

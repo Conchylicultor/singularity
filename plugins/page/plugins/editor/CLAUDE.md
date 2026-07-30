@@ -598,24 +598,23 @@ structure — no per-block Lexical history.
   subtree has already left; `applyPatch` must agree or the overlay drops rows the
   server keeps (redoing an `unwrap` lost every promoted child).
 
-**What is recorded:** all `dispatchOp` ops (`paste` included — see below),
-`convertTo`, non-text `data` edits (to-do `checked`, callout color, image src… —
-via `commitRow` with `coalesceKey: blockId`), single-block `move` (client-known
-rank), `bulkDelete`, and `bulkMove`, each with an exact purely-computed
-after-state; text edits as mirrored `Y.UndoManager` items. The editor no longer
-uses `updateBlock` at all (`handle-update-block.ts` stays for page-level
-consumers: page title, sidebar expand, cover).
+**What is recorded:** all `dispatchOp` ops (`paste` and `duplicate` included — see
+below), `convertTo`, non-text `data` edits (to-do `checked`, callout color, image
+src… — via `commitRow` with `coalesceKey: blockId`), single-block `move`
+(client-known rank), `bulkDelete`, and `bulkMove`, each with an exact
+purely-computed after-state; text edits as mirrored `Y.UndoManager` items. The
+editor no longer uses `updateBlock` at all (`handle-update-block.ts` stays for
+page-level consumers: page title, sidebar expand, cover).
 `web/__tests__/structural-undo.test.tsx` is the per-mutation guardrail, asserting a
 QUADRUPLE per mutation: the forward call changed the rows, `canUndo` flipped, undo
 restores exactly, redo reproduces. The first is not ceremony — without it a
 mutation that silently does nothing passes vacuously, which is how the data-blind
-apply-guard hid.
+apply-guard hid. **There are no exceptions left to enumerate**: every mutation
+reachable from the editor's context is in that table.
 
-**Not recorded:** `setExpanded` (pure view state, `record: false` — Notion doesn't
-undo collapse/expand; still optimistic, just off the stack) and `projectText` (Yjs
-owns text history). `bulkDuplicate` is the one remaining gap, for the one reason
-that still holds: it mints ids SERVER-side (`insertForest`), so there is no
-client-computed after-state to invert.
+**Not recorded, and only these two:** `setExpanded` (pure view state,
+`record: false` — Notion doesn't undo collapse/expand; still optimistic, just off
+the stack) and `projectText` (Yjs owns text history).
 
 `bulkMove` is recorded off a client PREDICTION, not an overlay (its forward write
 is still the bespoke endpoint, like `bulkDelete`). Sound only because
@@ -649,9 +648,10 @@ Ids ride the node rather than a parallel `ids: string[]` **because a positional
 array breaks silently**: reorder a traversal on one side and the two sides insert
 *different blocks*, so the op can never confirm.
 
-- **`insertForest` is the DUPLICATE path only** (mints via `withMintedIds` at its
-  own boundary — `bulkDuplicate` has no client prediction to agree with). The
-  `/blocks/paste` endpoint is deleted: one write path for a forest insert.
+- **`insertForest` is the HISTORY-RESTORE path only** — its one caller is
+  `replacePageContent`, which mints server-side because a restore has no client
+  prediction to agree with. Both the `/blocks/paste` and `/blocks/bulk-duplicate`
+  endpoints are deleted: one write path for a forest insert.
 - **Anchorless paste inserts at the START of `parentId`**, where anchorless
   `insert` appends. Inherited from the old endpoint's contract; only reachable on
   an empty page, since real callers resolve an anchor via `pasteAnchorId`.
@@ -668,6 +668,30 @@ array breaks silently**: reorder a traversal on one side and the two sides inser
 latency: it stalls the op endpoint 4s and asserts the blocks render long before
 the server could answer, one op POST fires, the push neither duplicates nor drops
 them, and they survive a reload.
+
+### Duplicate is copy + paste-in-place (`{ kind: "duplicate", placements }`)
+
+Same op machinery, one gesture = one op = one undo entry however many roots:
+each placement clones one selection root and lands it right after that root, and
+the reducer arm is literally paste's (`insertForestAt`, shared). `serializeForest`
+(`web/serialize-blocks.ts`) is the ONE forest serializer — copy and duplicate use
+it, so "duplicate ≡ copy then paste after the source" is true by construction
+rather than by two mirrored implementations agreeing.
+
+- **A distinct op kind, not a fatter `paste`**, because `OP_LABELS`/`opFocusId`
+  are keyed by kind: a duplicate must not read "Paste blocks" in the history.
+- **A dead anchor drops only ITS placement**, where paste refuses the whole op.
+  Paste's refusal is about not guessing a destination; a duplicate placement names
+  its destination explicitly and independently. All-or-nothing would only ever
+  fire server-side (the client built the op from rows that contain every anchor),
+  so it would widen the never-confirming set from one clone to all of them.
+- **Placements carry no `parentId`** — a clone always lands after its source, so
+  the destination is never anchor-less. Keep it that way: `translateOpForStore`
+  rewrites `parentId` only for the kinds that have one, so adding the field would
+  silently skip anchor translation in an expanded sub-page.
+- Placement order is not load-bearing (the array travels on the op, both sides
+  fold it identically, and a clone always lands strictly between its source and
+  that source's next sibling) — it is document-ordered for determinism only.
 
 ## Per-block CRDT text (unconditional)
 
@@ -1116,7 +1140,6 @@ the whole document lives in React state and is discarded on unmount.
     - `POST /api/pages/:pageId/blocks/patch`
     - `POST /api/pages/:pageId/blocks/bulk-delete`
     - `POST /api/pages/:pageId/blocks/bulk-move`
-    - `POST /api/pages/:pageId/blocks/bulk-duplicate`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -1142,7 +1165,6 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockPatch`
     - `BlockTextVariant`
     - `BulkDeleteBlocksBody`
-    - `BulkDuplicateBlocksBody`
     - `BulkMoveBlocksBody`
     - `BulkMovePlacement`
     - `BulkMovePlan`
@@ -1179,8 +1201,6 @@ the whole document lives in React state and is discarded on unmount.
     - `blocksResource`
     - `bulkDeleteBlocks`
     - `BulkDeleteBlocksBodySchema`
-    - `bulkDuplicateBlocks`
-    - `BulkDuplicateBlocksBodySchema`
     - `bulkMoveBlocks`
     - `BulkMoveBlocksBodySchema`
     - `canIndent`
@@ -1196,6 +1216,7 @@ the whole document lives in React state and is discarded on unmount.
     - `deleteBlock`
     - `diffBlocks`
     - `IdentifiedBlockSchema`
+    - `inDocumentOrder`
     - `INLINE_SYNTAXES`
     - `isEmptyPatch`
     - `listBlocks`
@@ -1233,7 +1254,6 @@ the whole document lives in React state and is discarded on unmount.
     - `serializeBlockRuns`
     - `SerializedBlockSchema`
     - `serializeForestToMarkdown`
-    - `serializeSubtree`
     - `sortMarks`
     - `splitRuns`
     - `SvgNodeSchema`

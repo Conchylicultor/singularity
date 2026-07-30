@@ -11,7 +11,11 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { computeDrop, subtreeIds } from "@plugins/primitives/plugins/tree/core";
+import {
+  computeDrop,
+  selectionRoots,
+  subtreeIds,
+} from "@plugins/primitives/plugins/tree/core";
 import {
   prevVisibleLine,
   nextVisibleLine,
@@ -21,6 +25,7 @@ import {
   applyBulkMove,
   childrenOf,
   diffBlocks,
+  inDocumentOrder,
   planBulkMove,
   patchesFromDiff,
   isEmptyPatch,
@@ -43,6 +48,7 @@ import {
   toNodes,
   fromNodes,
 } from "./internal/optimistic-block-ops";
+import { serializeForest } from "./serialize-blocks";
 import { landCaret } from "./internal/caret-landing";
 import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-surface";
 import { useAnchorTypes, useBlockHandles } from "./internal/block-handles";
@@ -61,6 +67,7 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   unwrap: "Remove container",
   move: "Move block",
   paste: "Paste blocks",
+  duplicate: "Duplicate blocks",
 };
 
 /**
@@ -89,6 +96,10 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
       // then falls back to the patch's own first upsert.
       return op.blockIds.length === 1 ? (op.blockIds[0] ?? null) : null;
     case "paste":
+    // A duplicate is paste's shape exactly: clones land after their sources and
+    // focus stays on the selection container. (Selecting the clones is a
+    // deliberate non-goal — see the plan's follow-ups.)
+    case "duplicate":
       // A paste never moves the caret — it lands blocks after the anchor and
       // leaves focus where it was (in the anchor block, or on the selection
       // container). There is no "block the user is on" to restore.
@@ -291,7 +302,18 @@ interface BlockEditorContextValue {
     parentId: string | null;
     afterId: string | null;
   }) => void;
-  bulkDuplicate: (ids: string[]) => Promise<string[]>;
+  /**
+   * Clone each selection root's subtree in place, immediately after its source.
+   * A `duplicate` `BlockOp` dispatched through `dispatchOp`, so it is optimistic
+   * and recorded as ONE undo entry like every other structural edit.
+   *
+   * Returns nothing, for `paste`'s reason: the minted root ids are right there
+   * in the op, but `dispatchOp` legitimately DROPS an op whose reducer diff is
+   * empty, so "the ids that were created" would be an absorbable failure — a
+   * caller reading them back would be told clones landed in exactly the case
+   * they did not.
+   */
+  bulkDuplicate: (ids: string[]) => void;
   /**
    * Insert a serialized forest after `afterId` (or, anchorless, at the start of
    * `parentId` — defaulting to the page's own top level). A plain `BlockOp`
@@ -936,14 +958,6 @@ export function BlockEditorProviderInner({
     [store, recordStructural],
   );
 
-  const bulkDuplicate = useCallback(
-    async (ids: string[]): Promise<string[]> => {
-      if (ids.length === 0) return [];
-      return store.bulkDuplicate(ids);
-    },
-    [store],
-  );
-
   const move = useCallback(
     (id: string, zone: "before" | "after", targetId: string) => {
       // Positional intent, never a rank: the STORE owns rank authority (the
@@ -1036,6 +1050,38 @@ export function BlockEditorProviderInner({
       });
     },
     [dispatchOp, pageId],
+  );
+
+  // Duplicate a selection — one `dispatchOp` for the whole gesture, for paste's
+  // reasons: it is what puts the clones on the undo stack as ONE entry and what
+  // makes them render on the click rather than after the round-trip. Ids are
+  // minted HERE, client-side, which is exactly what the old server-minting path
+  // could not offer (no client-computed after-state to invert).
+  //
+  // MUST stay below `dispatchOp` — it closes over it.
+  const bulkDuplicate = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      const before = rowsRef.current;
+      // Document-ordered for determinism and to match every other
+      // selection-driven op (the folds, `pasteAnchorId`) — `selectionRoots`
+      // preserves input-ARRAY order, which is nobody's order. Not load-bearing
+      // for agreement: the array travels on the op, so both sides fold it
+      // identically.
+      const roots = inDocumentOrder(toNodes(before), selectionRoots(before, new Set(ids)));
+      if (roots.length === 0) return;
+      // One `serializeForest` call PER root, not one zipped call: a filtered
+      // positional array is exactly the silent-desync hazard the paste op's
+      // "ids ride the node" rule exists to prevent.
+      dispatchOp({
+        kind: "duplicate",
+        placements: roots.map((id) => ({
+          afterId: id,
+          forest: withMintedIds(serializeForest(before, [id])),
+        })),
+      });
+    },
+    [dispatchOp],
   );
 
   // Indent / outdent a SET of blocks (the selection roots). The single-block Tab

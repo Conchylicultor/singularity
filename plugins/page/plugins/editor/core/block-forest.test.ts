@@ -3,14 +3,17 @@
  * Run with `bun test plugins/page/plugins/editor/core/block-forest.test.ts`.
  *
  * Covers `planForestInsert` id/rank minting + pageId inheritance (including under
- * a `type="page"` node), `rankWindow` positioning, and a `serializeSubtree`
- * round-trip through a plan+serialize cycle.
+ * a `type="page"` node) and `rankWindow` positioning. Serialization is the
+ * inverse direction and no longer lives here: `serializeSubtree` was deleted with
+ * the bespoke duplicate endpoint, leaving `web/serialize-blocks.ts` as the one
+ * serializer — its cases (including the plan → serialize round-trip) moved to
+ * `web/serialize-blocks.test.ts`.
  */
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
-import { planForestInsert, rankWindow, serializeSubtree } from "./block-forest";
+import { planForestInsert, rankWindow } from "./block-forest";
 import type { BlockNode } from "./block-ops";
 import { withMintedIds, type SerializedBlock } from "./serialized-block";
 
@@ -223,46 +226,5 @@ describe("rankWindow", () => {
     const [prev, next] = rankWindow(nodes, "p", null, new Set(["b"]));
     expect(prev).toBeNull();
     expect(Rank.compare(next!, r1)).toBe(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// serializeSubtree
-// ---------------------------------------------------------------------------
-
-describe("serializeSubtree", () => {
-  test("captures type/data/expanded and rank-ordered children", () => {
-    const r1 = r0;
-    const r2 = after(r1);
-    const nodes = [
-      mk("root", null, r1.toJSON(), { type: "callout", expanded: true, text: "root" }),
-      // Deliberately unsorted insertion order; serialize must sort by rank.
-      mk("c2", "root", r2.toJSON(), { text: "c2" }),
-      mk("c1", "root", r1.toJSON(), { text: "c1" }),
-    ];
-    const s = serializeSubtree(nodes, "root");
-    expect(s.type).toBe("callout");
-    expect(s.expanded).toBe(true);
-    expect(s.children.map((c) => (c.data as { text: string }).text)).toEqual(["c1", "c2"]);
-  });
-
-  test("round-trips through a plan → serialize cycle (structure preserved)", () => {
-    const original: SerializedBlock = {
-      type: "callout",
-      data: { text: "note", color: "blue" },
-      expanded: true,
-      children: [
-        leaf("text", { text: "one" }),
-        { type: "toggle", data: { text: "two" }, expanded: false, children: [leaf("text", { text: "nested" })] },
-      ],
-    };
-    const { nodes, rootIds } = planForestInsert({
-      pageId: "page-1",
-      parentId: null,
-      rootRanks: Rank.nBetween(null, null, 1),
-      forest: withMintedIds([original]),
-    });
-    const round = serializeSubtree(nodes, rootIds[0]!);
-    expect(round).toEqual(original);
   });
 });

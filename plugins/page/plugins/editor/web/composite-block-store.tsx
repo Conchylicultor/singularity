@@ -273,18 +273,12 @@ export function CompositeServerProviderHost({
     [basePageId, storeFor],
   );
 
-  const bulkDuplicate = useCallback(
-    (ids: string[]): Promise<string[]> => {
-      return storeFor(singleOwnerPage(dataRef.current, ids)).bulkDuplicate(ids);
-    },
-    [storeFor],
-  );
-
-  // No routed `paste`: a paste is a `BlockOp`, so it arrives through `dispatch`
-  // above, where `resolveOpOwnerPage` applies the same anchor rule this used to
-  // (row owner for `afterId`, `insertOwnerPage` when anchorless) and
-  // `translateOpForStore` rewrites a page-link anchor `parentId` into the real
-  // page id.
+  // No routed `paste` and no routed `bulkDuplicate`: both are `BlockOp`s, so they
+  // arrive through `dispatch` above, where `resolveOpOwnerPage` applies the same
+  // anchor rules these used to (row owner for `afterId`, `insertOwnerPage` when
+  // anchorless; `singleOwnerPage` over a duplicate's placement anchors, which is
+  // the same cross-page refusal, from the same helper) and `translateOpForStore`
+  // rewrites a page-link anchor `parentId` into the real page id.
   const store = useMemo<BlockStore>(
     () => ({
       data,
@@ -294,9 +288,8 @@ export function CompositeServerProviderHost({
       move,
       bulkDelete,
       bulkMove,
-      bulkDuplicate,
     }),
-    [data, serverData, pending, dispatch, move, bulkDelete, bulkMove, bulkDuplicate],
+    [data, serverData, pending, dispatch, move, bulkDelete, bulkMove],
   );
 
   return (

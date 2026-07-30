@@ -4,8 +4,12 @@ import type { Block, SerializedBlock } from "../core";
 /**
  * Build a portable `SerializedBlock[]` for `rootIds` and their descendants from
  * the in-memory document rows (all blocks, incl. collapsed children). Children
- * are ordered by rank. Mirrors the server's `serializeSubtree` so copy (client)
- * and duplicate (server) produce the same shape.
+ * are ordered by rank.
+ *
+ * THE forest serializer — copy and duplicate both go through it, which is what
+ * makes "duplicate ≡ copy + paste-after-each-source" true rather than merely
+ * intended. It used to have a server-side twin (`serializeSubtree`) that the
+ * bespoke duplicate endpoint ran; that endpoint and that twin are both gone.
  */
 export function serializeForest(
   rows: readonly Block[],

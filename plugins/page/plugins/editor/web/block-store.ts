@@ -4,14 +4,13 @@
 //
 // Two implementations share one shape:
 //   - `useServerBlockStore`  — today's persistent path verbatim: the
-//     `useOptimisticResource(blocksResource, …)` overlay + the four direct write
-//     endpoints (move / bulk-delete / bulk-move / bulk-duplicate).
+//     `useOptimisticResource(blocksResource, …)` overlay + the three direct write
+//     endpoints (move / bulk-delete / bulk-move).
 //   - `useMemoryBlockStore`  — an authoritative in-memory `useState<Block[]>`,
 //     the source of truth itself (no overlay, no confirmation, no network). Its
 //     writes reuse the SAME pure helpers as the server (`applyOverlayOp`, the
-//     reducer, `planBulkMove`, and `core/block-forest`'s `rankWindow`/
-//     `serializeSubtree`/`planForestInsert`), so op/patch/insert/move semantics
-//     are byte-identical.
+//     reducer, `planBulkMove`), so op/patch/insert/move semantics are
+//     byte-identical.
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -20,10 +19,7 @@ import {
   useOptimisticResource,
 } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import {
-  selectionRoots,
-  subtreeIds,
-} from "@plugins/primitives/plugins/tree/core";
+import { subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
   moveBlock,
   applyBlockOpEndpoint,
@@ -33,14 +29,8 @@ import {
   applyBulkMove,
   bulkDeleteBlocks,
   bulkMoveBlocks,
-  bulkDuplicateBlocks,
   planBulkMove,
-  planForestInsert,
-  rankWindow,
-  serializeSubtree,
-  withMintedIds,
   type Block,
-  type BlockNode,
 } from "../core";
 import {
   applyOverlayOp,
@@ -52,8 +42,6 @@ import {
   type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
 import { useAnchorTypes } from "./internal/block-handles";
-
-const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 
 /**
  * Where a single-block `move` lands, as the provider resolved it over the
@@ -77,15 +65,16 @@ export interface BlockMoveDest {
 
 /**
  * The full read/write surface the provider needs. `dispatch` covers the overlay
- * op + patch pipeline (structural keystrokes and undo/redo); the remaining four
+ * op + patch pipeline (structural keystrokes and undo/redo); the remaining three
  * are the direct write paths that bypass the reducer. Recording for undo stays in
  * the provider — a store only applies/persists.
  *
- * There is deliberately NO `paste` member: a paste is a `BlockOp`, so `dispatch`
- * is its only home. It used to have one, and that is precisely how a paste
- * reached the pipeline without passing the provider's `dispatchOp` — the one
- * place that records an undo entry. Anything expressible as a `BlockOp` belongs
- * on `dispatch`; a new member here is a claim that it is not.
+ * There is deliberately NO `paste` and no `bulkDuplicate` member: both are
+ * `BlockOp`s, so `dispatch` is their only home. Both used to have one, and that
+ * is precisely how they reached the pipeline without passing the provider's
+ * `dispatchOp` — the one place that records an undo entry. Anything expressible
+ * as a `BlockOp` belongs on `dispatch`; a new member here is a claim that it is
+ * not.
  */
 export interface BlockStore {
   /** Current document rows (server truth + overlay, or the in-memory truth). */
@@ -108,8 +97,6 @@ export interface BlockStore {
   bulkDelete: (ids: string[]) => void;
   /** Reparent a selection's roots under `parentId`, positioned after `afterId`. */
   bulkMove: (args: { ids: string[]; parentId: string | null; afterId: string | null }) => void;
-  /** Duplicate each selection root in place; resolves to the new root ids. */
-  bulkDuplicate: (ids: string[]) => Promise<string[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -194,18 +181,6 @@ export function useServerBlockStore(pageId: string): BlockStore {
     [pageId],
   );
 
-  const bulkDuplicate = useCallback(
-    async (ids: string[]): Promise<string[]> => {
-      const { rootIds } = await fetchEndpoint(
-        bulkDuplicateBlocks,
-        { pageId },
-        { body: { ids } },
-      );
-      return rootIds;
-    },
-    [pageId],
-  );
-
   return {
     data: optimistic.data,
     serverData: optimistic.serverData,
@@ -214,7 +189,6 @@ export function useServerBlockStore(pageId: string): BlockStore {
     move,
     bulkDelete,
     bulkMove,
-    bulkDuplicate,
   };
 }
 
@@ -228,11 +202,8 @@ export function useServerBlockStore(pageId: string): BlockStore {
 export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] }): BlockStore {
   const [rows, setRowsState] = useState<Block[]>(initialBlocks);
   // The authoritative rows are also mirrored into a ref updated synchronously by
-  // every write, so (a) writes chained within one event compose against the
-  // latest truth (not a stale render snapshot), and (b) `bulkDuplicate` can
-  // resolve its new root ids SYNCHRONOUSLY — a `useState` updater runs on a
-  // later render, so reading the ids "after `setRows`" would read the pre-write
-  // value. Never mint ids inside the updater; compute, commit, then return.
+  // every write, so writes chained within one event compose against the latest
+  // truth rather than a stale render snapshot.
   const rowsRef = useRef<Block[]>(initialBlocks);
   // Same reducer facts as the server path — an in-memory document must apply an
   // op exactly as a persisted one does (see `useServerBlockStore`).
@@ -309,37 +280,6 @@ export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] 
     [commit],
   );
 
-  const bulkDuplicate = useCallback(
-    (ids: string[]): Promise<string[]> => {
-      const cur = rowsRef.current;
-      const roots = selectionRoots(cur, new Set(ids));
-      if (roots.length === 0) return Promise.resolve([]);
-      const nodes = toNodes(cur);
-      const newNodes: BlockNode[] = [];
-      const rootIds: string[] = [];
-      for (const rootId of roots) {
-        const root = nodes.find((n) => n.id === rootId);
-        if (!root) continue;
-        // Clone lands immediately after the original, between it and its next
-        // sibling. Windows are computed from the ORIGINAL nodes (clones aren't in
-        // `nodes`), so duplicating adjacent siblings never collides — exactly the
-        // server's `insertForest` positioning.
-        const [prev, next] = rankWindow(nodes, root.parentId, root.id, EMPTY_IDS);
-        const plan = planForestInsert({
-          pageId: root.pageId,
-          parentId: root.parentId,
-          rootRanks: Rank.nBetween(prev, next, 1),
-          forest: withMintedIds([serializeSubtree(nodes, rootId)]),
-        });
-        newNodes.push(...plan.nodes);
-        rootIds.push(...plan.rootIds);
-      }
-      commit([...cur, ...fromNodes(newNodes, cur)]);
-      return Promise.resolve(rootIds);
-    },
-    [commit],
-  );
-
   return {
     data: rows,
     // Every in-memory row is authoritative from the start (no overlay), so the
@@ -350,6 +290,5 @@ export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] 
     move,
     bulkDelete,
     bulkMove,
-    bulkDuplicate,
   };
 }

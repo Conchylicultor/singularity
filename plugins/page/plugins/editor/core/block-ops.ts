@@ -136,7 +136,19 @@ export type BlockOp =
        * forest, so a top-level insert is physically parented to the page).
        */
       parentId?: string | null;
-    };
+    }
+  /**
+   * Duplicate a block selection: each placement clones one selection root's
+   * subtree and lands it immediately after that root. Ids are minted CLIENT-side
+   * (`withMintedIds`) for the same reason paste mints them — it is what lets both
+   * sides plan the same rows and the client overlay the result immediately.
+   *
+   * No `parentId` on a placement, deliberately: a clone always lands after its
+   * source, so the destination is never anchor-less. Keep it that way —
+   * `translateOpForStore` only rewrites `parentId` for the kinds that have one, so
+   * adding the field here would silently skip anchor translation.
+   */
+  | { kind: "duplicate"; placements: { afterId: string; forest: IdentifiedBlock[] }[] };
 
 /**
  * Type facts the pure reducer cannot derive from the forest alone. Parameterized
@@ -206,6 +218,12 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     forest: z.array(IdentifiedBlockSchema),
     afterId: z.string().nullable(),
     parentId: z.string().nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("duplicate"),
+    placements: z.array(
+      z.object({ afterId: z.string(), forest: z.array(IdentifiedBlockSchema) }),
+    ),
   }),
 ]);
 
@@ -371,7 +389,7 @@ function documentOrder(blocks: BlockNode[]): string[] {
 }
 
 /** `ids` sorted top-to-bottom in document order; ids absent from the forest are dropped. */
-function inDocumentOrder(blocks: BlockNode[], ids: readonly string[]): string[] {
+export function inDocumentOrder(blocks: BlockNode[], ids: readonly string[]): string[] {
   const wanted = new Set(ids);
   return documentOrder(blocks).filter((id) => wanted.has(id));
 }
@@ -429,6 +447,10 @@ export function opBlockIds(op: BlockOp): string[] {
       // would make this (and the O(n) scans keyed off it) grow with the size
       // of the paste for no extra confirmation power.
       return op.forest.map((n) => n.id);
+    case "duplicate":
+      // Every placement's ROOT ids, for paste's reason: each clone's forest
+      // lands in the same one transaction as its root.
+      return op.placements.flatMap((p) => p.forest.map((n) => n.id));
   }
 }
 
@@ -479,6 +501,8 @@ function applyOp(
       return applyMove(blocks, op);
     case "paste":
       return applyPaste(blocks, op);
+    case "duplicate":
+      return applyDuplicate(blocks, op);
   }
 }
 
@@ -1062,36 +1086,40 @@ function insertScopePageId(blocks: BlockNode[], parentId: string | null): string
 }
 
 /**
- * Insert a whole identified forest as a contiguous sibling run, after `afterId`
- * (inheriting its parent) or under `op.parentId`. Same id/rank algebra the
+ * Insert ONE identified forest as a contiguous sibling run, after `afterId`
+ * (inheriting its parent) or under `parentId`. Same id/rank algebra the
  * server's `insertForest` runs — literally the same `planForestInsert` — so the
  * optimistic overlay and the persisted rows differ only in the ranks each side
  * minted against the sibling set it can see.
  *
- * A missing anchor refuses the whole paste (returns `blocks` unchanged), exactly
- * as `applyInsert` refuses a missing `afterId`: the destination the user aimed
- * at is gone, and guessing another one would drop their content somewhere they
- * did not ask for.
+ * The shared arm of `paste` (one call) and `duplicate` (one call per placement).
+ * A missing anchor returns `blocks` unchanged; what that MEANS for the op is the
+ * caller's to state — see `applyPaste` and `applyDuplicate`, which read the same
+ * identity in deliberately different ways.
  */
-function applyPaste(
+function insertForestAt(
   blocks: BlockNode[],
-  op: Extract<BlockOp, { kind: "paste" }>,
+  at: {
+    forest: IdentifiedBlock[];
+    afterId: string | null;
+    parentId?: string | null;
+  },
 ): BlockNode[] {
-  if (op.forest.length === 0) return blocks;
+  if (at.forest.length === 0) return blocks;
 
-  const after = op.afterId ? byId(blocks, op.afterId) : undefined;
-  if (op.afterId && !after) return blocks;
-  const parentId = after ? after.parentId : op.parentId ?? null;
+  const after = at.afterId ? byId(blocks, at.afterId) : undefined;
+  if (at.afterId && !after) return blocks;
+  const parentId = after ? after.parentId : at.parentId ?? null;
 
-  const [prev, nextRank] = rankWindow(blocks, parentId, op.afterId, NO_EXCLUSIONS);
+  const [prev, nextRank] = rankWindow(blocks, parentId, at.afterId, NO_EXCLUSIONS);
   const { nodes } = planForestInsert({
     pageId: insertScopePageId(blocks, parentId),
     parentId,
-    rootRanks: Rank.nBetween(prev, nextRank, op.forest.length),
-    forest: op.forest,
+    rootRanks: Rank.nBetween(prev, nextRank, at.forest.length),
+    forest: at.forest,
   });
 
-  // Open the destination parent (if it is a row we hold) so the pasted blocks
+  // Open the destination parent (if it is a row we hold) so the inserted blocks
   // are visible — the same courtesy `applyInsert` does.
   let next = blocks;
   if (parentId) {
@@ -1099,6 +1127,47 @@ function applyPaste(
     if (parent && !parent.expanded) next = replace(next, { ...parent, expanded: true });
   }
   return [...next, ...nodes];
+}
+
+/**
+ * A missing anchor refuses the whole paste (returns `blocks` unchanged), exactly
+ * as `applyInsert` refuses a missing `afterId`: the destination the user aimed
+ * at is gone, and guessing another one would drop their content somewhere they
+ * did not ask for. One forest, one anchor — so the arm's per-anchor identity IS
+ * the whole-op refusal.
+ */
+function applyPaste(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "paste" }>,
+): BlockNode[] {
+  return insertForestAt(blocks, op);
+}
+
+/**
+ * Duplicate a selection: fold each placement's clone in after its own source.
+ *
+ * **A dead anchor drops exactly its own placement, and that differs from paste
+ * on purpose.** Paste refuses the *whole* op on a missing anchor because
+ * guessing another parent would drop content the user never asked to place; a
+ * duplicate placement names its destination explicitly and independently, so the
+ * fold's natural per-placement identity (`insertForestAt` returns `blocks`
+ * unchanged when `afterId` misses) is the right answer — the clone whose source
+ * was raced away is dropped, the others land. All-or-nothing would be strictly
+ * worse: the client's rows always contain every anchor (it built the op from
+ * them), so a refusal can only ever fire server-side, where dropping N clones
+ * instead of 1 just widens the never-confirming set.
+ *
+ * The fold is order-INDEPENDENT: a clone always lands strictly between its
+ * source and the source's next sibling, so folding `[A, B]` and `[B, A]` for
+ * adjacent siblings produces the same rows. The array's order is chosen for
+ * determinism and a legible history, not for client/server agreement (the array
+ * travels on the op and both sides fold it identically).
+ */
+function applyDuplicate(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "duplicate" }>,
+): BlockNode[] {
+  return op.placements.reduce(insertForestAt, blocks);
 }
 
 function applyInsert(

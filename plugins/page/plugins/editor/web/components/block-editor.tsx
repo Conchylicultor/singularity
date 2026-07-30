@@ -563,10 +563,7 @@ function SelectionLayer({
       indent: indentBlocks,
       outdent: outdentBlocks,
       remove: bulkDelete,
-      // `bulkDuplicate` resolves with the new ids; selection mode has no use for
-      // them, so the fire-and-forget stays explicit here rather than being erased
-      // by the action's `void` return type.
-      duplicate: (ids) => void bulkDuplicate(ids),
+      duplicate: bulkDuplicate,
       focusBlock,
       moveSelection,
     }),
