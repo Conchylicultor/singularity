@@ -1,5 +1,54 @@
 # jobs
 
+## Liveness: shared fate, not a lease
+
+**"Is this job's worker alive" is answered by Postgres, never by a clock.** For a
+handler's whole lifetime `withJobLock` (`server/internal/job-lock.ts`) holds a
+session-scoped advisory lock on the graphile job id, on a **direct**-PG connection
+(5433 — pgbouncer's tx pooling would not preserve the session). Postgres releases
+it during backend teardown, so it vanishes the instant the owner dies (SIGKILL,
+OOM, panic, `process.exit()`). The sweeper reclaims a locked row **only** when
+that lock is absent from `pg_locks`. We can do this because we have shared fate
+with the queue — one instance, one local PG; a general job library cannot, which
+is the only reason leases exist elsewhere.
+
+**Never reintroduce a duration-based threshold, and never infer liveness from how
+long `locked_at` has been set.** A timeout cannot tell "dead" from "slow" or "host
+was asleep". The previous 5-minute lease cleared `locked_at` on live rows, so
+graphile re-dispatched jobs **while the handler was still running** — ~25 jobs
+stolen in 8 days (nightly backups, DB forks, `./singularity push`), worst at 69
+min; for non-idempotent handlers that is corruption, not wasted CPU. Its keepalive
+renewed `WHERE locked_by = 'undefined'` and never matched a row — silent for three
+months. A 6-hour handler is exactly as alive as a 200 ms one. Details:
+[`research/2026-07-30-jobs-exact-liveness-advisory-locks.md`](../../../../research/2026-07-30-jobs-exact-liveness-advisory-locks.md).
+
+**The sweeper's `LOCK_ACQUIRE_GRACE` (30s) is not a lease.** Graphile stamps
+`locked_at` in `get_job`; we take the lock a few ms later in `dispatch()`, and a
+row inside that gap would look abandoned. The grace bounds **acquisition latency**
+— a constant of the dispatch path — and never grows with handler duration. Wanting
+to raise it because a job is "slow" is reaching for a lease again; the answer is
+no. Every reclaim is loud (`console.warn` + report); silent reclaims are what hid
+the original bug.
+
+Reading it:
+
+- `queryRunningJobs()` and the `jobs-list` resource expose `alive` per locked row
+  (Debug → Queue shows a **no worker** badge). `false` = owner died, or dispatch is
+  inside the sub-second acquisition window — never "has been running a while".
+- The `pg_locks` key encoding lives once, as `jobLockHeldExpr` in
+  `introspection.ts` (which owns the graphile coupling). Compose it, don't re-type
+  it: the single-bigint form splits the key across `classid`/`objid` with
+  `objsubid = 1`, and a copy that drops the `datname` guard reads a sibling
+  worktree's locks.
+- `deadJobPredicate` / `readyPredicate` test `locked_at IS NULL` — presence, not
+  age. Unaffected; keep it that way.
+
+`POST /api/events-test/crash-recovery` is the regression test and asserts both
+halves through the public introspection API: **no-steal** (a row locked 2 min whose
+lock is held by a *live* connection survives a forced sweep — the case the old
+harness could not express) and **reclaim** (destroy the socket, wait for the lock
+to drop, sweep, handler re-runs).
+
 ## Retry policy & non-retryable failures
 
 A failing job is retried up to `maxAttempts` (default `DEFAULT_MAX_ATTEMPTS`,

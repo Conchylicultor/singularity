@@ -31,6 +31,33 @@ export const deadJobPredicate = sql`${jobTaskScope}
 // shared by the aggregate backlog snapshot and the per-jobName attribution.
 export const readyPredicate = sql`j.run_at <= now() AND j.locked_at IS NULL AND j.attempts < j.max_attempts`;
 
+// "A worker is provably still running this row": a granted, session-scoped
+// advisory lock keyed on the graphile job id exists in THIS database. That lock
+// is taken by `withJobLock` (job-lock.ts) for exactly the handler's lifetime and
+// released by Postgres itself the instant the owning backend goes away — SIGKILL,
+// OOM-killer, kernel panic, `process.exit()` alike — because lock release is part
+// of backend teardown. So this is a FACT the database maintains, not an estimate
+// off a clock: unlike `locked_at` it cannot go stale, and host sleep (which
+// freezes every timer we own) cannot forge it.
+//
+// The key encoding must match `pg_try_advisory_lock(<graphile job id>::bigint)`
+// byte for byte: the single-bigint form splits its key across `classid` (high 32
+// bits) and `objid` (low 32 bits) and marks it `objsubid = 1` (the two-int form
+// uses 2), and advisory locks are database-scoped, so the `datname` guard keeps
+// one worktree's fork from reading a sibling fork's locks. That encoding is
+// precisely the kind of detail that drifts once it is copied per call site, so
+// it lives here with the rest of the graphile coupling and is composed, never
+// re-typed. Correlated on `j` like every other fragment in this file.
+export const jobLockHeldExpr = sql`EXISTS (
+    SELECT 1
+      FROM pg_locks l
+     WHERE l.locktype = 'advisory'
+       AND l.granted
+       AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+       AND l.objsubid = 1
+       AND ((l.classid::bigint << 32) | l.objid::bigint) = j.id
+  )`;
+
 // One terminally-dead row per distinct jobName: how many, the worst-case attempt
 // counters, the latest error, and a sample graphile job id for hand-inspection.
 export interface DeadJobStat {
@@ -175,6 +202,13 @@ export interface RunningJobStat {
   jobId: string;
   lockedForMs: number;
   lockedBy: string | null;
+  // Whether a worker is still provably running this row (`jobLockHeldExpr`).
+  // Deliberately NOT inferred from `lockedForMs`: duration says nothing about
+  // liveness — a six-hour handler is as alive as a 200 ms one. `false` means
+  // either the owning backend died (the stuck-lock sweeper reclaims the row on
+  // its next tick) or dispatch is still inside the sub-second window between
+  // graphile's `get_job` stamping `locked_at` and `withJobLock` taking the lock.
+  alive: boolean;
 }
 
 interface RunningJobStatRow {
@@ -183,15 +217,20 @@ interface RunningJobStatRow {
   // bigint comes back from pg as a string; coerced to number below.
   locked_for_ms: string;
   locked_by: string | null;
+  alive: boolean;
 }
 
 // Read-only: currently-locked (running) jobs, longest-held slot first.
+// `locked_at` still answers "for how long" (graphile stamps it exactly once, at
+// dispatch); `pg_locks` answers "is it alive". Those are two different questions
+// and this is the one place both are read together.
 export async function queryRunningJobs(): Promise<RunningJobStat[]> {
   const result = await db.execute(sql`
     SELECT ${jobNameExpr}                                              AS job_name,
            j.id::text                                                  AS job_id,
            (extract(epoch FROM (now() - j.locked_at)) * 1000)::bigint  AS locked_for_ms,
-           j.locked_by                                                 AS locked_by
+           j.locked_by                                                 AS locked_by,
+           ${jobLockHeldExpr}                                          AS alive
       FROM ${queueJobsFrom}
      WHERE ${jobTaskScope} AND j.locked_at IS NOT NULL
      ORDER BY locked_for_ms DESC
@@ -201,5 +240,6 @@ export async function queryRunningJobs(): Promise<RunningJobStat[]> {
     jobId: r.job_id,
     lockedForMs: Number(r.locked_for_ms),
     lockedBy: r.locked_by,
+    alive: r.alive,
   }));
 }

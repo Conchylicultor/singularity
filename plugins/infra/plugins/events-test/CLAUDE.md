@@ -29,6 +29,7 @@
 - Server:
   - Uses:
     - `database.db`
+    - `database/admin.connectionString`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`
@@ -36,6 +37,7 @@
     - `infra/events.deleteTriggersFor`
     - `infra/events.trigger`
     - `infra/jobs.defineJob`
+    - `infra/jobs.queryRunningJobs`
     - `infra/jobs.UNSAFE_sweepStuckLocks`
   - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
   - Register:

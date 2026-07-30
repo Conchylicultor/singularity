@@ -9731,6 +9731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops/cluster`
           - `debug/timeline`
           - `debug/worktree-cleanup`
+          - `infra/events-test`
           - `infra/jobs`
           - `infra/launcher`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
@@ -14518,6 +14519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/admin.connectionString`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -14525,6 +14527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events.deleteTriggersFor`
           - `infra/events.trigger`
           - `infra/jobs.defineJob`
+          - `infra/jobs.queryRunningJobs`
           - `infra/jobs.UNSAFE_sweepStuckLocks`
         - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
         - Register:

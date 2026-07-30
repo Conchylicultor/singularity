@@ -14,6 +14,12 @@ export const JobRowSchema = z.object({
   runAt: z.string(),
   lockedAt: z.string().nullable(),
   lockedBy: z.string().nullable(),
+  // Exact worker liveness for a `running` row: `true` = a worker still holds the
+  // job's session-scoped advisory lock, `false` = nobody does (the owning backend
+  // died, or dispatch is mid-acquisition). `null` for every non-running row,
+  // where the question is meaningless. Never derive this from how long
+  // `lockedAt` has been set — that inference is the bug this replaced.
+  alive: z.boolean().nullable(),
   queueName: z.string().nullable(),
   priority: z.number(),
   lastError: z.string().nullable(),

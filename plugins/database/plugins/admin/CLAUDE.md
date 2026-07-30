@@ -40,6 +40,7 @@
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `debug/worktree-cleanup`
+    - `infra/events-test`
     - `infra/jobs`
     - `infra/launcher`
 

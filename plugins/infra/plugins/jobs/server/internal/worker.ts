@@ -3,6 +3,7 @@ import {
   makeWorkerUtils,
   parseCronItem,
   run,
+  type JobHelpers,
   type ParsedCronItem,
   type Runner,
   type WorkerUtils,
@@ -22,7 +23,7 @@ import {
   type JobTaskPayload,
 } from "./registry";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
-import { startLockHeartbeat } from "./lock-heartbeat";
+import { LOCK_HELD, withJobLock } from "./job-lock";
 import { isNonRetryableError } from "./non-retryable";
 import { markJobPermanentlyFailed } from "./introspection";
 import { _jobSteps, _jobWaits } from "./tables";
@@ -98,13 +99,17 @@ export async function startWorker(): Promise<Runner> {
       connectionString: connectionString(),
       concurrency: JOB_CONCURRENCY,
       taskList: {
-        // biome-ignore lint/suspicious/noExplicitAny: graphile's JobHelpers typing requires the full interface; we only need job.id and job.attempts.
-        [JOB_TASK]: async (payload: unknown, helpers: any) => {
+        // `helpers` is graphile's real `JobHelpers` and must stay that way — do
+        // NOT loosen it back to `any` for the two fields we read. It WAS `any`,
+        // and that is exactly how a read of `helpers.workerId` (a field
+        // `JobHelpers` does not have) survived three months as the literal string
+        // `"undefined"` instead of being a tsc error, silently disabling the
+        // keepalive that was supposed to stop jobs double-running.
+        [JOB_TASK]: async (payload: unknown, helpers: JobHelpers) => {
           const p = payload as JobTaskPayload;
           await dispatch(p, {
             jobId: String(helpers.job.id),
             attempt: Number(helpers.job.attempts),
-            workerId: String(helpers.workerId),
           });
         },
       },
@@ -142,7 +147,7 @@ export async function stopWorker(): Promise<void> {
 // those conditions in their own handler.
 async function dispatch(
   payload: JobTaskPayload,
-  meta: { jobId: string; attempt: number; workerId: string },
+  meta: { jobId: string; attempt: number },
 ): Promise<void> {
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
@@ -213,52 +218,96 @@ async function dispatch(
     },
   });
 
-  // Keep this job's graphile lock fresh for the whole (possibly hours-long)
-  // handler so the stuck-lock sweeper never mistakes a healthy long run for a
-  // dead worker and double-dispatches it. Stopped in `finally` on every exit
-  // path (success, suspend, throw), after which graphile completes/fails/deletes
-  // the row itself. See lock-heartbeat.ts.
-  const stopHeartbeat = startLockHeartbeat(meta.jobId, meta.workerId);
-  try {
-    await recordEntrySpan("job", payload.jobName, () =>
-      job.run({ input: payload.input, event: payload.event, ctx }),
-    );
-  } catch (err) {
-    if (isSuspendSignal(err)) {
-      // Graphile sees a successful run — the current job completes and the
-      // row is deleted. Resume happens via a fresh `enqueue` issued by
-      // `jobs.resume` when the event fires or the timeout hits.
-      return;
-    }
-    const errObj = err instanceof Error ? err : new Error(String(err));
-    reportServerError({
-      message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
-    });
-    // A NonRetryableError signals a DETERMINISTIC failure — the same stored
-    // input will fail identically on every retry. Collapse the retry budget so
-    // graphile dead-letters this row after the current attempt instead of
-    // churning `maxAttempts` retries of pure waste. The throw below still feeds
-    // graphile's fail handler (sets last_error, clears the lock); the row then
-    // satisfies `deadJobPredicate` and queue-health reaps it as one dead-letter.
-    // If the budget-collapse write itself fails, we fall through to the throw
-    // and graphile retries normally (the real cause was already reported above).
+  // Hold this job's advisory lock for exactly the handler's lifetime, so that for
+  // as long as this handler runs the database itself can answer "a worker is still
+  // on this row" — and answer it correctly for a 200 ms handler and a six-hour one
+  // alike, because the answer is shared fate with this backend rather than the age
+  // of a timestamp. `withJobLock` releases on every exit path (success, suspend,
+  // throw), after which graphile owns the row's terminal transition. See
+  // job-lock.ts for why this is a dedicated direct-5433 connection.
+  //
+  // Keyed on the graphile job id, never `workflowRunId`: a suspended workflow
+  // resumes as a DIFFERENT `_private_jobs` row, so a run-scoped key would make the
+  // resumed step contend with the very predecessor whose suspension created it.
+  const outcome = await withJobLock(
+    meta.jobId,
+    (err) => {
+      // The lock's connection died while the handler is still running: the lock is
+      // gone, so nothing now prevents the sweeper from reclaiming this row and
+      // graphile from re-dispatching it alongside the live handler. We cannot
+      // un-run a handler mid-flight — all we can do is make the double-run window
+      // impossible to miss.
+      const errObj = err instanceof Error ? err : new Error(String(err));
+      const message = `[jobs] lock connection lost mid-handler for ${payload.jobName} (job ${meta.jobId}): ${errObj.message} — job may double-run`;
+      console.warn(message, errObj);
+      reportServerError({
+        message,
+        stack: errObj.stack ?? null,
+        errorType: errObj.name,
+      });
+    },
+    async (): Promise<"completed" | "suspended"> => {
+      try {
+        await recordEntrySpan("job", payload.jobName, () =>
+          job.run({ input: payload.input, event: payload.event, ctx }),
+        );
+        return "completed";
+      } catch (err) {
+        if (isSuspendSignal(err)) {
+          // Graphile sees a successful run — the current job completes and the
+          // row is deleted. Resume happens via a fresh `enqueue` issued by
+          // `jobs.resume` when the event fires or the timeout hits. Reported as a
+          // value rather than an early `return` from `dispatch`, because inside
+          // this closure a `return` would only exit the closure and would let the
+          // step/wait-log cleanup below run on a workflow that is still live.
+          return "suspended";
+        }
+        const errObj = err instanceof Error ? err : new Error(String(err));
+        reportServerError({
+          message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
+          stack: errObj.stack ?? null,
+          errorType: errObj.name,
+        });
+        // A NonRetryableError signals a DETERMINISTIC failure — the same stored
+        // input will fail identically on every retry. Collapse the retry budget so
+        // graphile dead-letters this row after the current attempt instead of
+        // churning `maxAttempts` retries of pure waste. The throw below still feeds
+        // graphile's fail handler (sets last_error, clears the lock); the row then
+        // satisfies `deadJobPredicate` and queue-health reaps it as one dead-letter.
+        // If the budget-collapse write itself fails, we fall through to the throw
+        // and graphile retries normally (the real cause was already reported above).
+        //
+        // The `job` entry span above wraps only `job.run()`, so this write lands with
+        // no ambient entry and would be classified context-less — hence ungated,
+        // running against the connections reserved for human-blocking work. Widening
+        // the span would corrupt the recorded job duration; declaring the lane is the
+        // right tool. See research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
+        if (isNonRetryableError(err)) {
+          await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
+        }
+        throw err;
+      }
+    },
+  );
+
+  if (outcome === LOCK_HELD) {
+    // Another live session provably holds this job's lock, i.e. graphile handed
+    // the same row to two workers. Under this design that should be
+    // near-impossible, which is exactly why it is reported rather than logged: a
+    // silent defer is how the original double-run bug hid for three months.
     //
-    // The `job` entry span above wraps only `job.run()`, so this write lands with
-    // no ambient entry and would be classified context-less — hence ungated,
-    // running against the connections reserved for human-blocking work. Widening
-    // the span would corrupt the recorded job duration; declaring the lane is the
-    // right tool. See research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
-    if (isNonRetryableError(err)) {
-      await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
-    }
+    // Throwing (rather than returning) is the point — a successful return would
+    // delete the row and silently DROP this tick. The throw feeds graphile's
+    // normal fail path, so the row is re-queued with backoff and the other
+    // worker's run is left undisturbed.
+    const err = new Error(
+      `[jobs] ${payload.jobName} (job ${meta.jobId}) is already locked by another live worker — deferring this dispatch`,
+    );
+    console.warn(err.message);
+    reportServerError({ message: err.message, stack: err.stack ?? null });
     throw err;
-  } finally {
-    // Handler is done (returned, suspended, or threw) — graphile now owns the
-    // row's terminal transition, so we stop renewing the lock.
-    stopHeartbeat();
   }
+  if (outcome === "suspended") return;
 
   // Normal completion: drop the step + wait logs for this run. Trigger rows
   // outlive this cleanup — oneShot rows are deleted by the events dispatcher

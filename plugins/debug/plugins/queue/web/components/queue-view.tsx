@@ -172,9 +172,16 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
                   onClick={() => setSelected(r)}
                 >
                   <td className="px-md py-sm">
-                    <Badge colorClass={STATE_STYLES[r.state]}>
-                      {r.state}
-                    </Badge>
+                    <Inline gap="xs">
+                      <Badge colorClass={STATE_STYLES[r.state]}>
+                        {r.state}
+                      </Badge>
+                      {r.alive === false && (
+                        <Badge colorClass="bg-destructive/10 text-destructive">
+                          no worker
+                        </Badge>
+                      )}
+                    </Inline>
                   </td>
                   <td className="px-md py-sm font-mono text-caption">{r.jobName}</td>
                   <td className="px-md py-sm tabular-nums">
@@ -267,6 +274,22 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
       <Field label="Run at">{new Date(job.runAt).toLocaleString()} ({relativeTime(job.runAt)})</Field>
       {job.lockedAt && (
         <Field label="Locked at">{new Date(job.lockedAt).toLocaleString()}</Field>
+      )}
+      {/* Only meaningful while the row is locked; `alive` is null otherwise.
+          "Locked for 40 minutes" is NOT a fault on its own — a long handler is
+          expected. The fault is a locked row whose worker no longer holds the
+          job's advisory lock. */}
+      {job.alive !== null && (
+        <Field label="Worker">
+          {job.alive ? (
+            <span className="text-success">alive — holds this job&apos;s advisory lock</span>
+          ) : (
+            <span className="text-destructive">
+              gone — no advisory lock on this job; the stuck-lock sweeper will
+              reclaim the row (or dispatch is still acquiring it)
+            </span>
+          )}
+        </Field>
       )}
       <Field label="Queue">{job.queueName ?? "(default)"}</Field>
       <Field label="Input">

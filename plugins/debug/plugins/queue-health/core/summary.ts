@@ -14,11 +14,15 @@ const backlogJobStatSchema = z.object({
 });
 
 // Mirrors jobs' RunningJobStat: a currently-locked job holding a shared slot.
+// `alive` is exact worker liveness (a granted advisory lock on the job id), not
+// an inference from `lockedForMs` — a long `lockedForMs` with `alive: true` is a
+// healthy slow job, the same duration with `alive: false` is an abandoned row.
 const runningJobStatSchema = z.object({
   jobName: z.string(),
   jobId: z.string(),
   lockedForMs: z.number().int(),
   lockedBy: z.string().nullable(),
+  alive: z.boolean(),
 });
 
 // Mirrors jobs' DeadJobStat: terminally-dead rows per jobName.

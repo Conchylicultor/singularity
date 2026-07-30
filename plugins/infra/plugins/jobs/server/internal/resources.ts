@@ -9,6 +9,7 @@ import {
   type JobState,
 } from "../../core/resources";
 import { JOB_TASK } from "./constants";
+import { jobLockHeldExpr } from "./introspection";
 import { _deadJobs } from "./tables";
 
 interface GraphileJobRow {
@@ -25,6 +26,8 @@ interface GraphileJobRow {
   last_error: string | null;
   created_at: string;
   updated_at: string;
+  // NULL for any row that is not locked — see the CASE in the query below.
+  alive: boolean | null;
 }
 
 function deriveState(row: GraphileJobRow): JobState {
@@ -34,6 +37,16 @@ function deriveState(row: GraphileJobRow): JobState {
   return "pending";
 }
 
+// `state` is what graphile believes (`locked_at` stamped ⇒ "running"); `alive`
+// is whether a worker is actually still there, read straight off `pg_locks` via
+// the shared `jobLockHeldExpr`. Surfacing both is the point: a row that is
+// `running` with `alive = false` is exactly the "worker died mid-handler" case
+// the stuck-lock sweeper exists to reclaim, and it is now visible in Debug →
+// Queue instead of only inferable from a stale timestamp. Scoped by CASE to
+// locked rows — asking "does a worker hold this row's lock" of a pending row has
+// no meaning, and answering `false` there would read as a fault. The CASE also
+// keeps the cost honest: only the taken branch is evaluated, so the pg_locks scan
+// runs for the handful of locked rows, not all 500.
 export async function loadJobsList(limit = 500): Promise<JobsPayload> {
   const result = await db.execute(
     sql`SELECT j.id::text,
@@ -43,7 +56,8 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
                j.priority,
                j.run_at, j.locked_at, j.locked_by,
                j.attempts, j.max_attempts, j.last_error,
-               j.created_at, j.updated_at
+               j.created_at, j.updated_at,
+               CASE WHEN j.locked_at IS NULL THEN NULL ELSE ${jobLockHeldExpr} END AS alive
           FROM graphile_worker._private_jobs j
           JOIN graphile_worker._private_tasks t ON t.id = j.task_id
      LEFT JOIN graphile_worker._private_job_queues q ON q.id = j.job_queue_id
@@ -62,6 +76,7 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
     runAt: r.run_at,
     lockedAt: r.locked_at,
     lockedBy: r.locked_by,
+    alive: r.alive,
     queueName: r.queue_name,
     priority: r.priority,
     lastError: r.last_error,

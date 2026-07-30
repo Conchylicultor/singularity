@@ -15,6 +15,13 @@ This plugin ships:
 | `pool` (Drizzle app queries) | PgBouncer socket (port 6432) | Most traffic; tx pooling reclaims budget |
 | `adminPool`, graphile-worker, pg_dump/pg_restore | Direct PG socket (port 5433) | LISTEN/NOTIFY, advisory locks, subprocesses |
 
+The **advisory locks** row now has a real consumer: `infra/jobs` holds a
+session-scoped advisory lock per running job (see
+[`jobs/CLAUDE.md`](../../../infra/plugins/jobs/CLAUDE.md)). Session state is the
+whole mechanism there, so it must never be moved behind pgbouncer — in transaction
+mode the lock would land on whichever backend served the statement and silently
+vanish from the next one.
+
 ## Config
 
 PgBouncer uses a catch-all `* = host=<PG_SOCKET_DIR> port=5433` — any database name routes to the embedded cluster automatically. No SIGHUP needed on worktree create/destroy.
