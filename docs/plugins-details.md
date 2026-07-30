@@ -505,6 +505,123 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
+        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, hostnames, loopback port, last run, plus the derived install names read-only), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the live deploy log panel. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment, streaming the CLI's output into the durable `deploy` log channel and its outcome into the in-memory `deploy.runs` resource. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+          - Web:
+            - Slots: `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
+            - Contributes:
+              - `Deploy.Section` "Deployments" → `DeploymentsSection`
+              - `DeploymentItemActions` "converge" → `ConvergeAction`
+              - `DeploymentItemActions` "ship" → `ShipAction`
+              - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
+            - Uses:
+              - `apps/deploy/health.useServerHealth`
+              - `apps/deploy/shell.Deploy`
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpointMutation`
+              - `plugin-meta/composition.useManifestItems`
+              - `primitives/auto-scroll.JumpToBottomButton`
+              - `primitives/auto-scroll.useStickyScroll`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/bouncing-dots.BouncingDots`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/css/ui-kit.Select`
+              - `primitives/css/ui-kit.SelectContent`
+              - `primitives/css/ui-kit.SelectItem`
+              - `primitives/css/ui-kit.SelectTrigger`
+              - `primitives/css/ui-kit.SelectValue`
+              - `primitives/data-view.CreateOption`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.ItemActionProps`
+              - `primitives/icon-button.IconButton`
+              - `primitives/imperative-dialog.openDialog`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useCombinedResources`
+              - `primitives/live-state.useResource`
+              - `primitives/networking.useReconnectingWebSocket`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/row-actions.RowActionButton`
+              - `primitives/section-card.SectionCard`
+              - `shell/notifications.toast`
+            - Exports (values): `DeploymentItemActions`
+          - Server:
+            - Contributes:
+              - `resource.declare` "deploy.deployments"
+              - `resource.declare` "deploy.runs"
+            - Uses:
+              - `apps/deploy/servers._deployServers`
+              - `config_v2.getConfig`
+              - `database.db`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/paths.REPO_ROOT`
+              - `primitives/log-channels.defineLogSink`
+            - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
+            - Exports (values):
+              - `_deployDeployments`
+              - `deploymentsServerResource`
+            - Resources:
+              - `deploy.deployments` (push)
+              - `deploy.runs` (push)
+            - Routes:
+              - `GET /api/deploy/deployments`
+              - `POST /api/deploy/deployments`
+              - `GET /api/deploy/deployments/:id`
+              - `PATCH /api/deploy/deployments/:id`
+              - `DELETE /api/deploy/deployments/:id`
+              - `POST /api/deploy/deployments/:id/run`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `primitives/live-state.resourceDescriptor`
+            - Exports (types):
+              - `CreateDeploymentBody`
+              - `Deployment`
+              - `DeployRun`
+              - `DeployVerb`
+              - `InstallLayout`
+              - `RunDeploymentBody`
+              - `UpdateDeploymentBody`
+            - Exports (values):
+              - `CADDY_SITES_DIR`
+              - `createDeployment`
+              - `CreateDeploymentBodySchema`
+              - `currentAppPath`
+              - `DEFAULT_LOOPBACK_PORT`
+              - `deleteDeployment`
+              - `DEPLOY_LOG_CHANNEL`
+              - `DeploymentSchema`
+              - `deploymentsResource`
+              - `DeployRunSchema`
+              - `deployRunsResource`
+              - `DeployVerbSchema`
+              - `deriveInstall`
+              - `getDeployment`
+              - `INSTALL_ROOT`
+              - `listDeployments`
+              - `listenAddress`
+              - `LOOPBACK_HOST`
+              - `releaseAppPath`
+              - `releaseDir`
+              - `REMOTE_SCRIPT_SHEBANG`
+              - `runDeployment`
+              - `RunDeploymentBodySchema`
+              - `SYSTEMD_INSTANCE`
+              - `UNIT_TEMPLATE_PATH`
+              - `updateDeployment`
+              - `UpdateDeploymentBodySchema`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its keyed live resource, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -559,7 +676,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/deploy/servers/:id/ssh-check`
               - `POST /api/deploy/servers/:id/forget-host-key`
           - Cross-plugin:
-            - Imported by: `apps/deploy/ssh-setup`
+            - Imported by:
+              - `apps/deploy/deployments`
+              - `apps/deploy/ssh-setup`
           - Shared:
             - Exports (types):
               - `ServerHealthRow`
@@ -651,6 +770,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/deploy/servers/:id/ssh-keypair/import`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/deployments`
               - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
             - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
@@ -679,7 +799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
           - Web:
-            - Slots: `Deploy.Section`
+            - Slots: `Deploy.Section` ← `apps.deploy.deployments`
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
             - Uses:
               - `apps-core.Apps`
@@ -692,7 +812,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `deployApp`
           - Cross-plugin:
-            - Imported by: `apps/deploy/servers`
+            - Imported by:
+              - `apps/deploy/deployments`
+              - `apps/deploy/servers`
         - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
           - Web:
             - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
@@ -6355,6 +6477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `apps-core/surface/floating`
       - `apps-core/surface/floating/wallpaper`
+      - `apps/deploy/deployments`
       - `apps/sonata/audio/metronome`
       - `apps/sonata/notation`
       - `apps/sonata/piano-keyboard`
@@ -9613,6 +9736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data`
       - `apps/browser/bookmarks`
       - `apps/browser/history`
+      - `apps/deploy/deployments`
       - `apps/deploy/health`
       - `apps/deploy/servers`
       - `apps/mail/attachments`
@@ -14123,6 +14247,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
+          - `apps/deploy/deployments`
           - `apps/deploy/health`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
@@ -14885,9 +15010,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
           - `database/pgbouncer.pgbouncerPidFileUnder`
           - `infra/asset-mirror.seedAssetMirrorCache`
+          - `infra/paths.ReleaseIdentity`
+          - `infra/paths.setReleaseIdentity`
           - `infra/paths.SINGULARITY_DIR`
           - `infra/worktree.writeWorktreeSpec`
           - `infra/worktree.ZeroCacheSpec`
+        - Exports (types): `ListenAddress`
         - Exports (values):
           - `assertSupportedHost`
           - `awaitGatewayReady`
@@ -14899,9 +15027,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `hasPgBouncerPackage`
           - `isGatewayListening`
           - `isRunning`
+          - `LISTEN_ENV`
+          - `listenFlag`
           - `pgbouncerConnection`
           - `pgbouncerService`
           - `readPid`
+          - `resolveListenAddress`
           - `seedReleaseAssetMirror`
           - `seedReleaseConfig`
           - `spawnGatewayDaemon`
@@ -14948,6 +15079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating/wallpaper`
+          - `apps/deploy/deployments`
           - `apps/prototypes/files`
           - `apps/studio/compositions/auto-serve`
           - `backup`
@@ -15016,6 +15148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks`
       - Server:
+        - Exports (types): `ReleaseIdentity`
         - Exports (values):
           - `ATTACHMENTS_DIR`
           - `BACKUPS_DIR`
@@ -15042,10 +15175,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pruneWorktreeReleaseArtifacts`
           - `PS`
           - `RELEASE_ARTIFACTS_RETENTION`
+          - `releaseIdentity`
           - `REPO_CONFIG_DIR`
           - `REPO_ROOT`
           - `REPORTS_DIR`
           - `SECRETS_DIR`
+          - `setReleaseIdentity`
           - `SINGULARITY_DIR`
           - `STORE_PATH`
           - `TMUX`
@@ -15055,6 +15190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `worktreeDataDir`
           - `WORKTREES_DIR`
       - Core:
+        - Exports (types): `ReleaseIdentity`
         - Exports (values):
           - `ATTACHMENTS_DIR`
           - `BACKUPS_DIR`
@@ -15072,10 +15208,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LEGACY_AUTH_KEY`
           - `MAIN_WORKTREE_NAME`
           - `PLUGINS_DIR`
+          - `releaseIdentity`
           - `REPO_CONFIG_DIR`
           - `REPO_ROOT`
           - `REPORTS_DIR`
           - `SECRETS_DIR`
+          - `setReleaseIdentity`
           - `SINGULARITY_DIR`
           - `STORE_PATH`
           - `worktreeArtifacts`
@@ -15314,14 +15452,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
-    - **`ssh`** — Hermetic SSH client primitive: sshRun opens a session to (host, port, user) with EXACTLY the private key it is given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and returns a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally.
+    - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally.
       - Cross-plugin:
         - Imported by: `apps/deploy/health`
       - Server:
         - Exports (types):
+          - `SshFailure`
           - `SshRunResult`
           - `SshTarget`
-        - Exports (values): `sshRun`
+          - `SshUploadResult`
+        - Exports (values):
+          - `sshRun`
+          - `sshUpload`
       - Core:
         - Exports (types): `SshFailureKind`
         - Exports (values): `SshFailureKindSchema`
@@ -17062,6 +17204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `manifestItemToManifest`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/studio/compositions`
           - `apps/studio/compositions/auto-serve`
           - `apps/studio/compositions/contributors`
@@ -17894,6 +18037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useStickyScroll`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/sonata/rich/chord-progression`
           - `apps/studio/compositions/release/release-logs`
           - `build`
@@ -18157,6 +18301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/deploy/deployments`
               - `apps/deploy/ssh-setup`
               - `apps/mail/attachments`
               - `apps/mail/mailbox`
@@ -18279,6 +18424,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `BouncingDots`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/deployments`
               - `apps/website/demos/agent-run`
               - `apps/website/demos/app-gallery`
               - `conversations/conversation-view/jsonl-viewer`
@@ -18593,6 +18739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/deployments`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/mail/inbox`
@@ -18861,6 +19008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/surface/solo`
               - `apps/browser/webview`
+              - `apps/deploy/deployments`
               - `apps/pages/page-tree`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -19076,6 +19224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/tab-bar`
+              - `apps/deploy/deployments`
               - `apps/mail/mailbox`
               - `apps/mail/reading-pane`
               - `apps/mail/thread-list`
@@ -19197,6 +19346,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/deployments`
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
@@ -19675,6 +19825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/deployments`
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
@@ -20176,6 +20327,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/deployments`
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
@@ -20610,6 +20762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -20779,6 +20932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "debug.slow-ops.cluster-timeline"
           - `ConfigV2.Register` "debug.slow-ops.local"
           - `ConfigV2.Register` "debug.trace.events"
+          - `ConfigV2.Register` "deploy.deployments"
           - `ConfigV2.Register` "deploy.servers"
           - `ConfigV2.Register` "home.apps"
           - `ConfigV2.Register` "mail-inbox"
@@ -20805,6 +20959,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `readDataViewConfigDoc`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/home/app-cards`
           - `apps/mail/inbox`
@@ -21599,6 +21754,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/proxy`
           - `apps/browser/tabs`
           - `apps/browser/webview`
+          - `apps/deploy/deployments`
           - `apps/mail/reading-pane`
           - `apps/pages/history`
           - `apps/pages/page-tree`
@@ -21719,6 +21875,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating/wallpaper`
+          - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
           - `apps/sonata/sources/ultimate-guitar`
@@ -21970,6 +22127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/deploy/deployments`
           - `apps/deploy/health`
           - `apps/deploy/servers`
           - `apps/mail/inbox`
@@ -22277,6 +22435,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MAX_EMIT_LINES`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/mail/sync`
           - `apps/sonata/piano-roll`
           - `build`
@@ -22395,6 +22554,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useReconnectingWebSocket`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/studio/compositions/release/release-logs`
           - `build`
           - `build/build-logs`
@@ -22917,6 +23077,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/agent-manager/welcome`
           - `apps/browser/start-page`
+          - `apps/deploy/deployments`
           - `apps/deploy/health`
           - `apps/mail/inbox`
           - `apps/mail/reading-pane`
@@ -22995,6 +23156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `rowActionsAnchor`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/studio/compositions`
           - `conversations/conversations-view/data-view/history`
@@ -23080,6 +23242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `SectionCard`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/deploy/ssh-setup`
           - `apps/sonata/library`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
@@ -23727,6 +23890,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/data-view.FilterGroupSchema`
       - `primitives/live-state.resourceDescriptor`
     - Exports (types):
+      - `PlatformTag`
+      - `PlatformTagResult`
       - `Preview`
       - `QueryReleaseHistoryBody`
       - `ReleaseLogLine`
@@ -23734,6 +23899,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReleaseRun`
       - `ReleaseTarget`
     - Exports (values):
+      - `bunCompileTarget`
+      - `goEnvFor`
+      - `hostPlatformTag`
+      - `isLinuxTag`
+      - `isPlatformTag`
+      - `PLATFORM_TAGS`
+      - `platformTagFor`
+      - `platformTagFromUname`
       - `previewEndpoint`
       - `PreviewSchema`
       - `previewStateResource`
@@ -23759,6 +23932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
     - Contributes:
+      - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
@@ -23939,6 +24113,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "conversations-sidebar-sources"
       - `ConfigV2.Register` "debug-app.sidebar"
       - `ConfigV2.Register` "debug-app.toolbar"
+      - `ConfigV2.Register` "deploy.deployments.item-actions"
       - `ConfigV2.Register` "deploy.section"
       - `ConfigV2.Register` "deploy.servers.detail-header"
       - `ConfigV2.Register` "deploy.servers.fields"
@@ -24775,6 +24950,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/notifications/:id/dismiss`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/prototypes/gallery`
           - `apps/studio/compositions/release/release-logs`
           - `auth`

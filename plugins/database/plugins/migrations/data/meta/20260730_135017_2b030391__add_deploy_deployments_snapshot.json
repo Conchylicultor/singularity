@@ -1,6 +1,6 @@
 {
-  "id": "3bac22b9-10d8-4616-89d1-4773f61ca143",
-  "prevId": "be9c7e72-409b-4d7b-ab10-443fd2aa0941",
+  "id": "5ab8c723-6522-45b2-a377-4a499785cb22",
+  "prevId": "a66055d4-cde9-4416-858d-b18b5a89e34b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1538,6 +1538,75 @@
           "tableTo": "mail_accounts",
           "columnsFrom": [
             "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.page_blocks_ext_origin": {
+      "name": "page_blocks_ext_origin",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "page_blocks_ext_origin_created_at_idx": {
+          "name": "page_blocks_ext_origin_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "page_blocks_ext_origin_parent_id_page_blocks_id_fk": {
+          "name": "page_blocks_ext_origin_parent_id_page_blocks_id_fk",
+          "tableFrom": "page_blocks_ext_origin",
+          "tableTo": "page_blocks",
+          "columnsFrom": [
+            "parent_id"
           ],
           "columnsTo": [
             "id"
