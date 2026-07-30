@@ -16,6 +16,7 @@ import {
   type VirtualItem,
 } from "@tanstack/react-virtual";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { findScrollParent } from "@plugins/primitives/plugins/auto-scroll/web";
 
 export interface VirtualRowsProps<T> {
   items: readonly T[];
@@ -37,25 +38,6 @@ export interface VirtualRowsProps<T> {
    */
   keepMounted?: readonly string[];
   children: (item: T, index: number) => ReactNode;
-}
-
-const SCROLLABLE_OVERFLOW = new Set(["auto", "scroll", "overlay"]);
-
-/**
- * Walk up from `el` to the nearest ancestor that actually scrolls vertically.
- * Mode-agnostic: in a surface-mode data-view the data-view's own bounded body
- * is the match; embedded inside another scroller (a tabbed-view tab, a detail
- * pane) the *outer* scroller is the match — so windowing works wherever the
- * data-view is mounted, instead of assuming the data-view owns the scroll.
- * Falls back to the document scroller so a list is never left un-windowed.
- */
-function findScrollParent(el: HTMLElement | null): HTMLElement {
-  let node = el?.parentElement ?? null;
-  while (node) {
-    if (SCROLLABLE_OVERFLOW.has(getComputedStyle(node).overflowY)) return node;
-    node = node.parentElement;
-  }
-  return document.scrollingElement as HTMLElement;
 }
 
 export interface UseVirtualRowsOptions<T> {

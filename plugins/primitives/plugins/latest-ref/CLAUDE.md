@@ -44,6 +44,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `layouts/miller`
     - `page/code-block`
     - `page/editor`
+    - `primitives/auto-scroll`
     - `primitives/css/color-picker`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`

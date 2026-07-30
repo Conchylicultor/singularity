@@ -16106,6 +16106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.useEndpointMutation`
+          - `primitives/auto-scroll.useEdgeAutoScroll`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
@@ -18084,23 +18085,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/sidebar-framing`
       - Core:
         - Exports (types): `SidebarFramingProps`
-    - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
+    - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), and the shared findScrollParent discovery.
       - Web:
         - Uses:
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/latest-ref.useEventCallback`
+          - `primitives/latest-ref.useLatestRef`
         - Exports (types):
+          - `EdgeAutoScroll`
+          - `FindScrollParentOptions`
           - `JumpToBottomButtonProps`
           - `JumpToBottomView`
           - `ScrollAlign`
           - `ScrollChildIntoViewOptions`
           - `ScrollToBottomOptions`
           - `StickyScrollHandle`
+          - `UseEdgeAutoScrollOptions`
           - `UseStickyScrollOptions`
         - Exports (values):
+          - `findScrollParent`
           - `JumpToBottomButton`
           - `scrollChildIntoView`
           - `scrollToBottom`
+          - `useEdgeAutoScroll`
           - `useStickyScroll`
       - Cross-plugin:
         - Imported by:
@@ -18113,6 +18121,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/message-toc`
           - `debug/logs`
           - `layouts/miller`
+          - `page/editor`
+          - `primitives/virtual-rows`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
         - Uses:
@@ -22015,6 +22025,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/miller`
           - `page/code-block`
           - `page/editor`
+          - `primitives/auto-scroll`
           - `primitives/css/color-picker`
           - `primitives/data-view`
           - `primitives/data-view/custom-columns`
@@ -23886,7 +23897,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/tabbed-view`
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
       - Web:
-        - Uses: `primitives/css/ui-kit.cn`
+        - Uses:
+          - `primitives/auto-scroll.findScrollParent`
+          - `primitives/css/ui-kit.cn`
         - Exports (types):
           - `UseVirtualRowsOptions`
           - `UseVirtualRowsResult`

@@ -432,6 +432,39 @@ copied `""`). Partial cross-block selection was never given up; it never existed
   still down, so the browser re-seats a range every frame. The class disarms it; the
   per-move `focusContainer()` clears what beat it.
 
+**Holding at either viewport edge scrolls the document and keeps the range growing**
+(`useEdgeAutoScroll`, from the scroll-owning `auto-scroll` primitive). Three rules:
+
+- **One applier, two clocks.** `applySelectionAt(clientY)` is the entire per-move
+  body, called from `pointermove` **and** from the hook's `onScroll`: with the pointer
+  parked at the edge the pointer did not move, the CONTENT did, so re-evaluating only
+  on `pointermove` would scroll the document and select nothing new. Mirror rule:
+  **`track` is fed from the pointer handler only, never from the applier**, or the
+  hook re-latches off its own callback.
+- **It engages only once the gesture is already OURS** (`dragMovedRef` /
+  `textDragPromotedRef`), never at pointerdown. The trailing `min-h-40` empty zone
+  sits exactly inside the bottom edge band on a full page, so engaging on the press
+  turns a plain click there into a runaway scroll under a stationary pointer — which
+  arms `dragMovedRef` and swallows `onEmptyClick`, i.e. click-to-edit at the bottom of
+  a page stops working. Pre-promotion `text` is the same rule: the browser still owns
+  the gesture.
+- **`dragStartRef` carries two coordinate spaces; do not collapse them.** `x`/`y` are
+  VIEWPORT (`onEmptyClick` compares the press against live row rects). `contentY` is
+  the press inside `contentRef`'s box, because the marquee is an absolutely-positioned
+  CHILD of that box: subtracting a frozen viewport `y` from a content rect re-read
+  every frame drifts the anchor by exactly the pixels scrolled since the press, and
+  drops them from `height` entirely. The `> 3` drag threshold measures `contentY` too,
+  so a stationary pointer over a scrolling surface counts as the drag it is.
+
+`pointerup` and `pointercancel` share one teardown; cancel skips the click branch (a
+cancelled press is not a click). Missing the cancel listener used to leak two inert
+listeners — now it would leak a scroller with no pointer left to end it.
+
+Already correct, load-bearing only now: the per-move `focusContainer()` survives 60fps
+ONLY because it focuses with `preventScroll: true` (`internal/use-block-selection.ts`),
+else focus fights the scroll every frame; and `rowAtPointer`'s nearest-row fallback is
+what keeps the range extending while the pointer sits below the last block.
+
 ## The gutter `+` and `/` are one unified menu
 
 Both open the **same** caret-anchored block menu (`components/block-menu-plugin.tsx`,
@@ -929,6 +962,7 @@ the whole document lives in React state and is discarded on unmount.
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `primitives/auto-scroll.useEdgeAutoScroll`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`

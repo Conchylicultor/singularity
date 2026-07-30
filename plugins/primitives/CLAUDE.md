@@ -8,7 +8,7 @@
 - Sub-plugins:
   - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
   - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
-  - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
+  - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), and the shared findScrollParent discovery.
   - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
   - **`bar`** — Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
   - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.

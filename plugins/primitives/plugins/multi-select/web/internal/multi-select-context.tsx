@@ -38,6 +38,14 @@ function shallowEqual(a: readonly string[], b: readonly string[]): boolean {
   return true;
 }
 
+function sameMembers(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const id of a) {
+    if (!b.has(id)) return false;
+  }
+  return true;
+}
+
 function toggleRange(
   state: MultiSelectState,
   id: string,
@@ -104,6 +112,15 @@ export function multiSelectReducer(
       const hi = Math.max(anchorIdx, targetIdx);
       const next = new Set<string>();
       for (let i = lo; i <= hi; i++) next.add(state.orderedIds[i]!);
+      // A range drag re-dispatches the SAME range many times a second — once per
+      // pointermove, and once per animation frame while the pointer sits parked
+      // at a scrolling viewport edge. Returning the identical state object lets
+      // React bail out of the render entirely; without it every row in the list
+      // re-renders at 60fps for a selection that did not change. The anchor is
+      // part of what this case writes (extendTo / shift-arrow read it), so an
+      // identical set under a moved anchor is still a real change.
+      if (sameMembers(state.selectedIds, next) && state.anchorId === anchorId)
+        return state;
       return {
         ...state,
         selectedIds: next,
@@ -122,6 +139,15 @@ export function multiSelectReducer(
     }
 
     case "CLEAR_ALL":
+      // Same bail, cheaper test: this case writes exactly these three keys, so
+      // an already-cleared state has nothing to write and clearing twice must
+      // not re-render the list.
+      if (
+        state.selectedIds.size === 0 &&
+        state.anchorId === null &&
+        !state.isActive
+      )
+        return state;
       return {
         ...state,
         selectedIds: new Set(),

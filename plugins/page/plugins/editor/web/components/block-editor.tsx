@@ -43,7 +43,11 @@ import {
 } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
+import { useEdgeAutoScroll } from "@plugins/primitives/plugins/auto-scroll/web";
 import {
   canIndent,
   canOutdent,
@@ -182,6 +186,12 @@ function borrowedFirstLineCenters(
 // pointer sits in its top (before) or bottom (after) half. Reads live DOM rects
 // rather than dnd-kit's cached droppable rects, which drift off-by-one as block
 // heights settle. Falls back to the nearest row when between/outside rows.
+//
+// That fallback is load-bearing for drag-select's edge auto-scroll, not merely
+// tolerant: a pointer held BELOW the last block resolves to the last row, so the
+// range keeps extending onto whatever scrolls into view under it. A version that
+// returned null off-content would freeze the selection the moment the drag left
+// the content box — i.e. exactly when auto-scroll takes over.
 function rowAtPointer(y: number): DropTarget | null {
   const els = document.querySelectorAll<HTMLElement>("[data-block-id]");
   let nearest: DropTarget | null = null;
@@ -725,10 +735,24 @@ function SelectionLayer({
    * leaves the origin row.
    */
   type DragMode = "background" | "text";
+  /**
+   * The gesture's anchor, in TWO coordinate spaces, deliberately not collapsed
+   * into one:
+   *
+   * - `x` / `y` are VIEWPORT coords, frozen at pointerdown. `onEmptyClick` needs
+   *   them: it compares the press against the first/last row's live
+   *   `getBoundingClientRect()`, which is viewport-relative too.
+   * - `contentY` is the same press expressed in `contentRef`'s own box. The
+   *   marquee rectangle is an absolutely-positioned CHILD of that box, so its
+   *   `top` must be scroll-invariant. Subtracting a frozen viewport `y` from a
+   *   content rect re-read every frame drifts the anchor by exactly the distance
+   *   scrolled since the press — unnoticeable until the drag itself scrolls.
+   */
   const dragStartRef = useRef<{
     id: string | null;
     x: number;
     y: number;
+    contentY: number;
     mode: DragMode;
   } | null>(null);
   const dragMovedRef = useRef(false);
@@ -801,6 +825,79 @@ function SelectionLayer({
   );
 
   /**
+   * The ONE per-frame body of a drag-select gesture, at a viewport `clientY`.
+   *
+   * Two distinct clocks can advance a gesture, and both call this: the POINTER
+   * moved (`pointermove`), or the SURFACE moved under a parked pointer
+   * (`useEdgeAutoScroll`'s `onScroll`). The second is not a refinement — while
+   * the user holds still at the edge it is the only thing driving the gesture,
+   * so without re-applying here auto-scroll would move the document and select
+   * nothing new.
+   *
+   * The mirror rule lives at the call sites: `track` is fed from the pointer
+   * handler ONLY, never from in here, or the hook would re-latch off its own
+   * callback.
+   */
+  const applySelectionAt = useEventCallback((clientY: number) => {
+    const start = dragStartRef.current;
+    if (!start) return;
+    // `rowAtPointer` falls back to the NEAREST row when the pointer is off the
+    // content, which is exactly what this wants: a pointer parked below the last
+    // block resolves to the last row, so the range keeps extending as fresh
+    // content scrolls in under it.
+    const cur = rowAtPointer(clientY);
+
+    if (start.mode === "text") {
+      if (!textDragPromotedRef.current) {
+        // Still inside the origin row: the browser's own intra-block
+        // selection is the whole feature here. Hands off.
+        if (start.id === null || cur === null || cur.id === start.id) return;
+        textDragPromotedRef.current = true;
+        setTextDragPromoted(true);
+      }
+      if (cur && start.id) applyRange(start.id, cur.id);
+      // Every move, not just the promoting one: the pointer is still down and
+      // the browser is still in select-mode, so it re-seats a range in the
+      // origin host given any chance. `select-none` (below) is what stops it
+      // re-arming; this drops whatever it managed to seat before that landed.
+      //
+      // Safe to run at 60fps — which is what an auto-scrolling gesture now does
+      // — ONLY because `focusContainer` focuses with `preventScroll: true`
+      // (`internal/use-block-selection.ts`). Drop that and focus yanks the
+      // viewport back every frame, fighting the auto-scroll. (`focus()` on an
+      // already-focused element is a no-op and `releaseCaret` early-returns with
+      // no range, so the repeat itself costs nothing.)
+      focusContainer();
+      return;
+    }
+
+    const content = contentRef.current;
+    if (content) {
+      // Both ends in CONTENT coords, so the rectangle stays glued to the blocks
+      // it depicts while the surface scrolls beneath the gesture. The drag
+      // threshold is measured here too: a stationary pointer over a scrolling
+      // surface is genuinely a drag, not a click.
+      const curContentY = clientY - content.getBoundingClientRect().top;
+      const top = Math.min(start.contentY, curContentY);
+      const height = Math.abs(curContentY - start.contentY);
+      if (height > 3) {
+        dragMovedRef.current = true;
+        setMarquee({ top, height });
+      }
+    }
+    if (cur && start.id) applyRange(start.id, cur.id);
+  });
+
+  // Holding the pointer at the top/bottom edge scrolls the document and keeps
+  // the selection extending, Notion-style. `containerRef` is the interaction
+  // surface, which sits INSIDE whatever scroller hosts the editor — the hook
+  // walks up from it to find that scroller per gesture.
+  const autoScroll = useEdgeAutoScroll({
+    anchorRef: containerRef,
+    onScroll: applySelectionAt,
+  });
+
+  /**
    * One pointer-drag gesture, two entry points, one tracking loop.
    *
    * The `text` entry is what makes a selection cross a block boundary at all.
@@ -834,6 +931,12 @@ function SelectionLayer({
       if (!containerRef.current?.contains(el)) return;
       // A gutter/inline control owns its own press outright, in either mode.
       if (el.closest("button")) return;
+      // The content wrapper renders inside the container in the same pass, so the
+      // check above already proves it is mounted. Refusing to start the gesture is
+      // still the honest response to its absence — the marquee's anchor is read
+      // from this box, and there is no coordinate to guess it from.
+      const content = contentRef.current;
+      if (!content) return;
 
       const row = el.closest("[data-block-id]");
       const inText = el.closest('[contenteditable="true"]') !== null;
@@ -849,53 +952,48 @@ function SelectionLayer({
         ? (row?.getAttribute("data-block-id") ?? null)
         : (rowAtPointer(e.clientY)?.id ?? null);
 
-      dragStartRef.current = { id: originId, x: e.clientX, y: e.clientY, mode };
+      dragStartRef.current = {
+        id: originId,
+        x: e.clientX,
+        y: e.clientY,
+        contentY: e.clientY - content.getBoundingClientRect().top,
+        mode,
+      };
       dragMovedRef.current = false;
       textDragPromotedRef.current = false;
       // A text press must reach the browser untouched — that IS the intra-block
       // selection. Only the background entry claims the editor up front.
       if (mode === "background") focusContainer();
 
+      /**
+       * Has the gesture become OURS? Auto-scroll must not engage on the press
+       * itself: the editor's trailing `min-h-40` empty zone sits exactly inside
+       * the bottom edge band on a full page, so a plain click there would scroll
+       * under a stationary pointer, arm `dragMovedRef`, and swallow the
+       * `onEmptyClick` that makes click-to-edit work at the bottom of a page.
+       *
+       * For `text` the promotion latch says the same thing: before the pointer
+       * leaves the origin row the gesture belongs to the BROWSER (which does its
+       * own selection auto-scroll), and the editor's rule is to never intercept
+       * the text press on the way down.
+       */
+      const engaged = () =>
+        mode === "text" ? textDragPromotedRef.current : dragMovedRef.current;
+
       const onMove = (ev: PointerEvent) => {
-        const start = dragStartRef.current;
-        if (!start) return;
-        const cur = rowAtPointer(ev.clientY);
-
-        if (start.mode === "text") {
-          if (!textDragPromotedRef.current) {
-            // Still inside the origin row: the browser's own intra-block
-            // selection is the whole feature here. Hands off.
-            if (start.id === null || cur === null || cur.id === start.id) return;
-            textDragPromotedRef.current = true;
-            setTextDragPromoted(true);
-          }
-          if (cur && start.id) applyRange(start.id, cur.id);
-          // Every move, not just the promoting one: the pointer is still down and
-          // the browser is still in select-mode, so it re-seats a range in the
-          // origin host given any chance. `select-none` (below) is what stops it
-          // re-arming; this drops whatever it managed to seat before that landed.
-          focusContainer();
-          return;
-        }
-
-        const content = contentRef.current;
-        if (content) {
-          const r = content.getBoundingClientRect();
-          const top = Math.min(start.y, ev.clientY) - r.top;
-          const height = Math.abs(ev.clientY - start.y);
-          if (height > 3) {
-            dragMovedRef.current = true;
-            setMarquee({ top, height });
-          }
-        }
-        if (cur && start.id) applyRange(start.id, cur.id);
+        applySelectionAt(ev.clientY);
+        if (engaged()) autoScroll.track(ev.clientY);
       };
-      const onUp = () => {
+      const finish = (commitClick: boolean) => {
+        // First: the gesture is over, so the loop must not survive whatever the
+        // click branch below does (focus, insert, a re-render).
+        autoScroll.stop();
         const start = dragStartRef.current;
         // A plain click (no drag) on the empty background routes the caret to a
         // block; a drag was a marquee selection and is left alone. A text press
-        // needs neither — the browser already placed the caret.
-        if (start && start.mode === "background" && !dragMovedRef.current) {
+        // needs neither — the browser already placed the caret. A CANCELLED
+        // gesture is not a click at all, so it takes the teardown without this.
+        if (commitClick && start && start.mode === "background" && !dragMovedRef.current) {
           onEmptyClick(start.x, start.y);
         }
         dragStartRef.current = null;
@@ -904,11 +1002,18 @@ function SelectionLayer({
         setMarquee(null);
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onCancel);
       };
+      const onUp = () => finish(true);
+      // Without this the gesture's listeners survive a cancelled press — inert
+      // until now, but they hold an auto-scroll loop that would keep scrolling
+      // the document with no pointer left to end it.
+      const onCancel = () => finish(false);
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onCancel);
     },
-    [applyRange, focusContainer, onEmptyClick, containerRef],
+    [applySelectionAt, autoScroll, focusContainer, onEmptyClick, containerRef],
   );
 
   // ---- Drag-and-drop (single block, or the whole selection) ----------------

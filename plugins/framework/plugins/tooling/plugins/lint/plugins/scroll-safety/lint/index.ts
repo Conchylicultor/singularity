@@ -17,6 +17,7 @@ export default {
       "plugins/primitives/plugins/auto-scroll/web/use-sticky-scroll.ts",
       "plugins/primitives/plugins/auto-scroll/web/scroll-to-bottom.ts",
       "plugins/primitives/plugins/auto-scroll/web/scroll-child-into-view.ts",
+      "plugins/primitives/plugins/auto-scroll/web/use-edge-auto-scroll.ts",
     ],
   },
 };
