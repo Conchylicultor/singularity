@@ -710,13 +710,35 @@ function SelectionLayer({
     [handles, paste, focusedBlockId, containerRef, allowAttachments],
   );
 
-  // ---- Marquee drag-select on the empty container background ---------------
+  // ---- Pointer drag-select (background marquee + cross-block text promotion) --
 
   const [marquee, setMarquee] = useState<{ top: number; height: number } | null>(
     null,
   );
-  const marqueeStartRef = useRef<{ id: string | null; x: number; y: number } | null>(null);
-  const marqueeMovedRef = useRef(false);
+  /**
+   * `background` — the press landed on empty surface (a row's gutter rail, the gap
+   * between rows, the area below the last block). Block-selection starts on the
+   * press and the marquee rectangle is painted.
+   *
+   * `text` — the press landed INSIDE a block's contenteditable. The BROWSER owns
+   * this gesture, and we do not interfere with it, right up until the pointer
+   * leaves the origin row.
+   */
+  type DragMode = "background" | "text";
+  const dragStartRef = useRef<{
+    id: string | null;
+    x: number;
+    y: number;
+    mode: DragMode;
+  } | null>(null);
+  const dragMovedRef = useRef(false);
+  /**
+   * A text drag that has crossed a block boundary and been taken over as a block
+   * range. Mirrored into state because it suppresses native text selection for the
+   * rest of the gesture (below), which is a render concern.
+   */
+  const textDragPromotedRef = useRef(false);
+  const [textDragPromoted, setTextDragPromoted] = useState(false);
 
   // Notion-style click-to-edit on the empty editor background: a plain click
   // (no drag) routes the caret to a block instead of doing nothing. Above the
@@ -778,6 +800,26 @@ function SelectionLayer({
     [flat, handles, insert, clearSelection, applyRange, focusBlockBoundary],
   );
 
+  /**
+   * One pointer-drag gesture, two entry points, one tracking loop.
+   *
+   * The `text` entry is what makes a selection cross a block boundary at all.
+   * Every text-bearing block mounts its OWN Lexical instance, i.e. its own
+   * contenteditable EDITING HOST, and a browser clamps a mouse selection to the
+   * host it started in — so dragging out of a block does not extend the selection,
+   * it COLLAPSES it back to a bare caret, and Cmd+C copies "" (measured in
+   * `e2e/cross-block-text-selection-probe.ts`). There is no partial cross-block
+   * selection to preserve, so at the boundary we take the gesture over and promote
+   * it to a whole-block range: Notion's model, and the one the block-selection
+   * machinery (highlight, markdown clipboard, bulk ops) is already built for.
+   *
+   * Promotion is deliberately ONE-WAY. Dragging back into the origin block leaves
+   * that block selected whole rather than re-seating a partial caret: restoring a
+   * caret mid-drag means putting one back into a blurred block, which is exactly
+   * the state `releaseCaret` exists to prevent (an untagged `@lexical/yjs`
+   * reconcile reads it as "the caret didn't move" and reclaims DOM focus with no
+   * user input — see `internal/use-block-selection.ts`).
+   */
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
@@ -790,47 +832,75 @@ function SelectionLayer({
       // portaled menu press masquerades as an empty-background click and arms a
       // stray trailing-paragraph insert that races the menu's own conversion.
       if (!containerRef.current?.contains(el)) return;
-      // Only start on empty background — never over a block, gutter button, or
-      // editable text (those have their own pointer behavior). A row's gutter
-      // rail is its own padding, so a hit on the row element ITSELF is the rail
-      // (background); only a hit on a descendant is block content.
+      // A gutter/inline control owns its own press outright, in either mode.
+      if (el.closest("button")) return;
+
       const row = el.closest("[data-block-id]");
-      if (
-        (row && row !== el) ||
-        el.closest("button") ||
-        el.closest('[contenteditable="true"]')
-      ) {
-        return;
-      }
-      const start = rowAtPointer(e.clientY);
-      marqueeStartRef.current = { id: start?.id ?? null, x: e.clientX, y: e.clientY };
-      marqueeMovedRef.current = false;
-      focusContainer();
+      const inText = el.closest('[contenteditable="true"]') !== null;
+      // A row's gutter rail is its own padding, so a hit on the row element ITSELF
+      // is the rail (background); only a hit on a descendant is block content.
+      const onBackground = !inText && !(row && row !== el);
+      // Block content that is neither background nor editable text — an image, a
+      // page-link card, a checkbox — keeps its own pointer behavior.
+      if (!onBackground && !inText) return;
+
+      const mode: DragMode = onBackground ? "background" : "text";
+      const originId = inText
+        ? (row?.getAttribute("data-block-id") ?? null)
+        : (rowAtPointer(e.clientY)?.id ?? null);
+
+      dragStartRef.current = { id: originId, x: e.clientX, y: e.clientY, mode };
+      dragMovedRef.current = false;
+      textDragPromotedRef.current = false;
+      // A text press must reach the browser untouched — that IS the intra-block
+      // selection. Only the background entry claims the editor up front.
+      if (mode === "background") focusContainer();
 
       const onMove = (ev: PointerEvent) => {
-        const startInfo = marqueeStartRef.current;
-        if (!startInfo) return;
+        const start = dragStartRef.current;
+        if (!start) return;
         const cur = rowAtPointer(ev.clientY);
+
+        if (start.mode === "text") {
+          if (!textDragPromotedRef.current) {
+            // Still inside the origin row: the browser's own intra-block
+            // selection is the whole feature here. Hands off.
+            if (start.id === null || cur === null || cur.id === start.id) return;
+            textDragPromotedRef.current = true;
+            setTextDragPromoted(true);
+          }
+          if (cur && start.id) applyRange(start.id, cur.id);
+          // Every move, not just the promoting one: the pointer is still down and
+          // the browser is still in select-mode, so it re-seats a range in the
+          // origin host given any chance. `select-none` (below) is what stops it
+          // re-arming; this drops whatever it managed to seat before that landed.
+          focusContainer();
+          return;
+        }
+
         const content = contentRef.current;
         if (content) {
           const r = content.getBoundingClientRect();
-          const top = Math.min(startInfo.y, ev.clientY) - r.top;
-          const height = Math.abs(ev.clientY - startInfo.y);
+          const top = Math.min(start.y, ev.clientY) - r.top;
+          const height = Math.abs(ev.clientY - start.y);
           if (height > 3) {
-            marqueeMovedRef.current = true;
+            dragMovedRef.current = true;
             setMarquee({ top, height });
           }
         }
-        if (cur && startInfo.id) applyRange(startInfo.id, cur.id);
+        if (cur && start.id) applyRange(start.id, cur.id);
       };
       const onUp = () => {
+        const start = dragStartRef.current;
         // A plain click (no drag) on the empty background routes the caret to a
-        // block; a drag was a marquee selection and is left alone.
-        if (!marqueeMovedRef.current) {
-          const s = marqueeStartRef.current;
-          if (s) onEmptyClick(s.x, s.y);
+        // block; a drag was a marquee selection and is left alone. A text press
+        // needs neither — the browser already placed the caret.
+        if (start && start.mode === "background" && !dragMovedRef.current) {
+          onEmptyClick(start.x, start.y);
         }
-        marqueeStartRef.current = null;
+        dragStartRef.current = null;
+        textDragPromotedRef.current = false;
+        setTextDragPromoted(false);
         setMarquee(null);
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
@@ -1144,7 +1214,14 @@ function SelectionLayer({
             // pointer-events-none `above` layer, so it never eats the drag
             // events). The per-row insertion line below still pinpoints the drop.
             above={<FileDropOverlay active={fileDragging} />}
-            className="min-h-40 w-full cursor-text pb-sm pt-md outline-none"
+            className={cn(
+              "min-h-40 w-full cursor-text pb-sm pt-md outline-none",
+              // A text drag that crossed a block boundary is a BLOCK range now.
+              // The pointer is still down, so without this the browser keeps
+              // re-seating a text range in the origin host every frame and the two
+              // highlights fight. Lasts only for the rest of the gesture.
+              textDragPromoted && "select-none",
+            )}
           >
             {/* This wrapper owns the horizontal gutters: `contentClassName`
                 supplies width/centering only (no horizontal padding of its own).

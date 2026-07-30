@@ -409,6 +409,29 @@ the container's `onCopy` (the bar renders *outside* the container, so the event 
 the button). `copySelectionViaButton` handles both explicitly. Cmd+C / Cmd+X are
 unaffected — they originate inside the container.
 
+### A text drag becomes a block selection at the first boundary
+
+`onPointerDown`'s two entry points (background marquee, text) feed one tracking loop:
+
+> A drag starting inside a block's text belongs to the BROWSER until the pointer
+> leaves the origin row; then the editor takes over with a whole-**block** range.
+
+There is nothing to share with the browser: each block is its own contenteditable
+**editing host**, and a selection is clamped to the host it started in — dragging out
+*collapses* it (pre-change baseline recorded in
+`e2e/cross-block-text-selection-verify.ts`: `{collapsed: true, text: ""}`, Cmd+C
+copied `""`). Partial cross-block selection was never given up; it never existed.
+
+- **Never intercept the text press on the way down** — no `preventDefault`, no
+  `focusContainer()`. Until the pointer leaves the row, native intra-block selection
+  IS the feature.
+- **Promotion is one-way.** Dragging back leaves the origin selected whole; re-seating
+  a partial caret would park one in a blurred block, the exact state `releaseCaret`
+  exists to prevent.
+- **`select-none` for the rest of the gesture**, not one `releaseCaret`: the pointer is
+  still down, so the browser re-seats a range every frame. The class disarms it; the
+  per-move `focusContainer()` clears what beat it.
+
 ## The gutter `+` and `/` are one unified menu
 
 Both open the **same** caret-anchored block menu (`components/block-menu-plugin.tsx`,
