@@ -1005,6 +1005,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "debug.slow-ops.cluster-timeline"
     - `ConfigV2.Register` "debug.slow-ops.local"
     - `ConfigV2.Register` "debug.trace.events"
+    - `ConfigV2.Register` "deploy.deployments"
     - `ConfigV2.Register` "deploy.servers"
     - `ConfigV2.Register` "home.apps"
     - `ConfigV2.Register` "mail-inbox"
@@ -1031,6 +1032,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - Exports (values): `readDataViewConfigDoc`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/home/app-cards`
     - `apps/mail/inbox`

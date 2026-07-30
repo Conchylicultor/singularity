@@ -1,0 +1,68 @@
+/**
+ * The listen address of a launched app, and its ONE runtime authority.
+ *
+ * A released bundle's listen address can be expressed in exactly two places:
+ * `RELEASE.json`'s `port` (the build's default, which is what makes a bundle
+ * runnable by double-click with no environment at all) and `SINGULARITY_LISTEN`
+ * (the runtime override). Nothing else.
+ *
+ * `SINGULARITY_LISTEN` replaced the older `PORT` override rather than joining
+ * it. `PORT` was a strictly weaker form of the same knob — no bind host — and
+ * the bind host is the whole point: a deployment sits behind Caddy on loopback,
+ * and "the gateway is not reachable off-box" must be a property of how it was
+ * started, not of whether someone also remembered a firewall rule. Two knobs
+ * for one value would let the weaker one win by accident.
+ */
+
+/** The single runtime listen override, `host:port`. */
+export const LISTEN_ENV = "SINGULARITY_LISTEN";
+
+/** A resolved listen address. `host: null` is a wildcard bind (all interfaces). */
+export interface ListenAddress {
+  /** Bind host exactly as `net.Listen` wants it (`127.0.0.1`, `[::1]`), or null for wildcard. */
+  host: string | null;
+  port: number;
+}
+
+/**
+ * Resolve where to listen: `SINGULARITY_LISTEN` if set, else `manifestPort` on
+ * a wildcard bind (today's behavior when nothing is set).
+ *
+ * A malformed override throws rather than falling back to the manifest — a
+ * typo'd bind host that silently became a wildcard is exactly the failure this
+ * knob exists to prevent, so it must never be absorbable.
+ */
+export function resolveListenAddress(manifestPort: number): ListenAddress {
+  const raw = process.env[LISTEN_ENV];
+  if (raw === undefined || raw.trim() === "") {
+    return { host: null, port: assertPort(manifestPort, `RELEASE.json "port"`) };
+  }
+
+  const value = raw.trim();
+  // Last colon, so an IPv6 literal (`[::1]:9100`) splits at the right one. The
+  // host is kept verbatim — brackets included — because it is passed straight
+  // through to the gateway's `-listen`, which is a Go `net.Listen` address.
+  const split = value.lastIndexOf(":");
+  if (split < 0) {
+    throw new Error(
+      `${LISTEN_ENV}="${value}" is not a host:port address. Use ":9100" to listen on all interfaces, or "127.0.0.1:9100" to listen on loopback only.`,
+    );
+  }
+  const host = value.slice(0, split);
+  return {
+    host: host === "" ? null : host,
+    port: assertPort(Number(value.slice(split + 1)), `${LISTEN_ENV}="${value}"`),
+  };
+}
+
+/** The `-listen` flag value for a resolved address. */
+export function listenFlag(addr: ListenAddress): string {
+  return `${addr.host ?? ""}:${addr.port}`;
+}
+
+function assertPort(port: number, source: string): number {
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`Invalid listen port ${String(port)} from ${source}`);
+  }
+  return port;
+}

@@ -38,6 +38,54 @@ export function isRelease(): boolean {
   return process.env.SINGULARITY_RELEASE === "1";
 }
 
+/** WHICH build is running. Both fields are null outside a release. */
+export interface ReleaseIdentity {
+  /** The release run that produced this bundle (`RELEASE.json.runId`). */
+  runId: string | null;
+  /** The composition this bundle is (`RELEASE.json.composition`). */
+  composition: string | null;
+}
+
+// Where the identity rides: the same launch → gateway → backend env chain
+// `isRelease()` uses (the gateway spreads `process.env` into the gateway spawn
+// and forwards `os.Environ()` to the backend). Private to this module on
+// purpose — `setReleaseIdentity` / `releaseIdentity` are the only surface, so
+// the names exist once and no consumer can spell one of them wrong.
+const RUN_ID_ENV = "SINGULARITY_RELEASE_RUN_ID";
+const COMPOSITION_ENV = "SINGULARITY_RELEASE_COMPOSITION";
+
+/**
+ * Read which build is serving. This is a *propagation* of `RELEASE.json`, not a
+ * second authority: the launcher stamps it verbatim from the manifest it already
+ * parses, so a consumer reading it (the health payload, so a deploy can prove
+ * the build it shipped is the build now answering) cannot be told a different
+ * story than the bundle's own record.
+ */
+export function releaseIdentity(): ReleaseIdentity {
+  return {
+    runId: process.env[RUN_ID_ENV] ?? null,
+    composition: process.env[COMPOSITION_ENV] ?? null,
+  };
+}
+
+/**
+ * Stamp the release identity into the environment, for inheritance by every
+ * process spawned after this call. Called by the launcher from the manifest,
+ * BEFORE the gateway spawn — a child's env is snapshotted at spawn, so a later
+ * write would never reach the backend.
+ */
+export function setReleaseIdentity(identity: ReleaseIdentity): void {
+  for (const [key, value] of [
+    [RUN_ID_ENV, identity.runId],
+    [COMPOSITION_ENV, identity.composition],
+  ] as const) {
+    // A null field deletes rather than writes "null" / "": an absent var is how
+    // "not a release" is spelled, and a stale inherited value must not survive.
+    if (value === null) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
 /**
  * The namespace this backend runs in: the worktree slug, or `MAIN_WORKTREE_NAME`
  * on main. Use to tag/scope per-namespace data so it can't leak across the

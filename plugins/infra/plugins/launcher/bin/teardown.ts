@@ -7,8 +7,8 @@
  * install's songs/DB persist across app restarts.
  *
  * Invoked by the desktop (Tauri) shell on app exit with the SAME `SINGULARITY_DIR`
- * / `PORT` env the launcher saw, so it tears down exactly the stack `launch`
- * brought up. The gateway / Postgres are detached daemons (not the shell's
+ * / `SINGULARITY_LISTEN` env the launcher saw, so it tears down exactly the stack
+ * `launch` brought up. The gateway / Postgres are detached daemons (not the shell's
  * children), so pidfile-based teardown is the authoritative stop.
  *
  * CRITICAL ordering (same as launch.ts): set the path env BEFORE importing
@@ -46,17 +46,19 @@ function readReleaseManifest(): ReleaseManifest {
 
 async function main(): Promise<void> {
   const manifest = readReleaseManifest();
-  // The HTTP listen port: PORT override wins, else the baked manifest value —
-  // identical resolution to launch.ts, so teardown targets the right gateway.
-  const httpPort = process.env.PORT ? Number(process.env.PORT) : manifest.port;
 
   // Imported AFTER env is set, so the launcher's path constants freeze under the
   // release root. (Same-plugin dynamic import — the env-before-import ordering
   // launch.ts relies on; teardown itself only needs `root`, which it passes
   // explicitly.)
-  const { teardownSelfContainedApp } = await import(
+  const { teardownSelfContainedApp, resolveListenAddress } = await import(
     "@plugins/infra/plugins/launcher/server"
   );
+
+  // The HTTP listen port, resolved by the SAME function launch.ts uses (one
+  // authority: SINGULARITY_LISTEN, else the baked manifest value) — so teardown
+  // cannot target a different gateway than the one launch brought up.
+  const { port: httpPort } = resolveListenAddress(manifest.port);
 
   // PG is killed via its postmaster pidfile under `root` — the authoritative
   // stop. The pgPort arg is only a loopback-TCP backstop, relevant when the
@@ -69,8 +71,9 @@ async function main(): Promise<void> {
   await teardownSelfContainedApp(
     {
       root: dataRoot,
-      httpPort:
-        Number.isInteger(httpPort) && httpPort > 0 ? httpPort : undefined,
+      // Already validated by resolveListenAddress, which throws on a bad value
+      // rather than handing back one to re-check here.
+      httpPort,
       pgPort:
         pgPort !== undefined && Number.isInteger(pgPort) && pgPort > 0
           ? pgPort

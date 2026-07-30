@@ -25,8 +25,11 @@ export {
   MAIN_WORKTREE_NAME,
   isMain,
   isRelease,
+  releaseIdentity,
+  setReleaseIdentity,
   currentWorktreeName,
 } from "../core/internal/paths";
+export type { ReleaseIdentity } from "../core/internal/paths";
 
 export { GIT, PGREP, PS, CLAUDE, TMUX } from "./internal/bins";
 

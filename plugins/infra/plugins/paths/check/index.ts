@@ -21,6 +21,14 @@ const ALLOWED_PATHS = [
   // reader. Lives in shared/ so server, central, and CLI can all import
   // from a sanctioned location.
   "plugins/database/plugins/embedded/shared/internal/paths.ts",
+  // Deploy owns the REMOTE host's layout — a different machine's filesystem,
+  // reached over SSH. This plugin cannot source those from `paths` even in
+  // principle: `paths` resolves paths on THIS machine, and a dev-host constant
+  // in a generated remote script would be silently wrong (the laptop is macOS,
+  // the target is Ubuntu). Same principle as the entries above — the owner of a
+  // path family is source-of-truth territory; its consumers (the CLI's
+  // `deploy.ts`, which generates the scripts) stay policed.
+  "plugins/apps/plugins/deploy/plugins/deployments/core/derive.ts",
   // Display-only strings (JSX text, plugin description metadata, log messages).
   "plugins/auth/web/components/accounts-pane.tsx",
   "plugins/infra/plugins/attachments/server/index.ts",

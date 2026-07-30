@@ -48,6 +48,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversations-sidebar-sources", pluginId: "conversations.conversations-view.data-view" },
   { slotId: "debug-app.sidebar", pluginId: "apps.debug.shell" },
   { slotId: "debug-app.toolbar", pluginId: "apps.debug.shell" },
+  { slotId: "deploy.deployments.item-actions", pluginId: "apps.deploy.deployments" },
   { slotId: "deploy.section", pluginId: "apps.deploy.shell" },
   { slotId: "deploy.servers.detail-header", pluginId: "apps.deploy.servers" },
   { slotId: "deploy.servers.fields", pluginId: "apps.deploy.servers" },

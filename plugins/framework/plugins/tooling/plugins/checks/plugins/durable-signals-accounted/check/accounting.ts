@@ -63,6 +63,10 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
     consumer: "rendering-only",
     note: "Local release-run logs, streamed into the Studio release-logs pane. A release progress log, not a failure funnel.",
   },
+  deploy: {
+    consumer: "rendering-only",
+    note: "`singularity deploy converge|ship` output, streamed into the Deploy app's Deployments section. A deploy progress log, not a failure funnel: a failed run's own verdict is the CLI's message, surfaced on the deployment row via the `deploy.runs` live resource — the human is watching the run they just started, so it needs no alert funnel.",
+  },
 
   // ── Internal diagnostics: human-readable prose, no durable consumer. ──────
   sentinel: {

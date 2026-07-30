@@ -24,6 +24,7 @@
     - `useStickyScroll`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/sonata/rich/chord-progression`
     - `apps/studio/compositions/release/release-logs`
     - `build`

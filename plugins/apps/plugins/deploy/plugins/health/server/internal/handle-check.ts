@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { sshRun } from "@plugins/infra/plugins/ssh/server";
+import { platformTagFromUname } from "@plugins/release/core";
 import {
   _deployServers,
   getServerSshPrivateKey,
@@ -42,11 +43,23 @@ export const handleCheckSsh = implement(checkServerSsh, async ({ params }) => {
         ? { mode: "pinned", knownHostsLine: pinnedHostKey }
         : { mode: "learn" },
     },
-    // `true` is deliberate: it cannot fail on its own, so ANY non-zero exit is
+    // `uname -sm` is deliberate: like the bare `true` it replaced, it cannot
+    // fail on its own on a reachable POSIX host, so ANY non-zero exit is still
     // an SSH-layer problem. That removes the exit-255 ambiguity between "ssh
-    // itself failed" and "the remote command happened to exit 255".
-    ["true"],
+    // itself failed" and "the remote command happened to exit 255". It is also
+    // read-only, and it makes the platform a byproduct of a probe that already
+    // runs — so which artifact a server accepts is DISCOVERED rather than typed
+    // into a field a human can get wrong.
+    ["uname", "-sm"],
   );
+
+  // Parsed only from a successful probe: a failure has no output to read, so its
+  // platform is null on this check's own terms rather than a stale guess.
+  // `platformTagFromUname` returns a discriminated result — an unsupported host
+  // (`unsupported host FreeBSD amd64`) lands as `ok: true, platform: null`,
+  // which is a state of its own, distinct from "never probed" and from a failed
+  // probe. See the state table in `shared/schemas.ts`.
+  const probedPlatform = result.ok ? platformTagFromUname(result.stdout) : null;
 
   await serverHealth.upsert(params.id, {
     ok: result.ok,
@@ -56,6 +69,9 @@ export const handleCheckSsh = implement(checkServerSsh, async ({ params }) => {
     // Stamped AS OF this check — this is what makes "verified" exact without
     // `servers` ever having to invalidate us. See `shared/schemas.ts`.
     checkedPublicKey: row.sshPublicKey,
+    // Same upsert as the verdict: one write, one lifecycle, no second source of
+    // truth to keep in step.
+    platform: probedPlatform?.ok ? probedPlatform.tag : null,
     // A failed check never drops the pin: only a successful learn adds one, and
     // only the explicit forget-host-key action removes one.
     hostKeyLine: result.ok ? (result.learnedHostKey ?? pinnedHostKey) : pinnedHostKey,

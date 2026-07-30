@@ -84,7 +84,10 @@ export async function startPreview(runId: string): Promise<void> {
     env: {
       ...process.env,
       SINGULARITY_DIR: dataRoot,
-      PORT: String(port),
+      // `:${port}` — wildcard bind, identical to the retired `PORT` override it
+      // replaced. A preview must pin its own port: falling through to
+      // `manifest.port` would bind every concurrent preview to the same one.
+      SINGULARITY_LISTEN: `:${port}`,
       SINGULARITY_PG_PORT: String(pgPort),
     },
   });

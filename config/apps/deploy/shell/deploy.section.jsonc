@@ -1,4 +1,12 @@
-// @hash dfc9a7e375eb
+// @hash 8ff85fa1c90c
 {
-  "items": []
+  // The server detail pane's section stack — a vertical list, read top to bottom.
+  //
+  // One contributor today: Deployments (what this server serves, and the two
+  // verbs over each). The SSH setup section is NOT ordered here — it lives in
+  // its own `Servers.SshSetup` slot and renders above this stack, which is the
+  // ordering the domain actually requires: `converge` and `ship` both refuse
+  // until a reachability probe has succeeded, so the key flow has to be
+  // reachable before anything in this slot is usable.
+  "items": ["apps.deploy.deployments:deployments"]
 }

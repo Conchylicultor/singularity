@@ -121,7 +121,10 @@ pub fn run() {
                     let status = Command::new(bundle_dir.join("launch"))
                         .env("SINGULARITY_DIR", &data_dir)
                         .env("SINGULARITY_PG_SOCKET_DIR", &socket_dir)
-                        .env("PORT", port.to_string())
+                        // `host:port`; an empty host is the wildcard bind the
+                        // desktop app has always used (the retired `PORT`
+                        // override could express nothing else).
+                        .env("SINGULARITY_LISTEN", format!(":{port}"))
                         .env("SINGULARITY_PG_PORT", pg_port.to_string())
                         .status();
                     if !matches!(status, Ok(s) if s.success()) {
@@ -148,7 +151,9 @@ pub fn run() {
                     let _ = Command::new(ctx.bundle_dir.join("teardown"))
                         .env("SINGULARITY_DIR", &ctx.data_dir)
                         .env("SINGULARITY_PG_SOCKET_DIR", &ctx.socket_dir)
-                        .env("PORT", ctx.port.to_string())
+                        // Same address launch was given, so teardown resolves the
+                        // same gateway.
+                        .env("SINGULARITY_LISTEN", format!(":{}", ctx.port))
                         .env("SINGULARITY_PG_PORT", ctx.pg_port.to_string())
                         .status();
                 }

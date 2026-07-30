@@ -67,9 +67,12 @@ and appends it. Design:
     - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
     - `database/pgbouncer.pgbouncerPidFileUnder`
     - `infra/asset-mirror.seedAssetMirrorCache`
+    - `infra/paths.ReleaseIdentity`
+    - `infra/paths.setReleaseIdentity`
     - `infra/paths.SINGULARITY_DIR`
     - `infra/worktree.writeWorktreeSpec`
     - `infra/worktree.ZeroCacheSpec`
+  - Exports (types): `ListenAddress`
   - Exports (values):
     - `assertSupportedHost`
     - `awaitGatewayReady`
@@ -81,9 +84,12 @@ and appends it. Design:
     - `hasPgBouncerPackage`
     - `isGatewayListening`
     - `isRunning`
+    - `LISTEN_ENV`
+    - `listenFlag`
     - `pgbouncerConnection`
     - `pgbouncerService`
     - `readPid`
+    - `resolveListenAddress`
     - `seedReleaseAssetMirror`
     - `seedReleaseConfig`
     - `spawnGatewayDaemon`

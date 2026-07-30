@@ -109,6 +109,7 @@ async function main(): Promise<void> {
     writeReleaseDatabaseConfig,
     seedReleaseAssetMirror,
     seedReleaseConfig,
+    resolveListenAddress,
   } = await import("@plugins/infra/plugins/launcher/server");
 
   // Host preconditions first, before anything is read, written or spawned: a
@@ -123,12 +124,14 @@ async function main(): Promise<void> {
 
   const manifest = readReleaseManifest();
   const name = manifest.composition;
-  // PORT env override lets an operator pick the listen port without rebuilding;
-  // otherwise the port baked into RELEASE.json wins.
-  const port = process.env.PORT ? Number(process.env.PORT) : manifest.port;
-  if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid port: ${process.env.PORT ?? manifest.port}`);
-  }
+
+  // Where to listen: `SINGULARITY_LISTEN=host:port` if set, else the port baked
+  // into RELEASE.json on a wildcard bind. That env var is the ONE runtime
+  // authority — it replaced the older `PORT` override rather than joining it,
+  // because `PORT` is the same knob minus the bind host, and the bind host is
+  // what keeps a deployment's gateway off the public internet. See
+  // `launcher/server/internal/listen.ts`.
+  const { host: bindHost, port } = resolveListenAddress(manifest.port);
 
   // Write the release database.json FIRST, so bootSelfContainedApp's internal
   // ensureDatabaseConfig sees the file already present and no-ops (a release has
@@ -169,6 +172,9 @@ async function main(): Promise<void> {
 
   await bootSelfContainedApp({
     name,
+    // Which build is serving, for /api/health to report — see setReleaseIdentity.
+    // `runId` is absent on a bundle built outside a tracked release run.
+    releaseIdentity: { runId: manifest.runId ?? null, composition: name },
     // The compiled backend's cwd. The binary is self-contained (closure bundled
     // by `bun --compile`), so cwd is not load-bearing — bundleRoot is a stable
     // existing dir.
@@ -178,6 +184,7 @@ async function main(): Promise<void> {
     command: [join(bundleRoot, "server")],
     web: join(bundleRoot, "web"),
     port,
+    bindHost: bindHost ?? undefined,
     // buildOrLocateGateway skips `go build` because <repoRoot>/gateway/gateway
     // (the vendored prebuilt) already exists.
     repoRoot: bundleRoot,

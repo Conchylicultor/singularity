@@ -619,6 +619,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/browser/start-page`
+    - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/mail/inbox`

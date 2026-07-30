@@ -85,6 +85,7 @@
     - `POST /api/deploy/servers/:id/ssh-keypair/import`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
   - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)

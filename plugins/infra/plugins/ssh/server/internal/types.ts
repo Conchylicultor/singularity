@@ -18,23 +18,39 @@ export interface SshTarget {
 }
 
 /**
- * The outcome of one `sshRun`. A discriminated result, not a throw: every
- * listed failure is an expected, actionable state of a remote host the user is
- * still setting up — the caller renders it, it is not an exception. Failure can
- * never be mistaken for an empty success, because the two shapes differ.
+ * The failure member of EVERY hermetic SSH operation, named once and shared by
+ * `SshRunResult` / `SshUploadResult`.
+ *
+ * A discriminated result, not a throw: every listed failure is an expected,
+ * actionable state of a remote host the user is still setting up — the caller
+ * renders it, it is not an exception. Failure can never be mistaken for an
+ * empty success, because the two shapes differ.
+ */
+export interface SshFailure {
+  ok: false;
+  kind: SshFailureKind;
+  /** One-line, human-readable summary safe to show in the UI. */
+  message: string;
+  /** OpenSSH's own diagnostic text, verbatim. Never contains key material. */
+  stderr: string;
+  /** `null` when the child was killed by a signal (incl. our own deadline). */
+  exitCode: number | null;
+}
+
+/**
+ * The outcome of one `sshRun`.
  *
  * `learnedHostKey` is non-null only under `hostKey.mode === "learn"` on a
  * successful connection — it is the `known_hosts` line to persist and pin.
  */
 export type SshRunResult =
   | { ok: true; stdout: string; stderr: string; learnedHostKey: string | null }
-  | {
-      ok: false;
-      kind: SshFailureKind;
-      /** One-line, human-readable summary safe to show in the UI. */
-      message: string;
-      /** OpenSSH's own diagnostic text, verbatim. Never contains key material. */
-      stderr: string;
-      /** `null` when the child was killed by a signal (incl. our own deadline). */
-      exitCode: number | null;
-    };
+  | SshFailure;
+
+/**
+ * The outcome of one `sshUpload`. Deliberately carries no `stdout`: `scp` says
+ * nothing on success (its progress meter is suppressed off a TTY), so a stdout
+ * field would only ever be an empty string inviting a caller to read meaning
+ * into it. `learnedHostKey` behaves exactly as in {@link SshRunResult}.
+ */
+export type SshUploadResult = { ok: true; learnedHostKey: string | null } | SshFailure;

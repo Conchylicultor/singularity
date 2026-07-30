@@ -99,7 +99,8 @@ export function VerifyConnectionBody({ server }: { server: Server }) {
     <Stack gap="sm" align="start">
       <StepNote>
         Opens an SSH session to {server.sshUser}@{server.host}:{server.port} with
-        the configured key and runs a no-op command.
+        the configured key and reads the host&apos;s platform (
+        <code>uname -sm</code>).
       </StepNote>
       {/* `last.ok` while `verified` is false means the key was replaced after
           that success — the old proof no longer says anything about this key. */}
@@ -173,9 +174,9 @@ function remediation(kind: SshFailureKind, server: Server): ReactNode {
     case "command-failed":
       return (
         <>
-          The connection and login succeeded, but the no-op check command failed
-          on the server — the account may have a restricted or non-interactive
-          shell.
+          The connection and login succeeded, but the read-only check command
+          (<code>uname -sm</code>) failed on the server — the account may have a
+          restricted or non-interactive shell.
         </>
       );
     case "unknown":

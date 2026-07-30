@@ -233,6 +233,10 @@
       "name": "@singularity/plugin-apps-deploy",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/deployments": {
+      "name": "@singularity/plugin-apps-deploy-deployments",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/health": {
       "name": "@singularity/plugin-apps-deploy-health",
       "version": "0.0.1",
@@ -5204,6 +5208,8 @@
     "@singularity/plugin-apps-debug-shell": ["@singularity/plugin-apps-debug-shell@workspace:plugins/apps/plugins/debug/plugins/shell"],
 
     "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
+
+    "@singularity/plugin-apps-deploy-deployments": ["@singularity/plugin-apps-deploy-deployments@workspace:plugins/apps/plugins/deploy/plugins/deployments"],
 
     "@singularity/plugin-apps-deploy-health": ["@singularity/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
 

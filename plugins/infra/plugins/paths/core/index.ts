@@ -23,5 +23,8 @@ export {
   MAIN_WORKTREE_NAME,
   isMain,
   isRelease,
+  releaseIdentity,
+  setReleaseIdentity,
   currentWorktreeName,
 } from "./internal/paths";
+export type { ReleaseIdentity } from "./internal/paths";

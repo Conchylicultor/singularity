@@ -17,6 +17,7 @@
   - Exports (values): `SectionCard`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/deploy/ssh-setup`
     - `apps/sonata/library`
 

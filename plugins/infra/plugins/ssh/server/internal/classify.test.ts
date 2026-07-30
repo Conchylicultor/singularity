@@ -163,6 +163,35 @@ describe("unknown", () => {
   });
 });
 
+describe("ownFailureExit: null (scp)", () => {
+  // `scp` exits 1 for a refused connection AND for a remote path it cannot
+  // write, so the status distinguishes nothing and only stderr does.
+  const SCP = { ownFailureExit: null };
+
+  test("an ssh-layer failure behind scp's exit 1 is still classified", () => {
+    // The default convention would have called this "command-failed" on the
+    // status alone and never read the diagnostic — blaming the wrong hop.
+    const stderr = "ssh: connect to host 1.2.3.4 port 22: Connection refused\nlost connection\n";
+    expect(classify(1, null, stderr, false, SCP)).toBe("unreachable");
+  });
+
+  test("a rejected key behind scp's exit 1 is still auth", () => {
+    const stderr = "root@1.2.3.4: Permission denied (publickey).\nscp: Connection closed\n";
+    expect(classify(1, null, stderr, false, SCP)).toBe("auth");
+  });
+
+  test("a copy failure stays unknown and keeps its stderr", () => {
+    // Not an ssh-layer failure and not a remote command either, so there is no
+    // kind to claim — the diagnostic is the answer.
+    const stderr = "scp: dest open \"/srv/equin/website/releases/r1/app\": Permission denied\n";
+    const kind = classify(1, null, stderr, false, SCP);
+    expect(kind).toBe("unknown");
+    expect(failureMessage(kind, stderr)).toBe(
+      'scp: dest open "/srv/equin/website/releases/r1/app": Permission denied',
+    );
+  });
+});
+
 describe("failureMessage", () => {
   test("every kind has a non-empty summary", () => {
     const kinds = [

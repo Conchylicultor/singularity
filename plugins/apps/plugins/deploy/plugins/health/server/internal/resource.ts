@@ -16,5 +16,6 @@ export const serverHealthServerResource = queryResource(serverHealthDescriptor, 
     failureKind: _deployServersHealthExt.failureKind,
     failureMessage: _deployServersHealthExt.failureMessage,
     checkedPublicKey: _deployServersHealthExt.checkedPublicKey,
+    platform: _deployServersHealthExt.platform,
   },
 });

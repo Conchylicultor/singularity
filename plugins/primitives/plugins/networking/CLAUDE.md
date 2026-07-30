@@ -77,6 +77,7 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `useReconnectingWebSocket`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/studio/compositions/release/release-logs`
     - `build`
     - `build/build-logs`

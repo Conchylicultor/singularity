@@ -20,7 +20,7 @@ import type { SshFailureKind } from "../../core";
  * exit status 255. Any other non-zero status is the remote command's own exit
  * status passed through verbatim.
  */
-const SSH_OWN_FAILURE_EXIT = 255;
+export const SSH_OWN_FAILURE_EXIT = 255;
 
 /**
  * Ordered stderr patterns. Order is load-bearing where messages overlap:
@@ -61,19 +61,27 @@ const STDERR_PATTERNS: ReadonlyArray<{ kind: SshFailureKind; patterns: readonly 
 ];
 
 /**
- * Classify a FAILED `ssh` invocation. Only ever called once the caller has
- * established the attempt did not succeed — a clean `exit 0` has no kind.
+ * Classify a FAILED OpenSSH-family invocation. Only ever called once the caller
+ * has established the attempt did not succeed — a clean `exit 0` has no kind.
  *
  * @param exitCode process exit status, or `null` when it died on a signal.
  * @param signalCode the signal that killed it, or `null`.
  * @param stderr OpenSSH's diagnostic output, verbatim.
  * @param timedOut whether OUR OWN deadline fired and killed the child.
+ * @param opts.ownFailureExit the status the program reserves for its OWN
+ *   connection-layer failures — `SSH_OWN_FAILURE_EXIT` (255) for `ssh`, which
+ *   is the default. Pass `null` for a program whose exit status carries no such
+ *   distinction (`scp` collapses "could not connect" and "could not write the
+ *   file" into exit 1): the status is then not evidence of anything and only
+ *   stderr is read, so an unrecognized copy failure comes back as `unknown`
+ *   with its diagnostic intact instead of mislabelled `command-failed`.
  */
 export function classify(
   exitCode: number | null,
   signalCode: string | null,
   stderr: string,
   timedOut: boolean,
+  opts: { ownFailureExit: number | null } = { ownFailureExit: SSH_OWN_FAILURE_EXIT },
 ): SshFailureKind {
   // Our deadline wins over everything: whatever ssh was about to say, the
   // reason the caller has no answer is that time ran out.
@@ -83,7 +91,12 @@ export function classify(
   // authenticated and the REMOTE COMMAND exited non-zero. Decided before any
   // stderr matching, so a remote command that happens to print "Connection
   // refused" (curl, a health probe) is not misread as an ssh-layer failure.
-  if (signalCode === null && exitCode !== null && exitCode !== SSH_OWN_FAILURE_EXIT) {
+  if (
+    opts.ownFailureExit !== null &&
+    signalCode === null &&
+    exitCode !== null &&
+    exitCode !== opts.ownFailureExit
+  ) {
     return "command-failed";
   }
 

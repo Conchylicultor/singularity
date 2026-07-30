@@ -210,6 +210,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `manifestItemToManifest`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/studio/compositions`
     - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/contributors`

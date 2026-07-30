@@ -63,6 +63,7 @@ offsets expressible on the semantic ramp.
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/solo`
     - `apps/browser/webview`
+    - `apps/deploy/deployments`
     - `apps/pages/page-tree`
     - `apps/sonata/library`
     - `apps/sonata/notation`

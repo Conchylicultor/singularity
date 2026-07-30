@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SshFailureKindSchema } from "@plugins/infra/plugins/ssh/core";
+import { PLATFORM_TAGS } from "@plugins/release/core";
 
 /**
  * One reachability verdict per server — the row of the
@@ -17,6 +18,21 @@ import { SshFailureKindSchema } from "@plugins/infra/plugins/ssh/core";
  * the two sides are comparable by construction. A pasted key is no longer an
  * exception: `servers` derives its public half at the door, so it too carries a
  * real line here rather than a `null` that compares equal to everything.
+ *
+ * `platform` is the probe's second byproduct, and unlike `hostKeyLine` it DOES
+ * reach the wire: a deployment surface has to show which artifact a server will
+ * accept. `(ok, platform)` spells out four distinct states, which is what keeps
+ * the null from absorbing a failure:
+ *
+ * | state | meaning |
+ * |---|---|
+ * | no row at all | never probed — we have never reached this box |
+ * | `ok: false` | the last probe failed; there was no output to read a platform from |
+ * | `ok: true`, `platform: null` | reached it, and it did not report a platform we support |
+ * | `ok: true`, `platform: tag` | reached it, and it will accept `tag` artifacts |
+ *
+ * `converge` / `ship` therefore refuse on a null with a message naming which of
+ * the three non-shippable states it is, instead of asserting against the null.
  */
 export const ServerHealthRowSchema = z.object({
   parentId: z.string(),
@@ -27,6 +43,8 @@ export const ServerHealthRowSchema = z.object({
   failureKind: SshFailureKindSchema.nullable(),
   failureMessage: z.string().nullable(),
   checkedPublicKey: z.string().nullable(),
+  /** The host's own `uname -sm` as of this check. See the state table above. */
+  platform: z.enum(PLATFORM_TAGS).nullable(),
 });
 export type ServerHealthRow = z.infer<typeof ServerHealthRowSchema>;
 

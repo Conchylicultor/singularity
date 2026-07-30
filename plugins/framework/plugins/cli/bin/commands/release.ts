@@ -7,6 +7,7 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -31,6 +32,15 @@ import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
 import { propagateConfigToUser } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import {
+  PLATFORM_TAGS,
+  bunCompileTarget,
+  goEnvFor,
+  hostPlatformTag,
+  isLinuxTag,
+  isPlatformTag,
+  type PlatformTag,
+} from "@plugins/release/core";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -107,18 +117,38 @@ function releaseOutDir(
   );
 }
 
-function platformTag(): string {
-  const mapping: Record<string, Record<string, string>> = {
-    darwin: { arm64: "darwin-arm64", x64: "darwin-x64" },
-    linux: { arm64: "linux-arm64", x64: "linux-x64" },
-  };
-  const tag = mapping[process.platform]?.[process.arch];
-  if (!tag) {
-    throw new Error(
-      `release: unsupported platform ${process.platform}/${process.arch}`,
+/** The tag of the machine cutting the release, or a loud failure. */
+function hostTagOrThrow(): PlatformTag {
+  const host = hostPlatformTag();
+  if (!host.ok) throw new Error(`release: ${host.reason}`);
+  return host.tag;
+}
+
+/**
+ * Resolve `--platform` to the ONE target tag every platform-bound step below
+ * reads. Absent ⇒ the host's own tag, so a release with no `--platform` does
+ * exactly what it did before the flag existed: cross-building is a
+ * parameterization of the host path, never a second path beside it.
+ *
+ * Every derivation from a tag (Bun compile target, Go GOOS/GOARCH, the
+ * `-glibc` parcel-watcher suffix) lives in `@plugins/release/core` — getting
+ * the Bun prefix or the Go arch spelling wrong is a silent mis-build, so this
+ * file names tags and never spells a mapping itself.
+ */
+function resolvePlatformTag(
+  opt: string | undefined,
+  hostTag: PlatformTag,
+): PlatformTag {
+  if (opt === undefined) return hostTag;
+  if (!isPlatformTag(opt)) {
+    console.error(
+      `Unsupported --platform "${opt}". Supported platforms: ${PLATFORM_TAGS.map(
+        (t) => `"${t}"`,
+      ).join(", ")}.`,
     );
+    process.exit(1);
   }
-  return tag;
+  return opt;
 }
 
 async function run(
@@ -296,14 +326,21 @@ async function resolveCompositionIconKey(opts: {
  * filtered composition registry, so the bundled closure IS the composition
  * closure. (We use a resolver rather than `--tsconfig-override`, which
  * `bun build` does not accept.)
+ *
+ * `platform` selects the standalone runtime baked into the binary. Bun
+ * cross-compilation is first-class — it downloads the target runtime itself
+ * (`--compile-executable-path` is the offline/pinned fallback). Passing the
+ * host's own tag is byte-for-byte identical to omitting the target, so this is
+ * unconditional rather than a cross-build-only branch.
  */
 async function compile(opts: {
   entry: string;
   outfile: string;
   root: string;
+  platform: PlatformTag;
   aliasOverride?: { alias: string; target: string };
 }): Promise<void> {
-  const { entry, outfile, root, aliasOverride } = opts;
+  const { entry, outfile, root, platform, aliasOverride } = opts;
   mkdirSync(dirname(outfile), { recursive: true });
 
   const plugins: Bun.BunPlugin[] = [];
@@ -323,7 +360,13 @@ async function compile(opts: {
 
   const result = await Bun.build({
     entrypoints: [join(root, entry)],
-    compile: { outfile },
+    compile: {
+      outfile,
+      // Bun types the target as a template-literal union it cannot prove a
+      // computed string belongs to; `bunCompileTarget` is the single place the
+      // spelling is decided, so assert rather than duplicate the union here.
+      target: bunCompileTarget(platform) as Bun.Build.CompileTarget,
+    },
     plugins,
   });
 
@@ -359,60 +402,223 @@ async function bundleSentinelWorker(opts: {
   }
 }
 
-/** Resolve the embedded-postgres native dir for the host platform. */
-function embeddedNativeDir(root: string): string {
-  const tag = platformTag();
-  const dir = join(
+// ── Vendored native packages ──────────────────────────────────────────────────
+//
+// Three native packages are copied into the bundle: the embedded-Postgres tree,
+// the PgBouncer binary, and @parcel/watcher's prebuilt `.node` addon. All three
+// are `os`/`cpu`-gated optionalDependencies, so the repo's node_modules only
+// ever holds the HOST's variant — a cross-platform release has to fetch the
+// target's.
+//
+// `NativeSource` is that fork, resolved once by the caller so the three
+// resolvers below stay dumb path builders:
+//
+//   • `repo`   — the host tag: resolve in place, byte-for-byte the pre-`--platform`
+//                path, so a plain release touches no new machinery at all.
+//   • `staged` — a foreign tag: a `bun install --os=<os> --cpu=<cpu>` tree under
+//                a cache dir, joined into directly (`Bun.resolveSync` is useless
+//                here — the target package is not in the host's resolution graph).
+type NativeSource =
+  | { kind: "repo" }
+  | { kind: "staged"; dir: string };
+
+/** The `@parcel/watcher` platform package for a tag. */
+function parcelWatcherPkg(tag: PlatformTag): string {
+  // parcel suffixes linux packages with -glibc/-musl; releases target glibc.
+  // This MUST key off the TARGET, not the host: read from `process.platform` it
+  // silently picks the nonexistent `@parcel/watcher-linux-x64` whenever a Mac
+  // cross-builds for linux, and throws a misleading "run `bun install`".
+  return isLinuxTag(tag)
+    ? `@parcel/watcher-${tag}-glibc`
+    : `@parcel/watcher-${tag}`;
+}
+
+/** A missing native is fatal, but the remedy differs by where we looked. */
+function missingNative(
+  what: string,
+  path: string,
+  src: NativeSource,
+): Error {
+  return new Error(
+    src.kind === "repo"
+      ? `release: ${what} not found at ${path}; run \`bun install\` first`
+      : `release: ${what} not found at ${path}; the staged target-platform install did not provide it`,
+  );
+}
+
+/** The version of an installed package, read from its own package.json. */
+function installedVersion(pkgDir: string, what: string): string {
+  const pkgJson = join(pkgDir, "package.json");
+  if (!existsSync(pkgJson)) {
+    throw new Error(
+      `release: ${what} not installed at ${pkgDir}; run \`bun install\` first`,
+    );
+  }
+  const { version } = JSON.parse(readFileSync(pkgJson, "utf8")) as {
+    version?: string;
+  };
+  if (!version) {
+    throw new Error(`release: ${pkgJson} declares no "version"`);
+  }
+  return version;
+}
+
+/**
+ * Fetch the three native packages for a FOREIGN platform tag and return the dir
+ * whose `node_modules/` holds them.
+ *
+ * Two constraints on this fetch, both load-bearing:
+ *
+ *   • **Never install into the repo root.** `--os`/`--cpu` re-solve the whole
+ *     optional set, so a linux install in-tree PRUNES the host's darwin-arm64
+ *     natives out of the shared node_modules and breaks the dev cluster.
+ *   • **Never call this before phase 1.** `build-composition` shells a plain
+ *     `bun install` (`commands/internal/app-artifacts.ts`), which would re-prune
+ *     anything staged earlier — so the call site sits in phase 3, not up front.
+ *     (That install is also what guarantees the host versions read below are on
+ *     disk at all, e.g. in a fresh worktree.)
+ *
+ * Versions are read from what the HOST has installed rather than written as
+ * literals here: `bun.lock` pins every platform variant of a package to one
+ * version, so the host's version IS the target's, and there is no second place
+ * to bump. (For @parcel/watcher it is also the only correct answer — the addon's
+ * ABI is tied to the `@parcel/watcher` the compiled backend bundles.)
+ */
+async function stageForeignNatives(opts: {
+  root: string;
+  tag: PlatformTag;
+  hostTag: PlatformTag;
+}): Promise<string> {
+  const { root, tag, hostTag } = opts;
+
+  const embeddedDir = join(
     root,
     "plugins/database/plugins/embedded/node_modules",
-    `@embedded-postgres/${tag}`,
-    "native",
+    `@embedded-postgres/${hostTag}`,
   );
-  if (!existsSync(dir)) {
-    throw new Error(
-      `release: embedded-postgres native dir not found at ${dir}; run \`bun install\` first`,
+  const pgbouncerDir = join(
+    root,
+    "plugins/database/plugins/pgbouncer/node_modules",
+    `@equin/pgbouncer-${hostTag}`,
+  );
+  const watcherDir = dirname(Bun.resolveSync("@parcel/watcher", root));
+
+  const deps: Record<string, string> = {
+    [`@embedded-postgres/${tag}`]: installedVersion(
+      embeddedDir,
+      "embedded-postgres",
+    ),
+    [`@equin/pgbouncer-${tag}`]: installedVersion(pgbouncerDir, "pgbouncer"),
+    [parcelWatcherPkg(tag)]: installedVersion(watcherDir, "@parcel/watcher"),
+  };
+
+  // Keyed on the tag AND the resolved versions, so a dependency bump can never
+  // be served a stale tree — and two releases for the same tag share one fetch.
+  const hasher = new Bun.CryptoHasher("sha256");
+  hasher.update(JSON.stringify(deps));
+  const cacheDir = join(
+    tmpdir(),
+    "equin-release-natives",
+    `${tag}-${hasher.digest("hex").slice(0, 12)}`,
+  );
+  if (existsSync(join(cacheDir, "node_modules"))) {
+    console.log(`  • ${tag} native packages (cached): ${cacheDir}`);
+    return cacheDir;
+  }
+
+  // bun's install overrides take npm's own `os`/`cpu` spelling, which is exactly
+  // the tag's two halves — a split, not a mapping, so nothing is re-derived here.
+  const [os, cpu] = tag.split("-") as [string, string];
+  console.log(`  • staging ${tag} native packages (bun install --os=${os} --cpu=${cpu})`);
+  // Populate a scratch dir and rename it into place, so a concurrent release for
+  // the same tag can never read a half-installed tree (same temp+rename shape as
+  // the worktree DB fork).
+  mkdirSync(dirname(cacheDir), { recursive: true });
+  const staging = mkdtempSync(`${cacheDir}.tmp-`);
+  try {
+    writeFileSync(
+      join(staging, "package.json"),
+      JSON.stringify(
+        { name: "equin-release-natives", private: true, dependencies: deps },
+        null,
+        2,
+      ) + "\n",
     );
+    await run(["bun", "install", `--os=${os}`, `--cpu=${cpu}`], {
+      cwd: staging,
+    });
+    renameSync(staging, cacheDir);
+  } catch (err) {
+    rmSync(staging, { recursive: true, force: true });
+    // A concurrent release winning the rename is the ONE tolerable failure: its
+    // tree is equivalent, because the cache key IS the full dependency set.
+    // Anything else — a failed install, a bad version — must surface.
+    if (!existsSync(join(cacheDir, "node_modules"))) throw err;
+  }
+  return cacheDir;
+}
+
+/** Resolve the embedded-postgres native dir for the target platform. */
+function embeddedNativeDir(
+  root: string,
+  tag: PlatformTag,
+  src: NativeSource,
+): string {
+  const pkg = `@embedded-postgres/${tag}`;
+  const dir =
+    src.kind === "repo"
+      ? join(root, "plugins/database/plugins/embedded/node_modules", pkg, "native")
+      : join(src.dir, "node_modules", pkg, "native");
+  if (!existsSync(dir)) {
+    throw missingNative("embedded-postgres native dir", dir, src);
   }
   return dir;
 }
 
-/** Resolve the PgBouncer native binary for the host platform. */
-function pgbouncerNativeBin(root: string): string {
-  const tag = platformTag();
-  const bin = join(
-    root,
-    "plugins/database/plugins/pgbouncer/node_modules",
-    `@equin/pgbouncer-${tag}`,
-    "native/bin/pgbouncer",
-  );
+/** Resolve the PgBouncer native binary for the target platform. */
+function pgbouncerNativeBin(
+  root: string,
+  tag: PlatformTag,
+  src: NativeSource,
+): string {
+  const pkg = `@equin/pgbouncer-${tag}`;
+  const bin =
+    src.kind === "repo"
+      ? join(
+          root,
+          "plugins/database/plugins/pgbouncer/node_modules",
+          pkg,
+          "native/bin/pgbouncer",
+        )
+      : join(src.dir, "node_modules", pkg, "native/bin/pgbouncer");
   if (!existsSync(bin)) {
-    throw new Error(
-      `release: pgbouncer native binary not found at ${bin}; run \`bun install\` first`,
-    );
+    throw missingNative("pgbouncer native binary", bin, src);
   }
   return bin;
 }
 
-/** Resolve the @parcel/watcher prebuilt native .node for the host platform. */
-function parcelWatcherNativeNode(root: string): string {
-  const tag = platformTag();
-  // parcel suffixes linux packages with -glibc/-musl; releases target glibc.
-  const pkg =
-    process.platform === "linux"
-      ? `@parcel/watcher-${tag}-glibc`
-      : `@parcel/watcher-${tag}`;
-  // The platform package is an optionalDependency of @parcel/watcher and lives in
-  // bun's store (not symlinked at top-level node_modules), so resolve it FROM
-  // @parcel/watcher's own dir. Its package.json main is "watcher.node".
-  const parcelDir = dirname(Bun.resolveSync("@parcel/watcher", root));
-  const file = join(
-    dirname(Bun.resolveSync(`${pkg}/package.json`, parcelDir)),
-    "watcher.node",
-  );
-  if (!existsSync(file)) {
-    throw new Error(
-      `release: parcel-watcher native not found at ${file}; run \`bun install\` first`,
+/** Resolve the @parcel/watcher prebuilt native .node for the target platform. */
+function parcelWatcherNativeNode(
+  root: string,
+  tag: PlatformTag,
+  src: NativeSource,
+): string {
+  const pkg = parcelWatcherPkg(tag);
+  let file: string;
+  if (src.kind === "repo") {
+    // The platform package is an optionalDependency of @parcel/watcher and lives in
+    // bun's store (not symlinked at top-level node_modules), so resolve it FROM
+    // @parcel/watcher's own dir. Its package.json main is "watcher.node".
+    const parcelDir = dirname(Bun.resolveSync("@parcel/watcher", root));
+    file = join(
+      dirname(Bun.resolveSync(`${pkg}/package.json`, parcelDir)),
+      "watcher.node",
     );
+  } else {
+    file = join(src.dir, "node_modules", pkg, "watcher.node");
+  }
+  if (!existsSync(file)) {
+    throw missingNative("parcel-watcher native", file, src);
   }
   return file;
 }
@@ -438,6 +644,10 @@ export function registerRelease(program: Command) {
       "Listen port baked into RELEASE.json",
       String(DEFAULT_PORT),
     )
+    .option(
+      "--platform <tag>",
+      `Target platform — ${PLATFORM_TAGS.join(" | ")} (default: this host). Cross-building keeps build inputs off production hosts.`,
+    )
     .action(
       async (opts: {
         composition: string;
@@ -445,6 +655,7 @@ export function registerRelease(program: Command) {
         dev?: boolean;
         out?: string;
         port: string;
+        platform?: string;
       }) => {
         const root = REPO_ROOT;
 
@@ -461,7 +672,22 @@ export function registerRelease(program: Command) {
           process.exit(1);
         }
 
-        const platform = platformTag();
+        const hostTag = hostTagOrThrow();
+        const platform = resolvePlatformTag(opts.platform, hostTag);
+
+        // Cross-building tauri is genuinely impossible, not merely unwired: the
+        // Rust build needs the target's webview SDK (webkit2gtk on linux), and
+        // the macOS path shells `xcrun` + `appdmg`. Refuse here rather than fail
+        // deep inside cargo with a sysroot error.
+        if (opts.target === "tauri" && platform !== hostTag) {
+          console.error(
+            `--target tauri cannot cross-build (--platform ${platform} on a ${hostTag} host): ` +
+              `a desktop bundle needs the target's Rust toolchain + webview SDK, and on macOS xcrun/appdmg. ` +
+              `Use --target web for a foreign platform.`,
+          );
+          process.exit(1);
+        }
+
         // Versioned, self-contained out dir under the canonical releases root
         // (shared with the Studio engine). When the engine supplies `--out` it is
         // already a `<…>/<run-id>` dir; derive the run-id from the dir name so
@@ -472,6 +698,9 @@ export function registerRelease(program: Command) {
         const runId = basename(out);
 
         console.log(`Releasing composition "${opts.composition}" (${platform})`);
+        if (platform !== hostTag) {
+          console.log(`  Cross-building from ${hostTag}`);
+        }
         console.log(`  Output: ${out}`);
 
         // ── 1. Composition artifact phase (hermetic) ─────────────────────────
@@ -556,6 +785,7 @@ export function registerRelease(program: Command) {
           entry: SERVER_ENTRY,
           outfile: join(out, "server"),
           root,
+          platform,
           aliasOverride: {
             alias: "@composition-server-registry",
             target: filteredServerReg,
@@ -567,6 +797,7 @@ export function registerRelease(program: Command) {
           entry: LAUNCH_ENTRY,
           outfile: join(out, "launch"),
           root,
+          platform,
         });
 
         console.log("  • pg-start");
@@ -574,6 +805,7 @@ export function registerRelease(program: Command) {
           entry: PG_START_ENTRY,
           outfile: join(out, "pg", "pg-start"),
           root,
+          platform,
         });
 
         console.log("  • pgbouncer-start");
@@ -581,6 +813,7 @@ export function registerRelease(program: Command) {
           entry: PGBOUNCER_START_ENTRY,
           outfile: join(out, "pgbouncer", "pgbouncer-start"),
           root,
+          platform,
         });
 
         if (opts.target === "tauri") {
@@ -589,30 +822,63 @@ export function registerRelease(program: Command) {
             entry: TEARDOWN_ENTRY,
             outfile: join(out, "teardown"),
             root,
+            platform,
           });
         }
 
         // ── 3. Vendor native binaries + web dist ─────────────────────────────
         console.log("\n[3/5] Vendoring native binaries + web dist...");
 
+        // Where the target's native packages come from. Resolved HERE and not
+        // earlier: phase 1's `build-composition` shells a plain `bun install`,
+        // which would re-prune anything staged before it. For the host tag this
+        // is the in-repo path, unchanged.
+        const natives: NativeSource =
+          platform === hostTag
+            ? { kind: "repo" }
+            : {
+                kind: "staged",
+                dir: await stageForeignNatives({ root, tag: platform, hostTag }),
+              };
+
         // Gateway: build it (forced) so the bundle ships a fresh prebuilt.
+        // `-o` writes STRAIGHT into <out> — never into <repo>/gateway/gateway,
+        // which is the path `buildOrLocateGateway` (launcher boot.ts)
+        // short-circuits on: a cross-build leaving a linux binary there would
+        // make a later `./singularity start` silently launch a linux gateway on
+        // the Mac.
         console.log("  • gateway (go build)");
-        const gatewayDir = join(root, "gateway");
-        await run(["go", "build", "-o", "gateway", "."], { cwd: gatewayDir });
-        mkdirSync(join(out, "gateway"), { recursive: true });
-        cpSync(join(gatewayDir, "gateway"), join(out, "gateway", "gateway"));
+        const gatewayOut = join(out, "gateway", "gateway");
+        mkdirSync(dirname(gatewayOut), { recursive: true });
+        await run(["go", "build", "-o", gatewayOut, "."], {
+          cwd: join(root, "gateway"),
+          env: {
+            ...goEnvFor(platform),
+            // cgo is a function of the TARGET OS, not a blanket 0. The darwin
+            // sigaction shim (`gateway/sigterm_darwin.go`) is a cgo file whose
+            // pure-Go twin is `//go:build !darwin`, so CGO_ENABLED=0 on a darwin
+            // target compiles NEITHER (`undefined: logSigtermSender`) — and Go
+            // defaults cgo OFF whenever GOOS/GOARCH differ from the host, so
+            // even darwin-arm64 → darwin-x64 needs it explicitly ON. Linux takes
+            // the pure-Go twin and wants 0, for a static binary that depends on
+            // no glibc version on the production host.
+            CGO_ENABLED: isLinuxTag(platform) ? "0" : "1",
+          },
+        });
 
         // Embedded PG: copy the whole native/ tree (bin + lib + symlink manifest).
         console.log("  • embedded-postgres native tree");
-        cpSync(embeddedNativeDir(root), join(out, "pg", "native"), {
-          recursive: true,
-        });
+        cpSync(
+          embeddedNativeDir(root, platform, natives),
+          join(out, "pg", "native"),
+          { recursive: true },
+        );
 
         // PgBouncer: copy the single native binary.
         console.log("  • pgbouncer native binary");
         mkdirSync(join(out, "pgbouncer", "native", "bin"), { recursive: true });
         cpSync(
-          pgbouncerNativeBin(root),
+          pgbouncerNativeBin(root, platform, natives),
           join(out, "pgbouncer", "native", "bin", "pgbouncer"),
         );
 
@@ -621,7 +887,7 @@ export function registerRelease(program: Command) {
         console.log("  • parcel-watcher native addon");
         mkdirSync(join(out, "parcel-watcher"), { recursive: true });
         cpSync(
-          parcelWatcherNativeNode(root),
+          parcelWatcherNativeNode(root, platform, natives),
           join(out, "parcel-watcher", "watcher.node"),
         );
 
@@ -1012,16 +1278,32 @@ async function packStagedTree(opts: {
   root: string;
   composition: string;
   target: string;
-  platform: string;
+  platform: PlatformTag;
 }): Promise<string> {
   const { stagedDir, root, composition, target, platform } = opts;
 
   // tar the staged tree. -C <staged> . so the archive root holds the bundle
   // contents directly (launch, server, gateway/, …) with no leading dir.
+  //
+  // The archive itself is platform-agnostic, with one host nit: macOS bsdtar
+  // writes SCHILY.xattr.com.apple.provenance pax headers, which perturb the
+  // sha256 that keys the extraction cache dir below. Both flags are needed —
+  // neither strips it alone. This is a HOST condition (whose tar is writing the
+  // archive), not a target one.
   const tarPath = join(dirname(stagedDir), `.${composition}-${platform}.tar`);
   rmSync(tarPath, { force: true });
   console.log("  • tar staged tree");
-  await run(["tar", "-cf", tarPath, "-C", stagedDir, "."]);
+  await run([
+    "tar",
+    "-cf",
+    tarPath,
+    ...(process.platform === "darwin"
+      ? ["--no-xattrs", "--no-mac-metadata"]
+      : []),
+    "-C",
+    stagedDir,
+    ".",
+  ]);
 
   // Content hash of the tarball → cache dir key (stable across identical builds).
   const tarBytes = await Bun.file(tarPath).arrayBuffer();
@@ -1089,6 +1371,9 @@ process.exit(child.status ?? 1);
 
   try {
     console.log("  • compile self-extracting binary");
+    // This is the SHIPPED binary, so it takes the target explicitly: without it
+    // a cross-build produces a Mach-O self-extractor wrapping a linux payload.
+    // (`bun build` takes the CLI flag form of the same target string.)
     await run(
       [
         "bun",
@@ -1097,6 +1382,7 @@ process.exit(child.status ?? 1);
         bootstrapPath,
         "--outfile",
         binaryPath,
+        `--target=${bunCompileTarget(platform)}`,
       ],
       { cwd: root },
     );

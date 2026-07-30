@@ -21,6 +21,8 @@ export {
   gatewayPidFile,
   zeroCacheSpec,
 } from "./internal/boot";
+export { LISTEN_ENV, resolveListenAddress, listenFlag } from "./internal/listen";
+export type { ListenAddress } from "./internal/listen";
 
 export default {
 } satisfies ServerPluginDefinition;

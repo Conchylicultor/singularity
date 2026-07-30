@@ -359,6 +359,7 @@ The three aggregate live resources — `config-v2.scopes` (storePath→scopeIds)
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
+    - `apps/deploy/deployments`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/notation`
     - `apps/sonata/piano-keyboard`

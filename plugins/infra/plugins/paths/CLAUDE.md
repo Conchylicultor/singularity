@@ -7,6 +7,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
+    - `apps/deploy/deployments`
     - `apps/prototypes/files`
     - `apps/studio/compositions/auto-serve`
     - `backup`
@@ -75,6 +76,7 @@
     - `stats/cost`
     - `tasks`
 - Server:
+  - Exports (types): `ReleaseIdentity`
   - Exports (values):
     - `ATTACHMENTS_DIR`
     - `BACKUPS_DIR`
@@ -101,10 +103,12 @@
     - `pruneWorktreeReleaseArtifacts`
     - `PS`
     - `RELEASE_ARTIFACTS_RETENTION`
+    - `releaseIdentity`
     - `REPO_CONFIG_DIR`
     - `REPO_ROOT`
     - `REPORTS_DIR`
     - `SECRETS_DIR`
+    - `setReleaseIdentity`
     - `SINGULARITY_DIR`
     - `STORE_PATH`
     - `TMUX`
@@ -114,6 +118,7 @@
     - `worktreeDataDir`
     - `WORKTREES_DIR`
 - Core:
+  - Exports (types): `ReleaseIdentity`
   - Exports (values):
     - `ATTACHMENTS_DIR`
     - `BACKUPS_DIR`
@@ -131,10 +136,12 @@
     - `LEGACY_AUTH_KEY`
     - `MAIN_WORKTREE_NAME`
     - `PLUGINS_DIR`
+    - `releaseIdentity`
     - `REPO_CONFIG_DIR`
     - `REPO_ROOT`
     - `REPORTS_DIR`
     - `SECRETS_DIR`
+    - `setReleaseIdentity`
     - `SINGULARITY_DIR`
     - `STORE_PATH`
     - `worktreeArtifacts`

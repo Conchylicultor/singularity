@@ -9,7 +9,11 @@ import {
 } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import {
+  SINGULARITY_DIR,
+  setReleaseIdentity,
+  type ReleaseIdentity,
+} from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import {
   ensureDatabase,
@@ -41,6 +45,7 @@ import {
 // `zeroCache` block. The same predicate gates the cache-service install-time
 // provision, so the fence stays consistent across runtime and build time.
 import { zeroCacheEnabled } from "@plugins/database/plugins/zero/core";
+import { listenFlag } from "./listen";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -425,13 +430,21 @@ export async function buildOrLocateGateway(
  * env unless we spread the live `process.env` into the spawn. Spreading it
  * forwards those overrides to the gateway, which re-roots its registry / sockets
  * / cluster dirs and the supervised PG/PgBouncer start binaries (and every
- * spawned backend) under the release dir. The `-listen :<port>` flag pins the
- * listen port.
+ * spawned backend) under the release dir. The `-listen <bindHost>:<port>` flag
+ * pins the listen address.
  */
 export function spawnGatewayDaemon(opts: {
   gatewayDir: string;
   gatewayBin: string;
   port: number;
+  /**
+   * Bind host, e.g. `127.0.0.1`. Omitted (the default) is a wildcard bind on
+   * every interface — dev and the desktop app, where the gateway IS the front
+   * door. A deployment passes loopback, so it is reachable only through the TLS
+   * reverse proxy in front of it: the public-port hole stops being something a
+   * firewall rule has to remember and becomes a property of how it was started.
+   */
+  bindHost?: string;
   logLevel: string;
   /**
    * Fallback namespace for subdomain-less requests, passed as
@@ -450,7 +463,7 @@ export function spawnGatewayDaemon(opts: {
     [
       opts.gatewayBin,
       "-listen",
-      `:${opts.port}`,
+      listenFlag({ host: opts.bindHost ?? null, port: opts.port }),
       "-log-level",
       opts.logLevel,
       "-log-dir",
@@ -678,6 +691,14 @@ export async function bootSelfContainedApp(opts: {
   server: string;
   web: string;
   port: number;
+  /** Gateway bind host; omitted is a wildcard bind. See `spawnGatewayDaemon`. */
+  bindHost?: string;
+  /**
+   * Which build this is (from the bundle's `RELEASE.json`), stamped into the env
+   * before the gateway spawn so it reaches the backend and `/api/health` can
+   * name the serving build. Omitted outside a release.
+   */
+  releaseIdentity?: ReleaseIdentity;
   repoRoot: string;
   /**
    * Explicit backend spawn argv (e.g. `["<abs>/server"]` for a compiled
@@ -688,18 +709,24 @@ export async function bootSelfContainedApp(opts: {
   logLevel?: string;
   log?: LogFn;
 }): Promise<void> {
-  const { name, server, web, command, port, repoRoot } = opts;
+  const { name, server, web, command, port, bindHost, repoRoot } = opts;
   const logLevel = opts.logLevel ?? "info";
   const log = opts.log ?? noop;
 
   const { gatewayDir, gatewayBin } = await buildOrLocateGateway(repoRoot, log);
   ensureDatabaseConfig(repoRoot, log);
+  // Stamp the release identity BEFORE the gateway spawn: a child's env is
+  // snapshotted at spawn, and the backend inherits its env from the gateway, so
+  // this is the last moment it can still reach the process that serves
+  // /api/health.
+  if (opts.releaseIdentity) setReleaseIdentity(opts.releaseIdentity);
   // A self-contained app is single-namespace: route subdomain-less requests
   // (the desktop webview, single-origin web) to it via the gateway default.
   const pid = spawnGatewayDaemon({
     gatewayDir,
     gatewayBin,
     port,
+    bindHost,
     logLevel,
     defaultNamespace: name,
   });

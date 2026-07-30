@@ -107,6 +107,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`

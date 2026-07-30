@@ -110,6 +110,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
     - `MAX_EMIT_LINES`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/mail/sync`
     - `apps/sonata/piano-roll`
     - `build`

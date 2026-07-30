@@ -58,7 +58,9 @@
     - `POST /api/deploy/servers/:id/ssh-check`
     - `POST /api/deploy/servers/:id/forget-host-key`
 - Cross-plugin:
-  - Imported by: `apps/deploy/ssh-setup`
+  - Imported by:
+    - `apps/deploy/deployments`
+    - `apps/deploy/ssh-setup`
 - Shared:
   - Exports (types):
     - `ServerHealthRow`

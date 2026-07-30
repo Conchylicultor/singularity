@@ -21,6 +21,7 @@
     - `rowActionsAnchor`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/studio/compositions`
     - `conversations/conversations-view/data-view/history`

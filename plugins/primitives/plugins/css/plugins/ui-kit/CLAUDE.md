@@ -260,6 +260,7 @@ structurally unrepresentable.
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`

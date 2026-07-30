@@ -25,6 +25,35 @@ import {
 
 const READY_TIMEOUT_SEC = 30;
 
+// ─── run user ────────────────────────────────────────────────
+
+/**
+ * Refuse to run as root, at the boundary and by name.
+ *
+ * `initdb` and `postgres` both refuse uid 0 themselves, so the run user has
+ * always been load-bearing — but that refusal arrives as Postgres's own message
+ * from deep inside a `spawnSync`, several layers below whoever chose the user,
+ * and it says nothing about what the right user *is*. This check exists so the
+ * failure names the concept instead: a deployment runs as its derived service
+ * user, never root, and there is no field anywhere to set it to root.
+ */
+function assertNotRoot(): void {
+  if (process.getuid?.() !== 0) return;
+  throw new Error(
+    [
+      "pg: refusing to run as root (uid 0).",
+      "",
+      "Postgres will not initdb or start as root, so the whole stack must run as an",
+      "unprivileged user. A deployed composition runs as the service user converge",
+      "derives from its name (`svc-<composition>`, applied by the systemd unit's",
+      "`User=` line); in dev it runs as you.",
+      "",
+      "If you got here via sudo, drop it. If via a systemd unit, that unit is missing",
+      "its `User=`.",
+    ].join("\n"),
+  );
+}
+
 // ─── platform detection ──────────────────────────────────────
 
 function platformPackage(): string {
@@ -63,10 +92,39 @@ function resolveBinDir(): string {
 
 // ─── symlink management ─────────────────────────────────────
 
+/**
+ * Hydrate the unversioned library aliases PG's loader needs (`libicuuc.dylib`,
+ * `libicuuc.so.60`, …) from the manifest shipped inside the platform package.
+ *
+ * This is the ONLY thing that creates them. The platform package declares a
+ * `postinstall` (`hydrate-symlinks.js`) that would, but bun does not run
+ * lifecycle scripts for untrusted dependencies and nothing in this repo lists
+ * these packages in `trustedDependencies` — so the manifest is load-bearing on
+ * every install and, more sharply, on every shipped release: a cross-built
+ * bundle's native tree has never been hydrated by anything on the build host, so
+ * the aliases come into existence on the target box or not at all.
+ *
+ * Hence no early return on a missing manifest. Absent, PG fails much later with
+ * a missing-shared-library error naming a file nobody ever asked for; here we can
+ * still name the real cause.
+ */
 function ensureSymlinks(binDir: string): void {
   const pkgRoot = dirname(dirname(binDir)); // native/bin -> package root
   const manifestPath = join(pkgRoot, "native", "pg-symlinks.json");
-  if (!existsSync(manifestPath)) return;
+  if (!existsSync(manifestPath)) {
+    throw new Error(
+      [
+        `pg: symlink manifest not found at ${manifestPath}`,
+        "",
+        "Every @embedded-postgres/<platform> package ships this file in its `native/`",
+        "dir, and it is what creates the unversioned library aliases PG's loader",
+        "resolves against — without it the cluster cannot start.",
+        "",
+        "A release bundle gets it from `cpSync` of the whole `native/` tree; if it is",
+        "missing here, that vendoring step dropped it. In dev, re-run `bun install`.",
+      ].join("\n"),
+    );
+  }
 
   const entries: Array<{ source: string; target: string }> = JSON.parse(
     readFileSync(manifestPath, "utf-8"),
@@ -121,6 +179,10 @@ function dataDirPartial(): boolean {
 // ─── main lifecycle ─────────────────────────────────────────
 
 async function main(): Promise<void> {
+  // First, before any binary resolution, any mkdir, and any spawn: nothing
+  // below this line is legal as root.
+  assertNotRoot();
+
   const binDir = resolveBinDir();
   ensureSymlinks(binDir);
 

@@ -1,0 +1,11 @@
+// @hash 955582601718
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.deploy.deployments:converge",
+    "apps.deploy.deployments:ship",
+    "apps.deploy.deployments:delete"
+  ]
+}

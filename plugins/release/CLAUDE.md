@@ -51,7 +51,7 @@ registration.)
   direct `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX`
   mkdtemp — short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
-  binary with `SINGULARITY_DIR=<tmp>` + `PORT=<free>`, tracked in an in-memory
+  binary with `SINGULARITY_DIR=<tmp>` + `SINGULARITY_LISTEN=:<free>`, tracked in an in-memory
   Map projected into the `release.previews` external resource. Stop kills the
   process group and removes the data dir. Boot reconcile reaps dead previews.
 
@@ -238,6 +238,8 @@ nothing remote is built here.
     - `primitives/data-view.FilterGroupSchema`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
+    - `PlatformTag`
+    - `PlatformTagResult`
     - `Preview`
     - `QueryReleaseHistoryBody`
     - `ReleaseLogLine`
@@ -245,6 +247,14 @@ nothing remote is built here.
     - `ReleaseRun`
     - `ReleaseTarget`
   - Exports (values):
+    - `bunCompileTarget`
+    - `goEnvFor`
+    - `hostPlatformTag`
+    - `isLinuxTag`
+    - `isPlatformTag`
+    - `PLATFORM_TAGS`
+    - `platformTagFor`
+    - `platformTagFromUname`
     - `previewEndpoint`
     - `PreviewSchema`
     - `previewStateResource`
