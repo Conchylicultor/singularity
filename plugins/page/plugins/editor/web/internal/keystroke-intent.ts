@@ -148,8 +148,35 @@ function hasPrevSibling(nodes: BlockNode[], node: BlockNode): boolean {
   return siblings.findIndex((s) => s.id === node.id) > 0;
 }
 
+function hasNextSibling(nodes: BlockNode[], node: BlockNode): boolean {
+  const siblings = childrenOf(nodes, node.parentId);
+  const idx = siblings.findIndex((s) => s.id === node.id);
+  return idx !== -1 && idx < siblings.length - 1;
+}
+
 function hasExpandedChildren(nodes: BlockNode[], node: BlockNode): boolean {
   return node.expanded && childrenOf(nodes, node.id).length > 0;
+}
+
+/**
+ * Is `node`'s own indentation EXCESS — does it sit DEEPER than the visible line
+ * below it (or is it the last visible line, whose reference depth is the top
+ * level)? This is what decides the ORDER of Backspace's two middle rungs: only
+ * excess indentation is nearer to the caret than the line break above.
+ *
+ * Stated on depth, computed structurally, because the two are the same predicate:
+ * `nextVisibleLine` returns the first visible CHILD when there is one (deeper),
+ * else the next SIBLING when there is one (same depth), else a following sibling
+ * of some ANCESTOR (strictly shallower) or nothing. So "the next visible line is
+ * shallower, or there is none" ⟺ "no visible children and no next sibling" ⟺
+ * `node` is the last visible line inside its parent.
+ *
+ * Corollary worth keeping in mind when touching this: because excess implies no
+ * next sibling, the outdent this gates has NO followers to adopt — it is always a
+ * pure move, never the silent re-nesting that `unwrap` exists to avoid.
+ */
+function hasExcessIndentation(nodes: BlockNode[], node: BlockNode): boolean {
+  return !hasExpandedChildren(nodes, node) && !hasNextSibling(nodes, node);
 }
 
 export function resolveKeystroke(
@@ -227,7 +254,27 @@ export function resolveKeystroke(
       // block with lines of its own above it, so it keeps the generic rung.
       const anchor = firstChildAnchor(ctx, node);
       if (anchor) return { type: "unwrap", blockId: anchor.id };
-      if (isIndented(node)) return { type: "outdent" };
+      // Indentation only comes off FIRST while it is the block's own EXCESS — i.e.
+      // while the block sits deeper than the visible line below it. Indentation the
+      // block SHARES with the content that follows is not a thing sitting between
+      // the caret and the line break above: stripping it would misalign the block
+      // from its own surroundings and leave the line break — the thing the user
+      // actually pointed at — still there. So the two middle rungs swap order on
+      // this predicate rather than being fixed:
+      //
+      //   aaa            aaa            aaa            aaa
+      //     bbb|    →      aaa      →     aaa     →      aaa|bbb
+      //     ccc              bbb|          bbb|            ccc
+      //   (same depth        ccc           ccc
+      //    as ccc →        (deeper than  (now level
+      //    merge)           ccc →         with ccc →
+      //                     outdent)      merge)
+      //
+      // A block with no next visible line at all is excess-indented against the top
+      // level, which is the pre-existing "peel one level per press, then merge"
+      // ladder — unchanged.
+      if (isIndented(node) && hasExcessIndentation(ctx.nodes, node))
+        return { type: "outdent" };
       // Merge lands on the previous VISIBLE line (`applyMerge`'s own resolution),
       // so gate on that line, not the previous sibling: over a spliced multi-page
       // union it can belong to ANOTHER page (the last inner block of an expanded
@@ -238,6 +285,12 @@ export function resolveKeystroke(
       const prev = prevVisibleLine(ctx.nodes, node);
       if (prev && prev.pageId === node.pageId && ctx.acceptsText(prev))
         return { type: "merge" };
+      // There is no line break above to delete after all (a page boundary, or a
+      // text-less line the reducer refuses to merge into), so non-excess
+      // indentation gets its turn as the FALLBACK rung. Without this, deferring
+      // outdent below merge would silently REMOVE the only way such a block can
+      // escape its nesting — e.g. the line below a divider inside a container.
+      if (isIndented(node)) return { type: "outdent" };
       // No same-page line to merge into: the first top-level block, or a page
       // boundary directly above. Backspace here means exactly what ArrowLeft
       // means — step backwards out to whatever caret surface precedes (the page

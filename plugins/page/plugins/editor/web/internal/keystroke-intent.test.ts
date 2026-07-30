@@ -592,6 +592,32 @@ describe("trajectories", () => {
     ]);
   });
 
+  test("Backspace: nested block peels only its EXCESS indentation → [outdent, merge]", () => {
+    // page ▸ A ▸ [B ▸ X, C]. X sits one level deeper than the line below it (C),
+    // so the first press strips that one excess level — landing X between B and C,
+    // level with C — and the second, with no excess left, deletes the line break
+    // above (merging into B). Two presses, not three: the level X SHARES with C
+    // never comes off.
+    const rankB2 = Rank.between(null, null).toJSON();
+    const rankC2 = Rank.between(Rank.from(rankB2), null).toJSON();
+    const nodes: BlockNode[] = [
+      mk("A", PAGE, rankA, { text: "aaa", expanded: true }),
+      mk("B", "A", rankB2, { text: "aaa", expanded: true }),
+      mk("X", "B", rankChild, { text: "bbb" }),
+      mk("C", "A", rankC2, { text: "ccc" }),
+    ];
+    expect(runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true })).toEqual([
+      "outdent",
+      "merge",
+    ]);
+    // And the outdent lands X where the caret expects it: level with C, ABOVE it.
+    const after = applyBlockOp(nodes, { kind: "outdent", blockIds: ["X"] }, ANCHOR_CTX);
+    expect(after.find((n) => n.id === "X")!.parentId).toBe("A");
+    expect(nextVisibleLine(after, after.find((n) => n.id === "X")!)?.id).toBe("C");
+    // C is untouched — the outdent adopted nothing (excess implies no follower).
+    expect(after.find((n) => n.id === "C")!.parentId).toBe("A");
+  });
+
   test("empty-Enter: empty bullet nested two deep → [outdent, outdent, convertTo, split]", () => {
     // page ▸ A ▸ B ▸ X(empty bulleted-list, breakout policy). Nesting escapes
     // outward twice, THEN the type escapes (convertTo), THEN ordinary split.
@@ -928,11 +954,9 @@ describe("container anchors", () => {
 
   test("a LATER child is NOT the unwrap rung — it takes the generic indentation rung", () => {
     // Only the FIRST child dissolves the box. A later line inside it is an
-    // ordinary indented block, so Backspace at its start resolves exactly as it
-    // does for any nested block: outdent (which, for a line inside a container,
-    // means leaving the box). Unchanged pre-existing behavior — deliberately not
-    // touched here; Notion would instead merge it into the line above, which is
-    // a separate change to the generic ladder.
+    // ordinary indented block taking the generic ladder — and Y is the LAST
+    // visible line in the box, so its indentation is excess: it outdents (which,
+    // for a line inside a container, means leaving the box).
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes: boxed(),
@@ -940,6 +964,16 @@ describe("container anchors", () => {
         blockId: "Y",
       }),
     ).toEqual({ type: "outdent" });
+    // Give Y a follower inside the box and it shares its indentation with it, so
+    // the same line merges into X instead of being ejected from the container.
+    const kid3 = Rank.between(Rank.from(kid2), null).toJSON();
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: [...boxed(), mk("Z", "CA", kid3, { text: "third" })],
+        ...TYPE_FACTS,
+        blockId: "Y",
+      }),
+    ).toEqual({ type: "merge" });
   });
 
   test("the marker still strips first: a formatted first child resets its type before unwrapping", () => {
@@ -953,7 +987,11 @@ describe("container anchors", () => {
     ).toEqual({ type: "convertTo", to: "text" });
   });
 
-  test("a first child of an ORDINARY block still outdents (the rung is anchor-only)", () => {
+  test("a first child of an ORDINARY block is NOT unwrapped — it takes the generic ladder", () => {
+    // The rung is anchor-only: an ordinary parent renders a line of its own, so
+    // there is nothing to dissolve. X shares its indentation with its follower Y,
+    // so the generic ladder merges it into that line rather than outdenting —
+    // which is also what keeps `outdentOne` from adopting Y as X's child.
     const nodes = boxed().map((n) => (n.id === "CA" ? { ...n, type: "toggle" } : n));
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
@@ -961,7 +999,96 @@ describe("container anchors", () => {
         ...TYPE_FACTS,
         blockId: "X",
       }),
+    ).toEqual({ type: "merge" });
+    // With no follower to share the indentation with, the same first child is
+    // excess-indented and outdents — still never `unwrap`.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: nodes.filter((n) => n.id !== "Y"),
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
     ).toEqual({ type: "outdent" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Excess indentation: WHICH of Backspace's two middle rungs goes first.
+//
+// Indentation is only nearer to the caret than the line break above while it is
+// the block's OWN excess — while the block sits DEEPER than the visible line
+// below it. Indentation shared with the content that follows is not something
+// standing between the caret and that line break, so the ladder merges instead
+// and the outdent rung becomes the fallback for when nothing above is mergeable.
+// ---------------------------------------------------------------------------
+
+describe("excess indentation (outdent vs merge order)", () => {
+  const kid1 = Rank.between(null, null).toJSON();
+  const kid2 = Rank.between(Rank.from(kid1), null).toJSON();
+
+  function backspaceAt(nodes: BlockNode[], blockId: string) {
+    return resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+      nodes,
+      ...TYPE_FACTS,
+      blockId,
+    });
+  }
+
+  test("a following SIBLING shares the indentation → merge, not outdent", () => {
+    // page ▸ A ▸ [X, Y]. X and Y are equally indented, so X has no excess.
+    const nodes = [
+      mk("A", PAGE, rankA, { text: "aaa", expanded: true }),
+      mk("X", "A", kid1, { text: "bbb" }),
+      mk("Y", "A", kid2, { text: "ccc" }),
+    ];
+    expect(backspaceAt(nodes, "X")).toEqual({ type: "merge" });
+    // Y, the last visible line of A's subtree, has nothing below it at all — so
+    // its indentation IS excess and it still peels off one level per press.
+    expect(backspaceAt(nodes, "Y")).toEqual({ type: "outdent" });
+  });
+
+  test("a visible CHILD is deeper still → merge (its own subtree is what follows)", () => {
+    // page ▸ A ▸ X ▸ C. Nothing about X's indentation is excess relative to C.
+    const nodes = [
+      mk("A", PAGE, rankA, { text: "aaa", expanded: true }),
+      mk("X", "A", kid1, { text: "bbb", expanded: true }),
+      mk("C", "X", kid1, { text: "ccc" }),
+    ];
+    expect(backspaceAt(nodes, "X")).toEqual({ type: "merge" });
+    // COLLAPSED, those children are not visible lines, so X is the last visible
+    // line of A's subtree again and the excess rung returns.
+    const collapsed = nodes.map((n) => (n.id === "X" ? { ...n, expanded: false } : n));
+    expect(backspaceAt(collapsed, "X")).toEqual({ type: "outdent" });
+  });
+
+  test("the fallback: non-excess indentation still outdents when nothing above is mergeable", () => {
+    // page ▸ A ▸ [D(divider), X, Y]. X shares its indentation with Y, but its
+    // previous visible line is text-less — there is no line break to delete — so
+    // the deferred outdent rung is what keeps X able to escape the nesting.
+    const kid3 = Rank.between(Rank.from(kid2), null).toJSON();
+    const nodes = [
+      mk("A", PAGE, rankA, { text: "aaa", expanded: true }),
+      { ...mk("D", "A", kid1), type: "divider" },
+      mk("X", "A", kid2, { text: "bbb" }),
+      mk("Y", "A", kid3, { text: "ccc" }),
+    ];
+    expect(backspaceAt(nodes, "X")).toEqual({ type: "outdent" });
+  });
+
+  test("the marker still strips before either rung", () => {
+    const nodes = [
+      mk("A", PAGE, rankA, { text: "aaa", expanded: true }),
+      { ...mk("X", "A", kid1, { text: "bbb" }), type: "bulleted-list" },
+      mk("Y", "A", kid2, { text: "ccc" }),
+    ];
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "X",
+        editPolicy: { resetToOnBackspaceAtStart: "text" },
+      }),
+    ).toEqual({ type: "convertTo", to: "text" });
   });
 });
 

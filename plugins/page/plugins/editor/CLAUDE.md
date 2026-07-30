@@ -266,8 +266,8 @@ See
 deletion and to escaping structure:
 
 > **Backspace** deletes the nearest visible thing to the LEFT of the caret:
-> marker glyph (convertTo) → indentation (outdent) → line break (merge) →
-> boundary (nav-left).
+> marker glyph (convertTo) → **excess** indentation (outdent) → line break
+> (merge) → any remaining indentation (outdent) → boundary (nav-left).
 >
 > **Delete** deletes the nearest visible thing to the RIGHT of the caret:
 > the line break below (merge the next visible line up) → boundary (nav-right).
@@ -281,6 +281,27 @@ Backspace's and empty-Enter's ladders order `convertTo`/`outdent`
 type is the outer layer). Every rung is pinned by `keystroke-intent.test.ts`
 (`Backspace` / `Delete` / `Enter` describes); its `trajectories` describe is the
 multi-step spec, re-resolving a fixture across repeated keystrokes.
+
+**Only EXCESS indentation is nearer than the line break above** (Notion's model,
+`hasExcessIndentation`) — indentation the block SHARES with the visible line below
+it isn't standing between the caret and that break, so peeling it would misalign
+the block from its surroundings and leave the break still there. Hence the two
+middle rungs **swap order** on that predicate instead of being fixed: a block
+level with the line below merges in one press; a block deeper than it peels only
+the excess levels first. Nothing below at all = excess against the top level, i.e.
+the original ladder, unchanged.
+
+Stated on depth, computed structurally (`!hasExpandedChildren && !hasNextSibling`)
+— identical predicates, since `nextVisibleLine` yields a child (deeper), else a
+next sibling (same depth), else an ancestor's follower (shallower) or nothing.
+
+- **This rung's outdent can never adopt followers**: excess implies no next
+  sibling, so `outdentOne` re-parents nothing — never the silent re-nesting
+  `unwrap` exists to avoid, which the first child of an *ordinary* (non-anchor)
+  parent used to hit here.
+- **Outdent stays as the FALLBACK rung below merge**, for when there is no break
+  above after all (page boundary, or a text-less previous line). Without it,
+  deferring outdent removes the only escape from nesting for such a block.
 
 **A ladder is only as good as the caret context feeding it.** Every rung gates on
 `caret.atStart` / `caret.atEnd`, so `readCaretContext` returns **null** for an
