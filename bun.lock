@@ -2851,6 +2851,26 @@
       "name": "@singularity/plugin-page",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/annotations": {
+      "name": "@singularity/plugin-page-annotations",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/annotations/plugins/agent-notes": {
+      "name": "@singularity/plugin-page-annotations-agent-notes",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/annotations/plugins/context": {
+      "name": "@singularity/plugin-page-annotations-context",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/annotations/plugins/private-notes": {
+      "name": "@singularity/plugin-page-annotations-private-notes",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/annotations/plugins/todo": {
+      "name": "@singularity/plugin-page-annotations-todo",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/attachment-block": {
       "name": "@singularity/plugin-page-attachment-block",
       "version": "0.0.1",
@@ -2877,10 +2897,6 @@
     },
     "plugins/page/plugins/container": {
       "name": "@singularity/plugin-page-container",
-      "version": "0.0.1",
-    },
-    "plugins/page/plugins/context": {
-      "name": "@singularity/plugin-page-context",
       "version": "0.0.1",
     },
     "plugins/page/plugins/cover": {
@@ -6463,6 +6479,16 @@
 
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
 
+    "@singularity/plugin-page-annotations": ["@singularity/plugin-page-annotations@workspace:plugins/page/plugins/annotations"],
+
+    "@singularity/plugin-page-annotations-agent-notes": ["@singularity/plugin-page-annotations-agent-notes@workspace:plugins/page/plugins/annotations/plugins/agent-notes"],
+
+    "@singularity/plugin-page-annotations-context": ["@singularity/plugin-page-annotations-context@workspace:plugins/page/plugins/annotations/plugins/context"],
+
+    "@singularity/plugin-page-annotations-private-notes": ["@singularity/plugin-page-annotations-private-notes@workspace:plugins/page/plugins/annotations/plugins/private-notes"],
+
+    "@singularity/plugin-page-annotations-todo": ["@singularity/plugin-page-annotations-todo@workspace:plugins/page/plugins/annotations/plugins/todo"],
+
     "@singularity/plugin-page-attachment-block": ["@singularity/plugin-page-attachment-block@workspace:plugins/page/plugins/attachment-block"],
 
     "@singularity/plugin-page-audio": ["@singularity/plugin-page-audio@workspace:plugins/page/plugins/audio"],
@@ -6476,8 +6502,6 @@
     "@singularity/plugin-page-code-block": ["@singularity/plugin-page-code-block@workspace:plugins/page/plugins/code-block"],
 
     "@singularity/plugin-page-container": ["@singularity/plugin-page-container@workspace:plugins/page/plugins/container"],
-
-    "@singularity/plugin-page-context": ["@singularity/plugin-page-context@workspace:plugins/page/plugins/context"],
 
     "@singularity/plugin-page-cover": ["@singularity/plugin-page-cover@workspace:plugins/page/plugins/cover"],
 

@@ -17,8 +17,9 @@
     - `debug/render-profiler`
     - `improve/element-picker`
     - `infra/events-test`
+    - `page/annotations`
+    - `page/annotations/context`
     - `page/callout`
-    - `page/context`
     - `page/editor`
     - `page/editor-collab`
     - `page/image`

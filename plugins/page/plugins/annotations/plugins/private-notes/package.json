@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-annotations-private-notes",
+  "description": "Private-note block type: a void container for notes withheld from agents.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -13675,8 +13675,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/render-profiler`
               - `improve/element-picker`
               - `infra/events-test`
+              - `page/annotations`
+              - `page/annotations/context`
               - `page/callout`
-              - `page/context`
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
@@ -15777,6 +15778,84 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`page`** — Block-based page editor.
   - Plugins:
+    - **`annotations`** — Umbrella for the page editor's annotation containers — the audience-scoped boxes that carry the human↔agent side-channel of a page: context, agent notes, private notes, TODO.
+      - Plugins:
+        - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+          - Web:
+            - Contributes:
+              - `Editor.Block` "agent-notes" → `ContainerNoRow`
+              - `Editor.BlockFrame` "agent-notes" → `AgentNotesFrame`
+            - Uses:
+              - `page/container.ContainerAnchor`
+              - `page/container.ContainerBackdrop`
+              - `page/container.ContainerNoRow`
+              - `page/editor.Editor`
+            - Exports (values): `agentNotesBlock`
+          - Server:
+            - Contributes: `page.block-data` "agent-notes"
+            - Uses: `page/editor.Editor`
+          - Core:
+            - Uses: `page/container.defineContainerBlock`
+            - Exports (values):
+              - `agentNotesBlock`
+              - `agentNotesDataSchema`
+        - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+          - Web:
+            - Contributes:
+              - `Editor.Block` "context" → `ContainerNoRow`
+              - `Editor.BlockFrame` "context" → `ContextFrame`
+            - Uses:
+              - `page/container.ContainerAnchor`
+              - `page/container.ContainerBackdrop`
+              - `page/container.ContainerNoRow`
+              - `page/editor.Editor`
+            - Exports (values): `contextBlock`
+          - Server:
+            - Contributes: `page.block-data` "context"
+            - Uses: `page/editor.Editor`
+          - Core:
+            - Uses: `page/container.defineContainerBlock`
+            - Exports (values):
+              - `contextBlock`
+              - `contextDataSchema`
+        - **`private-notes`** — Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+          - Web:
+            - Contributes:
+              - `Editor.Block` "private-notes" → `ContainerNoRow`
+              - `Editor.BlockFrame` "private-notes" → `PrivateNotesFrame`
+            - Uses:
+              - `page/container.ContainerAnchor`
+              - `page/container.ContainerBackdrop`
+              - `page/container.ContainerNoRow`
+              - `page/editor.Editor`
+            - Exports (values): `privateNotesBlock`
+          - Server:
+            - Contributes: `page.block-data` "private-notes"
+            - Uses: `page/editor.Editor`
+          - Core:
+            - Uses: `page/container.defineContainerBlock`
+            - Exports (values):
+              - `privateNotesBlock`
+              - `privateNotesDataSchema`
+        - **`todo`** — TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+          - Web:
+            - Contributes:
+              - `Editor.Block` "todo" → `ContainerNoRow`
+              - `Editor.BlockFrame` "todo" → `TodoFrame`
+            - Uses:
+              - `page/container.ContainerAnchor`
+              - `page/container.ContainerBackdrop`
+              - `page/container.ContainerNoRow`
+              - `page/editor.Editor`
+            - Exports (values): `todoBlock`
+          - Server:
+            - Contributes: `page.block-data` "todo"
+            - Uses: `page/editor.Editor`
+          - Core:
+            - Uses: `page/container.defineContainerBlock`
+            - Exports (values):
+              - `todoBlock`
+              - `todoDataSchema`
     - **`attachment-block`** — Shared web infra for attachment-owning page blocks: the reusable <AttachmentUpload> empty-state (click/drop/paste) funnel. Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.
       - Server:
         - Contributes: `trigger` "page.attachment-block.reconcile"
@@ -15984,27 +16063,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `defineContainerBlock`
       - Cross-plugin:
         - Imported by:
+          - `page/annotations/agent-notes`
+          - `page/annotations/context`
+          - `page/annotations/private-notes`
+          - `page/annotations/todo`
           - `page/callout`
-          - `page/context`
-    - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
-      - Web:
-        - Contributes:
-          - `Editor.Block` "context" → `ContainerNoRow`
-          - `Editor.BlockFrame` "context" → `ContextFrame`
-        - Uses:
-          - `page/container.ContainerAnchor`
-          - `page/container.ContainerBackdrop`
-          - `page/container.ContainerNoRow`
-          - `page/editor.Editor`
-        - Exports (values): `contextBlock`
-      - Server:
-        - Contributes: `page.block-data` "context"
-        - Uses: `page/editor.Editor`
-      - Core:
-        - Uses: `page/container.defineContainerBlock`
-        - Exports (values):
-          - `contextBlock`
-          - `contextDataSchema`
     - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
       - Server:
         - Contributes: `page.attachment-block.collector`
@@ -16035,8 +16098,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.context`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-          - `Editor.BlockFrame` ← `page.callout`, `page.context`
+          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses:
@@ -16341,6 +16404,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/shell`
           - `apps/story/story-core`
           - `apps/website/demos/editor-toy`
+          - `page/annotations`
+          - `page/annotations/agent-notes`
+          - `page/annotations/context`
+          - `page/annotations/private-notes`
+          - `page/annotations/todo`
           - `page/attachment-block`
           - `page/audio`
           - `page/bookmark`
@@ -16348,7 +16416,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/callout`
           - `page/code-block`
           - `page/container`
-          - `page/context`
           - `page/divider`
           - `page/editor-collab`
           - `page/embed`

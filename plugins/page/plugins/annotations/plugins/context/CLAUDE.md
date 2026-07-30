@@ -30,7 +30,7 @@ first line of content at once:
 
 The callout had already solved this by owning no text at all, and that is now the
 shared shape: `core/context-block.ts` calls **`defineContainerBlock`**
-([`page/container`](../container/CLAUDE.md)), which forces `anchor: true`,
+([`page/container`](../../../container/CLAUDE.md)), which forces `anchor: true`,
 `collapsible: "never"` and `wrapOnConvert: true` and rejects a text-bearing schema
 at the type level. Neither symptom is expressible any more: the container has no
 line to type into, and `/context` on an existing block **wraps** it — which is
@@ -51,7 +51,7 @@ previous model's rows unwritable rather than merely unused. `core/context-block.
 pins both the rejection and the forced container facts.
 
 There is no per-instance appearance either, and the anchor reflects that: a
-**fixed** `MdAutoAwesome` glyph, no icon picker and no colours, so its popover
+**fixed** `MdRule` glyph, no icon picker and no colours, so its popover
 carries only the shared structural actions (Remove context / Delete). A container
 with nothing to configure contributes no `sections` rather than inheriting a
 picker it has no field to write to.
@@ -101,7 +101,7 @@ convert real prose on paste.
 Nothing feeds page content to an agent today — a `/prompt` launch sends only that
 block's own text. Delivering these cards to a launched agent is a separate,
 deliberately deferred step (Stage 2 of
-[`research/2026-07-29-page-context-block.md`](../../../../research/2026-07-29-page-context-block.md)),
+[`research/2026-07-29-page-context-block.md`](../../../../../../research/2026-07-29-page-context-block.md)),
 and when it lands it reuses this serializer rather than adding a second rendering
 path.
 

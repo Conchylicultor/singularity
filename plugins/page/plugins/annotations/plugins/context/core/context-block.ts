@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MdAutoAwesome } from "react-icons/md";
+import { MdRule } from "react-icons/md";
 import { defineContainerBlock } from "@plugins/page/plugins/container/core";
 
 /**
@@ -37,8 +37,12 @@ export const contextBlock = defineContainerBlock({
   type: "context",
   schema: contextDataSchema,
   label: "Context",
-  icon: MdAutoAwesome,
-  aliases: ["agent", "agents", "instructions", "ai", "guidance"],
+  icon: MdRule,
+  // NOT "agent" / "agents" / "ai": those belong to the sibling `/agent` block
+  // (notes an agent wrote back). This card is what a human tells an agent, so its
+  // aliases are the instruction words — otherwise `/agent` would surface two
+  // opposite-direction cards with no way to tell which is which.
+  aliases: ["instructions", "guidance", "conventions", "rules"],
   empty: () => ({}),
   // One-way markdown: `text/plain` is the EXTERNAL projection only (internal
   // copy/paste is lossless through the `BLOCKS_MIME` JSON forest). A void

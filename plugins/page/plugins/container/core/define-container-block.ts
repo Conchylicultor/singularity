@@ -54,9 +54,8 @@ export type RejectTextBearing<S extends AnyZodObject> = "text" extends keyof S["
  * `gutterFirstLineCenter` (the surface seats the decoration on the first
  * child's borrowed line), `splitInto` / `splitChildWhenExpanded` /
  * `dataOnSplit` (a void row never splits), `resetToOnBackspaceAtStart` /
- * `breakOutOnEmptyEnter` (no caret can originate in it), `toggle`,
- * `defaultText`, and `markdownPrefixes` (a void type derives no parser from
- * them — see `markdown.ts`'s `parserFor`).
+ * `breakOutOnEmptyEnter` (no caret can originate in it), `toggle` and
+ * `defaultText`.
  */
 export interface ContainerBlockOptions<S extends AnyZodObject> {
   /** The block type id, e.g. `"callout"`. */
@@ -77,6 +76,27 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
    * declare this only to emit a structural marker line.
    */
   markdown?: BlockMarkdown<z.infer<S>>;
+  /**
+   * Typed prefixes that WRAP the line into this container (e.g. `"TODO "`).
+   *
+   * Legal on a void container even though a void type derives no markdown
+   * PARSER from them, because the two readers of this field are different
+   * mechanisms and only one of them cares about text:
+   *
+   * - `markdown.ts`'s `parserFor` derives a parse rule from prefixes only for a
+   *   handle with a `text` lens, so for a container it stays inert — pasted
+   *   markdown never converts prose into a container, which is the property that
+   *   made this field look inapplicable;
+   * - `MarkdownShortcutPlugin` reads the handle directly on TYPING, strips the
+   *   prefix from the live editor and calls `convertTo` — which, for a
+   *   `wrapOnConvert` type, wraps. So the line the user was typing becomes the
+   *   container's first child with the prefix removed, exactly as `/<container>`
+   *   on that line would have.
+   *
+   * Declare one only for a marker distinctive enough that real prose starting
+   * with it is vanishingly rare: the conversion is silent and mid-sentence.
+   */
+  markdownPrefixes?: string[];
 }
 
 /**

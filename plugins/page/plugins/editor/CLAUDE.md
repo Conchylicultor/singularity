@@ -921,8 +921,8 @@ the whole document lives in React state and is discarded on unmount.
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots:
-    - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.context`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-    - `Editor.BlockFrame` ← `page.callout`, `page.context`
+    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+    - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
   - Uses:
@@ -1227,6 +1227,11 @@ the whole document lives in React state and is discarded on unmount.
     - `apps/story/shell`
     - `apps/story/story-core`
     - `apps/website/demos/editor-toy`
+    - `page/annotations`
+    - `page/annotations/agent-notes`
+    - `page/annotations/context`
+    - `page/annotations/private-notes`
+    - `page/annotations/todo`
     - `page/attachment-block`
     - `page/audio`
     - `page/bookmark`
@@ -1234,7 +1239,6 @@ the whole document lives in React state and is discarded on unmount.
     - `page/callout`
     - `page/code-block`
     - `page/container`
-    - `page/context`
     - `page/divider`
     - `page/editor-collab`
     - `page/embed`

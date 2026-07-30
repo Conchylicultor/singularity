@@ -1,4 +1,4 @@
-import { MdAutoAwesome } from "react-icons/md";
+import { MdRule } from "react-icons/md";
 import type { BlockAnchorProps } from "@plugins/page/plugins/editor/web";
 import { ContainerAnchor } from "@plugins/page/plugins/container/web";
 
@@ -21,7 +21,7 @@ export function ContextAnchor({ id, editor }: BlockAnchorProps) {
       editor={editor}
       name="context"
       triggerLabel="Context block actions"
-      glyph={<MdAutoAwesome className="size-5 text-muted-foreground" />}
+      glyph={<MdRule className="size-5 text-muted-foreground" />}
     />
   );
 }
