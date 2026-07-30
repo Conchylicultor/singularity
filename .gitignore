@@ -25,6 +25,7 @@ dist.swap.*
 dist.stats.html
 /gateway/gateway
 **/.build.lock
+**/.install.lock
 
 # TypeScript
 *.tsbuildinfo

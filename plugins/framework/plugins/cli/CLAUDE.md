@@ -1,9 +1,10 @@
 # cli
 
-The `./singularity` agent CLI. `bin/index.ts` registers one command per file
-under `bin/commands/`; everything shared between commands lives either beside
-them in `bin/` (profiler, build lock, lane, migrations, admission valve) or, when
-it is an ordered *stage sequence* rather than a helper, in
+The `./singularity` agent CLI. `bin/index.ts` is a three-step bootstrap;
+`bin/cli.ts` is the CLI proper and registers one command per file under
+`bin/commands/`. Everything shared between commands lives either beside them in
+`bin/` (profiler, build lock, lane, migrations, admission valve, ensure-deps) or,
+when it is an ordered *stage sequence* rather than a helper, in
 `bin/commands/internal/`.
 
 ## Commands
@@ -31,6 +32,36 @@ op-wedge watchdog could attach a profiler. Both the watchdog and the re-exec wer
 removed 2026-07-28 (every wedge the watchdog ever reported was a false positive —
 `research/2026-07-28-global-retire-op-wedge-watchdog.md`), so an op is now a
 single process, not a wrapper/worker pair.
+
+## Dependencies: `bin/ensure-deps.ts` is the only install
+
+`ensureDeps()` owns "this checkout's `node_modules` is correct for its inputs":
+freshness-gated on a `(mtimeMs,size)` signature stamped in
+`node_modules/.singularity-deps` (so the common case is ~140 ms and silent),
+serialized on `.install.lock`, and **loud** — it runs `bun install` with output
+passed through and throws a message naming the phase on failure. Every install
+site routes through it: the `bin/index.ts` bootstrap, `mise.toml`'s setup task,
+and `app-artifacts.ts` stage 1.
+
+**`./singularity` is a bare `exec` — never add a step above it.** It used to run
+`bun install --silent` first; a failed install (bun 1.3.13 has no install mutex,
+so concurrent installs in one checkout race on `clonefileat`) aborted the wrapper
+under `set -e` before `exec`, printing nothing, so *every* subcommand read as
+having failed on its own. Nothing may run before the CLI process, because only
+the CLI process can attribute its own failures.
+
+**`bin/index.ts` may never statically import an npm package** — node builtins,
+relative files and `@plugins/*` only. Static imports hoist above the install, so
+`import { program } from "commander"` there would resolve against the
+`node_modules` `ensureDeps` exists to repair. That is the whole reason `cli.ts`
+exists and why the bootstrap ends in `await import("./cli")`; the orphan guard
+arms first, so an orphaned op can never sit on the install lock. Enforced by the
+`cli:bootstrap-package-free` check — if you need a package, put it in `cli.ts`.
+
+Lock order is one-way: **`.build.lock` → `.install.lock`**, never the reverse
+(nothing takes the build lock while holding the install lock), so no deadlock.
+The install lock is not `.build.lock` itself on purpose — sharing them would make
+a `./singularity check` block for an entire concurrent build.
 
 ## The artifact / deploy seam
 

@@ -6,5 +6,11 @@ cd "$(dirname "$0")"
 # must NOT leak into the global `bun install` (it would mis-target any other
 # native dep bun loads at runtime). It is therefore scoped to a single subprocess
 # in the root `postinstall` step (ensure-zero-sqlite3.ts), not exported here.
-bun install --silent
+
+# ONE step, on purpose: nothing may run before the CLI process. This used to
+# `bun install --silent` first, and a failed install aborted the wrapper (set -e)
+# before `exec`, printing nothing — every subcommand then looked like it had
+# failed on its own. Dependencies are now installed INSIDE the CLI, by the
+# bootstrap in bin/index.ts (ensureDeps), which can attribute its own failures.
+# Do not add a step above this line.
 exec bun plugins/framework/plugins/cli/bin/index.ts "$@"

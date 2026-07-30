@@ -21,12 +21,13 @@ import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plug
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { flattenManifest, resolveComposition } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
-import { spawnCaptured, spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type GrantHooks, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
 import { holdThroughValve, shouldRequeue, type ValveDeps } from "../../admission-valve";
 import { acquireBuildLock } from "../../build-lock";
+import { ensureDeps } from "../../ensure-deps";
 import { generateMigration, type MigrationAnswer } from "../../migrations";
 import { distStagingPath, publishDistAtomic } from "./dist-publish";
 
@@ -73,10 +74,12 @@ import { distStagingPath, publishDistAtomic } from "./dist-publish";
  *     `StepResult[]`; rendering and the failure wording stay in `build.ts`.
  *
  * ORDERING CONSTRAINTS (load-bearing — do not reorder):
- *   - `bun install` FIRST: vite, drizzle-kit and tsc are all resolved out of
- *     `node_modules`, and a release additionally vendors the embedded-postgres /
- *     pgbouncer natives from there. Including it is what makes a fresh
- *     `git clone` work.
+ *   - dependencies FIRST (`ensureDeps`, stage 1): vite, drizzle-kit and tsc are
+ *     all resolved out of `node_modules`, and a release additionally vendors the
+ *     embedded-postgres / pgbouncer natives from there. Including it is what
+ *     makes a fresh `git clone` work. Freshness-gated, so for a dev build —
+ *     whose `./singularity` bootstrap just ran the same function — it collapses
+ *     to a no-op instead of a second 10–25 s install.
  *   - registry codegen BEFORE the composition registry: the filtered
  *     per-composition registries are emitted beside the full committed ones the
  *     registry pass just regenerated.
@@ -106,18 +109,38 @@ import { distStagingPath, publishDistAtomic } from "./dist-publish";
  * also why `release.ts`, which statically imports plugin barrels, must shell out
  * to a separate process rather than call this module in-process.)
  *
+ * LOCK ORDERING (why there is no deadlock): the two locks a caller of this
+ * module can hold are acquired in ONE direction only —
+ *
+ *     `.build.lock`  (acquireArtifactLock, held by the caller for its lifetime)
+ *          ↓
+ *     `.install.lock` (inside stage 1's `ensureDeps`, released before it returns)
+ *
+ * — and never the reverse: nothing anywhere acquires the build lock while
+ * holding the install lock, so the two can never form a cycle. The install lock
+ * is deliberately NOT `.build.lock` itself: sharing them would make a plain
+ * `./singularity check` — which installs, but builds nothing — block for the
+ * entire duration of a concurrent build in the same checkout.
+ *
  * FAILURE IS A TYPE, not a value: stage 3 returns a discriminated
  * `ArtifactBuildResult` — on any failed step it `rm`s its own staging dir first,
  * so a failed artifact build never leaks one (relying on the next run's
- * `sweepDistLeftovers` would be silent cleanup). Two DOCUMENTED process-exit
- * exceptions, both pre-existing and preserved verbatim because callers depend on
- * the exit code:
- *   - `exec` (stage 1's `bun install`) exits 1 on a nonzero child.
+ * `sweepDistLeftovers` would be silent cleanup). ONE DOCUMENTED process-exit
+ * exception, pre-existing and preserved verbatim because callers depend on the
+ * exit code:
  *   - `generateMigration` (stage 2) exits 1 on an invalid name and exits 2 when
  *     drizzle-kit shows rename/create prompts — `release` relies on that code.
  * `resolveFrontendMode` likewise exits 1 on contradictory flags, mirroring
  * `parseMigrationAnswers` in ../../migrations.ts: it is argv validation, before
  * any artifact exists and with no cleanup owed.
+ *
+ * Stage 1's install used to be a second such exception (`exec` exited 1 on a
+ * nonzero `bun install`). It is now `ensureDeps`, which THROWS a message naming
+ * the failing phase — strictly better here: both callers route a thrown stage
+ * into their own error path (`build`'s verdict guard + `finalizeBuild` still
+ * render "aborted before completing", `runCli` sets exit 1), whereas the bare
+ * `process.exit(1)` produced the same code with no explanation of which phase
+ * died. No caller keys on install-specific exit behaviour.
  */
 
 /**
@@ -167,21 +190,6 @@ interface StepOutput {
  * again. A `unique symbol` so it can never collide with a real `StepResult[]`.
  */
 const REQUEUE = Symbol("requeue");
-
-async function exec(
-  cmd: string[],
-  cwd: string,
-  env?: Record<string, string>,
-): Promise<{ maxRssBytes: number | undefined }> {
-  const { exitCode, resourceUsage } = await spawnPassthrough(cmd, {
-    cwd,
-    env: env ? { ...process.env, ...env } : undefined,
-  });
-  if (exitCode !== 0) {
-    process.exit(1);
-  }
-  return { maxRssBytes: resourceUsage.maxRssBytes };
-}
 
 // Lines are rebuilt AFTER exit as stdout-lines then stderr-lines. The old piped
 // version interleaved the two streams in arrival order, but that order was a
@@ -315,11 +323,34 @@ export async function prepareCompositionSources(opts: {
   // 1. Install dependencies. Required before the gateway can find the
   // platform-specific embedded-postgres binaries under
   // plugins/infra/plugins/database/node_modules/@embedded-postgres/.
+  //
+  // Through `ensureDeps` — the repo's ONE install chokepoint (freshness-gated,
+  // serialized on `.install.lock`, loud on failure), the same function the
+  // `./singularity` bootstrap already ran moments ago. So for a dev build this
+  // is normally a ~140 ms no-op reporting `installed: false`, and the old
+  // double 10–25 s install per build (wrapper, then here) is gone. The call
+  // stays because `build-composition` on a bare host from a fresh `git clone`
+  // is the caller that genuinely needs the install, and stage 1 is where the
+  // ordering constraint above puts it.
+  //
+  // `ensureDeps` OWNS every in-flight line of this phase (the lock-wait notice,
+  // and the install child's passed-through output) — it is the only side that
+  // knows an install is about to happen. This caller therefore announces
+  // nothing up front and reports RETROSPECTIVELY, from `installed`: a
+  // pre-emptive "Installing dependencies..." would be a plain false statement
+  // on the normal fresh-skip path, and even on the install path it would land
+  // after bun's own output, since the passthrough completes before the call
+  // returns. Past tense for the same ordering reason.
   let endSpan = hooks.span("bunInstall", "build:setup", "bun install");
-  hooks.log("Installing dependencies...");
-  const install = await exec(["bun", "install"], root);
-  endSpan({ maxRssBytes: install.maxRssBytes });
-  hooks.recordFootprint("bun install", install.maxRssBytes);
+  const deps = await ensureDeps({ root, log: hooks.log });
+  hooks.log(deps.installed ? "Installed dependencies." : "Dependencies already up to date.");
+  // No footprint to report: the install usually does not RUN here (fresh-skip),
+  // and when it does it is `ensureDeps`' own passthrough child, whose rusage it
+  // does not surface. Both sinks take `number | undefined`, so pass `undefined`
+  // — `maxRssLine` then prints nothing — rather than attributing a peak this
+  // phase did not measure. The seam stays wired for the day it can measure again.
+  endSpan({ maxRssBytes: undefined });
+  hooks.recordFootprint("bun install", undefined);
 
   // 1b–2a. Registry-level repo-tree codegen: barrel-import auto-stubs (from
   // .d.ts files) then the plugin registry. Must happen before central is

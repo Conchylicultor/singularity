@@ -51,11 +51,16 @@ else
 fi
 
 echo "setup: installing bun deps (needed for the apply-migrations command imports)..."
-bun install --silent
+# The CLI's one dependency chokepoint, invoked directly: freshness-gated and
+# serialized against any concurrent CLI-mediated install, and runnable before
+# node_modules exists (node builtins + @plugins/* aliases only).
+bun plugins/framework/plugins/cli/bin/ensure-deps.ts
 
 echo "setup: applying migrations to 'singularity' DB..."
-# Invoke the CLI bin directly (not the ./singularity wrapper) to avoid a
-# redundant second `bun install` — deps were just installed above.
+# Invoke the CLI bin directly (not the ./singularity wrapper) purely for
+# symmetry with the line above — a redundant second install is now structurally
+# impossible, since the wrapper reaches the SAME `ensureDeps`, which the call
+# above has already made fresh, so it returns immediately either way.
 SINGULARITY_WORKTREE=singularity bun plugins/framework/plugins/cli/bin/index.ts apply-migrations
 '''
 
