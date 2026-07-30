@@ -93,7 +93,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `layouts/route-fallback`
     - `page/audio`
     - `page/bookmark`
-    - `page/callout`
+    - `page/container`
     - `page/editor`
     - `page/file`
     - `page/formatting/color`

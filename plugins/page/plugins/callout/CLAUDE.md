@@ -17,30 +17,21 @@ of content at once. Enter made a second callout (making another content line
 meant making another container); converting the line to a heading destroyed the
 box (the line's type *was* the container's identity). Neither is expressible now.
 
-## Three responsibilities, three declarations
+## The container shape is not declared here
 
-- **The handle** (`core/callout-block.ts`) states the container facts the editor
-  core reads generically. `acceptsText` is *derived* from the schema
-  (`"text" in schema.shape`), so dropping `textBlockSchema` is what makes the
-  block void — there is no separate flag to disagree with the payload, and the
-  write boundary's strict parse rejects a stray `text` outright.
-  - `anchor: true` — this type renders no line. The surface collapses its row to
-    zero height while it has visible children and paints its decoration in the
-    indent gutter; the pure reducer reads the same fact (`BlockOpContext.anchorTypes`)
-    for the split/merge refusals and the childless-anchor prune. It lives in
-    `core` because the server has no slots.
-  - `wrapOnConvert: true` — `/callout` on an existing block **wraps** it instead
-    of retyping it: the origin keeps its id, type, `data` and children and
-    becomes the anchor's first child; a new row is minted for the anchor. Keeping
-    the origin id is what keeps the caret still (its content `Y.Doc`, its
-    `Y.UndoManager` and its registered focus handle are all keyed by block id),
-    and not retyping it is what makes `/callout` work on a heading, to-do, image
-    or code block for free.
-  - `collapsible: "never"` — an anchor has no chevron, so a stored
-    `expanded: false` (which `applySplit`, `applyInsert` and any patch replay all
-    mint) would hide its children behind nothing. The flatten ignores the flag for
-    these types; making it *inert* is a guarantee, "every creation path sets it
-    true" is not.
+`core/callout-block.ts` calls **`defineContainerBlock`**
+([`page/container`](../container/CLAUDE.md)), not `defineBlock`. That factory
+forces the three facts that are only correct together — `anchor: true`,
+`collapsible: "never"`, `wrapOnConvert: true` — and constrains its schema to a
+shape without `text`, so a text-bearing callout is a compile error rather than a
+runtime surprise. `acceptsText` is still *derived* from the schema
+(`"text" in schema.shape`), so voidness is a fact of the payload and the write
+boundary's strict parse rejects a stray `text` outright.
+
+Read that plugin's doc for what each flag buys and why they cannot be declared
+piecemeal. This file therefore declares nothing but the callout's identity and
+its `{icon, iconSvgNodes, color}` appearance payload — and the two shells it
+composes:
 
 - **The frame** (`web/components/callout-frame.tsx`) paints the tint, over the
   anchor's row plus its whole visible subtree. A block renderer cannot do this
@@ -52,12 +43,11 @@ box (the line's type *was* the container's identity). Neither is expressible now
   registered matches (`useFramedBlockTypes()`), so there is no second "I am a
   container" flag to drift from who actually paints a box.
 
-  The frame owns the tint and nothing else. It must never add horizontal padding
-  or a left border **to the flow**: the rows inside seat their hover controls
-  against a content edge the *surface* computed, so shifting the flow sideways
-  would strand them. The box starts at the `inset` prop — the editor's
-  already-resolved content edge `C`, which is why the tint bleeds to `C` rather
-  than `C + BLOCK_INSET`.
+  The frame declares the **tint and nothing else** — `ContainerBackdrop` owns the
+  box's geometry (`absolute` insets from `inset`, never `h-full`, no horizontal
+  offset of its own), which is why the tint bleeds to the content edge `C` rather
+  than `C + BLOCK_INSET`, and why a stray padding or left border can no longer
+  strand the enclosed rows' hover controls.
 
 - **The anchor** (`web/components/callout-anchor.tsx`) is the icon, and it rides
   on the *same* `Editor.BlockFrame` registration (`BlockFrameMeta.anchor`) so a
@@ -66,10 +56,10 @@ box (the line's type *was* the container's identity). Neither is expressible now
   together — a handle declaring `anchor: true` whose plugin supplies no component
   is an invisible container, not a cosmetic gap.
 
-  The anchor renders appearance + interaction ONLY. The surface owns its
-  geometry: a `BLOCK_INDENT`-wide column at `C`, seated on the first visible
-  child's borrowed first-line centre (an anchor has no line of its own to
-  measure), and the drag listeners. It must not position or size itself.
+  It supplies a `glyph` and `sections` to `ContainerAnchor`; the shell owns the
+  static-vs-interactive branch, the trigger and the popover, and the surface owns
+  the geometry (a `BLOCK_INDENT`-wide column at `C`, seated on the first visible
+  child's borrowed first-line centre, plus the drag listeners).
 
 ## The icon popover carries the whole block-actions menu
 
@@ -80,15 +70,21 @@ an ordinary block gets from that handle therefore lives on the icon: the surface
 gives it drag-to-move, and the popover carries colour, icon, Reset, plus the two
 structural actions.
 
-**Remove callout** and **Delete** are different intents and must stay separate.
-Remove dissolves the box and promotes the children into its slot (the `unwrap`
-reducer op) — the escape hatch that keeps the content, and the same thing
-Backspace at the start of the first child resolves to. Delete removes the
-container *with* its subtree, exactly as any other block's Delete does.
+The split between them is exactly the primitive's: **Remove callout** and
+**Delete** are the shared structural actions and come from `ContainerAnchor`
+(they are different intents — remove dissolves the box and promotes the children
+via the `unwrap` op, delete takes the subtree with it — which is why they stay
+two rows). Colour, icon and Reset are the callout's own, and live in
+`web/components/callout-appearance.tsx` as the `sections` it hands the shell,
+because they exist only by virtue of its payload. The shell owns the popover's
+open state, so those sections dismiss it through the `close()` they are given
+rather than holding a second copy of it; the swatches deliberately do not close
+(picking colours in a row is a comparison, not a commit).
 
 The trigger `preventDefault`s its mousedown (the click lands beside a live
 caret), and commits fire on `onMouseDown` — the same shape `BlockActionsMenu`
-uses, for the same reason.
+uses, for the same reason. `width="xl"` on the shell is the callout's own: its
+sections host the full icon picker.
 
 ## What is deliberately NOT here
 
@@ -101,11 +97,21 @@ an anchor's first child — and it exists because the generic `isIndented` → o
 rung would pop that child out *and adopt the remaining siblings as its children*,
 silently re-nesting content nobody asked to nest.
 
-The `Editor.Block` contribution is kept with a **null renderer**
-(`CalloutNoRow`). `BlockRow`'s anchored branch never dispatches that slot for an
-`anchor` type, so it is unreachable — but the registration is where the HANDLE
-lives, and the handle is what the insert palette, markdown, paste, the turn-into
-list and the reducer's `anchorTypes` all read.
+The `Editor.Block` contribution is kept with the primitive's shared **null
+renderer** (`ContainerNoRow`). `BlockRow`'s anchored branch never dispatches that
+slot for an `anchor` type, so it is unreachable — but the registration is where
+the HANDLE lives, and the handle is what the insert palette, markdown, paste, the
+turn-into list and the reducer's `anchorTypes` all read.
+
+The two e2e scripts are this plugin's real spec, and they are the regression
+proof for any change to the container primitive:
+`e2e/callout-container-verify.ts` (zero-height row with visible children, a
+visible one-line box when childless, the icon's clickable box inside the
+`[C, C+BLOCK_INDENT]` column, its centre within ~2px of the first child's
+first-line centre, Enter yielding a sibling inside the tint, `/h1` on a child
+leaving the container untouched, Tab in/out preserving the caret, Backspace at
+the first child's start unwrapping) and `e2e/callout-wrap-verify.ts` (`/callout`
+keeps the origin's id and caret; the wrap is ONE undo entry).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -114,22 +120,19 @@ list and the reducer's `anchorTypes` all read.
 - Description: Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
 - Web:
   - Contributes:
-    - `Editor.Block` "callout" → `CalloutNoRow`
+    - `Editor.Block` "callout" → `ContainerNoRow`
     - `Editor.BlockFrame` "callout" → `CalloutFrame`
   - Uses:
+    - `page/container.ContainerAnchor`
+    - `page/container.ContainerBackdrop`
+    - `page/container.ContainerNoRow`
     - `page/editor.BlockAnchorProps`
-    - `page/editor.BlockEditorAPI`
     - `page/editor.Editor`
     - `page/editor.PageIcon`
-    - `page/editor.useBlockEditor`
-    - `primitives/css/center.Center`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/icon-picker.IconPicker`
   - Exports (values): `calloutBlock`
 - Server:
@@ -137,7 +140,7 @@ list and the reducer's `anchorTypes` all read.
   - Uses: `page/editor.Editor`
 - Core:
   - Uses:
-    - `page/editor.defineBlock`
+    - `page/container.defineContainerBlock`
     - `page/editor.SvgNodeSchema`
   - Exports (types): `CalloutColor`
   - Exports (values):

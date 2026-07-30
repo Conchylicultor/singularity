@@ -1,4 +1,4 @@
-// @hash 7e0fa112d5b3
+// @hash 9cb0c7665b26
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -9,6 +9,7 @@
     "page.bulleted-list:bulleted-list",
     "page.callout:callout",
     "page.code-block:code-block",
+    "page.context:context",
     "page.divider:divider",
     "page.embed:embed",
     "page.file:file",

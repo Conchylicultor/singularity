@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MdLightbulb } from "react-icons/md";
-import { defineBlock, SvgNodeSchema } from "@plugins/page/plugins/editor/core";
+import { SvgNodeSchema } from "@plugins/page/plugins/editor/core";
+import { defineContainerBlock } from "@plugins/page/plugins/container/core";
 
 export const CALLOUT_COLORS = ["default", "info", "success", "warning", "danger"] as const;
 export type CalloutColor = (typeof CALLOUT_COLORS)[number];
@@ -8,10 +9,12 @@ export type CalloutColor = (typeof CALLOUT_COLORS)[number];
 /**
  * A callout is a VOID container: it owns appearance only, never content.
  *
- * The schema deliberately does NOT compose `textBlockSchema`. `acceptsText` is
- * *derived* from the schema (`"text" in schema.shape`), so voidness falls out
- * with no new flag, and the write boundary's strict parse then rejects a stray
- * `text` key outright — which is what makes the data migration's own guard
+ * The schema deliberately does NOT compose `textBlockSchema` — and no longer
+ * *can*: `defineContainerBlock` constrains its schema to a shape without `text`,
+ * so a text-bearing container is a compile error. `acceptsText` is *derived*
+ * from the schema (`"text" in schema.shape`), so voidness falls out with no new
+ * flag, and the write boundary's strict parse then rejects a stray `text` key
+ * outright — which is what makes the data migration's own guard
  * (`WHERE data ? 'text'`) idempotent rather than aspirational.
  */
 export const calloutDataSchema = z.object({
@@ -23,24 +26,18 @@ export const calloutDataSchema = z.object({
   color: z.enum(CALLOUT_COLORS).default("default"),
 });
 
-export const calloutBlock = defineBlock({
+/**
+ * `defineContainerBlock` — not `defineBlock` — is what makes this a container.
+ * It FORCES `anchor: true`, `collapsible: "never"` and `wrapOnConvert: true`,
+ * the three facts that are only correct together (see
+ * `@plugins/page/plugins/container/core`), so this file declares nothing but the
+ * callout's own identity and appearance payload.
+ */
+export const calloutBlock = defineContainerBlock({
   type: "callout",
   schema: calloutDataSchema,
   label: "Callout",
   icon: MdLightbulb,
   aliases: ["note", "info", "warning", "tip", "aside", "highlight", "banner"],
   empty: () => ({ icon: null, iconSvgNodes: null, color: "default" as CalloutColor }),
-  // The callout renders NO line of its own: its content IS its children, and the
-  // surface paints its icon in the indent gutter left of the first child. That is
-  // what makes converting a child to a heading (or splitting it with Enter) a
-  // plain operation on an ordinary block that cannot touch the container.
-  anchor: true,
-  // `/callout` on an existing block WRAPS it — the origin keeps its id, type,
-  // data and children and becomes the anchor's first child — rather than retyping
-  // it. So a heading, to-do, image or code block can be put in a callout, and the
-  // caret never moves (block-id-keyed content doc / undo manager / focus handle).
-  wrapOnConvert: true,
-  // An anchor has no chevron to reopen it, and every creation path mints
-  // `expanded: false`. Making the stored flag inert is the only guarantee.
-  collapsible: "never",
 });

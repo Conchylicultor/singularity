@@ -18,6 +18,7 @@
     - `improve/element-picker`
     - `infra/events-test`
     - `page/callout`
+    - `page/context`
     - `page/editor`
     - `page/editor-collab`
     - `page/image`

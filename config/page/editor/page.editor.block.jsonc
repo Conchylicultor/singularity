@@ -1,4 +1,4 @@
-// @hash 7e0fa112d5b3
+// @hash 9cb0c7665b26
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -31,6 +31,7 @@
     ]},
     { "type": "header", "label": "Advanced", "items": [
       "page.prompt.block:prompt",
+      "page.context:context",
       "page.code-block:code-block",
       "page.math.equation:equation",
       "page.page-link:page-link",

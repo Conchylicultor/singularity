@@ -1,7 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
+import { ContainerNoRow } from "@plugins/page/plugins/container/web";
 import { calloutBlock } from "../core";
-import { CalloutAnchor, CalloutNoRow } from "./components/callout-anchor";
+import { CalloutAnchor } from "./components/callout-anchor";
 import { CalloutFrame } from "./components/callout-frame";
 
 export { calloutBlock } from "../core";
@@ -11,17 +12,17 @@ export default {
     "Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings.",
   contributions: [
     // The callout renders NO row of its own — `BlockRow`'s anchored branch never
-    // dispatches `Editor.Block` for an `anchor` type, so this renderer is
-    // unreachable and returns null. The registration itself is NOT vestigial: it
-    // is where the handle lives, and the handle is what the insert palette, the
-    // markdown pipeline, paste, the turn-into list and `useAnchorTypes()` (the
-    // reducer's `anchorTypes`) all read. The row's paint comes from the frame's
-    // `anchor` below.
+    // dispatches `Editor.Block` for an `anchor` type, so the container
+    // primitive's shared null renderer is unreachable. The registration itself is
+    // NOT vestigial: it is where the handle lives, and the handle is what the
+    // insert palette, the markdown pipeline, paste, the turn-into list and
+    // `useAnchorTypes()` (the reducer's `anchorTypes`) all read. The row's paint
+    // comes from the frame's `anchor` below.
     Editor.Block({
       id: calloutBlock.type,
       match: calloutBlock.type,
       block: calloutBlock,
-      component: CalloutNoRow,
+      component: ContainerNoRow,
     }),
     // Contributing a frame is what makes the callout a container: the surfaces
     // derive the framed-type set from this slot, group the callout's visible
