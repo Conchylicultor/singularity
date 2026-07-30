@@ -13607,6 +13607,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve/element-picker`
               - `infra/events-test`
               - `page/callout`
+              - `page/context`
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
@@ -15841,22 +15842,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
       - Web:
         - Contributes:
-          - `Editor.Block` "callout" → `CalloutNoRow`
+          - `Editor.Block` "callout" → `ContainerNoRow`
           - `Editor.BlockFrame` "callout" → `CalloutFrame`
         - Uses:
+          - `page/container.ContainerAnchor`
+          - `page/container.ContainerBackdrop`
+          - `page/container.ContainerNoRow`
           - `page/editor.BlockAnchorProps`
-          - `page/editor.BlockEditorAPI`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
-          - `page/editor.useBlockEditor`
-          - `primitives/css/center.Center`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.Popover`
-          - `primitives/css/ui-kit.PopoverContent`
-          - `primitives/css/ui-kit.PopoverTrigger`
           - `primitives/icon-picker.IconPicker`
         - Exports (values): `calloutBlock`
       - Server:
@@ -15864,7 +15862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `page/editor.Editor`
       - Core:
         - Uses:
-          - `page/editor.defineBlock`
+          - `page/container.defineContainerBlock`
           - `page/editor.SvgNodeSchema`
         - Exports (types): `CalloutColor`
         - Exports (values):
@@ -15914,6 +15912,65 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `codeBlock`
+    - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the Remove/Delete structural actions). Contributes nothing itself — each container plugin registers its own block type through it.
+      - Web:
+        - Uses:
+          - `page/editor.BlockEditorAPI`
+          - `page/editor.useBlockEditor`
+          - `primitives/css/center.Center`
+          - `primitives/css/row.Row`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.Popover`
+          - `primitives/css/ui-kit.PopoverContent`
+          - `primitives/css/ui-kit.PopoverTrigger`
+          - `primitives/css/ui-kit.PopoverWidth`
+        - Exports (types): `ContainerAnchorProps`
+        - Exports (values):
+          - `ContainerAnchor`
+          - `ContainerBackdrop`
+          - `ContainerNoRow`
+      - Core:
+        - Uses:
+          - `page/editor.BlockHandle`
+          - `page/editor.BlockMarkdown`
+          - `page/editor.defineBlock`
+        - Exports (types):
+          - `ContainerBlockOptions`
+          - `RejectTextBearing`
+        - Exports (values): `defineContainerBlock`
+      - Cross-plugin:
+        - Imported by:
+          - `page/callout`
+          - `page/context`
+    - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+      - Web:
+        - Contributes:
+          - `Editor.Block` "context" → `ContainerNoRow`
+          - `Editor.BlockFrame` "context" → `ContextFrame`
+        - Uses:
+          - `page/container.ContainerAnchor`
+          - `page/container.ContainerBackdrop`
+          - `page/container.ContainerNoRow`
+          - `page/editor.Editor`
+        - Exports (values): `contextBlock`
+      - Server:
+        - Contributes: `page.block-data` "context"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses: `page/container.defineContainerBlock`
+        - Exports (values):
+          - `contextBlock`
+          - `contextDataSchema`
+      - E2e:
+        - Uses:
+          - `framework/tooling/e2e-harness.arg`
+          - `framework/tooling/e2e-harness.baseUrl`
+          - `framework/tooling/e2e-harness.report`
+          - `framework/tooling/e2e-harness.snap`
+          - `framework/tooling/e2e-harness.withBrowser`
+          - `page/editor.blockText`
+          - `page/editor.caretState`
+          - `page/editor.openBlankPage`
     - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
       - Server:
         - Contributes: `page.attachment-block.collector`
@@ -15944,8 +16001,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-          - `Editor.BlockFrame` ← `page.callout`
+          - `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.context`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.BlockFrame` ← `page.callout`, `page.context`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses:
@@ -16269,6 +16326,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/bulleted-list`
           - `page/callout`
           - `page/code-block`
+          - `page/container`
+          - `page/context`
           - `page/divider`
           - `page/editor-collab`
           - `page/embed`
@@ -18485,7 +18544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/route-fallback`
               - `page/audio`
               - `page/bookmark`
-              - `page/callout`
+              - `page/container`
               - `page/editor`
               - `page/file`
               - `page/formatting/color`
@@ -19130,6 +19189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/date/filter`
               - `history/dialog`
               - `page/callout`
+              - `page/container`
               - `page/editor`
               - `page/inline-date`
               - `page/page-link`
@@ -20429,6 +20489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/callout`
               - `page/code-block`
+              - `page/container`
               - `page/divider`
               - `page/editor`
               - `page/embed`

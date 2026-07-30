@@ -252,6 +252,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/bulleted-list", id: "page.bulleted-list", loader: () => import("@plugins/page/plugins/bulleted-list/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/callout", id: "page.callout", loader: () => import("@plugins/page/plugins/callout/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/code-block", id: "page.code-block", loader: () => import("@plugins/page/plugins/code-block/server"), dependsOn: ["page/plugins/editor"] },
+  { pluginPath: "page/plugins/context", id: "page.context", loader: () => import("@plugins/page/plugins/context/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/cover", id: "page.cover", loader: () => import("@plugins/page/plugins/cover/server"), dependsOn: ["page/plugins/attachment-block", "page/plugins/editor"] },
   { pluginPath: "page/plugins/divider", id: "page.divider", loader: () => import("@plugins/page/plugins/divider/server"), dependsOn: ["page/plugins/editor"] },
   { pluginPath: "page/plugins/editor-collab", id: "page.editor-collab", loader: () => import("@plugins/page/plugins/editor-collab/server"), dependsOn: ["database", "database/plugins/db-test-fixture", "database/plugins/migrations", "infra/plugins/endpoints", "page/plugins/editor", "primitives/plugins/collab-doc"] },

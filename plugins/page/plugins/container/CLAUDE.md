@@ -196,7 +196,7 @@ they describe.
     - `page/editor.defineBlock`
   - Exports (types):
     - `ContainerBlockOptions`
-    - `VoidBlockSchema`
+    - `RejectTextBearing`
   - Exports (values): `defineContainerBlock`
 - Cross-plugin:
   - Imported by:
