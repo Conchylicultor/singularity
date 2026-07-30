@@ -55,6 +55,19 @@ export function QueueSource({
             if (dest.targetId === id) return;
             dispatchReorder({ conversationId: id, targetId: dest.targetId, zone: dest.zone });
           },
+          // The only two draggable sections — `current` (the pinned cluster) and
+          // `queued` — share ONE rank space; the section is *derived* from the
+          // rank, not an independent field. So dragging past the pin is a plain
+          // neighbour reorder, and declaring `onReseat` (the primitive's
+          // cross-section capability) keeps that drop offered rather than
+          // refused. Every other section has `rank: null`, so it is neither a
+          // drag source nor a drop target and can never reach here.
+          onReseat: (id, dest) =>
+            dispatchReorder({
+              conversationId: id,
+              targetId: dest.targetId,
+              zone: dest.zone,
+            }),
         },
       })}
     </CloseConversationContext.Provider>

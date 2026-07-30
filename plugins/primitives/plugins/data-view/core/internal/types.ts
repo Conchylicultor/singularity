@@ -67,24 +67,23 @@ export interface HierarchyConfig<TRow> {
   getAliasParents?: (row: TRow) => readonly string[];
   getRank: (row: TRow) => Rank;
   /**
-   * DnD reorder/reparent. Omit → read-only nav tree (no drag). `dest.parentId`
-   * is the destination parent; `dest.rank` is the rank the tree computed over
-   * the rows it was handed. `dest.targetId` / `dest.zone` are the drop
-   * neighbour's row id + side (`"before"`/`"after"`), with `targetId: null`
-   * meaning the parent's child-list boundary (`"after"` = append at the end —
-   * what a drop-onto-a-row reparent resolves to): rank-based consumers persist
-   * `dest.rank` and ignore them; endpoint-based (neighbor-based) consumers
-   * forward `targetId`/`zone` and ignore `dest.rank`.
+   * DnD reorder/reparent. Omit → read-only nav tree (no drag). The destination
+   * is positional INTENT: `dest.parentId` is the destination parent, and
+   * `dest.targetId` / `dest.zone` the drop neighbour's row id + side
+   * (`"before"`/`"after"`), with `targetId: null` meaning the parent's
+   * child-list boundary (`"after"` = append at the end — what a
+   * drop-onto-a-row reparent resolves to).
    *
-   * Mirrors `ManualOrderConfig.onMove` — a consumer whose rows are a *filtered
-   * projection* of one shared ordering space MUST be endpoint-based, since a
+   * There is deliberately **no rank**. A view's rows are always a projection of
+   * a shared ordering space (filtered, searched, grouped, or type-scoped), so a
    * rank minted over the rows it can see collides with the siblings it cannot.
+   * Every consumer forwards the anchor to its endpoint and lets the server mint
+   * against the complete sibling set (`rankAdjacentTo`).
    */
   onMove?: (
     id: string,
     dest: {
       parentId: string | null;
-      rank: Rank;
       targetId: string | null;
       zone: "before" | "after";
     },
@@ -361,10 +360,12 @@ export interface DataViewAggregateConfig<TRow> {
  * capability and gates the manual-order mode. Present AND the active view opts in
  * (`supportsManualOrder`) → that view orders rows by `getRank` (skipping the
  * field sort, like the tree ignores sort), shows drag affordances, and the host
- * hides the Sort control. Reorder is **within a section**: a cross-section drag
- * reports the destination group via `onMove`'s `dest.groupKey`, which the
- * consumer maps to its own field mutation (the primitive carries no field/status
- * knowledge). Ungrouped → the single implicit `null` section.
+ * hides the Sort control. Ungrouped → the single implicit `null` section.
+ *
+ * `onMove` is the **within-a-section** reorder; `onReseat` is the separate,
+ * optional cross-section capability. Which drops a view accepts follows from
+ * **handler presence** — the same convention `HierarchyConfig` uses for a
+ * read-only tree — not from a flag.
  */
 export interface ManualOrderConfig<TRow> {
   /**
@@ -376,21 +377,47 @@ export interface ManualOrderConfig<TRow> {
    */
   getRank: (row: TRow) => Rank | null;
   /**
-   * Persist a reorder. `id` is `rowKey(row)`; `dest.rank` is the new rank;
-   * `dest.groupKey` is the destination section key (the drop target's group) —
-   * equal to the dragged row's group for an in-section move, the new group for a
-   * cross-section move, and `null`/absent when ungrouped. `dest.targetId` /
-   * `dest.zone` are the drop neighbor's row id + side (`"before"`/`"after"`):
-   * rank-based consumers ignore them and persist `dest.rank`; endpoint-based
-   * (neighbor-based) consumers use them and ignore `dest.rank`.
+   * Persist a reorder **within one section**. `id` is `rowKey(row)`;
+   * `dest.rank` is the new rank; `dest.targetId` / `dest.zone` are the drop
+   * neighbor's row id + side (`"before"`/`"after"`): rank-based consumers ignore
+   * them and persist `dest.rank`; endpoint-based (neighbor-based) consumers use
+   * them and ignore `dest.rank`.
+   *
+   * There is deliberately **no destination group**: the drop neighbour is always
+   * in the dragged row's own section, so the group is unchanged by construction.
+   * A drop into another section goes to `onReseat` instead.
    */
   onMove: (
     id: string,
     dest: {
       rank: Rank;
-      groupKey?: string | null;
       targetId?: string;
       zone?: "before" | "after";
+    },
+  ) => void | Promise<void>;
+  /**
+   * Persist a **cross-section** move: a write of the group-by field (moving the
+   * row into `dest.groupKey`'s group) **plus** a reorder next to
+   * `dest.targetId`/`dest.zone`. Only the consumer can do that — the primitive
+   * knows the section key, not which field produced it nor how to write it.
+   *
+   * Anchor-only on purpose (no `rank`): the destination section's rank space is
+   * the consumer's to mint over the complete membership, exactly as
+   * `HierarchyConfig.onMove` documents.
+   *
+   * **Absent ⇒ the view refuses cross-section drops**, and does so *visibly*:
+   * while a drag is in flight every row outside the dragged row's section
+   * disables its drop zones, so no indicator paints there and the drop cannot be
+   * made. (It is not a drop-time no-op — the user sees the refusal mid-gesture.)
+   * `groupKey` is `null` for the implicit ungrouped section, which is why the
+   * ungrouped surface never reaches this handler.
+   */
+  onReseat?: (
+    id: string,
+    dest: {
+      groupKey: string | null;
+      targetId: string;
+      zone: "before" | "after";
     },
   ) => void | Promise<void>;
 }
@@ -659,8 +686,9 @@ export interface DataViewProps<TRow> {
    * Flat manual-order accessors + mutation. Present → views that opt in
    * (`supportsManualOrder`: list/table) order by `getRank` and enable rank-based
    * drag reordering; the host hides the Sort control on the active view while
-   * manual order is active. Composes with group-by: a cross-section drag reports
-   * the destination section via `onMove`'s `dest.groupKey`.
+   * manual order is active. Composes with group-by: in-section drags reorder as
+   * usual, and cross-section drags are accepted only when the config supplies
+   * `onReseat` (otherwise the other sections paint no drop zone).
    */
   manualOrder?: ManualOrderConfig<TRow>;
   /**

@@ -35,18 +35,24 @@ import type { ListViewOptions } from "../../core";
  * drag source (Notion-style, no grip), with hover before/after drop indicators.
  * Mirrors the tree's RowChrome drop-indicator markup. Only mounted in
  * manual-order mode, in both the windowed and the plain branch.
+ *
+ * `group` is the row's section key: while a drag from another section is in
+ * flight and the config declared no `onReseat`, the primitive switches this
+ * row's drop zones off, so the indicators below simply never paint.
  */
 function ManualOrderRow({
   id,
   rank,
+  group,
   children,
 }: {
   id: string;
   rank: Rank;
+  group: string | null;
   children: ReactNode;
 }): ReactNode {
   const { dragSource, isDragging, beforeRef, afterRef, isOverBefore, isOverAfter } =
-    useRankReorderItem(id, rank);
+    useRankReorderItem(id, rank, group);
   // Destructure-and-rename at the top so render never does inline `dragSource.ref`
   // member access — react-hooks/refs flags member access on the hook output in
   // render, but not destructuring (mirrors the tree's RowChrome precedent).
@@ -100,6 +106,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveOperatorSet = useResolveOperatorSet();
   // Manual order arrives type-erased; present only when the host activated it.
   const manualOrder = props.manualOrder as ManualOrderConfig<unknown> | undefined;
+  // Cross-section capability: present ⇒ a drop into another section is offered
+  // and reported; absent ⇒ the primitive refuses those drops visibly.
+  const onReseat = manualOrder?.onReseat;
   // Aggregate arrives type-erased; present only when the consumer supplied it.
   const aggregate = props.aggregate as
     | DataViewAggregateConfig<unknown>
@@ -228,13 +237,16 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // the row non-orderable: it renders plain, so the `useRankReorderItem` hook
   // (inside ManualOrderRow) is never mounted for it. This is an element-type
   // choice, not a conditional hook.
-  const renderEntry = (entry: DataViewRowEntry<unknown>): ReactNode => {
+  const renderEntry = (
+    entry: DataViewRowEntry<unknown>,
+    group: string | null,
+  ): ReactNode => {
     const row = renderRow(entry.row, entry.key, entry.aggregateCount);
     if (!manualOrder) return row;
     const rank = manualOrder.getRank(entry.row);
     if (rank == null) return row;
     return (
-      <ManualOrderRow key={entry.key} id={entry.key} rank={rank}>
+      <ManualOrderRow key={entry.key} id={entry.key} rank={rank} group={group}>
         {row}
       </ManualOrderRow>
     );
@@ -249,6 +261,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const renderEntries = (
     entries: DataViewRowEntry<unknown>[],
     activeId: string | null,
+    group: string | null,
   ): ReactNode => {
     if (entries.length > VIRTUALIZE_THRESHOLD) {
       return (
@@ -259,13 +272,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           itemClassName="px-pane-gutter"
           keepMounted={activeId ? [activeId] : undefined}
         >
-          {(entry) => renderEntry(entry)}
+          {(entry) => renderEntry(entry, group)}
         </VirtualRows>
       );
     }
     return (
       <Stack gap="none" className="px-pane-gutter py-sm">
-        {entries.map(renderEntry)}
+        {entries.map((entry) => renderEntry(entry, group))}
       </Stack>
     );
   };
@@ -274,7 +287,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     // Ungrouped: the single implicit section renders headerless — byte-for-byte
     // the legacy markup.
     sections.length === 1 && sections[0]!.key === null ? (
-      renderEntries(sections[0]!.entries, activeId)
+      renderEntries(sections[0]!.entries, activeId, null)
     ) : (
       // Grouped: the shared pinned/stacking group-header chrome. GroupedSections
       // owns the shared pane-gutter inset, so header and body sit on one rail.
@@ -283,13 +296,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
       >
-        {(section) => renderEntries(section.entries, activeId)}
+        {(section) => renderEntries(section.entries, activeId, section.key)}
       </GroupedSections>
     );
 
   // Manual order: wrap the rendered sections in a single rank-reorder DnD host
-  // covering every section, so a drag can reseat within or ACROSS sections (the
-  // destination section's key flows back as `dest.groupKey`).
+  // covering every section. In-section drags reorder; a drop into ANOTHER
+  // section is a group write plus a reorder, so it is offered only when the
+  // config supplies `onReseat` — otherwise the primitive scopes the drag to its
+  // own section and the others paint no drop zone.
   if (manualOrder) {
     // Any windowed section ⇒ rows mount/unmount mid-drag as autoscroll runs, so
     // the shell must re-measure droppables every frame.
@@ -303,10 +318,19 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         onMove={(id, dest) =>
           manualOrder.onMove(id, {
             rank: dest.rank,
-            groupKey: dest.group,
             targetId: dest.targetId,
             zone: dest.zone,
           })
+        }
+        onReseat={
+          onReseat
+            ? (id, dest) =>
+                onReseat(id, {
+                  groupKey: dest.group,
+                  targetId: dest.targetId,
+                  zone: dest.zone,
+                })
+            : undefined
         }
         dragOverlay={(id) => {
           const entry = sections

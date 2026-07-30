@@ -22,8 +22,7 @@
   // session (the contributed `origin` enum from `agent-origin`) into their own
   // **Agent** section, below **Mine**. The tree partitions ROOTS only and every
   // descendant follows its root's section, so a subtree is never split. Unmarked
-  // pages project "user", so there is no "None" bucket. Trade-off: grouping
-  // suspends the tree's drag-reorder — see the agent-origin plugin's CLAUDE.md.
+  // pages project "user", so there is no "None" bucket.
   "views": [
     {
       "id": "pages",

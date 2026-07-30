@@ -907,6 +907,7 @@ the whole document lives in React state and is discarded on unmount.
     - `infra/trash.defineTrashSource`
     - `infra/trash.recordTrashEntry`
     - `primitives/rank.nextRankUnder`
+    - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
   - DB schema:
     - `plugins/page/plugins/editor/server/internal/tables-events.ts`

@@ -1,13 +1,26 @@
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { updateAgent } from "@plugins/conversations/plugins/agents/core";
+import { moveAgent, updateAgent } from "@plugins/conversations/plugins/agents/core";
 
+// No `rank`: repositioning goes through `moveAgentTo` below, which carries
+// positional intent and lets the server mint the rank against the complete
+// sibling set. A client only ever holds a projection of that set.
 type AgentPatch = {
   name?: string;
   parentId?: string | null;
-  rank?: Rank;
 };
 
 export async function patchAgent(id: string, patch: AgentPatch) {
   await fetchEndpoint(updateAgent, { id }, { body: patch });
+}
+
+/** Reposition an agent: positional intent (`targetId`/`zone`), never a rank. */
+export async function moveAgentTo(
+  id: string,
+  dest: {
+    parentId: string | null;
+    targetId: string | null;
+    zone: "before" | "after";
+  },
+) {
+  await fetchEndpoint(moveAgent, { id }, { body: dest });
 }

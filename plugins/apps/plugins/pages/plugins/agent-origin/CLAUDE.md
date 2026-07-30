@@ -32,9 +32,8 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   (never null), so there is no "None" bucket and the section order follows the
   options: **Mine**, then **Agent**. The tree partitions ROOTS only and every
   descendant follows its root's section, so a subtree is never split.
-  Trade-off, accepted: grouping suspends the Pages tree's drag-reorder (a
-  per-section `TreeList` could mint a colliding rank against a hidden root) —
-  which is exactly why `starred` sets `groupable: false` and this field does not.
+  Drag-reorder keeps working while grouped: the tree's drop contract carries an
+  anchor, not a rank, so a per-section `TreeList` cannot mint a colliding key.
 - **The sweep is `defineRetention` + its `beforeDelete` seam**, mirroring how
   trash drives `purgeTrashedPages`: the primitive's DELETE clears the MARKER,
   the callback removes the PAGES through `deleteBlocksSubtree` — the delete

@@ -20,6 +20,7 @@
     - `infra/paths.GIT`
     - `infra/warmup.defineWarmup`
     - `infra/worktree.ensureMainWorktreeRoot`
+    - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
     - `tasks/auto-start.setTaskAutoStart`
     - `tasks/task-category.setTaskCategory`
@@ -37,6 +38,7 @@
     - `tasks/tasks-core.getTaskDependencyIds`
     - `tasks/tasks-core.hasBlockingDep`
     - `tasks/tasks-core.insertPush`
+    - `tasks/tasks-core.isDescendant`
     - `tasks/tasks-core.listAttempts`
     - `tasks/tasks-core.listDependentIds`
     - `tasks/tasks-core.listPushShasIn`
@@ -57,6 +59,7 @@
     - `POST /api/tasks/insert-between`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
+    - `POST /api/tasks/:id/move`
     - `POST /api/tasks/:id/auto-start`
     - `DELETE /api/tasks/:id/auto-start`
     - `POST /api/tasks/:id/dependencies`
@@ -79,12 +82,12 @@
     - `conversations/model-provider.ConversationModelSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
-    - `primitives/rank.RankSchema`
   - Exports (types):
     - `AddDependencyBody`
     - `CreateTaskBody`
     - `DepsMoveBody`
     - `InsertBetweenBody`
+    - `MoveTaskBody`
     - `SetAutoStartBody`
     - `TaskChainCard`
     - `TaskChainLaunch`
@@ -107,6 +110,8 @@
     - `InsertBetweenBodySchema`
     - `insertTaskBetween`
     - `listTasks`
+    - `moveTask`
+    - `MoveTaskBodySchema`
     - `moveTaskInDepsTree`
     - `removeTaskDependency`
     - `SetAutoStartBodySchema`

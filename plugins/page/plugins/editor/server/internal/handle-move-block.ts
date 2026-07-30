@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import { moveBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksChanged } from "./tables-events";
-import { loadLiveSiblings, rankAdjacentTo } from "./forest";
+import { loadLiveSiblings } from "./forest";
 import { recomputePageIdSubtree } from "./page-id";
 
 export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => {

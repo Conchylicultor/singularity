@@ -14,17 +14,17 @@ model, not two.
   `children` may be a render-prop receiving the active drag id (for windowed
   `keepMounted`).
 - **`RankReorderProvider`** — high-level flat host. Props `{ items, onMove,
-  dragOverlay?, measuringAlways? }`. Resolves each before/after drop to a
-  destination `Rank` via `rank`'s `computeFlatReorder`, scoped to the drop
+  onReseat?, dragOverlay?, measuringAlways? }`. Resolves each before/after drop
+  to a destination `Rank` via `rank`'s `computeFlatReorder`, scoped to the drop
   target's **group** so manual order composes with group-by sections. `onMove(id,
-  { rank, group })` fires only for real (non-no-op) moves. Its `children` may be
-  a render-prop receiving the active drag id (passed straight through to the
-  shell). Built on `RankReorderDndContext`.
-- **`useRankReorderItem(id, rank)`** — per-row draggable + before/after
+  { rank, group, targetId, zone })` fires only for real (non-no-op) in-group
+  moves. Its `children` may be a render-prop receiving the active drag id (passed
+  straight through to the shell). Built on `RankReorderDndContext`.
+- **`useRankReorderItem(id, rank, group?)`** — per-row draggable + before/after
   droppables. Returns `{ dragSource, isDragging, beforeRef, afterRef,
   isOverBefore, isOverAfter }`. The droppable data shape (`{ zone, targetId }`)
   and draggable data (`{ id, rank }`) are the contract the shell's `onDragEnd`
-  reads.
+  reads. `group` is the row's section key — see below.
 
 ## Drop-data contract
 
@@ -39,12 +39,26 @@ math to `computeFlatReorder`.
 
 ## Composition with group-by
 
-`RankReorderProvider.items` carry an optional `group` key. A drag onto a row in
-another group resolves the rank within that group and reports it via
-`onMove`'s `dest.group` — the consumer maps the new group to its own mutation
-(e.g. the data-view manual-order forwards it as `dest.groupKey`). The primitive
-owns rank arithmetic + destination-group reporting; it has no field/status
-knowledge.
+`items` carry an optional `group` key, and each row passes its own group to
+`useRankReorderItem(id, rank, group)`. A drop **within** a group resolves the
+rank inside it and fires `onMove`.
+
+A drop into **another** group is a separate capability, expressed by **handler
+presence**, not a flag:
+
+- **`onReseat` supplied** → cross-group drops are allowed and reported
+  anchor-only (`{ group, targetId, zone }`, no rank). Minting a rank in a group
+  whose membership the host is about to rewrite is not the primitive's call.
+- **`onReseat` absent** → the provider publishes the in-flight drag's group
+  through an internal context; every row in another group passes `disabled` to
+  both its `useDroppable`s. They leave collision detection, so **no indicator
+  paints and the drop cannot be made**. The refusal must stay visible mid-drag —
+  do *not* re-implement it as an `onDragEnd` early-return, which reads to the
+  user as a drag that silently did nothing.
+
+The tree is unaffected: it mounts `RankReorderDndContext` directly (one DnD
+context per section, so cross-section drags are already unrepresentable) and
+publishes no scope, which the context's default reads as "never scoped".
 
 ## Windowing while dragging
 

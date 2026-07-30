@@ -188,12 +188,6 @@ export function PagesSidebar() {
           // document, stamped `updatedAt`, and fanned out `blocksChanged` (a
           // search reindex plus a history snapshot). Matches Notion, whose
           // sidebar arrow only reveals nav children.
-          // Positional intent only — never `dest.rank`. These rows are the
-          // `type='page'` projection of the `page_blocks` forest, so a rank
-          // computed over them collides with the content blocks sharing the
-          // same `(parent_id, rank)` space. `handleMoveBlock` mints the rank
-          // against the complete sibling set.
-          //
           // Sibling drops resolve against the TARGET's physical parent: the
           // display parent (`dest.parentId`) is the page-level `pageId`
           // relation, while `moveBlock` validates `targetId` against the raw

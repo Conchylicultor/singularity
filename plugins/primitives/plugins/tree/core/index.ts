@@ -2,6 +2,7 @@ export {
   buildTree,
   computeDrop,
   isDescendant,
+  resolveDropParent,
   selectionRoots,
   subtreeIds,
 } from "./internal/tree";

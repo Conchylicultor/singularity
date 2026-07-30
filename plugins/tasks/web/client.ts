@@ -6,16 +6,17 @@ import {
   setTaskAutoStart,
   clearTaskAutoStart,
 } from "../core/endpoints";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
+// No `rank`: repositioning goes through the `moveTask` endpoint, which carries
+// positional intent and mints the rank server-side against the complete sibling
+// set. A client only ever holds a projection of that set.
 export type TaskPatch = Partial<{
   title: string;
   description: string | null;
   drop: boolean;
   hold: boolean;
   folderId: string | null;
-  rank: Rank;
 }>;
 
 export type AutoStartModel = ConversationModel | "none";

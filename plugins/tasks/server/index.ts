@@ -6,6 +6,7 @@ import { handleClearAutoStart } from "./internal/handle-clear-auto-start";
 import { handleSetAutoStart } from "./internal/handle-set-auto-start";
 import { handleGet } from "./internal/handle-get";
 import { handleUpdate } from "./internal/handle-update";
+import { handleMove } from "./internal/handle-move";
 import {
   handleAddDependency,
   handleRemoveDependency,
@@ -24,6 +25,7 @@ import {
   insertTaskBetween,
   getTask,
   updateTask,
+  moveTask,
   setTaskAutoStart,
   clearTaskAutoStart,
   addTaskDependency,
@@ -43,6 +45,7 @@ export default {
     [insertTaskBetween.route]: handleInsertBetween,
     [getTask.route]: handleGet,
     [updateTask.route]: handleUpdate,
+    [moveTask.route]: handleMove,
     [setTaskAutoStart.route]: handleSetAutoStart,
     [clearTaskAutoStart.route]: handleClearAutoStart,
     [addTaskDependency.route]: handleAddDependency,

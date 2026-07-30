@@ -6,13 +6,12 @@ import { type DragEndEvent } from "@dnd-kit/core";
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import {
   buildTree,
-  computeDrop,
   isDescendant,
+  resolveDropParent,
   type DropZone,
   type ExpandChange,
   type TreeNode,
 } from "../../core";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
 import {
   MultiSelectProvider,
@@ -47,17 +46,17 @@ export type TreeListProps<T extends TreeItem> = {
   setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
   /**
    * DnD reorder/reparent. Omit for a read-only tree — the drag handle disappears.
-   * `dest.rank` is computed over `rows`; `dest.targetId`/`dest.zone` carry the
-   * raw positional intent (`targetId: null` + `"after"` = append under
-   * `dest.parentId`, which is what the `child` reparent zone resolves to).
-   * Consumers whose `rows` are a filtered projection of a shared ordering space
-   * must forward `targetId`/`zone` to their endpoint and ignore `dest.rank`.
+   * The destination is positional INTENT and carries no rank: `targetId`/`zone`
+   * name the drop neighbour and side, with `targetId: null` + `"after"` meaning
+   * "append at the end of `dest.parentId`'s children" (what the `child` reparent
+   * zone resolves to). `rows` is a projection of a shared ordering space, so the
+   * rank is the server's to mint against the complete sibling set
+   * (`rankAdjacentTo`) — see the rank primitive's CLAUDE.md.
    */
   onMove?: (
     id: string,
     dest: {
       parentId: string | null;
-      rank: Rank;
       targetId: string | null;
       zone: "before" | "after";
     },
@@ -255,16 +254,14 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       if (!draggedId || !zone || !targetId) return;
       if (draggedId === targetId) return;
       if (isDescendant(rows, draggedId, targetId)) return;
-      const dest = computeDrop(rows, draggedId, zone, targetId);
+      const dest = resolveDropParent(rows, draggedId, zone, targetId);
       if (!dest) return;
-      const current = rows.find((r) => r.id === draggedId);
-      if (
-        current &&
-        current.parentId === dest.parentId &&
-        Rank.equals(current.rank, dest.rank)
-      ) {
-        return;
-      }
+      // No "already there" short-circuit: under a filtered projection that is
+      // not decidable here. Two rows adjacent in `rows` can have invisible
+      // siblings between them in storage, so a drop that looks like a no-op is
+      // a real reposition. The server resolves the anchor against the complete
+      // sibling set and is free to mint the rank the row already holds.
+      //
       // A drop into a COLLAPSED destination parent would make the dragged row
       // vanish: a drag never changes `selectedRowId`, so the reveal-on-select
       // effect below never runs for a reparent. Open the destination in its own
@@ -277,9 +274,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       if (destParent && !destParent.expanded) {
         void setExpanded([{ id: destParent.id, expanded: true }]);
       }
-      // The raw positional intent alongside the computed rank. A `child` drop
-      // reparents under the target and lands last, which as neighbour intent is
-      // "after the end of the parent's child list" — i.e. a null target.
+      // A `child` drop reparents under the target and lands last, which as
+      // neighbour intent is "after the end of the parent's child list" — i.e. a
+      // null target.
       void onMove(draggedId, {
         ...dest,
         targetId: zone === "child" ? null : targetId,

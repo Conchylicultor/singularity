@@ -7,6 +7,7 @@ import { handleList } from "./internal/handle-list";
 import { handleGet } from "./internal/handle-get";
 import { handleCreate } from "./internal/handle-create";
 import { handleUpdate } from "./internal/handle-update";
+import { handleMove } from "./internal/handle-move";
 import { handleDelete } from "./internal/handle-delete";
 import { handleLaunch } from "./internal/handle-launch";
 import { handleListLaunches } from "./internal/handle-list-launches";
@@ -19,6 +20,7 @@ import {
   createAgent,
   getAgent,
   updateAgent,
+  moveAgent,
   deleteAgent,
   launchAgent,
   listAgentLaunches,
@@ -38,6 +40,7 @@ export default {
     [createAgent.route]: handleCreate,
     [getAgent.route]: handleGet,
     [updateAgent.route]: handleUpdate,
+    [moveAgent.route]: handleMove,
     [deleteAgent.route]: handleDelete,
     [launchAgent.route]: handleLaunch,
     [listAgentLaunches.route]: handleListLaunches,

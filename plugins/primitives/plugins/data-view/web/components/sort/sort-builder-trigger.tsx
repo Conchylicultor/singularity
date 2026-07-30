@@ -14,8 +14,11 @@ import { SortBuilderPopover } from "./sort-builder-popover";
 export function SortBuilderTrigger<TRow>(props: {
   controller: SortController<TRow>;
   presets: SortPresetsController;
+  /** This surface has a manual drag order that the live sort is shadowing —
+   *  the popover explains it (see `SortBuilderPopover`). */
+  manualOrderOverridden?: boolean;
 }): ReactNode {
-  const { controller, presets } = props;
+  const { controller, presets, manualOrderOverridden } = props;
   const [open, setOpen] = useState(false);
   const active = controller.ruleCount > 0;
   const label = active
@@ -42,6 +45,7 @@ export function SortBuilderTrigger<TRow>(props: {
       <SortBuilderPopover
         controller={controller}
         presets={presets}
+        manualOrderOverridden={manualOrderOverridden}
         onClose={() => setOpen(false)}
       />
     </InlinePopover>

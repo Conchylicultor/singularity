@@ -61,6 +61,9 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveOperatorSet = useResolveOperatorSet();
   // Manual order arrives type-erased; present only when the host activated it.
   const manualOrder = props.manualOrder as ManualOrderConfig<unknown> | undefined;
+  // Cross-section capability: present ⇒ a drop into another section is offered
+  // and reported; absent ⇒ the primitive refuses those drops visibly.
+  const onReseat = manualOrder?.onReseat;
   // Aggregate arrives type-erased; present only when the consumer supplied it.
   const aggregate = props.aggregate as
     | DataViewAggregateConfig<unknown>
@@ -74,6 +77,16 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     { rowKey: props.rowKey, manualRank: manualOrder?.getRank, aggregate },
   );
 
+  // Which section each row sits in. DataTable's per-row decoration hook only
+  // receives `(row, index)`, but the primitive needs the row's group to scope a
+  // drag to its own section — so resolve it by row key here, once.
+  const sectionKeyByRowKey = new Map<string, string | null>();
+  for (const section of sections) {
+    for (const entry of section.entries) {
+      sectionKeyByRowKey.set(entry.key, section.key);
+    }
+  }
+
   // Per-row decoration hook (called once per row inside DataTable's row
   // component, so it may call hooks): the whole row is the rank-reorder drag
   // source, with hover before/after drop indicators. Defined unconditionally
@@ -85,7 +98,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     const id = props.rowKey(row, i);
     const rank = manualOrder!.getRank(row);
     const { dragSource, isDragging, beforeRef, afterRef, isOverBefore, isOverAfter } =
-      useRankReorderItem(id, rank);
+      useRankReorderItem(id, rank, sectionKeyByRowKey.get(id) ?? null);
     // A null rank marks the row non-orderable: the hook still runs (hooks rule),
     // but we return no decoration so its refs attach to nothing — the row is
     // neither a drag source nor a drop target.
@@ -256,8 +269,10 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     );
 
   // Manual order: wrap the table in one rank-reorder DnD host spanning every
-  // section, so a drag reseats within or across sections (the destination
-  // section's key flows back as `dest.groupKey`).
+  // section. In-section drags reorder; a drop into ANOTHER section is a group
+  // write plus a reorder, so it is offered only when the config supplies
+  // `onReseat` — otherwise the primitive scopes the drag to its own section and
+  // the others paint no drop zone.
   if (manualOrder) {
     // Rows mount/unmount mid-drag only when the body windows; the shell then
     // re-measures droppables every frame so a freshly mounted row (autoscrolled
@@ -273,10 +288,19 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
         onMove={(id, dest) =>
           manualOrder.onMove(id, {
             rank: dest.rank,
-            groupKey: dest.group,
             targetId: dest.targetId,
             zone: dest.zone,
           })
+        }
+        onReseat={
+          onReseat
+            ? (id, dest) =>
+                onReseat(id, {
+                  groupKey: dest.group,
+                  targetId: dest.targetId,
+                  zone: dest.zone,
+                })
+            : undefined
         }
         dragOverlay={(id) => manualOrderOverlay(sections, columns, id)}
       >

@@ -40,9 +40,6 @@ export function StarredField({ render }: FieldExtensionProps<PageRow>) {
         // accessor (it is a filter dimension, not searchable text). It stays in
         // the Filter pill, which is gated on the field type resolving operators.
         filterable: false,
-        // A group-by silently disables `rowOrderEnabled`, which would suspend
-        // the Favorites drag order with no visible cause — so never groupable.
-        groupable: false,
       },
     ],
     [set],

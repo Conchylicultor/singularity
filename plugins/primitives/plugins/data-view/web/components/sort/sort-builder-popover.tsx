@@ -25,13 +25,19 @@ import { SavePresetAffordance } from "./presets/save-preset-affordance";
  * over the fields not yet used, and a `Clear sort` footer (clears every level).
  * A field can be sorted at most once, so each row's picker offers only the fields
  * not used by OTHER rows.
+ *
+ * When the surface has a manual drag order that the live sort is shadowing, the
+ * footer carries a muted line saying so. A sort silently overriding manual order
+ * is the last remaining cause of "drag stopped working" with no visible reason,
+ * and this popover is where the remedy (Clear sort) already lives.
  */
 export function SortBuilderPopover<TRow>(props: {
   controller: SortController<TRow>;
   presets: SortPresetsController;
+  manualOrderOverridden?: boolean;
   onClose: () => void;
 }): ReactNode {
-  const { controller, presets } = props;
+  const { controller, presets, manualOrderOverridden } = props;
   const usedIds = new Set(controller.rules.map((r) => r.fieldId));
   const availableToAdd = controller.sortableFields.filter(
     (f) => !usedIds.has(f.id),
@@ -104,6 +110,12 @@ export function SortBuilderPopover<TRow>(props: {
             />
           ) : null}
           <DropdownMenuSeparator />
+          {manualOrderOverridden ? (
+            <Text as="div" variant="caption" tone="muted" className="px-2xs">
+              Manual drag order is overridden while a sort is set. Clear the sort
+              to reorder.
+            </Text>
+          ) : null}
           {/* `flex … justify-between` so the footer buttons hug their content:
               Save preset packs left, Clear sort pins right. */}
           <div className="flex items-center justify-between gap-sm">

@@ -123,6 +123,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `infra/query-resource.rel`
     - `primitives/icon-picker.resolveIconSvgNodesJson`
     - `primitives/rank.nextRankUnder`
+    - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-category.TaskCategory`
@@ -159,6 +160,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `POST /api/agents`
     - `GET /api/agents/:id`
     - `PATCH /api/agents/:id`
+    - `POST /api/agents/:id/move`
     - `DELETE /api/agents/:id`
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
@@ -175,6 +177,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `CreateAgentBody`
     - `LaunchAgentBody`
     - `LaunchAgentResponse`
+    - `MoveAgentBody`
     - `UpdateAgentBody`
   - Exports (values):
     - `AgentLaunchSchema`
@@ -189,6 +192,8 @@ drag-reparent behavior. Do not reintroduce it; see
     - `LaunchAgentResponseSchema`
     - `listAgentLaunches`
     - `listAgents`
+    - `moveAgent`
+    - `MoveAgentBodySchema`
     - `updateAgent`
     - `UpdateAgentBodySchema`
 

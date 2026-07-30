@@ -29,8 +29,10 @@ export interface UpdateTaskPatch {
   drop?: boolean;
   hold?: boolean;
   // Re-file under a different folder (display-only hierarchy, not a dependency).
+  // No `rank`: positioning is `handle-move`'s job, which mints against the
+  // complete sibling set inside its own transaction. A re-file made here keeps
+  // the task's existing rank.
   folderId?: string | null;
-  rank?: Rank;
 }
 
 export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) {
@@ -88,9 +90,6 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
       throw new Error("Cannot file a task into its own descendant");
     }
     dbPatch.folderId = patch.folderId;
-  }
-  if (patch.rank instanceof Rank) {
-    dbPatch.rank = patch.rank.toJSON();
   }
   // Snapshot status before the write so we can detect a flip
   // (typical: drop/hold transitions).

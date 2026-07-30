@@ -62,7 +62,7 @@ outside a tree — notably a `data-view` item-action, which every view renders
 
 ## Plugin reference
 
-- Description: Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
+- Description: Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 - Web:
   - Slots: `Tree.Disclosure` ← `ui.tree-disclosure`
   - Uses:
@@ -129,6 +129,7 @@ outside a tree — notably a `data-view` item-action, which every view renders
     - `buildTree`
     - `computeDrop`
     - `isDescendant`
+    - `resolveDropParent`
     - `selectionRoots`
     - `subtreeIds`
 - Cross-plugin:

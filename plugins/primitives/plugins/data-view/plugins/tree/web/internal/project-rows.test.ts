@@ -3,15 +3,15 @@
  * alias (reference) rank minting in particular.
  * Run with `bun test plugins/primitives/plugins/data-view/plugins/tree`.
  *
- * No DOM, no React render: the projection is a pure function and `computeDrop`
- * is pure rank arithmetic, so these are bun:test (not the jsdom vitest suite).
+ * No DOM, no React render: the projection and the tree's drop resolution are
+ * both pure, so these are bun:test (not the jsdom vitest suite).
  */
 
 import { describe, expect, test } from "bun:test";
-import { computeDrop } from "@plugins/primitives/plugins/tree/core";
+import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { HierarchyConfig } from "@plugins/primitives/plugins/data-view/core";
-import { projectRows } from "./project-rows";
+import { projectRows, realNodeId } from "./project-rows";
 
 /**
  * A row in the shape the pages sidebar feeds the tree: `parentId` is the
@@ -88,11 +88,17 @@ describe("alias rank minting", () => {
     expect(byRank.map((p) => p.id)).toEqual(underHost.map((p) => p.id));
   });
 
-  test("resolves a drop AFTER a real row whose next neighbour is an alias (the regression)", () => {
+  test("an alias sorts after every real sibling even when it would borrow their rank", () => {
     // The alias of `x` (first child of otherA ⇒ rank a0) lands under `host`
-    // beside host's own first child c1 (also a0). Dropping `c2` after `c1`
-    // rank-sorts [c1(a0), alias(a0), c2] and calls Rank.between(a0, a0) →
-    // throws → computeDrop returns null → the drag is silently swallowed.
+    // beside host's own first child c1 (also a0). Borrowing the referenced
+    // row's rank would put the two at the same key; minting keeps the alias
+    // strictly last, which is where it renders.
+    //
+    // This used to also be a DROP hazard — the duplicate made
+    // `Rank.between(a0, a0)` throw inside `computeDrop`, silently swallowing
+    // drags on the REAL rows beside the alias. The drop path no longer mints a
+    // rank at all (`resolveDropParent` is anchor-only), so what is left to pin
+    // is the display invariant: rank order agrees with paint order.
     const rows = [
       row("host", null, "a0"),
       row("c1", "host", "a0"),
@@ -102,12 +108,15 @@ describe("alias rank minting", () => {
     ];
 
     const { projected } = project(rows);
-    const dest = computeDrop(projected, "c2", "after", "c1");
-
-    expect(dest).not.toBeNull();
-    expect(dest!.parentId).toBe("host");
-    // The minted rank really does sit between c1 and the next neighbour.
-    expect(Rank.compare(dest!.rank, Rank.from("a0"))).toBe(1);
+    const underHost = projected.filter((p) => p.parentId === "host");
+    expect(underHost.map((p) => realNodeId(p.id))).toEqual(["c1", "c2", "x"]);
+    const alias = underHost.find((p) => p.alias)!;
+    expect(Rank.compare(alias.rank, Rank.from("a1"))).toBe(1);
+    // …and the drop that used to be swallowed resolves normally: `c2` after
+    // `c1` is a plain sibling anchor under `host`, with no rank arithmetic.
+    expect(resolveDropParent(projected, "c2", "after", "c1")).toEqual({
+      parentId: "host",
+    });
   });
 
   test("still mints distinct ranks when the host parent has no real children", () => {

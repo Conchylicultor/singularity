@@ -210,8 +210,14 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     activeSupportsManualOrder && // list / table only
     manualOrder == null && // a consumer's domain order wins
     props.dataSource == null && // server-paginated ⇒ the client cannot own the order
-    aggregate == null && // an aggregate representative's rank cannot stand for its members
-    !activeState.groupBy; // a cross-group drop would need a field write the primitive cannot do
+    aggregate == null; // an aggregate representative's rank cannot stand for its members
+  // Group-by is deliberately NOT a clause. Reordering WITHIN a section is
+  // well-defined (the contributed order covers the whole unpartitioned set, so a
+  // drop anchored on a same-section neighbour resolves globally), and a drop into
+  // ANOTHER section — which would need the group field written — is refused by
+  // the view unless the config supplies `ManualOrderConfig.onReseat`. Suspending
+  // the whole order because one kind of drop is unsupported is what made
+  // reordering silently stop working under a group-by.
 
   // The per-view Properties control (which fields render in the body + their
   // order) now lives in the settings gear as a `view`-scope `DataViewSlots.Setting`
@@ -269,6 +275,11 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
         // is set.
         const manualOrderActive =
           cfg != null && activeSupportsManualOrder && activeState.sort.length === 0;
+        // The mirror image: an order EXISTS for this view but a sort is
+        // shadowing it. After grouping stopped suspending drag, this is the last
+        // silent cause of "dragging stopped working", so the sort popover says so.
+        const manualOrderOverridden =
+          cfg != null && activeSupportsManualOrder && activeState.sort.length > 0;
 
         // The host passes RAW rows; each view applies the processing matching its own
         // semantics (gallery/table call `useFlatRows`, the tree feeds `TreeList`).
@@ -349,6 +360,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
                   <SortBuilderTrigger
                     controller={sortController}
                     presets={sortPresets}
+                    manualOrderOverridden={manualOrderOverridden}
                   />
                 ) : null
               }

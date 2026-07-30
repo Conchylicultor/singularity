@@ -40,9 +40,9 @@ export const DepsSources =
   defineDataViewSources<DepsHostProps>("task-deps-tree-sources");
 
 // Every `task_dependencies` edge is a literal tree edge, so the tree's shape IS
-// the dependency relation. A drop is neighbour-based, not rank-based: a drop
-// ONTO a row (`targetId === null`) splices into the chain; a sibling-zone drop
-// branches. `dest.rank` is discarded — the server owns edge rewiring atomically.
+// the dependency relation. The drop's anchor is read as an edge intent rather
+// than a position: a drop ONTO a row (`targetId === null`) splices into the
+// chain; a sibling-zone drop branches. The server rewires the edges atomically.
 const depsHierarchy: HierarchyConfig<DepsTreeRow> = {
   getParentId: (r) => r.depsParentId,
   getRank: (r) => r.rank,

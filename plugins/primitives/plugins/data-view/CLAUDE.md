@@ -248,8 +248,13 @@ Flat rank-based drag reordering — the flat twin of the tree-only
 ```ts
 interface ManualOrderConfig<TRow> {
   getRank: (row: TRow) => Rank | null;
+  // within one section
   onMove: (id: string, dest: {
-    rank: Rank; groupKey?: string | null; targetId?: string; zone?: "before" | "after";
+    rank: Rank; targetId?: string; zone?: "before" | "after";
+  }) => void | Promise<void>;
+  // across sections — group write + reorder; absent ⇒ such drops are refused
+  onReseat?: (id: string, dest: {
+    groupKey: string | null; targetId: string; zone: "before" | "after";
   }) => void | Promise<void>;
 }
 ```
@@ -276,7 +281,9 @@ manual order and rows are draggable; setting a **field sort overrides** it and
 suspends drag (the host simply withholds the config; `useDataViewSections`'s
 `manualRank ⇒ sort: []` rule is untouched); **clearing the sort restores** it.
 Consequently the **Sort pill stays visible** in manual mode — it must stay
-reachable to clear the sort.
+reachable to clear the sort. It is also the *only* remaining thing that suspends
+drag, so the sort popover says so in a muted footer line whenever an order exists
+and a sort is shadowing it (`manualOrderOverridden`) — the cause is never silent.
 
 When a config is active for the displayed view:
 
@@ -285,9 +292,13 @@ When a config is active for the displayed view:
 - rows render with rank-reorder drag affordances via the **`rank-reorder`**
   primitive (`RankReorderProvider` + `useRankReorderItem`), the same DnD machinery
   the tree's sibling zones use — one reorder model, not two;
-- reordering is **within a section**; a cross-section drag reports the destination
-  section via `onMove`'s `dest.groupKey` (the consumer maps the new group to its
-  own field mutation — the primitive carries no field/status knowledge);
+- reordering is **within a section** (`onMove`). A cross-section drop needs the
+  group-by field written, which only the consumer can do, so it is a separate
+  capability expressed by **handler presence**: with `onReseat` the drop is
+  allowed and reported anchor-only (`{ groupKey, targetId, zone }`); without it
+  the other sections' rows disable their drop zones for the duration of the drag,
+  so the refusal is **visible** rather than a drop-time no-op (see
+  `rank-reorder`'s CLAUDE.md);
 - `list` and `table` **window *and* drag**. `rank-reorder`'s shell re-measures
   droppables every frame (`measuringAlways`), and `virtual-rows` pins the drag
   source through `keepMounted`, so an in-flight drag survives its source row
@@ -345,9 +356,16 @@ const rowOrderEnabled =
   activeSupportsManualOrder &&   // list / table only — gallery/tree have no flat rank axis
   manualOrder == null &&         // a consumer's domain order wins
   props.dataSource == null &&    // server-paginated ⇒ the client cannot own the order
-  aggregate == null &&           // an aggregate representative's rank cannot stand for its members
-  !activeState.groupBy;          // a cross-group drop would need a field write the primitive cannot do
+  aggregate == null;             // an aggregate representative's rank cannot stand for its members
 ```
+
+**Group-by is deliberately absent too.** It used to be a clause, which is what
+made drag silently stop working under the Pages sidebar's default `groupBy`.
+Within-section reordering is well-defined — the contributed order covers the
+whole *unpartitioned* set (`CollectRowOrder` feeds it filter-applied,
+search-excluded rows), so a drop anchored on a same-section neighbour resolves
+globally — and the one unsupported case, a drop into another section, is refused
+per-drop by the view (above), not by suspending the whole order.
 
 **The sort test is deliberately absent here.** It lives in `manualOrderActive`
 (`cfg != null && activeSupportsManualOrder && activeState.sort.length === 0`)

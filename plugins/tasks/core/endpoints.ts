@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { dateString } from "@plugins/infra/plugins/endpoints/core";
 import {
@@ -30,15 +29,32 @@ export const CreateTaskBodySchema = z.object({
 });
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;
 
+// No `rank`: a task's position is only ever set through `moveTask` below, which
+// carries positional intent. `folderId` stays here for a plain re-file that
+// makes no positional claim (the task appends at the end of its new folder).
 export const UpdateTaskBodySchema = z.object({
   title: z.string().optional(),
   description: z.string().nullable().optional(),
   drop: z.boolean().optional(),
   hold: z.boolean().optional(),
   folderId: z.string().nullable().optional(),
-  rank: RankSchema.optional(),
 });
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
+
+/**
+ * Positional intent, never a rank (see `CreateTaskBodySchema.afterId`). The
+ * task lands among `folderId`'s children, immediately `zone` of `targetId`.
+ *
+ * `targetId: null` addresses the sibling-list boundary instead of a neighbour:
+ * `"after"` appends at the end of the folder, `"before"` prepends at the start.
+ * That is what a tree "drop onto this row as a child" gesture means.
+ */
+export const MoveTaskBodySchema = z.object({
+  folderId: z.string().nullable(),
+  targetId: z.string().nullable(),
+  zone: z.enum(["before", "after"]),
+});
+export type MoveTaskBody = z.infer<typeof MoveTaskBodySchema>;
 
 export const InsertBetweenBodySchema = z.object({
   sourceTaskId: z.string(),
@@ -120,6 +136,15 @@ export const updateTask = defineEndpoint({
   route: "PATCH /api/tasks/:id",
   body: UpdateTaskBodySchema,
   response: TaskResponseSchema,
+});
+
+// Reposition a task in the FOLDER tree (the display hierarchy). The rank is
+// minted server-side against the complete `folderId` sibling set, inside the
+// write's own transaction — the tree that emits this drop only ever holds a
+// projection. Returns nothing: the tasks live resource pushes the new order.
+export const moveTask = defineEndpoint({
+  route: "POST /api/tasks/:id/move",
+  body: MoveTaskBodySchema,
 });
 
 export const setTaskAutoStart = defineEndpoint({

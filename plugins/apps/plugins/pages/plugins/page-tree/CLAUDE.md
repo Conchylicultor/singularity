@@ -107,6 +107,7 @@ is no channel through which it could. See
     - `pagesTreeRoute`
 - E2e:
   - Uses:
+    - `framework/tooling/e2e-harness.arg`
     - `framework/tooling/e2e-harness.boot`
     - `framework/tooling/e2e-harness.pathUrl`
     - `framework/tooling/e2e-harness.report`

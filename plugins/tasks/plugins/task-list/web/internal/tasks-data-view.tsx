@@ -4,7 +4,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { FieldDef, HierarchyConfig } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { createTask } from "@plugins/tasks/core";
+import { createTask, moveTask } from "@plugins/tasks/core";
 import type { TaskListItem, TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
 import { STATUS_META, StatusIcon, StatusBadge } from "@plugins/tasks/plugins/task-status/web";
@@ -66,8 +66,21 @@ export const taskFields: FieldDef<TaskListItem>[] = [
 export const taskHierarchy: HierarchyConfig<TaskListItem> = {
   getParentId: (t) => t.folderId,
   getRank: (t) => t.rank,
+  // Positional intent only. These rows are a projection of the tasks table
+  // (filtered, searched, grouped by the view), so the rank is `moveTask`'s to
+  // mint against the complete `folderId` sibling set.
   onMove: (id, dest) =>
-    patchTask(id, { folderId: dest.parentId, rank: dest.rank }),
+    fetchEndpoint(
+      moveTask,
+      { id },
+      {
+        body: {
+          folderId: dest.parentId,
+          targetId: dest.targetId,
+          zone: dest.zone,
+        },
+      },
+    ),
   onCreate: createTaskRow,
 };
 

@@ -38,11 +38,13 @@ export const realNodeId = (id: string) => {
  * within its own sibling group, so an alias carrying its row's own rank imports
  * a key from a foreign group: with per-group ranks minted `a0, a1, …`, an alias
  * of any parent's first child lands on `a0` and collides with the host parent's
- * own first child. `computeDrop` → `computeFlatReorder` rank-SORTS a parent's
- * children to find a drop's neighbours, so a duplicate makes
- * `Rank.between(a0, a0)` throw → `computeDrop` returns null → the drag is
- * silently swallowed — for drops on the REAL rows beside the alias too, well
- * before any alias-degrading `onMove` wrapper can see it.
+ * own first child, putting rank order at odds with paint order.
+ *
+ * It used to be worse: the drop path rank-SORTED a parent's children to find a
+ * drop's neighbours, so the duplicate made `Rank.between(a0, a0)` throw and
+ * silently swallowed the drag — for drops on the REAL rows beside the alias
+ * too. The tree's drop contract is anchor-only now (`resolveDropParent`), so
+ * what minting still protects is the display invariant.
  */
 function mintAliasRanks(
   maxRealRank: Rank | null,

@@ -90,6 +90,44 @@ export function subtreeIds<T extends { id: string; parentId: string | null }>(
   return out;
 }
 
+/**
+ * The destination PARENT of a drop — the rank-free half of `computeDrop`, and
+ * the one every projection uses. `child` nests under the target; `before` /
+ * `after` land beside it, so the parent is the target's own.
+ *
+ * `null` aborts the drop: the target is not among `rows` (a stale drop id), or
+ * it IS the dragged row (a row has no position relative to itself).
+ *
+ * No rank, deliberately. `(parentId, targetId, zone)` is positional INTENT the
+ * server resolves against the COMPLETE sibling set (`rankAdjacentTo`); a rank
+ * minted here would be arithmetic over whatever subset the client happens to
+ * hold — a filtered, searched, grouped or type-scoped projection of a shared
+ * ordering space — and collides with the siblings it cannot see.
+ *
+ * Argument order mirrors `computeDrop` so a call site swaps one name.
+ */
+export function resolveDropParent<T extends { id: string; parentId: string | null }>(
+  rows: readonly T[],
+  draggedId: string,
+  zone: DropZone,
+  targetId: string,
+): { parentId: string | null } | null {
+  if (targetId === draggedId) return null;
+  const target = rows.find((r) => r.id === targetId);
+  if (!target) return null;
+  return { parentId: zone === "child" ? target.id : target.parentId };
+}
+
+/**
+ * `resolveDropParent` PLUS the rank the drop would land on.
+ *
+ * **Complete-set holders only.** Rank arithmetic is valid only over the whole
+ * sibling group, so this is legal exactly where the caller holds the unfiltered
+ * forest — today the page editor's block store, which predicts the rank for its
+ * optimistic overlay + undo record while still sending positional intent over
+ * the wire. Every *projection* (the tree primitive, the data-view tree adapter,
+ * every list consumer) uses `resolveDropParent` and lets the server mint.
+ */
 export function computeDrop<T extends Node>(
   rows: readonly T[],
   draggedId: string,

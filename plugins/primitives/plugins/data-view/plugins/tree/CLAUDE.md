@@ -12,9 +12,9 @@ order the tree ships — and honors `ViewState.sort` when a field sort is picked
 
 A thin **adapter**, not a reimplementation. It projects the data-view rows plus
 the data source's `HierarchyConfig` onto the `tree` primitive's `TreeList`,
-reusing `buildTree`, subtree-preserving `filterTree` search, DnD `computeDrop`,
-and the `RowChrome` / `RenameInput` row primitives. The `tree` primitive stays
-the lower-level building block.
+reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
+`resolveDropParent`, and the `RowChrome` / `RenameInput` row primitives. The
+`tree` primitive stays the lower-level building block.
 
 ## How it works
 
@@ -82,11 +82,15 @@ the lower-level building block.
   per-list chrome renders exactly ONCE for the whole view: expand-all /
   `toolbarStart` are hoisted above the sections and the root Add footer below
   them, while the (hidden-input) search stays threaded into each per-section
-  list. While grouped, **DnD reorder is suspended** like under sort: a
-  per-section `TreeList` sees only its own section's roots, so a within-section
-  root reorder could mint a rank colliding with a hidden root of another
-  section (the documented filtered-projection hazard); `onCreate` stays
-  enabled. An unset / unresolvable / value-less group field renders the exact
+  list. **DnD reorder keeps working while grouped** (unlike under sort): the
+  drop contract carries no rank, only an anchor the server resolves against the
+  complete sibling set, so a section seeing just its own roots cannot mint a
+  colliding key. Two facts make that correct rather than merely harmless — a
+  cross-section drag is unrepresentable (each `TreeList` mounts its own
+  `RankReorderDndContext`), and `bucketRowsByRootSection` keeps every
+  descendant in its ROOT's section, so a subtree is never split and the
+  per-section `isDescendant` guard still sees the whole chain. An unset /
+  unresolvable / value-less group field renders the exact
   ungrouped path. The pure pieces (orphan-rule roots, field adaptation onto the
   projected wrapper, children-follow-their-root bucketing) live in
   `web/internal/group-rows.ts`, bun-tested alongside `project-rows`.
@@ -121,16 +125,15 @@ the lower-level building block.
   They must not carry the referenced row's own rank: a rank is only meaningful
   within its own sibling group, so importing one from a foreign group collides —
   with per-group ranks (`a0, a1, …`) an alias of any parent's first child lands
-  on `a0`, exactly where the host parent's own first child sits. That is not
-  cosmetic: `computeDrop` → `computeFlatReorder` rank-SORTS a parent's children
-  to find a drop's neighbours, so a duplicate makes `Rank.between(a0, a0)` throw
-  → `computeDrop` returns `null` → **the drag is silently swallowed, including
-  drops on the REAL rows beside the alias** (the abort happens inside
-  `computeDrop`, before the alias-degrading `onMove` wrapper is ever called).
-- A consumer using aliases must still be **endpoint-based** (`targetId`/`zone`),
-  like every filtered-projection tree. The minted ranks are projection-local:
-  an alias occupies rank space that does not exist in storage, so a `dest.rank`
-  computed beside one is not a valid key in the real sibling group.
+  on `a0`, exactly where the host parent's own first child sits, and rank order
+  then contradicts paint order. (It used to be worse: the drop path rank-SORTED
+  the children, so the duplicate made `Rank.between(a0, a0)` throw and silently
+  swallowed drags on the REAL rows beside the alias. The drop path is
+  anchor-only now, so what minting protects is the display invariant.)
+- Alias ranks are projection-local — an alias occupies rank space that does not
+  exist in storage — which is one more reason nothing client-side may mint a
+  key from them. The `HierarchyConfig.onMove` contract carries no rank, so this
+  is enforced by the type rather than by consumer discipline.
 
 ## Options
 

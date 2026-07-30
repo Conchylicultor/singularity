@@ -1,7 +1,7 @@
 /**
  * Tests for the tree core — the pure DnD/hierarchy utilities every list plugin
  * leans on (`buildTree`, `isDescendant`, `selectionRoots`, `subtreeIds`,
- * `computeDrop`). Run with
+ * `resolveDropParent`, `computeDrop`). Run with
  * `bun test plugins/primitives/plugins/tree/core/internal/tree.test.ts`.
  *
  * The load-bearing invariant: a DnD move must never create a cycle. Every
@@ -23,6 +23,7 @@ import {
   buildTree,
   computeDrop,
   isDescendant,
+  resolveDropParent,
   selectionRoots,
   subtreeIds,
   type DropZone,
@@ -337,6 +338,88 @@ describe("selectionRoots + subtreeIds — property", () => {
         expect(covered).toBe(true);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveDropParent — the anchor-only contract every PROJECTION uses
+// ---------------------------------------------------------------------------
+
+describe("resolveDropParent — scenarios", () => {
+  const mk = (id: string, parentId: string | null, rankStr: string): Row => ({
+    id,
+    parentId,
+    rank: Rank.from(rankStr),
+  });
+
+  test("unknown target → null (a stale drop id aborts the drag)", () => {
+    const rows = [mk("a", null, "a0")];
+    expect(resolveDropParent(rows, "a", "after", "nope")).toBeNull();
+  });
+
+  test("dropping a row onto itself → null", () => {
+    const rows = [mk("a", null, "a0"), mk("b", "a", "a0")];
+    expect(resolveDropParent(rows, "b", "before", "b")).toBeNull();
+    expect(resolveDropParent(rows, "b", "child", "b")).toBeNull();
+  });
+
+  test("'child' nests under the target", () => {
+    const rows = [mk("a", null, "a0"), mk("b", null, "a1")];
+    expect(resolveDropParent(rows, "b", "child", "a")).toEqual({ parentId: "a" });
+  });
+
+  test("'before'/'after' adopt the TARGET's parent, not the dragged row's", () => {
+    const rows = [
+      mk("a", null, "a0"),
+      mk("child", "a", "a0"),
+      mk("root", null, "a1"),
+    ];
+    expect(resolveDropParent(rows, "root", "before", "child")).toEqual({
+      parentId: "a",
+    });
+    expect(resolveDropParent(rows, "child", "after", "root")).toEqual({
+      parentId: null,
+    });
+  });
+
+  test("agrees with computeDrop's parent on every complete-set drop", () => {
+    // The two resolve the SAME destination parent; `computeDrop` merely also
+    // predicts a rank. Fuzzed so the pair cannot silently diverge.
+    const zones: DropZone[] = ["before", "after", "child"];
+    let compared = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 5 + Math.floor(rand() * 15));
+      for (let step = 0; step < 20; step++) {
+        const dragged = rows[Math.floor(rand() * rows.length)]!;
+        const target = rows[Math.floor(rand() * rows.length)]!;
+        const zone = zones[Math.floor(rand() * zones.length)]!;
+        if (dragged.id === target.id) continue;
+        const full = computeDrop(rows, dragged.id, zone, target.id);
+        if (full === null) continue;
+        expect(resolveDropParent(rows, dragged.id, zone, target.id)).toEqual({
+          parentId: full.parentId,
+        });
+        compared++;
+      }
+    }
+    expect(compared).toBeGreaterThan(100);
+  });
+
+  test("resolves against a FILTERED projection exactly as against the full set", () => {
+    // The reason this function exists: a projection hides siblings, which makes
+    // a client-minted rank wrong — but the destination PARENT is unaffected, so
+    // the anchor a projection emits is the same one the full set would.
+    const full = [
+      mk("p", null, "a0"),
+      mk("visible1", "p", "a0"),
+      mk("hidden", "p", "a1"),
+      mk("visible2", "p", "a2"),
+    ];
+    const projection = full.filter((r) => r.id !== "hidden");
+    expect(resolveDropParent(projection, "visible2", "after", "visible1")).toEqual(
+      resolveDropParent(full, "visible2", "after", "visible1"),
+    );
   });
 });
 

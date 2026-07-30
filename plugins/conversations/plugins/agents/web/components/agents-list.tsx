@@ -24,7 +24,7 @@ import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
 import { SystemFolder } from "./system-folder";
-import { patchAgent } from "./patch-agent";
+import { moveAgentTo, patchAgent } from "./patch-agent";
 
 export { patchAgent } from "./patch-agent";
 
@@ -119,7 +119,9 @@ export function AgentsList({
         hierarchy={{
           getParentId: (a) => a.parentId,
           getRank: (a) => a.rank,
-          onMove: (id, dest) => patchAgent(id, dest),
+          // Positional intent only — the rows are a projection of the agents
+          // table, so `moveAgent` mints the rank against the complete sibling set.
+          onMove: (id, dest) => moveAgentTo(id, dest),
           onCreate: createAgentRow,
         }}
         selection={{ bulkActions: <DeleteSelectedAction /> }}

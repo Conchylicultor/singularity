@@ -23,7 +23,6 @@ import {
   type RowChromeMenuHelpers,
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -183,9 +182,9 @@ function DefaultRow<TRow>(props: {
 /**
  * Tree view: a thin adapter that projects the data-view rows + `HierarchyConfig`
  * onto the `tree` primitive's `TreeList`. No reimplementation — `buildTree`,
- * `filterTree` search, DnD `computeDrop`, and `RowChrome` all come from the tree
- * primitive; the primary label's inline edit reuses the shared cell-editor
- * capability via `EditableTreeLabel`.
+ * `filterTree` search, DnD `resolveDropParent`, and `RowChrome` all come from
+ * the tree primitive; the primary label's inline edit reuses the shared
+ * cell-editor capability via `EditableTreeLabel`.
  *
  * `rows`/`fields`/`options`/`hierarchy` arrive type-erased as `unknown`; this is
  * the documented re-cast boundary for the view child.
@@ -320,7 +319,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       rowsBySectionKey: new Map(sections.map((s, i) => [s.key, buckets[i]!])),
     };
   }, [sortedProjected, fields, groupBy]);
-  const groupActive = grouped !== null;
 
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {
@@ -375,7 +373,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       id: string,
       dest: {
         parentId: string | null;
-        rank: Rank;
         targetId: string | null;
         zone: "before" | "after";
       },
@@ -430,15 +427,22 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   if (!hierarchy) return null;
   if (sortedProjected.length === 0) return <>{props.emptyState}</>;
 
-  // A field sort overrides the manual (rank) order, so drag-to-reorder would set
-  // a rank with no visible effect — disable DnD while sorted (drop back to manual
-  // to reorder), mirroring Notion. Grouping suspends DnD the same way: a
-  // per-section TreeList sees only its own section's roots, so a within-section
-  // root reorder could mint a rank colliding with a hidden root of another
-  // section (the documented filtered-projection hazard). `onCreate` stays
-  // enabled in both cases.
-  const onMove =
-    sortActive || groupActive || !hierOnMove ? undefined : wrappedOnMove;
+  // A field sort overrides the manual (rank) order, so drag-to-reorder would
+  // move a row with no visible effect — disable DnD while sorted (drop back to
+  // manual to reorder), mirroring Notion. `onCreate` stays enabled.
+  //
+  // GROUPING does NOT suspend DnD. It used to, because a per-section TreeList
+  // sees only its own section's roots — but the drop contract carries no rank
+  // any more, only an anchor the server resolves against the complete sibling
+  // set, so a partial view of the roots cannot mint a colliding key. Two facts
+  // make the grouped path correct rather than merely harmless:
+  //   - a cross-section drag is UNREPRESENTABLE: `TreeList` mounts its own
+  //     `RankReorderDndContext`, so each section is a separate DnD context and
+  //     no droppable from another section is ever a candidate;
+  //   - `bucketRowsByRootSection` keeps every descendant in its ROOT's section,
+  //     so a subtree is never split and the per-section `isDescendant` cycle
+  //     guard still sees the whole chain it needs.
+  const onMove = sortActive || !hierOnMove ? undefined : wrappedOnMove;
 
   // `onMove`/`onCreate` are optional: omitting them yields a read-only tree —
   // TreeList drops the drag source and every Add affordance (no inert handlers).

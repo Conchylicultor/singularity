@@ -6,21 +6,31 @@ Use this plugin. `fractional-indexing` strings ("a0", "V0m", "Zz9…") can alway
 insert between any two neighbors, sort correctly under the `rank_text` PostgreSQL
 domain (C collation = byte order), and never need a full-list rewrite.
 
-## When to use this vs tree's `computeDrop`
+## Which minter
 
-- **`computeDrop` (`@plugins/primitives/plugins/tree/shared`)** — client-side DnD:
-  computes the rank for an item *moved between two existing neighbors*. Call it in
-  `onDragEnd` / `onDrop` handlers.
+- **`computeDrop` (`@plugins/primitives/plugins/tree/core`)** — a DnD rank
+  predicted CLIENT-side. Legal only for a holder of the COMPLETE sibling set (in
+  practice: the page editor's own forest, for its optimistic overlay). Every
+  projection uses the rank-free `resolveDropParent` and sends the anchor.
 
 - **`nextRankIn` / `nextRankUnder` (this plugin, server barrel)** — server-side
   *inserts*: generates the rank for a new item appended at the end of a list.
   Both accept an optional `executor` (a `tx` from `db.transaction`) so they
   compose safely inside transactions.
 
-- **`rankAfterSibling` (this plugin, server barrel)** — server-side *positional*
-  inserts: the rank that places a new row immediately after an anchor row among
-  its true siblings (`afterId === null` prepends at the start). The positional
-  twin of `nextRankUnder`, and likewise `executor`-composable.
+- **`rankAdjacentTo` (this plugin, server barrel)** — THE server-side resolver for
+  a **DnD move**: the wire carries positional intent `(targetId, zone)` — the
+  shape the tree/data-view drop contract emits — and this mints the rank against
+  the caller-loaded COMPLETE sibling set. `targetId === null` addresses the list
+  boundary (`"after"` appends, `"before"` prepends); `excludeIds` keeps the moved
+  row from bounding its own insertion. Pure, so call it inside the write's own
+  transaction. A tied neighbourhood does not abort — see its doc comment.
+
+- **`rankAfterSibling` (this plugin, server barrel)** — the `afterId`-shaped
+  sibling of `rankAdjacentTo`, for server-side *positional inserts*: the rank that
+  places a new row immediately after an anchor row among its true siblings
+  (`afterId === null` prepends at the start). Reads its own neighbourhood from the
+  DB rather than a supplied set; `executor`-composable like `nextRankUnder`.
 
   **Rank arithmetic is only valid over the COMPLETE sibling set**, which is why
   this is a server API. A client usually holds a *filtered projection* of a
@@ -39,6 +49,12 @@ import { nextRankIn } from "@plugins/primitives/plugins/rank/server";
 
 // Server — inserting under a parent (parentId, groupId, etc.)
 import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
+
+// Server — resolving a DnD move's (targetId, zone) against the loaded siblings
+import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
+// rankAdjacentTo(rows, parentId, targetId, zone, excludeIds)
+// rows: readonly { id, parentId, rank: Rank | string }[] — the COMPLETE set
+// targetId === null → "after" appends, "before" prepends
 
 // Server — inserting immediately after an anchor sibling (positional intent)
 import { rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
@@ -72,13 +88,16 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 
 ## Plugin reference
 
-- Description: Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
+- Description: Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
 - Server:
   - Uses: `database.db`
-  - Exports (types): `RankExecutor`
+  - Exports (types):
+    - `RankAdjacentRow`
+    - `RankExecutor`
   - Exports (values):
     - `nextRankIn`
     - `nextRankUnder`
+    - `rankAdjacentTo`
     - `rankAfterSibling`
     - `rankText`
 - Cross-plugin:

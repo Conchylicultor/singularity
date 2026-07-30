@@ -1529,6 +1529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pagesTreeRoute`
           - E2e:
             - Uses:
+              - `framework/tooling/e2e-harness.arg`
               - `framework/tooling/e2e-harness.boot`
               - `framework/tooling/e2e-harness.pathUrl`
               - `framework/tooling/e2e-harness.report`
@@ -7079,6 +7080,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource.rel`
           - `primitives/icon-picker.resolveIconSvgNodesJson`
           - `primitives/rank.nextRankUnder`
+          - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
           - `tasks/task-category.setTaskCategory`
           - `tasks/task-category.TaskCategory`
@@ -7115,6 +7117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/agents`
           - `GET /api/agents/:id`
           - `PATCH /api/agents/:id`
+          - `POST /api/agents/:id/move`
           - `DELETE /api/agents/:id`
           - `POST /api/agents/:id/launch`
           - `GET /api/agents/:id/launches`
@@ -7131,6 +7134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateAgentBody`
           - `LaunchAgentBody`
           - `LaunchAgentResponse`
+          - `MoveAgentBody`
           - `UpdateAgentBody`
         - Exports (values):
           - `AgentLaunchSchema`
@@ -7145,6 +7149,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LaunchAgentResponseSchema`
           - `listAgentLaunches`
           - `listAgents`
+          - `moveAgent`
+          - `MoveAgentBodySchema`
           - `updateAgent`
           - `UpdateAgentBodySchema`
     - **`all-conversations`** — All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
@@ -16055,6 +16061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/trash.defineTrashSource`
           - `infra/trash.recordTrashEntry`
           - `primitives/rank.nextRankUnder`
+          - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
         - DB schema:
           - `plugins/page/plugins/editor/server/internal/tables-events.ts`
@@ -22972,13 +22979,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/prompt-editor.PromptEditorSlots`
-    - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
+    - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Server:
         - Uses: `database.db`
-        - Exports (types): `RankExecutor`
+        - Exports (types):
+          - `RankAdjacentRow`
+          - `RankExecutor`
         - Exports (values):
           - `nextRankIn`
           - `nextRankUnder`
+          - `rankAdjacentTo`
           - `rankAfterSibling`
           - `rankText`
       - Cross-plugin:
@@ -23653,7 +23663,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/sync-status`
           - `shell/global-action-bar`
           - `ui/segmented-progress-bar/dots`
-    - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
+    - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
       - Web:
         - Slots: `Tree.Disclosure` ← `ui.tree-disclosure`
         - Uses:
@@ -23720,6 +23730,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `buildTree`
           - `computeDrop`
           - `isDescendant`
+          - `resolveDropParent`
           - `selectionRoots`
           - `subtreeIds`
       - Cross-plugin:
@@ -25213,6 +25224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.GIT`
       - `infra/warmup.defineWarmup`
       - `infra/worktree.ensureMainWorktreeRoot`
+      - `primitives/rank.rankAdjacentTo`
       - `primitives/rank.rankAfterSibling`
       - `tasks/auto-start.setTaskAutoStart`
       - `tasks/task-category.setTaskCategory`
@@ -25230,6 +25242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.getTaskDependencyIds`
       - `tasks/tasks-core.hasBlockingDep`
       - `tasks/tasks-core.insertPush`
+      - `tasks/tasks-core.isDescendant`
       - `tasks/tasks-core.listAttempts`
       - `tasks/tasks-core.listDependentIds`
       - `tasks/tasks-core.listPushShasIn`
@@ -25250,6 +25263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `POST /api/tasks/insert-between`
       - `GET /api/tasks/:id`
       - `PATCH /api/tasks/:id`
+      - `POST /api/tasks/:id/move`
       - `POST /api/tasks/:id/auto-start`
       - `DELETE /api/tasks/:id/auto-start`
       - `POST /api/tasks/:id/dependencies`
@@ -25272,12 +25286,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/model-provider.ConversationModelSchema`
       - `infra/endpoints.dateString`
       - `infra/endpoints.defineEndpoint`
-      - `primitives/rank.RankSchema`
     - Exports (types):
       - `AddDependencyBody`
       - `CreateTaskBody`
       - `DepsMoveBody`
       - `InsertBetweenBody`
+      - `MoveTaskBody`
       - `SetAutoStartBody`
       - `TaskChainCard`
       - `TaskChainLaunch`
@@ -25300,6 +25314,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `InsertBetweenBodySchema`
       - `insertTaskBetween`
       - `listTasks`
+      - `moveTask`
+      - `MoveTaskBodySchema`
       - `moveTaskInDepsTree`
       - `removeTaskDependency`
       - `SetAutoStartBodySchema`

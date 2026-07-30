@@ -157,7 +157,15 @@ Conversations sharing the same `taskId` form a **group**. All members share the 
 - **Section assignment** is group-level: if any member is `working`/`starting`, the entire group goes to Working.
 - **Shared rank**: when any group member is reordered, `reseatGroupMembers()` sets all siblings to the same new rank. New conversations joining a group receive the group's existing rank.
 
-### The pin
+### Why the queue keeps its own `rankAdjacentTo`
+
+Not the shared `rank/server` one, deliberately. That resolver's contract is "the
+caller supplies the COMPLETE sibling set"; the queue mints against a
+**status-filtered projection** on purpose — a `gone` conversation's rank row is a
+tombstone awaiting the nightly sweep and must not bound a live drop. It is also a
+DB reader (two indexed `LIMIT 1` seeks inside the reorder transaction, never
+materializing the deck) over one flat space with no parent dimension and no
+exclusion set.
 
 A single `pinnedConversationId` in `queue_state` tracks the user's current focus. It renders as a sticky, elevated row at the top of the Queue section.
 

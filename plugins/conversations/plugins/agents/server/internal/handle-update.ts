@@ -7,6 +7,7 @@ import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";
 import { agents } from "./views";
+import { isAgentDescendant } from "./hierarchy";
 
 export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const id = params.id;
@@ -31,13 +32,10 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     if (body.parentId === id) {
       throw new HttpError(400, "Cannot parent an agent to itself");
     }
-    if (body.parentId !== null && (await isDescendant(id, body.parentId))) {
+    if (body.parentId !== null && (await isAgentDescendant(id, body.parentId))) {
       throw new HttpError(400, "Cannot parent an agent under its own descendant");
     }
     patch.parentId = body.parentId;
-  }
-  if (body.rank != null) {
-    patch.rank = body.rank.toJSON();
   }
   const [updated] = await db
     .update(_agents)
@@ -65,19 +63,3 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   if (!row) throw new HttpError(404, "Not found after update");
   return AgentSchema.parse(row);
 });
-
-async function isDescendant(ancestorId: string, candidateId: string): Promise<boolean> {
-  const all = await db
-    .select({ id: _agents.id, parentId: _agents.parentId })
-    .from(_agents);
-  const byId = new Map(all.map((r) => [r.id, r.parentId] as const));
-  let cur: string | null = candidateId;
-  const seen = new Set<string>();
-  while (cur) {
-    if (cur === ancestorId) return true;
-    if (seen.has(cur)) return false;
-    seen.add(cur);
-    cur = byId.get(cur) ?? null;
-  }
-  return false;
-}
