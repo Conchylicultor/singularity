@@ -97,17 +97,13 @@ export function deriveMounts(
   return mounts;
 }
 
-/** The anchor ids of the TRANSLATED (page-link) mounts — `anchor ≠ pageId`. */
-export function translatedAnchorIds(mounts: Mounts): Set<string> {
-  const anchors = new Set<string>();
-  for (const [pageId, anchorId] of mounts) {
-    if (anchorId !== pageId) anchors.add(anchorId);
-  }
-  return anchors;
-}
-
-/** `mountedPageId` keyed by its anchor, for the translated mounts only. */
-function pageByAnchor(mounts: Mounts): Map<string, string> {
+/**
+ * `mountedPageId` keyed by its anchor, for the TRANSLATED (page-link) mounts
+ * only — `anchor ≠ pageId`. The anchor row stands in for the mounted page's
+ * shell in union space, so this map is what turns a union-space parent back
+ * into the real one.
+ */
+export function pageByAnchor(mounts: Mounts): Map<string, string> {
   const byAnchor = new Map<string, string>();
   for (const [pageId, anchorId] of mounts) {
     if (anchorId !== pageId) byAnchor.set(anchorId, pageId);
@@ -272,13 +268,14 @@ export function resolveOpOwnerPage(
 }
 
 /**
- * Split a patch into one per-page patch per owning page. Upserts carry their
+ * Split a patch into one per-page patch per owning page. Creates carry their
  * own denormalized `pageId` (untouched by union remapping), so they route even
- * when the page's feed is unmounted (the detached-persist path). Delete ids
- * carry nothing, so they resolve through the caller's `ownerOf` — the union
- * first, falling back to the composite's cumulative row→page index for rows
- * that left the union (undo after collapse). An unresolvable id throws.
- * `updateOnly` is preserved onto every group.
+ * when the page's feed is unmounted (the detached-persist path). Updates and
+ * delete ids carry no page — a field-scoped update names only what it changes,
+ * and `pageId` is never one of those fields — so both resolve through the
+ * caller's `ownerOf`: the union first, falling back to the composite's
+ * cumulative row→page index for rows that left the union (undo after collapse).
+ * An unresolvable id throws.
  */
 export function groupPatchByOwnerPage(
   patch: BlockPatch,
@@ -288,76 +285,90 @@ export function groupPatchByOwnerPage(
   const groupFor = (owner: string): BlockPatch => {
     let group = groups.get(owner);
     if (!group) {
-      group = patch.updateOnly
-        ? { upserts: [], deleteIds: [], updateOnly: true }
-        : { upserts: [], deleteIds: [] };
+      group = { creates: [], updates: [], deleteIds: [] };
       groups.set(owner, group);
     }
     return group;
   };
-  for (const upsert of patch.upserts) {
-    if (upsert.pageId === null) {
-      throw new Error(`Patch upsert ${upsert.id} has no owning page`);
-    }
-    groupFor(upsert.pageId).upserts.push(upsert);
-  }
-  for (const id of patch.deleteIds) {
+  const resolve = (id: string, what: string): string => {
     const owner = ownerOf(id);
     if (owner === null) {
-      throw new Error(`Cannot resolve the owning page of deleted block ${id}`);
+      throw new Error(`Cannot resolve the owning page of ${what} ${id}`);
     }
-    groupFor(owner).deleteIds.push(id);
+    return owner;
+  };
+  for (const create of patch.creates) {
+    if (create.pageId === null) {
+      throw new Error(`Patch create ${create.id} has no owning page`);
+    }
+    groupFor(create.pageId).creates.push(create);
+  }
+  for (const update of patch.updates) {
+    groupFor(resolve(update.id, "updated block")).updates.push(update);
+  }
+  for (const id of patch.deleteIds) {
+    groupFor(resolve(id, "deleted block")).deleteIds.push(id);
   }
   return groups;
 }
 
 /**
- * Translate a patch's upserts from union space back to store space. A row
- * whose recorded `parentId` is a page-link anchor is a top-level row of its
- * own page, whose real parent IS the page row — and a page row's id equals the
- * pageId, so the row itself carries the answer. `anchorIds` is the cumulative
- * set of translated anchors ever mounted (not just the current mounts): undo
- * patches recorded while a link was expanded replay after it collapsed.
- * Identity (same reference) when nothing rewrites.
+ * Translate a patch from union space back to store space. A row whose recorded
+ * `parentId` is a page-link anchor is a top-level row of its own page, whose
+ * real parent is that page's row — which `anchorPages` resolves directly, for
+ * creates (which carry a whole row) and for updates (which carry only the
+ * fields they change, `pageId` never among them) alike. `anchorPages` is the
+ * CUMULATIVE anchor→page map of every translated mount seen (not just the
+ * current mounts): undo patches recorded while a link was expanded replay after
+ * it collapsed. Identity (same reference) when nothing rewrites.
  */
 export function translatePatchForStore(
   patch: BlockPatch,
-  anchorIds: ReadonlySet<string>,
+  anchorPages: ReadonlyMap<string, string>,
 ): BlockPatch {
-  if (anchorIds.size === 0) return patch;
+  if (anchorPages.size === 0) return patch;
   let changed = false;
-  const upserts: BlockPatch["upserts"] = [];
-  for (const upsert of patch.upserts) {
-    if (upsert.parentId === null || !anchorIds.has(upsert.parentId)) {
-      upserts.push(upsert);
+  const creates: BlockPatch["creates"] = [];
+  for (const create of patch.creates) {
+    const real = create.parentId === null ? undefined : anchorPages.get(create.parentId);
+    if (real === undefined) {
+      creates.push(create);
       continue;
     }
-    if (upsert.pageId === null) {
-      throw new Error(`Patch upsert ${upsert.id} has no owning page`);
+    changed = true;
+    creates.push({ ...create, parentId: real });
+  }
+  const updates: BlockPatch["updates"] = [];
+  for (const update of patch.updates) {
+    const parentId = update.changes.parentId;
+    const real = parentId == null ? undefined : anchorPages.get(parentId);
+    if (real === undefined) {
+      updates.push(update);
+      continue;
     }
     changed = true;
-    upserts.push({ ...upsert, parentId: upsert.pageId });
+    updates.push({ ...update, changes: { ...update.changes, parentId: real } });
   }
-  return changed ? { ...patch, upserts } : patch;
+  return changed ? { ...patch, creates, updates } : patch;
 }
 
 /**
  * Translate an overlay op from union space to the owning store's space before
  * dispatch: parent anchors on `insert`/`move` ops and on `reparent` effect
- * predictions map back to the real mounted page id; patch upserts translate
+ * predictions map back to the real mounted page id; patch rows translate
  * via {@link translatePatchForStore}. Identity — the same reference — when the
  * op references no translated anchor (every sub-page-only union).
  */
 export function translateOpForStore(
   v: BlockOverlayOp,
   mounts: Mounts,
-  patchAnchorIds?: ReadonlySet<string>,
+  patchAnchorPages?: ReadonlyMap<string, string>,
 ): BlockOverlayOp {
+  const byAnchor = pageByAnchor(mounts);
   if (v.tag === "patch") {
-    const patch = translatePatchForStore(v.patch, patchAnchorIds ?? translatedAnchorIds(mounts));
+    const patch = translatePatchForStore(v.patch, patchAnchorPages ?? byAnchor);
     return patch === v.patch ? v : { tag: "patch", patch };
   }
-  const byAnchor = pageByAnchor(mounts);
   if (byAnchor.size === 0) return v;
   let op = v.op;
   if (

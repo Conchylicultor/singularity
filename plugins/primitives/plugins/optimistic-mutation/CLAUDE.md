@@ -154,7 +154,7 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   - Before the first push, `state.data` is `resource.initialData` (a placeholder,
     `dataUpdatedAt === 0`). The resolve edge passes `undefined` rather than the
     placeholder, because `isConfirmedBy` would accept it (an empty base vacuously
-    "reflects" a remove, and `isPatchReflected` treats an update-only upsert onto
+    "reflects" a remove, and `isPatchReflected` treats an update naming
     a missing row as absorbed), dropping the op against data never sent.
 
   **Tokenless-coarse soundness.** `gen > dispatchGen` proves *a* push landed

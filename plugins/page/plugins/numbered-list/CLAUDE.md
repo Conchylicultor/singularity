@@ -7,9 +7,7 @@
 - Description: Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "numbered-list" → `BlockTextRenderer`
-  - Uses:
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Exports (values): `numberedListBlock`
 - Server:
   - Contributes: `page.block-data` "numbered-list"

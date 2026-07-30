@@ -5,12 +5,24 @@ The `prompt` block type — the `/prompt` block **is** the prompt.
 ## Why a text-bearing block, not a popover
 
 `defineBlock` + `textBlockSchema({})` already give a prompt everything it needs:
-the shared `BlockTextEditor` (Lexical, marks, inline `[[page]]` / `@date` tokens,
+the shared text editor (Lexical, marks, inline `[[page]]` / `@date` tokens,
 per-block CRDT text, the unified undo stack) and declarative Enter/Backspace
-knobs. So the block's payload is plain block text with no extra fields, and the
-renderer adds exactly one row of chrome — a `LaunchControl` and the launched
-conversations. Structurally the `callout` block (a padded box + `BlockTextEditor`
-+ a `marker`, `inset={false}`, matching `gutterFirstLineCenter`).
+knobs. So the block's payload is plain block text with no extra fields.
+
+It owns **no dispatch component**: it declares `BlockChrome` (a raised box, and
+two regions — `start` = the glyph, `footer` = the action row), which the editor's
+shared `TextBlockLayout` paints around the same editable line every text block
+gets. A region is a SIBLING of that line and receives no `children`, so it
+structurally cannot wrap it — which is what makes `/prompt` a re-style rather
+than a remount of the Lexical editor holding the caret. `padding` matches
+`gutterFirstLineCenter` (`inset: false`, since the box supplies the left inset);
+the footer pads ITSELF, not the box, so the box's first line stays where the
+handle says it is.
+
+`PromptFooter` opens with `if (!editor) return null` — see the two reasons in
+that file: on a read-only surface its content would be a lie about the snapshot,
+and its hooks (`useOpenPane`, `conversationPane.useRouteEntries`) do not exist
+there, so it would crash rather than degrade. The marker DOES render read-only.
 
 The payoff is that the prompt already lives in the document tree: it is
 editable, formattable, versioned and searchable like any other block, and the
@@ -41,13 +53,11 @@ can never drift apart.
 
 - Description: Prompt block type: block text plus a launch control that turns it into an agent run, and chips for the conversations it launched. Prompt block type: registers its `data` schema (plain block text) at the server write boundary.
 - Web:
-  - Contributes: `Editor.Block` "prompt" → `PromptBlock`
+  - Contributes: `Editor.Block` "prompt" → `BlockTextRenderer`
   - Uses:
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.conversationPane`
     - `page/editor.BLOCK_INSET`
-    - `page/editor.BlockRendererProps`
-    - `page/editor.BlockTextEditor`
     - `page/editor.Editor`
     - `page/prompt/link.createPromptTask`
     - `page/prompt/link.useBlockPromptTasks`
@@ -55,7 +65,6 @@ can never drift apart.
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Inset`
-    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.ControlSizeProvider`

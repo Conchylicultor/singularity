@@ -1,15 +1,34 @@
-import type { Block, RichText } from "../core";
+import type { ComponentType } from "react";
+import type { InsetSides } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { SurfaceLevel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Block, RichText, RowData } from "../core";
 import type { CaretContext } from "./internal/caret-geometry";
 
+/**
+ * Row data minus the projection-owned `text` key — what a row-writing API
+ * accepts. Declared in `core/row-data.ts` (block creation needs it too) and
+ * re-exported here, next to the APIs it types.
+ */
+export type { RowData };
+
 export interface BlockEditorAPI {
-  update(data: unknown): void;
+  /**
+   * Replace this block's non-text `data`. Since the blob is REPLACED, a control
+   * changing one field restates the others — spread `rowDataOf(block.data)`, not
+   * `block.data`, so the row's `text` projection never rides along.
+   */
+  update(data: RowData): void;
   /** Toggle this block's expanded/collapsed state (children show/hide). */
   setExpanded(expanded: boolean): void;
   /**
-   * Convert this block to another type, replacing its data payload. `opts.expanded`
-   * also resets the open/collapsed state in the same PATCH.
+   * Convert this block to another type, replacing its non-text data payload.
+   * `opts.expanded` also resets the open/collapsed state in the same PATCH.
+   *
+   * The block keeps its id, hence its content doc, hence its text: the row's
+   * `data.text` projection is carried over untouched (or dropped when the target
+   * type is text-less). Seed `data` from the target handle's `emptyRowData()`.
    */
-  convertTo(type: string, data: unknown, opts?: { expanded?: boolean }): void;
+  convertTo(type: string, data: RowData, opts?: { expanded?: boolean }): void;
   /**
    * Insert a new block of the given type immediately after this one and return
    * its id (minted client-side, so the caller can act on it without awaiting the
@@ -76,6 +95,94 @@ export interface BlockRendererProps {
   editor: BlockEditorAPI;
   /** 1-based position within the consecutive run of same-type siblings; only ordinalMarker blocks use it. */
   ordinal: number;
+}
+
+/**
+ * Props every block REGION receives. Shaped after `BlockAnchorProps` (NOT
+ * `BlockRendererProps`): the read-only surface renders `ReadOnlyNode`s, which are
+ * not `Block`s — a snapshot may carry no id and never carries a `pageId`. Flat
+ * fields let ONE contribution render on both surfaces.
+ *
+ * There is deliberately no `children`: a region is a SIBLING of the editable
+ * line and structurally cannot wrap it. That is the invariant, expressed as a
+ * type — see `TextBlockLayout`.
+ *
+ * `editor` is absent on read-only surfaces (version-history preview, the public
+ * site) — degrade to a static rendering, never a control whose click no-ops.
+ */
+export interface BlockRegionProps {
+  id: string;
+  type: string;
+  /** Owning page; `null` on a read-only surface rendering a detached snapshot. */
+  pageId: string | null;
+  /**
+   * RAW row blob, possibly partial/historical (and transient mid-edit) — read it
+   * through your own handle's `safeParse`, with a default, never `parse`. Same
+   * rule `CalloutAnchor` / `CalloutFrame` follow on the container axis.
+   */
+  data: unknown;
+  isFocused: boolean;
+  /** 1-based position among the consecutive run of same-type siblings. */
+  ordinal: number;
+  editor?: BlockEditorAPI;
+}
+
+export type BlockRegion = ComponentType<BlockRegionProps>;
+
+/**
+ * The four sibling positions around the editable line. **Closed by geometry**: a
+ * leaf inside a box has exactly two positions on the block axis and two on the
+ * inline axis, so a new block type never needs a new one. All four always render
+ * (as `null` when undeclared); `header` and `end` have no consumer today, which
+ * is the price of closing the set rather than merely claiming it is closed.
+ */
+export interface BlockRegions {
+  /** Block-before: a full-box-width row above the line. */
+  header?: BlockRegion;
+  /** Inline-before: the leading `MARKER_GUTTER` column. Overrides the handle's marker ladder. */
+  start?: BlockRegion;
+  /** Inline-after: a rigid cell trailing the text column. */
+  end?: BlockRegion;
+  /** Block-after: a full-box-width row below the line. */
+  footer?: BlockRegion;
+}
+
+/**
+ * A text-bearing block type's presentation: how the shared skeleton's elements
+ * are STYLED, plus the sibling regions it contributes around the editable line.
+ * It can never wrap the line — a region receives no `children` — which is what
+ * keeps a type change a re-style instead of a remount. See `TextBlockLayout`.
+ *
+ * `chrome` is a STATIC object, built once at module eval inside the contribution
+ * literal, so a region component's identity is a module constant BY
+ * CONSTRUCTION. A `chrome(data)` function would be a place where a fresh
+ * component can be minted (resetting that region on every keystroke) and a place
+ * where a hook can be called from inside a per-type conditional (crashing on
+ * conversion). Neither is representable here. The one data-dependent knob,
+ * `boxClassName`, returns a **string**: it cannot mint a component, and
+ * `rules-of-hooks` rejects a hook inside a plain lowercase function.
+ */
+export interface BlockChrome {
+  /**
+   * Padding OUTSIDE the box — decoration edge `C` → box. Static, and vertical
+   * padding must not vary per row: `BlockHandle.gutterFirstLineCenter` is a
+   * static per-type declaration, so a row-dependent `y` would seat the gutter
+   * rail on a phantom line.
+   */
+  padding?: InsetSides;
+  /** Semantic elevation, composed as `SURFACE_LEVELS[level]` on the box. */
+  surface?: SurfaceLevel;
+  /**
+   * Everything else painted on the box. **PAINT ONLY** — no padding (see
+   * `padding` above) and no `overflow`: Lexical's scroll-into-view and
+   * `internal/caret-geometry.ts` resolve against the nearest scrollable
+   * ancestor, so a stray `overflow-*` would silently change caret scroll
+   * semantics.
+   */
+  boxClassName?: string | ((data: unknown) => string);
+  /** Whether the LINE supplies the page column's left inset (default true). */
+  inset?: boolean;
+  regions?: BlockRegions;
 }
 
 /**

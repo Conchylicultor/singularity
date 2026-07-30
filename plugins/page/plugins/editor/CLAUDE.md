@@ -579,8 +579,8 @@ structure — no per-block Lexical history.
 - **Same optimistic instance.** The `patch` overlay variant flows through the SAME
   `useOptimisticResource` as forward ops, POSTing to
   `POST /api/pages/:pageId/blocks/patch` (`handle-patch-blocks.ts`, a blind
-  row-level upsert+delete writer sharing the op handler's delete-lifecycle and
-  notify path). Undo/redo thunks dispatch patches DIRECTLY, never through the
+  row-level create/update/delete writer sharing the op handler's delete-lifecycle
+  and notify path). Undo/redo thunks dispatch patches DIRECTLY, never through the
   recording wrapper, and the primitive's re-entrancy guard ignores `record` during
   replay. Bound editors never re-read `data.text` from a patch — content flows
   exclusively through the block's `Y.Doc`.
@@ -593,7 +593,7 @@ structure — no per-block Lexical history.
   `data`: `parseBlockData` normalizes it and `data.text` trails the doc by ~1s, so a
   snapshot that provably contains the write can still differ, and comparing would
   stick the op in the overlay. Same question, different subject; don't merge them.
-- **A patch's delete cascade reads POST-upsert parentage.** `handlePatchBlocks`
+- **A patch's delete cascade reads POST-patch parentage.** `handlePatchBlocks`
   UPDATEs before it DELETEs, so a row the same patch re-parents out of the deleted
   subtree has already left; `applyPatch` must agree or the overlay drops rows the
   server keeps (redoing an `unwrap` lost every promoted child).
@@ -692,6 +692,189 @@ rather than by two mirrored implementations agreeing.
 - Placement order is not load-bearing (the array travels on the op, both sides
   fold it identically, and a clone always lands strictly between its source and
   that source's next sibling) — it is document-ordered for determinism only.
+
+## A write names the fields it changes (`BlockPatch`)
+
+> Restating a whole row asserts authority over fields you don't own.
+
+`BlockPatch` is therefore an explicit create/update split, not an upsert
+(`core/block-diff.ts`):
+
+```ts
+type BlockFieldChanges = Partial<Pick<Block, "parentId"|"type"|"data"|"rank"|"expanded">>;
+interface BlockPatch {
+  creates: Block[];                                    // full rows — a new row has no prior state
+  updates: { id: string; changes: BlockFieldChanges }[];
+  deleteIds: string[];
+}
+```
+
+Two invariants fall out, and both used to be hand-maintained approximations:
+
+- **A single-field writer cannot clobber a field it doesn't own.** `diffBlocks`
+  reduces a whole-row `after` to `changedFields(before, after)`, and
+  `patchesFromDiff`'s undo inverts *exactly that field set* — so a text
+  projection authors `data` and says nothing about `type`. It is `commitRow`'s
+  structural half: its callers still write `b => ({ ...b, data })`, but the diff,
+  not the caller, decides what the patch claims. The incident: a projection flush
+  firing from the unmount cleanup of a `/callout` conversion restated
+  `type: "text"` over the callout the user had just picked. Reading render-fresh
+  rows (`liveRowsRef`) narrows the window; the field scope removes it.
+- **An update never creates**, which is what the retired `updateOnly` flag was
+  approximating. An update naming a missing id is a skip *by definition* — in
+  `applyPatch`, in `isPatchReflected` (vacuously absorbed, so the op confirms
+  rather than replaying forever), and in the server writer. Only `creates` bring
+  a row into existence, or back: a create whose id matches a soft-deleted row
+  un-trashes it (undo of a page delete restores the whole subtree).
+
+Consequences worth knowing:
+
+- **Both patch predicates compare exactly the fields the patch NAMES**, over one
+  shared comparator, so a patch can never be produced by one definition of
+  "changed" and judged by another (`data` deep-compared with `dataEqual`, the
+  SAME predicate the diff used to emit it). They still differ on the one axis
+  above — `isPatchAbsorbed` counts `data`, `isPatchReflected` does not.
+- **The server writes only the named columns** (`handle-patch-blocks.ts`).
+  `parseBlockData` validates against the *effective* type, so a `data`-only
+  change validates against the STORED type, and a `type`-only change
+  re-validates (and re-mints) the stored blob against the NEW one. The
+  page-type transition guard keys off writes that name `type`; `parkRanks` only
+  runs for writes that name `parentId` or `rank`.
+- **An update carries no `pageId`**, so the composite store resolves its owning
+  page from the union rows (falling back to its cumulative row→page index for
+  rows that left with a collapse) — `groupPatchByOwnerPage`. Creates still route
+  by their own denormalized `pageId`, which is what makes the detached-persist
+  path work for a collapsed page.
+
+## Text is doc-owned: a row write can never say `text`
+
+> A block's text has exactly ONE owner: its per-block `Y.Doc`.
+> `page_blocks.data.text` is a ~1 s-debounced **projection** of it — one writer
+> (`projectText`), one reader (the doc-init seed).
+
+Row text is writable at block **creation** only: a brand-new id has no doc, so
+its row is that doc's only seed (`use-collab-block-doc.ts`). `insertAfter`,
+`BlockOp.insert.data`, `split.tailData`/`split.runs`/`merge.runs` and
+`BlockHandle.empty()` therefore keep taking text. An *edit* to an existing block
+never does — and `RowData` (`core/row-data.ts`, `Record<string, unknown> &
+{ text?: never }`) makes saying it a compile error, so `BlockEditorAPI.update` /
+`convertTo` cannot express "convert this block AND set its text".
+
+Exactly two functions in the row-write pipeline are allowed to name `text`, and
+both exist to keep the projection out of everyone else's hands:
+
+- **`preserveText`** (`block-editor-context.tsx`) — carries the row's existing
+  projection across an `update`/`convertTo` untouched. A conversion keeps the
+  block's id, hence its doc, hence its text, so the row must neither restate nor
+  drop it. It DOES drop it when the target type is text-less (divider, image, …),
+  whose strict schema rejects a stray `text` key with a 400 — resolved generically
+  off the `Editor.Block` dispatch slot, so no call site branches on `acceptsText`.
+- **`rowDataOf(data)`** (`core/row-data.ts`) — a stored blob minus `text`, for a
+  control that must restate the block's OTHER fields (`update` replaces the blob).
+  `handle.emptyRowData()` is the same derivation over `empty()`, and is what every
+  convert site seeds from, so none of them hand-strips.
+
+**Stripping text a conversion consumed is a content-doc edit, in this order.**
+`convertStrippingText({ blockId, from, to, type, data })` is the ONE primitive
+behind the slash menu, the gutter-`+` draft, and the markdown shortcuts:
+
+1. delete `[from, to)` from the block's doc through `BlockFocusHandle.deleteRange`
+   (`collab-text-surgery.ts`'s `deleteBlockTextRange` — `discrete: true`, so the
+   binding's Yjs transaction lands synchronously);
+2. `convertRow`, which writes the new `type` saying nothing about text — or, for
+   a `wrapOnConvert` target, wraps instead of retyping.
+
+**The wrap-vs-swap decision belongs to `convertRow`, the SHARED half.** It once
+sat on `BlockEditorAPI.convertTo`, one level above, so `convertStrippingText`
+bypassed it entirely and `/callout` from the slash menu retyped the origin into a
+container — losing its text and 400ing on the callout's void schema — while
+Turn-into wrapped correctly. A decision only one of two callers reaches is not
+shared. Strip strictly BEFORE the wrap: the origin must lose its `/callout` query
+from the content doc before it becomes the container's first child.
+
+Both halves are load-bearing. A convert carrying the stripped text in its row
+payload cannot strip anything — the row field is downstream of the doc — which
+is how `/callout` used to leave the doc saying `/callout` while the row said
+`text: []`, permanently, with which side the user saw depending on whether the
+projection debounce had fired. And the strip must be `discrete` because the slash
+commit runs INSIDE the caret menu's own `editor.update()`: a non-discrete nested
+update commits on a microtask, racing the re-render the type write schedules.
+No text type swaps its dispatch component any more (see the presentation-API
+section below), so that race no longer costs an unmounted editor — but the
+ordering stands on its own regardless of who renders the target: a row write is
+downstream of the doc.
+`e2e/convert-in-place-verify.ts` is the executable spec (type changed, marker
+gone from DOM *and* `data.text`, the two in agreement, caret still in the block).
+
+Backspace-reset / empty-Enter break-out strip **nothing** — a marker glyph was
+never text — so they call plain `convertTo` and carry no payload but the target's
+`emptyRowData()`.
+
+## A text block's presentation is styling plus sibling regions
+
+> Every text-bearing type dispatches the SAME component (`BlockTextRenderer`).
+> A type change is a re-style, never a remount.
+
+React unmounts when the element **TYPE at a position** changes. So the chain of
+element types from the shared renderer's root down to `<LexicalComposer>` must be
+constant, independent of `block.type`; props, classNames and styles may vary
+freely. `components/text-block-layout.tsx` IS that fixed chain, and everything
+else follows from it. (Same principle `BlockFrameProps` reaches on the container
+axis: "a BACKDROP, not a wrapper".) Design:
+[`research/2026-07-29-page-text-block-presentation-api.md`](../../../research/2026-07-29-page-text-block-presentation-api.md).
+
+A type therefore declares `chrome` (`BlockChrome`) and never a `component`:
+
+- **styling** of elements that always exist — `padding` (outside the box),
+  `surface`, `boxClassName` (paint only), `inset`;
+- **sibling regions** around the editable line — `regions.{header,start,end,footer}`.
+  A region gets **no `children`**, so it structurally cannot wrap the line. The
+  set is **closed by geometry** (a leaf in a box has two block-axis and two
+  inline-axis neighbours), so a new type never needs a new position; `header` and
+  `end` have no consumer today, which is the price of actually closing it.
+
+`Editor.Block`'s registration is a union discriminated off the handle's `text`
+lens, so a text-bearing type naming a `component` is a **compile error**, and
+`excludeFromReorder` is on the text-less arm ONLY — `ReorderItemMiddleware` flips
+between `<SortableReorderItem>` and a Fragment on that field, i.e. an element-type
+flip on an ancestor of the composer.
+
+Four constraints that are not stylistic:
+
+- **`chrome` is a STATIC object**, built at module eval in the contribution
+  literal, so a region component's identity is a module constant *by
+  construction*. A `chrome(data)` function would be a place to mint a fresh
+  component per render (resetting that region on every keystroke) and to call a
+  hook inside a per-type conditional (crashing on conversion). The one
+  data-dependent knob, `boxClassName`, returns a **string**.
+- **Regions are `ComponentType`, not `ReactNode`** — a prebuilt node cannot
+  degrade when `editor` is absent, and a region with hooks needs its own scope.
+- **Three totality rules** (stated in `text-block-layout.tsx`, read them before
+  editing it): every skeleton element renders unconditionally and none may be a
+  primitive that could collapse to a Fragment; each region occupies exactly ONE
+  children-array slot (React pairs unkeyed siblings by `fiber.index`, so a length
+  change mis-pairs the leaf cell and remounts Lexical); nothing keys or branches
+  on `block.type`.
+- **`padding` is static and `boxClassName` is paint-only.**
+  `BlockHandle.gutterFirstLineCenter` is a static per-type declaration, so
+  per-row vertical padding would seat the gutter rail on a phantom line; and
+  `overflow-*` would silently change caret scroll semantics (Lexical's
+  scroll-into-view and `internal/caret-geometry.ts` resolve against the nearest
+  scrollable ancestor).
+
+`BlockTextEditor` is the LEAF (the Lexical pipeline, no layout) and is
+deliberately **not exported** from the web barrel — that removes the
+roll-your-own-text-component affordance outright. `read-only-view` renders the
+same `TextBlockLayout` with the same `chrome`, swapping only the leaf
+(`RunsRenderer`) and passing **no `editor`**, which is how a region knows to
+degrade. Spec: `e2e/convert-in-place-verify.ts`'s DOM-node-identity round trip —
+the only assertion that catches a skeleton element which vanishes.
+
+Still out of scope, by construction: content aligned to the editable's *wrapped
+line boxes* (line numbers, per-line comment anchors, a diff rail) — a sibling
+column cannot know line boxes without measuring rects; and a per-type wrapper of
+any kind. Cross-cutting affordances (comments, presence) are `Editor.BlockRegion`
+render slots at the same four positions, not a fifth knob.
 
 ## Per-block CRDT text (unconditional)
 
@@ -915,12 +1098,13 @@ restore.
   during a transient outage RETAINS the entry and drains on the next reconnect edge.
   Known edge: closing the TAB while offline loses the last unflushed edits — the same
   class as an unflushed autosave.
-- **The `data.text` projection dispatches `updateOnly` patches**
-  (`BlockPatch.updateOnly`): an upsert whose row is gone is skipped on BOTH the
-  client overlay and the server writer, and `isPatchReflected` treats it as
-  vacuously absorbed so the op confirms instead of sticking. Otherwise a debounced
-  projection flush racing a history restore (or another tab's delete) resurrects the
-  deleted row with pre-delete text.
+- **The `data.text` projection dispatches an UPDATE, and an update never
+  creates.** A row that is gone is skipped on BOTH the client overlay and the
+  server writer, and `isPatchReflected` treats it as vacuously absorbed so the op
+  confirms instead of sticking. Otherwise a debounced projection flush racing a
+  history restore (or another tab's delete) resurrects the deleted row with
+  pre-delete text. The patch's SHAPE is the guarantee — there is no flag to set,
+  or forget.
 - **History restore.** `replacePageContent` mints fresh block ids, so a restore is
   automatically doc-consistent (the wipe FK-cascades every old `page_block_docs`
   row; pending flushes 409 → doc-init probe 404s → quiet terminal drop; the restored
@@ -1000,6 +1184,7 @@ the whole document lives in React state and is discarded on unmount.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`
     - `primitives/icon-picker.SvgIcon`
@@ -1035,12 +1220,16 @@ the whole document lives in React state and is discarded on unmount.
     - `reorder.useReorderedEntries`
   - Exports (types):
     - `BlockAnchorProps`
+    - `BlockChrome`
     - `BlockContribution`
     - `BlockEditorAPI`
     - `BlockEditorHandle`
     - `BlockFrameMeta`
     - `BlockFrameProps`
     - `BlockPasteHandler`
+    - `BlockRegion`
+    - `BlockRegionProps`
+    - `BlockRegions`
     - `BlockRendererProps`
     - `BlockSection`
     - `BlockTextExtension`
@@ -1052,11 +1241,11 @@ the whole document lives in React state and is discarded on unmount.
     - `PageIconProps`
     - `PageOption`
     - `PageOptionsResult`
+    - `TextBlockLayoutProps`
   - Exports (values):
     - `BLOCK_INDENT`
     - `BLOCK_INSET`
     - `BlockEditor`
-    - `BlockTextEditor`
     - `BlockTextRenderer`
     - `BlockTypeList`
     - `colorCssValue`
@@ -1074,6 +1263,7 @@ the whole document lives in React state and is discarded on unmount.
     - `PageOptionsList`
     - `registerBlockPasteHandler`
     - `registerBlockTextExtension`
+    - `TextBlockLayout`
     - `useBlockAnchors`
     - `useBlockEditor`
     - `useFormatToolbar`
@@ -1157,6 +1347,7 @@ the whole document lives in React state and is discarded on unmount.
     - `Block`
     - `BlockData`
     - `BlockDiff`
+    - `BlockFieldChanges`
     - `BlockHandle`
     - `BlockMarkdown`
     - `BlockNode`
@@ -1164,6 +1355,7 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockOpContext`
     - `BlockPatch`
     - `BlockTextVariant`
+    - `BlockUpdate`
     - `BulkDeleteBlocksBody`
     - `BulkMoveBlocksBody`
     - `BulkMovePlacement`
@@ -1183,6 +1375,7 @@ the whole document lives in React state and is discarded on unmount.
     - `PageData`
     - `PageRow`
     - `RichText`
+    - `RowData`
     - `RunsTokenExtension`
     - `RunsXmlTextOptions`
     - `SerializedBlock`
@@ -1195,6 +1388,7 @@ the whole document lives in React state and is discarded on unmount.
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
     - `applyBulkMove`
+    - `BlockFieldChangesSchema`
     - `BlockOpSchema`
     - `BlockPatchSchema`
     - `BlockSchema`
@@ -1205,12 +1399,14 @@ the whole document lives in React state and is discarded on unmount.
     - `BulkMoveBlocksBodySchema`
     - `canIndent`
     - `canOutdent`
+    - `changedFields`
     - `childrenOf`
     - `coalesce`
     - `COLOR_TOKENS`
     - `colorCssValue`
     - `createBlock`
     - `CreateBlockBodySchema`
+    - `dataEqual`
     - `defaultTextHandle`
     - `defineBlock`
     - `deleteBlock`
@@ -1226,6 +1422,7 @@ the whole document lives in React state and is discarded on unmount.
     - `mergeRuns`
     - `moveBlock`
     - `MoveBlockBodySchema`
+    - `namesField`
     - `nextVisibleLine`
     - `opBlockIds`
     - `PAGE_BLOCK_TYPE`
@@ -1246,6 +1443,7 @@ the whole document lives in React state and is discarded on unmount.
     - `prevVisibleLine`
     - `rankWindow`
     - `RichTextSchema`
+    - `rowDataOf`
     - `runsLength`
     - `runsOf`
     - `runsOfNode`

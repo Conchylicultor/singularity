@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Editor, BlockTextRenderer } from "@plugins/page/plugins/editor/web";
+import { Editor } from "@plugins/page/plugins/editor/web";
 import { toggleBlock } from "../core";
 
 export { toggleBlock } from "../core";
@@ -11,7 +11,6 @@ export default {
       id: toggleBlock.type,
       match: toggleBlock.type,
       block: toggleBlock,
-      component: BlockTextRenderer,
     }),
   ],
 } satisfies PluginDefinition;

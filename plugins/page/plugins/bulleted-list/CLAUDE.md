@@ -18,9 +18,7 @@ list-specific nesting logic.
 - Description: Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "bulleted-list" → `BlockTextRenderer`
-  - Uses:
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Exports (values): `bulletedListBlock`
 - Server:
   - Contributes: `page.block-data` "bulleted-list"

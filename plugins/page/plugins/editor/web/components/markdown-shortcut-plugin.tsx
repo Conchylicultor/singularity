@@ -1,15 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import {
-  $createParagraphNode,
-  $createTextNode,
-  $getRoot,
-  COLLABORATION_TAG,
-  HISTORIC_TAG,
-} from "lexical";
+import { $getRoot, COLLABORATION_TAG, HISTORIC_TAG } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { runsOf, type Block } from "../../core";
-import type { BlockEditorAPI } from "../types";
+import type { Block, RowData } from "../../core";
+import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { INLINE_FORMAT_TAG } from "../internal/inline-format-tag";
 
@@ -25,10 +19,20 @@ import { INLINE_FORMAT_TAG } from "../internal/inline-format-tag";
  * instant the user types the trailing space, while never auto-converting
  * DB-seeded content like a literal `* foo` on mount.
  *
- * On a match it strips the prefix from the *live* editor and converts the block
- * type. Because every text-like block type shares one renderer, the conversion
- * reconciles in place: the same editor keeps focus, so any text the user keeps
- * typing flows straight into the now-bulleted block.
+ * On a match it strips the prefix and converts the block type through the ONE
+ * `convertStrippingText` primitive — the strip is a CONTENT-DOC edit (a block's
+ * text has a single owner; the row's `data.text` is a projection of it), never a
+ * row payload the type write carries. Ordering it that way is what makes the
+ * strip survive at all: a target type that swaps the block's dispatch component
+ * unmounts this editor, so a row write claiming to carry the stripped text can
+ * never actually strip anything.
+ *
+ * Because most text-like block types share one renderer, the conversion
+ * reconciles IN PLACE: the same Lexical instance keeps focus, so text the user
+ * keeps typing flows straight into the now-bulleted block. (`quote` and
+ * `prompt` still own their own dispatch component, so converting into those two
+ * remounts the editor — the strip lands first regardless, which is the point of
+ * the ordering above.)
  *
  * **A transition only counts when the USER produced it.** The listener is tag-
  * guarded because a text transition is not by itself evidence of typing:
@@ -46,15 +50,10 @@ import { INLINE_FORMAT_TAG } from "../internal/inline-format-tag";
  * make the next genuine keystroke diff against stale text and fire a phantom
  * transition.
  */
-export function MarkdownShortcutPlugin({
-  block,
-  editor,
-}: {
-  block: Block;
-  editor: BlockEditorAPI;
-}) {
+export function MarkdownShortcutPlugin({ block }: { block: Block }) {
   const [lexicalEditor] = useLexicalComposerContext();
   const contributions = Editor.Block.useContributions();
+  const { convertStrippingText } = useBlockEditor();
 
   // Flatten every registered block's prefixes into {prefix, type} pairs, longest
   // prefix first so a more specific marker wins over a shorter one.
@@ -62,8 +61,7 @@ export function MarkdownShortcutPlugin({
     const out: {
       prefix: string;
       type: string;
-      empty?: () => unknown;
-      acceptsText: boolean;
+      emptyRowData: () => RowData;
       collapsible?: "always" | "never";
     }[] = [];
     for (const c of contributions) {
@@ -71,8 +69,7 @@ export function MarkdownShortcutPlugin({
         out.push({
           prefix,
           type: c.block.type,
-          empty: c.block.empty,
-          acceptsText: c.block.acceptsText,
+          emptyRowData: () => c.block.emptyRowData(),
           collapsible: c.block.collapsible,
         });
       }
@@ -81,7 +78,8 @@ export function MarkdownShortcutPlugin({
   }, [contributions]);
 
   const rulesRef = useLatestRef(rules);
-  const editorRef = useLatestRef(editor);
+  const convertRef = useLatestRef(convertStrippingText);
+  const blockIdRef = useLatestRef(block.id);
   const blockTypeRef = useLatestRef(block.type);
 
   useEffect(() => {
@@ -110,7 +108,7 @@ export function MarkdownShortcutPlugin({
         }
         if (pending || text === before) return;
 
-        for (const { prefix, type, empty, acceptsText, collapsible } of rulesRef.current) {
+        for (const { prefix, type, emptyRowData, collapsible } of rulesRef.current) {
           if (type === blockTypeRef.current) continue;
           // Only on the transition into the prefixed state.
           if (text.startsWith(prefix) && !before.startsWith(prefix)) {
@@ -124,29 +122,28 @@ export function MarkdownShortcutPlugin({
                 .getEditorState()
                 .read(() => $getRoot().getTextContent());
               if (!current.startsWith(prefix)) return;
-              const remaining = current.slice(prefix.length);
-              lexicalEditor.update(() => {
-                const root = $getRoot();
-                root.clear();
-                const paragraph = $createParagraphNode();
-                if (remaining.length > 0) {
-                  paragraph.append($createTextNode(remaining));
-                }
-                root.append(paragraph);
-                paragraph.selectEnd();
-              });
-              prevText = remaining;
-              // Seed the target type's default payload (e.g. a to-do's
-              // `checked`) before overlaying the preserved text — but only into a
-              // text-bearing target: a void type (e.g. divider via `---`) rejects
-              // an unknown `text` key at the write boundary. An "always"
-              // collapsible target (e.g. a toggle) opens by default.
-              const base = empty?.() ?? {};
-              editorRef.current.convertTo(
+              // Keep the update listener's baseline in step with the strip we
+              // are about to make, so it doesn't read the removal as a new
+              // transition.
+              prevText = current.slice(prefix.length);
+              // The prefix is the leading run of the FIRST paragraph, so its
+              // node offsets are its linear offsets. Stripping it through the
+              // surgery seam (rather than rebuilding the root from plain text,
+              // as this did before) preserves marks and inline tokens in the
+              // text that follows, and leaves the caret at the block's start
+              // instead of teleporting it to the end.
+              //
+              // Seeds only the target type's NON-text defaults (e.g. a to-do's
+              // `checked`): the block keeps its id, hence its content doc, hence
+              // its text. An "always" collapsible target (a toggle) opens.
+              convertRef.current({
+                blockId: blockIdRef.current,
+                from: 0,
+                to: prefix.length,
                 type,
-                acceptsText ? { ...base, text: runsOf(remaining) } : base,
-                collapsible === "always" ? { expanded: true } : undefined,
-              );
+                data: emptyRowData(),
+                expanded: collapsible === "always" ? true : undefined,
+              });
             });
             return;
           }

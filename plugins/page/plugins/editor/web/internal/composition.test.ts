@@ -18,11 +18,11 @@ import {
   groupIdsByOwnerPage,
   groupPatchByOwnerPage,
   insertOwnerPage,
+  pageByAnchor,
   remapUnionParents,
   resolveOpOwnerPage,
   rowOwnerPage,
   singleOwnerPage,
-  translatedAnchorIds,
   translateOpForStore,
   translatePatchForStore,
   translateUnionParentId,
@@ -282,53 +282,84 @@ describe("groupPatchByOwnerPage", () => {
   const ownerOf = (id: string) =>
     unionRows.find((r) => r.id === id)?.pageId ?? (id === "gone-a" ? "shell-a" : null);
 
-  test("groups upserts by their own pageId and deletes via the lookup", () => {
+  test("groups creates by their own pageId; updates + deletes via the lookup", () => {
     const patch: BlockPatch = {
-      upserts: [mk("t2", BASE, BASE), mk("a3", "shell-a", "shell-a")],
-      deleteIds: ["a1", "t1"],
+      creates: [mk("t2", BASE, BASE), mk("a3", "shell-a", "shell-a")],
+      // An update carries no pageId (it names only what it changes), so its
+      // owner is resolved from the union.
+      updates: [{ id: "a1", changes: { expanded: true } }],
+      deleteIds: ["a2", "t1"],
     };
     const groups = groupPatchByOwnerPage(patch, ownerOf);
-    expect(groups.get(BASE)).toEqual({ upserts: [patch.upserts[0]!], deleteIds: ["t1"] });
-    expect(groups.get("shell-a")).toEqual({ upserts: [patch.upserts[1]!], deleteIds: ["a1"] });
+    expect(groups.get(BASE)).toEqual({
+      creates: [patch.creates[0]!],
+      updates: [],
+      deleteIds: ["t1"],
+    });
+    expect(groups.get("shell-a")).toEqual({
+      creates: [patch.creates[1]!],
+      updates: [patch.updates[0]!],
+      deleteIds: ["a2"],
+    });
   });
 
-  test("a delete id absent from the union resolves through the fallback index", () => {
+  test("an update/delete id absent from the union resolves through the fallback index", () => {
     // The detached case: the row left the union when its page collapsed; the
     // composite's cumulative row→page index still knows it.
-    const groups = groupPatchByOwnerPage({ upserts: [], deleteIds: ["gone-a"] }, ownerOf);
-    expect(groups.get("shell-a")).toEqual({ upserts: [], deleteIds: ["gone-a"] });
-  });
-
-  test("an unresolvable delete id throws (never silently dropped)", () => {
-    expect(() =>
-      groupPatchByOwnerPage({ upserts: [], deleteIds: ["ghost"] }, ownerOf),
-    ).toThrow(/Cannot resolve the owning page/);
-  });
-
-  test("updateOnly is preserved onto every group", () => {
     const groups = groupPatchByOwnerPage(
-      { upserts: [mk("t2", BASE, BASE)], deleteIds: [], updateOnly: true },
+      {
+        creates: [],
+        updates: [{ id: "gone-a", changes: { expanded: false } }],
+        deleteIds: ["gone-a"],
+      },
       ownerOf,
     );
-    expect(groups.get(BASE)?.updateOnly).toBe(true);
+    expect(groups.get("shell-a")).toEqual({
+      creates: [],
+      updates: [{ id: "gone-a", changes: { expanded: false } }],
+      deleteIds: ["gone-a"],
+    });
+  });
+
+  test("an unresolvable id throws (never silently dropped)", () => {
+    expect(() =>
+      groupPatchByOwnerPage({ creates: [], updates: [], deleteIds: ["ghost"] }, ownerOf),
+    ).toThrow(/Cannot resolve the owning page/);
+    expect(() =>
+      groupPatchByOwnerPage(
+        { creates: [], updates: [{ id: "ghost", changes: { expanded: true } }], deleteIds: [] },
+        ownerOf,
+      ),
+    ).toThrow(/Cannot resolve the owning page/);
   });
 });
 
 describe("translatePatchForStore", () => {
-  test("rewrites anchor parents back to the row's own page id", () => {
+  const anchors = new Map([["link-1", "page-p"]]);
+
+  test("rewrites anchor parents back to the mounted page id, on creates AND updates", () => {
     const patch: BlockPatch = {
-      upserts: [mk("p-top", "page-p", "link-1"), mk("t2", BASE, BASE)],
+      creates: [mk("p-top", "page-p", "link-1"), mk("t2", BASE, BASE)],
+      updates: [
+        { id: "p-two", changes: { parentId: "link-1" } },
+        { id: "t3", changes: { parentId: BASE } },
+      ],
       deleteIds: ["x"],
     };
-    const out = translatePatchForStore(patch, new Set(["link-1"]));
-    expect(out.upserts.map((u) => u.parentId)).toEqual(["page-p", BASE]);
+    const out = translatePatchForStore(patch, anchors);
+    expect(out.creates.map((u) => u.parentId)).toEqual(["page-p", BASE]);
+    expect(out.updates.map((u) => u.changes.parentId)).toEqual(["page-p", BASE]);
     expect(out.deleteIds).toEqual(["x"]);
   });
 
   test("identity — the same reference — when nothing rewrites", () => {
-    const patch: BlockPatch = { upserts: [mk("t2", BASE, BASE)], deleteIds: [] };
-    expect(translatePatchForStore(patch, new Set())).toBe(patch);
-    expect(translatePatchForStore(patch, new Set(["link-1"]))).toBe(patch);
+    const patch: BlockPatch = {
+      creates: [mk("t2", BASE, BASE)],
+      updates: [{ id: "t3", changes: { expanded: true } }],
+      deleteIds: [],
+    };
+    expect(translatePatchForStore(patch, new Map())).toBe(patch);
+    expect(translatePatchForStore(patch, anchors)).toBe(patch);
   });
 });
 
@@ -362,11 +393,11 @@ describe("translateOpForStore", () => {
   test("patch tag delegates to the patch translation (cumulative anchors win)", () => {
     const patch: BlockOverlayOp = {
       tag: "patch",
-      patch: { upserts: [mk("p-top", "page-p", "old-link")], deleteIds: [] },
+      patch: { creates: [mk("p-top", "page-p", "old-link")], updates: [], deleteIds: [] },
     };
-    // `old-link` is no longer a mounted anchor; the cumulative set resolves it.
-    const out = translateOpForStore(patch, m, new Set(["old-link"]));
-    expect(out.tag === "patch" && out.patch.upserts[0]!.parentId).toBe("page-p");
+    // `old-link` is no longer a mounted anchor; the cumulative map resolves it.
+    const out = translateOpForStore(patch, m, new Map([["old-link", "page-p"]]));
+    expect(out.tag === "patch" && out.patch.creates[0]!.parentId).toBe("page-p");
   });
 
   test("identity — the same reference — when no translated anchor is named", () => {
@@ -380,12 +411,13 @@ describe("translateOpForStore", () => {
   });
 });
 
-describe("translateUnionParentId / translatedAnchorIds", () => {
+describe("translateUnionParentId / pageByAnchor", () => {
   test("maps a translated anchor to its page; identity otherwise", () => {
     const m = mounts(["page-p", "link-1"], ["shell-a", "shell-a"]);
     expect(translateUnionParentId("link-1", m)).toBe("page-p");
     expect(translateUnionParentId("shell-a", m)).toBe("shell-a");
     expect(translateUnionParentId(null, m)).toBe(null);
-    expect(translatedAnchorIds(m)).toEqual(new Set(["link-1"]));
+    // Identity mounts (sub-page shells) are NOT translated anchors.
+    expect(pageByAnchor(m)).toEqual(new Map([["link-1", "page-p"]]));
   });
 });

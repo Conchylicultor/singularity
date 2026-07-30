@@ -1,4 +1,4 @@
-import { useMemo, type ComponentType, type CSSProperties, type ReactNode } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 import {
   MdImage,
   MdLink as MdLinkIcon,
@@ -21,11 +21,11 @@ import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/p
 import {
   Editor,
   PageIcon,
+  TextBlockLayout,
   useBlockAnchors,
   useFramedBlockTypes,
   BLOCK_INDENT,
   BLOCK_INSET,
-  MARKER_GUTTER,
   type BlockAnchorProps,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
@@ -42,6 +42,14 @@ import type { BlockDiffKind, ReadOnlyNode } from "../node";
 function asTextVariant(v: BlockTextVariant | undefined): TextVariant {
   return (v ?? "body") as TextVariant;
 }
+
+/**
+ * One `Editor.Block` contribution as the slot's READ hook hands it over: its
+ * `component` is sealed (wrapped in the framework's middleware chain), so this
+ * is derived from the hook rather than named as the editor's own
+ * `BlockContribution` — which types what a plugin WRITES.
+ */
+type BlockEntry = ReturnType<typeof Editor.Block.useContributions>[number];
 
 /** A record-view of a block's `data`. */
 function asRecord(data: unknown): Record<string, unknown> {
@@ -79,43 +87,49 @@ function DiffWrap({ kind, children }: { kind?: BlockDiffKind; children: ReactNod
 
 /**
  * Renders one text-bearing block faithfully (text, headings, lists, to-do,
- * toggle, quote): the structural chrome from handle metadata + the rich text via
- * RunsRenderer. Mirrors `BlockTextRenderer` + `BlockTextEditor`'s marker-gutter
- * layout. One block type carries its own box chrome and is matched by type here
- * (the quote left-border) — the editor renders it with the same wrapper.
+ * toggle, quote, prompt): the SAME `TextBlockLayout` skeleton the editable
+ * surface uses, styled by the SAME per-type `chrome` off the block's
+ * `Editor.Block` contribution — only the leaf differs (`RunsRenderer` instead of
+ * the Lexical editor). It therefore names zero block types: the quote's border
+ * and the prompt's raised box arrive as chrome, not as a branch here.
+ *
+ * The region props carry `pageId: null` (a snapshot is detached from any page),
+ * `isFocused: false`, and — load-bearing — **no `editor`**: that absence IS the
+ * read-only signal, and a region is expected to degrade to a static rendering or
+ * render nothing rather than paint a control whose click no-ops.
  */
 function TextLikeBlock({
-  handle,
+  node,
+  contribution,
   data,
-  children,
   ordinal,
 }: {
-  handle: BlockHandle<unknown>;
+  node: ReadOnlyNode;
+  contribution: BlockEntry;
   data: Record<string, unknown>;
-  /** Rendered children (nested blocks) of this block, already laid out. */
-  children: ReactNode;
   /** 1-based position among same-type siblings (for ordinal markers). */
   ordinal: number;
 }) {
+  const handle = contribution.block;
   const checked = handle.toggle ? Boolean(data[handle.toggle.field]) : false;
 
-  let marker: ReactNode = null;
+  let fallbackMarker: ReactNode = null;
   if (handle.toggle) {
     // Seat the checkbox on the first text line: the gutter shares the text's
     // top `py-xs`, so the indicator top-aligns without a raw margin offset.
-    marker = (
+    fallbackMarker = (
       <span className="py-xs">
         <CheckboxIndicator checked={checked} />
       </span>
     );
   } else if (handle.ordinalMarker) {
-    marker = (
+    fallbackMarker = (
       <Text as="span" variant="body" tone="muted" aria-hidden className="tabular-nums py-xs">
         {handle.ordinalMarker(ordinal)}
       </Text>
     );
   } else if (handle.marker) {
-    marker = (
+    fallbackMarker = (
       <Text as="span" variant="body" tone="muted" aria-hidden className="py-xs">
         {handle.marker}
       </Text>
@@ -127,48 +141,32 @@ function TextLikeBlock({
       ? (handle.toggle.doneClassName ?? "line-through text-muted-foreground")
       : undefined;
 
-  const text = (
-    <Inset l={BLOCK_INSET} className="flex gap-xs">
-      {marker != null ? (
-        <div
-          className="flex flex-none select-none justify-center"
-          style={{ minWidth: MARKER_GUTTER }}
-        >
-          {marker}
-        </div>
-      ) : null}
-      <div className="min-w-0 flex-1">
-        <Text
-          as="div"
-          variant={asTextVariant(handle.textVariant)}
-          className={cn(
-            insetClass({ r: BLOCK_INSET }),
-            "py-xs whitespace-pre-wrap break-words",
-            doneClass,
-          )}
-        >
-          <RunsRenderer value={data.text} />
-        </Text>
-      </div>
-    </Inset>
-  );
-
-  // The quote block wraps the shared text in a left-border italic rail.
-  if (handle.type === "quote") {
-    return (
-      <>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- the quote rail's left border + italic chrome, mirroring the quote block */}
-        <div className="border-muted-foreground/30 border-l-2 italic">{text}</div>
-        {children}
-      </>
-    );
-  }
-
   return (
-    <>
-      {text}
-      {children}
-    </>
+    <TextBlockLayout
+      chrome={contribution.chrome}
+      region={{
+        // A read-only node may legitimately carry no id at all.
+        id: node.id ?? "",
+        type: node.type,
+        pageId: null,
+        data: node.data,
+        isFocused: false,
+        ordinal,
+      }}
+      fallbackMarker={fallbackMarker}
+    >
+      <Text
+        as="div"
+        variant={asTextVariant(handle.textVariant)}
+        className={cn(
+          insetClass({ r: BLOCK_INSET }),
+          "py-xs whitespace-pre-wrap break-words",
+          doneClass,
+        )}
+      >
+        <RunsRenderer value={data.text} />
+      </Text>
+    </TextBlockLayout>
   );
 }
 
@@ -263,11 +261,12 @@ function captionFor(type: string, data: Record<string, unknown>): string | undef
 
 const MEDIA_TYPES = new Set(["divider", "code-block", "image"]);
 
-/** Block types the shared text renderer can faithfully reproduce. */
-function isTextLike(handle: BlockHandle<unknown> | undefined): handle is BlockHandle<unknown> {
-  // Any block whose data carries `text` is text-bearing. The handle's text
-  // metadata (marker/ordinalMarker/toggle/textVariant) is what we render from.
-  return handle !== undefined;
+/** Blocks the shared text layout can faithfully reproduce. */
+function isTextLike(c: BlockEntry | undefined): c is BlockEntry {
+  // Any block whose data carries `text` is text-bearing. The contribution's
+  // handle metadata (marker/ordinalMarker/toggle/textVariant) and its `chrome`
+  // are what we render from.
+  return c !== undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -292,21 +291,27 @@ function hasText(data: Record<string, unknown>): boolean {
 function NodeView({
   node,
   ordinal,
-  handles,
+  contributions,
   framedTypes,
   anchors,
   diff,
 }: {
   node: ReadOnlyNode;
   ordinal: number;
-  handles: BlockHandle<unknown>[];
+  /**
+   * The live `Editor.Block` contributions — kept whole rather than mapped down
+   * to handles, because a text-bearing type's presentation (`chrome`) rides on
+   * the contribution, not the handle.
+   */
+  contributions: BlockEntry[];
   /** Container block types, derived from the live `Editor.BlockFrame` registry. */
   framedTypes: ReadonlySet<string>;
   /** Container-anchor decorations, from the same `Editor.BlockFrame` registry. */
   anchors: ReadonlyMap<string, ComponentType<BlockAnchorProps>>;
   diff?: Map<string, BlockDiffKind>;
 }) {
-  const handle = handles.find((h) => h.type === node.type);
+  const contribution = contributions.find((c) => c.block.type === node.type);
+  const handle: BlockHandle<unknown> | undefined = contribution?.block;
   const data = asRecord(node.data);
   const kind = node.id ? diff?.get(node.id) : undefined;
 
@@ -319,7 +324,7 @@ function NodeView({
       <div style={{ paddingLeft: BLOCK_INDENT }}>
         <ForestView
           forest={node.children}
-          handles={handles}
+          contributions={contributions}
           framedTypes={framedTypes}
           anchors={anchors}
           diff={diff}
@@ -392,11 +397,17 @@ function NodeView({
         )}
       </>
     );
-  } else if (isTextLike(handle) && hasText(data)) {
+  } else if (isTextLike(contribution) && hasText(data)) {
     body = (
-      <TextLikeBlock handle={handle} data={data} ordinal={ordinal}>
+      <>
+        <TextLikeBlock
+          node={node}
+          contribution={contribution}
+          data={data}
+          ordinal={ordinal}
+        />
         {children}
-      </TextLikeBlock>
+      </>
     );
   } else {
     // Exotic / editor-API-only block → labeled placeholder card.
@@ -433,13 +444,13 @@ function NodeView({
 
 function ForestView({
   forest,
-  handles,
+  contributions,
   framedTypes,
   anchors,
   diff,
 }: {
   forest: ReadOnlyNode[];
-  handles: BlockHandle<unknown>[];
+  contributions: BlockEntry[];
   framedTypes: ReadonlySet<string>;
   anchors: ReadonlyMap<string, ComponentType<BlockAnchorProps>>;
   diff?: Map<string, BlockDiffKind>;
@@ -459,7 +470,7 @@ function ForestView({
           key={node.id ?? i}
           node={node}
           ordinal={ordinals[i] ?? 1}
-          handles={handles}
+          contributions={contributions}
           framedTypes={framedTypes}
           anchors={anchors}
           diff={diff}
@@ -488,17 +499,17 @@ function ForestView({
  *    labeled placeholder card — the documented fidelity gap.
  */
 export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
+  // The contributions are kept WHOLE (not mapped down to handles): a
+  // text-bearing type's presentation — the quote's border, the prompt's raised
+  // box and its regions — lives on the contribution's `chrome`, and this surface
+  // renders it through the same `TextBlockLayout` the editor uses.
   const contributions = Editor.Block.useContributions();
-  const handles = useMemo(
-    () => contributions.map((c) => c.block as BlockHandle<unknown>),
-    [contributions],
-  );
   const framedTypes = useFramedBlockTypes();
   const anchors = useBlockAnchors();
   return (
     <ForestView
       forest={forest}
-      handles={handles}
+      contributions={contributions}
       framedTypes={framedTypes}
       anchors={anchors}
       diff={diff}

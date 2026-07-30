@@ -24,6 +24,7 @@ import {
   groupIdsByOwnerPage,
   groupPatchByOwnerPage,
   insertOwnerPage,
+  pageByAnchor,
   remapUnionParents,
   resolveOpOwnerPage,
   rowOwnerPage,
@@ -164,19 +165,19 @@ export function CompositeServerProviderHost({
   // Cumulative indexes for writes that outlive their feed (undo entries are
   // mount-scoped to the EDITOR, not to a child feed, so they can replay after
   // the child collapsed):
-  //  - row id → owning page, for delete ids whose row left the union;
-  //  - every translated (page-link) anchor ever mounted, so recorded
-  //    union-space parents still translate after the link collapsed.
+  //  - row id → owning page, for update/delete ids whose row left the union;
+  //  - every translated (page-link) anchor ever mounted, mapped to its page, so
+  //    recorded union-space parents still translate after the link collapsed.
   // Append-only and bounded by the rows seen during this editor's mount —
   // exactly the ids a mount-scoped undo thunk can still name.
   const seenOwnersRef = useRef(new Map<string, string>());
-  const seenAnchorsRef = useRef(new Set<string>());
+  const seenAnchorsRef = useRef(new Map<string, string>());
   useEffect(() => {
     for (const [pageId, feed] of feeds) {
       for (const row of feed.data) seenOwnersRef.current.set(row.id, pageId);
     }
-    for (const [pageId, anchorId] of mounts) {
-      if (anchorId !== pageId) seenAnchorsRef.current.add(anchorId);
+    for (const [anchorId, pageId] of pageByAnchor(mounts)) {
+      seenAnchorsRef.current.set(anchorId, pageId);
     }
   }, [feeds, mounts]);
 
@@ -198,8 +199,9 @@ export function CompositeServerProviderHost({
       const curMounts = mountsRef.current;
       if (v.tag === "patch") {
         // A patch may legitimately span pages (undoing a cross-page bulk
-        // delete), so split it per owner. Delete ids resolve through the union
-        // first, then the cumulative index (rows that left with a collapse).
+        // delete), so split it per owner. Update + delete ids carry no page of
+        // their own, so they resolve through the union first, then the
+        // cumulative index (rows that left with a collapse).
         const rows = dataRef.current;
         const ownerOf = (id: string) =>
           rows.find((b) => b.id === id)?.pageId ?? seenOwnersRef.current.get(id) ?? null;

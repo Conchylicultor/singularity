@@ -244,13 +244,20 @@ const RECORDED: [name: string, run: (h: Harness) => void][] = [
   ["insert", (h) => h.ctx().insert(TEXT, { text: [] })],
   ["insertFirst", (h) => h.ctx().insertFirst(TEXT, { text: [] })],
   ["unwrapBlock", (h) => h.ctx().unwrapBlock(h.id("A"))],
+  // Both payloads are text-FREE, and not merely by choice: `RowData` makes a
+  // row-level `text` write a compile error, because `page_blocks.data.text` is a
+  // projection of the block's content `Y.Doc` with exactly one writer. So the
+  // mutation each case has to make is the row fact it really owns — the TYPE for
+  // `convertTo`, a non-text `data` field for `update` — which is also what makes
+  // the quadruple's "the forward mutation genuinely changed something" arm honest
+  // here rather than incidental.
   [
     "convertTo",
-    (h) => h.ctx().makeBlockAPI(h.id("B")).convertTo("page/heading-1", { text: [{ text: "B" }] }),
+    (h) => h.ctx().makeBlockAPI(h.id("B")).convertTo("page/heading-1", {}),
   ],
   [
     "update",
-    (h) => h.ctx().makeBlockAPI(h.id("B")).update({ text: [{ text: "B!" }] }),
+    (h) => h.ctx().makeBlockAPI(h.id("B")).update({ checked: true }),
   ],
   [
     // Enter at offset 0 of a non-empty block: the identity-preserving arm, which

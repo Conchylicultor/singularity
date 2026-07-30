@@ -1,25 +1,30 @@
 import { useMemo, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { BlockRendererProps } from "../types";
+import { rowDataOf } from "../../core";
+import type { BlockRegionProps, BlockRendererProps } from "../types";
 import { Editor } from "../slots";
 import { BlockTextEditor } from "./block-text-editor";
+import { TextBlockLayout } from "./text-block-layout";
 
 /**
- * The single renderer shared by every editable-text block type (text,
- * bulleted-list, …). Because all such types register *this same function* as
- * their dispatch component, converting one into another (e.g. `* ` → bullet)
- * reconciles in place — the live Lexical editor instance, its focus and its
- * caret all survive, so no keystrokes are lost across the conversion.
+ * The single renderer shared by EVERY editable-text block type. Because all such
+ * types dispatch *this same function* — `Editor.Block`'s union makes naming a
+ * `component` a compile error for them — converting one into another (`* ` →
+ * bullet, `/quote`, `/prompt`) reconciles in place: the live Lexical instance,
+ * its Yjs binding, its focus and the caret all survive.
  *
- * Per-type presentation (the leading marker, the placeholder) is read from the
- * matched block handle, so this renderer never names a specific block type.
+ * It names no block type. Per-type presentation comes from two generic sources:
+ * the matched handle's marker ladder + placeholder + typography, and the
+ * contribution's `chrome` (box styling and the four sibling regions), which
+ * `TextBlockLayout` applies onto a fixed element tree.
  */
 export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRendererProps) {
   const contributions = Editor.Block.useContributions();
-  const handle = useMemo(
-    () => contributions.find((c) => c.block.type === block.type)?.block,
+  const contribution = useMemo(
+    () => contributions.find((c) => c.block.type === block.type),
     [contributions, block.type],
   );
+  const handle = contribution?.block;
 
   // A boolean-state block (e.g. to-do): the static glyph is replaced by an
   // interactive checkbox bound to `data[field]`, and the text is struck through
@@ -27,14 +32,22 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
   const data = block.data as Record<string, unknown>;
   const checked = handle?.toggle ? Boolean(data[handle.toggle.field]) : false;
 
-  let marker: ReactNode;
+  // The handle's marker ladder — the FALLBACK glyph, used unless the type
+  // declares a `regions.start` of its own.
+  let fallbackMarker: ReactNode;
   if (handle?.toggle) {
-    marker = (
+    fallbackMarker = (
       <input
         type="checkbox"
         checked={checked}
         onChange={() =>
-          editor.update({ ...data, [handle.toggle!.field]: !checked })
+          // `update` REPLACES the blob, so restate the block's other fields —
+          // but through `rowDataOf`, never a raw `{...data}` spread: the row's
+          // `text` is a ≤1 s-lagged projection of the content doc, and writing
+          // that snapshot back would revert whatever was typed in the last
+          // second. (`update` carries the projection across itself; see
+          // `preserveText`.)
+          editor.update({ ...rowDataOf(data), [handle.toggle!.field]: !checked })
         }
         // Don't blur the editor before the onChange registers; the editable
         // field flushes on blur anyway, but this keeps the caret put.
@@ -44,7 +57,7 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
       />
     );
   } else if (handle?.ordinalMarker) {
-    marker = (
+    fallbackMarker = (
       <Text
         as="span"
         variant="body"
@@ -55,7 +68,7 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
       </Text>
     );
   } else if (handle?.marker) {
-    marker = (
+    fallbackMarker = (
       <Text
         as="span"
         variant="body"
@@ -72,15 +85,30 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
       ? (handle.toggle.doneClassName ?? "line-through text-muted-foreground")
       : undefined;
 
+  const region: BlockRegionProps = {
+    id: block.id,
+    type: block.type,
+    pageId: block.pageId,
+    data: block.data,
+    isFocused,
+    ordinal,
+    editor,
+  };
+
   return (
-    <BlockTextEditor
-      block={block}
-      isFocused={isFocused}
-      editor={editor}
-      marker={marker}
-      placeholder={handle?.placeholder}
-      contentClassName={contentClassName}
-      textVariant={handle?.textVariant ?? "body"}
-    />
+    <TextBlockLayout
+      chrome={contribution?.chrome}
+      region={region}
+      fallbackMarker={fallbackMarker}
+    >
+      <BlockTextEditor
+        block={block}
+        isFocused={isFocused}
+        editor={editor}
+        placeholder={handle?.placeholder}
+        contentClassName={contentClassName}
+        textVariant={handle?.textVariant ?? "body"}
+      />
+    </TextBlockLayout>
   );
 }

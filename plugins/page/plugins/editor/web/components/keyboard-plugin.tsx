@@ -89,23 +89,17 @@ export function KeyboardPlugin({
         }
         case "convertTo": {
           event.preventDefault();
-          // Reset this block to a plain type, preserving its live rich-text runs
-          // (and any children, untouched). Mirrors the markdown-shortcut
-          // conversion: seed the target type's empty payload, then overlay the
-          // preserved runs.
-          const runs = serializeBlockRuns(lexicalEditor);
+          // Reset this block to a plain type (children untouched). This ladder
+          // rung strips NOTHING — it removes a marker glyph the block never
+          // stored as text — so it carries no text at all: the block keeps its
+          // id, hence its content doc, and `convertTo` carries the row's `text`
+          // projection across on its own. An unregistered `intent.to` seeds an
+          // empty payload and the write boundary rejects the unknown type
+          // loudly, as before.
           const target = contributionsRef.current.find(
             (c) => c.block.type === intent.to,
           )?.block;
-          // A convertTo intent only ever targets a text-bearing reset/break-out
-          // type (resetToOnBackspaceAtStart / breakOutOnEmptyEnter — see
-          // keystroke-intent), so carry the runs unless a RESOLVED handle
-          // declares itself void. An unresolved target means intent.to is
-          // unregistered — trust the intent and preserve the text (the write
-          // boundary rejects the unknown type loudly either way).
-          const base = target?.empty?.() ?? {};
-          const carryText = target ? target.acceptsText : true;
-          api.convertTo(intent.to, carryText ? { ...base, text: runs } : base);
+          api.convertTo(intent.to, target?.emptyRowData() ?? {});
           return true;
         }
         case "merge": {

@@ -3,21 +3,34 @@
 ## Block types are matched GENERICALLY, or the boundary leaks
 
 This renderer dispatches on handle METADATA (`marker`, `ordinalMarker`, `toggle`,
-`textVariant`, `anchor`) and on the live `Editor.BlockFrame` registry — not on
-block-type names. Two `node.type ===` comparisons survive, and both are
-deliberate, documented fidelity shims for chrome this surface cannot derive: the
-`quote` left-border rail and the `PAGE_BLOCK_TYPE` sub-page chip. A third one
-(the callout's icon + its duplicated colour map) was a real boundary violation —
-this plugin owned a copy of another plugin's appearance, which drifted the moment
-the callout changed — and it is gone: the decoration now comes from the callout's
-own `Editor.BlockFrame` contribution (`BlockFrameMeta.anchor`), the same one the
-editor mounts.
+`textVariant`, `anchor`), on the contribution's `chrome`, and on the live
+`Editor.BlockFrame` registry — not on block-type names. Exactly **one**
+`node.type ===` comparison survives: the `PAGE_BLOCK_TYPE` sub-page chip.
+
+The other two were real boundary violations, and both are gone. The callout's
+icon + its duplicated colour map now come from the callout's own
+`Editor.BlockFrame` contribution (`BlockFrameMeta.anchor`). The `quote`
+left-border rail (and, for free, the prompt's raised box + glyph) now comes from
+`BlockChrome` on the block's own `Editor.Block` contribution, rendered through the
+SAME `TextBlockLayout` the editor uses — so `ReadOnlyBlocks` keeps the
+contributions whole instead of mapping them down to handles, and its text arm
+names zero block types.
+
+The region props carry `pageId: null`, `isFocused: false` and — load-bearing —
+**no `editor`**. That absence IS the read-only signal: a region degrades to a
+static rendering (the prompt's glyph) or renders nothing (the prompt's footer,
+which is live agent state, not document content, and whose hooks do not exist on
+the public-site surface). Same contract as the anchor below.
 
 `NodeView`'s arm ORDER is load-bearing. The generic anchored branch sits **before**
 the `isTextLike && hasText` arm, because a void container's `data` carries no
 `text` and would otherwise fall through to the "Unknown block" placeholder card —
 exactly the trap `PAGE_BLOCK_TYPE` is already there to avoid. A new block type
 that renders no text of its own must be placed above that arm too.
+
+`BlockEntry` is derived from `Editor.Block.useContributions()` rather than named
+as the editor's `BlockContribution`: the read hook SEALS `component` (middleware
+chain), so the written and the read shapes are not the same type.
 
 The geometry of a container anchor falls out for free here. This surface has no
 hover rail (it dispatches frames with `inset: 0`, so `C` is simply the renderer's
@@ -44,8 +57,8 @@ is expected to degrade to a static glyph rather than render a dead control.
     - `page/editor.BlockAnchorProps`
     - `page/editor.colorCssValue`
     - `page/editor.Editor`
-    - `page/editor.MARKER_GUTTER`
     - `page/editor.PageIcon`
+    - `page/editor.TextBlockLayout`
     - `page/editor.useBlockAnchors`
     - `page/editor.useFramedBlockTypes`
     - `page/math/render.KatexMath`

@@ -1,11 +1,13 @@
 # quote
 
-Quote / blockquote block type for the page editor. A thin renderer that composes
-the editor plugin's reusable `BlockTextRenderer` (which owns the whole Lexical
-pipeline — value sync, slash menu, markdown shortcuts, structural keyboard
-handling) inside a styled container: a left border plus italic emphasis. There
-is no quote-specific editing logic, so converting a block to or from a quote
-reconciles in place — the live Lexical instance, focus and caret all survive.
+Quote / blockquote block type for the page editor. It owns **no component at
+all** — just one line of `BlockChrome` on its `Editor.Block` registration
+(`boxClassName: "border-l-2 border-muted-foreground/30 italic"`), painted by the
+editor's shared `TextBlockLayout`. It used to wrap `BlockTextRenderer` in a
+styled `<div>`, which is precisely why converting into or out of a quote
+remounted the Lexical editor and dropped the caret; a quote is now a re-style of
+the same element tree. No `padding` / `inset`: the line supplies the page rail's
+left inset like every other text block.
 
 Quotes store the shared `{ text }` payload and are reachable from the slash menu,
 the insert menu, and "Turn into". They intentionally declare **no**
@@ -22,11 +24,8 @@ Enter splits into a sibling quote — no quote-specific nesting logic.
 
 - Description: Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
 - Web:
-  - Contributes: `Editor.Block` "quote" → `QuoteBlock`
-  - Uses:
-    - `page/editor.BlockRendererProps`
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Contributes: `Editor.Block` "quote" → `BlockTextRenderer`
+  - Uses: `page/editor.Editor`
   - Exports (values): `quoteBlock`
 - Server:
   - Contributes: `page.block-data` "quote"

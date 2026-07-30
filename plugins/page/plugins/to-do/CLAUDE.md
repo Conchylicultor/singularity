@@ -22,9 +22,7 @@ to-do-specific nesting logic.
 - Description: To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "to-do" → `BlockTextRenderer`
-  - Uses:
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Exports (values): `toDoBlock`
 - Server:
   - Contributes: `page.block-data` "to-do"

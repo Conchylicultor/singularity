@@ -133,10 +133,26 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
  * `any` (a JS caller, a dynamically built schema): the type-level constraint
  * already rejects a text-bearing schema, and this makes the failure loud at
  * module eval instead of silently minting a text-bearing container.
+ *
+ * ## The return type PROVES the handle is text-less
+ *
+ * `defineBlock` returns a handle whose `text` lens is present-or-absent
+ * depending on its schema, so a caller holding a `BlockHandle<T>` alone cannot
+ * tell. A container's voidness is already guaranteed twice over here — at the
+ * type level by `RejectTextBearing<S>` and at runtime by the throw below — so
+ * the `& { text?: undefined }` intersection states a fact the function has
+ * ALREADY established rather than asserting a new one.
+ *
+ * Without it the guarantee stops at this boundary: `Editor.Block`'s
+ * registration is a type-level union whose text-less arm requires exactly that
+ * proof (a text-bearing block may not name its own `component`), so every
+ * container would fail to register despite being void by construction. Stating
+ * it here fixes that once, for every container, at the one place voidness is
+ * decided.
  */
 export function defineContainerBlock<S extends AnyZodObject>(
   opts: ContainerBlockOptions<S> & RejectTextBearing<S>,
-): BlockHandle<z.infer<S>> {
+): BlockHandle<z.infer<S>> & { text?: undefined } {
   if ("text" in opts.schema.shape) {
     throw new Error(
       `defineContainerBlock("${opts.type}"): a container is a VOID block — its schema must not ` +

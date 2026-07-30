@@ -15960,9 +15960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`bulleted-list`** — Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bulleted-list" → `BlockTextRenderer`
-        - Uses:
-          - `page/editor.BlockTextRenderer`
-          - `page/editor.Editor`
+        - Uses: `page/editor.Editor`
         - Exports (values): `bulletedListBlock`
       - Server:
         - Contributes: `page.block-data` "bulleted-list"
@@ -16120,6 +16118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/icon-button.IconButton`
           - `primitives/icon-picker.SvgIcon`
@@ -16155,12 +16154,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.useReorderedEntries`
         - Exports (types):
           - `BlockAnchorProps`
+          - `BlockChrome`
           - `BlockContribution`
           - `BlockEditorAPI`
           - `BlockEditorHandle`
           - `BlockFrameMeta`
           - `BlockFrameProps`
           - `BlockPasteHandler`
+          - `BlockRegion`
+          - `BlockRegionProps`
+          - `BlockRegions`
           - `BlockRendererProps`
           - `BlockSection`
           - `BlockTextExtension`
@@ -16172,11 +16175,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageIconProps`
           - `PageOption`
           - `PageOptionsResult`
+          - `TextBlockLayoutProps`
         - Exports (values):
           - `BLOCK_INDENT`
           - `BLOCK_INSET`
           - `BlockEditor`
-          - `BlockTextEditor`
           - `BlockTextRenderer`
           - `BlockTypeList`
           - `colorCssValue`
@@ -16194,6 +16197,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageOptionsList`
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
+          - `TextBlockLayout`
           - `useBlockAnchors`
           - `useBlockEditor`
           - `useFormatToolbar`
@@ -16277,6 +16281,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Block`
           - `BlockData`
           - `BlockDiff`
+          - `BlockFieldChanges`
           - `BlockHandle`
           - `BlockMarkdown`
           - `BlockNode`
@@ -16284,6 +16289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockOpContext`
           - `BlockPatch`
           - `BlockTextVariant`
+          - `BlockUpdate`
           - `BulkDeleteBlocksBody`
           - `BulkMoveBlocksBody`
           - `BulkMovePlacement`
@@ -16303,6 +16309,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageData`
           - `PageRow`
           - `RichText`
+          - `RowData`
           - `RunsTokenExtension`
           - `RunsXmlTextOptions`
           - `SerializedBlock`
@@ -16315,6 +16322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
           - `applyBulkMove`
+          - `BlockFieldChangesSchema`
           - `BlockOpSchema`
           - `BlockPatchSchema`
           - `BlockSchema`
@@ -16325,12 +16333,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BulkMoveBlocksBodySchema`
           - `canIndent`
           - `canOutdent`
+          - `changedFields`
           - `childrenOf`
           - `coalesce`
           - `COLOR_TOKENS`
           - `colorCssValue`
           - `createBlock`
           - `CreateBlockBodySchema`
+          - `dataEqual`
           - `defaultTextHandle`
           - `defineBlock`
           - `deleteBlock`
@@ -16346,6 +16356,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `mergeRuns`
           - `moveBlock`
           - `MoveBlockBodySchema`
+          - `namesField`
           - `nextVisibleLine`
           - `opBlockIds`
           - `PAGE_BLOCK_TYPE`
@@ -16366,6 +16377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `prevVisibleLine`
           - `rankWindow`
           - `RichTextSchema`
+          - `rowDataOf`
           - `runsLength`
           - `runsOf`
           - `runsOfNode`
@@ -16606,9 +16618,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`heading-1`** — Heading 1 block type for the page editor. Heading 1 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-1" → `BlockTextRenderer`
-            - Uses:
-              - `page/editor.BlockTextRenderer`
-              - `page/editor.Editor`
+            - Uses: `page/editor.Editor`
             - Exports (values): `heading1Block`
           - Server:
             - Contributes: `page.block-data` "heading-1"
@@ -16621,9 +16631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`heading-2`** — Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-2" → `BlockTextRenderer`
-            - Uses:
-              - `page/editor.BlockTextRenderer`
-              - `page/editor.Editor`
+            - Uses: `page/editor.Editor`
             - Exports (values): `heading2Block`
           - Server:
             - Contributes: `page.block-data` "heading-2"
@@ -16636,9 +16644,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`heading-3`** — Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-3" → `BlockTextRenderer`
-            - Uses:
-              - `page/editor.BlockTextRenderer`
-              - `page/editor.Editor`
+            - Uses: `page/editor.Editor`
             - Exports (values): `heading3Block`
           - Server:
             - Contributes: `page.block-data` "heading-3"
@@ -16851,9 +16857,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`numbered-list`** — Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "numbered-list" → `BlockTextRenderer`
-        - Uses:
-          - `page/editor.BlockTextRenderer`
-          - `page/editor.Editor`
+        - Uses: `page/editor.Editor`
         - Exports (values): `numberedListBlock`
       - Server:
         - Contributes: `page.block-data` "numbered-list"
@@ -16897,13 +16901,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`block`** — Prompt block type: block text plus a launch control that turns it into an agent run, and chips for the conversations it launched. Prompt block type: registers its `data` schema (plain block text) at the server write boundary.
           - Web:
-            - Contributes: `Editor.Block` "prompt" → `PromptBlock`
+            - Contributes: `Editor.Block` "prompt" → `BlockTextRenderer`
             - Uses:
               - `conversations/conversation-ui/item.ConversationItem`
               - `conversations/conversation-view.conversationPane`
               - `page/editor.BLOCK_INSET`
-              - `page/editor.BlockRendererProps`
-              - `page/editor.BlockTextEditor`
               - `page/editor.Editor`
               - `page/prompt/link.createPromptTask`
               - `page/prompt/link.useBlockPromptTasks`
@@ -16911,7 +16913,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/spacing.Inset`
-              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.ControlSizeProvider`
@@ -16987,11 +16988,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `promptTaskOriginsResource`
     - **`quote`** — Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
       - Web:
-        - Contributes: `Editor.Block` "quote" → `QuoteBlock`
-        - Uses:
-          - `page/editor.BlockRendererProps`
-          - `page/editor.BlockTextRenderer`
-          - `page/editor.Editor`
+        - Contributes: `Editor.Block` "quote" → `BlockTextRenderer`
+        - Uses: `page/editor.Editor`
         - Exports (values): `quoteBlock`
       - Server:
         - Contributes: `page.block-data` "quote"
@@ -17009,8 +17007,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockAnchorProps`
           - `page/editor.colorCssValue`
           - `page/editor.Editor`
-          - `page/editor.MARKER_GUTTER`
           - `page/editor.PageIcon`
+          - `page/editor.TextBlockLayout`
           - `page/editor.useBlockAnchors`
           - `page/editor.useFramedBlockTypes`
           - `page/math/render.KatexMath`
@@ -17066,9 +17064,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
-        - Uses:
-          - `page/editor.BlockTextRenderer`
-          - `page/editor.Editor`
+        - Uses: `page/editor.Editor`
         - Exports (values): `textBlock`
       - Server:
         - Contributes: `page.block-data` "text"
@@ -17081,9 +17077,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`to-do`** — To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "to-do" → `BlockTextRenderer`
-        - Uses:
-          - `page/editor.BlockTextRenderer`
-          - `page/editor.Editor`
+        - Uses: `page/editor.Editor`
         - Exports (values): `toDoBlock`
       - Server:
         - Contributes: `page.block-data` "to-do"
@@ -17098,9 +17092,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`toggle`** — Toggle (collapsible) block type for the page editor. Toggle (collapsible) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "toggle" → `BlockTextRenderer`
-        - Uses:
-          - `page/editor.BlockTextRenderer`
-          - `page/editor.Editor`
+        - Uses: `page/editor.Editor`
         - Exports (values): `toggleBlock`
       - Server:
         - Contributes: `page.block-data` "toggle"
@@ -19857,7 +19849,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `history/dialog`
               - `infra/events-test`
               - `page/editor`
-              - `page/prompt/block`
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/command-palette`

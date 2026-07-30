@@ -73,7 +73,9 @@ export function BlockActionsMenu({
               activeIndex={activeIndex}
               onHoverIndex={setActiveIndex}
               onSelect={(handle) => {
-                api.convertTo(handle.type, handle.empty?.() ?? {});
+                // Only the target's NON-text defaults: the block keeps its id,
+                // hence its content doc, so `convertTo` carries its text over.
+                api.convertTo(handle.type, handle.emptyRowData());
                 setOpen(false);
               }}
             />

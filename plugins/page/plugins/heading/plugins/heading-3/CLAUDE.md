@@ -22,9 +22,7 @@ from the dispatch slot.
 - Description: Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "heading-3" → `BlockTextRenderer`
-  - Uses:
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Exports (values): `heading3Block`
 - Server:
   - Contributes: `page.block-data` "heading-3"

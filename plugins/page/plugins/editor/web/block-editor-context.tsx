@@ -30,10 +30,12 @@ import {
   patchesFromDiff,
   isEmptyPatch,
   withMintedIds,
+  namesField,
   type Block,
   type BlockOp,
   type BlockPatch,
   type RichText,
+  type RowData,
   type SerializedBlock,
 } from "../core";
 import {
@@ -54,6 +56,7 @@ import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-su
 import { useAnchorTypes, useBlockHandles } from "./internal/block-handles";
 import { useMemoryBlockStore, type BlockStore } from "./block-store";
 import { CompositeServerProviderHost } from "./composite-block-store";
+import { Editor } from "./slots";
 import type { BlockEditorAPI } from "./types";
 
 /** Human labels for the structural-undo history (tooltips / menus). */
@@ -107,26 +110,6 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
   }
 }
 
-/**
- * The origin row's `data` for a WRAP, given the payload the `convertTo` caller
- * passed for the (now container) target type. The origin keeps its own type and
- * therefore its own `data` — the caller's payload belongs to the container — with
- * ONE exception: a caller that supplied a `text` key resolved it against the
- * ORIGIN's live content (the `/` menu strips the `/query` and hands back the
- * remaining runs), so that key is overlaid. Callers with nothing to say about
- * text (Turn-into, and any void target whose `empty()` has no `text`) leave the
- * origin's data byte-identical.
- */
-function withConvertText(originData: unknown, convertData: unknown): unknown {
-  if (typeof convertData !== "object" || convertData === null || !("text" in convertData)) {
-    return originData;
-  }
-  return {
-    ...((originData as Record<string, unknown> | null) ?? {}),
-    text: (convertData as { text: unknown }).text,
-  };
-}
-
 /** Run the pure reducer over full rows and project back to `Block[]`. */
 function fromOpResult(
   before: Block[],
@@ -140,15 +123,15 @@ function fromOpResult(
  * Shared before→after derivation for the two structural recorders
  * (`recordPatchEntry` and `recordStructuralWithDocEdit`): diff the two full-row
  * snapshots into a minimal forward/reverse `BlockPatch` pair, splice the optional
- * `undoTextOverride` into the reverse patch's upserts (no-op when undefined — pins
- * a restored row's `data.text` to LIVE runs captured at op time, used by merge),
+ * `undoTextOverride` into the reverse patch (no-op when undefined — pins a
+ * restored row's `data.text` to LIVE runs captured at op time, used by merge),
  * and derive the per-direction focus targets. Returns `null` when BOTH patches are
  * empty; the caller decides whether that is a full bail (patch-only entry) or a
  * still-record (a docEdit-only entry). Redo keeps the `focusId` the user was on;
- * undo PREFERS the block the reverse patch restores (`undoPatch.upserts[0]`) over
- * `focusId` — undoing a split deletes the new block, so landing focus on it would
- * drop focus to <body>, whereas the reverse upsert is the surviving block — falling
- * back to `focusId` then the forward upsert so every op still lands somewhere sane.
+ * undo PREFERS the block the reverse patch restores over `focusId` — undoing a
+ * split deletes the new block, so landing focus on it would drop focus to <body>,
+ * whereas the reverse write's target is the surviving block — falling back to
+ * `focusId` then the forward patch so every op still lands somewhere sane.
  */
 function derivePatchEntry(
   before: Block[],
@@ -165,24 +148,34 @@ function derivePatchEntry(
   const redoPatch = patches.redo;
   let undoPatch = patches.undo;
   if (undoTextOverride) {
+    const { blockId, runs } = undoTextOverride;
+    const pin = (data: unknown) => ({
+      ...((data as Record<string, unknown> | null) ?? {}),
+      text: runs,
+    });
+    // Only where the reverse patch ALREADY writes `data`. A create restores the
+    // whole row, so it always does; an update that says nothing about `data`
+    // must keep saying nothing — pinning text there would turn a field-scoped
+    // write back into an authority claim over a field it doesn't own. (In
+    // practice merge's source row was deleted, so it is a create.)
     undoPatch = {
       ...undoPatch,
-      upserts: undoPatch.upserts.map((b) =>
-        b.id === undoTextOverride.blockId
-          ? {
-              ...b,
-              data: {
-                ...((b.data as Record<string, unknown> | null) ?? {}),
-                text: undoTextOverride.runs,
-              },
-            }
-          : b,
+      creates: undoPatch.creates.map((b) =>
+        b.id === blockId ? { ...b, data: pin(b.data) } : b,
+      ),
+      updates: undoPatch.updates.map((u) =>
+        u.id === blockId && namesField(u.changes, "data")
+          ? { ...u, changes: { ...u.changes, data: pin(u.changes.data) } }
+          : u,
       ),
     };
   }
   if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return null;
-  const redoFocus = focusId ?? redoPatch.upserts[0]?.id ?? null;
-  const undoFocus = undoPatch.upserts[0]?.id ?? focusId ?? null;
+  // Order mirrors the patch's own precedence: redo's first write is its creates
+  // (a split's new block), undo's is its updates (the surviving origin row).
+  const redoFocus = focusId ?? redoPatch.creates[0]?.id ?? redoPatch.updates[0]?.id ?? null;
+  const undoFocus =
+    undoPatch.updates[0]?.id ?? undoPatch.creates[0]?.id ?? focusId ?? null;
   return { undoPatch, redoPatch, undoFocus, redoFocus };
 }
 
@@ -213,8 +206,40 @@ export interface BlockFocusHandle extends CaretSurface {
    * concatenation into the target's content doc with marks/tokens intact).
    */
   appendRunsAtEnd?: (runs: RichText) => void;
+  /**
+   * Content surgery: delete the LIVE content in the linear range `[from, to)`.
+   * The non-tail sibling of `truncateAt` — a slash-menu commit strips its
+   * `/query`, a markdown shortcut its `> ` prefix — and the ONLY way to strip
+   * text a type change consumed, since `page_blocks.data.text` is a projection
+   * of the doc this edits, not a place text can be removed from.
+   */
+  deleteRange?: (from: number, to: number) => void;
   /** Serialize this block's LIVE runs (the read dual of `appendRunsAtEnd`). */
   readRuns?: () => RichText;
+}
+
+/**
+ * The ONE place in the row-write pipeline permitted to name `text`.
+ *
+ * A row write states the fields it owns; `text` is not one of them — it is a
+ * ~1 s-debounced projection of the block's content doc, whose sole writer is
+ * `projectText`. A type change keeps the block's id, hence its doc, hence its
+ * text, so `convertTo`/`update` carry the row's existing projection across
+ * untouched rather than restating (or dropping) it. Everywhere else the key is
+ * unrepresentable — that is what {@link RowData} buys.
+ *
+ * `targetAcceptsText` is the one case where the projection must NOT survive: a
+ * conversion into a text-less type (divider, image, …) whose strict schema
+ * rejects a stray `text` key at the write boundary with a 400.
+ */
+function preserveText(
+  prev: unknown,
+  next: RowData,
+  targetAcceptsText: boolean,
+): Record<string, unknown> {
+  const text = (prev as Record<string, unknown> | null)?.text;
+  if (!targetAcceptsText || text === undefined) return { ...next };
+  return { ...next, text };
 }
 
 interface BlockEditorContextValue {
@@ -255,6 +280,35 @@ interface BlockEditorContextValue {
   setFocusedBlockId: (id: string | null) => void;
   registerFocusHandle: (id: string, handle: BlockFocusHandle) => () => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
+  /**
+   * "Strip then convert" — THE single primitive behind every commit that
+   * consumes some of a block's own text as a command: the slash menu's
+   * `/query`, the gutter-`+` draft's filter, a markdown prefix (`* `, `> `,
+   * `# `). One operation, two owners, in this order:
+   *
+   *  1. delete `[from, to)` from the block's CONTENT DOC through its focus
+   *     handle (discrete, so it lands before anything can re-render);
+   *  2. write the new `type` to the ROW.
+   *
+   * The order is the whole point. Text lives in the doc; `data.text` is a
+   * projection of it. A convert that carried the stripped text in its row
+   * payload could not strip anything — it would leave the doc saying
+   * `/callout` while the row said `text: []`, permanently. And a type change
+   * that swaps the block's renderer unmounts the very editor holding the doc
+   * binding, so a strip deferred past it never happens at all.
+   */
+  convertStrippingText: (args: {
+    blockId: string;
+    /** Linear start of the consumed span (stored-runs basis), inclusive. */
+    from: number;
+    /** Linear end of the consumed span, exclusive. `to <= from` strips nothing. */
+    to: number;
+    type: string;
+    /** Target payload, seeded from the target handle's `emptyRowData()`. */
+    data: RowData;
+    /** Reset the open/collapsed state in the same write (a toggle opens). */
+    expanded?: boolean;
+  }) => void;
   setFlatOrder: (blocks: Block[]) => void;
   /** All blocks of the page (incl. collapsed), kept current for bulk ops. */
   setRows: (blocks: Block[]) => void;
@@ -544,6 +598,20 @@ export function BlockEditorProviderInner({
   const anchorTypes = useAnchorTypes();
   const blockHandles = useBlockHandles();
   const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
+
+  // `type ⇒ does this type carry text`, read generically off the dispatch slot
+  // (never a hardcoded list). The row-write pipeline is the one place that must
+  // know: `preserveText` carries the projection across a conversion, EXCEPT into
+  // a text-less type whose schema rejects the key. Resolving it here rather than
+  // at each call site is what lets `convertTo` callers stop hand-branching on
+  // `acceptsText`. An unregistered type is assumed text-bearing — the same
+  // "trust the intent, let the write boundary reject loudly" stance the keyboard
+  // ladder takes.
+  const blockContributions = Editor.Block.useContributions();
+  const acceptsTextRef = useLatestRef((type: string) => {
+    const handle = blockContributions.find((c) => c.block.type === type)?.block;
+    return handle ? handle.acceptsText : true;
+  });
   // The flanking surfaces are read only inside imperative callbacks, so mirror
   // them into refs rather than threading them through `makeBlockAPI`'s deps.
   const caretBeforeRef = useLatestRef(caretBefore);
@@ -728,8 +796,8 @@ export function BlockEditorProviderInner({
       // no-op through `dispatchPatch` and focus falls back to `focusId`.
       if (!derived && !docEdit) return;
       const { undoPatch, redoPatch, undoFocus, redoFocus } = derived ?? {
-        undoPatch: { upserts: [], deleteIds: [] },
-        redoPatch: { upserts: [], deleteIds: [] },
+        undoPatch: { creates: [], updates: [], deleteIds: [] },
+        redoPatch: { creates: [], updates: [], deleteIds: [] },
         undoFocus: focusId,
         redoFocus: focusId,
       };
@@ -827,20 +895,20 @@ export function BlockEditorProviderInner({
         coalesceKey?: string;
         caretOffset?: number;
         record?: boolean;
-        /**
-         * Dispatch the forward patch as update-only (never creates rows; a
-         * concurrently-deleted row is skipped). Only meaningful with
-         * `record: false` — recorded entries need creation semantics so
-         * undoing a delete can re-create rows. Used by the CRDT projection.
-         */
-        updateOnly?: boolean;
       },
     ) => {
-      const before = rowsRef.current;
+      // The patch is FIELD-SCOPED: `transform` produces whole rows, but the
+      // diff reduces them to the fields that actually changed, so a text writer
+      // never authors `type` and cannot clobber a concurrent conversion. That is
+      // the structural half of the fix. RENDER-FRESH rows (not `rowsRef`, which a
+      // consumer effect sets, so it lags within a commit) are the belt: the case
+      // that proved both is a conversion into a type with its own dispatch
+      // component (quote/prompt), which unmounts the text editor, whose
+      // projection flush fires from the unmount cleanup — BEFORE the effect
+      // refreshes `rowsRef`.
+      const before = liveRowsRef.current;
       const after = transform(before);
-      const patches = patchesFromDiff(diffBlocks(before, after));
-      const undoPatch = patches.undo;
-      const redoPatch = opts.updateOnly ? { ...patches.redo, updateOnly: true } : patches.redo;
+      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
       if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
       const { focusId } = opts;
       if (opts.record !== false) {
@@ -864,7 +932,7 @@ export function BlockEditorProviderInner({
       }
       dispatchPatch(redoPatch);
     },
-    [record, dispatchPatch, focusBlock],
+    [record, dispatchPatch, focusBlock, liveRowsRef],
   );
 
   // The one-row case of `commitRows`: rewrite exactly the target row and land
@@ -878,7 +946,6 @@ export function BlockEditorProviderInner({
         coalesceKey?: string;
         caretOffset?: number;
         record?: boolean;
-        updateOnly?: boolean;
       },
     ) => {
       commitRows((rows) => rows.map((b) => (b.id === blockId ? transform(b) : b)), {
@@ -903,16 +970,17 @@ export function BlockEditorProviderInner({
       // at that instant, and projecting through it would UPSERT (resurrect)
       // the just-deleted block. `liveRowsRef` already reflects the deletion.
       if (!liveRowsRef.current.some((b) => b.id === blockId)) return;
-      // `updateOnly` (Stage 4a): the client-side gate above can't cover the
-      // window where the row was deleted SERVER-side (history restore, another
-      // tab's delete) but the push hasn't reached this client yet — an
-      // ordinary upsert landing in that window would resurrect the deleted
-      // row with pre-delete text. Update-only skips a missing row on the
-      // server too, closing the race end-to-end.
+      // The gate above can't cover the window where the row was deleted
+      // SERVER-side (history restore, another tab's delete) but the push hasn't
+      // reached this client yet. It doesn't have to: a text projection changes
+      // only `data`, so the patch is an UPDATE, and an update never creates —
+      // on the client overlay and the server writer alike. A flush landing in
+      // that window is skipped instead of resurrecting the row with pre-delete
+      // text; the race is closed by the patch's shape, not by a flag.
       commitRow(
         blockId,
         (b) => ({ ...b, data: { ...(b.data ?? {}), text: runs } }),
-        { label: "Project text", record: false, updateOnly: true },
+        { label: "Project text", record: false },
       );
     },
     [commitRow, liveRowsRef],
@@ -1180,7 +1248,8 @@ export function BlockEditorProviderInner({
   // is never observed mid-flight (there is no intermediate state where the
   // container exists without its child).
   //
-  // The ORIGIN keeps its id, type, `data`, children and rank. Keeping the id is
+  // The ORIGIN keeps its id, type, `data` (its `text` projection included, since
+  // its content doc is untouched), children and rank. Keeping the id is
   // load-bearing, not an optimization: its `page_block_docs` Yjs doc, its
   // `Y.UndoManager` and its registered `BlockFocusHandle` are all keyed by block
   // id, so the caret simply stays put — no `focusNew`, no remount race. The NEW
@@ -1192,7 +1261,7 @@ export function BlockEditorProviderInner({
   // sharing one `(parent_id, rank)` slot), and the in-memory store has no
   // `parkRanks` — it applies the patch verbatim.
   const wrapInContainer = useCallback(
-    (blockId: string, type: string, containerData: unknown, convertData: unknown) => {
+    (blockId: string, type: string, containerData: unknown) => {
       const containerId = crypto.randomUUID();
       commitRows(
         (rows) => {
@@ -1221,9 +1290,7 @@ export function BlockEditorProviderInner({
           };
           return [
             ...rows.map((b) =>
-              b.id === blockId
-                ? { ...b, parentId: containerId, data: withConvertText(b.data, convertData) }
-                : b,
+              b.id === blockId ? { ...b, parentId: containerId } : b,
             ),
             container,
           ];
@@ -1333,14 +1400,97 @@ export function BlockEditorProviderInner({
     [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes],
   );
 
+  // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
+  // `convertStrippingText` so the two can never drift. Recorded (a conversion is
+  // a document edit) and dispatched through the same optimistic patch pipeline
+  // as its own undo/redo; `commitRow` no-ops a missing/unchanged block.
+  //
+  // The wrap/swap decision lives HERE, not on `convertTo`, precisely because
+  // this is the shared half: with it one level up, `convertStrippingText` — the
+  // path the `/` menu, the gutter-`+` draft and the markdown shortcuts all take
+  // — silently bypassed it, so `/callout` retyped the origin into a container
+  // instead of wrapping it (losing its text, and 400ing on the callout's void
+  // schema). Every caller reaching a type change must reach this decision.
+  const convertRow = useCallback(
+    (blockId: string, type: string, data: RowData, expanded?: boolean) => {
+      // Converting INTO a `wrapOnConvert` type is a WRAP, not a type swap: mint
+      // a container row and make THIS block its first child, keeping this
+      // block's id, type, data (text projection included), children and rank.
+      // `data` is the CONTAINER's seed on this path, not the origin's — there is
+      // no type change to carry a payload for, so the caller's `data` is
+      // deliberately ignored in favour of the target's own `empty()`, and
+      // `preserveText` has nothing to do here.
+      const target = blockHandles.get(type);
+      if (target?.wrapOnConvert) {
+        wrapInContainer(blockId, type, target.empty?.() ?? {});
+        return;
+      }
+      commitRow(
+        blockId,
+        (b) => ({
+          ...b,
+          type,
+          data: preserveText(b.data, data, acceptsTextRef.current(type)),
+          expanded: expanded ?? b.expanded,
+        }),
+        { label: "Change block type" },
+      );
+    },
+    [commitRow, acceptsTextRef, blockHandles, wrapInContainer],
+  );
+
+  const convertStrippingText = useCallback(
+    ({
+      blockId,
+      from,
+      to,
+      type,
+      data,
+      expanded,
+    }: {
+      blockId: string;
+      from: number;
+      to: number;
+      type: string;
+      data: RowData;
+      expanded?: boolean;
+    }) => {
+      // (1) The doc. `deleteRange` is DISCRETE, so its Yjs transaction commits
+      // within this task — before React can re-render and move the block (a
+      // `wrapOnConvert` target reparents it into a fresh container, which DOES
+      // remount its editor). That is the guarantee, not the statement order:
+      // called from the slash menu this runs inside the caret menu's own
+      // `editor.update()`, where Lexical defers the nested update to the end of
+      // the outer one — still ahead of any re-render, which is all that matters.
+      //
+      // A block with no registered handle (text-less, or not yet mounted) has
+      // nothing to strip — an empty span is the normal case here, not a
+      // swallowed failure.
+      focusHandlesRef.current.get(blockId)?.deleteRange?.(from, to);
+      // (2) The row. It states the TYPE and nothing about text: the stripped
+      // content reaches `data.text` on its own, through the projection. Strictly
+      // AFTER the strip — `/callout` must lose its `/callout` query from the
+      // content doc before the block becomes a container's first child.
+      convertRow(blockId, type, data, expanded);
+    },
+    [convertRow],
+  );
+
   const makeBlockAPI = useCallback(
     (blockId: string): BlockEditorAPI => ({
-      update(data: unknown) {
+      update(data: RowData) {
         // The single data-write affordance every block renderer uses — routed
         // through `commitRow` so non-text edits (to-do checked, callout color,
         // image src, …) are optimistic AND recorded. `coalesceKey: blockId`
-        // collapses streaming/rapid same-block edits into one undo step.
-        commitRow(blockId, (b) => ({ ...b, data }), { label: "Edit block", coalesceKey: blockId });
+        // collapses streaming/rapid same-block edits into one undo step. The
+        // blob is REPLACED, but `text` is carried across by `preserveText`: a
+        // control flipping `checked` must not be able to write a lagged text
+        // snapshot back over the row.
+        commitRow(
+          blockId,
+          (b) => ({ ...b, data: preserveText(b.data, data, acceptsTextRef.current(b.type)) }),
+          { label: "Edit block", coalesceKey: blockId },
+        );
       },
       setExpanded(expanded: boolean) {
         // Pure view state — deliberately NOT recorded into history (`record: false`):
@@ -1349,25 +1499,15 @@ export function BlockEditorProviderInner({
         // re-click via the blocksResource push.
         commitRow(blockId, (b) => ({ ...b, expanded }), { label: "Toggle collapse", record: false });
       },
-      convertTo(type: string, data: unknown, opts?: { expanded?: boolean }) {
-        // Converting INTO a `wrapOnConvert` type is a WRAP, not a type swap: mint
-        // a container row and make THIS block its first child, keeping this
-        // block's id, type, data, children and rank. Resolved here so no caller
-        // changes — the `/` menu, the gutter-`+` draft, Turn-into and `url-paste`
-        // all keep calling `convertTo(type, data)`.
-        const target = blockHandles.get(type);
-        if (target?.wrapOnConvert) {
-          wrapInContainer(blockId, type, target.empty?.() ?? {}, data);
-          return;
-        }
-        // Type conversion IS a recorded document edit. Its forward apply now flows
-        // through the same optimistic patch pipeline as its undo/redo via `commitRow`
-        // (which no-ops a missing/unchanged block on its own).
-        commitRow(
-          blockId,
-          (b) => ({ ...b, type, data, expanded: opts?.expanded ?? b.expanded }),
-          { label: "Change block type" },
-        );
+      convertTo(type: string, data: RowData, opts?: { expanded?: boolean }) {
+        // The plain path, for a type change that touches no text at all. A
+        // conversion that CONSUMES some of the block's own text (a `/query`, a
+        // markdown prefix) must go through `convertStrippingText` instead.
+        //
+        // Both land on `convertRow`, which owns the wrap-vs-swap decision — so
+        // Turn-into and `url-paste` get `wrapOnConvert` from the same place the
+        // slash menu does, rather than from a check only this caller ran.
+        convertRow(blockId, type, data, opts?.expanded);
       },
       insertAfter(type: string, data: unknown, opts?: { focus?: boolean }) {
         const newId = crypto.randomUUID();
@@ -1543,12 +1683,11 @@ export function BlockEditorProviderInner({
       focusNew,
       focusBlock,
       commitRow,
+      convertRow,
       applyOverlay,
       recordStructural,
       recordStructuralWithDocEdit,
       mergeBlock,
-      blockHandles,
-      wrapInContainer,
     ],
   );
 
@@ -1565,6 +1704,7 @@ export function BlockEditorProviderInner({
       setFocusedBlockId,
       registerFocusHandle,
       makeBlockAPI,
+      convertStrippingText,
       setFlatOrder,
       setRows,
       rowsRef,
@@ -1603,6 +1743,7 @@ export function BlockEditorProviderInner({
       setFocusedBlockId,
       registerFocusHandle,
       makeBlockAPI,
+      convertStrippingText,
       setFlatOrder,
       setRows,
       focusBlock,

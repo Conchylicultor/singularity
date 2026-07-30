@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Editor, BlockTextRenderer } from "@plugins/page/plugins/editor/web";
+import { Editor } from "@plugins/page/plugins/editor/web";
 import { toDoBlock } from "../core";
 
 export { toDoBlock } from "../core";
@@ -11,7 +11,6 @@ export default {
       id: toDoBlock.type,
       match: toDoBlock.type,
       block: toDoBlock,
-      component: BlockTextRenderer,
     }),
   ],
 } satisfies PluginDefinition;

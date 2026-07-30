@@ -15,8 +15,10 @@ import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutati
 import {
   applyBlockOp,
   childrenOf,
-  diffBlocks,
+  dataEqual,
+  namesField,
   opBlockIds,
+  type BlockFieldChanges,
   type BlockNode,
   type BlockOp,
   type BlockOpContext,
@@ -71,9 +73,10 @@ export type OpEffect =
  *
  *  - `op` — a single `BlockOp` applied through the shared `applyBlockOp` reducer
  *    (the forward keystroke/structural edits). Confirmed by its `OpEffect`.
- *  - `patch` — a minimal `BlockPatch` (upsert rows + delete ids) applied
- *    directly onto the client `Block[]` (the undo/redo inverse path). Confirmed
- *    when every upsert is reflected and every deleted id is absent.
+ *  - `patch` — a minimal `BlockPatch` (create rows + field-scoped updates +
+ *    delete ids) applied directly onto the client `Block[]` (the undo/redo
+ *    inverse path). Confirmed when every created row is present and matching,
+ *    every update's NAMED fields have landed, and every deleted id is absent.
  */
 export type BlockOverlayOp =
   | { tag: "op"; op: BlockOp; effect: OpEffect }
@@ -91,7 +94,11 @@ export type BlockOverlayOp =
  */
 function overlayOpTargets(v: BlockOverlayOp): string[] {
   if (v.tag === "patch") {
-    return [...v.patch.upserts.map((b) => b.id), ...v.patch.deleteIds];
+    return [
+      ...v.patch.creates.map((b) => b.id),
+      ...v.patch.updates.map((u) => u.id),
+      ...v.patch.deleteIds,
+    ];
   }
   return opBlockIds(v.op);
 }
@@ -141,10 +148,76 @@ function movedTo(blocks: Block[], m: PredictedMove): boolean {
 }
 
 /**
- * Does SERVER TRUTH prove a patch landed? True when every upserted row is
- * present with matching STRUCTURAL columns (parent / type / rank / expanded) —
- * deliberately not `data` — and every deleted id is gone. The `isConfirmedBy`
- * predicate for the patch variant.
+ * Does `row` already carry every field `changes` NAMES? The one comparator
+ * behind both patch predicates, so "has this write landed" has a single
+ * definition over the field-scoped shape — a patch can never be produced by one
+ * notion of "changed" and judged by another. It reads exactly the named fields,
+ * which is the hole the field scope closes: a whole-row comparison judged
+ * columns the writer never claimed.
+ *
+ * `compareData` is the ONE axis the two callers differ on, deliberately — read
+ * {@link isPatchAbsorbed} and {@link isPatchReflected} together.
+ */
+function fieldsReflected(
+  row: Block,
+  changes: BlockFieldChanges,
+  compareData: boolean,
+): boolean {
+  if (namesField(changes, "parentId") && row.parentId !== changes.parentId) return false;
+  if (namesField(changes, "type") && row.type !== changes.type) return false;
+  if (namesField(changes, "rank") && String(row.rank) !== String(changes.rank)) return false;
+  if (namesField(changes, "expanded") && row.expanded !== changes.expanded) return false;
+  // Deep-compared with the SAME predicate the diff used to emit the change, so
+  // the writer and the guard can never disagree about whether a row differs.
+  if (compareData && namesField(changes, "data") && !dataEqual(row.data, changes.data)) {
+    return false;
+  }
+  return true;
+}
+
+/** Every persisted field of a full row, as a change set (what a create asserts). */
+function allFields(row: Block): BlockFieldChanges {
+  return {
+    parentId: row.parentId,
+    type: row.type,
+    rank: row.rank,
+    expanded: row.expanded,
+    data: row.data,
+  };
+}
+
+/**
+ * Shared body of the two patch predicates: every created row present and
+ * matching, every update's NAMED fields landed, every deleted id gone.
+ *
+ * An update naming an absent row is vacuously satisfied under both: an update
+ * never creates, so `applyPatch` and the server writer skip it too — applying
+ * would change nothing, and the op can (must) confirm against a base without
+ * the row rather than replaying forever. That is the whole of what the retired
+ * `updateOnly` flag was approximating.
+ */
+function patchLanded(blocks: Block[], patch: BlockPatch, compareData: boolean): boolean {
+  const byId = new Map(blocks.map((b) => [b.id, b]));
+  for (const c of patch.creates) {
+    const cur = byId.get(c.id);
+    if (!cur) return false;
+    if (!fieldsReflected(cur, allFields(c), compareData)) return false;
+  }
+  for (const u of patch.updates) {
+    const cur = byId.get(u.id);
+    if (!cur) continue;
+    if (!fieldsReflected(cur, u.changes, compareData)) return false;
+  }
+  for (const id of patch.deleteIds) {
+    if (byId.has(id)) return false;
+  }
+  return true;
+}
+
+/**
+ * Does SERVER TRUTH prove a patch landed? True when every field the patch names
+ * has landed — `data` **excluded** — and every deleted id is gone. The
+ * `isConfirmedBy` predicate for the patch variant.
  *
  * `data` is excluded on purpose, and this is the confirmation half of an
  * asymmetry with {@link isPatchAbsorbed} (read both docs together). Server truth
@@ -158,29 +231,18 @@ function movedTo(blocks: Block[], m: PredictedMove): boolean {
  * is exactly why they are two functions.
  */
 export function isPatchReflected(blocks: Block[], patch: BlockPatch): boolean {
-  const byId = new Map(blocks.map((b) => [b.id, b]));
-  for (const up of patch.upserts) {
-    const cur = byId.get(up.id);
-    if (!cur) {
-      // Update-only upsert onto a row that no longer exists: vacuously
-      // absorbed — the server writer skipped it too (never resurrects), so
-      // this op can and must confirm against a base without the row.
-      if (patch.updateOnly) continue;
-      return false;
-    }
-    if (
-      cur.parentId !== up.parentId ||
-      cur.type !== up.type ||
-      String(cur.rank) !== String(up.rank) ||
-      cur.expanded !== up.expanded
-    ) {
-      return false;
-    }
-  }
-  for (const id of patch.deleteIds) {
-    if (byId.has(id)) return false;
-  }
-  return true;
+  return patchLanded(blocks, patch, false);
+}
+
+/** Overlay a change set onto a row, touching only the fields it names. */
+function mergeFields(row: Block, changes: BlockFieldChanges): Block {
+  const next = { ...row };
+  if (namesField(changes, "parentId")) next.parentId = changes.parentId!;
+  if (namesField(changes, "type")) next.type = changes.type!;
+  if (namesField(changes, "rank")) next.rank = changes.rank!;
+  if (namesField(changes, "expanded")) next.expanded = changes.expanded!;
+  if (namesField(changes, "data")) next.data = changes.data;
+  return next;
 }
 
 /**
@@ -197,59 +259,40 @@ export function isPatchReflected(blocks: Block[], patch: BlockPatch): boolean {
  * made `update` a complete no-op in `persist={false}` memory mode (whose
  * `dispatch` catches `OpNoLongerApplies` and keeps the current rows) and
  * non-optimistic on the server path.
- *
- * "Changed" is `diffBlocks`' own row comparator — the same one `commitRows` used
- * to decide there was a patch worth dispatching — so the writer and the guard
- * can never disagree about whether a row differs.
  */
 export function isPatchAbsorbed(blocks: Block[], patch: BlockPatch): boolean {
-  const byId = new Map(blocks.map((b) => [b.id, b]));
-  const current: Block[] = [];
-  const wanted: Block[] = [];
-  for (const up of patch.upserts) {
-    const cur = byId.get(up.id);
-    if (!cur) {
-      // Update-only upsert onto a row that no longer exists: vacuously absorbed
-      // — `applyPatch` skips it too (never resurrects), so applying would indeed
-      // change nothing. Same rule as the confirmation predicate's.
-      if (patch.updateOnly) continue;
-      return false;
-    }
-    current.push(cur);
-    wanted.push(up);
-  }
-  // Identical id sets on both sides, so `inserted`/`deleted` are empty by
-  // construction and `updated` is exactly "some row would change".
-  if (diffBlocks(current, wanted).updated.length > 0) return false;
-  for (const id of patch.deleteIds) {
-    if (byId.has(id)) return false;
-  }
-  return true;
+  return patchLanded(blocks, patch, true);
 }
 
 /**
- * Apply a `BlockPatch` onto a client `Block[]` base: replace/insert each upsert
- * by id, then drop the deleted ids (and any descendants of them, since the
- * server delete cascades the subtree). Ordering is by rank at render time, so we
- * don't need to position inserts — just include them.
+ * Apply a `BlockPatch` onto a client `Block[]` base: MERGE each update's named
+ * fields into its row (never a whole-row swap — an update says nothing about
+ * the fields it omits), insert/replace each created row, then drop the deleted
+ * ids (and any descendants of them, since the server delete cascades the
+ * subtree). Ordering is by rank at render time, so we don't need to position
+ * inserts — just include them. An update whose row is absent is skipped, which
+ * mirrors the server writer exactly.
  */
 export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
-  const upsertById = new Map(patch.upserts.map((b) => [b.id, b]));
+  const createById = new Map(patch.creates.map((b) => [b.id, b]));
+  const changesById = new Map(patch.updates.map((u) => [u.id, u.changes]));
   const deleted = new Set(patch.deleteIds);
   // Drop the explicitly-deleted ids plus their descendants (mirrors the server's
   // FK cascade), so an undo that re-deletes a subtree-root clears the subtree.
   //
-  // The cascade reads the POST-upsert parentage, which is what the server does
+  // The cascade reads the POST-patch parentage, which is what the server does
   // and is not a detail: `handlePatchBlocks` applies its updates BEFORE its
   // `DELETE`, so a row this patch re-parents OUT of the deleted subtree has
   // already left by the time the cascade runs. Reading pre-patch parentage here
   // instead would silently swallow exactly that shape — redoing an `unwrap`
   // (promote the children, delete the container) dropped every promoted child.
-  // `has`, not `?? b.parentId`: a promotion to the TOP level upserts
+  // `namesField`, not `?? b.parentId`: a promotion to the TOP level writes
   // `parentId: null`, which `??` would silently read as "no opinion".
   const parentOf = (b: Block) => {
-    const up = upsertById.get(b.id);
-    return up ? up.parentId : b.parentId;
+    const created = createById.get(b.id);
+    if (created) return created.parentId;
+    const changes = changesById.get(b.id);
+    return changes && namesField(changes, "parentId") ? (changes.parentId ?? null) : b.parentId;
   };
   const dropped = new Set(deleted);
   let grew = true;
@@ -268,17 +311,20 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
   const seen = new Set<string>();
   for (const b of blocks) {
     if (dropped.has(b.id)) continue;
-    const up = upsertById.get(b.id);
-    next.push(up ?? b);
+    // A create landing on a row that is already present is an idempotent
+    // re-assert of the whole row (a replayed undo-of-delete): the create IS the
+    // full state, so it wins outright. An update only merges its named fields.
+    const created = createById.get(b.id);
+    const changes = changesById.get(b.id);
+    next.push(created ?? (changes ? mergeFields(b, changes) : b));
     seen.add(b.id);
   }
-  // Append any upserts that weren't already present (re-created / inserted
-  // rows) — unless the patch is update-only, which never creates rows (the
-  // absent row was deleted out from under it; mirrors the server writer).
-  if (!patch.updateOnly) {
-    for (const up of patch.upserts) {
-      if (!seen.has(up.id) && !dropped.has(up.id)) next.push(up);
-    }
+  // Append creates that weren't already present (re-created / inserted rows).
+  // Updates are deliberately NOT appended: an update never creates a row, so an
+  // absent target is a skip — mirroring the server writer, and the reason a
+  // debounced projection flush can never resurrect a deleted block.
+  for (const c of patch.creates) {
+    if (!seen.has(c.id) && !dropped.has(c.id)) next.push(c);
   }
   return next;
 }

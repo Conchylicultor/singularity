@@ -286,14 +286,30 @@ describe("chained compose", () => {
 // ---------------------------------------------------------------------------
 
 describe("applyPatch", () => {
-  test("upserts insert new + replace existing, deletes drop ids", () => {
+  test("creates insert new + replace existing, deletes drop ids", () => {
     const blocks = [mk("A", null, a, { text: "a" }), mk("B", null, after(a), { text: "b" })];
     const out = applyPatch(blocks, {
-      upserts: [mk("A", null, a, { text: "A!" }), mk("C", null, after(after(a)), { text: "c" })],
+      creates: [mk("A", null, a, { text: "A!" }), mk("C", null, after(after(a)), { text: "c" })],
+      updates: [],
       deleteIds: ["B"],
     });
     expect(out.map((b) => b.id).sort()).toEqual(["A", "C"]);
     expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("A!");
+  });
+
+  test("an update MERGES its named fields — never a whole-row swap", () => {
+    const blocks = [mk("A", "P", a, { text: "keep me", type: "callout", expanded: true })];
+    const out = applyPatch(blocks, {
+      creates: [],
+      updates: [{ id: "A", changes: { expanded: false } }],
+      deleteIds: [],
+    });
+    const row = out[0]!;
+    expect(row.expanded).toBe(false);
+    // Everything the patch did not name is untouched — the whole point.
+    expect(row.type).toBe("callout");
+    expect(row.parentId).toBe("P");
+    expect((row.data as { text: string }).text).toBe("keep me");
   });
 
   test("deleting a subtree root drops descendants too (mirrors FK cascade)", () => {
@@ -302,7 +318,7 @@ describe("applyPatch", () => {
       mk("C1", "P", after(a)),
       mk("C2", "C1", after(after(a))),
     ];
-    const out = applyPatch(blocks, { upserts: [], deleteIds: ["P"] });
+    const out = applyPatch(blocks, { creates: [], updates: [], deleteIds: ["P"] });
     expect(out.length).toBe(0);
   });
 
@@ -313,7 +329,8 @@ describe("applyPatch", () => {
     // instead swallowed every promoted child.
     const blocks = [mk("P", null, a, { expanded: true }), mk("C", "P", a)];
     const out = applyPatch(blocks, {
-      upserts: [mk("C", null, after(a))],
+      creates: [],
+      updates: [{ id: "C", changes: { parentId: null } }],
       deleteIds: ["P"],
     });
     expect(out.map((b) => b.id)).toEqual(["C"]);
@@ -322,19 +339,54 @@ describe("applyPatch", () => {
 });
 
 describe("isPatchReflected", () => {
-  test("true once every upsert is present + matching and every delete is gone", () => {
+  test("true once every create is present + matching and every delete is gone", () => {
     const base = [mk("A", null, a, { type: "heading" })];
-    const patch = { upserts: [mk("A", null, a, { type: "heading" })], deleteIds: ["B"] };
+    const patch = {
+      creates: [mk("A", null, a, { type: "heading" })],
+      updates: [],
+      deleteIds: ["B"],
+    };
     expect(isPatchReflected(base, patch)).toBe(true);
-    // An upsert whose column differs ⇒ not yet reflected.
+    // A create whose column differs ⇒ not yet reflected.
     expect(isPatchReflected([mk("A", null, a, { type: "text" })], patch)).toBe(false);
     // A delete id still present ⇒ not reflected.
     expect(isPatchReflected([...base, mk("B", null, after(a))], patch)).toBe(false);
   });
 
+  // Confirmation is deliberately data-BLIND (server truth legitimately differs:
+  // `parseBlockData` normalization, a `data.text` projection lagging ~1s). The
+  // exact question belongs to the apply-guard — see the `isPatchAbsorbed`
+  // describe below, which pins the divergence.
+  test("`data` is not compared, even when the patch names it", () => {
+    const patch = {
+      creates: [],
+      updates: [{ id: "A", changes: { data: { text: "projected" } } }],
+      deleteIds: [],
+    };
+    expect(isPatchReflected([mk("A", null, a, { text: "stale" })], patch)).toBe(true);
+    expect(isPatchReflected([mk("A", null, a, { text: "projected" })], patch)).toBe(true);
+  });
+
+  test("only the NAMED fields are compared", () => {
+    const patch = {
+      creates: [],
+      updates: [{ id: "A", changes: { expanded: true } }],
+      deleteIds: [],
+    };
+    // `data`/`type`/`parentId` all differ from anything — irrelevant, unnamed.
+    expect(
+      isPatchReflected([mk("A", "Z", a, { expanded: true, type: "quote", text: "x" })], patch),
+    ).toBe(true);
+    expect(isPatchReflected([mk("A", "Z", a, { expanded: false })], patch)).toBe(false);
+  });
+
   test("applyOverlayOp on a patch that the base already reflects throws", () => {
     const base = [mk("A", null, a)];
-    const overlay = buildPatchOverlayOp({ upserts: [mk("A", null, a)], deleteIds: [] });
+    const overlay = buildPatchOverlayOp({
+      creates: [mk("A", null, a)],
+      updates: [],
+      deleteIds: [],
+    });
     expect(() => applyOverlayOp(base, overlay)).toThrow(OpNoLongerApplies);
   });
 });
@@ -344,15 +396,20 @@ describe("isPatchReflected", () => {
 //
 // The two predicates ask different questions of different subjects — "would
 // applying this change anything HERE" vs "does server truth prove my write
-// landed" — and `data` belongs in the first but not the second. These pin the
-// difference: identical on every structural case, divergent on a data-only
-// patch, which is every `BlockEditorAPI.update` (to-do checked, callout color,
-// image width).
+// landed" — and `data` belongs in the first but not the second. Everything else
+// (which fields a patch NAMES, the update-never-creates skip) is shared, so
+// these pin exactly that difference: identical on every structural case,
+// divergent on a data-only patch, which is every `BlockEditorAPI.update` (to-do
+// checked, callout color, image width) and the `data.text` projection.
 // ---------------------------------------------------------------------------
 
 describe("isPatchAbsorbed", () => {
   const base = [mk("A", null, a, { text: "old" }), mk("B", null, after(a))];
-  const dataOnly = { upserts: [mk("A", null, a, { text: "new" })], deleteIds: [] };
+  const dataOnly = {
+    creates: [],
+    updates: [{ id: "A", changes: { data: { text: "new" } } }],
+    deleteIds: [],
+  };
 
   test("a data-only patch is NOT absorbed, though it IS reflected", () => {
     expect(isPatchAbsorbed(base, dataOnly)).toBe(false);
@@ -370,24 +427,28 @@ describe("isPatchAbsorbed", () => {
   });
 
   test("`data` equality is by VALUE, not reference (a re-serialized identical payload is absorbed)", () => {
-    const same = { upserts: [mk("A", null, a, { text: "old" })], deleteIds: [] };
+    const same = {
+      creates: [],
+      updates: [{ id: "A", changes: { data: { text: "old" } } }],
+      deleteIds: [],
+    };
     expect(isPatchAbsorbed(base, same)).toBe(true);
   });
 
   test("the structural cases behave identically under both predicates", () => {
     const cases: { patch: Parameters<typeof isPatchAbsorbed>[1]; expected: boolean }[] = [
-      // Fully absorbed: same columns, same data.
-      { patch: { upserts: [mk("A", null, a, { text: "old" })], deleteIds: [] }, expected: true },
-      // A structural column differs.
-      { patch: { upserts: [mk("A", null, a, { text: "old", type: "heading" })], deleteIds: [] }, expected: false },
-      { patch: { upserts: [mk("A", "B", a, { text: "old" })], deleteIds: [] }, expected: false },
-      { patch: { upserts: [mk("A", null, after(a), { text: "old" })], deleteIds: [] }, expected: false },
-      { patch: { upserts: [mk("A", null, a, { text: "old", expanded: true })], deleteIds: [] }, expected: false },
+      // Every named field already matches.
+      { patch: { creates: [], updates: [{ id: "A", changes: { data: { text: "old" } } }], deleteIds: [] }, expected: true },
+      // A named structural field differs.
+      { patch: { creates: [], updates: [{ id: "A", changes: { type: "heading" } }], deleteIds: [] }, expected: false },
+      { patch: { creates: [], updates: [{ id: "A", changes: { parentId: "B" } }], deleteIds: [] }, expected: false },
+      { patch: { creates: [], updates: [{ id: "A", changes: { rank: Rank.from(after(a)) } }], deleteIds: [] }, expected: false },
+      { patch: { creates: [], updates: [{ id: "A", changes: { expanded: true } }], deleteIds: [] }, expected: false },
       // A row the patch would CREATE is missing.
-      { patch: { upserts: [mk("C", null, after(after(a)))], deleteIds: [] }, expected: false },
+      { patch: { creates: [mk("C", null, after(after(a)))], updates: [], deleteIds: [] }, expected: false },
       // A delete id still present / already gone.
-      { patch: { upserts: [], deleteIds: ["B"] }, expected: false },
-      { patch: { upserts: [], deleteIds: ["GONE"] }, expected: true },
+      { patch: { creates: [], updates: [], deleteIds: ["B"] }, expected: false },
+      { patch: { creates: [], updates: [], deleteIds: ["GONE"] }, expected: true },
     ];
     for (const { patch, expected } of cases) {
       expect(isPatchAbsorbed(base, patch)).toBe(expected);
@@ -395,25 +456,29 @@ describe("isPatchAbsorbed", () => {
     }
   });
 
-  test("update-only: an absent row is vacuously absorbed under both", () => {
+  test("an update naming an absent row is vacuously satisfied under both", () => {
     const projected = {
-      upserts: [mk("GONE", null, a, { text: "projected" })],
+      creates: [],
+      updates: [{ id: "GONE", changes: { data: { text: "projected" } } }],
       deleteIds: [],
-      updateOnly: true,
     };
     expect(isPatchAbsorbed(base, projected)).toBe(true);
     expect(isPatchReflected(base, projected)).toBe(true);
-    // Without `updateOnly` the row should have been created ⇒ neither absorbed.
-    const plain = { ...projected, updateOnly: undefined };
-    expect(isPatchAbsorbed(base, plain)).toBe(false);
-    expect(isPatchReflected(base, plain)).toBe(false);
+    // The same row as a CREATE should have been created ⇒ neither is satisfied.
+    const created = {
+      creates: [mk("GONE", null, a, { text: "projected" })],
+      updates: [],
+      deleteIds: [],
+    };
+    expect(isPatchAbsorbed(base, created)).toBe(false);
+    expect(isPatchReflected(base, created)).toBe(false);
   });
 
-  test("a PRESENT row's data still counts under update-only (the projection applies optimistically)", () => {
+  test("a PRESENT row's data still counts for the guard (the projection applies optimistically)", () => {
     const projected = {
-      upserts: [mk("A", null, a, { text: "projected" })],
+      creates: [],
+      updates: [{ id: "A", changes: { data: { text: "projected" } } }],
       deleteIds: [],
-      updateOnly: true,
     };
     expect(isPatchAbsorbed(base, projected)).toBe(false);
     expect(isPatchReflected(base, projected)).toBe(true);
@@ -421,22 +486,21 @@ describe("isPatchAbsorbed", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Update-only patches (Stage 4a): the CRDT text projection's write mode. An
-// update-only patch never CREATES rows — a debounced projection flush racing a
-// concurrent delete (most importantly a history RESTORE, which replaces every
-// content row) must never resurrect a deleted block with pre-delete text.
-// These pin the client half; the server half is the symmetric insert-skip in
-// handle-patch-blocks.ts.
+// An update never creates. The CRDT text projection is a `data`-only update, so
+// a debounced flush racing a concurrent delete (most importantly a history
+// RESTORE, which replaces every content row) cannot resurrect the block: the
+// patch's SHAPE forbids it, with no flag to set or forget. These pin the client
+// half; the server half is the symmetric skip in handle-patch-blocks.ts.
 // ---------------------------------------------------------------------------
 
-describe("updateOnly patches", () => {
+describe("updates never create", () => {
   const projected = {
-    upserts: [mk("A", null, a, { text: "projected" })],
+    creates: [],
+    updates: [{ id: "A", changes: { data: { text: "projected" } } }],
     deleteIds: [],
-    updateOnly: true,
   };
 
-  test("applyPatch updates a present row like a normal patch", () => {
+  test("applyPatch updates a present row", () => {
     const out = applyPatch([mk("A", null, a, { text: "old" }), mk("B", null, after(a))], projected);
     expect(out.map((b) => b.id)).toEqual(["A", "B"]);
     expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("projected");
@@ -452,17 +516,21 @@ describe("updateOnly patches", () => {
     // Row gone from server truth: the server writer skipped the update, so the
     // op must confirm against this base instead of replaying forever.
     expect(isPatchReflected([mk("B", null, after(a))], projected)).toBe(true);
-    // Same base, plain patch: NOT reflected (the row should have been created).
+    // Same row as a CREATE: NOT reflected (the row should have been created).
     expect(
-      isPatchReflected([mk("B", null, after(a))], { ...projected, updateOnly: undefined }),
+      isPatchReflected([mk("B", null, after(a))], {
+        creates: [mk("A", null, a, { text: "projected" })],
+        updates: [],
+        deleteIds: [],
+      }),
     ).toBe(false);
   });
 
-  test("isPatchReflected still compares persisted columns for present rows", () => {
+  test("isPatchReflected still compares named columns for present rows", () => {
     const moved = {
-      upserts: [mk("A", "B", a)],
+      creates: [],
+      updates: [{ id: "A", changes: { parentId: "B" } }],
       deleteIds: [],
-      updateOnly: true,
     };
     expect(isPatchReflected([mk("A", null, a)], moved)).toBe(false);
     expect(isPatchReflected([mk("A", "B", a)], moved)).toBe(true);
@@ -475,7 +543,17 @@ describe("updateOnly patches", () => {
 
 describe("sameOverlayTarget", () => {
   const patchOn = (ids: string[], deleteIds: string[] = []): BlockOverlayOp =>
-    buildPatchOverlayOp({ upserts: ids.map((id) => mk(id, null, a)), deleteIds });
+    buildPatchOverlayOp({ creates: ids.map((id) => mk(id, null, a)), updates: [], deleteIds });
+
+  test("an update's target counts as a written row", () => {
+    const upd = buildPatchOverlayOp({
+      creates: [],
+      updates: [{ id: "A", changes: { expanded: true } }],
+      deleteIds: [],
+    });
+    expect(sameOverlayTarget(upd, patchOn(["A"]))).toBe(true);
+    expect(sameOverlayTarget(upd, patchOn(["B"]))).toBe(false);
+  });
 
   test("an undo patch and its redo inverse share their id set (the stuck-inverse pair cascades)", () => {
     const undoP = patchOn([], ["X"]); // undo: delete X

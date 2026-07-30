@@ -24,7 +24,7 @@ import { BlockPastePlugin } from "./block-paste-plugin";
 import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
 import { blockTextNodes, getBlockTextExtensions, serializeBlockRuns } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
-import { BLOCK_INSET, MARKER_GUTTER } from "../internal/page-column";
+import { BLOCK_INSET } from "../internal/page-column";
 import {
   placeCaretAtBoundary,
   placeCaretAtColumn,
@@ -32,6 +32,7 @@ import {
 } from "../internal/caret-geometry";
 import {
   appendRunsAtJoin,
+  deleteBlockTextRange,
   focusHydratingAware,
   truncateBlockTextFrom,
 } from "../internal/collab-text-surgery";
@@ -62,40 +63,37 @@ function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<Lexi
 }
 
 /**
- * Reusable editable-text block renderer. Owns the entire Lexical pipeline —
- * the per-block CRDT binding, structural keyboard handling, the slash menu, and
- * the markdown block-shortcut affordance — so every text-bearing block type (text,
- * bulleted-list, and future heading/quote/to-do types) is a thin wrapper that
- * supplies a `marker` and `placeholder`.
+ * The editable-text LEAF: the entire Lexical pipeline — the per-block CRDT
+ * binding, structural keyboard handling, the slash menu, and the markdown
+ * block-shortcut affordance — and nothing else.
+ *
+ * It owns no layout. The line wrapper, the leading-marker gutter and the leaf
+ * cell all live in `TextBlockLayout`, which renders this as its `children`, so
+ * the element chain above `<LexicalComposer>` is constant across every
+ * text-bearing block type (see that file for why). Consequence: the marker
+ * gutter now sits OUTSIDE the composer — nothing reads Lexical context from a
+ * marker today, and arguably a region should not be able to.
+ *
+ * Deliberately NOT exported from the web barrel: a block type never renders this
+ * itself, it declares `chrome` and lets the shared renderer place it.
  */
 export function BlockTextEditor({
   block,
   isFocused,
   editor,
-  marker,
   placeholder,
   contentClassName,
   textVariant,
-  inset = true,
 }: {
   block: Block;
   isFocused: boolean;
   editor: BlockEditorAPI;
-  /** Optional non-editable element rendered in the leading-marker gutter (e.g. a bullet). */
-  marker?: ReactNode;
   /** Shown when the block is empty and focused. */
   placeholder?: ReactNode;
   /** Extra classes for the editable content (e.g. strikethrough when done). */
   contentClassName?: string;
   /** Semantic typography variant for the editable text and placeholder. */
   textVariant: BlockTextVariant;
-  /**
-   * Whether the editor supplies the page-level left text inset itself. Plain
-   * blocks (the default) sit directly on the page rail and want it; blocks that
-   * already wrap themselves in a padded container (e.g. the callout box) own
-   * that inset and pass `inset={false}` so it isn't applied twice.
-   */
-  inset?: boolean;
 }) {
   const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
   const isEmpty = runs.length === 0;
@@ -169,6 +167,10 @@ export function BlockTextEditor({
         const ed = lexicalEditorRef.current;
         if (ed) appendRunsAtJoin(ed, runs);
       },
+      deleteRange: (from: number, to: number) => {
+        const ed = lexicalEditorRef.current;
+        if (ed) deleteBlockTextRange(ed, from, to);
+      },
       // The read dual of `appendRunsAtEnd`: serialize this block's LIVE runs (the
       // same call the keyboard plugin makes for split/convertTo/merge), so a
       // forward-delete in the PREVIOUS block can pull this block's freshly-typed
@@ -181,69 +183,55 @@ export function BlockTextEditor({
   }, [block.id, registerFocusHandle]);
 
   return (
+    // `LexicalComposer` emits no DOM, so these all render directly inside
+    // `TextBlockLayout`'s `relative` leaf cell — which is what the placeholder's
+    // `absolute left-0 top-0` resolves against.
     <LexicalComposer initialConfig={initialConfig}>
-      <div className={cn("relative flex gap-xs", inset && insetClass({ l: BLOCK_INSET }))}>
-        {/* Leading-marker gutter: a fixed-width column shared by every marker
-            type so the text content edge is identical across block types.
-            `justify-center` + `min-width` centers narrow glyphs (bullet,
-            number, checkbox) and lets wider markers (the callout icon) grow the
-            column without disturbing the others. */}
-        {marker != null ? (
-          <div
-            className="flex flex-none select-none justify-center"
-            style={{ minWidth: MARKER_GUTTER }}
-          >
-            {marker}
-          </div>
-        ) : null}
-        <div className="relative min-w-0 flex-1">
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                className={cn("outline-none py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant], contentClassName)}
-                onFocus={() => editor.onFocus()}
-              />
-            }
-            placeholder={
-              isEmpty && isFocused && effectivePlaceholder ? (
-                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant])}>
-                  {effectivePlaceholder}
-                </div>
-              ) : null
-            }
-            ErrorBoundary={LexicalErrorBoundary}
+      <RichTextPlugin
+        contentEditable={
+          <ContentEditable
+            className={cn("outline-none py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant], contentClassName)}
+            onFocus={() => editor.onFocus()}
           />
-          {/* Wires TOGGLE_LINK_COMMAND → LinkNode; validateUrl gates the href to
-              the allowed protocols. ClickableLinkPlugin makes links open in a new
-              tab on cmd/ctrl-click (plain click still places the caret), the
-              Notion-like editable-link UX. */}
-          <LinkPlugin validateUrl={isValidLinkUrl} />
-          <ClickableLinkPlugin newTab />
-          {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
-              split/merge are content-doc-aware, and text edits ride the
-              unified undo stack via the seam's Y.UndoManager. */}
-          <CollabTextPlugin block={block} />
-          <KeyboardPlugin blockId={block.id} editor={editor} />
-          <BlockMenuPlugin editor={editor} blockId={block.id} />
-          <MarkdownShortcutPlugin block={block} editor={editor} />
-          {/* Block-level markdown PREFIXES first, then inline delimiters. The
-              order is the layering: the inline transform can leave a prefix
-              behind (`~~- foo~~` → `- foo`), and the block plugin tag-guards
-              that away, so the block listener must already be registered when
-              the inline one starts stamping INLINE_FORMAT_TAG. */}
-          <InlineMarkdownPlugin blockId={block.id} />
-          <FormatShortcutsPlugin />
-          <FormatToolbarPlugin />
-          <BlockPastePlugin block={block} editor={editor} />
-          <BlockForestPastePlugin block={block} editor={editor} />
-          {getBlockTextExtensions().map((ext) =>
-            ext.Plugin ? (
-              <ext.Plugin key={ext.id} block={block} editor={editor} />
-            ) : null,
-          )}
-          <EditorRefPlugin editorRef={lexicalEditorRef} />
-        </div>
-      </div>
+        }
+        placeholder={
+          isEmpty && isFocused && effectivePlaceholder ? (
+            <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant])}>
+              {effectivePlaceholder}
+            </div>
+          ) : null
+        }
+        ErrorBoundary={LexicalErrorBoundary}
+      />
+      {/* Wires TOGGLE_LINK_COMMAND → LinkNode; validateUrl gates the href to
+          the allowed protocols. ClickableLinkPlugin makes links open in a new
+          tab on cmd/ctrl-click (plain click still places the caret), the
+          Notion-like editable-link UX. */}
+      <LinkPlugin validateUrl={isValidLinkUrl} />
+      <ClickableLinkPlugin newTab />
+      {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
+          split/merge are content-doc-aware, and text edits ride the
+          unified undo stack via the seam's Y.UndoManager. */}
+      <CollabTextPlugin block={block} />
+      <KeyboardPlugin blockId={block.id} editor={editor} />
+      <BlockMenuPlugin blockId={block.id} />
+      <MarkdownShortcutPlugin block={block} />
+      {/* Block-level markdown PREFIXES first, then inline delimiters. The order
+          is the layering: the inline transform can leave a prefix behind
+          (`~~- foo~~` → `- foo`), and the block plugin tag-guards that away, so
+          the block listener must already be registered when the inline one
+          starts stamping INLINE_FORMAT_TAG. */}
+      <InlineMarkdownPlugin blockId={block.id} />
+      <FormatShortcutsPlugin />
+      <FormatToolbarPlugin />
+      <BlockPastePlugin block={block} editor={editor} />
+      <BlockForestPastePlugin block={block} editor={editor} />
+      {getBlockTextExtensions().map((ext) =>
+        ext.Plugin ? (
+          <ext.Plugin key={ext.id} block={block} editor={editor} />
+        ) : null,
+      )}
+      <EditorRefPlugin editorRef={lexicalEditorRef} />
     </LexicalComposer>
   );
 }

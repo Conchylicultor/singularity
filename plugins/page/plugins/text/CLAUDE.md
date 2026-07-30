@@ -16,9 +16,7 @@ The bulleted-list block is the second consumer of the same primitive.
 - Description: Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
-  - Uses:
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Exports (values): `textBlock`
 - Server:
   - Contributes: `page.block-data` "text"

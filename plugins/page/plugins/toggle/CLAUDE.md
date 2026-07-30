@@ -23,9 +23,7 @@ toggle-specific nesting logic.
 - Description: Toggle (collapsible) block type for the page editor. Toggle (collapsible) block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "toggle" → `BlockTextRenderer`
-  - Uses:
-    - `page/editor.BlockTextRenderer`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Exports (values): `toggleBlock`
 - Server:
   - Contributes: `page.block-data` "toggle"

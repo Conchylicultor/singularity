@@ -5,23 +5,108 @@ import {
   defineRenderSlot,
   type OrderedDispatchContribution,
 } from "@plugins/primitives/plugins/slot-render/web";
-import type { Block, BlockHandle } from "../core";
+import type { Block, BlockHandle, RichText } from "../core";
 import type {
   BlockAnchorProps,
+  BlockChrome,
   BlockEditorAPI,
   BlockFrameProps,
   BlockRendererProps,
 } from "./types";
 import { UnknownBlock } from "./components/unknown-block";
+import { BlockTextRenderer } from "./components/block-text-renderer";
 
 /** Block handle metadata carried alongside the dispatch fields (match, component). */
 export interface BlockMeta {
   block: BlockHandle<unknown>;
+  /**
+   * Per-type presentation for a text-bearing type, applied by the shared
+   * renderer onto a fixed element tree. Mutually exclusive with `component` —
+   * see `BlockRegistration`.
+   */
+  chrome?: BlockChrome;
 }
 
-/** Full contribution shape — block metadata plus ordered-dispatch fields. */
+/**
+ * Full contribution shape as STORED — block metadata plus ordered-dispatch
+ * fields, `component` always resolved. What a plugin may WRITE is narrower; see
+ * `BlockRegistration`.
+ */
 export type BlockContribution =
   OrderedDispatchContribution<BlockRendererProps, string> & BlockMeta;
+
+/** Dispatch fields every block registration carries. */
+interface BlockRegistrationBase {
+  id: string;
+  match: string | RegExp | ((props: BlockRendererProps) => boolean);
+}
+
+/**
+ * The compile-time discriminator between the two arms below. `defineBlock`
+ * installs a REQUIRED `text` lens exactly when the schema carried the
+ * `TextBearingSchema` brand, and types a void block's as `text?: undefined` — so
+ * "does this block carry editable text" is readable from the handle's TYPE, with
+ * no second flag to keep in sync. `data: never` only has to be a bottom type the
+ * concrete lens is bivariantly assignable to; nothing calls it through here.
+ */
+type TextBearingHandle = BlockHandle<unknown> & { text(data: never): RichText };
+type TextLessHandle = BlockHandle<unknown> & { text?: undefined };
+
+/**
+ * What a plugin writes at an `Editor.Block` call site — a union with exactly one
+ * inhabitable arm per handle:
+ *
+ * - **text-bearing** (text, headings, lists, to-do, toggle, quote, prompt) → the
+ *   SLOT supplies the renderer; the contribution may only declare `chrome`.
+ *   Naming a `component` here is a compile error, and that is the point: quote
+ *   and prompt used to own their own dispatch components, so converting into
+ *   them unmounted the `LexicalComposer` (and the Yjs↔Lexical binding) holding
+ *   the user's caret — the reason the `/quote` bug was reported for those types
+ *   and no other. Every text type now dispatches ONE function reference, so
+ *   every text↔text conversion reconciles in place. See
+ *   `research/2026-07-29-page-text-block-presentation-api.md`.
+ * - **text-less** (divider, image, code-block, embed, media, sub-page, the
+ *   callout anchor, …) → owns its component outright. Converting text → divider
+ *   SHOULD tear the editor down; there is no caret on the other side to keep.
+ *
+ * **`excludeFromReorder` is on the TEXT-LESS arm only**, and that is a real hole
+ * being closed rather than hygiene: `ReorderItemMiddleware`
+ * (`plugins/reorder/web/internal/dnd-item-middleware.tsx`) early-returns
+ * `<>{children}</>` where it otherwise renders `<SortableReorderItem>`,
+ * discriminating on exactly that field — an element-type flip on an ANCESTOR of
+ * the composer, keyed per contribution. A text-bearing type setting it would
+ * remount Lexical on every conversion into or out of it: the reported bug,
+ * reached through a field the union would otherwise permit. No block sets it
+ * today, which is why the shared-renderer fix would otherwise be complete in
+ * fact rather than by construction.
+ */
+export type BlockRegistration =
+  | (BlockRegistrationBase & {
+      block: TextBearingHandle;
+      chrome?: BlockChrome;
+      component?: never;
+      excludeFromReorder?: never;
+    })
+  | (BlockRegistrationBase & {
+      block: TextLessHandle;
+      component: ComponentType<BlockRendererProps>;
+      chrome?: never;
+      excludeFromReorder?: boolean;
+    });
+
+// Ordered-dispatch: renders one contribution per block via `.Dispatch`, but
+// each contribution carries an `id` so the slot enters the reorderable-slots
+// manifest and owes an authored config override. The grouped block menus read
+// that config order (groups + labels) through `useReorderedEntries`; the slot
+// itself stays pure single-match dispatch.
+const blockSlot = defineOrderedDispatchSlot<BlockRendererProps, string, BlockMeta>(
+  "page.editor.block",
+  {
+    key: (props) => props.block.type,
+    fallback: UnknownBlock,
+    docLabel: (c) => c.block?.type,
+  },
+);
 
 /**
  * Extra fields carried alongside a container frame's dispatch fields.
@@ -45,17 +130,26 @@ export interface BlockFrameMeta {
 }
 
 export const Editor = {
-  // Ordered-dispatch: renders one contribution per block via `.Dispatch`, but
-  // each contribution carries an `id` so the slot enters the reorderable-slots
-  // manifest and owes an authored config override. The grouped block menus read
-  // that config order (groups + labels) through `useReorderedEntries`; the slot
-  // itself stays pure single-match dispatch.
-  Block: defineOrderedDispatchSlot<BlockRendererProps, string, BlockMeta>(
-    "page.editor.block",
+  /**
+   * Register a block type's renderer. Callable + the slot's own members
+   * (`id` / `useContributions` / `Dispatch`), so it stays slot-shaped for the
+   * facet walk and every reading consumer; only the CALL signature is narrowed,
+   * to `BlockRegistration`'s union.
+   */
+  Block: Object.assign(
+    (reg: BlockRegistration) =>
+      blockSlot({
+        ...reg,
+        // The one and only binding of the shared text renderer to a block type.
+        // A text-bearing registration cannot name a `component` (typed `never`),
+        // so this default is unconditional for all of them — which is precisely
+        // what keeps a type change chrome-only.
+        component: reg.component ?? BlockTextRenderer,
+      } as BlockContribution),
     {
-      key: (props) => props.block.type,
-      fallback: UnknownBlock,
-      docLabel: (c) => c.block?.type,
+      id: blockSlot.id,
+      useContributions: blockSlot.useContributions,
+      Dispatch: blockSlot.Dispatch,
     },
   ),
   /**

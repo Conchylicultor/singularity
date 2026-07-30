@@ -10,8 +10,9 @@
 //     from the restored `data.text`);
 //  5. assert `page_block_docs` and `data.text` agree for every restored block;
 //  6. assert a SECOND browser context converges;
-//  7. server-half of the resurrect race: POST a stale `updateOnly` projection
-//     patch for the pre-restore block id and assert it is NOT resurrected.
+//  7. server-half of the resurrect race: POST a stale projection patch (a
+//     field-scoped `data` UPDATE) for the pre-restore block id and assert it is
+//     NOT resurrected — an update never creates, by definition.
 //
 // Usage: bun plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts [--base <url>] [--out <path>]
 import {
@@ -31,6 +32,7 @@ import {
   editableBlocks,
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/crdt-restore");
@@ -41,6 +43,8 @@ interface TextRun {
 interface BlockRow {
   id: string;
   type: string;
+  parentId: string | null;
+  rank: string;
   data?: { text?: TextRun[] };
 }
 interface VersionRow {
@@ -191,27 +195,24 @@ await withBrowser(async (h) => {
   r.ok("context B converges", bText === `${V1} post-restore`, JSON.stringify(bText));
   await snap(pageB, out, "context-b");
 
-  // --- Server-half of the resurrect race: stale updateOnly projection ----------
+  // --- Server-half of the resurrect race: a stale projection UPDATE ------------
   // A projection flush computed against the PRE-restore rows arrives AFTER the
-  // restore (the client gate can't cover in-flight requests). update-only must
-  // skip the dead row — never re-create it.
-  const stalePatch = {
-    upserts: [
-      { ...preBlock, data: { ...(preBlock.data ?? {}), text: [{ text: "ZOMBIE" }] } },
-    ],
-    deleteIds: [] as string[],
-    updateOnly: true,
-  };
-  const patchRes = await fetch(`${base}/api/pages/${pageId}/blocks/patch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(stalePatch),
+  // restore (the client gate can't cover in-flight requests). A projection
+  // changes only `data`, so it is an UPDATE — and an update never creates, so
+  // the dead row is skipped rather than resurrected. No flag: the patch's shape
+  // is the guarantee.
+  const postPatch = (body: unknown) =>
+    fetch(`${base}/api/pages/${pageId}/blocks/patch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const patchRes = await postPatch({
+    creates: [],
+    updates: [{ id: preBlock.id, changes: { data: { text: [{ text: "ZOMBIE" }] } } }],
+    deleteIds: [],
   });
-  r.ok(
-    "stale updateOnly patch accepted (2xx)",
-    patchRes.ok,
-    `status=${patchRes.status}`,
-  );
+  r.ok("stale projection update accepted (2xx)", patchRes.ok, `status=${patchRes.status}`);
   const rowsAfter = await fetchBlocks(pageId);
   r.ok(
     "stale projection did NOT resurrect the old block",
@@ -221,23 +222,39 @@ await withBrowser(async (h) => {
     "restored row untouched by the stale patch",
     rowText(rowsAfter.find((row) => row.id === restored.id)).startsWith(V1),
   );
-  // Control: WITHOUT updateOnly the same stale patch WOULD resurrect (documents
-  // why the flag exists). Clean it up right after.
-  const controlRes = await fetch(`${base}/api/pages/${pageId}/blocks/patch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...stalePatch, updateOnly: false }),
+  // Control: the SAME row as a `create` DOES come back — undo-of-delete
+  // semantics are intact, and creation is the only thing that carries them. It
+  // must be given a FREE slot: the restore re-minted its rows from scratch, so
+  // the pre-restore row's own `(parent_id, rank)` pair is occupied again, and
+  // re-claiming it is a genuine collision the unique index fires on (loudly, by
+  // design — see `rank-park.ts`). Clean the row up right after.
+  const freeRank = Rank.between(
+    Rank.from(
+      rowsAfter
+        .filter((row) => row.parentId === preBlock.parentId)
+        .map((row) => row.rank)
+        .reduce((a, b) => (a > b ? a : b)),
+    ),
+    null,
+  ).toJSON();
+  const controlRes = await postPatch({
+    creates: [
+      {
+        ...preBlock,
+        rank: freeRank,
+        data: { ...(preBlock.data ?? {}), text: [{ text: "ZOMBIE" }] },
+      },
+    ],
+    updates: [],
+    deleteIds: [],
   });
   const rowsControl = await fetchBlocks(pageId);
   r.ok(
-    "control: plain patch re-creates (undo-of-delete semantics intact)",
+    "control: a create re-creates (undo-of-delete semantics intact)",
     controlRes.ok && rowsControl.some((row) => row.id === preBlock.id),
+    `status=${controlRes.status}`,
   );
-  await fetch(`${base}/api/pages/${pageId}/blocks/patch`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ upserts: [], deleteIds: [preBlock.id] }),
-  });
+  await postPatch({ creates: [], updates: [], deleteIds: [preBlock.id] });
 
   r.finish();
 });

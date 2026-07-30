@@ -29,22 +29,25 @@ describe("defineBlock acceptsText", () => {
   });
 });
 
-describe("text-carry rule (the convert-path gate)", () => {
-  // The three convert sites (slash menu, keyboard reset, markdown shortcut) all
-  // apply this expression: carry `text` into the target payload iff the target's
-  // schema declares it. A void target must never receive an unknown `text` key
-  // (the write boundary rejects it with a 400).
-  const carry = (handle: { acceptsText: boolean }, base: object, text: string) =>
-    handle.acceptsText ? { ...base, text } : base;
-
-  test("carries text into a text-bearing target", () => {
-    const handle = defineBlock({ type: "text", schema: z.object({ text: z.string() }) });
-    expect(carry(handle, { text: "" }, "hello")).toEqual({ text: "hello" });
+describe("emptyRowData (the convert-path seed)", () => {
+  // `empty()` seeding `{ text: [] }` is correct at block CREATION — a brand-new
+  // id has no content doc, so its row is the only seed. A CONVERSION keeps the
+  // block's id, hence its doc, hence its text, so every convert site seeds from
+  // `emptyRowData()` instead: the same payload with `text` derived away, so no
+  // call site hand-strips and none can clear a block's text by converting it.
+  test("drops `text` while keeping the target type's other defaults", () => {
+    const handle = defineBlock({
+      type: "to-do",
+      schema: textBlockSchema({ checked: z.boolean() }),
+      empty: () => ({ text: [], checked: false }),
+    });
+    expect(handle.empty!()).toEqual({ text: [], checked: false });
+    expect(handle.emptyRowData()).toEqual({ checked: false });
   });
 
-  test("omits text for a void target, preserving its empty payload", () => {
+  test("is an empty payload for a void type that declares no `empty`", () => {
     const handle = defineBlock({ type: "divider", schema: z.object({}) });
-    expect(carry(handle, {}, "hello")).toEqual({});
+    expect(handle.emptyRowData()).toEqual({});
   });
 });
 

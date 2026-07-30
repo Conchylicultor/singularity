@@ -8,8 +8,12 @@ export { useFormatToolbar } from "./internal/format-toolbar-context";
 export type { FormatToolbarValue } from "./internal/format-toolbar-context";
 export type {
   BlockAnchorProps,
+  BlockChrome,
   BlockEditorAPI,
   BlockFrameProps,
+  BlockRegion,
+  BlockRegionProps,
+  BlockRegions,
   BlockRendererProps,
 } from "./types";
 export { BlockEditor } from "./components/block-editor";
@@ -18,7 +22,12 @@ export type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
 export { PageContentColumn } from "./components/page-content-column";
 export { BLOCK_INSET, BLOCK_INDENT, MARKER_GUTTER } from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";
-export { BlockTextEditor } from "./components/block-text-editor";
+// `BlockTextEditor` is deliberately NOT exported: a text-bearing block type
+// never renders the editor itself, it declares `chrome` and lets the shared
+// renderer place it. Removing the export deletes the roll-your-own-text-
+// component affordance outright (prompt was its only external consumer).
+export { TextBlockLayout } from "./components/text-block-layout";
+export type { TextBlockLayoutProps } from "./components/text-block-layout";
 export { useBlockEditor } from "./block-editor-context";
 export {
   useInsertableBlocks,

@@ -91,6 +91,69 @@ export function truncateBlockTextFrom(editor: LexicalEditor, offset: number): vo
 }
 
 /**
+ * Inside a Lexical update: delete the content in the linear range `[from, to)`
+ * — the same stored-runs plain-text basis as {@link $truncateFromLinearOffset},
+ * the split `position` and `splitRuns`. The sibling verb for a strip that is NOT
+ * a tail cut: a `/query` span in the middle of a line, a `> ` markdown prefix at
+ * its start.
+ *
+ * `to` is resolved to a selection point BEFORE `from` moves the caret, because
+ * placing the caret does not mutate the node graph — so both points stay valid.
+ * `removeText` then collapses the selection at `from`, which is exactly where
+ * the caret belongs after a strip (the user stays in this block).
+ *
+ * Like its sibling the cut is POSITIONAL, not a CRDT-relative anchor.
+ */
+export function $deleteLinearRange(from: number, to: number): void {
+  const total = $paragraphsPlainLength();
+  const start = Math.min(Math.max(from, 0), total);
+  const end = Math.min(Math.max(to, 0), total);
+  if (end <= start) return; // empty span — nothing to strip
+  $placeCaretAtLinearOffset(end);
+  const endSel = $getSelection();
+  if (!$isRangeSelection(endSel)) return;
+  const focusKey = endSel.anchor.key;
+  const focusOffset = endSel.anchor.offset;
+  const focusType = endSel.anchor.type;
+  $placeCaretAtLinearOffset(start);
+  const sel = $getSelection();
+  if (!$isRangeSelection(sel)) return;
+  sel.focus.set(focusKey, focusOffset, focusType);
+  if (!sel.isCollapsed()) sel.removeText();
+}
+
+/**
+ * Delete the block's content in the linear range `[from, to)`. THE way a block
+ * strips text it never meant to keep — the `/query` a slash-menu commit consumed,
+ * the markdown prefix a shortcut consumed. Text is doc-owned, so the strip must
+ * happen HERE (through Lexical → the collab binding → the block's `Y.Doc`); a
+ * type change writing the stripped text into `page_blocks.data.text` cannot
+ * strip anything, because that row field is a projection of this doc.
+ *
+ * `discrete: true` is load-bearing, for a reason its siblings don't have: the
+ * slash-menu commit runs INSIDE the caret menu's own `editor.update()`, so this
+ * update is nested and Lexical defers it to the end of the outer one. Without
+ * `discrete` the outer commit — and hence the binding's Yjs transaction — is a
+ * microtask, racing the React re-render the accompanying type write schedules.
+ * Lose that race against a type change that swaps the block's renderer
+ * (quote/callout own their own component today) and the edit dies with the
+ * unmounted editor: the literal `/callout` survives in the doc forever.
+ * `discrete` makes the nested flush synchronous, so it always wins.
+ *
+ * Deliberately NOT tagged `SKIP_DOM_SELECTION_TAG` (unlike
+ * {@link truncateBlockTextFrom}): this is FOREGROUND surgery on the block the
+ * user is standing in, and the collapsed selection `removeText` leaves at `from`
+ * IS where the caret must end up.
+ */
+export function deleteBlockTextRange(
+  editor: LexicalEditor,
+  from: number,
+  to: number,
+): void {
+  editor.update(() => $deleteLinearRange(from, to), { discrete: true });
+}
+
+/**
  * `focus()`'s ONE landing policy, in both scroll modes:
  *
  * > **An existing selection wins; only a selection-less editor lands at the

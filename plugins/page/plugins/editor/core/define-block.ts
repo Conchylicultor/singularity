@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { AnyZodObject, z } from "zod";
 import { runsOf, type RichText } from "./rich-text";
+import { rowDataOf, type RowData } from "./row-data";
 import type { TextBearingSchema } from "./text-data";
 import type { BlockMarkdown } from "./markdown";
 
@@ -87,6 +88,17 @@ export interface BlockHandle<T> {
   aliases?: string[];
   /** Returns the default `data` payload for a freshly inserted block. */
   empty?: () => T;
+  /**
+   * The default payload minus the projection-owned `text` key — DERIVED from
+   * `empty()`, never declared. `empty()` seeding `{ text: [] }` is correct at
+   * block CREATION (a brand-new id has no content doc, so its row is the only
+   * seed); a CONVERSION keeps the block's id and therefore its doc, so the row's
+   * text must be left alone. Every `convertTo` call site seeds from here so none
+   * of them hand-strips.
+   *
+   * Declared in METHOD syntax deliberately — see the bivariance note on `text`.
+   */
+  emptyRowData(): RowData;
   /**
    * Leading text that auto-converts a block into this type (e.g. `["* ", "- "]`
    * for a bulleted list). The shared text editor strips the matched prefix and
@@ -272,6 +284,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     icon: opts.icon,
     aliases: opts.aliases,
     empty: opts.empty,
+    emptyRowData: () => rowDataOf(opts.empty?.() ?? {}),
     markdownPrefixes: opts.markdownPrefixes,
     resetToOnBackspaceAtStart: opts.resetToOnBackspaceAtStart,
     breakOutOnEmptyEnter: opts.breakOutOnEmptyEnter,

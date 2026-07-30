@@ -88,6 +88,12 @@ A runtime throw at module eval backs it up for a caller arriving through `any`
 text-bearing container. The type-level guard also fails CLOSED on `any` —
 `keyof any` includes `"text"`.
 
+The return type carries that fact past the boundary: `BlockHandle<z.infer<S>> &
+{ text?: undefined }`, not the bare handle `defineBlock` gives back. Downstream
+needs the proof — `Editor.Block`'s registration union admits a block naming its
+own `component` only on the text-less arm — so without it every container, void
+by construction, fails to register. Don't weaken it back to `BlockHandle<…>`.
+
 The declaration surface is also much smaller than `defineBlock`'s, and that is
 the other half of "inconsistent is unrepresentable": everything an anchor cannot
 coherently declare is simply absent — `placeholder`, `marker`, `textVariant`,

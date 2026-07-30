@@ -1,3 +1,5 @@
+import type { RowData } from "../../core";
+
 /**
  * Generic block-paste-handler registry, owned by the editor plugin.
  *
@@ -17,8 +19,13 @@ export interface BlockPasteHandler {
   type: string;
   /** MIME accept spec: "image/*", "video/*", "audio/*", or "*" (catch-all). */
   accept: string;
-  /** Upload the file and return the new block's data payload. */
-  build: (file: File) => Promise<unknown>;
+  /**
+   * Upload the file and return the new block's data payload. `RowData`, not
+   * `unknown`: an attachment block is text-less, and the paste path converts an
+   * EXISTING empty block in place — a payload naming `text` would be writing
+   * over a projection of that block's content doc.
+   */
+  build: (file: File) => Promise<RowData>;
 }
 
 const handlers: BlockPasteHandler[] = [];

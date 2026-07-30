@@ -1,6 +1,13 @@
 import { describe, test, expect } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { diffBlocks, patchesFromDiff, isEmptyPatch } from "./block-diff";
+import {
+  BlockPatchSchema,
+  changedFields,
+  diffBlocks,
+  isEmptyPatch,
+  namesField,
+  patchesFromDiff,
+} from "./block-diff";
 import type { Block } from "./schemas";
 
 const r = (i: number) => Rank.from(String.fromCharCode(97 + i));
@@ -20,6 +27,31 @@ function mk(id: string, over: Partial<Block> = {}): Block {
   };
 }
 
+describe("changedFields", () => {
+  test("names ONLY the fields that differ", () => {
+    const before = mk("A");
+    expect(changedFields(before, before)).toEqual({});
+    expect(Object.keys(changedFields(before, mk("A", { type: "callout" })))).toEqual(["type"]);
+    expect(
+      Object.keys(changedFields(before, mk("A", { data: { text: [{ text: "hi" }] } }))),
+    ).toEqual(["data"]);
+    expect(Object.keys(changedFields(before, mk("A", { expanded: false })))).toEqual([
+      "expanded",
+    ]);
+  });
+
+  test("a falsy/null write is still a named field (presence, not truthiness)", () => {
+    const changes = changedFields(mk("A", { parentId: "X" }), mk("A", { parentId: null }));
+    expect(namesField(changes, "parentId")).toBe(true);
+    expect(changes.parentId).toBe(null);
+  });
+
+  test("compares rank by stored value, not instance identity", () => {
+    expect(changedFields(mk("A", { rank: Rank.from("m") }), mk("A", { rank: Rank.from("m") })))
+      .toEqual({});
+  });
+});
+
 describe("diffBlocks", () => {
   test("detects insert / update / delete by id", () => {
     const before = [mk("A"), mk("B", { type: "heading" })];
@@ -31,8 +63,7 @@ describe("diffBlocks", () => {
     const d = diffBlocks(before, after);
     expect(d.inserted.map((b) => b.id)).toEqual(["C"]);
     expect(d.updated.map((u) => u.after.id)).toEqual(["A"]);
-    expect(d.updated[0]!.before.parentId).toBe(null);
-    expect(d.updated[0]!.after.parentId).toBe("X");
+    expect(d.updated[0]!.changes).toEqual({ parentId: "X" });
     expect(d.deletedIds).toEqual(["B"]);
     expect(d.deleted.map((b) => b.id)).toEqual(["B"]);
   });
@@ -53,35 +84,107 @@ describe("diffBlocks", () => {
 });
 
 describe("patchesFromDiff", () => {
-  test("redo re-applies, undo inverts (insert ⇒ undo deletes it)", () => {
+  // THE reason this shape exists: a writer that changes one field must not
+  // author the others. The projection writing `data.text` while a conversion
+  // is in flight used to restate `type` and undo the user's conversion.
+  test("a single-field change emits ONLY that field, in both directions", () => {
+    const before = [mk("A", { type: "callout", data: { text: [] } })];
+    const after = [mk("A", { type: "callout", data: { text: [{ text: "hi" }] } })];
+    const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
+
+    expect(redo.creates).toEqual([]);
+    expect(redo.deleteIds).toEqual([]);
+    expect(redo.updates).toEqual([
+      { id: "A", changes: { data: { text: [{ text: "hi" }] } } },
+    ]);
+    // The undo inverts EXACTLY the same field set — never the whole row, so it
+    // cannot restate `type` either.
+    expect(undo.updates).toEqual([{ id: "A", changes: { data: { text: [] } } }]);
+    expect(Object.keys(undo.updates[0]!.changes)).toEqual(["data"]);
+  });
+
+  test("a multi-field change inverts each named field to its before value", () => {
+    const before = [mk("A", { type: "text", expanded: true, rank: r(1) })];
+    const after = [mk("A", { type: "toggle", expanded: false, rank: r(1) })];
+    const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
+
+    expect(redo.updates[0]!.changes).toEqual({ type: "toggle", expanded: false });
+    expect(undo.updates[0]!.changes).toEqual({ type: "text", expanded: true });
+    // `rank` never changed, so neither direction claims it.
+    expect(namesField(undo.updates[0]!.changes, "rank")).toBe(false);
+  });
+
+  test("insert ⇒ redo creates the full row, undo deletes it", () => {
     const before = [mk("A")];
     const after = [mk("A"), mk("B")]; // inserted B
     const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
 
-    expect(redo.upserts.map((b) => b.id)).toEqual(["B"]);
+    expect(redo.creates.map((b) => b.id)).toEqual(["B"]);
+    expect(redo.updates).toEqual([]);
     expect(redo.deleteIds).toEqual([]);
     expect(undo.deleteIds).toEqual(["B"]);
-    expect(undo.upserts).toEqual([]);
+    expect(undo.creates).toEqual([]);
   });
 
-  test("delete ⇒ undo re-creates the deleted row's before state", () => {
+  test("delete ⇒ undo re-creates the deleted row as a FULL row (no prior state to merge onto)", () => {
     const before = [mk("A"), mk("B", { type: "quote" })];
     const after = [mk("A")]; // B deleted
     const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
 
     expect(redo.deleteIds).toEqual(["B"]);
-    expect(redo.upserts).toEqual([]);
-    expect(undo.upserts.map((b) => b.id)).toEqual(["B"]);
-    expect(undo.upserts[0]!.type).toBe("quote");
+    expect(redo.creates).toEqual([]);
+    expect(undo.creates.map((b) => b.id)).toEqual(["B"]);
+    expect(undo.creates[0]!.type).toBe("quote");
     expect(undo.deleteIds).toEqual([]);
   });
 
-  test("update ⇒ redo carries after, undo carries before", () => {
-    const before = [mk("A", { type: "text" })];
-    const after = [mk("A", { type: "heading" })];
+  test("create/delete round-trip: redo∘undo returns the original rows", () => {
+    const before = [mk("A"), mk("B", { type: "quote", rank: r(1) })];
+    const after = [mk("A", { type: "heading" }), mk("C", { rank: r(2) })];
     const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
 
-    expect(redo.upserts[0]!.type).toBe("heading");
-    expect(undo.upserts[0]!.type).toBe("text");
+    // Forward: create C, retype A, delete B.
+    expect(redo.creates.map((b) => b.id)).toEqual(["C"]);
+    expect(redo.updates).toEqual([{ id: "A", changes: { type: "heading" } }]);
+    expect(redo.deleteIds).toEqual(["B"]);
+    // Reverse: re-create B, retype A back, delete C.
+    expect(undo.creates.map((b) => b.id)).toEqual(["B"]);
+    expect(undo.updates).toEqual([{ id: "A", changes: { type: "text" } }]);
+    expect(undo.deleteIds).toEqual(["C"]);
+  });
+});
+
+describe("BlockPatchSchema", () => {
+  test("round-trips a field-scoped update over the wire, keeping absent fields absent", () => {
+    const wire = JSON.parse(
+      JSON.stringify({
+        creates: [],
+        updates: [{ id: "A", changes: { data: { text: [{ text: "hi" }] } } }],
+        deleteIds: [],
+      }),
+    ) as unknown;
+    const parsed = BlockPatchSchema.parse(wire);
+    const changes = parsed.updates[0]!.changes;
+    expect(namesField(changes, "data")).toBe(true);
+    // The keys the patch did NOT name must not materialize as `undefined`
+    // entries — presence IS the authority claim the server reads.
+    expect(namesField(changes, "type")).toBe(false);
+    expect(namesField(changes, "parentId")).toBe(false);
+    expect(namesField(changes, "rank")).toBe(false);
+    expect(namesField(changes, "expanded")).toBe(false);
+  });
+
+  test("decodes a rank change back into a Rank instance", () => {
+    const parsed = BlockPatchSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          creates: [],
+          updates: [{ id: "A", changes: { rank: r(3), parentId: null } }],
+          deleteIds: [],
+        }),
+      ),
+    );
+    expect(String(parsed.updates[0]!.changes.rank)).toBe(String(r(3)));
+    expect(namesField(parsed.updates[0]!.changes, "parentId")).toBe(true);
   });
 });

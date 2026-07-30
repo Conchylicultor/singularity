@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import {
-  $getNodeByKey,
-  $getSelection,
-  $isRangeSelection,
-  $isTextNode,
-} from "lexical";
+import { $getSelection, $isRangeSelection, $isTextNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   atWordBoundary,
@@ -13,9 +8,9 @@ import {
   useCaretQuery,
   useForcedCaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
-import { runsOf, type BlockHandle } from "../../core";
-import type { BlockEditorAPI } from "../types";
+import type { BlockHandle } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
+import { $linearCaretOffset } from "../internal/block-text-extensions";
 import {
   BlockTypeList,
   filterBlockTypes,
@@ -42,19 +37,15 @@ const TRIGGER = "/";
  *
  * On commit the query span is stripped and the block is converted in place: the
  * `/` flow keeps the text around the slash; the draft flow drops the whole text
- * before the caret (it was pure filter, not content).
+ * before the caret (it was pure filter, not content). Both go through the ONE
+ * `convertStrippingText` primitive — the strip is a CONTENT-DOC edit (text has a
+ * single owner), never a row payload the type write carries.
  */
-export function BlockMenuPlugin({
-  editor,
-  blockId,
-}: {
-  editor: BlockEditorAPI;
-  blockId: string;
-}) {
+export function BlockMenuPlugin({ blockId }: { blockId: string }) {
   const [lexicalEditor] = useLexicalComposerContext();
   const grouped = useGroupedInsertableBlocks();
   const flatAll = useMemo(() => flattenSections(grouped), [grouped]);
-  const { blockMenuDraftId, clearBlockMenu } = useBlockEditor();
+  const { blockMenuDraftId, clearBlockMenu, convertStrippingText } = useBlockEditor();
   const active = blockMenuDraftId === blockId;
   // A newline ends the query; any space means the user typed a literal `/ …`
   // (not a command) — Notion dismisses the menu the moment a space follows.
@@ -81,62 +72,50 @@ export function BlockMenuPlugin({
   const flat = useMemo(() => flattenSections(sections), [sections]);
 
   function handleSelect(handle: BlockHandle<unknown>) {
-    // Convert the current block to the chosen type, stripping the query span.
-    // slash: drop the `/query` (keep the text around the slash). draft: drop the
-    // WHOLE text before the caret (it was pure filter, not content). `convertTo`
-    // authoritatively rewrites the block's `data` — the same path the markdown
-    // shortcuts use — so the field's debounced autosave can't clobber it.
-    //
-    // Compute `remaining` from a synchronous READ: this runs inside the Enter
-    // command (already within a Lexical update), so a nested `lexicalEditor.
-    // update()` is DEFERRED — its result isn't observable here. The strip below
-    // is purely the live-editor reflection; `convertTo` is what persists.
+    // Resolve the consumed span as LINEAR offsets — the stored-runs plain-text
+    // basis the whole content-surgery seam speaks (same as split `position`).
+    //   - slash: `[the `/`, the caret)`, so the text AROUND the slash survives.
+    //   - draft: `[block start, the caret)` — every character before the caret
+    //     was filter text the user never meant as content.
+    // Read the committed state: this runs inside the caret menu's own
+    // `editor.update()` (both the Enter command and the pointer commit), where
+    // nothing has been mutated yet.
     let found = false;
-    let nodeKey = "";
-    let stripIdx = 0;
-    let caretIdx = 0;
-    let remaining = "";
+    let from = 0;
+    let to = 0;
     lexicalEditor.getEditorState().read(() => {
       const sel = $getSelection();
       if (!$isRangeSelection(sel) || !sel.isCollapsed()) return;
-      const node = sel.anchor.getNode();
-      if (!$isTextNode(node)) {
-        // Empty draft block (no text node): nothing to strip; convert as-is.
-        if (useForced) {
-          found = true;
-          remaining = "";
-        }
+      const caret = $linearCaretOffset();
+      if (caret === null) return;
+      if (useForced) {
+        // An empty draft block has no text node at all — `from === to === 0`
+        // strips nothing and the conversion proceeds, which is the point.
+        found = true;
+        to = caret;
         return;
       }
-      const full = node.getTextContent();
-      const caretOffset = sel.anchor.offset;
-      const idx = useForced ? 0 : full.slice(0, caretOffset).lastIndexOf(TRIGGER);
-      if (!useForced && idx === -1) return;
+      const node = sel.anchor.getNode();
+      if (!$isTextNode(node)) return;
+      const idx = node.getTextContent().slice(0, sel.anchor.offset).lastIndexOf(TRIGGER);
+      if (idx === -1) return;
       found = true;
-      nodeKey = node.getKey();
-      stripIdx = idx;
-      caretIdx = caretOffset;
-      remaining = full.slice(0, idx) + full.slice(caretOffset);
+      // Within ONE text node linear offsets advance 1:1 with node offsets, so
+      // the node-relative distance back to the `/` is also the linear distance.
+      from = caret - (sel.anchor.offset - idx);
+      to = caret;
     });
     if (!found) return;
 
-    if (nodeKey) {
-      // Reflect the strip in the live editor (deferred is fine — it's visual only).
-      lexicalEditor.update(() => {
-        const node = $getNodeByKey(nodeKey);
-        if (!$isTextNode(node)) return;
-        const full = node.getTextContent();
-        node.setTextContent(full.slice(0, stripIdx) + full.slice(caretIdx));
-        node.select(stripIdx, stripIdx);
-      });
-    }
-    // Only carry `text` into a text-bearing target; a void block type (audio,
-    // divider, …) rejects an unknown `text` key at the write boundary.
-    const base = handle.empty?.() ?? {};
-    editor.convertTo(
-      handle.type,
-      handle.acceptsText ? { ...base, text: runsOf(remaining) } : base,
-    );
+    convertStrippingText({
+      blockId,
+      from,
+      to,
+      type: handle.type,
+      // The block keeps its id, so it keeps its content doc: seed only the
+      // target type's NON-text defaults and let its text come along untouched.
+      data: handle.emptyRowData(),
+    });
     if (useForced) clearBlockMenu(blockId);
   }
 

@@ -59,11 +59,15 @@ export type {
 
 export {
   BlockPatchSchema,
+  BlockFieldChangesSchema,
+  changedFields,
+  dataEqual,
+  namesField,
   diffBlocks,
   patchesFromDiff,
   isEmptyPatch,
 } from "./block-diff";
-export type { BlockPatch, BlockDiff } from "./block-diff";
+export type { BlockPatch, BlockUpdate, BlockFieldChanges, BlockDiff } from "./block-diff";
 
 export {
   MARK_ORDER,
@@ -96,6 +100,9 @@ export { rankWindow, planForestInsert } from "./block-forest";
 
 export { defineBlock } from "./define-block";
 export type { BlockHandle, BlockTextVariant } from "./define-block";
+
+export { rowDataOf } from "./row-data";
+export type { RowData } from "./row-data";
 
 export {
   serializeForestToMarkdown,

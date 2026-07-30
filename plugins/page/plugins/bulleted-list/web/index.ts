@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Editor, BlockTextRenderer } from "@plugins/page/plugins/editor/web";
+import { Editor } from "@plugins/page/plugins/editor/web";
 import { bulletedListBlock } from "../core";
 
 export { bulletedListBlock } from "../core";
@@ -11,7 +11,6 @@ export default {
       id: bulletedListBlock.type,
       match: bulletedListBlock.type,
       block: bulletedListBlock,
-      component: BlockTextRenderer,
     }),
   ],
 } satisfies PluginDefinition;
