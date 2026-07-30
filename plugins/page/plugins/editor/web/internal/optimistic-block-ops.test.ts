@@ -18,6 +18,7 @@ import {
   applyPatch,
   buildOverlayOp,
   buildPatchOverlayOp,
+  isPatchAbsorbed,
   isPatchReflected,
   isReflected,
   sameOverlayTarget,
@@ -304,6 +305,20 @@ describe("applyPatch", () => {
     const out = applyPatch(blocks, { upserts: [], deleteIds: ["P"] });
     expect(out.length).toBe(0);
   });
+
+  test("a child the SAME patch re-parents out of the deleted subtree survives", () => {
+    // Redo of an `unwrap`: promote the container's children, then delete the
+    // container. The server UPDATEs before it DELETEs, so the cascade sees the
+    // child already gone from the subtree — reading pre-patch parentage here
+    // instead swallowed every promoted child.
+    const blocks = [mk("P", null, a, { expanded: true }), mk("C", "P", a)];
+    const out = applyPatch(blocks, {
+      upserts: [mk("C", null, after(a))],
+      deleteIds: ["P"],
+    });
+    expect(out.map((b) => b.id)).toEqual(["C"]);
+    expect(out[0]!.parentId).toBe(null);
+  });
 });
 
 describe("isPatchReflected", () => {
@@ -321,6 +336,87 @@ describe("isPatchReflected", () => {
     const base = [mk("A", null, a)];
     const overlay = buildPatchOverlayOp({ upserts: [mk("A", null, a)], deleteIds: [] });
     expect(() => applyOverlayOp(base, overlay)).toThrow(OpNoLongerApplies);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isPatchAbsorbed (the apply-guard) vs isPatchReflected (confirmation).
+//
+// The two predicates ask different questions of different subjects — "would
+// applying this change anything HERE" vs "does server truth prove my write
+// landed" — and `data` belongs in the first but not the second. These pin the
+// difference: identical on every structural case, divergent on a data-only
+// patch, which is every `BlockEditorAPI.update` (to-do checked, callout color,
+// image width).
+// ---------------------------------------------------------------------------
+
+describe("isPatchAbsorbed", () => {
+  const base = [mk("A", null, a, { text: "old" }), mk("B", null, after(a))];
+  const dataOnly = { upserts: [mk("A", null, a, { text: "new" })], deleteIds: [] };
+
+  test("a data-only patch is NOT absorbed, though it IS reflected", () => {
+    expect(isPatchAbsorbed(base, dataOnly)).toBe(false);
+    // The confirmation predicate stays data-blind on purpose (server truth
+    // legitimately differs — `parseBlockData` normalization, a lagging
+    // `data.text` projection), which is why it cannot double as the guard.
+    expect(isPatchReflected(base, dataOnly)).toBe(true);
+  });
+
+  test("applyOverlayOp APPLIES a data-only patch instead of swallowing it", () => {
+    const out = applyOverlayOp(base, buildPatchOverlayOp(dataOnly));
+    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("new");
+    // …and re-applying it onto the result is a genuine no-op ⇒ guard trips.
+    expect(() => applyOverlayOp(out, buildPatchOverlayOp(dataOnly))).toThrow(OpNoLongerApplies);
+  });
+
+  test("`data` equality is by VALUE, not reference (a re-serialized identical payload is absorbed)", () => {
+    const same = { upserts: [mk("A", null, a, { text: "old" })], deleteIds: [] };
+    expect(isPatchAbsorbed(base, same)).toBe(true);
+  });
+
+  test("the structural cases behave identically under both predicates", () => {
+    const cases: { patch: Parameters<typeof isPatchAbsorbed>[1]; expected: boolean }[] = [
+      // Fully absorbed: same columns, same data.
+      { patch: { upserts: [mk("A", null, a, { text: "old" })], deleteIds: [] }, expected: true },
+      // A structural column differs.
+      { patch: { upserts: [mk("A", null, a, { text: "old", type: "heading" })], deleteIds: [] }, expected: false },
+      { patch: { upserts: [mk("A", "B", a, { text: "old" })], deleteIds: [] }, expected: false },
+      { patch: { upserts: [mk("A", null, after(a), { text: "old" })], deleteIds: [] }, expected: false },
+      { patch: { upserts: [mk("A", null, a, { text: "old", expanded: true })], deleteIds: [] }, expected: false },
+      // A row the patch would CREATE is missing.
+      { patch: { upserts: [mk("C", null, after(after(a)))], deleteIds: [] }, expected: false },
+      // A delete id still present / already gone.
+      { patch: { upserts: [], deleteIds: ["B"] }, expected: false },
+      { patch: { upserts: [], deleteIds: ["GONE"] }, expected: true },
+    ];
+    for (const { patch, expected } of cases) {
+      expect(isPatchAbsorbed(base, patch)).toBe(expected);
+      expect(isPatchReflected(base, patch)).toBe(expected);
+    }
+  });
+
+  test("update-only: an absent row is vacuously absorbed under both", () => {
+    const projected = {
+      upserts: [mk("GONE", null, a, { text: "projected" })],
+      deleteIds: [],
+      updateOnly: true,
+    };
+    expect(isPatchAbsorbed(base, projected)).toBe(true);
+    expect(isPatchReflected(base, projected)).toBe(true);
+    // Without `updateOnly` the row should have been created ⇒ neither absorbed.
+    const plain = { ...projected, updateOnly: undefined };
+    expect(isPatchAbsorbed(base, plain)).toBe(false);
+    expect(isPatchReflected(base, plain)).toBe(false);
+  });
+
+  test("a PRESENT row's data still counts under update-only (the projection applies optimistically)", () => {
+    const projected = {
+      upserts: [mk("A", null, a, { text: "projected" })],
+      deleteIds: [],
+      updateOnly: true,
+    };
+    expect(isPatchAbsorbed(base, projected)).toBe(false);
+    expect(isPatchReflected(base, projected)).toBe(true);
   });
 });
 

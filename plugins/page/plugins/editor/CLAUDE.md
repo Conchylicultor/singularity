@@ -507,24 +507,51 @@ structure — no per-block Lexical history.
   recording wrapper, and the primitive's re-entrancy guard ignores `record` during
   replay. Bound editors never re-read `data.text` from a patch — content flows
   exclusively through the block's `Y.Doc`.
+- **Two patch predicates, deliberately asymmetric** (both in
+  `internal/optimistic-block-ops.ts`). `isPatchAbsorbed` is the APPLY-GUARD — "would
+  writing this onto THIS base change anything" — and must be exact, `data` INCLUDED:
+  a data-only edit (to-do `checked`, callout color) is a real edit, and a data-blind
+  guard swallowed every one of them in memory mode. `isPatchReflected` is
+  CONFIRMATION — "does server truth prove my write landed" — and must NOT compare
+  `data`: `parseBlockData` normalizes it and `data.text` trails the doc by ~1s, so a
+  snapshot that provably contains the write can still differ, and comparing would
+  stick the op in the overlay. Same question, different subject; don't merge them.
+- **A patch's delete cascade reads POST-upsert parentage.** `handlePatchBlocks`
+  UPDATEs before it DELETEs, so a row the same patch re-parents out of the deleted
+  subtree has already left; `applyPatch` must agree or the overlay drops rows the
+  server keeps (redoing an `unwrap` lost every promoted child).
 
-**What is recorded:** all `dispatchOp` ops, `convertTo`, non-text `data` edits
-(to-do `checked`, callout color, image src… — via `commitRow` with `coalesceKey:
-blockId`), single-block `move` (client-known rank), and `bulkDelete`, each with an
-exact purely-computed after-state; text edits as mirrored `Y.UndoManager` items.
-The editor no longer uses `updateBlock` at all (`handle-update-block.ts` stays for
-page-level consumers: page title, sidebar expand, cover).
+**What is recorded:** all `dispatchOp` ops (`paste` included — see below),
+`convertTo`, non-text `data` edits (to-do `checked`, callout color, image src… —
+via `commitRow` with `coalesceKey: blockId`), single-block `move` (client-known
+rank), `bulkDelete`, and `bulkMove`, each with an exact purely-computed
+after-state; text edits as mirrored `Y.UndoManager` items. The editor no longer
+uses `updateBlock` at all (`handle-update-block.ts` stays for page-level
+consumers: page title, sidebar expand, cover).
+`web/__tests__/structural-undo.test.tsx` is the per-mutation guardrail, asserting a
+QUADRUPLE per mutation: the forward call changed the rows, `canUndo` flipped, undo
+restores exactly, redo reproduces. The first is not ceremony — without it a
+mutation that silently does nothing passes vacuously, which is how the data-blind
+apply-guard hid.
 
-**Not recorded:** `setExpanded` — pure view state, dispatched with `record: false`
-because Notion doesn't undo collapse/expand (still optimistic, just off the stack).
-`bulkMove` and `bulkDuplicate` are not recorded *yet*: they mint server ids/ranks,
-so a clean inverse needs those endpoints to return their resulting rows (or to be
-diffed against the post-settle resource). `paste` no longer has that excuse —
-since it became a `BlockOp` (below) its ids are minted client-side and its
-after-state is exactly `applyBlockOp`'s output, so recording it is the same
-one-line `recordStructural` every other op gets. It simply isn't wired, because
-the provider's `paste` delegates to `store.paste` (which the composite store
-routes per owning page) rather than to `dispatchOp`.
+**Not recorded:** `setExpanded` (pure view state, `record: false` — Notion doesn't
+undo collapse/expand; still optimistic, just off the stack) and `projectText` (Yjs
+owns text history). `bulkDuplicate` is the one remaining gap, for the one reason
+that still holds: it mints ids SERVER-side (`insertForest`), so there is no
+client-computed after-state to invert.
+
+`bulkMove` is recorded off a client PREDICTION, not an overlay (its forward write
+is still the bespoke endpoint, like `bulkDelete`). Sound only because
+`planBulkMove`/`applyBulkMove` (`core/block-ops.ts`) are the ONE rank/order algebra
+the server writer, the memory store and that prediction all run; the planner
+document-orders its roots for the same reason the folds sort — `selectionRoots`
+preserves input-array order and the two writers hold their rows in different ones.
+Known next step: promote `bulkMove` to a real `BlockOp` (`OpEffect.reparent` and
+`buildOverlayOp`'s move arm already exist; missing are a reducer arm, the
+`opBlockIds`/`resolveOpOwnerPage`/`translateOpForStore` arms, and `parkRanks` in
+`handle-apply-block-op`). That collapses forward write, undo and redo onto one
+endpoint and one optimistic instance, killing the two-fire-and-forget-POSTs
+ordering race it shares with `move` and `bulkDelete` today.
 
 ## Paste is an op (`{ kind: "paste", forest, afterId, parentId }`)
 
@@ -979,6 +1006,9 @@ the whole document lives in React state and is discarded on unmount.
     - `BulkDeleteBlocksBody`
     - `BulkDuplicateBlocksBody`
     - `BulkMoveBlocksBody`
+    - `BulkMovePlacement`
+    - `BulkMovePlan`
+    - `BulkMoveRefusal`
     - `ColorToken`
     - `CreateBlockBody`
     - `IdentifiedBlock`
@@ -1001,6 +1031,7 @@ the whole document lives in React state and is discarded on unmount.
   - Exports (values):
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
+    - `applyBulkMove`
     - `BlockOpSchema`
     - `BlockPatchSchema`
     - `BlockSchema`
@@ -1046,6 +1077,7 @@ the whole document lives in React state and is discarded on unmount.
     - `patchBlocks`
     - `patchesFromDiff`
     - `plainOf`
+    - `planBulkMove`
     - `planForestInsert`
     - `prevVisibleLine`
     - `rankWindow`

@@ -12,13 +12,16 @@
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { selectionRoots } from "@plugins/primitives/plugins/tree/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import {
   applyBlockOp,
+  applyBulkMove,
   canIndent,
   canOutdent,
   childrenOf,
   pasteAnchorId,
+  planBulkMove,
   prevVisibleLine,
   nextVisibleLine,
   runsOfNode,
@@ -1271,6 +1274,189 @@ describe("move", () => {
     // Try to move A under CHILD (its own descendant).
     const out = run(blocks, { kind: "move", blockId: "A", parentId: "CHILD", rank: a });
     expect(out).toEqual(blocks);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bulk move (`planBulkMove` / `applyBulkMove`)
+// ---------------------------------------------------------------------------
+
+/**
+ * `bulkMove` is NOT a `BlockOp` — it has its own endpoint and its own
+ * hand-computed after-state on the client — so these drive the planner directly
+ * rather than through `run()`. The invariant the pair exists to protect is that
+ * the server writer, the in-memory store and the provider's undo prediction all
+ * derive the SAME placements from the same forest, whatever order they happen to
+ * hold their rows in.
+ */
+describe("planBulkMove", () => {
+  /**
+   * A ⊃ A1, then B, C, D at top level. Deep on purpose: a flat fixture lets a
+   * same-parent rank sort masquerade as document order.
+   */
+  function forest(): BlockNode[] {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    const r4 = after(r3);
+    return [
+      mk("A", null, r1, { expanded: true }),
+      mk("A1", "A", a),
+      mk("B", null, r2),
+      mk("C", null, r3),
+      mk("D", null, r4, { expanded: false }),
+    ];
+  }
+
+  /** Deterministic shuffle, so a failure reproduces. */
+  function shuffled(blocks: BlockNode[], seed: number): BlockNode[] {
+    const rand = rng(seed);
+    const out = [...blocks];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [out[i], out[j]] = [out[j]!, out[i]!];
+    }
+    return out;
+  }
+
+  test("placements are DOCUMENT-ordered, independent of the input array's order", () => {
+    // The regression test for the real defect: `selectionRoots` preserves INPUT
+    // array order, and the server feeds it `loadPageBlocks` — a plain select with
+    // no ORDER BY, i.e. Postgres heap order, which UPDATEs rewrite. Without the
+    // `inDocumentOrder` sort, which moved root gets which minted rank is
+    // arbitrary and the two sides disagree.
+    const selected = ["A", "B", "C"];
+    const base = planBulkMove(forest(), { ids: selected, parentId: "D", afterId: null });
+    expect(base.roots).toEqual(["A", "B", "C"]);
+
+    const rawOrders = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const rows = shuffled(forest(), seed);
+      rawOrders.add(selectionRoots(rows, new Set(selected)).join(","));
+      const plan = planBulkMove(rows, { ids: selected, parentId: "D", afterId: null });
+      expect(plan.placements).toEqual(base.placements);
+      expect(plan.roots).toEqual(base.roots);
+    }
+    // Non-vacuity: the shuffles really do reach several raw `selectionRoots`
+    // orders, so the equality above is the sort doing work, not the fixture
+    // being accidentally stable.
+    expect(rawOrders.size).toBeGreaterThan(1);
+  });
+
+  test("selecting a parent AND its child plans only the root (the child rides along)", () => {
+    const plan = planBulkMove(forest(), { ids: ["A1", "A"], parentId: "D", afterId: null });
+    expect(plan.roots).toEqual(["A"]);
+    expect(plan.placements.map((p) => p.id)).toEqual(["A"]);
+  });
+
+  test("placements carry the CURRENT parent (what `parkRanks` needs) and the destination", () => {
+    const plan = planBulkMove(forest(), { ids: ["A1", "B"], parentId: "D", afterId: null });
+    expect(plan.roots).toEqual(["A1", "B"]);
+    expect(plan.placements.map((p) => [p.id, p.currentParentId, p.parentId])).toEqual([
+      ["A1", "A", "D"],
+      ["B", null, "D"],
+    ]);
+    expect(plan.expandParentId).toBe("D");
+    expect(plan.refusal).toBeNull();
+  });
+
+  test("refusal: an empty selection, and a selection naming only absent ids", () => {
+    for (const selected of [[], ["ghost"]]) {
+      const plan = planBulkMove(forest(), { ids: selected, parentId: "D", afterId: null });
+      expect(plan.refusal).toBe("empty-selection");
+      expect(plan.placements).toEqual([]);
+      expect(plan.roots).toEqual([]);
+    }
+  });
+
+  test("refusal: dropping the selection INTO the selection", () => {
+    const plan = planBulkMove(forest(), { ids: ["A", "B"], parentId: "B", afterId: null });
+    expect(plan.refusal).toBe("into-selection");
+    expect(plan.placements).toEqual([]);
+  });
+
+  test("refusal: dropping a root into its OWN subtree", () => {
+    // A1 is A's child and is NOT selected, so this is not `into-selection`.
+    const plan = planBulkMove(forest(), { ids: ["A"], parentId: "A1", afterId: null });
+    expect(plan.refusal).toBe("into-own-subtree");
+    expect(plan.placements).toEqual([]);
+  });
+
+  test("a refused plan is the identity under `applyBulkMove`", () => {
+    const blocks = forest();
+    const plan = planBulkMove(blocks, { ids: ["A", "B"], parentId: "B", afterId: null });
+    expect(applyBulkMove(blocks, plan)).toEqual(blocks);
+  });
+
+  test("same-parent reorder: the movers do not bound their own window", () => {
+    // B, C, D are top-level siblings; move {B, D} after C. The window EXCLUDES
+    // both movers, so it is ("C", null) — and B's new key can equal the rank D
+    // still holds. That transient duplicate is the server's park-then-place
+    // problem, not the planner's: the FINAL keys must simply be ascending and
+    // land after C.
+    const blocks = forest();
+    const plan = planBulkMove(blocks, { ids: ["B", "D"], parentId: null, afterId: "C" });
+    expect(plan.refusal).toBeNull();
+    expect(plan.roots).toEqual(["B", "D"]);
+
+    const out = applyBulkMove(blocks, plan);
+    expect(ids(out, null)).toEqual(["A", "C", "B", "D"]);
+    assertRankOrdering(out);
+  });
+
+  test("`destSiblings` is the rank window's source, and it can hold rows `blocks` cannot see", () => {
+    // The server case: the destination is a sub-page row whose children are keyed
+    // to ITS page id, so a page-scoped load does not contain them. Planning the
+    // window over `blocks` would mint the first key onto that child's rank.
+    const blocks = forest();
+    const hidden: BlockNode[] = [
+      ...blocks,
+      // D's real (invisible-to-`blocks`) first child, sitting at the very first key.
+      mk("HIDDEN", "D", a, { pageId: "sub-page" }),
+    ];
+
+    const blind = planBulkMove(blocks, { ids: ["B"], parentId: "D", afterId: null });
+    const seeing = planBulkMove(blocks, { ids: ["B"], parentId: "D", afterId: null }, hidden);
+
+    // The blind plan collides head-on with the row it cannot see.
+    expect(blind.placements[0]!.rank).toBe(a);
+    // The window-aware plan lands strictly BEFORE it instead.
+    expect(seeing.placements[0]!.rank).not.toBe(a);
+    expect(
+      Rank.compare(Rank.from(seeing.placements[0]!.rank), Rank.from(a)),
+    ).toBe(-1);
+  });
+
+  test("plan ∘ apply: reparents every root, opens the destination, leaves the rest alone", () => {
+    const blocks = forest();
+    const snapshot = structuredClone(blocks);
+    Object.freeze(blocks);
+    blocks.forEach((b) => Object.freeze(b));
+
+    const plan = planBulkMove(blocks, { ids: ["B", "C"], parentId: "D", afterId: null });
+    const out = applyBulkMove(blocks, plan);
+
+    // Input untouched.
+    expect(blocks).toEqual(snapshot);
+    // Both roots landed under D, in document order.
+    expect(ids(out, "D")).toEqual(["B", "C"]);
+    expect(ids(out, null)).toEqual(["A", "D"]);
+    // The destination was opened (it was collapsed).
+    expect(out.find((b) => b.id === "D")!.expanded).toBe(true);
+    // Untouched rows are the very same objects.
+    expect(out.find((b) => b.id === "A1")).toBe(blocks.find((b) => b.id === "A1"));
+    assertRankOrdering(out);
+    // `pageId` is deliberately NOT recomputed here — the server owns that.
+    assertPageIdInvariant(snapshot, out);
+  });
+
+  test("a top-level drop expands nothing", () => {
+    const blocks = forest();
+    const plan = planBulkMove(blocks, { ids: ["A1"], parentId: null, afterId: "B" });
+    expect(plan.expandParentId).toBeNull();
+    const out = applyBulkMove(blocks, plan);
+    expect(ids(out, null)).toEqual(["A", "B", "A1", "C", "D"]);
+    expect(ids(out, "A")).toEqual([]);
   });
 });
 

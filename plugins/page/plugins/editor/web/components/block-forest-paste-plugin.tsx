@@ -65,7 +65,7 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
         if (!Array.isArray(forest) || forest.length === 0) return false;
 
         event.preventDefault();
-        void paste({ blocks: forest, afterId: block.id });
+        paste({ blocks: forest, afterId: block.id });
         return true;
       },
       COMMAND_PRIORITY_NORMAL,

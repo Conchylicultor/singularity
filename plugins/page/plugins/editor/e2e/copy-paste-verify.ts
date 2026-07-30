@@ -7,6 +7,9 @@
 // whitespace-only paragraphs into one block. Verifies all three fixed flows:
 //   A. block-selection copy writes real markdown text to the clipboard
 //   B. block-selection paste round-trips blocks (BLOCKS_MIME)
+//   B2. Cmd+Z undoes exactly that paste, leaving the trailing empty block —
+//      paste is a recorded op, not a write that slips past the undo stack
+//      (research/2026-07-30-page-record-paste-and-bulkmove-on-the-undo-stack.md)
 //   C. caret-in-block paste of copied blocks inserts REAL blocks (new plugin)
 //   D. caret-in-block paste of external multi-line markdown splits into typed blocks
 //   E. block-selection paste anchors on the selection's document-order END, so an
@@ -122,6 +125,34 @@ await withBrowser(async (h) => {
     (await blockTexts()).slice(0, 6),
     ["alpha", "bravo", "alpha", "bravo", "charlie", ""],
   );
+
+  // ---- B2: Cmd+Z undoes the paste ---------------------------------------------
+  // The exact inverse of the reported symptom
+  // (research/2026-07-30-page-record-paste-and-bulkmove-on-the-undo-stack.md):
+  // Cmd+Z used to consume the PREVIOUS structural entry — the Enter that created
+  // the trailing empty block — leaving the paste behind. So both halves matter:
+  // the copies are gone AND the trailing empty block is still there.
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(2000); // patch POST + push round-trip
+  r.eq("B2: Cmd+Z removes exactly the pasted blocks", await blockTexts(), [
+    "alpha",
+    "bravo",
+    "charlie",
+    "",
+  ]);
+
+  // Redo, so the phases below run against B's state (and the inverse pair is
+  // itself covered — an undo whose redo cannot land is only half a fix).
+  await page.keyboard.press("Meta+Shift+z");
+  await page.waitForTimeout(2000);
+  r.eq("B2: Cmd+Shift+Z puts them back", (await blockTexts()).slice(0, 6), [
+    "alpha",
+    "bravo",
+    "alpha",
+    "bravo",
+    "charlie",
+    "",
+  ]);
 
   // ---- C: caret-in-block paste of copied blocks (new Lexical plugin) ----------
   await block(4).click(); // caret inside "charlie"

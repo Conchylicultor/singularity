@@ -4,13 +4,14 @@
 //
 // Two implementations share one shape:
 //   - `useServerBlockStore`  — today's persistent path verbatim: the
-//     `useOptimisticResource(blocksResource, …)` overlay + the five direct write
-//     endpoints (move / bulk-delete / bulk-move / bulk-duplicate / paste).
+//     `useOptimisticResource(blocksResource, …)` overlay + the four direct write
+//     endpoints (move / bulk-delete / bulk-move / bulk-duplicate).
 //   - `useMemoryBlockStore`  — an authoritative in-memory `useState<Block[]>`,
 //     the source of truth itself (no overlay, no confirmation, no network). Its
 //     writes reuse the SAME pure helpers as the server (`applyOverlayOp`, the
-//     reducer, and `core/block-forest`'s `rankWindow`/`serializeSubtree`/
-//     `planForestInsert`), so op/patch/insert semantics are byte-identical.
+//     reducer, `planBulkMove`, and `core/block-forest`'s `rankWindow`/
+//     `serializeSubtree`/`planForestInsert`), so op/patch/insert/move semantics
+//     are byte-identical.
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -29,20 +30,20 @@ import {
   patchBlocks,
   blocksResource,
   applyBlockOp,
+  applyBulkMove,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
+  planBulkMove,
   planForestInsert,
   rankWindow,
   serializeSubtree,
   withMintedIds,
   type Block,
   type BlockNode,
-  type SerializedBlock,
 } from "../core";
 import {
   applyOverlayOp,
-  buildPasteOverlayOp,
   isPatchReflected,
   isReflected,
   sameOverlayTarget,
@@ -76,9 +77,15 @@ export interface BlockMoveDest {
 
 /**
  * The full read/write surface the provider needs. `dispatch` covers the overlay
- * op + patch pipeline (structural keystrokes and undo/redo); the remaining five
+ * op + patch pipeline (structural keystrokes and undo/redo); the remaining four
  * are the direct write paths that bypass the reducer. Recording for undo stays in
  * the provider — a store only applies/persists.
+ *
+ * There is deliberately NO `paste` member: a paste is a `BlockOp`, so `dispatch`
+ * is its only home. It used to have one, and that is precisely how a paste
+ * reached the pipeline without passing the provider's `dispatchOp` — the one
+ * place that records an undo entry. Anything expressible as a `BlockOp` belongs
+ * on `dispatch`; a new member here is a claim that it is not.
  */
 export interface BlockStore {
   /** Current document rows (server truth + overlay, or the in-memory truth). */
@@ -103,54 +110,6 @@ export interface BlockStore {
   bulkMove: (args: { ids: string[]; parentId: string | null; afterId: string | null }) => void;
   /** Duplicate each selection root in place; resolves to the new root ids. */
   bulkDuplicate: (ids: string[]) => Promise<string[]>;
-  /** Insert a serialized forest after `afterId` (or under `parentId`). */
-  paste: (args: {
-    blocks: SerializedBlock[];
-    afterId: string | null;
-    parentId?: string | null;
-  }) => Promise<string[]>;
-}
-
-/**
- * Paste, for EITHER store. A paste is a `BlockOp` like every other structural
- * edit, so both implementations reduce to "mint the forest's ids, dispatch the
- * op" and there is nothing left to diverge on.
- *
- * That is the whole point of the op form: the forest's identities are minted
- * HERE, client-side, so the overlay can render the pasted blocks on the
- * keystroke and the eventual server push is a confirmation rather than the
- * first time the user sees their content. Before this, paste was the only
- * editor mutation that POSTed and waited — a 25-block paste took ~600-800ms to
- * show anything and froze the main thread for ~500ms while the push mounted
- * every new block at once.
- *
- * `parentId` defaults to the PAGE's own id, not null: the reducer's forest
- * excludes the page row, so the page id is how "the content top level" is
- * addressed (see the `paste` op's `parentId` doc). Only a store knows its page.
- *
- * Resolves synchronously — the root ids are the ones just minted, not something
- * the server has to hand back.
- */
-function pasteThroughOps(
-  dispatch: (v: BlockOverlayOp) => void,
-  pageId: string,
-  args: {
-    blocks: SerializedBlock[];
-    afterId: string | null;
-    parentId?: string | null;
-  },
-): Promise<string[]> {
-  const forest = withMintedIds(args.blocks);
-  if (forest.length === 0) return Promise.resolve([]);
-  dispatch(
-    buildPasteOverlayOp({
-      kind: "paste",
-      forest,
-      afterId: args.afterId,
-      parentId: args.parentId ?? pageId,
-    }),
-  );
-  return Promise.resolve(forest.map((n) => n.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -247,15 +206,6 @@ export function useServerBlockStore(pageId: string): BlockStore {
     [pageId],
   );
 
-  const paste = useCallback(
-    (args: {
-      blocks: SerializedBlock[];
-      afterId: string | null;
-      parentId?: string | null;
-    }): Promise<string[]> => pasteThroughOps(dispatch, pageId, args),
-    [dispatch, pageId],
-  );
-
   return {
     data: optimistic.data,
     serverData: optimistic.serverData,
@@ -265,7 +215,6 @@ export function useServerBlockStore(pageId: string): BlockStore {
     bulkDelete,
     bulkMove,
     bulkDuplicate,
-    paste,
   };
 }
 
@@ -273,18 +222,15 @@ export function useServerBlockStore(pageId: string): BlockStore {
 // In-memory store (authoritative, synchronous, no network).
 // ---------------------------------------------------------------------------
 
-export function useMemoryBlockStore({
-  pageId,
-  initialBlocks,
-}: {
-  pageId: string;
-  initialBlocks: Block[];
-}): BlockStore {
+// Takes no `pageId`: the memory document is one synthetic page whose rows already
+// carry it, and the only write that ever needed the page's own id was `paste`
+// (now the provider's, which knows it).
+export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] }): BlockStore {
   const [rows, setRowsState] = useState<Block[]>(initialBlocks);
   // The authoritative rows are also mirrored into a ref updated synchronously by
   // every write, so (a) writes chained within one event compose against the
-  // latest truth (not a stale render snapshot), and (b) `bulkDuplicate`/`paste`
-  // can resolve their new root ids SYNCHRONOUSLY — a `useState` updater runs on a
+  // latest truth (not a stale render snapshot), and (b) `bulkDuplicate` can
+  // resolve its new root ids SYNCHRONOUSLY — a `useState` updater runs on a
   // later render, so reading the ids "after `setRows`" would read the pre-write
   // value. Never mint ids inside the updater; compute, commit, then return.
   const rowsRef = useRef<Block[]>(initialBlocks);
@@ -350,29 +296,15 @@ export function useMemoryBlockStore({
   const bulkMove = useCallback(
     (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
       const cur = rowsRef.current;
-      const roots = selectionRoots(cur, new Set(args.ids));
-      if (roots.length === 0) return;
-      const nodes = toNodes(cur);
-      // Rank window under the destination parent, excluding everything moving so
-      // the moved roots don't bound their own insertion window.
-      const movingSubtree = new Set(roots.flatMap((r) => subtreeIds(cur, r)));
-      const [prev, next] = rankWindow(nodes, args.parentId, args.afterId, movingSubtree);
-      const ranks = Rank.nBetween(prev, next, roots.length);
-      const rankById = new Map(roots.map((r, i) => [r, ranks[i]!] as const));
-      // Single synthetic page → no cross-page pageId recompute needed.
-      commit(
-        cur.map((b) => {
-          if (rankById.has(b.id)) {
-            return { ...b, parentId: args.parentId, rank: rankById.get(b.id)! };
-          }
-          // Open the destination parent so the moved blocks are visible (mirrors
-          // the server's expand-on-drop).
-          if (args.parentId !== null && b.id === args.parentId) {
-            return { ...b, expanded: true };
-          }
-          return b;
-        }),
-      );
+      // The SAME planner the server writer and the provider's undo prediction
+      // run. Sharing it is a correctness requirement, not DRY: the provider
+      // records its undo patch off `applyBulkMove`'s output, so any divergence
+      // here would make that patch describe a state this store never reached.
+      // It also brings the cycle guard and the document ordering the hand-rolled
+      // algebra here lacked. Single synthetic page → no `pageId` recompute.
+      const plan = planBulkMove(toNodes(cur), args);
+      if (plan.refusal) return;
+      commit(fromNodes(applyBulkMove(toNodes(cur), plan), cur));
     },
     [commit],
   );
@@ -408,18 +340,6 @@ export function useMemoryBlockStore({
     [commit],
   );
 
-  // Byte-identical to the server store's paste: the SAME op through the SAME
-  // reducer, differing only in that `dispatch` here writes state synchronously
-  // instead of overlaying + POSTing.
-  const paste = useCallback(
-    (args: {
-      blocks: SerializedBlock[];
-      afterId: string | null;
-      parentId?: string | null;
-    }): Promise<string[]> => pasteThroughOps(dispatch, pageId, args),
-    [dispatch, pageId],
-  );
-
   return {
     data: rows,
     // Every in-memory row is authoritative from the start (no overlay), so the
@@ -431,6 +351,5 @@ export function useMemoryBlockStore({
     bulkDelete,
     bulkMove,
     bulkDuplicate,
-    paste,
   };
 }

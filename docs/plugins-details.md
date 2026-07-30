@@ -16133,6 +16133,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BulkDeleteBlocksBody`
           - `BulkDuplicateBlocksBody`
           - `BulkMoveBlocksBody`
+          - `BulkMovePlacement`
+          - `BulkMovePlan`
+          - `BulkMoveRefusal`
           - `ColorToken`
           - `CreateBlockBody`
           - `IdentifiedBlock`
@@ -16155,6 +16158,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
+          - `applyBulkMove`
           - `BlockOpSchema`
           - `BlockPatchSchema`
           - `BlockSchema`
@@ -16200,6 +16204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `patchBlocks`
           - `patchesFromDiff`
           - `plainOf`
+          - `planBulkMove`
           - `planForestInsert`
           - `prevVisibleLine`
           - `rankWindow`

@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { patchBlocks, type Block, type SerializedBlock } from "../core";
+import { patchBlocks, type Block } from "../core";
 import { BlockEditorProviderInner } from "./block-editor-context";
 import type { CaretSurfaceRef } from "./caret-surface";
 import {
@@ -280,26 +280,11 @@ export function CompositeServerProviderHost({
     [storeFor],
   );
 
-  const paste = useCallback(
-    (args: {
-      blocks: SerializedBlock[];
-      afterId: string | null;
-      parentId?: string | null;
-    }): Promise<string[]> => {
-      const rows = dataRef.current;
-      const curMounts = mountsRef.current;
-      const owner =
-        args.afterId !== null
-          ? rowOwnerPage(rows, args.afterId)
-          : insertOwnerPage(rows, args.parentId ?? null, curMounts, basePageId);
-      return storeFor(owner).paste({
-        ...args,
-        parentId: translateUnionParentId(args.parentId ?? null, curMounts),
-      });
-    },
-    [basePageId, storeFor],
-  );
-
+  // No routed `paste`: a paste is a `BlockOp`, so it arrives through `dispatch`
+  // above, where `resolveOpOwnerPage` applies the same anchor rule this used to
+  // (row owner for `afterId`, `insertOwnerPage` when anchorless) and
+  // `translateOpForStore` rewrites a page-link anchor `parentId` into the real
+  // page id.
   const store = useMemo<BlockStore>(
     () => ({
       data,
@@ -310,9 +295,8 @@ export function CompositeServerProviderHost({
       bulkDelete,
       bulkMove,
       bulkDuplicate,
-      paste,
     }),
-    [data, serverData, pending, dispatch, move, bulkDelete, bulkMove, bulkDuplicate, paste],
+    [data, serverData, pending, dispatch, move, bulkDelete, bulkMove, bulkDuplicate],
   );
 
   return (

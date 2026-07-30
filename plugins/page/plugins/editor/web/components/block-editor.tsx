@@ -681,7 +681,7 @@ function SelectionLayer({
         const afterId = pasteAnchorId(toNodes(rowsRef.current), selectedRef.current, focusedBlockId);
         void (async () => {
           const data = await handler.build(file);
-          await paste({
+          paste({
             blocks: [{ type: handler.type, data, expanded: false, children: [] }],
             afterId,
           });
@@ -705,7 +705,7 @@ function SelectionLayer({
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();
       const afterId = pasteAnchorId(toNodes(rowsRef.current), selectedRef.current, focusedBlockId);
-      void paste({ blocks: forest, afterId });
+      paste({ blocks: forest, afterId });
     },
     [handles, paste, focusedBlockId, containerRef, allowAttachments],
   );
@@ -1017,7 +1017,7 @@ function SelectionLayer({
             children: [],
           })),
         );
-        await paste({ blocks, ...pos });
+        paste({ blocks, ...pos });
       })();
     },
     [fileDropPosition, paste, allowAttachments],

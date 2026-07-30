@@ -15,6 +15,7 @@ import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutati
 import {
   applyBlockOp,
   childrenOf,
+  diffBlocks,
   opBlockIds,
   type BlockNode,
   type BlockOp,
@@ -140,10 +141,21 @@ function movedTo(blocks: Block[], m: PredictedMove): boolean {
 }
 
 /**
- * Has `blocks` fully absorbed a patch? True when every upserted row is present
- * with matching persisted columns AND every deleted id is gone. Used for both
- * the patch apply-guard (skip a replay that the base already reflects) and
- * content-based confirmation on a fresh server snapshot.
+ * Does SERVER TRUTH prove a patch landed? True when every upserted row is
+ * present with matching STRUCTURAL columns (parent / type / rank / expanded) —
+ * deliberately not `data` — and every deleted id is gone. The `isConfirmedBy`
+ * predicate for the patch variant.
+ *
+ * `data` is excluded on purpose, and this is the confirmation half of an
+ * asymmetry with {@link isPatchAbsorbed} (read both docs together). Server truth
+ * legitimately differs from what the client wrote: `parseBlockData` normalizes
+ * the payload at the write boundary, and a row's `data.text` trails its content
+ * doc by up to ~1s (the debounced projection), so a snapshot that provably
+ * contains this write can still carry different `data`. Comparing it here would
+ * make ops fail to confirm, stick in the overlay, and file divergence reports.
+ *
+ * Being liberal is safe for confirmation and NOT safe for the apply-guard, which
+ * is exactly why they are two functions.
  */
 export function isPatchReflected(blocks: Block[], patch: BlockPatch): boolean {
   const byId = new Map(blocks.map((b) => [b.id, b]));
@@ -172,6 +184,50 @@ export function isPatchReflected(blocks: Block[], patch: BlockPatch): boolean {
 }
 
 /**
+ * Would applying this patch to THIS base change anything? The apply-guard: when
+ * true, `applyOverlayOp` throws `OpNoLongerApplies` so the replay drops the
+ * entry instead of double-applying it.
+ *
+ * The same question as {@link isPatchReflected} asks, but about a different
+ * subject — the base we are about to write, not a server snapshot we are reading
+ * evidence off. So it must be EXACT, `data` included: a patch that changes only
+ * `data` (a to-do's `checked`, a callout's color, an image's width — every
+ * `BlockEditorAPI.update`) is a real edit, and a data-blind guard reads it as
+ * already-absorbed and silently swallows it. That is not a theoretical gap: it
+ * made `update` a complete no-op in `persist={false}` memory mode (whose
+ * `dispatch` catches `OpNoLongerApplies` and keeps the current rows) and
+ * non-optimistic on the server path.
+ *
+ * "Changed" is `diffBlocks`' own row comparator — the same one `commitRows` used
+ * to decide there was a patch worth dispatching — so the writer and the guard
+ * can never disagree about whether a row differs.
+ */
+export function isPatchAbsorbed(blocks: Block[], patch: BlockPatch): boolean {
+  const byId = new Map(blocks.map((b) => [b.id, b]));
+  const current: Block[] = [];
+  const wanted: Block[] = [];
+  for (const up of patch.upserts) {
+    const cur = byId.get(up.id);
+    if (!cur) {
+      // Update-only upsert onto a row that no longer exists: vacuously absorbed
+      // — `applyPatch` skips it too (never resurrects), so applying would indeed
+      // change nothing. Same rule as the confirmation predicate's.
+      if (patch.updateOnly) continue;
+      return false;
+    }
+    current.push(cur);
+    wanted.push(up);
+  }
+  // Identical id sets on both sides, so `inserted`/`deleted` are empty by
+  // construction and `updated` is exactly "some row would change".
+  if (diffBlocks(current, wanted).updated.length > 0) return false;
+  for (const id of patch.deleteIds) {
+    if (byId.has(id)) return false;
+  }
+  return true;
+}
+
+/**
  * Apply a `BlockPatch` onto a client `Block[]` base: replace/insert each upsert
  * by id, then drop the deleted ids (and any descendants of them, since the
  * server delete cascades the subtree). Ordering is by rank at render time, so we
@@ -182,12 +238,26 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
   const deleted = new Set(patch.deleteIds);
   // Drop the explicitly-deleted ids plus their descendants (mirrors the server's
   // FK cascade), so an undo that re-deletes a subtree-root clears the subtree.
+  //
+  // The cascade reads the POST-upsert parentage, which is what the server does
+  // and is not a detail: `handlePatchBlocks` applies its updates BEFORE its
+  // `DELETE`, so a row this patch re-parents OUT of the deleted subtree has
+  // already left by the time the cascade runs. Reading pre-patch parentage here
+  // instead would silently swallow exactly that shape — redoing an `unwrap`
+  // (promote the children, delete the container) dropped every promoted child.
+  // `has`, not `?? b.parentId`: a promotion to the TOP level upserts
+  // `parentId: null`, which `??` would silently read as "no opinion".
+  const parentOf = (b: Block) => {
+    const up = upsertById.get(b.id);
+    return up ? up.parentId : b.parentId;
+  };
   const dropped = new Set(deleted);
   let grew = true;
   while (grew) {
     grew = false;
     for (const b of blocks) {
-      if (b.parentId !== null && dropped.has(b.parentId) && !dropped.has(b.id)) {
+      const parentId = parentOf(b);
+      if (parentId !== null && dropped.has(parentId) && !dropped.has(b.id)) {
         dropped.add(b.id);
         grew = true;
       }
@@ -275,7 +345,9 @@ export function applyOverlayOp(
   anchorTypes?: ReadonlySet<string>,
 ): Block[] {
   if (v.tag === "patch") {
-    if (isPatchReflected(blocks, v.patch)) throw new OpNoLongerApplies();
+    // `isPatchAbsorbed`, NOT the confirmation predicate: the guard asks "would
+    // applying this change anything here", which includes `data` (see both docs).
+    if (isPatchAbsorbed(blocks, v.patch)) throw new OpNoLongerApplies();
     return applyPatch(blocks, v.patch);
   }
   if (isReflected(blocks, v.effect)) throw new OpNoLongerApplies();
@@ -290,11 +362,14 @@ function opCtx(anchorTypes: ReadonlySet<string> | undefined): BlockOpContext {
 /**
  * Build the overlay vars for a `paste`. Split out from `buildOverlayOp` because
  * a paste needs NO current-state snapshot: its effect is exactly the root ids
- * the caller just minted, so there is nothing to predict off the rows. That is
- * what lets a store dispatch a paste without threading its render-fresh rows
- * through the callback.
+ * the caller just minted, so there is nothing to predict off the rows.
+ *
+ * Deliberately NOT exported — it is `buildOverlayOp`'s helper and nothing else.
+ * With no exported paste-overlay builder and no `paste` on `BlockStore`, a paste
+ * can only reach the pipeline through the provider's `dispatchOp`, which is the
+ * one place that records an undo entry. Exporting it again re-opens the bypass.
  */
-export function buildPasteOverlayOp(
+function buildPasteOverlayOp(
   op: Extract<BlockOp, { kind: "paste" }>,
 ): BlockOverlayOp {
   return { tag: "op", op, effect: { kind: "create", ids: op.forest.map((n) => n.id) } };

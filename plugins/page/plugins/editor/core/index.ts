@@ -37,18 +37,27 @@ export type {
 export {
   BlockOpSchema,
   applyBlockOp,
+  applyBulkMove,
   canIndent,
   canOutdent,
   childrenOf,
   opBlockIds,
   pasteAnchorId,
+  planBulkMove,
   prevVisibleLine,
   nextVisibleLine,
   textOf,
   runsOfNode,
   withRuns,
 } from "./block-ops";
-export type { BlockOp, BlockOpContext, BlockNode } from "./block-ops";
+export type {
+  BlockOp,
+  BlockOpContext,
+  BlockNode,
+  BulkMovePlacement,
+  BulkMovePlan,
+  BulkMoveRefusal,
+} from "./block-ops";
 
 export {
   BlockPatchSchema,

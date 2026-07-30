@@ -506,10 +506,13 @@ function applyOp(
  *
  * Known gap, deliberate: an `insert` op naming an anchor type mints a childless
  * anchor that this pass immediately removes. Anchors are never born that way —
- * the wrap mints the anchor and its first child in ONE patch (not an op) — and
- * the paths that CAN leave an empty anchor (`bulkDelete` / `bulkMove` / `paste`)
- * bypass the reducer entirely on both sides, where the surface's one-line
- * childless fallback makes the result visible and deletable rather than a ghost.
+ * the wrap mints the anchor and its first child in ONE patch (not an op). The
+ * remaining paths that CAN leave an empty anchor are `bulkDelete` and `bulkMove`,
+ * which bypass the reducer entirely on both sides (their own endpoints on the
+ * server, hand-computed after-states on the client), and there the surface's
+ * one-line childless fallback makes the result visible and deletable rather than
+ * a ghost. `paste` used to be in that list; since it became a `BlockOp` it flows
+ * through `applyBlockOp` like every other op and is pruned here too.
  */
 function pruneEmptyAnchors(
   blocks: BlockNode[],
@@ -894,6 +897,145 @@ export function canIndent(blocks: BlockNode[], blockIds: readonly string[]): boo
 /** Would outdenting `blockIds` move anything? Drives the selection bar's affordance. */
 export function canOutdent(blocks: BlockNode[], blockIds: readonly string[]): boolean {
   return foldOutdent(blocks, blockIds).moved.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Bulk move (the drag of a whole selection)
+// ---------------------------------------------------------------------------
+
+/** Where one selection root lands. Field-compatible with `parkRanks`' `RankPlacement`. */
+export interface BulkMovePlacement {
+  id: string;
+  /** The parent the row sits under NOW — the scope `parkRanks` parks it in. */
+  currentParentId: string | null;
+  parentId: string | null;
+  /** Stored string form, like every `BlockNode.rank`. */
+  rank: string;
+}
+
+/** Why a bulk move was refused. Each maps 1:1 to a distinguishable server 4xx. */
+export type BulkMoveRefusal = "empty-selection" | "into-selection" | "into-own-subtree";
+
+export interface BulkMovePlan {
+  /** In DOCUMENT order. Empty iff `refusal !== null`. */
+  placements: BulkMovePlacement[];
+  /** The selection roots, document-ordered (what each writer re-reads / notifies). */
+  roots: string[];
+  /** The destination parent to open, or null for a top-level drop. */
+  expandParentId: string | null;
+  refusal: BulkMoveRefusal | null;
+}
+
+function refusedBulkMove(refusal: BulkMoveRefusal): BulkMovePlan {
+  return { placements: [], roots: [], expandParentId: null, refusal };
+}
+
+/**
+ * Plan where a whole selection lands when it is dragged under `parentId`,
+ * immediately after `afterId` (or at the start of that sibling list when
+ * `afterId` is null). Pure: the ONE definition of bulk-move's rank/order algebra,
+ * run verbatim by the server writer, the in-memory store, and the provider's undo
+ * prediction — if the three disagreed, the recorded undo patch would be wrong.
+ *
+ * **All-or-nothing, which is why this is `plan*` and not `fold*`.** A `Fold` in
+ * this file is a per-element fold with PARTIAL refusal (`foldIndent` skips a
+ * blocked block and cascades), and its `moved` subset names a state the forest
+ * really reaches. A bulk move has no correct partial answer — a destination
+ * inside the moving selection is not "one root that cannot go", it invalidates
+ * the whole gesture — so a `moved` subset here would imply a state that cannot
+ * occur. `plan*` also matches `planForestInsert`, the structural twin.
+ *
+ * **Roots are ordered by `inDocumentOrder`, and that is load-bearing.**
+ * `selectionRoots` preserves the order ids appear in the INPUT ARRAY, and the two
+ * writers hold that array in different orders (the server's `loadPageBlocks` has
+ * no `ORDER BY` at all — Postgres heap order, which `UPDATE`s rewrite; a client
+ * holds a global rank sort, which is not document order either). Minting the rank
+ * run against an arbitrary order silently scrambles the selection's internal
+ * order on the way down, and makes the two sides disagree about which root got
+ * which key. The folds sort for exactly this reason.
+ *
+ * **Guards return a `refusal`; they never throw and never silently no-op.** A
+ * pure core helper cannot throw `HttpError` (wrong layer), and swallowing would
+ * rob the server of the two distinguishable 400s it owes the user. Clients treat
+ * any refusal as drop-before-record, the same discipline `dispatchOp` applies to
+ * an empty reducer diff.
+ *
+ * @param destSiblings MUST be the COMPLETE live sibling set under `parentId` —
+ * EVERY row with that `parent_id`, unfiltered by page and unfiltered by type. It
+ * defaults to `blocks` because a client holds its page's forest whole, but the
+ * server MUST pass `loadLiveSiblings(tx, parentId)`: a destination page row's
+ * children are keyed to that page and are therefore absent from a page-scoped
+ * load, so a window computed over page-scoped rows mints `"a0"` straight onto the
+ * sub-page's existing first child. `page_blocks` has ONE `(parent_id, rank)`
+ * ordering space that several live resources project disjointly — arithmetic over
+ * a filtered projection mints keys that collide with the siblings it cannot see.
+ */
+export function planBulkMove(
+  blocks: BlockNode[],
+  args: { ids: readonly string[]; parentId: string | null; afterId: string | null },
+  destSiblings: BlockNode[] = blocks,
+): BulkMovePlan {
+  const moving = new Set(args.ids);
+  const roots = inDocumentOrder(blocks, selectionRoots(blocks, moving));
+  if (roots.length === 0) return refusedBulkMove("empty-selection");
+
+  // Cycle guard: the selection cannot land inside itself (nor onto itself).
+  if (args.parentId !== null) {
+    if (moving.has(args.parentId)) return refusedBulkMove("into-selection");
+    for (const root of roots) {
+      if (isDescendant(blocks, root, args.parentId)) {
+        return refusedBulkMove("into-own-subtree");
+      }
+    }
+  }
+
+  // Exclude everything that is moving, so the moved roots don't bound their own
+  // insertion window. (The excluded ids can therefore collide transiently with a
+  // still-unmoved root's rank — which is what the server's park-then-place phase
+  // exists to absorb; see `rank-park.ts`.)
+  const movingSubtree = new Set(roots.flatMap((r) => subtreeIds(blocks, r)));
+  const [prev, next] = rankWindow(destSiblings, args.parentId, args.afterId, movingSubtree);
+  const ranks = Rank.nBetween(prev, next, roots.length);
+
+  const placements = roots.map((id, i) => ({
+    id,
+    currentParentId: byId(blocks, id)!.parentId,
+    parentId: args.parentId,
+    rank: ranks[i]!.toJSON(),
+  }));
+  return { placements, roots, expandParentId: args.parentId, refusal: null };
+}
+
+/**
+ * Apply a `planBulkMove` result to a forest: reparent + re-rank each placement
+ * and open the destination, so a client's predicted after-state is byte-identical
+ * to what the server's writer commits.
+ *
+ * Deliberately does NOT recompute `pageId` — the same in-page invariant
+ * `applyMove` holds. Reparenting CAN cross a page boundary, but only the server
+ * knows the whole tree, so it owns that (`recomputePageIdSubtree`); the composite
+ * client store refuses cross-page bulk moves outright rather than guessing.
+ *
+ * Deliberately does NOT run `pruneEmptyAnchors` either. `bulkMove` is not a
+ * `BlockOp`: it bypasses the reducer on both sides (its own endpoint on the
+ * server, a hand-computed after-state on the client), exactly as `bulkDelete`
+ * does. Pruning here would make the client's prediction diverge from the server's
+ * commit, which is the one thing this pair exists to prevent.
+ *
+ * A refused plan is the identity — its `placements` are empty by construction.
+ */
+export function applyBulkMove(blocks: BlockNode[], plan: BulkMovePlan): BlockNode[] {
+  let next = blocks;
+  for (const p of plan.placements) {
+    const node = byId(next, p.id);
+    if (!node) continue;
+    next = replace(next, { ...node, parentId: p.parentId, rank: p.rank });
+  }
+  if (plan.placements.length > 0 && plan.expandParentId) {
+    const parent = byId(next, plan.expandParentId);
+    if (parent && !parent.expanded) next = replace(next, { ...parent, expanded: true });
+  }
+  return next;
 }
 
 /**

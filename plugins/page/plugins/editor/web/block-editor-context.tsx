@@ -18,10 +18,13 @@ import {
   runsOfNode,
   runsLength,
   applyBlockOp,
+  applyBulkMove,
   childrenOf,
   diffBlocks,
+  planBulkMove,
   patchesFromDiff,
   isEmptyPatch,
+  withMintedIds,
   type Block,
   type BlockOp,
   type BlockPatch,
@@ -289,11 +292,23 @@ interface BlockEditorContextValue {
     afterId: string | null;
   }) => void;
   bulkDuplicate: (ids: string[]) => Promise<string[]>;
+  /**
+   * Insert a serialized forest after `afterId` (or, anchorless, at the start of
+   * `parentId` — defaulting to the page's own top level). A plain `BlockOp`
+   * dispatched through `dispatchOp`, so it is optimistic and recorded as ONE
+   * undo entry like every other structural edit.
+   *
+   * Returns nothing, deliberately. The minted root ids are right there in
+   * `withMintedIds`' output, but `dispatchOp` legitimately DROPS an op the
+   * reducer refused (a missing anchor refuses the whole paste), so "the ids
+   * that were pasted" would be an absorbable failure — a caller reading them
+   * back would be told content landed in exactly the case it did not.
+   */
   paste: (args: {
     blocks: SerializedBlock[];
     afterId: string | null;
     parentId?: string | null;
-  }) => Promise<string[]>;
+  }) => void;
   /**
    * Create a block of the given type at the end of the page and focus it
    * once the live resource re-renders the list.
@@ -437,7 +452,7 @@ function MemoryProviderHost({
   onOpenPage?: (pageId: string) => void;
   children: ReactNode;
 } & ProviderHostCaretProps) {
-  const store = useMemoryBlockStore({ pageId, initialBlocks });
+  const store = useMemoryBlockStore({ initialBlocks });
   return (
     <BlockEditorProviderInner
       store={store}
@@ -504,7 +519,7 @@ export function BlockEditorProviderInner({
   const pendingFocusRef = useRef<{ id: string; scroll: boolean } | null>(null);
 
   // The persistence seam. All reads (`data`/`serverData`/`pending`) and writes
-  // (`dispatch`/`move`/`bulk*`/`paste`) go through it; everything else in this
+  // (`dispatch`/`move`/`bulk*`) go through it; everything else in this
   // provider (recording, focus, `makeBlockAPI`, the CRDT projection) is
   // storage-agnostic — the server and in-memory stores share ONE shape.
 
@@ -858,27 +873,33 @@ export function BlockEditorProviderInner({
   const bulkMove = useCallback(
     (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
       if (args.ids.length === 0) return;
+      // Positional intent goes to the store (the server owns rank authority), but
+      // this editor holds the page's forest whole, so it can predict the placement
+      // locally for the undo record — exactly as `move` does. `planBulkMove` is the
+      // SAME planner the store and the server run, so the recorded after-state is
+      // byte-identical to what gets committed. No optimistic overlay: the forward
+      // write is still the bespoke endpoint, like `bulkDelete`.
+      const before = rowsRef.current;
+      const plan = planBulkMove(toNodes(before), args);
+      // A refused plan (empty selection, or a destination inside the selection)
+      // changes nothing — drop it before recording and before the network, the
+      // same discipline `dispatchOp` applies to an empty reducer diff.
+      if (plan.refusal) return;
+      const after = fromNodes(applyBulkMove(toNodes(before), plan), before);
+      // `focusId` is null for the reason `bulkDelete` passes null: a bulk move is
+      // driven from block-selection mode, where focus lives on the selection
+      // container rather than in any row. `"Move blocks"` is a literal because
+      // `bulkMove` is not a `BlockOp` and so has no `OP_LABELS` entry.
+      recordStructural(before, after, "Move blocks", null);
       store.bulkMove(args);
     },
-    [store],
+    [store, recordStructural],
   );
 
   const bulkDuplicate = useCallback(
     async (ids: string[]): Promise<string[]> => {
       if (ids.length === 0) return [];
       return store.bulkDuplicate(ids);
-    },
-    [store],
-  );
-
-  const paste = useCallback(
-    async (args: {
-      blocks: SerializedBlock[];
-      afterId: string | null;
-      parentId?: string | null;
-    }): Promise<string[]> => {
-      if (args.blocks.length === 0) return [];
-      return store.paste(args);
     },
     [store],
   );
@@ -942,6 +963,39 @@ export function BlockEditorProviderInner({
       store.dispatch(buildOverlayOp(op, before, anchorTypes));
     },
     [store, recordStructural, anchorTypes],
+  );
+
+  // Paste a serialized forest — a plain `dispatchOp`, which is the whole point:
+  // a paste is a `BlockOp` like any other structural edit, so routing it here
+  // (rather than at the store seam, where it used to sit) is what puts it on the
+  // undo stack, drops a refused paste before the network, and keeps ONE place
+  // that records structural mutations.
+  //
+  // Identity is minted HERE, client-side, and travels on the node: the overlay
+  // renders the pasted blocks on the keystroke and the server push is a
+  // confirmation rather than the first time the user sees their content (see the
+  // "Paste is an op" section of this plugin's CLAUDE.md).
+  //
+  // MUST stay below `dispatchOp` — it closes over it.
+  const paste = useCallback(
+    (args: {
+      blocks: SerializedBlock[];
+      afterId: string | null;
+      parentId?: string | null;
+    }) => {
+      const forest = withMintedIds(args.blocks);
+      if (forest.length === 0) return;
+      // `parentId` defaults to the PAGE's own id, not null: the reducer's forest
+      // excludes the page row, so the page id is how "the content top level" is
+      // addressed (see the `paste` op's `parentId` doc).
+      dispatchOp({
+        kind: "paste",
+        forest,
+        afterId: args.afterId,
+        parentId: args.parentId ?? pageId,
+      });
+    },
+    [dispatchOp, pageId],
   );
 
   // Indent / outdent a SET of blocks (the selection roots). The single-block Tab
