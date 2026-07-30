@@ -12,6 +12,8 @@
  * methods on one object, sharing a single failure counter and a single exit path.
  */
 
+import { drainDiagnostics } from "./diagnostics";
+
 export interface Report {
   /** Predicate form. `detail` is printed only on failure. */
   ok(name: string, condition: boolean, detail?: string): void;
@@ -72,6 +74,16 @@ export function report(title?: string): Report {
 
     finish(): never {
       const total = passed + failures.length;
+
+      // Non-fatal notices (a screenshot that could not be written, say) are
+      // surfaced but never counted: a diagnostic must not decide the verdict of
+      // a run whose assertions are green.
+      const diagnostics = drainDiagnostics();
+      if (diagnostics.length > 0) {
+        console.log(`\nDIAGNOSTICS (non-fatal): ${diagnostics.length}`);
+        for (const d of diagnostics) console.log(`  - ${d}`);
+      }
+
       if (failures.length === 0) {
         console.log(`\nALL CHECKS PASSED (${total})`);
         process.exit(0);

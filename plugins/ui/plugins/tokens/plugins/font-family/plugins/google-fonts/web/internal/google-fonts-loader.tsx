@@ -1,13 +1,21 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import { useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
 import { fontFamilyConfig } from "@plugins/ui/plugins/tokens/plugins/font-family/web";
-import { parseFontFamilies } from "./parse-font-families";
-import { shouldLoadFont } from "./should-load-font";
+import { loadGoogleFontFamilies } from "./google-font-catalog";
+import { preferredFontFamily } from "./preferred-font-family";
 
 const FONT_KEYS = ["fontSans", "fontSerif", "fontMono"] as const;
 
-function collectFontNames(
+/**
+ * The preferred face of every stack in these token sets.
+ *
+ * Only heads are collected, never fallbacks: across our 522 imported themes six
+ * families appear *only* in fallback position — including `Noto Color Emoji`,
+ * roughly 10 MB, in 54 of them, sitting behind an emoji font every OS already
+ * ships.
+ */
+function collectPreferredFamilies(
   tokenSets: Record<string, string>[],
 ): string[] {
   const names = new Set<string>();
@@ -15,9 +23,8 @@ function collectFontNames(
     for (const key of FONT_KEYS) {
       const value = tokens[key];
       if (value) {
-        for (const family of parseFontFamilies(value)) {
-          names.add(family);
-        }
+        const preferred = preferredFontFamily(value);
+        if (preferred !== null) names.add(preferred);
       }
     }
   }
@@ -70,8 +77,28 @@ export function GoogleFontsLoader() {
     ? null
     : (state.presets.find((p) => p.id === config.preset) ?? state.presets[0] ?? null);
 
+  // The catalog is a deferred import (it must not land in the boot bundle), so
+  // it arrives a tick after mount. Resolving it into state — rather than
+  // filtering inside the link effect — keeps that effect synchronous and keyed
+  // on the *filtered* set: two themes differing only in their system fallbacks
+  // then produce the same key, instead of tearing down and re-requesting every
+  // font sheet.
+  const [googleFamilies, setGoogleFamilies] = useState<ReadonlySet<string> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadGoogleFontFamilies().then((families) => {
+      if (!cancelled) setGoogleFamilies(families);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const fontsToLoad = useMemo(() => {
-    if (!active) return [];
+    if (!active || !googleFamilies) return [];
 
     const tokenSets: Record<string, string>[] = [active.light, active.dark];
     const ovLight = config.overrides.light;
@@ -79,8 +106,14 @@ export function GoogleFontsLoader() {
     if (ovLight) tokenSets.push(ovLight);
     if (ovDark) tokenSets.push(ovDark);
 
-    return collectFontNames(tokenSets).filter(shouldLoadFont);
-  }, [active, config.overrides]);
+    // Only a face Google can actually serve gets a stylesheet. Asking for
+    // anything else returns `400 text/html`, which Chromium blocks as an opaque
+    // response (ERR_BLOCKED_BY_ORB) — and a blocked sheet is what left
+    // `document.fonts.ready` unsettled.
+    return collectPreferredFamilies(tokenSets).filter((name) =>
+      googleFamilies.has(name),
+    );
+  }, [active, config.overrides, googleFamilies]);
 
   const fontsKey = fontsToLoad.join("\0");
 
