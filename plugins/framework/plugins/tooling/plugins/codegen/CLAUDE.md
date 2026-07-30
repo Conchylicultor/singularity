@@ -19,6 +19,8 @@
     - `config_v2.stringifyConfigValue`
     - `framework/plugin-id.asPath`
     - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.PluginId`
+    - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
     - `plugin-meta/barrel-import.AutoStubEntry`

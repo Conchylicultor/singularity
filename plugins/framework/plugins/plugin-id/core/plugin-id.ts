@@ -25,3 +25,29 @@ export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
  *  importing the code under test. */
 export const RUNTIME_FOLDERS = ["web", "server", "central", "core", "shared", "e2e"] as const;
 export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
+
+/** Whether a runtime folder's facts belong in the GENERATED plugin docs
+ *  (`docs/plugins-details.md` and each plugin's `CLAUDE.md` reference block).
+ *
+ *  Doc visibility is a property of the runtime, so it is declared here beside the
+ *  runtime set — the doc renderer consumes the derived set below and never names a
+ *  folder itself. `Record<RuntimeFolder, boolean>` is exhaustive by construction:
+ *  adding a runtime folder is a type error until it declares its doc policy.
+ *
+ *  `e2e` is omitted: an e2e barrel is real cross-plugin API, but only to other e2e
+ *  scripts — no `web`/`server`/`core` caller can reach it, so its `Uses`/`Exports`
+ *  facts spend every agent's context on a surface none of them can depend on. */
+const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
+  web: true,
+  server: true,
+  central: true,
+  core: true,
+  shared: true,
+  e2e: false,
+};
+
+/** Runtime folders the generated plugin docs omit — the doc renderer's generic
+ *  filter over a fact's folder key (non-runtime groups are never members). */
+export const UNDOCUMENTED_RUNTIME_FOLDERS: ReadonlySet<string> = new Set(
+  RUNTIME_FOLDERS.filter((rt) => !RUNTIME_FOLDER_DOCUMENTED[rt]),
+);

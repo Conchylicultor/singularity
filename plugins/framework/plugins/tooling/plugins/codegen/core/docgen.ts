@@ -6,7 +6,10 @@ import {
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getFacet, type Facet, type DocFact } from "@plugins/plugin-meta/plugins/facets/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  UNDOCUMENTED_RUNTIME_FOLDERS,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
 
 /**
@@ -44,6 +47,10 @@ function capitalize(s: string): string {
  * blob of 40 importers is unreadable and rewrites the whole line in a diff when
  * a single entry is added. A lone value stays inline (it is already on its own
  * line; nesting it would only add noise).
+ *
+ * Facts whose folder a runtime declares undocumented are dropped here — the one
+ * place every generated doc funnels through, so no facet has to know (or repeat)
+ * the policy, and this renderer never names a folder.
  */
 function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
   const subIndent = `${bodyIndent}  `;
@@ -51,6 +58,7 @@ function renderDocFacts(facts: DocFact[], bodyIndent: string): string[] {
   const lines: string[] = [];
   const folders = new Map<string, DocFact[]>();
   for (const f of facts) {
+    if (UNDOCUMENTED_RUNTIME_FOLDERS.has(f.folder)) continue;
     let group = folders.get(f.folder);
     if (!group) { group = []; folders.set(f.folder, group); }
     group.push(f);
