@@ -332,8 +332,24 @@ interface BlockEditorContextValue {
    * coalesced typing run in `blockId`'s content doc) onto the unified undo
    * stack. Called by `CollabTextPlugin` from the content-doc seam's
    * `onUndoableEdit`.
+   *
+   * `label` defaults to the typing-run label ("Edit text"); a caller that
+   * captured a NON-typing content-doc edit (see {@link recordDocEdit}) names
+   * what it actually did, so the history reads truthfully.
    */
-  recordTextEdit: (blockId: string, edit: CapturedBlockDocEdit) => void;
+  recordTextEdit: (blockId: string, edit: CapturedBlockDocEdit, label?: string) => void;
+  /**
+   * Capture a SYNCHRONOUS content-doc edit as ONE standalone text undo entry.
+   * `edit` must drive its Lexical/Yjs changes synchronously (`discrete: true`) —
+   * see `captureBlockDocEdit`. No-ops when the edit changed nothing.
+   *
+   * It lives here rather than in the calling component so that ALL undo
+   * recording stays at this documented chokepoint, next to
+   * `recordStructuralWithDocEdit`, instead of a component reaching into
+   * `captureBlockDocEdit` itself — and it hands the same capability to any
+   * future "toolbar bold as its own undo step".
+   */
+  recordDocEdit: (blockId: string, label: string, edit: () => void) => void;
   /** Structural (document-tier) undo — reverses the last recorded block edit. */
   undo: () => void;
   /** Structural (document-tier) redo — re-applies the last undone block edit. */
@@ -719,9 +735,9 @@ export function BlockEditorProviderInner({
   // thunks pop — app-level coalescing would merge two entries over two manager
   // items and break the 1:1 LIFO correspondence (`um.undo()` pops exactly one).
   const recordTextEdit = useCallback(
-    (blockId: string, edit: CapturedBlockDocEdit) => {
+    (blockId: string, edit: CapturedBlockDocEdit, label = "Edit text") => {
       record({
-        label: "Edit text",
+        label,
         undo: async () => {
           await edit.undo();
           // Undo/redo reveals the edited block — it may be off-screen.
@@ -734,6 +750,30 @@ export function BlockEditorProviderInner({
       });
     },
     [record, focusBlock],
+  );
+
+  // Standalone content-doc recorder: capture a SYNCHRONOUS doc edit (the
+  // inline-markdown autoformat today) as ONE text entry of its own, rather than
+  // folded into a structural op the way `recordStructuralWithDocEdit` does it.
+  // `captureBlockDocEdit` is the whole mechanism — leading/trailing
+  // `stopCapturing` fence the edit off from the surrounding typing run, and the
+  // mirror is suppressed so the entry is recorded HERE, once, under the caller's
+  // own label. `null` means the edit changed nothing (or the block has no live
+  // doc): nothing to reverse, so nothing lands on the stack.
+  //
+  // Recording lives at this chokepoint deliberately: a component that reached
+  // into `captureBlockDocEdit` itself would be a second, undocumented undo
+  // recorder outside the two that this file owns.
+  //
+  // No `coalesceKey`, same reasoning as `recordTextEdit` above: the manager's
+  // captureTimeout already did the grouping, and app-level coalescing would
+  // break the 1:1 LIFO correspondence (`um.undo()` pops exactly one item).
+  const recordDocEdit = useCallback(
+    (blockId: string, label: string, edit: () => void) => {
+      const captured = captureBlockDocEdit(blockId, edit);
+      if (captured) recordTextEdit(blockId, captured, label);
+    },
+    [recordTextEdit],
   );
 
   // THE single chokepoint for any DIRECT row-set mutation (everything that is not
@@ -1496,6 +1536,7 @@ export function BlockEditorProviderInner({
       insertFirst,
       projectText,
       recordTextEdit,
+      recordDocEdit,
       undo,
       redo,
       canUndo,
@@ -1532,6 +1573,7 @@ export function BlockEditorProviderInner({
       insertFirst,
       projectText,
       recordTextEdit,
+      recordDocEdit,
       undo,
       redo,
       canUndo,

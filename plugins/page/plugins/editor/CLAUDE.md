@@ -756,6 +756,66 @@ hazard) + debounced (~300 ms) `doc-update` posts of merged local updates.
   for a causal reason. One that fails to converge stays rendered and files a
   `stalled` divergence report instead of un-splitting the user's block.
 
+### Inline markdown autoformat is ONE captured doc edit
+
+Typing `**x**` bolds `x` and drops the delimiters (also `__x__`, `*x*`/`_x_`,
+`***x***`/`___x___`, `~~x~~`, `` `x` ``). The requirement is **one Cmd+Z reverts
+only the formatting, restoring the literal `**x**`** — so it goes through
+`recordDocEdit` (→ `captureBlockDocEdit`), not a bare `editor.update`: the
+`Y.UndoManager`'s 500 ms `captureTimeout` would fold the transform into the typing
+run's item and one Cmd+Z would eat `**x**` whole. `stopCapturing()` on both sides
+detaches it from the preceding run and stops later keystrokes merging in. Third
+consumer of that fence, not a new mechanism.
+
+- **`queueMicrotask` before applying is mandatory.** An update listener runs with
+  `editor._updating === true`, so an `editor.update()` issued there is *enqueued*
+  and begins after `captureBlockDocEdit` has closed its window — formatting still
+  applies, undo boundary silently doesn't exist. `applyInlineFormat` **throws**
+  rather than returning `false` there, since that is indistinguishable from a
+  benign drift-abort. (Same deferral as split's.)
+- **Tag-guarded (`historic`/`collaboration`/`paste`/`INLINE_FORMAT_TAG`), which is
+  what makes undo reachable at all**: `um.undo()` re-inserts the delimiters and
+  `@lexical/yjs` applies that tagged `historic`, so an unguarded listener
+  re-formats instantly and Cmd+Z looks broken. The exactly-one-char-typed rule is
+  a second defence, deliberately stricter than `@lexical/markdown`'s, which admits
+  a *decreasing* offset and so auto-formats on **Backspace**.
+- **Single-`TextNode` scope** (plus `isSimpleText()` — `splitText` on a segmented
+  node or subclass slices characters that carry semantics). Makes the decorator
+  tokens (`[[pageId]]`, `\(latex\)`) unreachable by any offset. Cost:
+  `**see [[page]] here**` doesn't auto-bold; Cmd+B still does.
+- **Marks set node-level, `hasFormat`-guarded** — byte-identically what
+  `runs-lexical.ts` does, so `marksOf` reads back the same bits and the round-trip
+  is correct by construction. The guard is why `` `code` `` inside a bold run adds
+  code instead of clearing bold. Not `FORMAT_TEXT_COMMAND` (pulls in other
+  listeners) nor `RangeSelection.formatText` (fresh selection has `format === 0`,
+  making toggle-vs-set implicit over a partly-formatted range).
+
+The delimiter table (`core/inline-markdown.ts`) is **closed core data, not a
+slot** — block prefixes use `Editor.Block` because block types are an open set,
+but `Mark` is a closed persisted `z.enum`. Its tests pin the marks as exactly
+`MARK_ORDER` minus `underline` (no markdown syntax for it), so a sixth mark fails
+the suite until someone decides its syntax. In `core/` because `markdown.ts`'s
+`MdSerializeCtx.plain` will need the same delimiters for clipboard export.
+
+Two traps:
+
+- **"Mark is OFF for text typed next" rests on a Lexical timing window, not an
+  invariant** — the restored `selection.format` survives only via
+  `markCollapsedSelectionFormat`, honored ~200 ms keyed on `(anchor.key, offset)`.
+  `e2e/inline-format-verify.ts`'s ` tail` assertion is the only regression net; do
+  not weaken it.
+- **`markdown-shortcut-plugin.tsx` carries the same tag guard and advances
+  `prevText` BEFORE its early return.** The guard stops our output (`~~- foo~~` →
+  `- foo`) tripping a block conversion and closes a pre-existing hazard (a remote
+  edit or Cmd+Z converting a block unprompted); skipping the baseline advance
+  manufactures a phantom transition on the next keystroke.
+
+Not guarded, deliberately: an in-flight `$$` math query can autoformat its LaTeX
+(`$$a*b*`), `*` being intraword-legal. Coupling to `caret-trigger`'s arbiter was
+rejected — candidacy is published even for a *dismissed* trigger, so one literal
+`[[` in a line would silently disable autoformat for the rest of the node. The
+right fix is the trigger owner consuming the keystroke.
+
 ### Hardening
 
 Validated against offline/reconnect, multi-tab, agent concurrency, and history
@@ -1056,6 +1116,9 @@ the whole document lives in React state and is discarded on unmount.
     - `ColorToken`
     - `CreateBlockBody`
     - `IdentifiedBlock`
+    - `InlineFormatContext`
+    - `InlineFormatMatch`
+    - `InlineSyntax`
     - `Mark`
     - `MdParseCtx`
     - `MdSerializeCtx`
@@ -1099,10 +1162,12 @@ the whole document lives in React state and is discarded on unmount.
     - `deleteBlock`
     - `diffBlocks`
     - `IdentifiedBlockSchema`
+    - `INLINE_SYNTAXES`
     - `isEmptyPatch`
     - `listBlocks`
     - `listPages`
     - `MARK_ORDER`
+    - `matchInlineFormat`
     - `mergeRuns`
     - `moveBlock`
     - `MoveBlockBodySchema`

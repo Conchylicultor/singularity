@@ -17,6 +17,7 @@ import { CollabTextPlugin } from "./collab-text-plugin";
 import { KeyboardPlugin } from "./keyboard-plugin";
 import { BlockMenuPlugin } from "./block-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
+import { InlineMarkdownPlugin } from "./inline-markdown-plugin";
 import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
@@ -225,6 +226,12 @@ export function BlockTextEditor({
           <KeyboardPlugin blockId={block.id} editor={editor} />
           <BlockMenuPlugin editor={editor} blockId={block.id} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
+          {/* Block-level markdown PREFIXES first, then inline delimiters. The
+              order is the layering: the inline transform can leave a prefix
+              behind (`~~- foo~~` → `- foo`), and the block plugin tag-guards
+              that away, so the block listener must already be registered when
+              the inline one starts stamping INLINE_FORMAT_TAG. */}
+          <InlineMarkdownPlugin blockId={block.id} />
           <FormatShortcutsPlugin />
           <FormatToolbarPlugin />
           <BlockPastePlugin block={block} editor={editor} />

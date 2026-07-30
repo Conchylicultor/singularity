@@ -82,6 +82,9 @@ export {
 } from "./rich-text";
 export type { Mark, ColorToken, TextRun, RichText } from "./rich-text";
 
+export { INLINE_SYNTAXES, matchInlineFormat } from "./inline-markdown";
+export type { InlineSyntax, InlineFormatMatch, InlineFormatContext } from "./inline-markdown";
+
 export { $appendRuns, colorCssValue, runsToLexical, serializeBlockRuns, tokenOf } from "./runs-lexical";
 export type { RunsTokenExtension } from "./runs-lexical";
 

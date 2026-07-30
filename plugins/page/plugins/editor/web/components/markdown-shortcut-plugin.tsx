@@ -1,10 +1,17 @@
 import { useEffect, useMemo } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getRoot,
+  COLLABORATION_TAG,
+  HISTORIC_TAG,
+} from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { runsOf, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor } from "../slots";
+import { INLINE_FORMAT_TAG } from "../internal/inline-format-tag";
 
 /**
  * Markdown block-shortcut affordance. Each block type declares its own
@@ -22,6 +29,22 @@ import { Editor } from "../slots";
  * type. Because every text-like block type shares one renderer, the conversion
  * reconciles in place: the same editor keeps focus, so any text the user keeps
  * typing flows straight into the now-bulleted block.
+ *
+ * **A transition only counts when the USER produced it.** The listener is tag-
+ * guarded because a text transition is not by itself evidence of typing:
+ *
+ * - `HISTORIC_TAG` / `COLLABORATION_TAG` — a Ctrl+Z or a remote peer's merge can
+ *   land text that *begins* with a prefix, and converting there would change the
+ *   block type on nobody's keystroke. Pre-existing hazard, since this plugin
+ *   originally filtered no tags at all.
+ * - `INLINE_FORMAT_TAG` — the inline-markdown autoformat strips delimiters, so it
+ *   can itself *create* a prefix: `~~- foo~~` strikes to leave `- foo`, whose
+ *   transition would silently become a bullet.
+ *
+ * A guarded update still has to **advance `prevText`** — the baseline is what
+ * "transition" is measured against, so returning early without updating it would
+ * make the next genuine keystroke diff against stale text and fire a phantom
+ * transition.
  */
 export function MarkdownShortcutPlugin({
   block,
@@ -69,11 +92,22 @@ export function MarkdownShortcutPlugin({
       .read(() => $getRoot().getTextContent());
     let pending = false;
 
-    return lexicalEditor.registerUpdateListener(() => {
+    return lexicalEditor.registerUpdateListener(({ tags }) => {
       lexicalEditor.getEditorState().read(() => {
         const text = $getRoot().getTextContent();
         const before = prevText;
+        // Advance the baseline BEFORE any early return, guarded updates
+        // included: whatever text an undo / a remote merge / our own inline
+        // transform left behind IS the state the next keystroke transitions
+        // from (see the component comment).
         prevText = text;
+        if (
+          tags.has(HISTORIC_TAG) ||
+          tags.has(COLLABORATION_TAG) ||
+          tags.has(INLINE_FORMAT_TAG)
+        ) {
+          return;
+        }
         if (pending || text === before) return;
 
         for (const { prefix, type, empty, acceptsText, collapsible } of rulesRef.current) {

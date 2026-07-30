@@ -16088,6 +16088,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ColorToken`
           - `CreateBlockBody`
           - `IdentifiedBlock`
+          - `InlineFormatContext`
+          - `InlineFormatMatch`
+          - `InlineSyntax`
           - `Mark`
           - `MdParseCtx`
           - `MdSerializeCtx`
@@ -16131,10 +16134,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteBlock`
           - `diffBlocks`
           - `IdentifiedBlockSchema`
+          - `INLINE_SYNTAXES`
           - `isEmptyPatch`
           - `listBlocks`
           - `listPages`
           - `MARK_ORDER`
+          - `matchInlineFormat`
           - `mergeRuns`
           - `moveBlock`
           - `MoveBlockBodySchema`
