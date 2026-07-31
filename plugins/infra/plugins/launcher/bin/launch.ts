@@ -106,6 +106,7 @@ async function main(): Promise<void> {
   const {
     assertSupportedHost,
     bootSelfContainedApp,
+    teardownSelfContainedApp,
     writeReleaseDatabaseConfig,
     seedReleaseAssetMirror,
     seedReleaseConfig,
@@ -170,7 +171,7 @@ async function main(): Promise<void> {
     log: console.log,
   });
 
-  await bootSelfContainedApp({
+  const { gateway } = await bootSelfContainedApp({
     name,
     // Which build is serving, for /api/health to report — see setReleaseIdentity.
     // `runId` is absent on a bundle built outside a tracked release run.
@@ -195,6 +196,43 @@ async function main(): Promise<void> {
   console.log(`App "${name}" is serving.`);
   console.log(`  URL:  http://${name}.localhost:${port}`);
   console.log(`  Root: ${process.env.SINGULARITY_DIR}`);
+
+  // ── Stay in the foreground. ────────────────────────────────────────────────
+  //
+  // This process IS the app, to everything that launches it: systemd treats the
+  // exit of `ExecStart` as the service dying and reaps the whole cgroup — the
+  // gateway and Postgres included — and a desktop launch should stop the app
+  // when you close it, the way every other application behaves. Returning here
+  // used to leave a detached stack behind, which read as "started successfully"
+  // locally (nothing was watching) and as a restart loop under systemd.
+  //
+  // `./singularity start` is the deliberate exception: it is the one command
+  // whose job is to leave a daemon running, and it does not `.ref()`.
+  //
+  // The gateway handle serves both jobs at once — it keeps the event loop alive
+  // (so there is no keepalive timer to invent) and it resolves exactly when the
+  // gateway dies, which is the event that means the app is gone.
+  gateway.ref();
+
+  const root = process.env.SINGULARITY_DIR!;
+  let stopping = false;
+  async function stop(reason: string, code: number): Promise<void> {
+    if (stopping) return; // A second SIGTERM must not race the first teardown.
+    stopping = true;
+    console.log(`\n${reason} — shutting down...`);
+    await teardownSelfContainedApp({ root, httpPort: port }, console.log);
+    process.exit(code);
+  }
+
+  process.on("SIGTERM", () => void stop("Received SIGTERM", 0));
+  process.on("SIGINT", () => void stop("Received SIGINT", 0));
+
+  const gatewayExit = await gateway.exited;
+  // Reached only when the gateway died on its OWN — we were never asked to
+  // stop. That is a failure even when it exited 0, so never report success:
+  // under a supervisor, exit 0 means "the service finished", which would leave
+  // a dead app un-restarted.
+  await stop(`Gateway exited (code ${gatewayExit})`, gatewayExit === 0 ? 1 : gatewayExit);
 }
 
 await main();

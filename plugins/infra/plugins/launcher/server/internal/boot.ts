@@ -423,7 +423,7 @@ export async function buildOrLocateGateway(
 
 /**
  * Daemonize the gateway: spawn it detached (`unref()`), write its pid to the pid
- * file, and return the pid. We pass `env: { ...process.env }` EXPLICITLY — Bun
+ * file, and return the handle. We pass `env: { ...process.env }` EXPLICITLY — Bun
  * snapshots the real environment at process start, so runtime mutations to
  * `process.env` (the release launcher's `SINGULARITY_DIR` + PG bin-dir overrides,
  * set in launch.ts before any import) are NOT reflected in a child's inherited
@@ -453,7 +453,7 @@ export function spawnGatewayDaemon(opts: {
    * requests 404, today's behavior).
    */
   defaultNamespace?: string;
-}): number {
+}): Bun.Subprocess {
   mkdirSync(LOGS_DIR, { recursive: true });
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
   // any panic. The gateway writes its own rotating logs under -log-dir.
@@ -486,8 +486,13 @@ export function spawnGatewayDaemon(opts: {
 
   closeSync(logFd);
   writeFileSync(PID_FILE, String(gw.pid) + "\n");
+  // Detached by default: `./singularity start` and the preview/desktop bring-up
+  // paths all outlive their launcher. A caller that means to SUPERVISE the
+  // gateway (the release launcher under systemd) calls `.ref()` on the returned
+  // handle and awaits `.exited`, which is why the handle — not just the pid — is
+  // what this returns.
   gw.unref();
-  return gw.pid;
+  return gw;
 }
 
 // Generous: the gateway does not bind its listener until its supervisor has
@@ -708,7 +713,7 @@ export async function bootSelfContainedApp(opts: {
   command?: string[];
   logLevel?: string;
   log?: LogFn;
-}): Promise<void> {
+}): Promise<{ gateway: Bun.Subprocess }> {
   const { name, server, web, command, port, bindHost, repoRoot } = opts;
   const logLevel = opts.logLevel ?? "info";
   const log = opts.log ?? noop;
@@ -722,7 +727,7 @@ export async function bootSelfContainedApp(opts: {
   if (opts.releaseIdentity) setReleaseIdentity(opts.releaseIdentity);
   // A self-contained app is single-namespace: route subdomain-less requests
   // (the desktop webview, single-origin web) to it via the gateway default.
-  const pid = spawnGatewayDaemon({
+  const gateway = spawnGatewayDaemon({
     gatewayDir,
     gatewayBin,
     port,
@@ -730,6 +735,7 @@ export async function bootSelfContainedApp(opts: {
     logLevel,
     defaultNamespace: name,
   });
+  const pid = gateway.pid;
   log(`Gateway started (PID ${pid}); waiting for it to serve...`);
 
   await awaitGatewayReady({ pid, port });
@@ -750,6 +756,8 @@ export async function bootSelfContainedApp(opts: {
   log(`Registered app "${name}"; waiting for backend to become ready...`);
 
   await awaitAppReady(name, port);
+
+  return { gateway };
 }
 
 /** Read a numeric PID from the first line of a pidfile; null if absent/invalid. */

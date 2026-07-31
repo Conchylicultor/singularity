@@ -86,7 +86,9 @@ export function registerStart(program: Command) {
 
       ensureDatabaseConfig(repoRoot, console.log);
 
-      const pid = spawnGatewayDaemon({
+      // `.pid` only, and no `.ref()`: `start` is the ONE command that
+      // deliberately leaves the gateway running after it exits.
+      const { pid } = spawnGatewayDaemon({
         gatewayDir,
         gatewayBin,
         port: DEFAULT_PORT,

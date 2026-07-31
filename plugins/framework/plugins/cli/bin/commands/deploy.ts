@@ -618,7 +618,20 @@ function caddySite(hostnames: string[], loopbackPort: number): string {
   // yields no worktree for anything not ending in `.localhost` — so a public
   // Host falls straight through to the default namespace. Caddy handles ACME,
   // renewal and WebSocket upgrades natively.
+  //
+  // `encode` and the asset `Cache-Control` belong HERE rather than in the app:
+  // the backend serves the web dist uncompressed and unlabelled, so without
+  // these every visitor pays ~4x the bytes and every REPEAT visitor re-downloads
+  // the whole bundle. Caddy is the only layer that sees the finished response,
+  // and it is generated, so a deployment cannot forget them.
+  //
+  // The `immutable` year is safe for `/assets/*` ONLY: vite content-hashes those
+  // filenames, so a changed file is a changed URL. Everything else (the HTML
+  // shell, the unhashed root icons) is deliberately left revalidating — caching
+  // index.html for a year would pin visitors to a stale build forever.
   return `${hostnames.join(", ")} {
+\tencode zstd gzip
+\theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy ${listenAddress(loopbackPort)}
 }
 `;
