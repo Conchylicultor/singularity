@@ -98,7 +98,16 @@ async function parentage(page: Page, pageId: string): Promise<Record<string, str
   }, pageId);
 }
 
-/** Park the pointer over a row's text, well clear of the gutter controls. */
+/**
+ * Park the pointer over a row's text, well clear of the gutter controls.
+ *
+ * A row that is not on screen is a hard STOP, not a move quietly skipped. The
+ * controls this hover was going to reveal stay `pointer-events-none` without
+ * it, so every later click on them spins out its whole timeout against a hit
+ * test that can never pass — which is how a page that simply had not finished
+ * rendering used to surface, 30s downstream, as an inexplicably unclickable
+ * handle. Bail where the fault actually is.
+ */
 async function hoverText(page: Page, id: string): Promise<void> {
   const box = await page.evaluate((blockId) => {
     const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
@@ -106,7 +115,8 @@ async function hoverText(page: Page, id: string): Promise<void> {
     const b = el.getBoundingClientRect();
     return { x: b.left + b.width * 0.6, y: b.top + Math.min(12, b.height / 2) };
   }, id);
-  if (box) await page.mouse.move(box.x, box.y);
+  if (!box) bail(`hover: ${id} is on screen`, "no such row in the DOM");
+  await page.mouse.move(box.x, box.y);
   await page.waitForTimeout(200);
 }
 
@@ -141,10 +151,13 @@ async function dismiss(page: Page): Promise<void> {
 /**
  * Open the menu the rail handle on `rowId` carries, and read its entries.
  *
- * The row must be hovered first: gutter controls are `opacity-0
- * pointer-events-none` until their row is hovered, so a cold `.click()` would
- * pass only because Playwright auto-hovers on its way in — and would keep
- * passing if the reveal broke.
+ * The row must be hovered first, and that is not a tidiness measure: gutter
+ * controls are `opacity-0 pointer-events-none` until their row is hovered, and
+ * Playwright runs its actionability hit test BEFORE it moves the pointer — so a
+ * cold `.click()` lands on the row beneath the handle and retries until its
+ * timeout expires, however long it is given (measured: three cold clicks on a
+ * fully rendered page, three timeouts). The hover is what makes the control
+ * clickable at all, which is exactly why `hoverText` refuses to miss quietly.
  */
 async function openRailMenu(page: Page, rowId: string): Promise<string[]> {
   await hoverText(page, rowId);
@@ -216,7 +229,19 @@ await withBrowser(async (h) => {
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1600);
+  // WAIT for the seed to be on screen; do not guess a settle time. A cold SPA
+  // boot paints its first row 2–3s after `domcontentloaded` (measured), so the
+  // fixed 1600ms pause this used to take resumed against a BLANK page: the
+  // first `hoverText` found no row, revealed no rail, and the click below then
+  // ran out its full timeout on a handle that could never become clickable —
+  // the page having painted in the meantime made no difference (see
+  // `openRailMenu`). The wait is on the LAST row posted, so its arrival proves
+  // the whole seed is rendered rather than the head of it.
+  await page
+    .locator(`[data-block-id="${seeded.after}"]`)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForTimeout(1500);
   await snap(page, out, "1-seeded");
 
   // --- 1. The borrowed line's handle opens the CONTAINER's menu ---------------

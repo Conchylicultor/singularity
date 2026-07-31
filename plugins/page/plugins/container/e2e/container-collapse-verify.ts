@@ -24,8 +24,9 @@
 //     unreachable while expanded (only re-expanding would work, since a collapsed
 //     chevron is pinned). Asserted by parking the pointer over the borrowed
 //     line's TEXT and reading the chevron's computed `opacity`/`pointer-events`
-//     — a `.click()` alone would hide the regression behind Playwright's own
-//     auto-hover.
+//     — a `.click()` alone cannot say WHICH half broke, since Playwright
+//     hit-tests before it moves the pointer and so times out identically for a
+//     stuck `opacity` and for a stuck `pointer-events`.
 //  3. FOLDING SHOWS ONE LINE AND MOVES NOTHING. The children below the borrowed
 //     line leave the DOM, the box shrinks to about one line, and the borrowed
 //     line's own top is UNCHANGED — the fold must not make the page jump under
@@ -131,7 +132,16 @@ async function boxHeight(page: Page): Promise<number | null> {
   });
 }
 
-/** Park the pointer over a row's text, well clear of the gutter controls. */
+/**
+ * Park the pointer over a row's text, well clear of the gutter controls.
+ *
+ * A row that is not on screen is a hard STOP, not a move quietly skipped. The
+ * chevron this hover was going to reveal stays `pointer-events-none` without
+ * it, so every later click on it spins out its whole timeout against a hit test
+ * that can never pass — which is how a page that simply had not finished
+ * rendering used to surface, 30s downstream, as an inexplicably unclickable
+ * control. Bail where the fault actually is.
+ */
 async function hoverText(page: Page, id: string): Promise<void> {
   const box = await page.evaluate((blockId) => {
     const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
@@ -139,7 +149,8 @@ async function hoverText(page: Page, id: string): Promise<void> {
     const b = el.getBoundingClientRect();
     return { x: b.left + b.width * 0.6, y: b.top + Math.min(12, b.height / 2) };
   }, id);
-  if (box) await page.mouse.move(box.x, box.y);
+  if (!box) bail(`hover: ${id} is on screen`, "no such row in the DOM");
+  await page.mouse.move(box.x, box.y);
   await page.waitForTimeout(200);
 }
 
@@ -243,7 +254,19 @@ await withBrowser(async (h) => {
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1600);
+  // WAIT for the seed to be on screen; do not guess a settle time — the same
+  // rule the cold-load check at the foot of this file already states, and for
+  // the same reason. A cold SPA boot paints its first row 2–3s after
+  // `domcontentloaded` (measured), so the fixed 1600ms pause this used to take
+  // resumed against a BLANK page, where "no children rendered" reads as "the
+  // fold hid them" and the first hover reveals nothing. The wait is on the LAST
+  // row posted, so its arrival proves the whole seed is rendered rather than
+  // the head of it.
+  await page
+    .locator(`[data-block-id="${seeded.after}"]`)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForTimeout(1500);
   await snap(page, out, "1-expanded");
 
   const openIds = await rendered(page);
