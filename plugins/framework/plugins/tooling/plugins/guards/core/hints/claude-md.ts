@@ -9,5 +9,6 @@ export const claudeMdHint: FileHint = {
     "- Keep it terse.",
     "- Only keep what's useful for future agents",
     '- Keep the WHY when a rule looks wrong, so nobody "fixes" it back.',
+    "- Don't document a bug you fixed structurally — if agents can't hit it anymore, the line only burns context.",
   ].join("\n"),
 };
