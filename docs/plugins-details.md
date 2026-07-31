@@ -13678,6 +13678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations`
               - `page/annotations/context`
               - `page/callout`
+              - `page/container`
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
@@ -16034,13 +16035,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `codeBlock`
-    - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the Remove/Delete structural actions). Contributes nothing itself — each container plugin registers its own block type through it.
+    - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the optional appearance popover — the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
       - Web:
         - Uses:
-          - `page/editor.BlockEditorAPI`
-          - `page/editor.useBlockEditor`
           - `primitives/css/center.Center`
-          - `primitives/css/row.Row`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Popover`
           - `primitives/css/ui-kit.PopoverContent`
@@ -16302,6 +16300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `InlineFormatContext`
           - `InlineFormatMatch`
           - `InlineSyntax`
+          - `IsAnchor`
           - `Mark`
           - `MdParseCtx`
           - `MdSerializeCtx`
@@ -16337,6 +16336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `changedFields`
           - `childrenOf`
           - `coalesce`
+          - `collapsedAnchorAbove`
           - `COLOR_TOKENS`
           - `colorCssValue`
           - `createBlock`
@@ -16399,6 +16399,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TurnIntoPageBodySchema`
           - `updateBlock`
           - `UpdateBlockBodySchema`
+          - `visibleChildrenOf`
+          - `visibleChildRule`
           - `withMintedIds`
           - `withRuns`
           - `xmlTextToRuns`
@@ -19243,7 +19245,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/date/filter`
               - `history/dialog`
               - `page/callout`
-              - `page/container`
               - `page/editor`
               - `page/inline-date`
               - `page/page-link`

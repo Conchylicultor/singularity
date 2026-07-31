@@ -15,9 +15,10 @@ import { defineContainerBlock } from "@plugins/page/plugins/container/core";
 export const privateNotesDataSchema = z.object({});
 
 /**
- * `defineContainerBlock` forces `anchor: true`, `collapsible: "never"` and
- * `wrapOnConvert: true` — see `@plugins/page/plugins/container/core` for why the
- * three are only correct together. This file declares nothing but identity.
+ * `defineContainerBlock` forces `anchor: true` and `wrapOnConvert: true` — see
+ * `@plugins/page/plugins/container/core` for why the two are only correct
+ * together. It declares no `collapsible`: a container folds to its BORROWED line
+ * (its first child's), so its stored `expanded` is live. This file declares nothing but identity.
  */
 export const privateNotesBlock = defineContainerBlock({
   type: "private-notes",

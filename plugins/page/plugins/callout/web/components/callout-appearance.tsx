@@ -4,7 +4,8 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import { CALLOUT_COLORS, type CalloutColor } from "../../core";
+import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
+import { calloutBlock, CALLOUT_COLORS, type CalloutColor } from "../../core";
 
 /** Solid swatch dot per semantic color, shown in the color row of the popover. */
 const COLOR_SWATCH: Record<CalloutColor, string> = {
@@ -19,6 +20,45 @@ export interface CalloutIconChange {
   icon: string | null;
   iconSvgNodes: SvgNode[] | null;
   color: CalloutColor;
+}
+
+/** The callout's appearance, read defensively — `data` can be transient mid-edit. */
+export function readCalloutAppearance(data: unknown): CalloutIconChange {
+  const parsed = calloutBlock.safeParse(data);
+  if (parsed.success) return parsed.data;
+  // An unparseable payload still gets a glyph, just the default one — exactly as
+  // `CalloutFrame` still paints a box in the default tint.
+  return { icon: null, iconSvgNodes: null, color: "default" };
+}
+
+/**
+ * The callout's appearance controls bound to one block's payload and API — the
+ * ONE wiring of `data → controls → api.update`, shared by the two surfaces that
+ * offer appearance: the glyph's own popover (`CalloutAnchor`) and the rail's
+ * block-actions menu (`CalloutMenu`). Appearance being reachable from both is
+ * deliberate; having it wired twice would not be.
+ *
+ * `update` carries the WHOLE payload, not just the changed key: `BlockEditorAPI`
+ * replaces a block's `data` rather than merging into it.
+ */
+export function CalloutAppearanceFor({
+  data,
+  api,
+  close,
+}: {
+  data: unknown;
+  api: BlockEditorAPI;
+  close: () => void;
+}) {
+  const { icon, iconSvgNodes, color } = readCalloutAppearance(data);
+  return (
+    <CalloutAppearance
+      color={color}
+      icon={icon}
+      onChange={(next) => api.update({ icon, iconSvgNodes, color, ...next })}
+      close={close}
+    />
+  );
 }
 
 /**

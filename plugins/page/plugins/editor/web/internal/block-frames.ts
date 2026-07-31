@@ -1,10 +1,16 @@
 import type { Block } from "../../core";
 
-/** One entry of the editor's depth-first flatten (see `block-editor.tsx`). */
+/** One entry of the editor's depth-first flatten (see `flatten-blocks.ts`). */
 export interface FlatBlock {
   block: Block;
   depth: number;
-  hasChildren: boolean;
+  /**
+   * How many children the block has in the FOREST — not how many are visible.
+   * Drives the collapse chevron (is there anything to fold?), which is a question
+   * about the document, not about what is currently on screen: a collapsed
+   * container has hidden children and must still offer the way back.
+   */
+  childCount: number;
   ordinal: number;
   /**
    * The `type` of this block's FIRST VISIBLE child (the immediately-following

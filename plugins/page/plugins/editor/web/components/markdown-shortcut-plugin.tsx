@@ -62,7 +62,7 @@ export function MarkdownShortcutPlugin({ block }: { block: Block }) {
       prefix: string;
       type: string;
       emptyRowData: () => RowData;
-      collapsible?: "always" | "never";
+      collapsible?: "always";
     }[] = [];
     for (const c of contributions) {
       for (const prefix of c.block.markdownPrefixes ?? []) {

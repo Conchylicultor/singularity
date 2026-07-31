@@ -4,7 +4,7 @@ import { textBlockSchema } from "@plugins/page/plugins/editor/core";
 import { defineContainerBlock } from "./define-container-block";
 
 /**
- * The primitive's whole value is that the three container facts cannot be
+ * The primitive's whole value is that the two container facts cannot be
  * declared piecemeal, and that a container cannot be text-bearing. These cases
  * pin both — a regression that stops forcing one of the flags, or starts
  * accepting a `text` field, is what re-creates the fused
@@ -19,10 +19,19 @@ describe("defineContainerBlock", () => {
     empty: () => ({}),
   });
 
-  it("forces the three container facts", () => {
+  it("forces the two container facts", () => {
     expect(container.anchor).toBe(true);
-    expect(container.collapsible).toBe("never");
     expect(container.wrapOnConvert).toBe(true);
+  });
+
+  it("is FOLDABLE: it declares no `collapsible`, so its stored `expanded` is live", () => {
+    // The third forced fact used to be `collapsible: "never"`, which made the
+    // flag inert because an anchor had no chevron to reopen itself with. A
+    // collapsed container now folds to its BORROWED line — always painted,
+    // always carrying the chevron back out — so the flag is meaningful and the
+    // opt-out is gone. A regression that re-introduces it silently removes
+    // folding from every container.
+    expect(container.collapsible).toBeUndefined();
   });
 
   it("is void: no derived text lens, and none of the text-row seams", () => {

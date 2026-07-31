@@ -42,9 +42,11 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, unwrapBlock } = useBlockEditor();
+  const { rowsRef, unwrapBlock, makeBlockAPI } = useBlockEditor();
   const unwrapRef = useRef(unwrapBlock);
   unwrapRef.current = unwrapBlock;
+  const makeBlockAPIRef = useRef(makeBlockAPI);
+  makeBlockAPIRef.current = makeBlockAPI;
   // The block-type registry: every block's static handle config (incl. the edit
   // policy and split-into-child flag). Resolved here, not prop-drilled.
   const contributions = Editor.Block.useContributions();
@@ -124,6 +126,14 @@ export function KeyboardPlugin({
           // editor-wide entry point rather than this block's api.
           event.preventDefault();
           unwrapRef.current(intent.blockId);
+          return true;
+        case "expand":
+          // Also the CONTAINER, for the same reason — but `setExpanded` is a
+          // per-block API, so address it by minting one for that id. The caret
+          // stays exactly where it is: this press spends itself opening the box,
+          // and the next one acts on the document now on screen.
+          event.preventDefault();
+          makeBlockAPIRef.current(intent.blockId).setExpanded(true);
           return true;
         case "indent":
           event.preventDefault();

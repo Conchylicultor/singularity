@@ -111,22 +111,45 @@ const blockSlot = defineOrderedDispatchSlot<BlockRendererProps, string, BlockMet
 /**
  * Extra fields carried alongside a container frame's dispatch fields.
  *
- * `anchor` is the container's leading decoration (the callout's icon), rendered
- * by the surface in the ROW layer — see `BlockAnchorProps`. It rides on the
- * frame registration rather than getting a slot of its own on purpose:
- * containerhood is already derived from *who actually paints a box*
+ * Both ride on the frame registration rather than getting slots of their own on
+ * purpose: containerhood is already derived from *who actually paints a box*
  * (`useFramedBlockTypes`), precisely so it cannot drift from a second flag; a
- * separate anchor slot would reintroduce exactly that drift in a new coat — a
- * type could claim a decoration while framing nothing, or frame without one.
+ * separate anchor (or menu) slot would reintroduce exactly that drift in a new
+ * coat — a type could claim a decoration while framing nothing, or frame
+ * without one.
+ *
+ * The two are **different surfaces of one container**, and the split is the
+ * user's stated model:
+ *
+ * - `anchor` is the leading decoration (the callout's icon), rendered by the
+ *   surface in the ROW layer — see `BlockAnchorProps`. It is the container's
+ *   APPEARANCE affordance.
+ * - `menu` is contributed sections inside the rail popover the container owns on
+ *   its BORROWED line (`BlockActionsMenu`'s container arm) — where the
+ *   STRUCTURAL actions (Collapse, Remove, Delete) live. A container with nothing
+ *   per-instance to configure (the context card, whose payload is `{}`)
+ *   contributes none and still gets those actions, so this field says nothing
+ *   about containerhood.
+ *
+ * Appearance is deliberately reachable from BOTH: the same component renders in
+ * the glyph's popover and in the rail's menu. The rail is where a user looks for
+ * block actions; the glyph is where they look for the glyph.
  *
  * The honest cost: only a field literally named `component` goes through the
  * framework's sealed-component middleware chain (error boundary, reorder), so an
- * `anchor` component is UNSEALED — a crash inside it is not contained to the
- * slot. Precedent: `BlockHandle.icon` is rendered raw today. Documented, not
+ * `anchor`/`menu` component is UNSEALED — a crash inside it is not contained to
+ * the slot. Precedent: `BlockHandle.icon` is rendered raw today. Documented, not
  * discovered.
  */
 export interface BlockFrameMeta {
   anchor?: ComponentType<BlockAnchorProps>;
+  /**
+   * Sections this container contributes to the rail popover, above the generic
+   * structural actions. The prop shape is `Editor.TurnInto`'s verbatim, so
+   * "menu sections contributed by a plugin" is ONE convention in this editor
+   * rather than two that drift.
+   */
+  menu?: ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>;
 }
 
 export const Editor = {
@@ -232,6 +255,37 @@ export function useBlockAnchors(): ReadonlyMap<string, ComponentType<BlockAnchor
     const out = new Map<string, ComponentType<BlockAnchorProps>>();
     for (const c of contributions) {
       if (typeof c.match === "string" && c.anchor) out.set(c.match, c.anchor);
+    }
+    return out;
+  }, [contributions]);
+}
+
+/**
+ * Block type → the sections it contributes to the rail popover, derived from the
+ * same `Editor.BlockFrame` registrations the two hooks above read. Twin of
+ * `useBlockAnchors()` on the same single source of truth, for the same reason:
+ * the menu a container hangs off its borrowed line's rail cannot drift from the
+ * registration that makes it a container in the first place.
+ *
+ * Unlike `anchor` there is no `page-editor:anchor-has-decoration`-style pairing
+ * check to owe, and deliberately so: a missing anchor is an INVISIBLE container,
+ * while a missing menu is a container with no per-instance appearance — the
+ * context card's normal, correct state. The container arm of `BlockActionsMenu`
+ * is therefore selected by the CORE fact `BlockHandle.anchor`, never by
+ * membership of this map.
+ */
+export function useBlockFrameMenus(): ReadonlyMap<
+  string,
+  ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>
+> {
+  const contributions = Editor.BlockFrame.useContributions();
+  return useMemo(() => {
+    const out = new Map<
+      string,
+      ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>
+    >();
+    for (const c of contributions) {
+      if (typeof c.match === "string" && c.menu) out.set(c.match, c.menu);
     }
     return out;
   }, [contributions]);

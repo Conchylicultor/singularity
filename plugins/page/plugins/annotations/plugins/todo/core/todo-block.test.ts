@@ -30,10 +30,13 @@ describe("todoBlock (derived + forced facts)", () => {
     expect(todoBlock.text).toBeUndefined();
   });
 
-  it("is a container: the three facts come from `defineContainerBlock`", () => {
+  it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(todoBlock.anchor).toBe(true);
     expect(todoBlock.wrapOnConvert).toBe(true);
-    expect(todoBlock.collapsible).toBe("never");
+    // Foldable: no `collapsible` opt-out. A container folds to its BORROWED
+    // line, which always paints and always carries the chevron back out, so
+    // the flag that used to make `expanded` inert is retired.
+    expect(todoBlock.collapsible).toBeUndefined();
     expect(todoBlock.splitChildWhenExpanded).toBeUndefined();
   });
 

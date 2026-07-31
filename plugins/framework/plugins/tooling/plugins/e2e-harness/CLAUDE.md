@@ -45,6 +45,7 @@ rule keeps the broken shape from coming back.
     - `page/annotations`
     - `page/annotations/context`
     - `page/callout`
+    - `page/container`
     - `page/editor`
     - `page/editor-collab`
     - `page/image`

@@ -11,8 +11,10 @@
 
 import {
   childrenOf,
+  collapsedAnchorAbove,
   nextVisibleLine,
   prevVisibleLine,
+  visibleChildrenOf,
   type BlockNode,
 } from "../../core";
 import type { CaretContext } from "./caret-geometry";
@@ -52,6 +54,20 @@ export type KeyIntent =
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
   | { type: "mergeNext" } // delete at end → merge the next visible line up into this block
   | { type: "outdent" } // backspace at start when indented, or shift+tab
+  /**
+   * Open a COLLAPSED container from a structural keystroke on the line it
+   * borrows (`blockId` is the CONTAINER's id, not the caret's block).
+   *
+   * You cannot restructure what you cannot see. The borrowed line is the only
+   * line a collapsed container shows, so every structural keystroke there would
+   * otherwise act on lines the user has no way of knowing are around: Backspace
+   * would `unwrap` and spill the hidden children into the document, and
+   * Shift+Tab would make the escaping block ADOPT them (`outdentOne` takes the
+   * followers). Opening first spends one press per structural level — the same
+   * bargain empty-Enter's ladder already makes — and the next press then acts on
+   * a document the user can see.
+   */
+  | { type: "expand"; blockId: string }
   /**
    * Backspace at the start of a container anchor's FIRST child: dissolve the
    * container (`blockId` is the ANCHOR's id, not the caret's block) and promote
@@ -154,8 +170,15 @@ function hasNextSibling(nodes: BlockNode[], node: BlockNode): boolean {
   return idx !== -1 && idx < siblings.length - 1;
 }
 
-function hasExpandedChildren(nodes: BlockNode[], node: BlockNode): boolean {
-  return node.expanded && childrenOf(nodes, node.id).length > 0;
+/**
+ * Does `node` show children BELOW it right now? `visibleChildrenOf`, not the raw
+ * `expanded` flag — inside a collapsed container the borrowed line's own children
+ * are sealed away, so a flag-based answer would nest an Enter-at-end into a slot
+ * nobody can see (and light the excess-indentation rung against lines that are
+ * not on screen).
+ */
+function hasVisibleChildren(ctx: IntentContext, node: BlockNode): boolean {
+  return visibleChildrenOf(ctx.nodes, node, ctx.isAnchor).length > 0;
 }
 
 /**
@@ -175,8 +198,8 @@ function hasExpandedChildren(nodes: BlockNode[], node: BlockNode): boolean {
  * next sibling, the outdent this gates has NO followers to adopt — it is always a
  * pure move, never the silent re-nesting that `unwrap` exists to avoid.
  */
-function hasExcessIndentation(nodes: BlockNode[], node: BlockNode): boolean {
-  return !hasExpandedChildren(nodes, node) && !hasNextSibling(nodes, node);
+function hasExcessIndentation(ctx: IntentContext, node: BlockNode): boolean {
+  return !hasVisibleChildren(ctx, node) && !hasNextSibling(ctx.nodes, node);
 }
 
 export function resolveKeystroke(
@@ -215,7 +238,7 @@ export function resolveKeystroke(
       // as the first child only when splitting at the very end of a block that
       // has visible children (Notion's Enter-at-end behavior).
       const asChild =
-        p?.asChild ?? (hasExpandedChildren(ctx.nodes, node) && caret.atEnd);
+        p?.asChild ?? (hasVisibleChildren(ctx, node) && caret.atEnd);
       // Enter at the END of a block can produce a sibling of a different type
       // (e.g. a heading yields a body paragraph). Mid-block splits keep the type.
       const siblingType = !asChild && caret.atEnd ? p?.splitInto : undefined;
@@ -252,6 +275,14 @@ export function resolveKeystroke(
       // Only the FIRST child: it is the one whose escape would take the whole
       // box with it. A later line inside the container is an ordinary indented
       // block with lines of its own above it, so it keeps the generic rung.
+      // ...but not while the box is CLOSED. On the borrowed line of a collapsed
+      // container, `unwrap` would dissolve the box and promote children the user
+      // cannot see into the document from one keypress. Open it first (one
+      // structural level per press) and the next Backspace unwraps a container
+      // whose contents are on screen. Above the `unwrap` rung, because the
+      // borrowed line satisfies that one too.
+      const closed = collapsedAnchorAbove(ctx.nodes, node, ctx.isAnchor);
+      if (closed) return { type: "expand", blockId: closed.id };
       const anchor = firstChildAnchor(ctx, node);
       if (anchor) return { type: "unwrap", blockId: anchor.id };
       // Indentation only comes off FIRST while it is the block's own EXCESS — i.e.
@@ -273,7 +304,7 @@ export function resolveKeystroke(
       // A block with no next visible line at all is excess-indented against the top
       // level, which is the pre-existing "peel one level per press, then merge"
       // ladder — unchanged.
-      if (isIndented(node) && hasExcessIndentation(ctx.nodes, node))
+      if (isIndented(node) && hasExcessIndentation(ctx, node))
         return { type: "outdent" };
       // Merge lands on the previous VISIBLE line (`applyMerge`'s own resolution),
       // so gate on that line, not the previous sibling: over a spliced multi-page
@@ -282,7 +313,7 @@ export function resolveKeystroke(
       // same-page TEXT-LESS line is equally unmergeable — the reducer refuses to
       // write text onto a schema that has none (a page shell row, a container
       // anchor, a divider/image/embed/file).
-      const prev = prevVisibleLine(ctx.nodes, node);
+      const prev = prevVisibleLine(ctx.nodes, node, ctx.isAnchor);
       if (prev && prev.pageId === node.pageId && ctx.acceptsText(prev))
         return { type: "merge" };
       // There is no line break above to delete after all (a page boundary, or a
@@ -317,7 +348,7 @@ export function resolveKeystroke(
       // Nothing mergeable below → step forward out of the block list (the exact
       // mirror of Backspace's `nav left`); the keystroke is still consumed even
       // when no caret surface follows.
-      const next = nextVisibleLine(ctx.nodes, node);
+      const next = nextVisibleLine(ctx.nodes, node, ctx.isAnchor);
       if (!next || next.pageId !== node.pageId || !ctx.acceptsText(next))
         return { type: "nav", dir: "right" };
       return { type: "mergeNext" };
@@ -325,6 +356,11 @@ export function resolveKeystroke(
     case "Tab": {
       // Tab/Shift+Tab always consume the event (never move focus / insert a tab).
       if (mods.shift) {
+        // Same guard as Backspace's, for the same reason: outdenting the
+        // borrowed line of a CLOSED container makes it adopt the followers
+        // (`outdentOne`), i.e. re-nest hidden content under the escaping block.
+        const closed = collapsedAnchorAbove(ctx.nodes, node, ctx.isAnchor);
+        if (closed) return { type: "expand", blockId: closed.id };
         return isIndented(node) ? { type: "outdent" } : { type: "noop" };
       }
       return hasPrevSibling(ctx.nodes, node) ? { type: "indent" } : { type: "noop" };

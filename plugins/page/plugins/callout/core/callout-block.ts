@@ -28,8 +28,8 @@ export const calloutDataSchema = z.object({
 
 /**
  * `defineContainerBlock` — not `defineBlock` — is what makes this a container.
- * It FORCES `anchor: true`, `collapsible: "never"` and `wrapOnConvert: true`,
- * the three facts that are only correct together (see
+ * It FORCES `anchor: true` and `wrapOnConvert: true`,
+ * the two facts that are only correct together (see
  * `@plugins/page/plugins/container/core`), so this file declares nothing but the
  * callout's own identity and appearance payload.
  */

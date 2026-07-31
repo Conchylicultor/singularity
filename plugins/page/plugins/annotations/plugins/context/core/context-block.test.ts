@@ -27,10 +27,12 @@ describe("contextBlock (derived + forced facts)", () => {
     expect(contextBlock.text).toBeUndefined();
   });
 
-  it("is a container: the three facts come from `defineContainerBlock`", () => {
+  it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(contextBlock.anchor).toBe(true);
     expect(contextBlock.wrapOnConvert).toBe(true);
-    expect(contextBlock.collapsible).toBe("never");
+    // Foldable: no `collapsible` opt-out. A context card holds standing
+    // instructions a reader usually wants out of the way, so this is the point.
+    expect(contextBlock.collapsible).toBeUndefined();
     // The seam whose `expanded` gate made Enter in the old title row mint a
     // SECOND context card.
     expect(contextBlock.splitChildWhenExpanded).toBeUndefined();

@@ -7,7 +7,7 @@ function entry(id: string, type: string, depth: number): FlatBlock {
   return {
     block: { id, type } as unknown as Block,
     depth,
-    hasChildren: false,
+    childCount: 0,
     ordinal: 1,
     firstVisibleChildType: null,
   };

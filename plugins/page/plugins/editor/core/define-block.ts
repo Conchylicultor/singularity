@@ -180,17 +180,20 @@ export interface BlockHandle<T> {
   toggle?: { field: string; doneClassName?: string };
   /**
    * When "always", the editor shows the collapse chevron for this block type even
-   * when it has no children yet (used by the toggle block). Omitted = the chevron
-   * appears only when the block actually has children.
+   * when it has no children yet (used by the toggle block, and by `sub-page` /
+   * `page-link`, whose chevron is not a fold at all — it drives the composite
+   * union's page MOUNT). Omitted = the chevron appears only when the block
+   * actually has children.
    *
-   * "never" hides the chevron AND makes the stored `expanded` flag INERT at
-   * flatten time. Required by `anchor` types: a block that renders no line of its
-   * own has no chevron left to reopen it, so a stored `expanded: false` (which
-   * every creation path mints — `applySplit`, `applyInsert`, any patch replay)
-   * would hide its children behind nothing. Making the flag inert is a guarantee;
-   * "every creation path sets `expanded: true`" is not.
+   * There is deliberately no `"never"`. It existed for one reason — an `anchor`
+   * renders no line, so it had no chevron to reopen itself with, and a stored
+   * `expanded: false` would have hidden its children behind nothing — and that
+   * reason is gone: a collapsed container now folds to its BORROWED line
+   * (`visibleChildRule`), which always paints and always carries the chevron
+   * back out. Inertness was a way to make a flag harmless; showing one line is a
+   * way to make it meaningful.
    */
-  collapsible?: "always" | "never";
+  collapsible?: "always";
   /**
    * This block type is a container ANCHOR: it renders no line of its own. Its
    * content IS its children. The surface collapses its row to zero height while
@@ -260,7 +263,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   splitInto?: string;
   dataOnSplit?(data: z.infer<S>): z.infer<S>;
   toggle?: { field: string; doneClassName?: string };
-  collapsible?: "always" | "never";
+  collapsible?: "always";
   anchor?: true;
   wrapOnConvert?: true;
   splitChildWhenExpanded?: { childType: string };

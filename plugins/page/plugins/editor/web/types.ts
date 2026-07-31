@@ -258,23 +258,31 @@ export interface BlockFrameProps {
  *   line. Anything that grows the row pushes the whole container apart.
  *
  * Unlike a frame this IS interactive: it sits in the row layer, above the frame,
- * so it can carry the container's own affordances (icon/colour picker, block
- * actions). That is the whole reason the frame stays inert — see
+ * so it can carry the container's own APPEARANCE affordance (the callout's
+ * icon/colour picker). That is the whole reason the frame stays inert — see
  * `BlockFrameProps`.
+ *
+ * ## Appearance only — the structure lives on the rail
+ *
+ * The anchor used to carry the container's whole block-actions menu, because an
+ * anchor row paints no rail of its own and there was nowhere else to hang one.
+ * There is now: the rail on the line the container BORROWS resolves the
+ * container as its owner (`internal/rail-seat.ts`), so `+`, drag, and the
+ * actions menu all act on the container and the menu's container arm carries
+ * Collapse / Remove / Delete. Hence the props this interface no longer needs —
+ * no `id` (nothing here is addressed by one), no `expanded`/`foldable` (nothing
+ * here folds).
+ *
+ * A container's per-instance appearance is reachable from BOTH surfaces, by
+ * design: it renders here AND as a `BlockFrameMeta.menu` contribution in that
+ * rail popover. The rail is where a user looks for block actions; the glyph is
+ * where they look for the glyph.
  *
  * `editor` is absent on read-only surfaces (the blog renderer, the
  * version-history preview), which have no block API at all. Degrade to a static
  * glyph rather than rendering a dead control.
  */
 export interface BlockAnchorProps {
-  /**
-   * The container block's id. An anchor is the container's ONLY affordance (its
-   * row carries no hover rail — see `BlockRow`), so its menu owns the structural
-   * actions an ordinary row gets from the gutter handle: `unwrapBlock(id)` to
-   * dissolve the box keeping its content, `editor.remove()` to delete it with its
-   * subtree. Both are addressed by id, so the props must carry one.
-   */
-  id: string;
   /** The container block's type — the dispatch key. */
   type: string;
   /** The container block's `data`; the anchor reads its own appearance off it. */

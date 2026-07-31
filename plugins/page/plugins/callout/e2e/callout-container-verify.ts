@@ -22,8 +22,10 @@
 //     against its own content edge" rule. This is the case the whole
 //     outermost-frame rail rule exists to fix; hit-test it, don't eyeball it.
 //  5. VERTICAL SEATING: the icon's centre sits within ~2px of the first child's
-//     first-line centre — measured against that child's OWN gutter handle, which
-//     is seated by the same rule, so the two cannot silently drift.
+//     first-line centre — measured against the gutter handle rendered on that
+//     child's ROW, which is seated by the same rule, so the two cannot silently
+//     drift. (That handle now ACTS on the callout, since the rail on a borrowed
+//     line belongs to the container; here it is used purely as a y reference.)
 //  6. ENTER: Enter at the end of a callout's first child yields a SIBLING text
 //     block still inside the tint — not a second callout. (The originally
 //     reported bug: five sibling callout rows, each with its own icon.)
@@ -173,7 +175,7 @@ interface AnchorProbe {
   /** What is actually hit-tested at the icon's centre. */
   hitIsIcon?: boolean;
   hitTag?: string;
-  /** Centre-y of the first child's own gutter drag handle (same seating rule). */
+  /** Centre-y of the gutter drag handle on the first child's row (same seating rule). */
   childHandleCenterY?: number;
 }
 
@@ -424,16 +426,34 @@ await withBrowser(async (h) => {
       r.fail("anchor: the first child exposes its own gutter handle to compare against");
     }
 
-    // And the click really opens the container's menu — the anchor is the ONLY
-    // affordance this container has, so a dead icon is a dead callout.
+    // And the click really opens the callout's APPEARANCE controls. The icon no
+    // longer carries the structural actions (Remove callout / Delete / Collapse)
+    // — those live on the rail of the line the callout borrows, which owns them
+    // for every container generically; `container/e2e/container-rail-verify.ts`
+    // is their spec. What is left here is the callout's own payload, and a dead
+    // icon is still a callout that cannot be re-coloured.
     await page
       .locator(`[data-block-id="${seeded.c1}"] button[aria-label="Callout icon and color"]`)
       .first()
       .click();
     await page.waitForTimeout(600);
-    const menuOpen = await page.getByText("Remove callout", { exact: true }).first().isVisible();
+    // Scoped to the popover's own content box: a page-wide text query also finds
+    // chrome elsewhere in the app, which is a false PASS waiting to happen.
+    const popover = page.locator('[data-slot="popover-content"]');
+    const swatchVisible = await popover
+      .locator('button[aria-label="info"]')
+      .first()
+      .isVisible();
+    const structuralLeaked = await popover
+      .getByText("Remove callout", { exact: true })
+      .first()
+      .isVisible();
     await snap(page, out, "2-icon-menu");
-    r.ok("anchor: clicking the icon opens the container's actions menu", menuOpen);
+    r.ok("anchor: clicking the icon opens the callout's appearance controls", swatchVisible);
+    r.ok(
+      "anchor: and nothing structural — that menu moved to the borrowed line's rail",
+      !structuralLeaked,
+    );
     await page.keyboard.press("Escape");
     await page.waitForTimeout(400);
   }

@@ -21,8 +21,8 @@ box (the line's type *was* the container's identity). Neither is expressible now
 
 `core/callout-block.ts` calls **`defineContainerBlock`**
 ([`page/container`](../container/CLAUDE.md)), not `defineBlock`. That factory
-forces the three facts that are only correct together — `anchor: true`,
-`collapsible: "never"`, `wrapOnConvert: true` — and constrains its schema to a
+forces the two facts that are only correct together — `anchor: true`,
+`wrapOnConvert: true` — and constrains its schema to a
 shape without `text`, so a text-bearing callout is a compile error rather than a
 runtime surprise. `acceptsText` is still *derived* from the schema
 (`"text" in schema.shape`), so voidness is a fact of the payload and the write
@@ -61,30 +61,31 @@ composes:
   the geometry (a `BLOCK_INDENT`-wide column at `C`, seated on the first visible
   child's borrowed first-line centre, plus the drag listeners).
 
-## The icon popover carries the whole block-actions menu
+## The icon popover is APPEARANCE; the rail carries the block actions
 
-An anchor row renders **no hover rail**. Its three gutter slots would be
-identical to its first child's, on the same visual line, and the child must keep
-its own handle — so there is nowhere to hang a `BlockActionsMenu` off. Everything
-an ordinary block gets from that handle therefore lives on the icon: the surface
-gives it drag-to-move, and the popover carries colour, icon, Reset, plus the two
-structural actions.
+It used to carry the whole block-actions menu, for one stated reason: an anchor
+row renders no hover rail, so there was nowhere to hang a `BlockActionsMenu`.
+**There is now** — the rail on the line the callout BORROWS resolves the callout
+as its owner, so its `⠿` handle opens Collapse / Remove callout / Delete
+generically (`page/container`'s *The glyph is appearance; the rail is structure*).
+The callout contributes none of that: "Remove callout" derives from the handle's
+own `label`.
 
-The split between them is exactly the primitive's: **Remove callout** and
-**Delete** are the shared structural actions and come from `ContainerAnchor`
-(they are different intents — remove dissolves the box and promotes the children
-via the `unwrap` op, delete takes the subtree with it — which is why they stay
-two rows). Colour, icon and Reset are the callout's own, and live in
-`web/components/callout-appearance.tsx` as the `sections` it hands the shell,
-because they exist only by virtue of its payload. The shell owns the popover's
-open state, so those sections dismiss it through the `close()` they are given
-rather than holding a second copy of it; the swatches deliberately do not close
-(picking colours in a row is a comparison, not a commit).
+What is left here is what only exists by virtue of the `{icon, iconSvgNodes,
+color}` payload — colour, icon, Reset, in
+`web/components/callout-appearance.tsx`. It renders in **both** places, by
+design: as the `sections` handed `ContainerAnchor` and as the
+`BlockFrameMeta.menu` on the same `Editor.BlockFrame` registration. Both go
+through `CalloutAppearanceFor`, the one binding of `data → controls →
+api.update`, so the duplication is in the SURFACES, never in the wiring.
 
-The trigger `preventDefault`s its mousedown (the click lands beside a live
-caret), and commits fire on `onMouseDown` — the same shape `BlockActionsMenu`
-uses, for the same reason. `width="xl"` on the shell is the callout's own: its
-sections host the full icon picker.
+The popover's open state belongs to whoever hosts it, so the sections dismiss
+through the `close()` they are given rather than holding a second copy; the
+swatches deliberately do not close (picking colours in a row is a comparison, not
+a commit). The trigger `preventDefault`s its mousedown (the click lands beside a
+live caret), and commits fire on `onMouseDown` — the same shape
+`BlockActionsMenu` uses, for the same reason. `width="xl"` is the callout's own:
+its sections host the full icon picker.
 
 ## What is deliberately NOT here
 

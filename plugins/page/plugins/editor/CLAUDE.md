@@ -59,9 +59,16 @@ own `C`, which is exactly where its first child's chevron would sit under the na
 rule; the child's row is later in DOM order at the same `z-raised` level, so the
 decoration would be not merely overlapped but **unclickable**. Seating the enclosed
 rows' rail at the frame's edge puts the controls *outside* the box and leaves that
-column free. `BlockRow` takes the resolved `railLeft` as a prop and still computes
-no geometry itself — `block-editor.tsx` derives it from the `frameSpans` it already
-has.
+column free. `BlockRow` takes the resolved seat as a prop and still computes no
+geometry itself — `block-editor.tsx` derives it from the `frameSpans` it already
+has (`internal/rail-seat.ts`).
+
+**The span rule is not the ownership rule** — that pair is stated once, in
+`internal/rail-seat.ts`, because conflating them was the bug that motivated the
+`RailSeat` abstraction. `left` is a SPAN rule: *every* row inside a frame seats at
+the frame's edge, the borrowed first line and lines 2..n alike. `owner` — which
+block the rail's controls act on — is a BORROW-CHAIN rule: only the borrowed
+*line* transfers ownership, so lines 2..n own themselves.
 
 **Hosts never compute the edge.** `BLOCK_GUTTER` is deliberately *not* exported from
 the web barrel — a host that re-adds it to its own wrapper's padding drifts the title
@@ -142,11 +149,13 @@ Four rules, each closing a failure the naive version has:
   not blink out when you collapse it) — at zero height that paints a 0px frame
   over a 0px row, i.e. an invisible, unclickable, undeletable ghost. With no
   children the row falls back to one empty line instead.
-- **`collapsible: "never"`**, and the flatten treats those types as expanded
-  regardless of the stored flag. There is no chevron left to reopen a collapsed
-  anchor, and "creation sets `expanded: true`" is not a guarantee — `applySplit`
-  and `applyInsert` both mint `false`, and a patch replay writes it verbatim.
-  Making the flag *inert* is.
+- **It borrows its first child's line** — for the gutter seat, and for the fold
+  (see *A container folds to its borrowed line* below). It declares no
+  `collapsible` and its stored `expanded` is live. This used to be
+  `collapsible: "never"` with the flag made *inert*, because an anchor had no
+  chevron to reopen itself with; folding to the borrowed line means a collapsed
+  container always paints a line and that line always carries the chevron, so
+  the flag is safe to mean what it says.
 - **The decoration lives in the row layer, never the frame.** Frames are emitted
   before the rows and are `pointer-events-none`, so an interactive control there
   is hit-tested under the following row. The anchor component rides on the
@@ -154,9 +163,33 @@ Four rules, each closing a failure the naive version has:
   cannot drift from who actually paints a box, but the *surface* mounts it — in
   the `BLOCK_INDENT` column at `C`, seated on the first visible child's borrowed
   first-line centre, since an anchor has no line of its own to measure.
-- **An anchor row renders no rail.** Its three slots would coincide with its first
-  child's, on the same visual line, and the child must keep its own handle. The
-  container is dragged and menued through its decoration instead.
+- **An anchor row renders no rail *of its own* — because the rail on its borrowed
+  line is already the container's.** The slots coincide with the first child's, on
+  the same visual line, so there is exactly one rail there and `RailSeat.owner`
+  resolves it to the outermost borrowing container: `+`, drag and the actions menu
+  act on the container, not on the child. A second rail here would also register a
+  second dnd-kit draggable under the same `drag:<id>`. The decoration is appearance
+  and its own click surface, nothing structural.
+
+### The rail's menu dispatches by owner
+
+`BlockActionsMenu` is the ONE rail popover and has two arms, chosen by a **core**
+fact about the seat's owner — `BlockHandle.anchor`, never by whether a plugin
+contributed sections:
+
+- ordinary owner → *Turn into* (+ `Editor.TurnInto` contributions) + *Delete*;
+- **container** owner → its `BlockFrameMeta.menu` sections, then *Collapse/Expand*
+  (`RailSeat.owner.childCount > 1`), *Remove `<label>`* (`unwrapBlock`), *Delete*.
+  No *Turn into*: a void container owns no text, so converting it away has nowhere
+  to put its children.
+
+Both structural halves are **generic**: `Remove callout` derives its wording from
+`handle.label`, so a new container type wires nothing here. `menu` is a second
+field on the same `Editor.BlockFrame` registration as `anchor` (`useBlockFrameMenus`
+is `useBlockAnchors`' twin), reusing `Editor.TurnInto`'s contribution prop shape so
+"menu sections contributed by a plugin" is one convention. A container's appearance
+renders in **both** the glyph's popover and this menu, deliberately — the rail is
+where a user looks for block actions, the glyph is where they look for the glyph.
 
 `BlockHandle.anchor` is a **core** fact because the reducer needs it (`BlockOpContext.anchorTypes`
 drives the split/merge refusals and the childless-anchor prune) and the server has
@@ -168,6 +201,59 @@ anchor's first child dissolves the container and promotes its children into its
 slot. The generic `isIndented` → outdent rung would instead pop that child out
 *and adopt the remaining siblings as its children*, silently re-nesting content
 nobody asked to nest.
+
+### A container folds to its borrowed line
+
+> A collapsed container renders exactly its first visible LINE and nothing else.
+
+`visibleChildRule` (`core/block-ops.ts`) is the one statement of it, in two
+rules — **R1**: an anchor always descends into its first child, collapsed or not
+(its own line IS that child's); **R2**: the borrowed line of a collapsed anchor
+shows no children and no following siblings. So folding a container is the same
+rule every ordinary block follows ("hide everything below my own line"), and
+nothing on screen moves when it folds.
+
+The consequence that retired `collapsible: "never"`: **a collapsed container
+always paints one line**, so content can never hide behind nothing — whatever a
+hand-written `PATCH` or a pasted `SerializedBlock` sets `expanded` to.
+
+- **Two encodings, one rule.** `visibleChildRule` returns the answer only;
+  `visibleChildrenOf` resolves it over the flat array (reducer, ladders) and
+  `flattenVisible` over the already-built tree (surface, so a render costs no
+  per-node `childrenOf` scan). `flatten-blocks.test.ts` cross-checks them over a
+  fuzz forest — a drift is the editor showing lines the ladders think are hidden.
+- **The chevron rides on the borrowed line's ROW, and targets the container**
+  (`resolveRailSeats`). It cannot live in the anchor's own row: gutter controls
+  are `pointer-events-none` until their row is hovered and an anchor row is
+  zero-height, so nothing could ever reveal it — collapse would be unreachable
+  while expanded. There is exactly one slot on that line (the span rule seats a
+  container and its subtree at one `left`), and it is the ONE rail control not
+  unconditionally the seat's `owner`, allocated: a *collapsed*
+  container claims it (the way back out, and the row's own state would lie);
+  else the line's own block if it needs one — load-bearing for
+  `collapsible: "always"` types, where the chevron drives the page MOUNT, not a
+  fold; else an expanded container with 2+ children. Nested containers share one
+  borrowed line, so only the outermost claims it; the rest fold from the rail
+  popover's own Collapse item.
+- **Content lands where it can be seen.** `applySplit` opens the containers it
+  writes into (`revealAround`) — it was the one op that did not, and the tail
+  landed among the folded children with no row and no Lexical instance while the
+  executor had already truncated the origin's doc, so the text after the caret
+  vanished. `applyInsert`/`applyPaste`/`applyMove` already opened their
+  destination parent, as do both server move handlers.
+- **You cannot restructure what you cannot see.** On a collapsed container's
+  borrowed line, Backspace-at-start and Shift+Tab resolve to `{type:"expand"}`
+  instead of `unwrap`/`outdent` — both would otherwise act on the hidden lines
+  (spilling them into the document, or adopting them as the escaping block's
+  children). One structural level per press, as empty-Enter's ladder already does.
+- **A block is born expanded.** Every creation path mints `expanded: true`
+  (unobservable — new blocks are childless), so a collapsed row is provably the
+  user's own act. Hygiene, not the safety mechanism: the guarantee is the line
+  a collapsed container always paints.
+- **Read-only surfaces ignore the fold** (`read-only-view` never reads
+  `expanded`), as do markdown, copy/paste and search indexing. Collapse is
+  editing-surface view state — so the editor and the version-history *diff*
+  deliberately disagree about what the document shows.
 
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 
@@ -1367,6 +1453,7 @@ the whole document lives in React state and is discarded on unmount.
     - `InlineFormatContext`
     - `InlineFormatMatch`
     - `InlineSyntax`
+    - `IsAnchor`
     - `Mark`
     - `MdParseCtx`
     - `MdSerializeCtx`
@@ -1402,6 +1489,7 @@ the whole document lives in React state and is discarded on unmount.
     - `changedFields`
     - `childrenOf`
     - `coalesce`
+    - `collapsedAnchorAbove`
     - `COLOR_TOKENS`
     - `colorCssValue`
     - `createBlock`
@@ -1464,6 +1552,8 @@ the whole document lives in React state and is discarded on unmount.
     - `TurnIntoPageBodySchema`
     - `updateBlock`
     - `UpdateBlockBodySchema`
+    - `visibleChildrenOf`
+    - `visibleChildRule`
     - `withMintedIds`
     - `withRuns`
     - `xmlTextToRuns`

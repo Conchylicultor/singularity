@@ -27,10 +27,13 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     expect(agentNotesBlock.text).toBeUndefined();
   });
 
-  it("is a container: the three facts come from `defineContainerBlock`", () => {
+  it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(agentNotesBlock.anchor).toBe(true);
     expect(agentNotesBlock.wrapOnConvert).toBe(true);
-    expect(agentNotesBlock.collapsible).toBe("never");
+    // Foldable: no `collapsible` opt-out. A container folds to its BORROWED
+    // line, which always paints and always carries the chevron back out, so
+    // the flag that used to make `expanded` inert is retired.
+    expect(agentNotesBlock.collapsible).toBeUndefined();
     expect(agentNotesBlock.splitChildWhenExpanded).toBeUndefined();
   });
 

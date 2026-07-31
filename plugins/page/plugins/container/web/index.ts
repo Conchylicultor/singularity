@@ -7,6 +7,6 @@ export type { ContainerAnchorProps } from "./components/container-anchor";
 
 export default {
   description:
-    "Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the Remove/Delete structural actions). Contributes nothing itself — each container plugin registers its own block type through it.",
+    "Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the optional appearance popover — the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.",
   contributions: [],
 } satisfies PluginDefinition;

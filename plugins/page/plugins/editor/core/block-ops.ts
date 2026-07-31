@@ -165,15 +165,27 @@ export type BlockOp =
 export interface BlockOpContext {
   /**
    * Block types declaring `BlockHandle.anchor` — containers that render no line
-   * of their own. The reducer needs them for three things: refusing to split one
-   * (it hosts no text), refusing to merge into or away one (same), and pruning a
-   * container the last child just left.
+   * of their own. The reducer needs them for four things: refusing to split one
+   * (it hosts no text), refusing to merge into or away one (same), pruning a
+   * container the last child just left, and resolving VISIBILITY — an anchor
+   * borrows its first child's line, so `visibleChildRule` (and therefore
+   * `prevVisibleLine` / `nextVisibleLine`) cannot answer without knowing which
+   * types are anchors.
    */
   anchorTypes?: ReadonlySet<string>;
 }
 
 /** The default context: no anchor types, i.e. today's behavior exactly. */
 const NO_ANCHORS: ReadonlySet<string> = new Set<string>();
+
+/**
+ * Adapt the reducer's `anchorTypes` set to the `IsAnchor` predicate the
+ * visibility helpers take. One conversion point, so the two spellings of the
+ * same fact can never drift.
+ */
+function anchorOf(anchorTypes: ReadonlySet<string>): IsAnchor {
+  return (node) => anchorTypes.has(node.type);
+}
 
 /**
  * Zod discriminated union mirroring `BlockOp`, for server body validation. The
@@ -250,40 +262,200 @@ export function prevSibling(blocks: BlockNode[], node: BlockNode): BlockNode | n
 }
 
 /**
- * The previous block in VISIBLE document order: the deepest last expanded
+ * Is this node a container ANCHOR — a type that renders no line of its own,
+ * whose content IS its children? Passed as a predicate rather than the
+ * `anchorTypes` set so the web resolver can hand over its existing
+ * `IntentContext.isAnchor` unchanged; `applyBlockOp` adapts its set at the
+ * boundary. The default (`NOT_ANCHOR`) makes every visibility helper below
+ * byte-identical to the pre-container behavior — the property that keeps every
+ * existing test and fuzz seed valid.
+ */
+export type IsAnchor = (node: BlockNode) => boolean;
+
+const NOT_ANCHOR: IsAnchor = () => false;
+
+/**
+ * THE visible-children rule, for one node, in one place — the normative
+ * statement of what a collapsed CONTAINER shows.
+ *
+ * A container anchor renders no line of its own, so it borrows its first child's
+ * (that is already how it seats its gutter decoration, and who owns that line's
+ * rail — `internal/rail-seat.ts` in the surface). Collapse borrows the SAME
+ * line, which makes folding a
+ * container the identical rule every ordinary block already follows — "hide
+ * everything below my own line":
+ *
+ * - **R1** — an anchor ALWAYS descends into its first child, collapsed or not.
+ *   Its own line IS that child's, so refusing to descend would hide the line
+ *   itself and leave a zero-height row: content behind nothing, which is exactly
+ *   the failure that used to force `collapsible: "never"`.
+ * - **R2** — the borrowed line of a COLLAPSED anchor shows no children and no
+ *   following siblings. `sealed` carries that fact down the walk.
+ *
+ * The consequence worth stating out loud, because it is what makes the fold
+ * safe: a collapsed container ALWAYS paints exactly one visible line. Content
+ * can never hide behind an invisible control, whatever a stray `expanded: false`
+ * from a hand-written PATCH or a pasted `SerializedBlock` says.
+ *
+ * Returns the rule's answer only — each caller supplies its own child lookup, so
+ * the surface can walk its already-built `TreeNode` forest (no per-node
+ * `childrenOf` scan on every render) while the reducer walks the flat array.
+ * One rule, two lookups; `block-ops.test.ts` cross-checks the two against each
+ * other over the fuzz forest.
+ */
+export function visibleChildRule(opts: {
+  isAnchor: boolean;
+  expanded: boolean;
+  /** Is this node already inside a collapsed anchor's borrowed chain? */
+  sealed: boolean;
+  hasChildren: boolean;
+}): { show: "none" | "first" | "all"; sealedBelow: boolean } {
+  const { isAnchor, expanded, sealed, hasChildren } = opts;
+  if (!hasChildren) return { show: "none", sealedBelow: sealed };
+  const open = expanded && !sealed;
+  // R1: an anchor descends into its first child either way — that child is its line.
+  if (isAnchor) return { show: open ? "all" : "first", sealedBelow: sealed || !expanded };
+  // R2: a sealed line is the borrowed line itself; nothing below it shows.
+  return { show: open ? "all" : "none", sealedBelow: sealed };
+}
+
+/**
+ * The anchors ABOVE `node` in its FIRST-CHILD chain, innermost first — every
+ * container whose borrowed line is `node`. Rank-first at each step: a later child
+ * is an ordinary line inside the box, not the box's borrowed one.
+ */
+function anchorChainAbove(
+  blocks: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor,
+): BlockNode[] {
+  const out: BlockNode[] = [];
+  let cur = node;
+  for (;;) {
+    if (cur.parentId === null) return out;
+    const parent = byId(blocks, cur.parentId);
+    if (!parent || !isAnchor(parent)) return out;
+    if (childrenOf(blocks, parent.id)[0]?.id !== cur.id) return out;
+    out.push(parent);
+    cur = parent;
+  }
+}
+
+/**
+ * The OUTERMOST collapsed anchor whose borrowed line is `node`, or null.
+ *
+ * Outermost, not innermost, and that is load-bearing: R2 says the borrowed line
+ * has no visible following siblings, so a sibling walk starting at `node` must
+ * resume above the last container that hides them. Resuming at the innermost
+ * would step to a sibling that is itself still inside a collapsed box.
+ */
+export function collapsedAnchorAbove(
+  blocks: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor = NOT_ANCHOR,
+): BlockNode | null {
+  const collapsed = anchorChainAbove(blocks, node, isAnchor).filter((a) => !a.expanded);
+  return collapsed[collapsed.length - 1] ?? null;
+}
+
+/**
+ * `node`'s children in VISIBLE document order — `visibleChildRule` resolved
+ * against the flat forest. The reducer's and the ladders' single visibility
+ * question; the surface's flatten answers the same one over its tree.
+ */
+export function visibleChildrenOf(
+  blocks: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor = NOT_ANCHOR,
+): BlockNode[] {
+  const kids = childrenOf(blocks, node.id);
+  const { show } = visibleChildRule({
+    isAnchor: isAnchor(node),
+    expanded: node.expanded,
+    sealed: collapsedAnchorAbove(blocks, node, isAnchor) !== null,
+    hasChildren: kids.length > 0,
+  });
+  if (show === "none") return [];
+  return show === "all" ? kids : [kids[0]!];
+}
+
+/**
+ * Open every collapsed container hiding what surrounds `node` — the reducer half
+ * of *content lands where it can be seen*.
+ *
+ * An op that writes a new line next to `node` (split, and the move/drop paths on
+ * the client) would otherwise place it where R2 hides it: not flattened, no
+ * `BlockRow`, no Lexical instance — while the executor has already truncated the
+ * origin's live doc and queued focus at the new id. The text after the caret
+ * would simply vanish. Opening first makes the op mean what the same op means
+ * anywhere else, and matches what `applyInsert`/`applyPaste`/`applyMove` have
+ * always done to their destination parent.
+ */
+function revealAround(
+  blocks: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor,
+): BlockNode[] {
+  let next = blocks;
+  for (const anchor of anchorChainAbove(blocks, node, isAnchor)) {
+    if (!anchor.expanded) next = replace(next, { ...anchor, expanded: true });
+  }
+  return next;
+}
+
+/**
+ * The previous block in VISIBLE document order: the deepest last visible
  * descendant of `node`'s previous sibling. When `node` has NO previous sibling,
  * the visible line directly above it is its PARENT — so walk one step up (null at
  * the forest root). "Line", not "leaf": with the upward branch it can return a
- * parent, not only a leaf. Stops descending at a collapsed block (its children
- * aren't visible), so the result is exactly the block whose end the caret would
- * land at when crossing up. The exact dual of `nextVisibleLine`, so
+ * parent, not only a leaf. Stops descending where visibility stops, so the result
+ * is exactly the block whose end the caret would land at when crossing up. The
+ * exact dual of `nextVisibleLine`, so
  * `prevVisibleLine(nextVisibleLine(X)) === X` for every X with a next line.
+ *
+ * "Last visible descendant" is `visibleChildrenOf`, not `expanded`: a COLLAPSED
+ * container's last visible line is its BORROWED one (its first child's), so the
+ * descent takes the first child there and the last child everywhere else. Getting
+ * this wrong breaks duality in exactly one place — Delete at the end of a
+ * collapsed container's line would resolve a merge the reducer then refuses,
+ * i.e. a consumed keystroke that silently does nothing.
  */
-export function prevVisibleLine(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+export function prevVisibleLine(
+  blocks: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor = NOT_ANCHOR,
+): BlockNode | null {
   let cur = prevSibling(blocks, node);
   if (!cur) return node.parentId ? (byId(blocks, node.parentId) ?? null) : null;
-  while (cur.expanded) {
-    const kids = childrenOf(blocks, cur.id);
-    if (kids.length === 0) break;
-    cur = kids[kids.length - 1]!;
+  for (;;) {
+    const kids = visibleChildrenOf(blocks, cur, isAnchor);
+    const last = kids[kids.length - 1];
+    if (!last) return cur;
+    cur = last;
   }
-  return cur;
 }
 
 /**
  * The next block in VISIBLE document order — the exact dual of `prevVisibleLine`:
- * the first visible child if `node` is expanded with children, else the nearest
- * following sibling found by walking up through ancestors. Null at the end of the
+ * the first visible child (`visibleChildrenOf`, so an anchor yields its borrowed
+ * line whether or not it is collapsed), else the nearest following sibling found
+ * by walking up through ancestors. Null at the end of the
  * forest. Like its dual it stops at a page boundary naturally: a sub-page's
  * subtree lives in another `page_id` partition and is simply absent from `blocks`.
  */
-export function nextVisibleLine(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+export function nextVisibleLine(
+  blocks: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor = NOT_ANCHOR,
+): BlockNode | null {
   // first visible child, else the nearest following sibling walking up
-  if (node.expanded) {
-    const kids = childrenOf(blocks, node.id);
-    if (kids[0]) return kids[0];
-  }
-  let cur: BlockNode | null = node;
+  const kids = visibleChildrenOf(blocks, node, isAnchor);
+  if (kids[0]) return kids[0];
+  // R2: the borrowed line of a collapsed container has no visible following
+  // siblings either — they are inside the box it folded. Resume the upward walk
+  // ABOVE the outermost container hiding them, so the next line is the one after
+  // the whole box.
+  let cur: BlockNode | null = collapsedAnchorAbove(blocks, node, isAnchor) ?? node;
   while (cur) {
     const sib = nextSibling(blocks, cur);
     if (sib) return sib;
@@ -559,18 +731,34 @@ function applySplit(
   op: Extract<BlockOp, { kind: "split" }>,
   anchorTypes: ReadonlySet<string>,
 ): BlockNode[] {
-  const block = byId(blocks, op.blockId);
-  if (!block) return blocks;
+  const isAnchor = anchorOf(anchorTypes);
+  const origin = byId(blocks, op.blockId);
+  if (!origin) return blocks;
   // A page row owns no text, so there is nothing to split, and `asChild` would
   // seed the new node into the sub-page's own `page_id` partition without ever
   // stamping it. Structurally unreachable (the renderer registers no text
   // surface, so Enter can't originate here) — the guard is the belt.
-  if (block.type === PAGE_BLOCK_TYPE) return blocks;
+  if (origin.type === PAGE_BLOCK_TYPE) return blocks;
   // Same belt, same argument, for a container anchor: it renders no line, hosts
   // no text surface and registers no focus handle, so Enter cannot originate in
   // one. A split there would write `data.text` onto a void schema (400 at the
   // write boundary) and mint a second empty container.
-  if (anchorTypes.has(block.type)) return blocks;
+  if (anchorTypes.has(origin.type)) return blocks;
+
+  // Content lands where it can be seen. Splitting ON the borrowed line of a
+  // COLLAPSED container would put the tail among the children R2 hides — no row,
+  // no Lexical instance — while the executor has already truncated the origin's
+  // live doc and queued focus at the new id, so the text after the caret would
+  // simply vanish. Open the box first and the split then means exactly what it
+  // means anywhere else. `applyInsert`/`applyPaste`/`applyMove` have always
+  // opened their destination parent; this was the one op that did not.
+  //
+  // Done before anything else is read, so the adoption gate below sees the forest
+  // the user will actually be looking at — identical to expanding the container
+  // by hand and then pressing Enter. Refusals come FIRST so a refused split stays
+  // an exact identity no-op (`dispatchOp` drops empty diffs).
+  const revealed = revealAround(blocks, origin, isAnchor);
+  const block = byId(revealed, op.blockId) ?? origin;
 
   // Live callers pass authoritative `op.runs`; the `runsOfNode` fallback (lagged
   // `data.text` projection) is the pure reducer's basis (tests / non-live).
@@ -586,7 +774,7 @@ function applySplit(
   // nothing after the caret), which must keep spawning a plain empty sibling BELOW
   // with the caret moving down. asChild and mid/end splits are unaffected.
   if (!op.asChild && op.position === 0 && afterRuns.length > 0) {
-    const prev = prevSibling(blocks, block);
+    const prev = prevSibling(revealed, block);
     const aboveRank = Rank.between(
       prev ? Rank.from(prev.rank) : null,
       Rank.from(block.rank),
@@ -598,12 +786,12 @@ function applySplit(
       type: op.siblingType ?? block.type,      // siblingType is never set here; belt-and-braces
       data: { ...asObject(op.tailData !== undefined ? op.tailData : block.data), text: [] },
       rank: aboveRank.toJSON(),
-      expanded: false,
+      expanded: true,
     };
-    return add(blocks, aboveNode);              // origin's object reference returned untouched
+    return add(revealed, aboveNode);            // origin's object reference returned untouched
   }
 
-  let next = blocks;
+  let next = revealed;
   let updatedBlock = withRuns(block, beforeRuns);
 
   let newParentId: string | null;
@@ -611,18 +799,17 @@ function applySplit(
   let newRank: Rank;
   // Visible children the tail adopts (non-asChild arm only; empty otherwise).
   let adopted: BlockNode[] = [];
-  let tailExpanded = false;
   if (op.asChild) {
     // Nest the split-off content as the original's FIRST child, before any
     // existing child, and force the original open so the new child is visible.
-    const firstChild = childrenOf(blocks, block.id)[0] ?? null;
+    const firstChild = childrenOf(revealed, block.id)[0] ?? null;
     const firstChildRank = firstChild ? Rank.from(firstChild.rank) : null;
     newParentId = block.id;
     newType = op.childType ?? block.type;
     newRank = Rank.between(null, firstChildRank);
     updatedBlock = { ...updatedBlock, expanded: true };
   } else {
-    const next0 = nextSibling(blocks, block);
+    const next0 = nextSibling(revealed, block);
     newParentId = block.parentId;
     newType = op.siblingType ?? block.type;
     newRank = Rank.between(Rank.from(block.rank), next0 ? Rank.from(next0.rank) : null);
@@ -637,6 +824,9 @@ function applySplit(
     // byte-for-byte (the whole sibling set moves together, so uniqueness/order
     // carry), and the tail inherits the subtree by opening (`expanded: true`).
     // Collapsed children are not visible lines, so they stay with the head.
+    // "Visible" is `visibleChildrenOf`, not the raw `expanded` flag, so the rule
+    // reads the same forest the user sees — including inside a container, where
+    // `revealed` has already opened the box the caret was standing in.
     //
     // This is DERIVED from the current forest inside the reducer, not carried on
     // the op, because ops apply against the CURRENT forest — overlay replays
@@ -647,11 +837,7 @@ function applySplit(
     // adoption below: after this split the head is childless, so
     // `prevVisibleLine(tail)` resolves to the head and a following merge
     // re-adopts — which is what makes split∘merge round-trip.
-    const visibleChildren = block.expanded ? childrenOf(blocks, block.id) : [];
-    if (visibleChildren.length > 0) {
-      adopted = visibleChildren;
-      tailExpanded = true;
-    }
+    adopted = visibleChildrenOf(revealed, block, isAnchor);
   }
 
   next = replace(next, updatedBlock);
@@ -678,7 +864,12 @@ function applySplit(
     type: newType,
     data: newData,
     rank: newRank.toJSON(),
-    expanded: tailExpanded,
+    // A block is BORN EXPANDED. The tail is either childless (where the flag is
+    // unobservable) or has just adopted the origin's visible children (which it
+    // must show). Minting `true` everywhere is what makes "a collapsed row is
+    // the user's own act" a fact rather than a hope — the flag used to be inert
+    // for containers precisely because creation minted `false`.
+    expanded: true,
   };
   next = add(next, newNode);
 
@@ -708,7 +899,7 @@ function applyMerge(
   // of the prev sibling, or the parent when the block is a first child), not the
   // immediate sibling — so the caret lands where the text visually joins,
   // matching document order.
-  const prev = prevVisibleLine(blocks, block);
+  const prev = prevVisibleLine(blocks, block, anchorOf(anchorTypes));
   if (!prev) return blocks; // no-op
   // Merging into a page row would write a `data.text` onto a `PageDataSchema`
   // payload AND adopt this block's children across the page boundary (under a
@@ -1221,7 +1412,7 @@ function applyInsert(
     type: op.type,
     data: op.data,
     rank: newRank.toJSON(),
-    expanded: false,
+    expanded: true,
   };
   return add(next, newNode);
 }

@@ -30,12 +30,20 @@ identity, appearance AND the first line of content at once:
   `splitChildWhenExpanded`'s policy did not apply (caret at offset 0, or a
   collapsed card).
 
-The callout had already solved this, but its solution lived in three separate
+The callout had already solved this, but its solution lived in separate
 `defineBlock` flags a second container had to know to copy. So the flags are no
 longer copyable: `defineContainerBlock` **forces** them, and the shape is one
 import rather than one convention.
 
-## `defineContainerBlock` — the three facts are forced, because they are one fact
+A container IS collapsible — it folds to its borrowed line, so it needs no row of
+its own to hang a chevron on. See *A container folds to its borrowed line* in
+[`page/editor`](../editor/CLAUDE.md). The fold's **fallback**, for the cases the
+borrowed line's single chevron slot cannot serve (nested containers share one
+line; a first child whose own chevron is load-bearing keeps it), is a Collapse
+item in that line's rail popover — not this plugin's code at all. See *The glyph
+is appearance; the rail is structure* below.
+
+## `defineContainerBlock` — the two facts are forced, because they are one fact
 
 `core/define-container-block.ts` wraps `defineBlock` and supplies:
 
@@ -46,12 +54,6 @@ import rather than one convention.
   and the childless-anchor prune. Because the container owns no line, converting
   its first child to a heading cannot touch it, and Enter in a child is a plain
   sibling split.
-- **`collapsible: "never"`** — an anchor has no chevron, so a stored
-  `expanded: false` (which `applySplit`, `applyInsert` and any patch replay all
-  mint) would hide the children behind nothing. The flatten treats these types as
-  expanded regardless of the flag: making it *inert* is a guarantee, "every
-  creation path sets it true" is not. The corollary is that **a void container
-  cannot be collapsible** — collapsibility needs a row to hang the chevron on.
 - **`wrapOnConvert: true`** — `/<container>` on an existing block WRAPS it: the
   origin keeps its id, type, `data` and children and becomes the anchor's first
   child, both rows minted in ONE patch (one undo entry). A void type has nowhere
@@ -136,44 +138,56 @@ becomes the container's first child, prefix stripped. `page/annotations/todo`'s
   `no-adhoc-surface` rules all scan a `className` attribute, so "appearance
   only" is enforced at the consumer's own call site rather than trusted.
 
-- **`ContainerAnchor`** — the decoration shell. It owns the static-vs-interactive
-  branch on `editor` presence, the trigger (`preventDefault`ed mousedown, because
-  the click lands beside a live caret), the popover, and the two STRUCTURAL
-  actions. The consumer supplies the `glyph`, the container's `name`, the
-  trigger's `aria-label`, and optionally `sections` — its own appearance controls,
-  rendered above the structural ones and handed `{ editor, close }`.
+- **`ContainerAnchor`** — the decoration shell, and **appearance only**. It owns
+  the static-vs-interactive branch on `editor` presence, the trigger
+  (`preventDefault`ed mousedown, because the click lands beside a live caret) and
+  the popover. The consumer supplies the `glyph` and optionally `sections` — its
+  own appearance controls, handed `{ editor, close }` — with `triggerLabel` and
+  `width` typed as travelling WITH `sections`, so "a glyph with no appearance but
+  a trigger label" is unrepresentable.
 
-  The branch lives in the primitive because it is load-bearing beyond styling:
-  the interactive arm calls `useBlockEditor()`, which **throws** outside a
-  `BlockEditorProvider`, so it must be a component the read-only surfaces (the
-  blog renderer, a version-history preview) never mount.
+  With no `sections` there is nothing to open, so the shell renders a plain
+  non-interactive glyph on **both** surfaces (the context card's state). With
+  sections, the branch on `editor` is still load-bearing beyond styling:
+  `sections` is handed a definitely-present `BlockEditorAPI` and writes through
+  it, so a read-only surface (blog renderer, version-history preview) has nothing
+  honest to render but the mark.
 
   The surface owns the anchor's geometry — a `BLOCK_INDENT`-wide column at `C`,
   seated on the first visible child's borrowed first-line centre, and the drag
   listeners — so the shell must not position or size itself, nor establish flow
   height.
 
-### Remove and Delete are different intents
+## The glyph is appearance; the rail is structure
 
-**Remove `<name>`** dissolves the box and promotes the children into its slot
-(the `unwrap` reducer op) — the escape hatch that keeps the content, and the same
-thing Backspace at the start of the first child resolves to. **Delete** removes
-the container *with* its subtree, as any other block's Delete does. A single
-"delete the container" would conflate them, so they stay two rows. Both commit on
-`onMouseDown` after a `preventDefault`, mirroring `BlockActionsMenu`.
+Collapse / **Remove `<name>`** / Delete used to live in the glyph's popover, for
+one stated reason: an anchor row renders no hover rail, so there was nowhere to
+hang a block-actions menu. **There is now.** The rail on the line the container
+BORROWS resolves the container as its owner (`RailSeat`, `page/editor`'s
+`internal/rail-seat.ts`), so its `⠿` handle opens a menu whose container arm
+carries exactly those actions — and this plugin contributes none of them:
 
-They live on the anchor at all because **an anchor row renders no hover rail**:
-its three gutter slots would coincide with its first child's, on the same visual
-line, and the child must keep its own handle — so there is nowhere else to hang a
-block-actions menu.
+- the arm is selected by the core fact `BlockHandle.anchor`, so a container with
+  no appearance (context) still gets it;
+- `Remove <name>` derives its wording from the handle's own `label`, which is why
+  `ContainerAnchorProps.name` is gone rather than threaded through;
+- **Remove and Delete stay two rows** — different intents. Remove dissolves the
+  box and promotes the children into its slot (the `unwrap` op, the escape hatch
+  that keeps the content, and what Backspace at the start of the first child
+  resolves to); Delete takes the subtree with it.
+
+Appearance is reachable from **both** the glyph and the rail — the consumer
+registers the same component as `sections` and as `BlockFrameMeta.menu`. That is
+the user's spec, not an oversight: the rail is where one looks for a block's
+actions, the glyph is where one looks for the glyph.
 
 ## What stays with each container
 
 Everything with a per-instance payload behind it: the callout's colour swatches,
 icon picker and Reset (driven by its `{icon, iconSvgNodes, color}` data), and the
 context card's fixed glyph and dashed look. A container with no appearance
-contributes no `sections` and gets a menu of the two structural actions — it does
-not inherit a picker it has no field to write to.
+contributes no `sections` and no `menu` — it does not inherit a picker it has no
+field to write to, and it loses nothing structural by it.
 
 The `Editor.Block` / `Editor.BlockFrame` **registrations** also stay with each
 container, deliberately. Containerhood is derived from who actually paints a box
@@ -186,13 +200,10 @@ they describe.
 
 ## Plugin reference
 
-- Description: Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the Remove/Delete structural actions). Contributes nothing itself — each container plugin registers its own block type through it.
+- Description: Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the optional appearance popover — the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
 - Web:
   - Uses:
-    - `page/editor.BlockEditorAPI`
-    - `page/editor.useBlockEditor`
     - `primitives/css/center.Center`
-    - `primitives/css/row.Row`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Popover`
     - `primitives/css/ui-kit.PopoverContent`

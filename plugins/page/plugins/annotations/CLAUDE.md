@@ -49,12 +49,17 @@ Recorded design for the delivery half: Stage 2 of
 ## What every annotation shares, and what stays per-block
 
 Shared, and NOT re-derived per plugin: the whole void-container shape —
-`defineContainerBlock` forcing `anchor` / `collapsible: "never"` /
-`wrapOnConvert`, plus `ContainerNoRow`, `ContainerBackdrop` and `ContainerAnchor`
-(which brings the Remove/Delete structural actions each of these would otherwise
-have no gutter handle to reach). All of it lives in
+`defineContainerBlock` forcing `anchor` / `wrapOnConvert`, plus `ContainerNoRow`,
+`ContainerBackdrop` and `ContainerAnchor`. All of it lives in
 [`page/container`](../container/CLAUDE.md); an annotation plugin adds no
 mechanism of its own.
+
+**None of the four has per-instance appearance** (every payload is `z.object({})`),
+so each passes `ContainerAnchor` a bare `glyph` — no `sections`, no
+`BlockFrameMeta.menu`, hence a plain non-interactive mark on both surfaces. They
+lose nothing by it: Collapse / Remove `<label>` / Delete come from the rail on the
+line the card BORROWS, whose menu arm keys on the core `BlockHandle.anchor` fact
+rather than on a contributed menu.
 
 Per-block, and deliberately: its identity (`type`, label, aliases, glyph), its
 tint, and its markdown marker. Those are four separate `Editor.Block` /

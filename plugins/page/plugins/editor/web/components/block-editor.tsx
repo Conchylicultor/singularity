@@ -34,7 +34,6 @@ import {
   selectionRoots,
   subtreeIds,
   type DropZone,
-  type TreeNode,
 } from "@plugins/primitives/plugins/tree/core";
 import {
   MultiSelectProvider,
@@ -59,19 +58,20 @@ import {
   parseMarkdownToForest,
   defaultTextHandle,
   type Block,
-  type BlockHandle,
   type SerializedBlock,
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor, useFramedBlockTypes } from "../slots";
-import { computeFrameSpans, type FlatBlock, type FrameSpan } from "../internal/block-frames";
-import { useBlockHandles } from "../internal/block-handles";
+import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
+import { flattenVisible } from "../internal/flatten-blocks";
+import { resolveRailSeats } from "../internal/rail-seat";
+import { useAnchorTypes, useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
 import { useBlockSelection, type BlockSelectionActions } from "../internal/use-block-selection";
-import { BlockRow, gutterFirstLineCenter } from "./block-row";
+import { BlockRow } from "./block-row";
 import { BLOCK_GUTTER, blockContentLeft } from "../internal/page-column";
 import { FileDropOverlay } from "./file-drop-overlay";
 import {
@@ -84,103 +84,6 @@ import { BLOCKS_MIME } from "../internal/clipboard";
 /** The editor drops *between* rows only — it has no tree `child` reparent zone. */
 type SiblingZone = Extract<DropZone, "before" | "after">;
 type DropTarget = { id: string; zone: SiblingZone };
-
-// Depth-first flatten that carries each block's depth. Rendering the tree as a
-// flat list of keyed siblings (rather than nesting children inside their parent's
-// DOM) keeps every block in the same React parent, so indent/outdent/move only
-// reorder keyed elements — the Lexical editor instance (and its focus) survives.
-//
-// `alwaysExpanded` is the set of types whose handle declares
-// `collapsible: "never"` — their stored `expanded` flag is IGNORED here. That is
-// what makes the flag inert rather than dangerous: a type with no chevron (an
-// anchor renders no line at all) could otherwise be left permanently collapsed,
-// hiding its children behind nothing, and every creation path mints `false`
-// (`applySplit`, `applyInsert`, any patch replay writes it verbatim).
-function flattenTree(
-  nodes: TreeNode<Block>[],
-  depth: number,
-  out: FlatBlock[],
-  alwaysExpanded: ReadonlySet<string>,
-): void {
-  // `ordinal` is the 1-based position within the maximal run of consecutive
-  // same-type siblings (resets on type change). Each recursive call into a
-  // node's children starts a fresh counter, so numbering resets per level.
-  let ordinal = 0;
-  let prevType: string | null = null;
-  for (const node of nodes) {
-    ordinal = node.type === prevType ? ordinal + 1 : 1;
-    prevType = node.type;
-    const expanded = node.expanded || alwaysExpanded.has(node.type);
-    out.push({
-      block: node,
-      depth,
-      hasChildren: node.children.length > 0,
-      ordinal,
-      firstVisibleChildType: expanded ? node.children[0]?.type ?? null : null,
-    });
-    // Skip a collapsed node's subtree so its children stay hidden. `expanded`
-    // defaults true for every existing row, so current documents are unchanged.
-    if (expanded) flattenTree(node.children, depth + 1, out, alwaysExpanded);
-  }
-}
-
-/**
- * Each flat index's RAIL SEAT: the content edge its hover controls hang back
- * from. For an unframed row that is its own content edge; for a row inside one
- * or more container frames it is the OUTERMOST one's — so the controls sit
- * outside the box and leave the container's own decoration column free. See
- * `internal/page-column.ts` for why that is forced rather than preferred.
- *
- * `computeFrameSpans` walks the flatten in order, so an enclosing frame (which
- * necessarily starts at a lower index) is always emitted BEFORE the frames it
- * contains: the first span covering an index is its outermost one.
- */
-function computeRailLefts(
-  flat: readonly FlatBlock[],
-  spans: readonly FrameSpan[],
-): number[] {
-  const out = flat.map((f) => blockContentLeft(f.depth));
-  const seated = new Array<boolean>(flat.length).fill(false);
-  for (const span of spans) {
-    const left = blockContentLeft(span.depth);
-    for (let i = span.start; i <= span.end; i += 1) {
-      if (seated[i]) continue;
-      seated[i] = true;
-      out[i] = left;
-    }
-  }
-  return out;
-}
-
-/**
- * A container ANCHOR's BORROWED first-line center. The anchor renders no line of
- * its own, so `--gutter-first-line-center` — derived from a row's own handle —
- * is structurally unknowable for it; hardcoding the body center puts the glyph
- * ~6px high against an H1 child and tens of px off against a divider/image child
- * that declares its own center, and the error grows with the density preset.
- *
- * The flatten is depth-first, so an anchor's first visible child is ALWAYS the
- * immediately-following entry — walk forward through nested anchors to the first
- * row that actually renders a line, and read that handle's seat. An anchor with
- * no visible children terminates the walk on itself and takes its own (default)
- * seat, which is exactly the one-line fallback box it renders.
- */
-function borrowedFirstLineCenters(
-  flat: readonly FlatBlock[],
-  handleOf: (type: string) => BlockHandle<unknown> | undefined,
-): (string | undefined)[] {
-  return flat.map((f, i) => {
-    if (handleOf(f.block.type)?.anchor !== true) return undefined;
-    let j = i;
-    while (
-      flat[j]!.firstVisibleChildType !== null &&
-      handleOf(flat[j]!.block.type)?.anchor === true
-    ) {
-      j += 1;
-    }
-    return gutterFirstLineCenter(handleOf(flat[j]!.block.type));
-  });
-}
 
 // Find the rendered block row under a vertical pointer position, plus whether the
 // pointer sits in its top (before) or bottom (after) half. Reads live DOM rects
@@ -392,25 +295,21 @@ function BlockEditorInner({
   // ShortcutManager untouched, regardless of which DOM element (a contenteditable,
   // the selection container, or <body> after a structural undo) holds the caret.
 
-  // Block handles, read once here: the flatten needs them (which types ignore
-  // their stored `expanded`) and so does `insertFirstBlock` below.
+  // Block handles, read once here — `insertFirstBlock` below needs them.
   const contributions = Editor.Block.useContributions();
+  // The SAME set the reducer and the server get (`useAnchorTypes`), never a
+  // second derivation: the flatten decides what the user sees and the ladders
+  // decide what a keystroke acts on, so a divergence here is a keystroke acting
+  // on a line that is not on screen.
+  const anchorTypes = useAnchorTypes();
 
   const { rows, flat } = useMemo(() => {
     if (pending) {
       return { rows: [] as Block[], flat: [] as FlatBlock[] };
     }
-    const alwaysExpanded = new Set(
-      contributions
-        .filter((c) => c.block.collapsible === "never")
-        .map((c) => c.block.type),
-    );
     const sorted = [...blocks].sort((a, b) => Rank.compare(a.rank, b.rank));
-    const tree = buildTree(sorted);
-    const out: FlatBlock[] = [];
-    flattenTree(tree, 0, out, alwaysExpanded);
-    return { rows: sorted, flat: out };
-  }, [blocks, pending, contributions]);
+    return { rows: sorted, flat: flattenVisible(buildTree(sorted), anchorTypes) };
+  }, [blocks, pending, anchorTypes]);
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
@@ -1212,20 +1111,20 @@ function SelectionLayer({
     [flat, framedTypes],
   );
 
-  // Per-row geometry the ROWS must not derive themselves (see
-  // `internal/page-column.ts`): where each row seats its hover rail, and — for a
-  // container anchor — the first-line center it borrows from its first child.
+  // Every row's RAIL SEAT — where its hover controls sit, WHICH BLOCK they act
+  // on, and (for a container anchor) the first-line center it borrows from its
+  // first child. Resolved HERE and nowhere else, because none of the three is
+  // knowable from a row alone: the geometry needs the frame spans
+  // (`internal/page-column.ts`) and the ownership needs the borrow chain above
+  // the row. One resolved seat per row is also what lets `<BlockRail>` take the
+  // seat and nothing else — see `internal/rail-seat.ts`.
   const handleOf = useCallback(
     (type: string) => handleMap.get(type),
     [handleMap],
   );
-  const railLefts = useMemo(
-    () => computeRailLefts(flat, frameSpans),
-    [flat, frameSpans],
-  );
-  const anchorCenters = useMemo(
-    () => borrowedFirstLineCenters(flat, handleOf),
-    [flat, handleOf],
+  const railSeats = useMemo(
+    () => resolveRailSeats(flat, frameSpans, handleOf),
+    [flat, frameSpans, handleOf],
   );
 
   return (
@@ -1383,11 +1282,9 @@ function SelectionLayer({
                   <BlockRow
                     block={f.block}
                     depth={f.depth}
-                    hasChildren={f.hasChildren}
                     hasVisibleChildren={f.firstVisibleChildType !== null}
                     ordinal={f.ordinal}
-                    railLeft={railLefts[i]!}
-                    borrowedFirstLineCenter={anchorCenters[i]}
+                    seat={railSeats[i]!}
                     isDragging={
                       activeId === f.block.id ||
                       (bulkDrag?.subtree.has(f.block.id) ?? false)

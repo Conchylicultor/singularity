@@ -16,8 +16,8 @@ import { defineContainerBlock } from "@plugins/page/plugins/container/core";
 export const contextDataSchema = z.object({});
 
 /**
- * `defineContainerBlock` forces `anchor: true`, `collapsible: "never"` and
- * `wrapOnConvert: true` — the three facts that are only correct together. The
+ * `defineContainerBlock` forces `anchor: true` and `wrapOnConvert: true` — the
+ * two facts that are only correct together. The
  * consequences, all of which the previous text-bearing model got wrong:
  *
  * - the card renders no line, so its FIRST VISIBLE LINE can be a heading (or a
@@ -28,10 +28,10 @@ export const contextDataSchema = z.object({});
  * - `/context` on an existing block WRAPS it, keeping the origin's id (and with
  *   it the caret, its content `Y.Doc` and its undo history).
  *
- * Collapsibility is deliberately gone with the header row: an anchor has no
- * chevron to hang it on (`collapsible: "never"` is what keeps a stored
- * `expanded: false` from hiding the children behind nothing). Folding a context
- * card away is filed as its own task.
+ * The card still FOLDS, and needed no header row to do it: a container collapses
+ * to its BORROWED line (its first child's — the one the anchor already borrows
+ * to seat its glyph), so the chevron rides on that line's row. Which is why this
+ * declares no `collapsible`: its stored `expanded` is live.
  */
 export const contextBlock = defineContainerBlock({
   type: "context",

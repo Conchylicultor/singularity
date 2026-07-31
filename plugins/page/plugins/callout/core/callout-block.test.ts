@@ -46,7 +46,9 @@ describe("calloutBlock (derived facts)", () => {
   it("declares the container facts the reducer and the surface read", () => {
     expect(calloutBlock.anchor).toBe(true);
     expect(calloutBlock.wrapOnConvert).toBe(true);
-    expect(calloutBlock.collapsible).toBe("never");
+    // Foldable: no `collapsible` opt-out, so its stored `expanded` is live and a
+    // long callout can be folded to its borrowed line.
+    expect(calloutBlock.collapsible).toBeUndefined();
     // The seam whose `expanded` gate is what made Enter mint a SECOND callout.
     expect(calloutBlock.splitChildWhenExpanded).toBeUndefined();
   });

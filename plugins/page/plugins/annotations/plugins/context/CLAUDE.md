@@ -30,17 +30,19 @@ first line of content at once:
 
 The callout had already solved this by owning no text at all, and that is now the
 shared shape: `core/context-block.ts` calls **`defineContainerBlock`**
-([`page/container`](../../../container/CLAUDE.md)), which forces `anchor: true`,
-`collapsible: "never"` and `wrapOnConvert: true` and rejects a text-bearing schema
-at the type level. Neither symptom is expressible any more: the container has no
+([`page/container`](../../../container/CLAUDE.md)), which forces `anchor: true`
+and `wrapOnConvert: true` and rejects a text-bearing schema at the type level.
+Neither symptom is expressible any more: the container has no
 line to type into, and `/context` on an existing block **wraps** it — which is
 also what lets the first visible line be a heading.
 
-**Collapsibility is deliberately gone.** An anchor renders no line, so there is no
-chevron to hang it on, which is exactly why `collapsible: "never"` is forced (a
-stored `expanded: false` would otherwise hide the children behind nothing).
-Folding a context card away is filed as its own task, and it will need a
-mechanism that does not depend on a header row.
+**It folds, and needed no header row to do it.** A context card holds standing
+instructions a reader usually wants out of the way, so this is the point of the
+block. It collapses to its BORROWED line — its first child's, the same line the
+anchor already borrows to seat its glyph — so nothing moves, and the chevron
+lives on that line's row rather than on a title row the void model exists to
+avoid. See *A container folds to its borrowed line* in
+[`page/editor`](../../../editor/CLAUDE.md).
 
 ## The void payload is enforced, not aspirational
 
@@ -51,10 +53,11 @@ previous model's rows unwritable rather than merely unused. `core/context-block.
 pins both the rejection and the forced container facts.
 
 There is no per-instance appearance either, and the anchor reflects that: a
-**fixed** `MdRule` glyph, no icon picker and no colours, so its popover
-carries only the shared structural actions (Remove context / Delete). A container
-with nothing to configure contributes no `sections` rather than inheriting a
-picker it has no field to write to.
+**fixed** `MdRule` glyph with **no popover at all** — a plain mark on both
+surfaces. It contributes neither `sections` nor `BlockFrameMeta.menu` rather than
+inheriting a picker it has no field to write to, and loses nothing by it: the
+structural actions (Collapse / Remove context / Delete) come from the rail on the
+line it borrows, generically over `BlockHandle.anchor`.
 
 ## The frame is appearance only
 

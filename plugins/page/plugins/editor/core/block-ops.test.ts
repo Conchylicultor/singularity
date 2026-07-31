@@ -24,11 +24,14 @@ import {
   planBulkMove,
   prevVisibleLine,
   nextVisibleLine,
+  visibleChildrenOf,
+  collapsedAnchorAbove,
   runsOfNode,
   textOf,
   type BlockNode,
   type BlockOp,
   type BlockOpContext,
+  type IsAnchor,
 } from "./block-ops";
 import { coalesce, mergeRuns, runsLength, splitRuns, type RichText } from "./rich-text";
 import { withMintedIds, type IdentifiedBlock, type SerializedBlock } from "./serialized-block";
@@ -236,7 +239,10 @@ describe("split", () => {
     // NEW is the first child, before K1.
     expect(ids(out, "B")).toEqual(["NEW", "K1"]);
     expect(newNode.pageId).toBe(b.pageId);
-    expect(newNode.expanded).toBe(false);
+    // A block is BORN EXPANDED — see the `expanded: true` note in `applySplit`.
+    // Unobservable on a childless node, and it is what makes "collapsed is the
+    // user's own act" true rather than hoped-for.
+    expect(newNode.expanded).toBe(true);
   });
 
   // `data` belongs to a TYPE. A cross-type tail that inherited the origin's
@@ -416,7 +422,7 @@ describe("split", () => {
     expect(ids(out, "P")).toEqual(["K1"]);
     const tail = out.find((b) => b.id === "NEW")!;
     expect(ids(out, "NEW")).toEqual([]);
-    expect(tail.expanded).toBe(false);
+    expect(tail.expanded).toBe(true); // born expanded; childless, so unobservable
   });
 
   test("adoption predicate needs BOTH: expanded but zero children → plain sibling split", () => {
@@ -425,7 +431,7 @@ describe("split", () => {
     expect(ids(out, null)).toEqual(["P", "NEW"]);
     const tail = out.find((b) => b.id === "NEW")!;
     expect(ids(out, "NEW")).toEqual([]);
-    expect(tail.expanded).toBe(false);
+    expect(tail.expanded).toBe(true); // born expanded; childless, so unobservable
   });
 
   test("identity: position-0 split of a NON-EMPTY block inserts an empty sibling ABOVE and leaves the origin untouched", () => {
@@ -440,7 +446,7 @@ describe("split", () => {
     const above = out.find((b) => b.id === "NEW")!;
     expect(textOf(above)).toBe("");
     expect(ids(out, "NEW")).toEqual([]); // childless
-    expect(above.expanded).toBe(false);
+    expect(above.expanded).toBe(true); // born expanded; childless, so unobservable
     expect(above.parentId).toBe(null);
     expect(above.pageId).toBe(origin.pageId);
 
@@ -1059,7 +1065,7 @@ describe("insert", () => {
     expect(ids(out, null)).toEqual(["A", "NEW", "B"]);
     const newNode = out.find((b) => b.id === "NEW")!;
     expect(newNode.parentId).toBe(null);
-    expect(newNode.expanded).toBe(false);
+    expect(newNode.expanded).toBe(true); // born expanded; childless, so unobservable
   });
 
   test("beforeId → inserts between target and its previous sibling, inherits parent", () => {
@@ -1633,6 +1639,35 @@ describe("planBulkMove", () => {
  */
 const ANCHOR = "container";
 const withAnchors: BlockOpContext = { anchorTypes: new Set([ANCHOR]) };
+/** The same fact in the shape the visibility helpers take. */
+const isAnchorFn: IsAnchor = (n) => n.type === ANCHOR;
+
+/**
+ * Is `node` a line the user can actually see (and therefore put a caret on)?
+ *
+ * DERIVED from `visibleChildrenOf` rather than re-encoding "walk up checking
+ * `expanded`" — that hand-rolled version is exactly what made the original
+ * duality round pass vacuously once containers arrived: it calls a collapsed
+ * container's borrowed line hidden, when the borrowed line is the one thing a
+ * collapsed container still shows.
+ */
+function isVisibleLine(
+  rows: BlockNode[],
+  node: BlockNode,
+  isAnchor: IsAnchor = () => false,
+): boolean {
+  let cur = node;
+  while (cur.parentId !== null) {
+    const parent = rows.find((r) => r.id === cur.parentId);
+    // A parent outside the row set is the forest root (the fuzz forest hangs its
+    // top level off a `PAGE` sentinel that is not itself a row) — the same
+    // "absent parent ⇒ top" reading `prevVisibleLine` takes.
+    if (!parent) return true;
+    if (!visibleChildrenOf(rows, parent, isAnchor).some((k) => k.id === cur.id)) return false;
+    cur = parent;
+  }
+  return true;
+}
 
 function anchorNode(id: string, parentId: string | null, rank: string): BlockNode {
   // Void payload: an anchor's schema carries appearance only, never `text`.
@@ -1677,17 +1712,79 @@ describe("anchors — split / merge refusals", () => {
     expect(run(blocks, op).find((b) => b.id === "C1")).toBeUndefined(); // unguarded: merged into A
   });
 
-  test("merge refuses an anchor reached as a COLLAPSED previous sibling", () => {
-    // The other way `prevVisibleLine` lands on an anchor: it stops descending at
-    // a collapsed container, so the block below one resolves to the anchor row.
+  test("merge into a COLLAPSED container lands on its BORROWED line, not the anchor", () => {
+    // A collapsed container is not an empty space above `T2`: it still paints
+    // one line — its first child's, borrowed (R1). So the previous VISIBLE line
+    // below which `T2` sits is `C1`, and Backspace at the start of `T2` joins
+    // that line, exactly as it would for a collapsed toggle. `prevVisibleLine`
+    // descending into a collapsed anchor (to its FIRST child, where every other
+    // block descends to its last) is what makes this the dual of
+    // `nextVisibleLine` — without it Delete at the end of `C1` would resolve a
+    // merge the reducer then refuses: a consumed keystroke that does nothing.
     const r1 = a;
     const r2 = after(r1);
     const blocks = [
       { ...anchorNode("A", null, r1), expanded: false },
       mk("T2", null, r2, { text: "below" }),
-      mk("C1", "A", a),
+      mk("C1", "A", a, { text: "first" }),
+      mk("C2", "A", after(a), { text: "hidden" }),
     ];
-    expect(run(blocks, { kind: "merge", blockId: "T2" }, withAnchors)).toBe(blocks);
+    expect(prevVisibleLine(blocks, blocks[1]!, isAnchorFn)?.id).toBe("C1");
+
+    const out = run(blocks, { kind: "merge", blockId: "T2" }, withAnchors);
+    expect(out.find((b) => b.id === "T2")).toBeUndefined();
+    expect(textOf(out.find((b) => b.id === "C1")!)).toBe("firstbelow");
+    // The container survives with both children — a merge into its visible line
+    // must not dissolve the box or disturb what it folded away.
+    expect(ids(out, "A")).toEqual(["C1", "C2"]);
+  });
+
+});
+
+describe("anchors — content lands where it can be seen", () => {
+  test("splitting a COLLAPSED container's borrowed line opens the box, so the tail is visible", () => {
+    // The failure this exists to prevent: without the reveal the tail lands as
+    // the container's 2nd child, which R2 hides — no row, no Lexical instance —
+    // while the executor has already truncated the origin's live doc and queued
+    // focus at the new id. The text after the caret would simply disappear.
+    const blocks = [
+      { ...anchorNode("A", null, a), expanded: false },
+      mk("C1", "A", a, { text: "helloworld" }),
+      mk("C2", "A", after(a), { text: "hidden" }),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "C1", position: 5, newId: "NEW" }, withAnchors);
+
+    expect(out.find((b) => b.id === "A")!.expanded).toBe(true);
+    expect(ids(out, "A")).toEqual(["C1", "NEW", "C2"]);
+    expect(textOf(out.find((b) => b.id === "C1")!)).toBe("hello");
+    expect(textOf(out.find((b) => b.id === "NEW")!)).toBe("world");
+    // The whole point: every line of the container is now a VISIBLE line.
+    for (const id of ["C1", "NEW", "C2"]) {
+      expect(isVisibleLine(out, out.find((b) => b.id === id)!, isAnchorFn)).toBe(true);
+    }
+  });
+
+  test("the reveal opens the whole NESTED chain, not just the innermost box", () => {
+    const blocks = [
+      { ...anchorNode("A", null, a), expanded: false },
+      { ...anchorNode("B", "A", a), expanded: false },
+      mk("C1", "B", a, { text: "helloworld" }),
+      mk("C2", "B", after(a), { text: "hidden" }),
+    ];
+    const out = run(blocks, { kind: "split", blockId: "C1", position: 5, newId: "NEW" }, withAnchors);
+    expect(out.find((b) => b.id === "A")!.expanded).toBe(true);
+    expect(out.find((b) => b.id === "B")!.expanded).toBe(true);
+    expect(isVisibleLine(out, out.find((b) => b.id === "NEW")!, isAnchorFn)).toBe(true);
+  });
+
+  test("a REFUSED split stays an exact identity no-op, reveal included", () => {
+    // Refusals run before the reveal, so a split that cannot apply never leaves a
+    // half-effect behind — `dispatchOp` drops empty diffs, and an op that only
+    // toggled `expanded` would slip past that and reach the undo stack.
+    const blocks = [{ ...anchorNode("A", null, a), expanded: false }, mk("C1", "A", a)];
+    expect(run(blocks, { kind: "split", blockId: "A", position: 0, newId: "NEW" }, withAnchors)).toBe(
+      blocks,
+    );
   });
 });
 
@@ -2350,24 +2447,16 @@ describe("split ∘ merge round-trip", () => {
     // The load-bearing identity behind `mergeNext` needing no new reducer op:
     // Delete-at-end of X is Backspace-at-start of the next visible line, and that
     // is well-defined only because these two helpers are true inverses. It holds
-    // for every X the caret can actually sit on — i.e. every VISIBLE node (all
-    // ancestors expanded); a node hidden inside a collapsed subtree is not part
-    // of the visible sequence, and `nextVisibleLine` from it exits the subtree
-    // without a matching predecessor, so it is correctly excluded.
-    const isVisible = (rows: BlockNode[], node: BlockNode): boolean => {
-      let p = node.parentId ? rows.find((r) => r.id === node.parentId) : undefined;
-      while (p) {
-        if (!p.expanded) return false;
-        p = p.parentId ? rows.find((r) => r.id === p!.parentId) : undefined;
-      }
-      return true;
-    };
+    // for every X the caret can actually sit on — i.e. every VISIBLE node; a node
+    // hidden inside a collapsed subtree is not part of the visible sequence, and
+    // `nextVisibleLine` from it exits the subtree without a matching
+    // predecessor, so it is correctly excluded.
     let checks = 0;
     for (let seed = 1; seed <= 3000; seed++) {
       const rand = rng(seed);
       const rows = randomForest(rand, 3 + Math.floor(rand() * 18));
       for (const x of rows) {
-        if (!isVisible(rows, x)) continue;
+        if (!isVisibleLine(rows, x)) continue;
         const next = nextVisibleLine(rows, x);
         if (!next) continue;
         expect(prevVisibleLine(rows, next)?.id).toBe(x.id);
@@ -2376,6 +2465,60 @@ describe("split ∘ merge round-trip", () => {
     }
     // Non-vacuity: the forest is dense enough that most nodes have a next line.
     expect(checks).toBeGreaterThan(3000);
+  });
+
+  test("duality holds over an ANCHOR-bearing forest with collapsed containers (~1500 seeds)", () => {
+    // The round above mints no anchors at all, so it says nothing about the fold:
+    // its `isVisibleLine` would have excluded a collapsed container's borrowed
+    // line as hidden and the interesting case would pass vacuously. Here anchors
+    // are real, their `expanded` is randomised, and visibility is DERIVED from
+    // `visibleChildrenOf` — the same rule the reducer and the surface run — so
+    // the property cannot drift from the definition it is checking.
+    //
+    // The shapes that matter, all reachable from `anchorize` + random collapse:
+    // a collapsed container as its parent's LAST child (the upward resume path,
+    // where `nextVisibleLine` must resume ABOVE the outermost collapsed anchor),
+    // a collapsed container whose first child is itself a container (the nested
+    // borrow chain), and a container adjacent to a page row.
+    let checks = 0;
+    let collapsedAnchorSeeds = 0;
+    for (let seed = 1; seed <= 1500; seed++) {
+      const rand = rng(seed);
+      const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand).map((b) =>
+        b.type === ANCHOR && rand() < 0.5 ? { ...b, expanded: false } : b,
+      );
+      if (rows.some((b) => b.type === ANCHOR && !b.expanded)) collapsedAnchorSeeds++;
+      for (const x of rows) {
+        if (!isVisibleLine(rows, x, isAnchorFn)) continue;
+        const next = nextVisibleLine(rows, x, isAnchorFn);
+        if (!next) continue;
+        expect(prevVisibleLine(rows, next, isAnchorFn)?.id).toBe(x.id);
+        checks++;
+      }
+    }
+    expect(checks).toBeGreaterThan(3000);
+    // Non-vacuity: the fixture space really does contain COLLAPSED containers.
+    expect(collapsedAnchorSeeds).toBeGreaterThan(500);
+  });
+
+  test("a collapsed container always shows exactly one line — content never hides behind nothing", () => {
+    // The structural guarantee that retires `collapsible: "never"`. Whatever a
+    // stray `expanded: false` says (a hand-written PATCH, a pasted
+    // `SerializedBlock`), a container keeps painting its borrowed line, so its
+    // fold is always visible and always reversible.
+    for (let seed = 1; seed <= 400; seed++) {
+      const rand = rng(seed);
+      const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand).map((b) =>
+        b.type === ANCHOR ? { ...b, expanded: false } : b,
+      );
+      for (const anchor of rows.filter((b) => b.type === ANCHOR)) {
+        if (!isVisibleLine(rows, anchor, isAnchorFn)) continue;
+        if (childrenOf(rows, anchor.id).length === 0) continue;
+        const visible = visibleChildrenOf(rows, anchor, isAnchorFn);
+        expect(visible).toHaveLength(1);
+        expect(visible[0]!.id).toBe(childrenOf(rows, anchor.id)[0]!.id);
+      }
+    }
   });
 
   test("split ∘ merge round-trips over an ANCHOR-bearing forest with `anchorTypes` supplied (~300 seeds)", () => {
@@ -2390,8 +2533,18 @@ describe("split ∘ merge round-trip", () => {
       const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand);
       if (rows.some((b) => b.type === ANCHOR)) withAnchorRounds++;
       // A page row is not a legal split target (guarded), and neither is an
-      // anchor — it hosts no text surface.
-      const targets = rows.filter((b) => b.type !== PAGE_BLOCK_TYPE && b.type !== ANCHOR);
+      // anchor — it hosts no text surface. The BORROWED line of a collapsed
+      // container is excluded too, and deliberately: splitting there additionally
+      // OPENS the box (`revealAround`, so the tail is not written where R2 hides
+      // it) and merge does not close it again, so the pair is an inverse on
+      // structure but not on the `expanded` flag. That side effect is pinned
+      // explicitly below rather than blurred into this property.
+      const targets = rows.filter(
+        (b) =>
+          b.type !== PAGE_BLOCK_TYPE &&
+          b.type !== ANCHOR &&
+          collapsedAnchorAbove(rows, b, isAnchorFn) === null,
+      );
       if (targets.length === 0) continue;
       const target = targets[Math.floor(rand() * targets.length)]!;
       const len = runsLength(runsOfNode(target));

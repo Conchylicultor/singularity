@@ -46,8 +46,7 @@ export type RejectTextBearing<S extends AnyZodObject> = "text" extends keyof S["
  * absent, so an inconsistent container is unrepresentable rather than merely
  * discouraged.
  *
- * Forced by the factory (not accepted here): `anchor`, `collapsible: "never"`,
- * `wrapOnConvert`.
+ * Forced by the factory (not accepted here): `anchor`, `wrapOnConvert`.
  *
  * Absent because an anchor renders no line of its own, so they would be inert:
  * `placeholder`, `marker` / `ordinalMarker`, `textVariant`,
@@ -103,7 +102,7 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
  * Define a VOID CONTAINER block type: one that owns no text at all, whose
  * displayed content IS its children.
  *
- * The three container facts are FORCED here rather than copied per block type,
+ * The two container facts are FORCED here rather than copied per block type,
  * because they are not independent — each one is load-bearing for the others,
  * and the `/context` regression this factory was extracted from was exactly the
  * result of declaring them piecemeal:
@@ -115,11 +114,10 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
  *   childless-anchor prune. Because the container owns no line, converting its
  *   first child to a heading cannot touch it, and Enter in a child is a plain
  *   sibling split rather than a second container.
- * - **`collapsible: "never"`** — an anchor has no chevron, so a stored
- *   `expanded: false` (which `applySplit`, `applyInsert` and any patch replay
- *   all mint) would hide its children behind nothing. The flatten therefore
- *   treats these types as expanded regardless of the flag: making it INERT is a
- *   guarantee, "every creation path sets it true" is not.
+ *   Because it owns no line it also owns no chevron — its fold rides on the line
+ *   it borrows (`resolveRailSeats`), whose rail the container OWNS, so that
+ *   rail's popover carries the Collapse fallback for the cases the single
+ *   chevron slot cannot serve.
  * - **`wrapOnConvert: true`** — `/<container>` on an existing block WRAPS it:
  *   the origin keeps its id, type, `data` and children and becomes the anchor's
  *   first child. A void type has nowhere to put the retyped block's text, so a
@@ -166,7 +164,6 @@ export function defineContainerBlock<S extends AnyZodObject>(
   return defineBlock({
     ...declared,
     anchor: true,
-    collapsible: "never",
     wrapOnConvert: true,
   });
 }

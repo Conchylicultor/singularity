@@ -100,7 +100,6 @@ genuine transient-chrome list escapes with
     - `fields/date/filter`
     - `history/dialog`
     - `page/callout`
-    - `page/container`
     - `page/editor`
     - `page/inline-date`
     - `page/page-link`

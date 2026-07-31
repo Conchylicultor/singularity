@@ -374,11 +374,14 @@ function NodeView({
         <div className="relative">
           {Anchor ? (
             <Pin to="top-left" className="py-xs" style={{ width: BLOCK_INDENT }}>
-              {/* `id` is the container's address for the anchor's structural
-                  actions; with no `editor` there are none, and a read-only node
-                  may legitimately carry no id at all. */}
+              {/* Appearance and nothing else. An anchor's structural actions live
+                  on the rail of the line the container borrows, which this
+                  surface has none of — and it carries no id here either, since a
+                  read-only node may legitimately have none. Omitting `editor` is
+                  the read-only signal: the contribution degrades to a static
+                  glyph rather than rendering a dead control. */}
               {/* eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Anchor` is a registry LOOKUP into the memoized `useBlockAnchors()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset. */}
-              <Anchor id={node.id ?? ""} type={node.type} data={node.data} />
+              <Anchor type={node.type} data={node.data} />
             </Pin>
           ) : null}
         </div>

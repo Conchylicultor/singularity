@@ -1010,6 +1010,111 @@ describe("container anchors", () => {
       }),
     ).toEqual({ type: "outdent" });
   });
+
+  // -------------------------------------------------------------------------
+  // ...and the same box, CLOSED. You cannot restructure what you cannot see: the
+  // borrowed line is the only line a collapsed container shows, so every
+  // structural keystroke on it would otherwise act on lines the user has no way
+  // of knowing are there.
+  // -------------------------------------------------------------------------
+
+  /** The same fixture with the box folded: only X's line renders. */
+  function closed(childType = "text"): BlockNode[] {
+    return boxed(childType).map((n) => (n.id === "CA" ? { ...n, expanded: false } : n));
+  }
+
+  test("Backspace on a COLLAPSED container's borrowed line opens it instead of unwrapping", () => {
+    // `unwrap` here would dissolve the box and spill Y — a line the user cannot
+    // see — into the document from one keypress.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: closed(),
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toEqual({ type: "expand", blockId: "CA" });
+  });
+
+  test("Shift+Tab on that line opens it too — outdent would ADOPT the hidden lines", () => {
+    // `outdentOne` takes the followers, so outdenting X out of a closed box would
+    // re-nest Y under X: invisible content, silently restructured.
+    expect(
+      resolveKeystroke("Tab", { shift: true }, caret({ atStart: true }), {
+        nodes: closed(),
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toEqual({ type: "expand", blockId: "CA" });
+  });
+
+  test("opening is ONE level per press — the next Backspace then unwraps as usual", () => {
+    // The same bargain empty-Enter's ladder already makes. After the expand the
+    // forest is the ordinary open box, so the ordinary rung applies.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: boxed(),
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toEqual({ type: "unwrap", blockId: "CA" });
+  });
+
+  test("the marker STILL strips first — the expand rung sits below convertTo", () => {
+    // Stripping a bullet is a visible, local edit that neither reveals nor
+    // restructures anything hidden, so it keeps its place at the top.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes: closed("bulleted-list"),
+        ...TYPE_FACTS,
+        blockId: "X",
+        editPolicy: { resetToOnBackspaceAtStart: "text" },
+      }),
+    ).toEqual({ type: "convertTo", to: "text" });
+  });
+
+  test("Delete at the end of a collapsed box's line skips the folded lines entirely", () => {
+    // `nextVisibleLine` resumes ABOVE the outermost collapsed container, so the
+    // line pulled up is the one after the whole box — never the hidden Y.
+    const nodes = [...closed(), mk("B", PAGE, rankB, { text: "after" })];
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toEqual({ type: "mergeNext" });
+    expect(nextVisibleLine(nodes, nodes.find((n) => n.id === "X")!, TYPE_FACTS.isAnchor)?.id).toBe(
+      "B",
+    );
+  });
+
+  test("Backspace on the line AFTER a collapsed box merges into its BORROWED line", () => {
+    // The box is not empty space above: it paints X's line, so that is the
+    // previous visible line and the one the text joins.
+    const nodes = [...closed(), mk("B", PAGE, rankB, { text: "after" })];
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "B",
+      }),
+    ).toEqual({ type: "merge" });
+  });
+
+  test("Enter at the end of a collapsed box's line does NOT nest into hidden children", () => {
+    // `asChild` reads VISIBLE children: X's own child is sealed away by the box,
+    // so Enter is a plain sibling split (which `applySplit` then makes visible by
+    // opening the container).
+    const grandkid = Rank.between(null, null).toJSON();
+    const nodes = [...closed(), mk("X1", "X", grandkid, { text: "nested" })];
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true, offset: 5 }), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "X",
+      }),
+    ).toMatchObject({ type: "split", asChild: false });
+  });
 });
 
 // ---------------------------------------------------------------------------

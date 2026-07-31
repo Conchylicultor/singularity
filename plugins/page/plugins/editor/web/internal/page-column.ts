@@ -31,9 +31,16 @@ import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/
  * comes later in DOM order at the same `z-raised` level, so the decoration would
  * not merely be overlapped, it would be unclickable. Seating a framed row's rail
  * against the frame's edge puts the controls OUTSIDE the box, leaving the
- * decoration column free. `BlockRow` takes the resolved `railLeft` as a prop;
- * the editor derives it from the frame spans it already computes, so rows still
+ * decoration column free. `BlockRow` takes the resolved seat as a prop; the
+ * editor derives it from the frame spans it already computes, so rows still
  * compute no geometry of their own.
+ *
+ * That SPAN rule is geometry and nothing else — it says where the controls sit,
+ * never what they act on. WHICH block a row's rail targets is a separate
+ * BORROW-CHAIN rule, because only a container's borrowed first LINE hands its
+ * rail over while lines 2..n inside the same frame keep their own. Both live on
+ * `RailSeat` (`internal/rail-seat.ts`); conflating them is what let the drag
+ * handle on a callout's first line pull that line out of the box.
  *
  * Hosts must never re-derive the content edge from `BLOCK_GUTTER` plus whatever
  * padding their wrapper happens to carry — they align onto it via
@@ -57,8 +64,8 @@ export const MARKER_GUTTER = "1.5rem";
  * border edge (which is where the rail starts). The single derivation of the
  * rail + per-depth indent sum — a container frame insets its decoration to it so
  * the box starts at the content edge instead of bleeding over the rail, and it
- * is what the editor evaluates (at the row's own depth, or at its outermost
- * enclosing frame's) to hand `BlockRow` its `railLeft`.
+ * is what `resolveRailSeats` evaluates (at the row's own depth, or at its
+ * outermost enclosing frame's) to hand each row its seat's `left`.
  */
 export function blockContentLeft(depth: number): number {
   return BLOCK_GUTTER + depth * BLOCK_INDENT;

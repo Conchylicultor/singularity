@@ -237,7 +237,8 @@ const anchorHasDecoration: Check = {
         "container:\n" +
         "  Editor.BlockFrame({ match: <handle>.type, component: <Frame>, anchor: <Anchor> })\n" +
         "The anchor component takes `BlockAnchorProps` ({ type, data, editor? }) and renders " +
-        "appearance + interaction only — the surface owns its position. Alternatively drop " +
+        "APPEARANCE only — the surface owns its position, and the structural actions live on " +
+        "the rail of the line the container borrows. Alternatively drop " +
         "`anchor: true` from the handle if the type really does render its own line.",
     };
   },

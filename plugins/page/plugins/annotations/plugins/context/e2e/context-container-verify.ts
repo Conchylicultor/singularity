@@ -5,11 +5,12 @@
 // and that model was rejected: one row played container identity, appearance AND
 // the first line of content at once, so Enter in the title minted a second card
 // and the card's first visible line could never be a HEADING. The corrected model
-// is the callout's — `anchor: true`, `collapsible: "never"`, `wrapOnConvert: true`,
-// payload `z.object({})` with NO `text`. The card renders no line of its own; its
+// is the callout's — `anchor: true`, `wrapOnConvert: true`, payload
+// `z.object({})` with NO `text`. The card renders no line of its own; its
 // entire displayed content is its children, ordinary blocks of any type that do
-// not know they are inside it. Collapsibility is deliberately dropped (tracked
-// separately) — an anchor has no row to hang a chevron on.
+// not know they are inside it. It is still collapsible: it folds to its BORROWED
+// line, which is `page/container`'s behaviour and is specced in that plugin's
+// `e2e/container-collapse-verify.ts`.
 //
 // Every claim below is invisible to a unit test of the pure grouping — a frame is
 // a `pointer-events-none` SIBLING backdrop spanning grid lines, never an ancestor

@@ -32,6 +32,7 @@ import {
   withMintedIds,
   namesField,
   type Block,
+  type BlockNode,
   type BlockOp,
   type BlockPatch,
   type RichText,
@@ -596,6 +597,14 @@ export function BlockEditorProviderInner({
   // the store passes the SAME set, and so does the server) and the handle
   // registry `convertTo` reads `wrapOnConvert`/`empty()` off.
   const anchorTypes = useAnchorTypes();
+  // The same fact in the shape the visibility helpers take. A container borrows
+  // its first child's line, so `prevVisibleLine`/`nextVisibleLine` cannot resolve
+  // a merge target without it — pass anything else and the executor's target
+  // disagrees with the reducer's, which is a merge that fires and does nothing.
+  const isAnchorNode = useCallback(
+    (node: BlockNode) => anchorTypes.has(node.type),
+    [anchorTypes],
+  );
   const blockHandles = useBlockHandles();
   const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
 
@@ -1277,9 +1286,9 @@ export function BlockEditorProviderInner({
             parentId: origin.parentId,
             type,
             data: containerData,
-            // Anchors declare `collapsible: "never"`, so a stored `false` would be
-            // inert anyway — but mint it open so any consumer reading the flag
-            // raw agrees with what the surface renders.
+            // Born expanded, like every other created row: a container's stored
+            // `expanded` is LIVE (it folds to its borrowed line), so a wrap that
+            // minted `false` would hand the user a box that arrives folded.
             expanded: true,
             rank: Rank.between(
               prev ? Rank.from(prev.rank) : null,
@@ -1317,7 +1326,7 @@ export function BlockEditorProviderInner({
       const nodes = toNodes(rowsRef.current);
       const block = nodes.find((b) => b.id === sourceId);
       if (!block) return;
-      const target = prevVisibleLine(nodes, block);
+      const target = prevVisibleLine(nodes, block, isAnchorNode);
       if (!target) return; // defensive: nothing to merge into
       // Composite-union backstop: merge is strictly in-page. Over the union the
       // previous visible line can belong to ANOTHER page (the line above an
@@ -1397,7 +1406,7 @@ export function BlockEditorProviderInner({
         );
       }
     },
-    [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes],
+    [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes, isAnchorNode],
   );
 
   // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
@@ -1611,7 +1620,7 @@ export function BlockEditorProviderInner({
         const nodes = toNodes(rowsRef.current);
         const block = nodes.find((b) => b.id === blockId);
         if (!block) return;
-        const next = nextVisibleLine(nodes, block);
+        const next = nextVisibleLine(nodes, block, isAnchorNode);
         if (!next) return; // defensive: nothing below to pull up
         // Read the next block's LIVE runs from its registered handle — the
         // authoritative source (its `data.text` projection lags by up to ~1s, so
@@ -1688,6 +1697,7 @@ export function BlockEditorProviderInner({
       recordStructural,
       recordStructuralWithDocEdit,
       mergeBlock,
+      isAnchorNode,
     ],
   );
 

@@ -2,44 +2,32 @@ import { MdLightbulb } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PageIcon, type BlockAnchorProps } from "@plugins/page/plugins/editor/web";
 import { ContainerAnchor } from "@plugins/page/plugins/container/web";
-import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import { calloutBlock, type CalloutColor } from "../../core";
-import { CalloutAppearance } from "./callout-appearance";
+import { CalloutAppearanceFor, readCalloutAppearance } from "./callout-appearance";
 import { COLOR_TEXT } from "./callout-colors";
 
-/** The callout's appearance, read defensively — `data` can be transient mid-edit. */
-function appearance(data: unknown): {
-  icon: string | null;
-  iconSvgNodes: SvgNode[] | null;
-  color: CalloutColor;
-} {
-  const parsed = calloutBlock.safeParse(data);
-  if (parsed.success) return parsed.data;
-  // An unparseable payload still gets a glyph, just the default one — exactly as
-  // `CalloutFrame` still paints a box in the default tint.
-  return { icon: null, iconSvgNodes: null, color: "default" };
-}
-
 /**
- * The callout's leading glyph — the ONLY thing its row paints.
+ * The callout's leading glyph — the ONLY thing its row paints, and APPEARANCE
+ * only.
  *
- * Everything structural about an anchor decoration (the static-vs-interactive
- * branch on `editor`, the `preventDefault`ed trigger, the popover, and its
- * Remove-callout / Delete actions) belongs to every void container, so it comes
- * from `ContainerAnchor`. What is genuinely the callout's own is what this file
- * supplies: the glyph and the appearance sections above those actions.
+ * The structural actions (Remove callout / Delete / Collapse) used to live in
+ * this popover, because an anchor row paints no hover rail and there was nowhere
+ * else to hang a block-actions menu. There is now: the rail on the line the
+ * callout BORROWS resolves the callout as its owner, so its `⠿` handle opens
+ * them — generically, for every container. What is left here is what is
+ * genuinely the callout's own: the glyph, and the icon/colour controls behind
+ * it, which also render in that rail menu (`CalloutMenu`) so appearance is
+ * reachable from both.
  *
- * `width="xl"` because the sections host the full icon picker; the shell's
- * default suits a menu of the two structural actions alone.
+ * The static-vs-interactive branch on `editor`, the `preventDefault`ed trigger
+ * and the popover all still belong to `ContainerAnchor`; `width="xl"` is the
+ * callout's own, because its sections host the full icon picker.
  */
-export function CalloutAnchor({ id, data, editor }: BlockAnchorProps) {
-  const { icon, iconSvgNodes, color } = appearance(data);
+export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
+  const { iconSvgNodes, color } = readCalloutAppearance(data);
 
   return (
     <ContainerAnchor
-      id={id}
       editor={editor}
-      name="callout"
       triggerLabel="Callout icon and color"
       width="xl"
       glyph={
@@ -50,12 +38,7 @@ export function CalloutAnchor({ id, data, editor }: BlockAnchorProps) {
         />
       }
       sections={({ editor: api, close }) => (
-        <CalloutAppearance
-          color={color}
-          icon={icon}
-          onChange={(next) => api.update({ icon, iconSvgNodes, color, ...next })}
-          close={close}
-        />
+        <CalloutAppearanceFor data={data} api={api} close={close} />
       )}
     />
   );
