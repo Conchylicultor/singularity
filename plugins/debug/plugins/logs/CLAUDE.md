@@ -24,7 +24,10 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
+    - `primitives/auto-scroll.JumpToBottomButton`
     - `primitives/auto-scroll.useStickyScroll`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`

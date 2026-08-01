@@ -10,24 +10,36 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useVisibleEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import {
+  eventKey,
+  jsonlEventsResource,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 interface UserEntry {
-  eventIndex: number;
+  key: string;
   userIndex: number;
   text: string;
   at: string;
 }
 
+/**
+ * Entries are keyed by content identity, never by position.
+ *
+ * This used to carry the index into the *unfiltered* resource array while the
+ * DOM stamps `data-event-index` over the *filtered* one, so every entry pointed
+ * at the wrong row in any conversation where a `JsonlViewer.EventFilter` had
+ * hidden something earlier — `ask-user-question` hides `user-text` events, which
+ * is exactly the kind listed here.
+ */
 function extractUserEntries(events: JsonlEvent[]): UserEntry[] {
   const entries: UserEntry[] = [];
   let userIndex = 0;
-  for (let i = 0; i < events.length; i++) {
-    const ev = events[i]!;
+  for (const ev of events) {
     if (ev.kind === "user-text") {
       entries.push({
-        eventIndex: i,
+        key: eventKey(ev),
         userIndex: ++userIndex,
         text: ev.text,
         at: ev.at,
@@ -61,15 +73,23 @@ function paneScrollFrom(from: Element): HTMLElement | null {
 export function MessageToc() {
   const { convId } = conversationPane.useParams();
   const result = useResource(jsonlEventsResource, { id: convId });
-
+  // Gate here so the list below never has to represent "loading" as "no
+  // messages" — the split exists purely so the events hook runs on real data.
   if (result.pending) return null;
+  return <MessageTocList events={result.data} />;
+}
 
-  const entries = extractUserEntries(result.data);
+function MessageTocList({ events }: { events: JsonlEvent[] }) {
+  // The rendered set, not the raw resource: listing an event the transcript
+  // filters out offers an entry with no row behind it.
+  const visible = useVisibleEvents(events);
+
+  const entries = extractUserEntries(visible);
   if (entries.length === 0) return null;
 
-  const scrollTo = (eventIndex: number, from: Element) => {
+  const scrollTo = (key: string, from: Element) => {
     const scroll = paneScrollFrom(from);
-    const el = scroll?.querySelector(`[data-event-index="${eventIndex}"]`);
+    const el = scroll?.querySelector(`[data-event-key="${CSS.escape(key)}"]`);
     revealElement(el, { behavior: "smooth", block: "start" });
   };
 
@@ -97,9 +117,9 @@ export function MessageToc() {
           <FloatingActionFadeIn>
             {entries.map((entry) => (
               <button
-                key={entry.eventIndex}
+                key={entry.key}
                 type="button"
-                onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
+                onClick={(e) => scrollTo(entry.key, e.currentTarget)}
                 className="flex w-full items-start gap-sm px-sm py-xs text-left text-caption hover:bg-accent"
               >
                 <span className="shrink-0 tabular-nums text-muted-foreground">

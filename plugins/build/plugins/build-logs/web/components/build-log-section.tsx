@@ -1,6 +1,6 @@
 import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useRef, useCallback, useEffect, type ReactElement } from "react";
+import { useState, useRef, useCallback, type ReactElement } from "react";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
@@ -111,12 +111,8 @@ function LiveLogs(): ReactElement {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
 
-  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
-    useStickyScroll({ resetKey: "build" });
-
-  useEffect(() => {
-    scrollIfPinned();
-  }, [entries.length, scrollIfPinned]);
+  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
+    useStickyScroll();
 
   useReconnectingWebSocket({
     url: WS_URL,
@@ -202,10 +198,12 @@ function LiveLogs(): ReactElement {
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
           </div>
         ))}
+        {/* Must stay the last child: it marks the true end of the content. */}
+        {bottomSentinel}
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={{ isPinned, hasUnread, jumpToBottom }} />
+        <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
       </Pin>
     </Stack>
   );

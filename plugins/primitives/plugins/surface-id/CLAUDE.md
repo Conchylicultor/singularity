@@ -25,6 +25,7 @@ once per surface by `TabSurface`.
     - `apps/home/app-cards`
     - `apps/sonata/controls`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/jsonl-viewer`
     - `layouts/miller`
     - `primitives/pane`
     - `primitives/shortcuts`

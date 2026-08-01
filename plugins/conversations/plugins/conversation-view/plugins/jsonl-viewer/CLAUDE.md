@@ -109,6 +109,7 @@ back.
     - `primitives/scroll-reveal.revealElement`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineRenderSlot`
+    - `primitives/surface-id.useSurfaceTabId`
   - Exports (types):
     - `EventFilterContribution`
     - `OverlayContribution`
@@ -123,6 +124,7 @@ back.
     - `useLastAssistantEvent`
     - `useRowMarkdown`
     - `useSectionExpand`
+    - `useVisibleEvents`
 - Server:
   - Contributes: `resource.declare` "jsonl-events"
   - Uses:
@@ -139,6 +141,7 @@ back.
     - `primitives/live-state.resourceDescriptor`
   - Exports (types): `JsonlEventsResponse`
   - Exports (values):
+    - `eventKey`
     - `JsonlEventsPayloadSchema`
     - `jsonlEventsResource`
 - Cross-plugin:

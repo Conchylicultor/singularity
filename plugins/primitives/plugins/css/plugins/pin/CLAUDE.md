@@ -83,6 +83,7 @@ offsets expressible on the semantic ramp.
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/notes`
+    - `debug/logs`
     - `improve/element-picker`
     - `page/audio`
     - `page/bookmark`

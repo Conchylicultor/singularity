@@ -16,6 +16,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
@@ -28,6 +29,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { SectionExpandProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
+import { useVisibleEvents } from "../use-visible-events";
 
 interface UsageTotals {
   output: number;
@@ -173,6 +175,7 @@ function JsonlPaneInner({
 }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone" || conversation.status === "done";
+  const surfaceTabId = useSurfaceTabId();
 
   // Pending-turn feedback: the store owns the send lifecycle; this pane owns
   // the events array, so it drives the reconcile pass (transcript match,
@@ -185,14 +188,9 @@ function JsonlPaneInner({
   }, [conversation.id, events, pendingTurns]);
 
   const totals = useMemo(() => aggregateUsage(events), [events]);
-  // Plugin-contributed hide predicates. Computed over the full `events` so the
-  // EventFilter slot can remove individual rows (e.g. a raw answer turn already
-  // shown inside a card) that the EventRenderer's predicate tier can't suppress.
-  const filters = JsonlViewer.EventFilter.useContributions();
-  const visibleEvents = useMemo(
-    () => events.filter((e) => !filters.some((f) => f.hide(e))),
-    [events, filters],
-  );
+  // Plugin-contributed hide predicates, via the shared owner — every surface
+  // that enumerates the transcript must agree on which events exist.
+  const visibleEvents = useVisibleEvents(events);
   const lastAssistantEvent = useMemo(() => {
     for (let i = events.length - 1; i >= 0; i--) {
       if (events[i]?.kind === "assistant-text") return events[i] ?? null;
@@ -221,15 +219,24 @@ function JsonlPaneInner({
   // Destructure at the call site: react-hooks/refs taints the handle object
   // (it carries scrollRef), so member access on it during render is flagged;
   // plain destructured locals are clean.
-  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
+  //
+  // No effect keyed on events.length any more: the hook watches its own bottom
+  // sentinel, so new events, images loading and shiki resolving all settle
+  // without this component knowing anything about it.
+  //
+  // followKey is the user sending a turn, NOT `isWorking`. A rising `isWorking`
+  // also fires when a background agent resumes on its own, which must not yank a
+  // reading user to the bottom.
+  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
     useStickyScroll({
-      resetKey: conversation.id,
-      forceScrollKey: isWorking ? 1 : 0,
+      followKey: pendingTurns.length,
+      persist: {
+        // Per surface, not just per conversation: two panes can be open on the
+        // same conversation and are allowed to sit at different positions.
+        key: `conversation-scroll:${conversation.id}:${surfaceTabId ?? "detached"}`,
+        anchorAttr: "data-event-key",
+      },
     });
-
-  useEffect(() => {
-    scrollIfPinned();
-  }, [events.length, pendingTurns.length, scrollIfPinned]);
 
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
@@ -266,6 +273,8 @@ function JsonlPaneInner({
             </EventSections>
           </LastAssistantProvider>
         )}
+        {/* Must stay the last child: it marks the true end of the content. */}
+        {bottomSentinel}
       </Scroll>
       {totals && (
         <Pin to="bottom" stretch offset="sm" layer="raised" decorative>
@@ -282,7 +291,7 @@ function JsonlPaneInner({
       )}
       <JsonlViewer.Overlay.Render />
       <JumpToBottomButton
-        handle={{ isPinned, hasUnread, jumpToBottom }}
+        handle={{ isFollowing, jumpToBottom }}
         // eslint-disable-next-line layout/no-adhoc-layout -- off-ramp corner pin on an external Button (self-renders null when hidden); bottom-12/right-4 are off the spacing ramp
         className="absolute bottom-12 right-4 z-nav"
       />

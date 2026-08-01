@@ -10,6 +10,7 @@
   - Uses:
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+    - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
     - `primitives/auto-scroll.scrollToBottom`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`

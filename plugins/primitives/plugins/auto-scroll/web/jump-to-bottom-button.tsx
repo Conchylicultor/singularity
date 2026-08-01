@@ -7,13 +7,13 @@ import type { StickyScrollHandle } from "./use-sticky-scroll";
  * The button only needs the view state + the jump action — never the
  * `scrollRef`. Narrowing the prop to this ref-free slice keeps a tainted ref
  * object out of the component's surface: consumers can hand it the destructured
- * pin/unread/jump fields (a plain object) instead of the whole handle, so
- * passing it never trips the "cannot access ref during render" rule. A full
+ * follow/jump fields (a plain object) instead of the whole handle, so passing it
+ * never trips the "cannot access ref during render" rule. A full
  * `StickyScrollHandle` still satisfies this structurally.
  */
 export type JumpToBottomView = Pick<
   StickyScrollHandle,
-  "isPinned" | "hasUnread" | "jumpToBottom"
+  "isFollowing" | "jumpToBottom"
 >;
 
 export interface JumpToBottomButtonProps {
@@ -28,7 +28,12 @@ export function JumpToBottomButton({
   className,
   label,
 }: JumpToBottomButtonProps): ReactElement | null {
-  if (handle.isPinned && !handle.hasUnread) return null;
+  // Shown whenever the user is away from the bottom. There is no separate
+  // "unread" concept any more: it could only ever be set by a per-consumer
+  // "content arrived" signal, and deleting those signals is the point of the
+  // sentinel. Offering the ride back whenever you are not at the bottom is both
+  // simpler and strictly more available.
+  if (handle.isFollowing) return null;
   return (
     <Button
       type="button"

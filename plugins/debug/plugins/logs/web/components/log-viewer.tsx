@@ -1,8 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useStickyScroll } from "@plugins/primitives/plugins/auto-scroll/web";
+import { JumpToBottomButton, useStickyScroll } from "@plugins/primitives/plugins/auto-scroll/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -112,10 +114,8 @@ function LogChannelView({ selected }: { selected: ChannelRef }) {
 
   const selectedRef = useLatestRef(selected);
 
-  const { scrollRef, scrollIfPinned } = useStickyScroll({ threshold: 32 });
-  useEffect(() => {
-    scrollIfPinned();
-  }, [entries, scrollIfPinned]);
+  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
+    useStickyScroll({ threshold: 32 });
 
   const isBackendSource = selected.source === "backend";
   const isGatewaySource = selected.source === "gateway";
@@ -189,10 +189,16 @@ function LogChannelView({ selected }: { selected: ChannelRef }) {
   }, [isGatewaySource, selected]);
 
   return (
+    // The jump-to-bottom off-ramp is pinned against this cell, not the scroller,
+    // so it does not scroll with the log. Previously this pane had no off-ramp at
+    // all, which made it the one consumer where a wrong follow state was
+    // invisible: "stuck at the bottom" and "logs stopped arriving" looked
+    // identical.
+    <Fill axis="y" className="relative">
     <Scroll
       fill
       ref={scrollRef}
-      className="rounded-md border bg-muted/30 p-lg font-mono text-caption"
+      className="h-full rounded-md border bg-muted/30 p-lg font-mono text-caption"
     >
       {entries.map((entry) => (
         <div
@@ -208,6 +214,13 @@ function LogChannelView({ selected }: { selected: ChannelRef }) {
           <span>{entry.line}</span>
         </div>
       ))}
+      {/* Must stay the last child: it marks the true end of the content. */}
+      {bottomSentinel}
     </Scroll>
+    {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
+    <Pin to="bottom" style={{ bottom: "0.25rem" }}>
+      <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
+    </Pin>
+    </Fill>
   );
 }

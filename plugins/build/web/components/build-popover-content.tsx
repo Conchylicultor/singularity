@@ -93,14 +93,8 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   const lastSeqRef = useRef<number>(0);
   const selectedRef = useRef("build");
 
-  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
-    useStickyScroll({
-      resetKey: "build",
-    });
-
-  useEffect(() => {
-    scrollIfPinned();
-  }, [entries.length, scrollIfPinned]);
+  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
+    useStickyScroll();
 
   const wsHandle = useReconnectingWebSocket({
     url: WS_URL,
@@ -192,10 +186,12 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
           </div>
         ))}
+        {/* Must stay the last child: it marks the true end of the content. */}
+        {bottomSentinel}
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={{ isPinned, hasUnread, jumpToBottom }} />
+        <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
       </Pin>
     </Stack>
   );

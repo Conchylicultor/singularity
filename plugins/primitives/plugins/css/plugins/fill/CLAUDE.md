@@ -63,6 +63,7 @@ composes last.
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversations-view`
+    - `debug/logs`
     - `debug/timeline`
     - `debug/trace/pane`
     - `debug/trace/spans`

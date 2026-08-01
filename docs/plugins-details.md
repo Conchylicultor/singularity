@@ -8101,6 +8101,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/scroll-reveal.revealElement`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineRenderSlot`
+              - `primitives/surface-id.useSurfaceTabId`
             - Exports (types):
               - `EventFilterContribution`
               - `OverlayContribution`
@@ -8115,6 +8116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useLastAssistantEvent`
               - `useRowMarkdown`
               - `useSectionExpand`
+              - `useVisibleEvents`
           - Server:
             - Contributes: `resource.declare` "jsonl-events"
             - Uses:
@@ -8131,6 +8133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.resourceDescriptor`
             - Exports (types): `JsonlEventsResponse`
             - Exports (values):
+              - `eventKey`
               - `JsonlEventsPayloadSchema`
               - `jsonlEventsResource`
           - Cross-plugin:
@@ -8423,6 +8426,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
                   - `primitives/auto-scroll.scrollToBottom`
                   - `primitives/css/center.Center`
                   - `primitives/css/column.Column`
@@ -10601,7 +10605,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.sidebarNavItem`
+          - `primitives/auto-scroll.JumpToBottomButton`
           - `primitives/auto-scroll.useStickyScroll`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
@@ -13670,7 +13677,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `code-explorer`
+              - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
+              - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
               - `improve/element-picker`
@@ -18083,6 +18092,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/persistent-draft.clearDraft`
+          - `primitives/persistent-draft.readDraft`
+          - `primitives/persistent-draft.writeDraft`
         - Exports (types):
           - `EdgeAutoScroll`
           - `FindScrollParentOptions`
@@ -18092,6 +18104,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ScrollChildIntoViewOptions`
           - `ScrollToBottomOptions`
           - `StickyScrollHandle`
+          - `StickyScrollPersist`
           - `UseEdgeAutoScrollOptions`
           - `UseStickyScrollOptions`
         - Exports (values):
@@ -18828,6 +18841,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversations-view`
+              - `debug/logs`
               - `debug/timeline`
               - `debug/trace/pane`
               - `debug/trace/spans`
@@ -19096,6 +19110,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/notes`
+              - `debug/logs`
               - `improve/element-picker`
               - `page/audio`
               - `page/bookmark`
@@ -23005,7 +23020,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `framework/web-core`
           - Web:
             - Exports (values): `yieldToMain`
-    - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
+    - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
           - `apps/sonata/library`
@@ -23013,11 +23028,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
+          - `primitives/auto-scroll`
           - `primitives/css/color-picker`
           - `shell/global-action-bar`
           - `tasks/task-draft-form`
       - Web:
-        - Exports (values): `useDraft`
+        - Exports (types): `DraftOptions`
+        - Exports (values):
+          - `clearDraft`
+          - `DEFAULT_DRAFT_TTL`
+          - `draftKey`
+          - `readDraft`
+          - `useDraft`
+          - `writeDraft`
     - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
       - Web:
         - Uses:
@@ -23519,6 +23542,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/home/app-cards`
           - `apps/sonata/controls`
           - `conversations/conversation-view`
+          - `conversations/conversation-view/jsonl-viewer`
           - `layouts/miller`
           - `primitives/pane`
           - `primitives/shortcuts`

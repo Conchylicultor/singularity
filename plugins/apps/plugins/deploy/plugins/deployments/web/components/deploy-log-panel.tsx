@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { useCallback, useRef, useState, type ReactElement } from "react";
 import { MdContentCopy } from "react-icons/md";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -41,12 +41,8 @@ export function DeployLogPanel(): ReactElement {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
 
-  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
-    useStickyScroll({ resetKey: DEPLOY_LOG_CHANNEL });
-
-  useEffect(() => {
-    scrollIfPinned();
-  }, [entries.length, scrollIfPinned]);
+  const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
+    useStickyScroll();
 
   useReconnectingWebSocket({
     url: WS_URL,
@@ -138,10 +134,12 @@ export function DeployLogPanel(): ReactElement {
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
           </Stack>
         ))}
+        {/* Must stay the last child: it marks the true end of the content. */}
+        {bottomSentinel}
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={{ isPinned, hasUnread, jumpToBottom }} />
+        <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
       </Pin>
     </Stack>
   );

@@ -13,6 +13,53 @@ that wants it. Today that is four roles:
 - **gesture edge auto-scroll** — `useEdgeAutoScroll`
 - **scroll-container discovery** — `findScrollParent`
 
+## `useStickyScroll` — following is an intent, never an inference
+
+You follow until a scroll **the hook did not author** lands you elsewhere; you
+follow again when such a scroll lands you back at the bottom. Content settling,
+reflow and new messages only *carry out* that standing intent. Consumers render
+the returned `bottomSentinel` as the scroll container's last child (asserted at
+mount) and signal nothing — there is no content-length effect to remember.
+
+**Do not reintroduce a size observer.**
+[`research/2026-05-25-global-sticky-scroll-redesign.md`](../../../../research/2026-05-25-global-sticky-scroll-redesign.md)
+removed one because a size delta is *sign-blind*: opening the file pane rewraps
+text taller, which is indistinguishable from new content. An
+`IntersectionObserver` on the sentinel is *sign-asymmetric* — a taller reflow can
+only make the bottom **less** visible — so it can exclusively un-follow, and a
+signal like that cannot drag anyone downward. Asserted in
+`internal/sticky-scroll-machine.test.ts`. The guarantee is narrower than it
+sounds: while following, reflow *does* write. It is "no observation-driven writes
+**while not following**".
+
+**Intent = a scroll whose offset ≠ what we last wrote** (read back after writing,
+so clamping counts). Do **not** swap in gesture listeners: they miss scrollbar
+drags, find-in-page, `useEdgeAutoScroll`, and `revealElement` — which
+`jsonl-pane`'s `StickyUserHeader` fires on expand, so a user at the bottom would
+be yanked back and the expand undone on the same frame. **Every own write must be
+instant, including `jumpToBottom`** — a smooth scroll's intermediate offsets never
+match the recorded one, so the hook reads its own animation as the user leaving
+and cancels the jump mid-flight. The one thing the comparison cannot serve is the
+`scroll` handler itself (IO delivers async, so its cached answer describes the
+pre-scroll position); that reads geometry via `isAtBottom`, which is safe because
+only a position change fires `scroll`.
+
+**`followKey` means "the user just acted"** — never ambient state. `isWorking`
+also rises when a background agent resumes, which must not move a reading user.
+
+**Sentinel geometry, both load-bearing:** the pin `threshold` becomes bottom
+`rootMargin` (a zero-height node at `threshold: 0` means a 0px pin distance), and
+the root is widened hugely left/right so horizontal scroll on an `axis="both"`
+surface can't carry the sentinel out of view.
+
+**`persist: { key, anchorAttr }`** (opt-in): `key` must identify the *surface
+instance* (compose `useSurfaceTabId()`) — two panes can show one conversation at
+different positions. `anchorAttr`'s value must be content identity: use
+`data-event-key`, never `data-event-index`, which indexes the *filtered* array and
+re-points whenever an `EventFilter` resolves. A saved anchor whose row is gone
+returns `missing`, distinct from `none`, so a key-scheme regression can't read as
+"first visit".
+
 ## `useEdgeAutoScroll` — the gesture contract
 
 While a gesture's pointer sits in the top or bottom edge band of its scroll
@@ -52,6 +99,9 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/persistent-draft.clearDraft`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
   - Exports (types):
     - `EdgeAutoScroll`
     - `FindScrollParentOptions`
@@ -61,6 +111,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `ScrollChildIntoViewOptions`
     - `ScrollToBottomOptions`
     - `StickyScrollHandle`
+    - `StickyScrollPersist`
     - `UseEdgeAutoScrollOptions`
     - `UseStickyScrollOptions`
   - Exports (values):

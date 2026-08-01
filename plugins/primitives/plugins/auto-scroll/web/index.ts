@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { useStickyScroll } from "./use-sticky-scroll";
 export type {
   StickyScrollHandle,
+  StickyScrollPersist,
   UseStickyScrollOptions,
 } from "./use-sticky-scroll";
 export { JumpToBottomButton } from "./jump-to-bottom-button";
