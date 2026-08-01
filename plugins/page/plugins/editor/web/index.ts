@@ -19,6 +19,11 @@ export type {
 export { BlockEditor } from "./components/block-editor";
 export type { BlockEditorHandle } from "./components/block-editor";
 export type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
+export { caretFlightReportSink } from "./internal/caret-authority";
+export type {
+  CaretFlightAbortReason,
+  CaretFlightAbortReport,
+} from "./internal/caret-authority";
 export { PageContentColumn } from "./components/page-content-column";
 export { BLOCK_INSET, BLOCK_INDENT, MARKER_GUTTER } from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";

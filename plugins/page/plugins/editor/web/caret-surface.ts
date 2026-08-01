@@ -14,6 +14,19 @@ export interface CaretLandOptions {
    *  cross-block nav, split/merge, undo/redo, and explicit jump-to-block scroll;
    *  a pointer-driven placement lands where the user pointed (already visible). */
   scroll?: boolean;
+  /**
+   * Fired when the caret is really IN the surface — i.e. caret-READY, not merely
+   * mounted. A CRDT-bound editor's root is childless until its content doc lands,
+   * and there is nothing to hold a caret until then, so the two moments are
+   * genuinely different (see `focusHydratingAware`).
+   *
+   * The caret authority injects it: while a landing is outstanding it owns the
+   * keyboard and buffers what the user types, and this callback is the ONLY
+   * signal that says "the buffer can be flushed into you now". A surface that
+   * takes the caret and never reports back leaves the authority holding the
+   * keyboard, so every landing path must call it.
+   */
+  onLanded?: () => void;
 }
 
 /**

@@ -8,6 +8,7 @@ import { namesField, type BlockFieldChanges } from "../../core/block-diff";
 import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { loadPageBlocks } from "./forest";
+import { lockPageForWrite } from "./page-write-lock";
 import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
 import { parkRanks, pairChanged } from "./rank-park";
@@ -195,6 +196,14 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   });
 
   const watermark = await db.transaction(async (tx) => {
+    // Take the page's write lock, the same one `handleApplyBlockOp` holds across
+    // its read-modify-write. This handler is a BLIND writer (its values come from
+    // the client, not from the read above), so it needs no atomic read of its
+    // own — but the op handler does, and without this its window would still be
+    // open to a patch: a `convertTo` patch committing between an op's read and
+    // its write left the op reasserting the pre-convert `type`, which is how a
+    // bullet typed immediately after an Enter turned back into a paragraph.
+    await lockPageForWrite(tx, params.pageId);
     // Vacate the `(parent_id, rank)` pairs this patch reassigns before anything
     // claims them. Parking runs first so the inserts below can take a pair a
     // re-ranked row is moving off (and so a swap-undo never trips the per-tuple

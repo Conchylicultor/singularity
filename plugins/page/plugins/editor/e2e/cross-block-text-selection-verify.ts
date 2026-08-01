@@ -22,6 +22,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const r = report();
@@ -34,24 +35,13 @@ await withBrowser(async (h) => {
 
   // A heading, a bullet, and a bullet indented under it — so the clipboard assertion
   // covers per-type markdown prefixes AND nesting, not just line breaks.
-  const type = async (line: string, indent = false) => {
-    if (indent) await page.keyboard.press("Tab");
-    await page.keyboard.type(line);
-    await page.waitForTimeout(150);
-  };
-  // Settle either side of each Enter: a keystroke landing within ~20ms of a split can
-  // be dropped (see the pre-seed note in the editor's CLAUDE.md), and back-to-back
-  // typing loses each line's first character under host load. A setup flake, but it
-  // scrambles every assertion downstream.
-  await type("# Alpha heading");
-  await page.keyboard.press("Enter");
-  await page.waitForTimeout(150);
-  await type("- Bravo bullet");
-  await page.keyboard.press("Enter");
-  await page.waitForTimeout(150);
-  // Enter on a bullet already mints a bullet, so this line must NOT re-type the
-  // "- " shortcut — the type is inherited and the marker would stay literal text.
-  await type("Charlie nested", true);
+  await typeLines(page, [
+    "# Alpha heading",
+    "- Bravo bullet",
+    // Enter on a bullet already mints a bullet, so this line must NOT re-type the
+    // "- " shortcut — the type is inherited and the marker would stay literal text.
+    { text: "Charlie nested", indent: "in" },
+  ]);
   await page.waitForTimeout(2000);
 
   const block = (i: number) => editableBlocks(page).nth(i);
@@ -135,4 +125,6 @@ await withBrowser(async (h) => {
   await page.mouse.up();
   await page.waitForTimeout(500);
   r.eq("an upward cross-block drag selects all three", await selectedCount(), 3);
+
+  r.finish();
 });

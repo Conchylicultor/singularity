@@ -2,13 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type MutableRefObject,
   type ReactNode,
 } from "react";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -53,6 +54,8 @@ import {
 } from "./internal/optimistic-block-ops";
 import { serializeForest } from "./serialize-blocks";
 import { landCaret } from "./internal/caret-landing";
+import { createCaretAuthority } from "./internal/caret-authority";
+import type { BlockFocusHandle } from "./internal/caret-authority";
 import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-surface";
 import { useAnchorTypes, useBlockHandles } from "./internal/block-handles";
 import { useMemoryBlockStore, type BlockStore } from "./block-store";
@@ -180,44 +183,10 @@ function derivePatchEntry(
   return { undoPatch, redoPatch, undoFocus, redoFocus };
 }
 
-/**
- * A block's focus capabilities, registered by its renderer. It is the block-side
- * `CaretSurface`: every focusable block provides `focus`; text editors
- * additionally provide caret-precise placement so the coordinator can land the
- * caret at a pixel column or boundary. Void/textarea blocks (divider, code)
- * register `focus` only. On top of the surface contract, a bound text editor
- * exposes content surgery (`truncateAt` / `appendRunsAtEnd`), which only a block
- * bound to a content doc can implement.
- */
-export interface BlockFocusHandle extends CaretSurface {
-  /** Place the caret at a linear character offset (the merge join point). */
-  focusOffset?: (offset: number, opts?: CaretLandOptions) => void;
-  /**
-   * Content surgery (registered by text editors, whose Lexical instance is
-   * bound to the block's per-block content doc): delete the LIVE content from
-   * linear `offset` to the end. Enter-split uses it to leave the head in the
-   * origin block — the reducer's row-level truncation is ignored by a bound
-   * editor.
-   */
-  truncateAt?: (offset: number) => void;
-  /**
-   * Content surgery: append `runs` to the LIVE content's end, focus, and land
-   * the caret at the join offset. Backspace-merge drives the target block's
-   * editor with it (through Lexical, so the collab binding syncs the
-   * concatenation into the target's content doc with marks/tokens intact).
-   */
-  appendRunsAtEnd?: (runs: RichText) => void;
-  /**
-   * Content surgery: delete the LIVE content in the linear range `[from, to)`.
-   * The non-tail sibling of `truncateAt` — a slash-menu commit strips its
-   * `/query`, a markdown shortcut its `> ` prefix — and the ONLY way to strip
-   * text a type change consumed, since `page_blocks.data.text` is a projection
-   * of the doc this edits, not a place text can be removed from.
-   */
-  deleteRange?: (from: number, to: number) => void;
-  /** Serialize this block's LIVE runs (the read dual of `appendRunsAtEnd`). */
-  readRuns?: () => RichText;
-}
+// The handle type is declared BY the caret authority, which owns the registry it
+// is registered into — the provider cannot reach a handle except through the
+// authority's narrow surface, and that is the point (see `caret-authority.ts`).
+export type { BlockFocusHandle } from "./internal/caret-authority";
 
 /**
  * The ONE place in the row-write pipeline permitted to name `text`.
@@ -280,6 +249,14 @@ interface BlockEditorContextValue {
   focusedBlockId: string | null;
   setFocusedBlockId: (id: string | null) => void;
   registerFocusHandle: (id: string, handle: BlockFocusHandle) => () => void;
+  /**
+   * Hand the caret authority the block list's interaction surface (the focusable
+   * container `useBlockSelection` owns). While a landing is outstanding the
+   * authority parks the caret THERE and buffers input from it, so the block the
+   * user just left stops being an editing host and nothing can type into it.
+   * Called by `BlockEditorInner`; there is exactly one such surface per editor.
+   */
+  attachContainer: (el: HTMLElement | null) => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
   /**
    * "Strip then convert" — THE single primitive behind every commit that
@@ -606,7 +583,6 @@ export function BlockEditorProviderInner({
     [anchorTypes],
   );
   const blockHandles = useBlockHandles();
-  const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
 
   // `type ⇒ does this type carry text`, read generically off the dispatch slot
   // (never a hardcoded list). The row-write pipeline is the one place that must
@@ -627,11 +603,6 @@ export function BlockEditorProviderInner({
   const caretAfterRef = useLatestRef(caretAfter);
   const flatOrderRef = useRef<Block[]>([]);
   const rowsRef = useRef<Block[]>([]);
-  // A queued focus carries its scroll intent so the deferred landing (fired by
-  // `registerFocusHandle` when the block finally mounts) honors the same
-  // scroll/no-scroll choice the caller made — a `focusNew` reveals its block, a
-  // pointer `focusBlock` does not.
-  const pendingFocusRef = useRef<{ id: string; scroll: boolean } | null>(null);
 
   // The persistence seam. All reads (`data`/`serverData`/`pending`) and writes
   // (`dispatch`/`move`/`bulk*`) go through it; everything else in this
@@ -655,19 +626,30 @@ export function BlockEditorProviderInner({
     [store.serverData],
   );
 
+  // --- The caret authority ---------------------------------------------------
+  // The ONE owner of "where the caret is" and of the block focus-handle registry
+  // (`internal/caret-authority.ts`). Everything below hands it a landing policy;
+  // nothing below can reach a handle to focus one itself, which is what makes the
+  // mount-gap race unreintroducible rather than merely fixed.
+  const liveIds = useMemo(() => new Set(store.data.map((b) => b.id)), [store.data]);
+  const getOriginId = useEventCallback(() => focusedBlockId);
+  const isLiveRow = useEventCallback((id: string) => liveIds.has(id));
+  const [authority] = useState(() => createCaretAuthority({ getOriginId, isLiveRow }));
+
+  // Push-based flight bound, never a timer: every commit is a fresh view of what
+  // the surface RENDERS, so a claimed landing whose block never becomes a visible
+  // line — a refused op, or a target inside a collapsed ancestor — is detected
+  // and the buffered keystrokes go back to the origin. `flatOrderRef` is the
+  // consumer's own flatten, written by a DESCENDANT's effect, which React runs
+  // before this one in the same commit. No dep array: a commit that changed
+  // nothing else is still evidence.
+  useEffect(() => {
+    authority.reconcile((id) => flatOrderRef.current.some((b) => b.id === id));
+  });
+
   const registerFocusHandle = useCallback(
-    (id: string, handle: BlockFocusHandle) => {
-      focusHandlesRef.current.set(id, handle);
-      const pending = pendingFocusRef.current;
-      if (pending?.id === id) {
-        pendingFocusRef.current = null;
-        handle.focus({ scroll: pending.scroll });
-      }
-      return () => {
-        focusHandlesRef.current.delete(id);
-      };
-    },
-    [],
+    (id: string, handle: BlockFocusHandle) => authority.registerHandle(id, handle),
+    [authority],
   );
 
   const setFlatOrder = useCallback((blocks: Block[]) => {
@@ -678,6 +660,29 @@ export function BlockEditorProviderInner({
     rowsRef.current = blocks;
   }, []);
 
+  /**
+   * Advance `rowsRef` to the rows a mutation THIS TURN just produced.
+   *
+   * `rowsRef` is refreshed by a consumer effect, i.e. once per React commit, so
+   * two mutations issued in the same synchronous turn both snapshot the
+   * PRE-first-mutation rows — and each writes its own full rows back. The second
+   * then silently reasserts the first's columns: replaying a buffered `Tab` and
+   * then the `* ` markdown prefix ran `indent` (an op) and `convertTo` (a patch)
+   * in one turn, and the patch's upsert carried the pre-indent `parentId`,
+   * un-indenting the block on the server. Captured as
+   * `[PATCHDIAG] upserts=<item><-<page>` with no intervening commit.
+   *
+   * A human never noticed because React commits between their keystrokes; the
+   * caret authority replays a whole buffer inside one turn, so a mutation now
+   * routinely follows another with no commit in between. Every chokepoint that
+   * computes an `after` publishes it here, so the next one in the same turn
+   * builds on it. The consumer effect still overwrites this on the next commit
+   * with the real (optimistically-overlaid) rows, so it can never drift.
+   */
+  const advanceRows = useCallback((after: Block[]) => {
+    rowsRef.current = after;
+  }, []);
+
   const requestBlockMenu = useCallback((id: string) => setBlockMenuDraftId(id), []);
   const clearBlockMenu = useCallback(
     (id?: string) => setBlockMenuDraftId((cur) => (id == null || cur === id ? null : cur)),
@@ -686,27 +691,28 @@ export function BlockEditorProviderInner({
 
   const focusBlock = useCallback(
     (id: string, caretOffset?: number, opts?: CaretLandOptions) => {
-      const handle = focusHandlesRef.current.get(id);
-      if (handle) {
+      authority.land(id, (handle, land) => {
         // When a caret offset is requested and this block is a text editor, land
         // the caret precisely (the same leaf-aware placement `merge` uses); else a
         // plain focus restoring its last selection.
-        if (caretOffset !== undefined && handle.focusOffset) handle.focusOffset(caretOffset, opts);
-        else handle.focus(opts);
-      } else pendingFocusRef.current = { id, scroll: opts?.scroll ?? false };
+        if (caretOffset !== undefined && handle.focusOffset) {
+          handle.focusOffset(caretOffset, { ...opts, ...land });
+        } else handle.focus({ ...opts, ...land });
+      });
     },
-    [],
+    [authority],
   );
 
   const focusBlockBoundary = useCallback(
-    (id: string, edge: "start" | "end", opts?: CaretLandOptions): boolean => {
-      const handle = focusHandlesRef.current.get(id);
-      if (!handle) return false;
-      if (handle.focusBoundary) handle.focusBoundary(edge, opts);
-      else handle.focus(opts);
-      return true;
-    },
-    [],
+    (id: string, edge: "start" | "end", opts?: CaretLandOptions): boolean =>
+      // Boundary landings answer a question — "can this row take a caret?" — that
+      // only a MOUNTED host can answer, and the empty-background click falls back
+      // to selecting the row on `false`. So this never claims a flight.
+      authority.landIfMounted(id, (handle, land) => {
+        if (handle.focusBoundary) handle.focusBoundary(edge, { ...opts, ...land });
+        else handle.focus({ ...opts, ...land });
+      }),
+    [authority],
   );
 
   // --- Unified undo/redo (single document-level stack) ----------------------
@@ -919,6 +925,7 @@ export function BlockEditorProviderInner({
       const after = transform(before);
       const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
       if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
+      advanceRows(after);
       const { focusId } = opts;
       if (opts.record !== false) {
         record({
@@ -941,7 +948,7 @@ export function BlockEditorProviderInner({
       }
       dispatchPatch(redoPatch);
     },
-    [record, dispatchPatch, focusBlock, liveRowsRef],
+    [record, dispatchPatch, focusBlock, liveRowsRef, advanceRows],
   );
 
   // The one-row case of `commitRows`: rewrite exactly the target row and land
@@ -1090,10 +1097,11 @@ export function BlockEditorProviderInner({
       if (diff.inserted.length === 0 && diff.updated.length === 0 && diff.deleted.length === 0) {
         return;
       }
+      advanceRows(after);
       recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op, before));
       store.dispatch(buildOverlayOp(op, before, anchorTypes));
     },
-    [store, recordStructural, anchorTypes],
+    [store, recordStructural, anchorTypes, advanceRows],
   );
 
   // Paste a serialized forest — a plain `dispatchOp`, which is the whole point:
@@ -1199,25 +1207,26 @@ export function BlockEditorProviderInner({
     (op: BlockOp): { before: Block[]; after: Block[] } => {
       const before = rowsRef.current;
       const after = fromOpResult(before, op, anchorTypes);
+      advanceRows(after);
       store.dispatch(buildOverlayOp(op, before, anchorTypes));
       return { before, after };
     },
-    [store, anchorTypes],
+    [store, anchorTypes, advanceRows],
   );
 
-  // Focus a freshly-minted block by its known id. If its text editor has already
-  // mounted, focus immediately; otherwise queue it so `registerFocusHandle`
-  // focuses it on mount (the live push will mount it shortly).
-  const focusNew = useCallback((id: string) => {
-    // A freshly-created block (Enter / split / insert) is a scroll-wanted
-    // landing: the new block may be below the fold, so reveal it.
-    pendingFocusRef.current = { id, scroll: true };
-    const handle = focusHandlesRef.current.get(id);
-    if (handle) {
-      pendingFocusRef.current = null;
-      handle.focus({ scroll: true });
-    }
-  }, []);
+  // Move the caret into a freshly-minted block by its known id. The block does
+  // not exist yet — this runs in the same turn as the op that creates it — so
+  // the authority CLAIMS the caret: it takes the keyboard and buffers what the
+  // user types until the new editor's caret is ready. That claim is the whole
+  // fix; without it every keystroke in the mount gap went to the origin block.
+  const focusNew = useCallback(
+    (id: string) => {
+      // A freshly-created block (Enter / split / insert) is a scroll-wanted
+      // landing: the new block may be below the fold, so reveal it.
+      authority.land(id, (handle, land) => handle.focus({ scroll: true, ...land }));
+    },
+    [authority],
+  );
 
   // Insert a new block at the end of the page. Top-level page content is
   // parented to the page block (`parentId: pageId`), since `computePageId(null)`
@@ -1346,7 +1355,7 @@ export function BlockEditorProviderInner({
       // `data.text` — which must be exactly what was removed from the
       // target, not a projection-lagged snapshot.
       const mergingRuns = runs ?? runsOfNode(block);
-      const targetHandle = focusHandlesRef.current.get(target.id);
+      const targetHandle = authority.surgeryOf(target.id);
       const op: BlockOp = { kind: "merge", blockId: sourceId, runs };
       if (targetHandle?.appendRunsAtEnd) {
         // Mounted target: drive its bound editor (append + caret at the live
@@ -1406,7 +1415,7 @@ export function BlockEditorProviderInner({
         );
       }
     },
-    [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes, isAnchorNode],
+    [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes, isAnchorNode, authority],
   );
 
   // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
@@ -1475,14 +1484,18 @@ export function BlockEditorProviderInner({
       // A block with no registered handle (text-less, or not yet mounted) has
       // nothing to strip — an empty span is the normal case here, not a
       // swallowed failure.
-      focusHandlesRef.current.get(blockId)?.deleteRange?.(from, to);
+      //
+      // Reached through the caret authority's `surgeryOf` seam, which hands back
+      // content surgery and NOT `focus` — the registry itself is unreachable from
+      // here on purpose, so no caller can place a caret behind the authority's back.
+      authority.surgeryOf(blockId)?.deleteRange?.(from, to);
       // (2) The row. It states the TYPE and nothing about text: the stripped
       // content reaches `data.text` on its own, through the projection. Strictly
       // AFTER the strip — `/callout` must lose its `/callout` query from the
       // content doc before the block becomes a container's first child.
       convertRow(blockId, type, data, expanded);
     },
-    [convertRow],
+    [convertRow, authority],
   );
 
   const makeBlockAPI = useCallback(
@@ -1600,7 +1613,7 @@ export function BlockEditorProviderInner({
         const { before, after } = applyOverlay(op);
         queueMicrotask(() => {
           const docEdit = captureBlockDocEdit(blockId, () => {
-            focusHandlesRef.current.get(blockId)?.truncateAt?.(position);
+            authority.surgeryOf(blockId)?.truncateAt?.(position);
           });
           recordStructuralWithDocEdit(before, after, OP_LABELS.split, newId, docEdit);
         });
@@ -1628,7 +1641,7 @@ export function BlockEditorProviderInner({
         // absorbed failure). Fall back to `runsOfNode` ONLY when the block has no
         // handle: a text-less block (divider/image/file/embed) registers none,
         // and its empty runs are the TRUE answer, not a lagged miss.
-        const nextHandle = focusHandlesRef.current.get(next.id);
+        const nextHandle = authority.surgeryOf(next.id);
         const runs = nextHandle?.readRuns ? nextHandle.readRuns() : runsOfNode(next);
         mergeBlock(next.id, runs);
       },
@@ -1657,28 +1670,32 @@ export function BlockEditorProviderInner({
         // on the nearest focusable block in this direction.
         const step = dir === "up" || dir === "left" ? -1 : 1;
         let j = idx + step;
-        while (
-          j >= 0 &&
-          j < flat.length &&
-          !focusHandlesRef.current.has(flat[j]!.id)
-        ) {
+        while (j >= 0 && j < flat.length && !authority.hasHandle(flat[j]!.id)) {
           j += step;
         }
         const target = flat[j];
+        // Keyboard cross-block navigation is scroll-wanted: the caret is moving
+        // to a block the user may not be looking at, so follow it into view.
+        if (target) {
+          authority.landIfMounted(target.id, (handle, land) =>
+            landCaret(handle, dir, caret, { scroll: true, ...land }),
+          );
+          return;
+        }
         // Running off the block order is not a dead end: the host may render a
         // caret surface right before/after the list (the page title). Blocks and
-        // host chrome land the caret through the exact same rules.
-        const surface: CaretSurface | null | undefined = target
-          ? focusHandlesRef.current.get(target.id)
-          : (step < 0 ? caretBeforeRef.current : caretAfterRef.current)?.current;
+        // host chrome land the caret through the exact same rules — the only
+        // difference is that host chrome is not a block, so it is not the
+        // authority's to hold.
+        const surface: CaretSurface | null | undefined = (
+          step < 0 ? caretBeforeRef.current : caretAfterRef.current
+        )?.current;
         if (!surface) return;
         // Leaving the block list entirely: no block owns the caret anymore, so
         // drop the focused-block state (an empty block would otherwise keep
         // showing its "Type '/' for commands" placeholder while the caret sits
         // in the title). A block target sets it back through its own `onFocus`.
-        if (!target) setFocusedBlockId(null);
-        // Keyboard cross-block navigation is scroll-wanted: the caret is moving
-        // to a block the user may not be looking at, so follow it into view.
+        setFocusedBlockId(null);
         landCaret(surface, dir, caret, { scroll: true });
       },
       onFocus() {
@@ -1698,6 +1715,9 @@ export function BlockEditorProviderInner({
       recordStructuralWithDocEdit,
       mergeBlock,
       isAnchorNode,
+      blockHandles,
+      wrapInContainer,
+      authority,
     ],
   );
 
@@ -1713,6 +1733,7 @@ export function BlockEditorProviderInner({
       focusedBlockId,
       setFocusedBlockId,
       registerFocusHandle,
+      attachContainer: authority.attachContainer,
       makeBlockAPI,
       convertStrippingText,
       setFlatOrder,
@@ -1752,6 +1773,7 @@ export function BlockEditorProviderInner({
       focusedBlockId,
       setFocusedBlockId,
       registerFocusHandle,
+      authority,
       makeBlockAPI,
       convertStrippingText,
       setFlatOrder,

@@ -16,6 +16,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const r = report();
@@ -25,11 +26,10 @@ await withBrowser(async (h) => {
 
   await openBlankPage(page, base, { settleMs: 3000 });
 
-  // Four sibling blocks: alpha / bravo / charlie / delta.
-  for (const word of ["alpha", "bravo", "charlie", "delta"]) {
-    await page.keyboard.type(word);
-    await page.keyboard.press("Enter");
-  }
+  // Four sibling blocks: alpha / bravo / charlie / delta, plus the trailing empty.
+  await typeLines(page, ["alpha", "bravo", "charlie", "delta"], {
+    trailingEnter: true,
+  });
   await page.waitForTimeout(800);
 
   /** The selection bar's live count ("N selected"). The bar stays mounted (faded) at 0. */

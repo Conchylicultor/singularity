@@ -208,8 +208,20 @@ function focusRestoringSelection(editor: LexicalEditor, scroll: boolean): void {
  * already holds a caret keeps it and only a selection-less one is placed.
  * `scroll` (default false) declares whether the landing follows the caret into
  * view.
+ *
+ * `onLanded` fires on BOTH paths, at the moment the caret is really in this
+ * editor — immediately when the root already has content, and from the one-shot
+ * listener when it doesn't. That difference is the whole reason the caret
+ * authority waits for caret-READY rather than for the mount: between the two, an
+ * empty root has nothing to insert into, so anything typed must stay buffered.
+ * Deliberately NOT fired on the "the user moved focus away meanwhile" bail — the
+ * caret did not land, and the authority's own focus-left abort owns that case.
  */
-export function focusHydratingAware(editor: LexicalEditor, scroll = false): void {
+export function focusHydratingAware(
+  editor: LexicalEditor,
+  scroll = false,
+  onLanded?: () => void,
+): void {
   const empty = editor.getEditorState().read(() => $getRoot().getChildrenSize() === 0);
   if (!empty) {
     // Non-empty at focus time — since Stage 4a's instant pre-seed this is the
@@ -217,6 +229,7 @@ export function focusHydratingAware(editor: LexicalEditor, scroll = false): void
     // selection yet → content start) and for a re-focus of the block the user
     // is already editing (selection present → restored untouched).
     focusRestoringSelection(editor, scroll);
+    onLanded?.();
     return;
   }
   editor.getRootElement()?.focus(scroll ? undefined : { preventScroll: true });
@@ -227,6 +240,7 @@ export function focusHydratingAware(editor: LexicalEditor, scroll = false): void
     if (document.activeElement !== editor.getRootElement()) return;
     const hasSelection = editor.getEditorState().read(() => $getSelection() !== null);
     if (!hasSelection) focusRestoringSelection(editor, scroll);
+    onLanded?.();
   });
 }
 

@@ -3921,6 +3921,10 @@
       "name": "@singularity/plugin-reports",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/caret-flight": {
+      "name": "@singularity/plugin-reports-caret-flight",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/crash": {
       "name": "@singularity/plugin-reports-crash",
       "version": "0.0.1",
@@ -6970,6 +6974,8 @@
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
 
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
+
+    "@singularity/plugin-reports-caret-flight": ["@singularity/plugin-reports-caret-flight@workspace:plugins/reports/plugins/caret-flight"],
 
     "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
 

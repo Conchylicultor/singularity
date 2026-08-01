@@ -7,6 +7,7 @@ import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { Editor as BlockRegistry } from "./block-registry";
 import { loadPageBlocks } from "./forest";
+import { lockPageForWrite } from "./page-write-lock";
 import { rowToNode, reconcileBlocks } from "./reconcile";
 import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
@@ -42,50 +43,90 @@ function anchorTypes(): ReadonlySet<string> {
   );
 }
 
-export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ params, body }) => {
-  const rows = await loadPageBlocks(params.pageId);
+/**
+ * The rows this op would delete, computed from an UNLOCKED read — used ONLY to
+ * decide which `BeforeDelete` hooks to run before the write transaction opens
+ * (see the call site). The authoritative delete set is recomputed under the page
+ * lock; this one never drives a write.
+ */
+function predictedDeletedRows(
+  rows: Awaited<ReturnType<typeof loadPageBlocks>>,
+  body: Parameters<typeof applyBlockOp>[1],
+) {
   const before = rows.map(rowToNode);
   const after = applyBlockOp(before, body, { anchorTypes: anchorTypes() });
-
-  const { inserted, updated, deletedIds } = reconcileBlocks(before, after);
-
-  // --- Delete-path lifecycle (mirrors handle-delete-block.ts) ----------------
+  const { deletedIds } = reconcileBlocks(before, after);
   const deletedSet = new Set(deletedIds);
-  const reducerDeletedRows = rows.filter((r) => deletedSet.has(r.id));
+  return rows.filter((r) => deletedSet.has(r.id));
+}
 
-  // Delete roots = deleted ids whose parent is NOT itself being deleted. Deleting
-  // only the roots and letting the FK `onDelete: "cascade"` clear descendants
-  // avoids redundant per-row deletes (and matches handle-delete-block.ts, which
-  // deletes just the root). Equivalent to deleting all `deletedIds`.
-  const rootIds = reducerDeletedRows
-    .filter((r) => r.parentId === null || !deletedSet.has(r.parentId))
-    .map((r) => r.id);
-
-  // Defensive: the reducers (`split`/`merge`/`indent`/`outdent`) already refuse
-  // to delete a `type="page"` row, so this branch should never fire — but a
-  // silently-cascading page here is the exact 2026-07-10 data-loss bug, so if one
-  // ever slips into the delete set, route the whole delete through the trash
-  // chokepoint (soft delete) instead of the inline hard delete below. The normal
-  // page-free keystroke path (the overwhelming majority) stays hard and pays no
-  // extra cost.
-  const hasPageDelete = reducerDeletedRows.some(
-    (r) => r.type === PAGE_BLOCK_TYPE,
-  );
-  const deletedRows = reducerDeletedRows;
-
-  // Run BeforeDelete hooks over the (page-free) delete set so backlinks/image
-  // reconcilers can snapshot state that depends on the soon-to-vanish rows. When
-  // a page IS in the set, the chokepoint runs the lifecycle hooks instead.
+export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ params, body }) => {
+  // --- BeforeDelete hooks, ahead of the transaction --------------------------
+  // Backlink / attachment reconcilers snapshot state that depends on the
+  // soon-to-vanish rows. They run on the POOL (their own connections), so they
+  // must NOT be awaited inside the write transaction: that is hold-and-wait, and
+  // it stretches the connection lease — and the page write lock — over their
+  // whole duration (`database/no-pool-await-in-transaction`).
+  //
+  // So the delete set is predicted from an UNLOCKED read here, and the
+  // authoritative one is recomputed under the lock below. The two can differ only
+  // if a concurrent write changes what this op deletes, in which case the hooks
+  // ran over the predicted set — exactly the behaviour before the lock existed,
+  // since this read is the same one the handler always used.
+  const predicted = await loadPageBlocks(params.pageId);
+  const predictedDeleted = predictedDeletedRows(predicted, body);
   const afterCallbacks: Array<() => void | Promise<void>> = [];
-  if (!hasPageDelete && deletedRows.length > 0) {
-    const cascadeIds = deletedRows.map((r) => r.id);
+  if (
+    predictedDeleted.length > 0 &&
+    !predictedDeleted.some((r) => r.type === PAGE_BLOCK_TYPE)
+  ) {
+    const cascadeIds = predictedDeleted.map((r) => r.id);
     for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
       const cb = await hook.beforeDelete(cascadeIds);
       if (cb) afterCallbacks.push(cb);
     }
   }
 
-  const watermark = await db.transaction(async (tx) => {
+  // ONE transaction spans the load, the reduce and the writes, and it opens by
+  // taking this page's write lock — because this handler is a read-modify-write
+  // over the whole forest and its UPDATE reasserts every column of every changed
+  // row. Splitting the read from the write let a concurrent op's parentage be
+  // silently overwritten by a stale snapshot; `page-write-lock.ts` documents the
+  // captured interleaving. Everything that must NOT hold the lock (the hooks
+  // above, the notify fan-out, the page-delete chokepoint, the final read-back)
+  // stays outside it.
+  const applied = await db.transaction(async (tx) => {
+    await lockPageForWrite(tx, params.pageId);
+    const rows = await loadPageBlocks(params.pageId, tx);
+    const before = rows.map(rowToNode);
+    const after = applyBlockOp(before, body, { anchorTypes: anchorTypes() });
+
+    const { inserted, updated, deletedIds } = reconcileBlocks(before, after);
+
+    // --- Delete-path lifecycle (mirrors handle-delete-block.ts) ----------------
+    const deletedSet = new Set(deletedIds);
+    const reducerDeletedRows = rows.filter((r) => deletedSet.has(r.id));
+
+    // Delete roots = deleted ids whose parent is NOT itself being deleted. Deleting
+    // only the roots and letting the FK `onDelete: "cascade"` clear descendants
+    // avoids redundant per-row deletes (and matches handle-delete-block.ts, which
+    // deletes just the root). Equivalent to deleting all `deletedIds`.
+    const rootIds = reducerDeletedRows
+      .filter((r) => r.parentId === null || !deletedSet.has(r.parentId))
+      .map((r) => r.id);
+
+    // Defensive: the reducers (`split`/`merge`/`indent`/`outdent`) already refuse
+    // to delete a `type="page"` row, so this branch should never fire — but a
+    // silently-cascading page here is the exact 2026-07-10 data-loss bug, so if one
+    // ever slips into the delete set, route the whole delete through the trash
+    // chokepoint (soft delete) instead of the inline hard delete below. The normal
+    // page-free keystroke path (the overwhelming majority) stays hard and pays no
+    // extra cost.
+    const hasPageDelete = reducerDeletedRows.some(
+      (r) => r.type === PAGE_BLOCK_TYPE,
+    );
+    const deletedRows = reducerDeletedRows;
+
     if (inserted.length > 0) {
       const now = new Date();
       await tx.insert(_blocks).values(
@@ -142,8 +183,16 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
     }
 
     // Ack token: the commit's xid8, read inside the write transaction (Rule A).
-    return currentTxId(tx);
+    return {
+      watermark: await currentTxId(tx),
+      before,
+      after,
+      deletedRows,
+      rootIds,
+      hasPageDelete,
+    };
   });
+  const { watermark, before, after, deletedRows, rootIds, hasPageDelete } = applied;
 
   // Route a page-containing delete through the trash chokepoint (soft delete +
   // OnTrash hooks). Runs after the insert/update tx so the reducer's other diffs

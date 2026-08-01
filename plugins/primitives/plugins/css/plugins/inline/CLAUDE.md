@@ -97,6 +97,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `primitives/tooltip`
     - `reorder/edit-mode`
     - `reorder/editor`
+    - `reports/caret-flight`
     - `reports/live-state-stale-drop`
     - `reports/optimistic-divergence`
     - `reports/render-loop`

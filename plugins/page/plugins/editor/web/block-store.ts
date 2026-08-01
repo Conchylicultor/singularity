@@ -114,6 +114,8 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // `applyBlockOp`; if the two ever disagreed, an op would predict one forest
   // here and commit another there, and could never confirm.
   const anchorTypes = useAnchorTypes();
+  // The tail of this page's serialized write queue (see `mutate` below).
+  const writeChainRef = useRef<Promise<void>>(Promise.resolve());
   const apply = useCallback(
     (blocks: Block[], v: BlockOverlayOp) => applyOverlayOp(blocks, v, anchorTypes),
     [anchorTypes],
@@ -125,14 +127,40 @@ export function useServerBlockStore(pageId: string): BlockStore {
     // Structural ops keep their own `op` endpoint; undo/redo patches POST to the
     // generic `patch` endpoint. Both flow through this one instance so the
     // overlay + freeze pipeline (and confirmation) is shared.
-    mutate: (v) =>
-      v.tag === "patch"
-        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then((r) => ({
-            watermark: r.watermark,
-          }))
-        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then((r) => ({
-            watermark: r.watermark,
-          })),
+    // SERIALIZED per page, in dispatch order. These writes are causally
+    // dependent — a `convertTo` patch turns a block into a bullet and the split
+    // that follows inherits that type; an `indent` op moves a block the next
+    // split then reads — but they are independent POSTs, so the browser is free
+    // to deliver them in either order and the server applied them as they
+    // landed. Captured in the wild: `split` arriving before the `convertTo` it
+    // depended on, so the tail inherited `text` and the user's bullet silently
+    // reverted one push later.
+    //
+    // A human never hit it because they pause between structural edits; the
+    // caret authority replays a buffered burst with no pauses at all, so the
+    // chain is now routine. The overlay renders every op instantly regardless
+    // (never-revert), so the queue costs the USER nothing — only the wire order
+    // is constrained, which is the one thing that was wrong.
+    //
+    // The chain is failure-proof: a rejected write must not wedge the queue, so
+    // the successor runs either way while `mutate` still returns the true
+    // outcome for THIS write (the primitive's classification/retry is untouched).
+    mutate: (v) => {
+      const send = () =>
+        v.tag === "patch"
+          ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then((r) => ({
+              watermark: r.watermark,
+            }))
+          : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then((r) => ({
+              watermark: r.watermark,
+            }));
+      const sent = writeChainRef.current.then(send, send);
+      writeChainRef.current = sent.then(
+        () => undefined,
+        () => undefined,
+      );
+      return sent;
+    },
     isConfirmedBy: (serverData, v) =>
       v.tag === "patch"
         ? isPatchReflected(serverData, v.patch)

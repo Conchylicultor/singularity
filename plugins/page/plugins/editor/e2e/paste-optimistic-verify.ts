@@ -25,6 +25,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const r = report();
@@ -40,13 +41,11 @@ await withBrowser(async (h) => {
 
   await openBlankPage(page, base, { settleMs: 3000 });
 
-  for (let i = 0; i < N; i++) {
-    await page.keyboard.type(`line ${String(i).padStart(2, "0")}`);
-    // Settle either side of the split — see copy-paste-verify.ts for why.
-    await page.waitForTimeout(150);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(150);
-  }
+  await typeLines(
+    page,
+    Array.from({ length: N }, (_, i) => `line ${String(i).padStart(2, "0")}`),
+    { trailingEnter: true },
+  );
   await page.waitForTimeout(2000); // doc -> data.text projection
 
   const blockTexts = (): Promise<string[]> =>

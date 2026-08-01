@@ -202,6 +202,7 @@ slot. The generic `isIndented` → outdent rung would instead pop that child out
 *and adopt the remaining siblings as its children*, silently re-nesting content
 nobody asked to nest.
 
+<<<<<<< .merge_file_KVWEyT
 ### A container folds to its borrowed line
 
 > A collapsed container renders exactly its first visible LINE and nothing else.
@@ -254,6 +255,127 @@ hand-written `PATCH` or a pasted `SerializedBlock` sets `expanded` to.
   `expanded`), as do markdown, copy/paste and search indexing. Collapse is
   editing-surface view state — so the editor and the version-history *diff*
   deliberately disagree about what the document shows.
+=======
+## The caret authority (input follows the model, not the DOM)
+
+> The editor holds ONE authoritative caret location. It moves synchronously with
+> the keystroke that moves it. DOM focus is a PROJECTION of it — never the source
+> of truth, never consulted to decide where input goes.
+
+`internal/caret-authority.ts` owns that location AND the `BlockFocusHandle`
+registry. **The registry is deliberately unreachable from the provider**: there
+is no way to focus a block except `land()`, so the gap below cannot be
+reintroduced by a future caller. (`surgeryOf()` hands back only
+`BlockTextSurgery` — no `focus` — for split/merge content edits.)
+
+The gap: a block created by Enter does not exist yet, so the caret used to land
+only when its editor's **passive** effect registered a handle — a separate React
+scheduler task — while keydowns arrive from the browser's higher-priority
+user-interaction source. Every keystroke in between went to the ORIGIN, already
+truncated, caret at the cut point: "alpha" Enter "bravo" → `["alphab","ravo"]`.
+Nothing bounded that window; human typing speed just usually won the race.
+
+- **Two states.** *idle* — model and DOM agree, the authority does nothing and the
+  browser types natively (which is what keeps IME/dictation/autocorrect working:
+  they need a real editing host). *in flight* — the model moved, the DOM hasn't;
+  the authority owns the keyboard.
+- **The caret parks on the container, it does not defend the origin.** A claim
+  does `container.focus()` + `releaseCaret`, so the origin stops being an editing
+  host and nothing can enter it BY CONSTRUCTION. `preventDefault` would not be
+  airtight — `beforeinput` with `insertCompositionText` is not cancelable.
+  Consequence: `beforeinput` never fires during a flight (there is no editing
+  host), so buffered text comes off **`keydown`** (`key.length === 1`) plus a
+  `paste` capture; `ctrl`/`meta` keydowns pass through untouched.
+- **A burst of mutations in one turn needs ordering the old code got for free.**
+  Replay issues structural mutations back-to-back with no React commit and no
+  pause between them, which broke three assumptions a human's pauses had hidden.
+  All three are fixed at the source, not in the replay:
+  - `rowsRef` is now ADVANCED at each mutation chokepoint (`advanceRows`), not
+    only by the consumer effect — two mutations in one turn both snapshotted the
+    pre-first-mutation rows and the second reasserted the first's columns.
+  - The op endpoint holds a per-page advisory lock across load→reduce→write
+    (`server/internal/page-write-lock.ts`), and the patch endpoint takes the same
+    lock — its read was outside its write transaction, so a concurrent op's
+    parentage was overwritten from a stale snapshot.
+  - Structural writes are SERIALIZED per page on the client (`block-store.ts`'s
+    `mutate` chain): causally dependent writes were independent POSTs, so a
+    `split` could reach the server before the `convertTo` it depended on.
+- **KNOWN BOUND: composition input started inside the flight window is DROPPED.**
+  A dead key or IME keydown carries no character (`key` is `"Dead"`/`"Process"`),
+  and with no editing host there is nothing to compose into, so it is neither
+  buffered nor replayed. It is the price of the line above and strictly better
+  than the alternative — before, those characters composed into the WRONG block —
+  but it IS a loss, bounded to the mount gap (typically one commit); IME is
+  untouched once the caret has landed, and completely untouched while idle. The
+  fix, if it ever matters, is to shorten the window (`flushSync` + a layout-effect
+  registration), NOT to make the container an editing host.
+- **Landing waits for caret-READY, not for the mount.** A freshly split block's
+  Lexical root is childless until the collab pre-seed lands, and there is nothing
+  to insert into until then. `CaretLandOptions.onLanded` is that signal;
+  `focusHydratingAware` fires it on both branches. A landing policy that takes the
+  caret and never reports back leaves the authority holding the keyboard.
+- **Replay must be INDISTINGUISHABLE from typing**, and that is four rules, each
+  paid for by a shipped bug (`replayInput` in block-text-editor):
+  - **One character per commit** — never coalesce a text run. The block markdown
+    shortcut fires on the `"- "` transition and the inline one demands
+    exactly-one-char-typed, so a coalesced `insertText` skips every incremental
+    transform: `"- Bravo bullet"` stayed a paragraph and the next Enter inherited
+    `text`. The Yjs cost coalescing avoided does not exist (the `Y.UndoManager`'s
+    500ms `captureTimeout` folds a run into one item either way).
+  - **`discrete: true` on every replayed edit** — Lexical's default commit is a
+    microtask, so the next entry would resolve against pre-insert state: offset 0,
+    empty runs, a split at `position: 0` whose `truncateAt(0)` wipes the doc
+    (`["alpha","","charlie"]`).
+  - **One microtask yield per entry** — the editor DEFERS work by `queueMicrotask`
+    (the markdown conversion, split's doc-edit capture, inline autoformat) and a
+    real keystroke sequence lets it run between keys. Replaying a whole buffer
+    inside one microtask starves it. Microtasks drain before the next input event,
+    so this cannot let the user overtake the buffer.
+  - **Unconsumed keys need their DEFAULT ACTION applied** — `dispatchCommand` is
+    not a DOM event and a synthetic `KeyboardEvent` is untrusted, so nothing runs
+    when no listener consumes it. Lexical's own listeners cover Enter / Backspace /
+    Delete, but ordinary caret movement is the BROWSER's: five buffered ArrowLefts
+    silently did nothing, so the following Enter split at the end instead of
+    mid-word. `selection.modify` replays Left/Right; an unconsumed Up/Down (a move
+    between visual lines, which has no model equivalent) is dropped — a caret
+    position, never content.
+
+  A replayed Enter re-enters `split()` and claims the NEXT flight, so the "alpha
+  Enter bravo" composition needs no special case.
+- **Only a block that does not exist yet is claimed.** A block that exists but has
+  no mounted handle (a void row, a collapsed-away editor) is queued best-effort
+  WITHOUT taking the keyboard: the caret never moved off the origin, and claiming
+  for a landing that may never come would strand the user's typing.
+- **Failure is a state.** The flight is bounded PUSH-BASED (`reconcile` on every
+  commit, never a timer) and by focus leaving the surface. On abort the buffer
+  replays into the ORIGIN and one `caretFlightReportSink` report is emitted
+  (consumer: `reports/plugins/caret-flight` → Debug → Reports); a handle without
+  `replayInput` aborts loudly rather than eating the keystrokes.
+  The bound's driving relation is the **RENDERED line set** (`flatOrderRef`) —
+  NOT `serverIds` (under never-revert a split's block renders long before any
+  push confirms it, so that would abort every normal split), and not merely "the
+  row exists" (a row nothing renders — a collapsed ancestor — mounts no editor,
+  so the landing can never happen and the keyboard would hang undiagnosed).
+
+**Replay must commit `discrete`, and must not begin inside an update.** Each
+replayed insert is committed synchronously (`discrete: true`) because the next
+replayed key resolves against `getEditorState()` — Lexical's default microtask
+commit would have it read the PRE-insert state, resolve "empty block", and split
+with `position: 0, runs: []`, whose `truncateAt(0)` wipes the doc (this shipped
+once: `["alpha","","charlie"]`). `discrete` is only honored outside an enclosing
+update, and a landing can fire from inside one, so `replayInto` defers the whole
+loop one microtask — which cannot let the user overtake the buffer, since
+microtasks drain before the next input event.
+
+**Two guardrails, and neither subsumes the other.**
+`web/__tests__/caret-authority.test.tsx` is the only place the long window is
+deterministic (withhold the target's handle) — it pins routing, ordering, the
+flight hand-off and the abort path. It CANNOT model Lexical's commit timing: its
+fake handles have no editor state, so the `discrete` defect above passed there
+and was caught only by `e2e/split-typing-verify.ts` in a real browser. Anything
+about *when* an edit becomes visible to the next one belongs in the e2e. Design:
+[`research/2026-07-31-page-caret-authority.md`](../../../../research/2026-07-31-page-caret-authority.md).
+>>>>>>> .merge_file_mTetbI
 
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 
@@ -1166,9 +1288,9 @@ restore.
   which must never post different bytes. The pre-seed DISCRIMINATOR is the
   provider's construction-time `blockRowConfirmed`, never an effect ordering: an
   existing block is confirmed from its first render, so it can never pre-seed over
-  its stored doc (DUPLICATED text on reopen). Residual known edge: a keystroke
-  < ~20ms after Enter can still be dropped (beyond human input;
-  `@plugins/page/plugins/editor-collab`'s `e2e/split-typing-window-probe.ts`).
+  its stored doc (DUPLICATED text on reopen). Keystrokes landing before the new
+  block's editor is caret-ready are not dropped and not misrouted — the caret
+  authority buffers them (see "The caret authority" above).
 - **Split focus/caret under pre-seed.** The origin's deferred truncation carries
   `SKIP_DOM_SELECTION_TAG` (it is background surgery on the block the user is
   LEAVING; reconciling its cut-point selection would yank DOM focus back), and
@@ -1320,6 +1442,8 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockSection`
     - `BlockTextExtension`
     - `BlockTextPluginProps`
+    - `CaretFlightAbortReason`
+    - `CaretFlightAbortReport`
     - `CaretSurface`
     - `CaretSurfaceRef`
     - `FormatToolbarValue`
@@ -1334,6 +1458,7 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockEditor`
     - `BlockTextRenderer`
     - `BlockTypeList`
+    - `caretFlightReportSink`
     - `colorCssValue`
     - `Editor`
     - `filterBlockTypes`
@@ -1613,6 +1738,7 @@ the whole document lives in React state and is discarded on unmount.
     - `page/turn-into-page`
     - `page/url-paste`
     - `page/video`
+    - `reports/caret-flight`
   - Extended by:
     - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
     - `apps/pages/starred` (table `page_blocks_ext_starred`)

@@ -31,6 +31,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-optimistic-divergence",
   "client-turn-unconfirmed",
   "client-live-state-stale-drop",
+  "client-caret-flight",
   "boot-snapshot",
   "plugin-load",
   "client-storage",

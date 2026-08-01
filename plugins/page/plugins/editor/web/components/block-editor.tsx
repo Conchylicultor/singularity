@@ -385,6 +385,7 @@ function SelectionLayer({
     focusBlockBoundary,
     focusedBlockId,
     allowAttachments,
+    attachContainer,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
   // ONE `type → handle` view of the `Editor.Block` registry (`useBlockHandles`),
@@ -483,6 +484,15 @@ function SelectionLayer({
     focusedBlockId,
     actions: selectionActions,
   });
+
+  // The same surface serves the caret authority: while a landing is outstanding
+  // (a block created by Enter whose editor hasn't mounted) it parks the caret
+  // here and buffers what the user types, so the block they LEFT stops being an
+  // editing host and nothing can be typed into it. Detaching aborts any flight.
+  useEffect(() => {
+    attachContainer(containerRef.current);
+    return () => attachContainer(null);
+  }, [attachContainer, containerRef]);
 
   // ---- Clipboard (DOM copy/cut/paste on the focused container) -------------
   //

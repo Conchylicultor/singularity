@@ -29,6 +29,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "./support/blank-page";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/bsi");
@@ -90,16 +91,19 @@ async function caretToStartOf(page: Page, id: string): Promise<void> {
   }
 }
 
-/** Type a line, then open the next block and re-indent it by `indent` levels. */
-async function line(page: Page, text: string, indent: "same" | "in" | "out"): Promise<void> {
-  await page.keyboard.type(text, { delay: 15 });
-  await page.waitForTimeout(400);
-  await page.keyboard.press("Enter");
-  await page.waitForTimeout(500);
-  if (indent === "in") await page.keyboard.press("Tab");
-  if (indent === "out") await page.keyboard.press("Shift+Tab");
-  if (indent !== "same") await page.waitForTimeout(700);
-}
+/**
+ * How long to let a fixture's Tab / Shift+Tab settle before measuring. NOT a
+ * typing settle: each is a structural indent/outdent op, and `pad` is read off
+ * the rendered row, so the op's rows must be back first.
+ */
+const INDENT_OP_MS = 1500;
+
+/**
+ * How long to let a Backspace's resolved op (convertTo / outdent / merge) land
+ * before reading the document shape. Same reason as `INDENT_OP_MS` — this is the
+ * keystroke under test, so the wait is after it, never before.
+ */
+const KEYSTROKE_OP_MS = 1500;
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
@@ -107,10 +111,8 @@ await withBrowser(async (h) => {
   // --- 1. shared indentation: ONE press merges, the follower stays put -------
   {
     await openBlankPage(page, base, { settleMs: 2500 });
-    await line(page, "aaa", "in");
-    await line(page, "bbb", "same");
-    await page.keyboard.type("ccc", { delay: 15 });
-    await page.waitForTimeout(1500);
+    await typeLines(page, ["aaa", { text: "bbb", indent: "in" }, "ccc"]);
+    await page.waitForTimeout(INDENT_OP_MS);
 
     const before = await rows(page);
     console.log("1 setup:", shape(before));
@@ -128,7 +130,7 @@ await withBrowser(async (h) => {
 
     await caretToStartOf(page, before[1]!.id);
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(KEYSTROKE_OP_MS);
     await snap(page, out, "1-shared-merged");
 
     const after = await rows(page);
@@ -149,11 +151,13 @@ await withBrowser(async (h) => {
   // --- 2. excess indentation: outdent to the next line's level, then merge ---
   {
     await openBlankPage(page, base, { settleMs: 2500 });
-    await line(page, "aaa", "in");
-    await line(page, "aaa2", "in");
-    await line(page, "bbb", "out");
-    await page.keyboard.type("ccc", { delay: 15 });
-    await page.waitForTimeout(1500);
+    await typeLines(page, [
+      "aaa",
+      { text: "aaa2", indent: "in" },
+      { text: "bbb", indent: "in" },
+      { text: "ccc", indent: "out" },
+    ]);
+    await page.waitForTimeout(INDENT_OP_MS);
 
     const before = await rows(page);
     console.log("2 setup:", shape(before));
@@ -173,7 +177,7 @@ await withBrowser(async (h) => {
 
     await caretToStartOf(page, b!.id);
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(KEYSTROKE_OP_MS);
     await snap(page, out, "2-excess-outdented");
 
     const mid = await rows(page);
@@ -192,7 +196,7 @@ await withBrowser(async (h) => {
     );
 
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(KEYSTROKE_OP_MS);
     await snap(page, out, "3-excess-merged");
 
     const after = await rows(page);
@@ -209,9 +213,8 @@ await withBrowser(async (h) => {
   // --- 3. no next visible line: the original peel-then-merge ladder ----------
   {
     await openBlankPage(page, base, { settleMs: 2500 });
-    await line(page, "aaa", "in");
-    await page.keyboard.type("bbb", { delay: 15 });
-    await page.waitForTimeout(1500);
+    await typeLines(page, ["aaa", { text: "bbb", indent: "in" }]);
+    await page.waitForTimeout(INDENT_OP_MS);
 
     const before = await rows(page);
     console.log("3 setup:", shape(before));
@@ -223,7 +226,7 @@ await withBrowser(async (h) => {
 
     await caretToStartOf(page, before[1]!.id);
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(KEYSTROKE_OP_MS);
     await snap(page, out, "4-last-line-outdented");
 
     const mid = await rows(page);
@@ -235,7 +238,7 @@ await withBrowser(async (h) => {
     );
 
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(KEYSTROKE_OP_MS);
     const after = await rows(page);
     console.log("3 press 2:", shape(after));
     r.ok(

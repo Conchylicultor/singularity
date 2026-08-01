@@ -23,6 +23,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Locator, Page } from "playwright";
 import { openBlankPage } from "./support/blank-page";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/visible-line");
@@ -132,13 +133,15 @@ await withBrowser(async (h) => {
     });
 
     await first.click();
-    await page.keyboard.type("AAACCC", { delay: 20 });
-    await page.waitForTimeout(400);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(600);
-    await page.keyboard.type("BBB", { delay: 20 });
-    await page.waitForTimeout(400);
+    await typeLines(page, ["AAACCC", "BBB"]);
+    // The Tab is hand-rolled, NOT folded into the typeLines call as an `indent`
+    // line: that would press it against an EMPTY block, and indenting an empty
+    // block is a different input (different caret context, so different
+    // `resolveKeystroke` inputs) than indenting one that already holds text.
+    // Dropping a settle must never change the gesture under test.
     await page.keyboard.press("Tab"); // indent BBB under AAACCC
+    // Structural indent op — `depth` is read off the rendered row, so wait for
+    // its rows, not for anything about typing.
     await page.waitForTimeout(800);
 
     const beforeSplit = await getRows(page);
@@ -147,6 +150,8 @@ await withBrowser(async (h) => {
     r.ok("A: setup — BBB indented under AAACCC", beforeSplit[1]?.depth === 1, `depth=${beforeSplit[1]?.depth}`);
 
     // Caret to start of AAACCC, then 3x ArrowRight -> between "AAA" and "CCC".
+    // The per-arrow pause is the selectionchange lag Lexical absorbs caret moves
+    // through (same caveat as crdt-split-merge-verify), not a typing settle.
     const head = editableFor(page, firstId);
     await caretToStart(page, head);
     await page.waitForTimeout(300);
@@ -191,14 +196,11 @@ await withBrowser(async (h) => {
     const { context, page } = await h.session();
     const { block: first } = await openBlankPage(page, base, { settleMs: 3000 });
     await first.click();
-    await page.keyboard.type("parent", { delay: 20 });
-    await page.waitForTimeout(400);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(600);
-    await page.keyboard.press("Tab"); // indent new block under "parent"
-    await page.waitForTimeout(400);
-    await page.keyboard.type("* item", { delay: 20 }); // "* " markdown prefix -> bulleted-list
-    await page.waitForTimeout(600);
+    // "* " is the markdown prefix that converts the block to a bulleted-list.
+    await typeLines(page, ["parent", { text: "* item", indent: "in" }]);
+    // Structural indent op + the convertTo the prefix triggers — both are read
+    // back as `depth` / `hasBulletMarker`, so let their rows land.
+    await page.waitForTimeout(1000);
 
     let rows = await getRows(page);
     console.log("B setup:", JSON.stringify(rows));
@@ -258,14 +260,12 @@ await withBrowser(async (h) => {
     const { context, page } = await h.session();
     const { block: first } = await openBlankPage(page, base, { settleMs: 3000 });
     await first.click();
-    await page.keyboard.type("parent", { delay: 20 });
-    await page.waitForTimeout(400);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(600);
-    await page.keyboard.press("Tab"); // indent new block under "parent"
-    await page.waitForTimeout(400);
-    await page.keyboard.type("* ", { delay: 20 }); // convert to bulleted-list, leave EMPTY
-    await page.waitForTimeout(600);
+    // "* " converts to a bulleted-list and leaves the block EMPTY — the state the
+    // empty-Enter ladder acts on.
+    await typeLines(page, ["parent", { text: "* ", indent: "in" }]);
+    // Structural indent op + the convertTo the prefix triggers — both are read
+    // back as `depth` / `hasBulletMarker`, so let their rows land.
+    await page.waitForTimeout(1000);
 
     let rows = await getRows(page);
     console.log("C setup:", JSON.stringify(rows));
@@ -316,7 +316,7 @@ await withBrowser(async (h) => {
     });
     await first.click();
     await page.keyboard.type("[] done it", { delay: 20 }); // "[] " markdown prefix -> to-do
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(600); // the prefix's convertTo op, read back as `checked`
 
     let rows = await getRows(page);
     console.log("D setup:", JSON.stringify(rows));
@@ -331,7 +331,8 @@ await withBrowser(async (h) => {
     r.ok("D: checkbox is now checked", rows[0]?.checked === true, JSON.stringify(rows[0]));
     await snap(page, `${out}/d`, "1-checked");
 
-    // Caret mid-text ("done| it") -> after "done" (4 chars) from the start.
+    // Caret mid-text ("done| it") -> after "done" (4 chars) from the start. The
+    // per-arrow pause is the selectionchange lag, as in scenario A.
     const editable = editableFor(page, firstId);
     await caretToStart(page, editable);
     await page.waitForTimeout(300);

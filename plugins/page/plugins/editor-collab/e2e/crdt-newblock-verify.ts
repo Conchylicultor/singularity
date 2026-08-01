@@ -22,7 +22,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { blockDocText, fetchBlockDoc } from "./support/ydoc";
 
 const base = baseUrl();
@@ -48,34 +48,25 @@ await withBrowser(async (h) => {
   console.log("page url:", pageUrl, "pageId:", pageId);
 
   // --- The race: rapid Enter-then-type chains ---------------------------------
-  // Each Enter dispatches a split op minting a new block; typing begins in the
-  // new block's editor ~25ms later — faster than any human Enter→key sequence,
-  // and far inside the structural-op round-trip + confirm-push + doc-init window
-  // (the FK race Stage 4a gates). Sub-20ms after Enter a single leading char can
-  // still be dropped (see ./split-typing-window-probe.ts) — that regime is
-  // beyond human input and deliberately not asserted here.
-  const ENTER_SETTLE_MS = 25;
+  // Each Enter dispatches a split op minting a new block and typing begins in it
+  // immediately — no settle at all, i.e. far inside the structural-op round-trip
+  // + confirm-push + doc-init window (the FK race Stage 4a gates). Landing those
+  // keystrokes in the NEW block rather than the origin is the caret authority's
+  // job, gated by `@plugins/page/plugins/editor`'s `e2e/split-typing-verify.ts`;
+  // what this script adds on top is that the doc-init seed survives the same
+  // window.
   const LINES = ["alpha one", "bravo two", "charlie three", "delta four"] as const;
-  await pageA.keyboard.type(LINES[0], { delay: 5 });
-  for (const line of LINES.slice(1)) {
-    await pageA.keyboard.press("Enter");
-    await pageA.waitForTimeout(ENTER_SETTLE_MS);
-    await pageA.keyboard.type(line, { delay: 5 });
-  }
+  await typeLines(pageA, LINES);
   // Mid-text split: caret placed mid-word, then Enter and immediate typing in
   // the tail-seeded new block.
-  await pageA.keyboard.press("Enter");
-  await pageA.waitForTimeout(ENTER_SETTLE_MS);
-  await pageA.keyboard.type("splitXtail", { delay: 5 });
+  await typeLines(pageA, ["splitXtail"], { leadingEnter: true });
   // Lexical absorbs native caret moves via selectionchange, which lags a
   // zero-delay synthetic arrow burst (same caveat as crdt-split-merge-verify).
   for (let i = 0; i < "Xtail".length; i++) {
     await pageA.keyboard.press("ArrowLeft");
     await pageA.waitForTimeout(50);
   }
-  await pageA.keyboard.press("Enter");
-  await pageA.waitForTimeout(ENTER_SETTLE_MS);
-  await pageA.keyboard.type("typed-immediately-", { delay: 5 });
+  await typeLines(pageA, ["typed-immediately-"], { leadingEnter: true });
 
   // Settle: flush debounce (300ms), projection debounce (1s), pushes.
   await pageA.waitForTimeout(3500);

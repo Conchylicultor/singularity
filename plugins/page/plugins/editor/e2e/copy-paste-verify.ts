@@ -24,6 +24,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const r = report();
@@ -35,21 +36,8 @@ await withBrowser(async (h) => {
 
   await openBlankPage(page, base, { settleMs: 3000 });
 
-  for (const word of ["alpha", "bravo", "charlie"]) {
-    await page.keyboard.type(word);
-    // Settle either side of the Enter. A keystroke landing within ~20ms of a
-    // split can still be dropped (see the pre-seed note in the editor's
-    // CLAUDE.md), and typing back-to-back reliably loses each word's first
-    // character to the previous block under host load ("alphab" / "ravoc").
-    // That is a SETUP flake, not a copy/paste one — but it scrambles every
-    // assertion downstream, so make the fixture deterministic. 150ms was not
-    // enough: measured 1 run in 2 losing the "b" of "bravo" and failing 7 of the
-    // 13 checks, every one of them structurally correct apart from that letter.
-    await page.waitForTimeout(250);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(250);
-  }
   // Leave the trailing empty block; wait out the doc→data.text projection (~1s).
+  await typeLines(page, ["alpha", "bravo", "charlie"], { trailingEnter: true });
   await page.waitForTimeout(2000);
 
   const blockTexts = (): Promise<string[]> =>

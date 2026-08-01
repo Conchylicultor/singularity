@@ -19,3 +19,5 @@ export type {
   CaretState,
   OpenBlankPageOptions,
 } from "./support/blank-page";
+export { typeLines } from "./support/type-lines";
+export type { TypedLine, TypeLinesOptions } from "./support/type-lines";

@@ -22,6 +22,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "./support/blank-page";
+import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/no-collab-cursors");
@@ -102,7 +103,7 @@ await withBrowser(async (h) => {
 
   // Typing is what moves the caret, and a caret move is what writes
   // anchorPos/focusPos into awareness and fires the cursor sync.
-  await page.keyboard.type("alpha bravo charlie");
+  await typeLines(page, ["alpha bravo charlie"]);
   await page.waitForTimeout(800);
   r.eq("no cursor label after typing", await cursorLabels(), []);
 
@@ -113,8 +114,7 @@ await withBrowser(async (h) => {
 
   // A second block: a NEW binding, a new replica doc, a new awareness.
   await page.keyboard.press("End");
-  await page.keyboard.press("Enter");
-  await page.keyboard.type("delta");
+  await typeLines(page, ["delta"], { leadingEnter: true });
   await page.waitForTimeout(800);
   r.eq("no cursor label in a second block", await cursorLabels(), []);
 
