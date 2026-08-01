@@ -13690,6 +13690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `primitives/text-editor/caret-trigger`
               - `release`
+              - `reorder`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses: `infra/paths.HOME_DIR`
