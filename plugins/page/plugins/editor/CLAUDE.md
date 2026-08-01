@@ -202,7 +202,6 @@ slot. The generic `isIndented` → outdent rung would instead pop that child out
 *and adopt the remaining siblings as its children*, silently re-nesting content
 nobody asked to nest.
 
-<<<<<<< .merge_file_KVWEyT
 ### A container folds to its borrowed line
 
 > A collapsed container renders exactly its first visible LINE and nothing else.
@@ -255,7 +254,7 @@ hand-written `PATCH` or a pasted `SerializedBlock` sets `expanded` to.
   `expanded`), as do markdown, copy/paste and search indexing. Collapse is
   editing-surface view state — so the editor and the version-history *diff*
   deliberately disagree about what the document shows.
-=======
+
 ## The caret authority (input follows the model, not the DOM)
 
 > The editor holds ONE authoritative caret location. It moves synchronously with
@@ -375,7 +374,6 @@ fake handles have no editor state, so the `discrete` defect above passed there
 and was caught only by `e2e/split-typing-verify.ts` in a real browser. Anything
 about *when* an edit becomes visible to the next one belongs in the e2e. Design:
 [`research/2026-07-31-page-caret-authority.md`](../../../../research/2026-07-31-page-caret-authority.md).
->>>>>>> .merge_file_mTetbI
 
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 

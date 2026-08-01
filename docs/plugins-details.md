@@ -509,13 +509,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
             - Contributes:
-              - `Deploy.Section` "Deployments" → `DeploymentsSection`
+              - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
               - `DeploymentItemActions` "converge" → `ConvergeAction`
               - `DeploymentItemActions` "ship" → `ShipAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
             - Uses:
               - `apps/deploy/health.useServerHealth`
-              - `apps/deploy/shell.Deploy`
+              - `apps/deploy/servers.ServerDetail`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
@@ -626,8 +626,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Servers.Fields` "status" → `StatusField`
-              - `Servers.DetailHeader` "status" → `ServerStatusHeader`
+              - `ServerDetail.Section` "Status" → `ServerStatusHeader`
             - Uses:
+              - `apps/deploy/servers.ServerDetail`
               - `apps/deploy/servers.Servers`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/spacing.Stack`
@@ -692,17 +693,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
             - Slots:
-              - `Servers.SshSetup` ← `apps.deploy.ssh-setup`
-              - `Servers.DetailHeader` ← `apps.deploy.health`
+              - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
               - `Servers.Fields` ← `apps.deploy.health`
               - `serverDetailPane.Actions`
               - `serversRootPane.Actions`
             - Contributes:
               - `Pane.Register` "deploy-servers"
               - `Pane.Register` "deploy-server-detail"
+              - `ServerDetail.Section` "Server" → `ServerEditForm`
               - `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
             - Uses:
-              - `apps/deploy/shell.Deploy`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -710,7 +710,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/fill.Fill`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.DialogDescription`
@@ -720,6 +719,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
+              - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
               - `primitives/imperative-dialog.openDialog`
@@ -730,7 +730,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/row-actions.RowActionButton`
-              - `primitives/slot-render.defineRenderSlot`
             - Exports (types):
               - `Server`
               - `SshKey`
@@ -738,6 +737,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `generateSshKeypair`
               - `importSshPrivateKey`
               - `NEW_SERVER_ID`
+              - `ServerDetail`
               - `serverDetailPane`
               - `Servers`
               - `serversResource`
@@ -799,33 +799,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
           - Web:
-            - Slots: `Deploy.Section` ← `apps.deploy.deployments`
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
-              - `primitives/slot-render.defineRenderSlot`
-            - Exports (values): `Deploy`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `deployApp`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/deploy/deployments`
-              - `apps/deploy/servers`
         - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
           - Web:
             - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
-            - Contributes: `Servers.SshSetup` "ssh-setup" → `SshSetupSection`
+            - Contributes: `ServerDetail.Section` "Set up SSH access" → `SshSetupSection`
             - Uses:
               - `apps/deploy/health.useServerVerified`
               - `apps/deploy/health.VerifyConnectionBody`
               - `apps/deploy/servers.generateSshKeypair`
               - `apps/deploy/servers.importSshPrivateKey`
               - `apps/deploy/servers.Server`
-              - `apps/deploy/servers.Servers`
+              - `apps/deploy/servers.ServerDetail`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
@@ -843,7 +836,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
               - `primitives/imperative-dialog.openDialog`
-              - `primitives/section-card.SectionCard`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepCommand`
               - `primitives/setup-steps.StepDone`
@@ -1565,7 +1557,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "page-detail"
               - `Pane.Register` "pages-tree"
               - `Pages.Sidebar` "Pages" → `PagesSidebar`
-              - `PageDetail.Section` → `BacklinksSection`
+              - `PageDetail.Section` "Linked from" → `BacklinksSection`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
             - Uses:
               - `apps/pages/shell.Pages`
@@ -1601,6 +1593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.defineItemActions`
+              - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTarget`
@@ -1642,14 +1635,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/pages-integration`
         - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
           - Web:
-            - Contributes: `TaskDetailSlots.Section` "prompt-origin" → `PromptOriginSection`
+            - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
               - `page/prompt/link.usePromptTaskLink`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/link-chip.LinkChip`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
               - `primitives/live-state.useResource`
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
@@ -2162,7 +2153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "sonata-player"
             - Uses:
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.SonataSection`
+              - `apps/sonata/shell.SonataSectionItem`
               - `apps/sonata/shell.SonataToolbar`
               - `apps/sonata/shell.TEMPO_MATH_FLOOR`
               - `apps/sonata/shell.useSonata`
@@ -2210,7 +2201,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.usePaneStore`
               - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.formatRelativeTime`
-              - `primitives/section-card.SectionCard`
               - `primitives/slot-render.defineRenderSlot`
             - Exports (values):
               - `Library`
@@ -2921,6 +2911,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/full-pane.FullPane`
               - `primitives/css/center.Center`
               - `primitives/css/text.Text`
+              - `primitives/detail-sections.defineDetailSections`
+              - `primitives/detail-sections.DetailSection`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/pane-toolbar.definePaneToolbar`
               - `primitives/scoped-store.defineScopedStore`
@@ -2947,6 +2939,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RhythmStoreProvider`
               - `Sonata`
               - `SonataProvider`
+              - `SonataSectionItem`
               - `SonataToolbar`
               - `TEMPO_MATH_FLOOR`
               - `TransposeStoreProvider`
@@ -3506,7 +3499,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `PageTree.RowActions` "story" → `UpgradeAction`
-              - `PageDetail.Section` → `StorySection`
+              - `PageDetail.Section` "Story" → `StorySection`
             - Uses:
               - `apps-core/tabs.navigate`
               - `apps/pages/page-tree.PageDetail`
@@ -3521,7 +3514,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
               - `primitives/css/ui-kit.Button`
               - `primitives/tooltip.WithTooltip`
         - **`render`** — Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
@@ -3739,7 +3731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/studio/compositions/release`
             - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
               - Web:
-                - Contributes: `CompositionDetail.Section` "closure-tree" → `ClosureTreeSection`
+                - Contributes: `CompositionDetail.Section` "Closure" → `ClosureTreeSection`
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/explorer.PluginTree`
@@ -3753,7 +3745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/pane.useOpenPane`
             - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
               - Web:
-                - Contributes: `CompositionDetail.Section` "contributors" → `ContributorsSection`
+                - Contributes: `CompositionDetail.Section` "Contributors" → `ContributorsSection`
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `plugin-meta/composition.updateActiveDraft`
@@ -3768,7 +3760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/search.SearchInput`
             - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
               - Web:
-                - Contributes: `CompositionDetail.Section` "draft-actions" → `DraftActions`
+                - Contributes: `CompositionDetail.Section` "Draft" → `DraftActions`
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/compositions.compositionDetailPane`
@@ -3784,7 +3776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/pane.openPane`
             - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
               - Web:
-                - Contributes: `CompositionDetail.Section` "entry-points" → `EntryPointsSection`
+                - Contributes: `CompositionDetail.Section` "Entry points" → `EntryPointsSection`
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `plugin-meta/composition.updateActiveDraft`
@@ -3804,7 +3796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/search.SearchInput`
             - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
               - Web:
-                - Contributes: `CompositionDetail.Section` "membership-summary" → `MembershipSummarySection`
+                - Contributes: `CompositionDetail.Section` "Summary" → `MembershipSummarySection`
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `plugin-meta/composition.useActiveMembership`
@@ -3818,8 +3810,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Slots: `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
                 - Contributes:
                   - `Pane.Register` "release-detail"
-                  - `CompositionDetail.Section` "release" → `ReleaseSection`
-                  - `CompositionDetail.Section` "release-history" → `ReleaseHistorySection`
+                  - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
+                  - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/compositions.compositionDetailPane`
@@ -3853,7 +3845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Plugins:
                 - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
                   - Web:
-                    - Contributes: `ReleaseDetail.Section` "artifact" → `ReleaseArtifact`
+                    - Contributes: `ReleaseDetail.Section` "Artifact" → `ReleaseArtifact`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `infra/endpoints.useEndpointMutation`
@@ -3866,7 +3858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/loading.Loading`
                 - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
                   - Web:
-                    - Contributes: `ReleaseDetail.Section` "info" → `ReleaseInfo`
+                    - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `primitives/css/badge.Badge`
@@ -3878,7 +3870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/relative-time.RelativeTime`
                 - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
                   - Web:
-                    - Contributes: `ReleaseDetail.Section` "logs" → `ReleaseLogSection`
+                    - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `infra/endpoints.useEndpoint`
@@ -3950,7 +3942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Plugins:
                 - **`columns`** — Table column definitions section in the table detail view.
                   - Web:
-                    - Contributes: `TableDetail.Section` "columns" → `ColumnsSection`
+                    - Contributes: `TableDetail.Section` "Columns" → `ColumnsSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
                       - `infra/endpoints.useEndpoint`
@@ -3968,7 +3960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Exports (values): `getTableColumns`
                 - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
                   - Web:
-                    - Contributes: `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
+                    - Contributes: `TableDetail.Section` "Foreign Keys" → `ForeignKeysSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
                       - `infra/endpoints.useEndpoint`
@@ -3988,7 +3980,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Exports (values): `getTableForeignKeys`
                 - **`indexes`** — Table indexes section in the table detail view.
                   - Web:
-                    - Contributes: `TableDetail.Section` "indexes" → `IndexesSection`
+                    - Contributes: `TableDetail.Section` "Indexes" → `IndexesSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
                       - `infra/endpoints.useEndpoint`
@@ -4006,7 +3998,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Exports (values): `getTableIndexes`
                 - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
                   - Web:
-                    - Contributes: `TableDetail.Section` "row-count" → `RowCountSection`
+                    - Contributes: `TableDetail.Section` "Row Count" → `RowCountSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
                       - `infra/endpoints.useEndpoint`
@@ -4024,7 +4016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Exports (values): `getTableRowCount`
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
                   - Web:
-                    - Contributes: `TableDetail.Section` "sample-rows" → `SampleRowsSection`
+                    - Contributes: `TableDetail.Section` "Sample Rows" → `SampleRowsSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
                       - `infra/endpoints.useEndpoint`
@@ -4587,13 +4579,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/app-shell.SidebarPaneSection`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
+              - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
@@ -4603,7 +4595,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
-              - `primitives/slot-render.defineRenderSlot`
             - Exports (values):
               - `definitionDetailPane`
               - `definitionsRootPane`
@@ -6109,7 +6100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "commits" → `BuildCommitsSection`
+        - Contributes: `BuildDetailSlots.Section` "Commits" → `BuildCommitsSection`
         - Uses:
           - `build.BuildDetailSlots`
           - `infra/endpoints.useEndpoint`
@@ -6137,7 +6128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `getBuildRunCommits`
     - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "fix" → `BuildFixSection`
+        - Contributes: `BuildDetailSlots.Section` "Fix" → `BuildFixSection`
         - Uses:
           - `build.BuildDetailSlots`
           - `infra/endpoints.useEndpoint`
@@ -6147,7 +6138,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications.toast`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "info" → `BuildInfo`
+        - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
         - Uses:
           - `build.BuildDetailSlots`
           - `primitives/css/badge.Badge`
@@ -6159,7 +6150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/relative-time.RelativeTime`
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "logs" → `BuildLogSection`
+        - Contributes: `BuildDetailSlots.Section` "Logs" → `BuildLogSection`
         - Uses:
           - `build.BuildDetailSlots`
           - `infra/endpoints.useEndpoint`
@@ -6202,7 +6193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getBuildRunLogs`
     - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "profiling" → `BuildProfilingSection`
+        - Contributes: `BuildDetailSlots.Section` "Profiling" → `BuildProfilingSection`
         - Uses:
           - `build.BuildDetailSlots`
           - `debug/profiling.GanttSection`
@@ -6212,7 +6203,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling.Span`
           - `debug/profiling.SpanDetail`
           - `infra/endpoints.useEndpoint`
-          - `primitives/css/clip.Clip`
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -16789,8 +16779,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.PageIcon`
           - `primitives/css/center.Center`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
@@ -17380,12 +17368,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Contributions" → `ContributionsDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.PluginLink`
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the contributions facet (PR review).
@@ -17418,14 +17406,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "cross-refs" → `CrossRefsDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Cross-refs" → `CrossRefsDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.ExportRuntime`
                   - `plugin-meta/plugin-view.PluginLink`
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.RUNTIME_COLORS`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `plugin-meta/plugin-view.SubHeading`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/inline.Inline`
@@ -17459,12 +17447,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "db-schema" → `DbSchemaDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Database" → `DbSchemaDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.PluginLink`
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `plugin-meta/plugin-view.SubHeading`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
@@ -17495,14 +17483,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/badge.Badge`
             - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "exports" → `ExportsDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Exports" → `ExportsDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.ConsumerList`
                   - `plugin-meta/plugin-view.ExportRuntime`
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.RUNTIME_COLORS`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/collapsible.Collapsible`
                   - `primitives/collapsible.CollapsibleChevron`
                   - `primitives/collapsible.CollapsibleContent`
@@ -17534,12 +17522,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "registrations" → `RegistrationsDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Registrations" → `RegistrationsDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.RUNTIME_COLORS`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the registrations facet (PR review).
@@ -17566,11 +17554,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "resources" → `ResourcesDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Resources" → `ResourcesDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the resources facet (PR review).
@@ -17598,12 +17586,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.cn`
             - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "routes" → `RoutesDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Routes" → `RoutesDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.PluginLink`
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/spacing.Stack`
@@ -17634,12 +17622,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/cluster.Cluster`
             - **`render-detail`** — Per-plugin slots section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "slots" → `SlotsDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Slots" → `SlotsDetailSection`
                 - Uses:
                   - `plugin-meta/plugin-view.PluginLink`
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
-                  - `plugin-meta/plugin-view.Section`
+                  - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
@@ -17669,11 +17657,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.pluginViewPane`
             - **`render-detail`** — Per-plugin structure section in the plugin detail pane.
               - Web:
-                - Contributes: `PluginViewSlots.Section` "structure" → `StructureDetailSection`
+                - Contributes: `PluginViewSlots.Section` "Structure" → `StructureDetailSection`
                 - Uses:
-                  - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
-                  - `plugin-meta/plugin-view.Section`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/spacing.Stack`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the structure facet (PR review).
@@ -17717,12 +17703,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
-        - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
+        - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `plugin-meta/plugin-view.PluginNode`
           - `plugin-meta/plugin-view.PluginViewSlots`
-          - `plugin-meta/plugin-view.Section`
+          - `plugin-meta/plugin-view.SectionCount`
           - `primitives/css/scroll.Scroll`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
@@ -17832,7 +17818,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/cluster.Cluster`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/loading.Loading`
@@ -17850,7 +17835,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pluginViewPane`
           - `PluginViewSlots`
           - `RUNTIME_COLORS`
-          - `Section`
+          - `SectionCount`
           - `SubHeading`
       - Server:
         - Uses:
@@ -17895,15 +17880,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and collapsing DAG diamonds via first-occurrence dedup.
           - Web:
             - Contributes:
-              - `PluginViewSlots.Section` "dependencies" → `DependsOnSection`
-              - `PluginViewSlots.Section` "dependents" → `UsedBySection`
+              - `PluginViewSlots.Section` "Depends on" → `DependsOnSection`
+              - `PluginViewSlots.Section` "Used by" → `UsedBySection`
             - Uses:
               - `plugin-meta/composition.useEnsureCompositionData`
               - `plugin-meta/composition.useGraph`
               - `plugin-meta/plugin-view.PluginNode`
               - `plugin-meta/plugin-view.pluginViewPane`
               - `plugin-meta/plugin-view.PluginViewSlots`
-              - `plugin-meta/plugin-view.Section`
+              - `plugin-meta/plugin-view.SectionCount`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/badge.Badge`
@@ -17915,29 +17900,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
         - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "file-tree" → `FileTreeSection`
+            - Contributes: `PluginViewSlots.Section` "Files" → `FileTreeSection`
             - Uses:
               - `code-explorer.FileTree`
               - `conversations/conversation-view/code/file-pane.filePeekPane`
               - `infra/endpoints.useEndpoint`
-              - `plugin-meta/plugin-view.PluginNode`
               - `plugin-meta/plugin-view.PluginViewSlots`
-              - `plugin-meta/plugin-view.Section`
               - `primitives/css/scroll.Scroll`
               - `primitives/data-view.defineDataView`
               - `primitives/pane.useOpenPane`
         - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "inclusion" → `InclusionSection`
+            - Contributes: `PluginViewSlots.Section` "Composition membership" → `InclusionSection`
             - Uses:
               - `plugin-meta/composition.pinAsRoot`
               - `plugin-meta/composition.useActiveComposition`
               - `plugin-meta/composition.useEnsureCompositionData`
               - `plugin-meta/composition.useImpact`
               - `plugin-meta/composition.useInclusion`
-              - `plugin-meta/plugin-view.PluginNode`
               - `plugin-meta/plugin-view.PluginViewSlots`
-              - `plugin-meta/plugin-view.Section`
               - `primitives/css/badge.Badge`
               - `primitives/css/badge.BadgeVariant`
               - `primitives/css/cluster.Cluster`
@@ -17947,29 +17928,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "runtimes" → `RuntimesSection`
+            - Contributes: `PluginViewSlots.Section` "Runtimes" → `RuntimesSection`
             - Uses:
               - `plugin-meta/plugin-view.PluginNode`
               - `plugin-meta/plugin-view.PluginViewSlots`
               - `plugin-meta/plugin-view.RUNTIME_COLORS`
-              - `plugin-meta/plugin-view.Section`
               - `primitives/css/badge.Badge`
               - `primitives/css/spacing.Stack`
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "source-path" → `SourcePathSection`
-            - Uses:
-              - `plugin-meta/plugin-view.PluginNode`
-              - `plugin-meta/plugin-view.PluginViewSlots`
-              - `plugin-meta/plugin-view.Section`
+            - Contributes: `PluginViewSlots.Section` "Source Path" → `SourcePathSection`
+            - Uses: `plugin-meta/plugin-view.PluginViewSlots`
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "sub-plugins" → `SubPluginsSection`
+            - Contributes: `PluginViewSlots.Section` "Sub-plugins" → `SubPluginsSection`
             - Uses:
               - `plugin-meta/plugin-view.PluginNode`
               - `plugin-meta/plugin-view.pluginViewPane`
               - `plugin-meta/plugin-view.PluginViewSlots`
-              - `plugin-meta/plugin-view.Section`
+              - `plugin-meta/plugin-view.SectionCount`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
@@ -18260,20 +18237,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/row`
           - `primitives/data-view`
           - `primitives/data-view/tree`
-          - `primitives/detail-sections`
           - `primitives/section-card`
           - `primitives/tree`
           - `reorder/node-types/header`
           - `review/code-review`
           - `review/plugin-changes`
           - `review/plugin-changes/file-changes`
-          - `tasks/task-attachments`
-          - `tasks/task-dependencies`
-          - `tasks/task-description`
-          - `tasks/task-effort`
-          - `tasks/task-events`
           - `tasks/task-list`
-          - `tasks/task-preprompt`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
@@ -18679,7 +18649,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/demos/release-switcher`
               - `backup`
               - `build/build-logs`
-              - `build/build-profiling`
               - `code-explorer`
               - `config_v2/settings`
               - `conversations/conversation-view`
@@ -18936,6 +18905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/table`
               - `primitives/data-view/tree`
+              - `primitives/detail-sections`
               - `primitives/tooltip`
               - `reorder/edit-mode`
               - `reorder/editor`
@@ -19247,7 +19217,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/thread-list`
               - `apps/pages/content-search`
               - `apps/pages/page-tree`
-              - `apps/pages/prompt-origin`
               - `apps/pages/trash`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
@@ -19279,17 +19248,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
-              - `primitives/detail-sections`
               - `primitives/folder-picker`
               - `primitives/section-card`
               - `reorder/editor`
               - `search/quick-find`
               - `tasks/task-attachments`
               - `tasks/task-dependencies`
-              - `tasks/task-description`
-              - `tasks/task-effort`
               - `tasks/task-events`
-              - `tasks/task-preprompt`
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/color-palette`
               - `ui/tokens/density`
@@ -19447,7 +19412,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/thread-list`
               - `apps/pages/history`
               - `apps/pages/page-tree`
-              - `apps/pages/prompt-origin`
               - `apps/pages/trash`
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
@@ -19638,7 +19602,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/link`
               - `page/image`
               - `page/inline-date`
-              - `page/links`
               - `page/math/inline`
               - `page/page-link`
               - `page/prompt/block`
@@ -19856,7 +19819,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
-              - `apps/deploy/servers`
               - `apps/mail/reading-pane`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/graph`
@@ -19864,7 +19826,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/demos/editor-toy`
               - `apps/website/demos/plugin-pyramid`
               - `apps/website/demos/sample-app`
-              - `apps/workflows/definitions`
               - `apps/workflows/editor`
               - `apps/workflows/engine`
               - `conversations/agents`
@@ -19951,7 +19912,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
               - `apps/story/content/text`
-              - `apps/story/pages-integration`
               - `apps/story/render`
               - `apps/story/renderers/blog`
               - `apps/story/renderers/slides`
@@ -20121,7 +20081,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/file`
               - `page/formatting/color`
               - `page/inline-date`
-              - `page/links`
               - `page/math/equation`
               - `page/math/inline`
               - `page/prompt/block`
@@ -20624,6 +20583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
+              - `primitives/detail-sections`
               - `primitives/floating-action`
               - `primitives/floating-surface`
               - `primitives/folder-picker`
@@ -21502,19 +21462,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Web:
         - Uses:
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
-          - `primitives/css/row.SectionHeaderRow`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.SpaceStep`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/persistent-draft.useDraft`
+          - `primitives/section-card.SectionCard`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.RenderSlot`
-        - Exports (types): `DetailSections`
+        - Exports (types):
+          - `DetailSection`
+          - `DetailSections`
+          - `DetailSectionsOptions`
         - Exports (values): `defineDetailSections`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/servers`
+          - `apps/pages/page-tree`
+          - `apps/sonata/shell`
           - `apps/studio/compositions`
           - `apps/studio/compositions/release`
           - `apps/studio/contributions/tables`
+          - `apps/workflows/definitions`
           - `build`
           - `plugin-meta/plugin-view`
           - `review`
@@ -23036,6 +23006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/push-and-exit`
           - `primitives/auto-scroll`
           - `primitives/css/color-picker`
+          - `primitives/detail-sections`
           - `shell/global-action-bar`
           - `tasks/task-draft-form`
       - Web:
@@ -23339,8 +23310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
-          - `apps/deploy/ssh-setup`
-          - `apps/sonata/library`
+          - `primitives/detail-sections`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
       - Cross-plugin:
         - Imported by:
@@ -23457,8 +23427,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-surface`
           - `apps/browser/shell`
           - `apps/debug/shell`
-          - `apps/deploy/servers`
-          - `apps/deploy/shell`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/shell`
@@ -23477,7 +23445,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/website/pillars/apps`
           - `apps/website/pillars/platform`
           - `apps/website/shell`
-          - `apps/workflows/definitions`
           - `apps/workflows/shell`
           - `config_v2/fields`
           - `config_v2/settings`
@@ -24132,8 +24099,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
       - `Staging.DiffRenderer` → `ReorderDiffRenderer`
     - Uses:
       - `config_v2.ConfigV2`
@@ -24213,11 +24178,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "debug-app.sidebar"
       - `ConfigV2.Register` "debug-app.toolbar"
       - `ConfigV2.Register` "deploy.deployments.item-actions"
-      - `ConfigV2.Register` "deploy.section"
-      - `ConfigV2.Register` "deploy.servers.detail-header"
+      - `ConfigV2.Register` "deploy.server-detail.section"
       - `ConfigV2.Register` "deploy.servers.fields"
       - `ConfigV2.Register` "deploy.servers.item-actions"
-      - `ConfigV2.Register` "deploy.servers.ssh-setup"
       - `ConfigV2.Register` "file-explorer.sidebar"
       - `ConfigV2.Register` "file-explorer.toolbar"
       - `ConfigV2.Register` "home.section"
@@ -24671,7 +24634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
       - Web:
         - Contributes:
-          - `ReviewSlots.Section` "code-review" → `CodeReviewSection`
+          - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
           - `ConfigV2.WebRegister`
         - Uses:
           - `config_v2.ConfigV2`
@@ -24705,7 +24668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `reviewConfig`
     - **`config-defaults`** — Lists staged config_v2 'default for everyone' edits in the review pane with a per-config before→after diff (pluggable renderer, generic fallback) and Apply / Discard.
       - Web:
-        - Contributes: `ReviewSlots.Section` "config-defaults" → `ConfigDefaultsSection`
+        - Contributes: `ReviewSlots.Section` "Default for everyone" → `ConfigDefaultsSection`
         - Uses:
           - `config_v2/staging.GenericConfigDiff`
           - `config_v2/staging.StagedConfigDefault`
@@ -24732,7 +24695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
-        - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
+        - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
         - Uses:
           - `infra/endpoints.useEndpoint`
           - `primitives/collapsible.ExpandAllButton`
@@ -25589,13 +25552,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core.getTask`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "attachments" → `TaskAttachments`
+        - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
         - Uses:
           - `infra/endpoints.useEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
           - `primitives/css/row.Row`
-          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `tasks/task-detail.TaskDetailSlots`
@@ -25647,14 +25607,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
       - Web:
         - Contributes:
-          - `TaskDetailSlots.Section` "dependencies" → `TaskDependencies`
-          - `TaskDetailSlots.Section` "dependents" → `TaskDependents`
+          - `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
+          - `TaskDetailSlots.Section` "Dependents" → `TaskDependents`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
           - `primitives/css/row.Row`
-          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
@@ -25671,7 +25628,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-deps-tree`** — Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
       - Web:
         - Contributes:
-          - `TaskDetailSlots.Section` "deps-tree" → `DepsTreeSection`
+          - `TaskDetailSlots.Section` "Dependency tree" → `DepsTreeSection`
           - `task-deps-tree.actions` "detach" → `DetachAction`
           - `task-deps-tree-sources` "Dependencies" → `DepsSource`
           - `task-deps-tree-sources` "Created" → `CreatedSource`
@@ -25712,13 +25669,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskClusterIds`
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "description" → `TaskDescription`
+        - Contributes: `TaskDetailSlots.Section` "Description" → `TaskDescription`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
           - `primitives/css/pin.Pin`
-          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
@@ -25846,13 +25800,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-dependencies`
     - **`task-effort`** — Per-task thinking-mode (effort) picker in the task detail pane; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "effort" → `TaskEffortSection`
+        - Contributes: `TaskDetailSlots.Section` "Thinking mode" → `TaskEffortSection`
         - Uses:
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
-          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/live-state.useResource`
@@ -25894,15 +25845,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskEffortsResource`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "events" → `TaskEvents`
+        - Contributes:
+          - `TaskDetailSlots.Section` "Pushes" → `TaskPushes`
+          - `TaskDetailSlots.Section` "Attempts" → `TaskAttempts`
         - Uses:
           - `conversations/conversation-ui/item.ConversationItem`
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.useEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
           - `primitives/css/row.Row`
-          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
@@ -25913,7 +25863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.TaskDetailSlots`
     - **`task-graph`** — Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "graph" → `TaskGraph`
+        - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/center.Center`
@@ -25934,7 +25884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.STATUS_META`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "header" → `TaskHeader`
+        - Contributes: `TaskDetailSlots.Section` "Header" → `TaskHeader`
         - Uses:
           - `conversations.useConversationById`
           - `conversations/model-provider.ModelSelect`
@@ -26003,13 +25953,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail`
     - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "preprompt" → `TaskPrepromptSection`
+        - Contributes: `TaskDetailSlots.Section` "Preprompt" → `TaskPrepromptSection`
         - Uses:
           - `conversations/preprompts.PrepromptSelect`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleContent`
-          - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/live-state.useResource`
@@ -26768,7 +26715,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Categorical preset"
               - `ThemeEngine.TokenGroup` "Categorical"
               - `ThemeEngine.VariantGroup` "Categorical" → `CategoricalPicker`
-              - `ThemeCustomizer.Section` "categorical" → `CategoricalSection`
+              - `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -26803,7 +26750,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Chart preset"
               - `ThemeEngine.TokenGroup` "Chart"
               - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
-              - `ThemeCustomizer.Section` "chart" → `ChartSection`
+              - `ThemeCustomizer.Section` "Chart" → `ChartSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -26849,7 +26796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ColorAdjust.Preset` "Invert Hue"
               - `ThemeEngine.ColorTransform` "Color Transform"
               - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
-              - `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
+              - `ThemeCustomizer.Section` "Color Adjust" → `ColorAdjustSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -26877,7 +26824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ColorPalette.Preset` "Warm"
               - `ThemeEngine.TokenGroup` "Color Palette"
               - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
-              - `ThemeCustomizer.Section` "color-palette" → `ColorPaletteSection`
+              - `ThemeCustomizer.Section` "Color Palette" → `ColorPaletteSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -26918,7 +26865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Density preset"
               - `ThemeEngine.TokenGroup` "Density"
               - `ThemeEngine.VariantGroup` "Density" → `DensityPicker`
-              - `ThemeCustomizer.Section` "density" → `DensitySection`
+              - `ThemeCustomizer.Section` "Density" → `DensitySection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -26953,7 +26900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Font preset"
               - `ThemeEngine.TokenGroup` "Fonts"
               - `ThemeEngine.VariantGroup` "Fonts" → `FontFamilyPicker`
-              - `ThemeCustomizer.Section` "font-family" → `FontFamilySection`
+              - `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -27020,7 +26967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ConfigV2.WebRegister`
               - `ThemeEngine.TokenGroup` "Shadow"
               - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
-              - `ThemeCustomizer.Section` "shadow" → `ShadowSection`
+              - `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -27066,7 +27013,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Shape preset"
               - `ThemeEngine.TokenGroup` "Shape"
               - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
-              - `ThemeCustomizer.Section` "shape" → `ShapeSection`
+              - `ThemeCustomizer.Section` "Shape" → `ShapeSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -27103,7 +27050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Sidebar Palette preset"
               - `ThemeEngine.TokenGroup` "Sidebar Palette"
               - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
-              - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
+              - `ThemeCustomizer.Section` "Sidebar Palette" → `SidebarPaletteSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -27141,7 +27088,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DynamicEnum.Options` "Type scale preset"
               - `ThemeEngine.TokenGroup` "Type Scale"
               - `ThemeEngine.VariantGroup` "Type Scale" → `TypeScalePicker`
-              - `ThemeCustomizer.Section` "type-scale" → `TypeScaleSection`
+              - `ThemeCustomizer.Section` "Type Scale" → `TypeScaleSection`
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -27253,7 +27200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
           - Web:
             - Contributes:
-              - `ThemeCustomizer.Section` "community-browser" → `CommunityBrowserSection`
+              - `ThemeCustomizer.Section` "Community Themes" → `CommunityBrowserSection`
               - `QuickTheme.Section` "Theme" → `QuickThemeSection`
             - Uses:
               - `config_v2.useConfigRegistrations`
