@@ -104,6 +104,21 @@ row actions disable, with the reason in the tooltip, when the server has no
 successful probe — the platform a deploy needs is discovered by that probe, so the
 button would certainly be refused.
 
+### Converge's idempotence contract
+
+A converge on an already-correct host must change nothing — re-running it is how
+you inspect or repair one. Two rules in the generated script
+(`cli/bin/commands/internal/converge-script.ts`) carry that; a new step has to
+honour both:
+
+- **Every generated file lands through `put`**, which replaces the target only
+  when the bytes differ — so an unchanged file keeps its mtime, and `[=]` is a
+  comparison rather than a string the step assumed.
+- **The restart is gated on the running process predating `env` / the unit**, not
+  on what this run did. That also repairs an install whose last converge wrote a
+  new `env` and died before restarting — which a "did I just change it" flag
+  never would.
+
 The child inherits `SINGULARITY_WORKTREE`, which is what makes the CLI act on the
 same namespace as the app you clicked in: it reads the deployment record over HTTP
 from `<worktree>.localhost:9000` and the server row from that worktree's DB fork,

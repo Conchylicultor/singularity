@@ -61,15 +61,11 @@ import {
 } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 import { serverHealth } from "@plugins/apps/plugins/deploy/plugins/health/server";
 import {
-  CADDY_SITES_DIR,
   DEFAULT_LOOPBACK_PORT,
   DeploymentSchema,
-  INSTALL_ROOT,
   REMOTE_SCRIPT_SHEBANG,
-  SYSTEMD_INSTANCE,
   UNIT_TEMPLATE_PATH,
   createDeployment,
-  currentAppPath,
   deriveInstall,
   listDeployments,
   listenAddress,
@@ -78,6 +74,7 @@ import {
   type Deployment,
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { convergeScript, sq } from "./internal/converge-script";
 import { sshRun, sshUpload, type SshTarget } from "@plugins/infra/plugins/ssh/server";
 import { isLinuxTag, isPlatformTag, type PlatformTag } from "@plugins/release/core";
 import {
@@ -555,11 +552,11 @@ async function assertClosureSafe(target: DeployTarget): Promise<void> {
 }
 
 // ── D3: the converge script ───────────────────────────────────────────────────
-
-/** Shell single-quote one value for safe interpolation into the script. */
-function sq(value: string): string {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
-}
+//
+// The script itself is `internal/converge-script.ts` — a pure function of plain
+// values, so its shell can be syntax-checked and its file-installer exercised by
+// `converge-script.test.ts` instead of only by a remote host. What stays here is
+// the guard that runs before it.
 
 /**
  * A hostname is about to be written into a Caddyfile, so it is asserted at the
@@ -577,274 +574,6 @@ function assertCaddySafeHostname(hostname: string): void {
         `into a Caddy site block. Fix it in the Deploy app.`,
     );
   }
-}
-
-/**
- * The systemd unit — ONE template file for every composition, so nothing
- * per-instance may appear in it. Its paths are `deriveInstall("%i")`, the same
- * function that derives the real instance's paths.
- *
- * `EQUIN_RELEASE_DIR` is explicit because `PrivateTmp=yes` gives the service its
- * own `/tmp`: without it the self-extractor falls back to `tmpdir()` and
- * re-extracts the whole bundle on every boot.
- */
-function unitTemplate(): string {
-  const t = deriveInstall(SYSTEMD_INSTANCE);
-  return `[Unit]
-Description=equin composition ${SYSTEMD_INSTANCE}
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=${t.runUser}
-ExecStart=${currentAppPath(SYSTEMD_INSTANCE)}
-EnvironmentFile=${t.envFile}
-Environment=SINGULARITY_DIR=${t.dataDir}
-Environment=EQUIN_RELEASE_DIR=${t.runtimeDir}
-Restart=always
-RestartSec=2
-PrivateTmp=yes
-
-[Install]
-WantedBy=multi-user.target
-`;
-}
-
-/** This deployment's Caddy site block: TLS in front, plain HTTP on loopback. */
-function caddySite(hostnames: string[], loopbackPort: number): string {
-  // No `header_up Host`: each install runs its OWN gateway with
-  // `-default-namespace <composition>`, and the gateway's `parseWorktree`
-  // yields no worktree for anything not ending in `.localhost` — so a public
-  // Host falls straight through to the default namespace. Caddy handles ACME,
-  // renewal and WebSocket upgrades natively.
-  //
-  // `encode` and the asset `Cache-Control` belong HERE rather than in the app:
-  // the backend serves the web dist uncompressed and unlabelled, so without
-  // these every visitor pays ~4x the bytes and every REPEAT visitor re-downloads
-  // the whole bundle. Caddy is the only layer that sees the finished response,
-  // and it is generated, so a deployment cannot forget them.
-  //
-  // The `immutable` year is safe for `/assets/*` ONLY: vite content-hashes those
-  // filenames, so a changed file is a changed URL. Everything else (the HTML
-  // shell, the unhashed root icons) is deliberately left revalidating — caching
-  // index.html for a year would pin visitors to a stale build forever.
-  return `${hostnames.join(", ")} {
-\tencode zstd gzip
-\theader /assets/* Cache-Control "public, max-age=31536000, immutable"
-\treverse_proxy ${listenAddress(loopbackPort)}
-}
-`;
-}
-
-/**
- * The whole convergent host state, as one idempotent script.
- *
- * Every step is written so that a second run changes nothing and a drifted host
- * is repaired: `id -u` before `useradd`, `install -d` (which re-applies owner
- * and mode), temp-file + `mv` for every file write, `ufw`'s own rule dedupe,
- * and package installs guarded on what is actually present.
- */
-function convergeScript(opts: {
-  install: InstallLayout;
-  hostnames: string[];
-  loopbackPort: number;
-  sshPort: number;
-  sshUser: string;
-}): string {
-  const { install, hostnames, loopbackPort, sshPort, sshUser } = opts;
-  const caddyfile = "/etc/caddy/Caddyfile";
-  const keyring = "/usr/share/keyrings/caddy-stable-archive-keyring.gpg";
-  const sourceList = "/etc/apt/sources.list.d/caddy-stable.list";
-  // The signed-by path is spelled INSIDE the apt source line, so it is derived
-  // from the same constant rather than typed twice.
-  const debLine = `deb [signed-by=${keyring}] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main`;
-
-  return `${REMOTE_SCRIPT_SHEBANG}
-# GENERATED by \`./singularity deploy converge\` — do NOT edit on the host.
-# It is regenerated from the deployment row and re-uploaded on every converge,
-# so any edit here is silently discarded. Change the deployment instead.
-set -euo pipefail
-
-# Everything this script says goes to stderr: \`sshRun\`'s failure result carries
-# stderr ONLY, so progress written to stdout would be dropped on exactly the run
-# a human needs to read. Command substitutions are unaffected (each sets up its
-# own stdout), which is what keeps \`$(...)\` reads below working.
-exec 1>&2
-
-C=${sq(install.compositionId)}
-RUN_USER=${sq(install.runUser)}
-UNIT=${sq(install.unit)}
-INSTALL_ROOT=${sq(INSTALL_ROOT)}
-INSTALL_DIR=${sq(install.installDir)}
-RELEASES_DIR=${sq(install.releasesDir)}
-RUNTIME_DIR=${sq(install.runtimeDir)}
-DATA_DIR=${sq(install.dataDir)}
-ENV_FILE=${sq(install.envFile)}
-UNIT_PATH=${sq(UNIT_TEMPLATE_PATH)}
-CADDYFILE=${sq(caddyfile)}
-CADDY_SITES=${sq(CADDY_SITES_DIR)}
-SITE=${sq(install.caddySitePath)}
-CADDY_KEYRING=${sq(keyring)}
-CADDY_LIST=${sq(sourceList)}
-
-# Converge runs as the server's LOGIN user because it creates users and writes
-# /etc. The RUN user is a different, unprivileged, derived one — that split is
-# the whole point, so say so loudly if the login user is not root.
-if [ "$(id -u)" -ne 0 ]; then
-  echo "converge needs root; the server's sshUser is ${sshUser}" >&2
-  exit 1
-fi
-export DEBIAN_FRONTEND=noninteractive
-
-# ── 1. The run user. Derived from the composition name, never read from a
-#       field, so it can never be root — which is what makes initdb legal.
-if id -u "$RUN_USER" >/dev/null 2>&1; then
-  echo "[=] run user $RUN_USER exists"
-else
-  useradd --system --create-home "$RUN_USER"
-  echo "[+] created run user $RUN_USER"
-fi
-
-# ── 2. The dir layout. \`install -d\` re-applies owner and mode on every run, so
-#       a hand-chowned dir converges back. data/ is 750: it holds the Postgres
-#       cluster, the config tree and the logs, and only root and the run user
-#       have any business there.
-install -d -m 755 "$INSTALL_ROOT"
-install -d -m 755 -o "$RUN_USER" -g "$RUN_USER" "$INSTALL_DIR" "$RELEASES_DIR" "$RUNTIME_DIR"
-install -d -m 750 -o "$RUN_USER" -g "$RUN_USER" "$DATA_DIR"
-echo "[=] layout under $INSTALL_DIR"
-
-# ── 3. The EnvironmentFile: the per-DEPLOYMENT values the shared unit template
-#       cannot hold. NO secrets — see the plan, §What goes in \`env\`.
-#       0600 root:$RUN_USER is safe because systemd (pid 1, root) reads
-#       EnvironmentFile BEFORE dropping to User=, so the service never needs
-#       read access itself. The umask is scoped to a SUBSHELL so the temp file is
-#       never briefly world-readable, without leaking 077 into the 0644 /etc
-#       writes below.
-(
-  umask 077
-  {
-    echo "# GENERATED by \\\`singularity deploy converge\\\` — do not edit."
-    echo "SINGULARITY_LISTEN=${listenAddress(loopbackPort)}"
-  } > "$ENV_FILE.new"
-)
-chown "root:$RUN_USER" "$ENV_FILE.new"
-chmod 600 "$ENV_FILE.new"
-mv -f "$ENV_FILE.new" "$ENV_FILE"
-echo "[=] $ENV_FILE (SINGULARITY_LISTEN=${listenAddress(loopbackPort)})"
-
-# ── 4a. Base packages. ufw is in the Ubuntu base image and curl is needed by
-#        ship's health gate; both are no-ops when present, and apt does no work
-#        at all when nothing is missing.
-missing=""
-for p in curl ca-certificates gnupg ufw; do
-  dpkg-query -W -f='\${Status}' "$p" 2>/dev/null | grep -q 'install ok installed' || missing="$missing $p"
-done
-if [ -n "$missing" ]; then
-  echo "[+] installing:$missing"
-  apt-get update -qq
-  apt-get install -y --no-install-recommends $missing
-else
-  echo "[=] base packages present"
-fi
-
-# ── 4b. Caddy terminates TLS in front; the gateway stays plain HTTP on
-#        loopback. Only reached when this deployment declares a hostname —
-#        a hostname-less deployment is loopback-only and needs no Caddy.
-${
-  hostnames.length > 0
-    ? `# Caddy is NOT in Ubuntu 24.04's archives, so a bare \`apt-get install -y caddy\`
-# fails on a fresh image: the official repo goes in first. The key is fetched
-# once (a dearmored key is deterministic, so re-fetching would change nothing);
-# the source line is rewritten every run and is content-identical, which is what
-# keeps this step convergent.
-if [ ! -s "$CADDY_KEYRING" ]; then
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o "$CADDY_KEYRING.new"
-  chmod 644 "$CADDY_KEYRING.new"
-  mv -f "$CADDY_KEYRING.new" "$CADDY_KEYRING"
-  echo "[+] caddy apt signing key"
-fi
-printf '%s\\n' ${sq(debLine)} > "$CADDY_LIST.new"
-chmod 644 "$CADDY_LIST.new"
-mv -f "$CADDY_LIST.new" "$CADDY_LIST"
-if ! command -v caddy >/dev/null 2>&1; then
-  echo "[+] installing caddy"
-  apt-get update -qq
-  apt-get install -y caddy
-else
-  echo "[=] caddy present"
-fi
-
-install -d -m 755 "$CADDY_SITES"
-cat > "$SITE.new" <<'EQUIN_CADDY_SITE'
-${caddySite(hostnames, loopbackPort)}EQUIN_CADDY_SITE
-# 0644: the caddy unit runs as User=caddy and must be able to READ its own site.
-chmod 644 "$SITE.new"
-mv -f "$SITE.new" "$SITE"
-echo "[=] $SITE"`
-    : `if [ -e "$SITE" ]; then
-  rm -f "$SITE"
-  echo "[-] removed $SITE (this deployment declares no hostname)"
-else
-  echo "[=] no Caddy site (this deployment declares no hostname)"
-fi`
-}
-
-# The root Caddyfile is OURS: converge owns it so the sites dir is genuinely
-# imported (the distro default ships an unrelated \`:80\` site and no import we
-# can rely on). Written from what is actually in the sites dir, because Caddy
-# errors on an import glob that matches nothing — with no sites at all the
-# config is deliberately empty, which is exactly "this box serves no hostname".
-if command -v caddy >/dev/null 2>&1; then
-  if ls "$CADDY_SITES"/*.caddy >/dev/null 2>&1; then
-    printf '%s\\n%s\\n' '# GENERATED by singularity deploy converge — do not edit.' "import $CADDY_SITES/*.caddy" > "$CADDYFILE.new"
-  else
-    printf '%s\\n' '# GENERATED by singularity deploy converge — no deployment on this host declares a hostname.' > "$CADDYFILE.new"
-  fi
-  chmod 644 "$CADDYFILE.new"
-  mv -f "$CADDYFILE.new" "$CADDYFILE"
-  caddy validate --config "$CADDYFILE"
-  systemctl enable --now caddy
-  systemctl reload caddy
-  echo "[=] caddy reloaded"
-fi
-
-# ── 5. The systemd unit. Reboot survival, crash restart, journald log rotation
-#       and the enforced run user all fall out of it — which is why it is the
-#       primitive rather than a wrapper script.
-cat > "$UNIT_PATH.new" <<'EQUIN_UNIT'
-${unitTemplate()}EQUIN_UNIT
-chmod 644 "$UNIT_PATH.new"
-mv -f "$UNIT_PATH.new" "$UNIT_PATH"
-systemctl daemon-reload
-systemctl enable "$UNIT" >/dev/null
-echo "[=] $UNIT_PATH; $UNIT enabled"
-
-# ── 6. The firewall. ONE multiport rule (a multiport \`ufw allow\` REQUIRES a
-#       protocol — bare \`22,80,443\` is rejected) added BEFORE \`--force
-#       enable\`, so the SSH session converge is running over survives it. The
-#       SSH port comes from the server row, not the literal 22: allowing only 22
-#       on a box whose sshd listens elsewhere would lock us out permanently.
-ufw default deny incoming >/dev/null
-ufw default allow outgoing >/dev/null
-ufw allow ${sshPort},80,443/tcp >/dev/null
-ufw --force enable >/dev/null
-echo "[=] ufw: deny incoming, allow ${sshPort},80,443/tcp"
-
-# The env file may have just changed (a new loopback port), and a running
-# install would otherwise keep the old listen address while Caddy proxies to the
-# new one. Restart only when something is actually running: with nothing shipped
-# yet there is no current/app to exec, and \`systemctl start\` would fail.
-if systemctl is-active --quiet "$UNIT"; then
-  systemctl restart "$UNIT"
-  echo "[~] restarted $UNIT to pick up $ENV_FILE"
-else
-  echo "[=] $UNIT is enabled but not running — nothing shipped yet"
-fi
-
-echo "[done] converged $C"
-`;
 }
 
 // ── D4: bundle discovery + the activate script ────────────────────────────────
