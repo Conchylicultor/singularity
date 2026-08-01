@@ -1715,8 +1715,6 @@ export function BlockEditorProviderInner({
       recordStructuralWithDocEdit,
       mergeBlock,
       isAnchorNode,
-      blockHandles,
-      wrapInContainer,
       authority,
     ],
   );

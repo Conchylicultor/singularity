@@ -13817,7 +13817,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `config_v2.staging`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `config_v2.staging`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.caret-flight`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -16176,6 +16176,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockSection`
           - `BlockTextExtension`
           - `BlockTextPluginProps`
+          - `CaretFlightAbortReason`
+          - `CaretFlightAbortReport`
           - `CaretSurface`
           - `CaretSurfaceRef`
           - `FormatToolbarValue`
@@ -16190,6 +16192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockEditor`
           - `BlockTextRenderer`
           - `BlockTypeList`
+          - `caretFlightReportSink`
           - `colorCssValue`
           - `Editor`
           - `filterBlockTypes`
@@ -16469,6 +16472,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/turn-into-page`
           - `page/url-paste`
           - `page/video`
+          - `reports/caret-flight`
         - Extended by:
           - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
           - `apps/pages/starred` (table `page_blocks_ext_starred`)
@@ -18481,6 +18485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/table`
               - `primitives/file-links`
               - `reorder`
+              - `reports/caret-flight`
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
               - `reports/render-loop`
@@ -18934,6 +18939,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tooltip`
               - `reorder/edit-mode`
               - `reorder/editor`
+              - `reports/caret-flight`
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
               - `reports/render-loop`
@@ -24387,7 +24393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.caret-flight`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
@@ -24471,6 +24477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/stall-monitor`
       - `debug/trace/engine`
       - `infra/boot-snapshot`
+      - `reports/caret-flight`
       - `reports/crash`
       - `reports/endpoint-errors`
       - `reports/launch-fix`
@@ -24482,6 +24489,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/turn-unconfirmed`
       - `tasks/reports-investigation`
   - Plugins:
+    - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `CaretFlightCollector`
+          - `Reports.KindView` → `CaretFlightKindView`
+        - Uses:
+          - `page/editor.caretFlightReportSink`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "caret-flight"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `CaretFlightPayload`
+        - Exports (values):
+          - `caretFlightFingerprint`
+          - `CaretFlightPayloadSchema`
     - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
       - Web:
         - Contributes:
