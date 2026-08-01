@@ -32,6 +32,7 @@ import { useStagedTree } from "./staged-tree";
 import { useEditMode } from "./edit-mode-store";
 import { useReorderScope } from "./scope-store";
 import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
+import { ReorderItemClaimContext } from "./item-claim";
 import {
   applyTree,
   contributionKey,
@@ -162,6 +163,11 @@ export function ReorderListMiddleware({
 
   // No descriptor (runtime-only render slot, a mount slot, or unresolved id)
   // → render naturally with no reorder applied.
+  //
+  // NOT claimed, deliberately: this path mounts no reorder area of its own, so
+  // its contributions are members of nothing. Claiming them here would hand them
+  // to whichever ancestor area happens to enclose this slot — the same
+  // inheritance bug the claim exists to close.
   if (!descriptor) {
     return <>{contributions.map((c) => renderItem(c))}</>;
   }
@@ -508,7 +514,16 @@ function ReorderInner({
               );
             }
             memberIds.push(entryKey(m));
-            return <span key={entryKey(m)}>{renderItem(m)}</span>;
+            // CLAIMED: a container's member is a real member of THIS area (its
+            // id is registered in the shared SortableContext via `memberIds`),
+            // so it gets a claim exactly like a top-level item.
+            return (
+              <span key={entryKey(m)}>
+                <ReorderItemClaimContext.Provider value={true}>
+                  {renderItem(m)}
+                </ReorderItemClaimContext.Provider>
+              </span>
+            );
           });
         }
         return {
@@ -555,7 +570,16 @@ function ReorderInner({
         kind: "item",
         id: entryKey(entry),
         excluded: !!(entry as Record<string, unknown>).excludeFromReorder,
-        node: renderItem(entry),
+        // CLAIMED: this is THE site that makes a contribution an item of this
+        // area. The provider lands directly above the item middleware's element
+        // (`renderItem` applies the item middlewares inside itself), which
+        // consumes the claim and resets it to `false` for everything below — so
+        // a slot dispatched from inside the contribution can never inherit it.
+        node: (
+          <ReorderItemClaimContext.Provider value={true}>
+            {renderItem(entry)}
+          </ReorderItemClaimContext.Provider>
+        ),
       });
     }
     return out;
@@ -588,6 +612,13 @@ function ReorderInner({
         );
       }
 
+      // NOT claimed, deliberately: the overlay is a PREVIEW of the dragged
+      // contribution, not a member of the area. `DragOverlayWrapper` lives inside
+      // the same `DndContext` as the list, so claiming it would register the
+      // dragged id a SECOND time for the duration of the drag (a duplicate that
+      // predates this fix). Unclaimed, it renders the bare contribution — it
+      // loses the item chrome (ring / ×-badge) inside the box below, which is
+      // accepted; re-claiming is not the fix if that preview ever looks wrong.
       return (
         <div className="rounded-md border border-border bg-background/90 shadow-lg">
           {renderItem(entry)}
