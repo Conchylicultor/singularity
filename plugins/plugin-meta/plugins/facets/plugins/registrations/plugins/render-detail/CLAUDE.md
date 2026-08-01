@@ -11,12 +11,12 @@ runtime registration (MCP tools, jobs, trigger-events) with its formatted
 
 - Description: Per-plugin registrations section in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "registrations" → `RegistrationsDetailSection`
+  - Contributes: `PluginViewSlots.Section` "Registrations" → `RegistrationsDetailSection`
   - Uses:
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.RUNTIME_COLORS`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
 

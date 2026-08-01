@@ -10,7 +10,7 @@
   - Slots:
     - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
-  - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
+  - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
   - Uses:
     - `infra/endpoints.useEndpoint`
     - `primitives/collapsible.ExpandAllButton`

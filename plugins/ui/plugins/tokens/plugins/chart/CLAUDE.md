@@ -13,7 +13,7 @@
     - `DynamicEnum.Options` "Chart preset"
     - `ThemeEngine.TokenGroup` "Chart"
     - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
-    - `ThemeCustomizer.Section` "chart" → `ChartSection`
+    - `ThemeCustomizer.Section` "Chart" → `ChartSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

@@ -6,7 +6,7 @@
 
 - Description: Table column definitions section in the table detail view.
 - Web:
-  - Contributes: `TableDetail.Section` "columns" → `ColumnsSection`
+  - Contributes: `TableDetail.Section` "Columns" → `ColumnsSection`
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `infra/endpoints.useEndpoint`

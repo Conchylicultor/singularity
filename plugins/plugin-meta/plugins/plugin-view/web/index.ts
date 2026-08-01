@@ -4,7 +4,7 @@ import { pluginViewPane } from "./panes";
 
 export { pluginViewPane } from "./panes";
 export { PluginDetail } from "./components/plugin-detail";
-export { Section } from "./components/section";
+export { SectionCount } from "./components/section-count";
 export { PluginLink } from "./components/plugin-link";
 export { ConsumerList } from "./components/consumer-list";
 export { SubHeading } from "./components/sub-heading";

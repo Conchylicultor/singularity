@@ -6,7 +6,7 @@
 
 - Description: FK relationships section (outgoing and incoming) in the table detail view.
 - Web:
-  - Contributes: `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
+  - Contributes: `TableDetail.Section` "Foreign Keys" → `ForeignKeysSection`
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `infra/endpoints.useEndpoint`

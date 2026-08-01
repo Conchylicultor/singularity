@@ -8,6 +8,12 @@ export default {
   description:
     "Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch.",
   contributions: [
-    TaskDetailSlots.Section({ id: "preprompt", label: "Preprompt", component: TaskPrepromptSection }),
+    TaskDetailSlots.Section({
+      id: "preprompt",
+      label: "Preprompt",
+      component: TaskPrepromptSection,
+      // Was a `Collapsible defaultOpen` before the host owned the card.
+      useDefaultOpen: () => true,
+    }),
   ],
 } satisfies PluginDefinition;

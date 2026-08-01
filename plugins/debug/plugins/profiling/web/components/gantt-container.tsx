@@ -38,7 +38,12 @@ export function TimeAxis({
   zoomWindow,
   onZoomReset,
 }: {
-  title: string;
+  /**
+   * Label heading the axis' own column. Omit when the Gantt is already hosted
+   * under a titled surface (a detail-section card) — the column then carries
+   * only the duration readout, instead of repeating the host's title.
+   */
+  title?: string;
   totalMs: number;
   zoomWindow?: ZoomWindow | null;
   onZoomReset?: () => void;
@@ -56,12 +61,14 @@ export function TimeAxis({
     <Stack direction="row" gap="none" className="relative h-6 border-b px-lg">
       {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt rows (LABEL_WIDTH) */}
       <div className="flex w-40 shrink-0 items-center gap-xs">
-        <SectionLabel
-          as="span"
-          className="text-3xs font-medium tracking-wider"
-        >
-          {title}
-        </SectionLabel>
+        {title && (
+          <SectionLabel
+            as="span"
+            className="text-3xs font-medium tracking-wider"
+          >
+            {title}
+          </SectionLabel>
+        )}
         {zoomWindow ? (
           <>
             <span className="text-3xs font-medium tabular-nums text-info">
@@ -211,7 +218,8 @@ export function GanttContainer({
   totalMs,
   children,
 }: {
-  title: string;
+  /** Axis-column label; omit under an already-titled host. See `TimeAxis`. */
+  title?: string;
   totalMs: number;
   children: ReactNode;
 }): ReactElement {

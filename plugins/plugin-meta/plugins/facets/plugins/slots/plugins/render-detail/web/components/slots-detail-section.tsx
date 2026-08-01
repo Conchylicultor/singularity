@@ -2,7 +2,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  Section,
+  SectionCount,
   PluginLink,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -14,43 +14,60 @@ import type { SlotDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/
 // type-only import from the facet core is erased and safe.
 const SLOTS_FACET_ID = "slots";
 
-export function SlotsDetailSection({ node }: { node: PluginNode }) {
+/** The slots this plugin defines, or `null` when it defines none. */
+function slots(node: PluginNode): SlotDef[] | null {
   const data = node.facets?.[SLOTS_FACET_ID] as SlotDef[] | undefined;
-  if (!data || data.length === 0) return null;
+  return data && data.length > 0 ? data : null;
+}
+
+/** No slots ⇒ the host paints no card at all. */
+export function useSlotsAvailable({ node }: { node: PluginNode }): boolean {
+  return slots(node) !== null;
+}
+
+export function SlotsCount({ node }: { node: PluginNode }) {
+  const data = slots(node);
+  if (!data) return null;
+  return (
+    <SectionCount>{`${data.length} slot${data.length !== 1 ? "s" : ""}`}</SectionCount>
+  );
+}
+
+export function SlotsDetailSection({ node }: { node: PluginNode }) {
+  const data = slots(node);
+  if (!data) return null;
 
   return (
-    <Section title="Slots" count={`${data.length} slot${data.length !== 1 ? "s" : ""}`}>
-      <Stack gap="2xs">
-        {data.map((s) => (
-          <Stack gap="2xs" key={s.slotId}>
-            <Text
-              as="div"
-              variant="caption"
-              className="flex items-center gap-sm px-sm py-2xs"
-            >
-              <code className="font-mono text-foreground">
-                {s.groupName}.{s.memberName}
-              </code>
-              <code className="ml-auto truncate font-mono text-muted-foreground/60">
-                {s.slotId}
-              </code>
-            </Text>
-            {s.contributors.length > 0 && (
-              <Cluster gap="xs" className="text-caption gap-y-2xs px-sm">
-                <span className="text-muted-foreground/60">←</span>
-                {s.contributors.map((id) => (
-                  <PluginLink
-                    key={id}
-                    name={id}
-                    label={id}
-                    className="font-mono text-muted-foreground hover:underline"
-                  />
-                ))}
-              </Cluster>
-            )}
-          </Stack>
-        ))}
-      </Stack>
-    </Section>
+    <Stack gap="2xs">
+      {data.map((s) => (
+        <Stack gap="2xs" key={s.slotId}>
+          <Text
+            as="div"
+            variant="caption"
+            className="flex items-center gap-sm px-sm py-2xs"
+          >
+            <code className="font-mono text-foreground">
+              {s.groupName}.{s.memberName}
+            </code>
+            <code className="ml-auto truncate font-mono text-muted-foreground/60">
+              {s.slotId}
+            </code>
+          </Text>
+          {s.contributors.length > 0 && (
+            <Cluster gap="xs" className="text-caption gap-y-2xs px-sm">
+              <span className="text-muted-foreground/60">←</span>
+              {s.contributors.map((id) => (
+                <PluginLink
+                  key={id}
+                  name={id}
+                  label={id}
+                  className="font-mono text-muted-foreground hover:underline"
+                />
+              ))}
+            </Cluster>
+          )}
+        </Stack>
+      ))}
+    </Stack>
   );
 }

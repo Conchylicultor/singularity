@@ -1,7 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import {
-  Section,
+  SectionCount,
   SubHeading,
   PluginLink,
   RUNTIME_COLORS,
@@ -30,38 +30,58 @@ const CROSS_REFS_FACET_ID = "cross-refs";
 
 const RUNTIMES = RUNTIME_FOLDERS;
 
-export function CrossRefsDetailSection({ node }: { node: PluginNode }) {
+function countUses(data: CrossRefsData): number {
+  return RUNTIMES.reduce((sum, rt) => sum + data.apiUses[rt].length, 0);
+}
+
+/** This plugin's cross-plugin edges, or `null` when it has none in either direction. */
+function crossRefs(node: PluginNode): CrossRefsData | null {
   const data = node.facets?.[CROSS_REFS_FACET_ID] as CrossRefsData | undefined;
+  if (!data) return null;
+  if (countUses(data) === 0 && data.importedBy.length === 0) return null;
+  return data;
+}
+
+/** No uses and no importers ⇒ the host paints no card at all. */
+export function useCrossRefsAvailable({ node }: { node: PluginNode }): boolean {
+  return crossRefs(node) !== null;
+}
+
+export function CrossRefsCount({ node }: { node: PluginNode }) {
+  const data = crossRefs(node);
+  if (!data) return null;
+  const totalUses = countUses(data);
+  const parts: string[] = [];
+  if (totalUses > 0) parts.push(`${totalUses} use${totalUses !== 1 ? "s" : ""}`);
+  if (data.importedBy.length > 0)
+    parts.push(
+      `${data.importedBy.length} importer${data.importedBy.length !== 1 ? "s" : ""}`,
+    );
+  return <SectionCount>{parts.join(" · ")}</SectionCount>;
+}
+
+export function CrossRefsDetailSection({ node }: { node: PluginNode }) {
+  const data = crossRefs(node);
   if (!data) return null;
 
   const { apiUses, importedBy } = data;
-  const totalUses = RUNTIMES.reduce((sum, rt) => sum + apiUses[rt].length, 0);
-  if (totalUses === 0 && importedBy.length === 0) return null;
-
-  const parts: string[] = [];
-  if (totalUses > 0) parts.push(`${totalUses} use${totalUses !== 1 ? "s" : ""}`);
-  if (importedBy.length > 0)
-    parts.push(
-      `${importedBy.length} importer${importedBy.length !== 1 ? "s" : ""}`,
-    );
+  const totalUses = countUses(data);
 
   return (
-    <Section title="Cross-refs" count={parts.join(" · ")}>
-      <Stack gap="md">
-        {importedBy.length > 0 && <ImportedByBanner names={importedBy} />}
-        {totalUses > 0 && (
-          <SubHeading label="Uses" count={totalUses}>
-            <Stack gap="sm">
-              {RUNTIMES.map((rt) =>
-                apiUses[rt].length > 0 ? (
-                  <UsesGroup key={rt} runtime={rt} uses={apiUses[rt]} />
-                ) : null,
-              )}
-            </Stack>
-          </SubHeading>
-        )}
-      </Stack>
-    </Section>
+    <Stack gap="md">
+      {importedBy.length > 0 && <ImportedByBanner names={importedBy} />}
+      {totalUses > 0 && (
+        <SubHeading label="Uses" count={totalUses}>
+          <Stack gap="sm">
+            {RUNTIMES.map((rt) =>
+              apiUses[rt].length > 0 ? (
+                <UsesGroup key={rt} runtime={rt} uses={apiUses[rt]} />
+              ) : null,
+            )}
+          </Stack>
+        </SubHeading>
+      )}
+    </Stack>
   );
 }
 

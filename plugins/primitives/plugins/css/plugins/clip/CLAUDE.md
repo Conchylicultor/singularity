@@ -47,7 +47,6 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps/website/demos/release-switcher`
     - `backup`
     - `build/build-logs`
-    - `build/build-profiling`
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/conversation-view`

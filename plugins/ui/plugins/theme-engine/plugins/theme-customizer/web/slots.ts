@@ -2,5 +2,4 @@ import { defineDetailSections } from "@plugins/primitives/plugins/detail-section
 
 export const ThemeCustomizer = defineDetailSections<{ search: string }>(
   "theme-customizer",
-  { collapsible: true, defaultOpen: false },
 );

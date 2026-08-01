@@ -8,7 +8,6 @@ import {
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { getBuildRunProfile } from "../../shared/endpoints";
 
 const PHASE_ORDER = [
@@ -43,18 +42,18 @@ export function BuildProfilingSection({ runId }: { runId: string }): ReactElemen
   const grouped = groupByPhase(data.spans);
 
   return (
+    // No frame and no title of our own: this section is hosted inside the build
+    // detail's `SectionCard` ("Profiling"), which already supplies both. The
+    // Gantt's own label column then carries just the run's total duration.
     <ProfilingContext.Provider value={ctxValue}>
-      <Clip className="rounded-md border">
-        <GanttSection
-          title="Build"
-          totalMs={data.totalMs}
-          phaseOrder={PHASE_ORDER}
-          phaseConfig={PHASE_CONFIG}
-          allByPhase={grouped.all}
-          visibleByPhase={grouped.visible}
-        />
-        <SpanDetail span={hovered} />
-      </Clip>
+      <GanttSection
+        totalMs={data.totalMs}
+        phaseOrder={PHASE_ORDER}
+        phaseConfig={PHASE_CONFIG}
+        allByPhase={grouped.all}
+        visibleByPhase={grouped.visible}
+      />
+      <SpanDetail span={hovered} />
     </ProfilingContext.Provider>
   );
 }

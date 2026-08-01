@@ -1,89 +1,289 @@
 import type { ComponentType, ReactNode } from "react";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+  insetClass,
+  Stack,
+  type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import {
   defineRenderSlot,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 
+/**
+ * Pane-level layout options. Deliberately NOT a chrome switch — the card is not
+ * configurable, or two panes' section stacks would drift again. The only thing a
+ * pane may declare is where its own content edge already is.
+ */
 export interface DetailSectionsOptions {
-  collapsible?: boolean;
-  defaultOpen?: boolean;
+  /**
+   * Horizontal/vertical inset around the section stack. Default `"lg"`.
+   *
+   * `"none"` is for a pane that ALREADY positions its content and would
+   * otherwise inset it twice — Pages puts the page title, icon, and section list
+   * at the shared block inset, so the stack must not add its own on top. The
+   * pane-gutter marker is applied either way (see `Host`).
+   */
+  inset?: SpaceStep;
 }
 
-export interface DetailSections<EntityProps> {
-  Section: RenderSlot<{
-    label: string;
-    component: ComponentType<EntityProps>;
-    headerExtra?: ComponentType;
-    summary?: ComponentType<EntityProps>;
-  }>;
+/**
+ * One section of a detail pane. The contribution supplies identity and a body;
+ * the HOST owns the chrome, so a pane's sections are uniform by construction —
+ * a section never paints its own card, title, or chevron.
+ */
+export interface DetailSection<EntityProps> {
+  /** The section's title, and its click target: clicking it toggles the body. */
+  label: string;
+  /** The body. Receives the pane's entity props. */
+  component: ComponentType<EntityProps>;
+  /** Leading icon in the header row. Raw component; the row owns size + color. */
+  icon?: ComponentType<{ className?: string }>;
+  /** Header-right controls, reachable while collapsed. Rendered at `sm` density. */
+  actions?: ComponentType<EntityProps>;
+  /** Collapsed-state preview beside the title (a count, a +/− diff stat). */
+  summary?: ComponentType<EntityProps>;
+  /** Gate hook. `false` ⇒ nothing painted at all — no card, no title. */
+  useAvailable?: (props: EntityProps) => boolean;
+  /** First-render open state when the user has no persisted choice yet. */
+  useDefaultOpen?: (props: EntityProps) => boolean;
+  /** `"none"` opts out of the card entirely — for a pane's identity block. */
+  chrome?: "card" | "none";
+}
+
+/**
+ * `Extra` carries contribution fields the PANE defines and the primitive knows
+ * nothing about — Sonata's `area: "editor" | "player"`, which routes a section
+ * to one of its column's two zones. It widens only the contribution type; the
+ * chrome, the slot id, and the persisted open-state key are untouched by it.
+ */
+export interface DetailSections<EntityProps, Extra extends object = {}> {
+  Section: RenderSlot<DetailSection<EntityProps> & Extra>;
   Host: ComponentType<EntityProps>;
+  /**
+   * The chrome for ONE contributed section — the same gate → card → persisted
+   * open-state path `Host` applies per item, exposed for a pane that owns its
+   * own zone layout and therefore cannot use `Host`'s single padded stack
+   * (Sonata's rail-collapsible column splits its contributions across two
+   * `.Render` zones by `area`).
+   *
+   * NOT an escape hatch from the chrome: it IS the chrome. A pane reaching for
+   * it still cannot drift on padding, radius, title typography, or open-state
+   * persistence — it only takes over where the sections are laid out. Reach for
+   * `Host` unless the pane genuinely has more than one zone.
+   */
+  SectionItem: ComponentType<{
+    section: DetailSection<EntityProps> & Extra & { id: string };
+    entityProps: EntityProps;
+  }>;
 }
 
-export function defineDetailSections<EntityProps extends Record<string, unknown>>(
+/**
+ * A detail pane is ONE render slot whose sections are contributions.
+ *
+ * `defineDetailSections("<id>")` returns `{ Section, Host, SectionItem }`:
+ * plugins contribute `DetailSection`s to `Section`, the pane renders
+ * `<Host {...entityProps}/>`, and the host paints every section as a
+ * `SectionCard` — a `Card` with a collapsible title row. There is exactly one
+ * mode: the chrome is not configurable per pane, so no two panes' section stacks
+ * can drift on padding, radius, title typography, or chevron placement. A pane
+ * with more than one zone (Sonata's `area`-split column) paints each section
+ * with `SectionItem` — the SAME chrome, laid out by the pane.
+ *
+ * ## Open state
+ *
+ * Resolves persisted user toggle → `useDefaultOpen?.(props)` → `false`. The
+ * persisted choice is device-local (`useDraft`, localStorage) under
+ * `` `<slotId>.<sectionId>.open` ``, where `slotId` is this factory's own
+ * `` `${id}.section` `` — so two panes' identically-named sections can never
+ * collide.
+ *
+ * ## A collapsed body is genuinely UNMOUNTED
+ *
+ * `SectionCard`'s body is a `CollapsibleContent`, which renders `null` while
+ * collapsed — a heavy panel costs nothing until opened. The corollary is a trap:
+ * anything that must keep running regardless of the panel's state (debounced
+ * persistence, a subscription that outlives the panel, a sync observer) does NOT
+ * belong in the body. Lift it into a headless always-mounted contribution — a
+ * `defineMountSlot` slot on the owning pane — and keep the body purely visual.
+ *
+ * ## Slot id (load-bearing)
+ *
+ * The emitted slot id is `` `${id}.section` `` verbatim, and
+ * `reorderDirectiveDescriptor` uses a slot id verbatim as its config_v2 config
+ * name. Renaming a slot silently resets every user's persisted section order on
+ * that pane — never change the shape of this string.
+ */
+export function defineDetailSections<
+  EntityProps extends Record<string, unknown>,
+  Extra extends object = {},
+>(
   id: string,
   options?: DetailSectionsOptions,
-): DetailSections<EntityProps> {
-  const Section = defineRenderSlot<{
-    label: string;
-    component: ComponentType<EntityProps>;
-    headerExtra?: ComponentType;
-    summary?: ComponentType<EntityProps>;
-  }>(`${id}.section`, {
-    docLabel: (p) => p.id,
-  });
+): DetailSections<EntityProps, Extra> {
+  // The template is spelled out INLINE on purpose: the codegen scanner that
+  // builds the reorderable-slots manifest statically parses exactly
+  // `defineRenderSlot(`${<first param>}.<static suffix>`, …)`. Hoisting the id
+  // into a variable makes this slot invisible to it.
+  const Section = defineRenderSlot<DetailSection<EntityProps> & Extra>(
+    `${id}.section`,
+    // The human-readable title, not the id — this is what reorder's drag overlay
+    // shows ("Tracks", not "track-mixer"). `label` is required on every section,
+    // so it is always present.
+    { docLabel: (p) => p.label },
+  );
+  // Derived, never re-spelled — the persisted open-state key must track the slot
+  // id exactly (it is what keeps two panes' identically-named sections apart).
+  const slotId = Section.id;
+  const inset = options?.inset ?? "lg";
 
-  function Host(entityProps: EntityProps): ReactNode {
-    if (options?.collapsible) {
+  type SectionItem = DetailSection<EntityProps> & Extra & { id: string };
+
+  interface SectionProps {
+    section: SectionItem;
+    entityProps: EntityProps;
+  }
+
+  /**
+   * The card chrome. `defaultOpen` is only the seed for the persisted toggle —
+   * `useDraft` resolves its initial value once, so a later flip of the
+   * contribution's `useDefaultOpen` never yanks a card the user has touched.
+   */
+  function CardSection({
+    section,
+    entityProps,
+    defaultOpen,
+  }: SectionProps & { defaultOpen: boolean }): ReactNode {
+    const [open, setOpen] = useDraft(`${slotId}.${section.id}.open`, defaultOpen);
+    const Body = section.component;
+    const Icon = section.icon;
+    const Actions = section.actions;
+    const Summary = section.summary;
+
+    // `summary` and `actions` share the header-right slot: both must stay
+    // visible (and, for actions, clickable) while the card is collapsed, and
+    // `SectionCard.title` takes a plain string — so this is the one node that
+    // can sit beside the title.
+    const headerRight =
+      Summary || Actions ? (
+        <Inline gap="xs">
+          {Summary ? <Summary {...entityProps} /> : null}
+          {Actions ? <Actions {...entityProps} /> : null}
+        </Inline>
+      ) : undefined;
+
+    return (
+      <SectionCard
+        title={section.label}
+        icon={Icon ? <Icon /> : undefined}
+        actions={headerRight}
+        open={open}
+        onOpenChange={setOpen}
+      >
+        {/* Pane gutter: `SectionCard` supplies the body's own `px-lg` but not
+            the flush marker, so the pairing is re-declared HERE, next to the
+            padding it accounts for. Without it every DataView dropped into a
+            section double-gutters; without the padding it would go flush to the
+            card edge. The two always move together. */}
+        <div className="pane-gutter-flush">
+          <Body {...entityProps} />
+        </div>
+      </SectionCard>
+    );
+  }
+
+  /** `chrome: "none"` — the body bare, no card and no title, but still a peer in the stack and still reorderable. */
+  function BareSection({ section, entityProps }: SectionProps): ReactNode {
+    const Body = section.component;
+    return <Body {...entityProps} />;
+  }
+
+  /**
+   * Resolves the contribution's `useDefaultOpen` hook. Its own component so the
+   * hook is called unconditionally (see `AvailableSection` for why the split is
+   * on presence, not on value).
+   */
+  function DefaultOpenSection({
+    useDefaultOpen,
+    section,
+    entityProps,
+  }: SectionProps & { useDefaultOpen: (props: EntityProps) => boolean }): ReactNode {
+    const defaultOpen = useDefaultOpen(entityProps);
+    return (
+      <CardSection
+        section={section}
+        entityProps={entityProps}
+        defaultOpen={defaultOpen}
+      />
+    );
+  }
+
+  function ChromeSection({ section, entityProps }: SectionProps): ReactNode {
+    if (section.chrome === "none") {
+      return <BareSection section={section} entityProps={entityProps} />;
+    }
+    if (section.useDefaultOpen) {
       return (
-        <Stack gap="sm" className="px-lg pb-lg">
-          <Section.Render>
-            {(item) => {
-              const C = item.component;
-              return (
-                <Collapsible defaultOpen={options.defaultOpen ?? false}>
-                  <div className="rounded-lg border border-border/60">
-                    {(() => {
-                      const Extra = item.headerExtra;
-                      return (
-                        <SectionHeaderRow
-                          variant="title"
-                          className="rounded-lg px-lg py-md"
-                          actions={Extra ? <Extra /> : undefined}
-                        >
-                          {item.label}
-                        </SectionHeaderRow>
-                      );
-                    })()}
-                    <CollapsibleContent className="px-lg pb-lg pane-gutter-flush">
-                      <C {...entityProps} />
-                    </CollapsibleContent>
-                  </div>
-                </Collapsible>
-              );
-            }}
-          </Section.Render>
-        </Stack>
+        <DefaultOpenSection
+          useDefaultOpen={section.useDefaultOpen}
+          section={section}
+          entityProps={entityProps}
+        />
       );
     }
     return (
-      // Detail sections provide their own inset, so any embedded DataView's pane
-      // gutter is declared spent (generic — no per-consumer opt-out needed).
-      <Stack gap="xl" className="p-xl pane-gutter-flush">
+      <CardSection section={section} entityProps={entityProps} defaultOpen={false} />
+    );
+  }
+
+  /**
+   * Applies the contribution's `useAvailable` gate before anything is painted,
+   * so an inapplicable section renders no card and no title rather than an empty
+   * one. The hook's presence is stable per contribution, so branching on it up
+   * in `SectionItemHost` keeps both leaves rules-of-hooks clean.
+   */
+  function AvailableSection({
+    useAvailable,
+    section,
+    entityProps,
+  }: SectionProps & { useAvailable: (props: EntityProps) => boolean }): ReactNode {
+    return useAvailable(entityProps) ? (
+      <ChromeSection section={section} entityProps={entityProps} />
+    ) : null;
+  }
+
+  function SectionItemHost({ section, entityProps }: SectionProps): ReactNode {
+    if (section.useAvailable) {
+      return (
+        <AvailableSection
+          useAvailable={section.useAvailable}
+          section={section}
+          entityProps={entityProps}
+        />
+      );
+    }
+    return <ChromeSection section={section} entityProps={entityProps} />;
+  }
+
+  function Host(entityProps: EntityProps): ReactNode {
+    return (
+      // Inset and the flush marker MOVE TOGETHER — that pairing is the whole
+      // pane-gutter contract. The marker is unconditional (some container has
+      // always spent the gutter by the time a section body renders: this stack
+      // at `inset: "lg"`, or the pane's own column at `inset: "none"`), while
+      // the padding is the pane's to decline. A pane that already positions its
+      // content — Pages puts sections at the page's block inset — passes
+      // `inset: "none"` rather than being pushed in a second time.
+      <Stack gap="sm" className={cn(insetClass({ pad: inset }), "pane-gutter-flush")}>
         <Section.Render>
-          {(item) => {
-            const C = item.component;
-            return <C {...entityProps} />;
-          }}
+          {(item) => <SectionItemHost section={item} entityProps={entityProps} />}
         </Section.Render>
       </Stack>
     );
   }
 
-  return { Section, Host };
+  return { Section, Host, SectionItem: SectionItemHost };
 }

@@ -1,31 +1,28 @@
-import type { ComponentType } from "react";
-import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
+import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 import type { Server } from "../shared";
 
+/**
+ * The server detail pane: **one slot whose sections are contributions**, hosted
+ * by `serverDetailPane`. The host owns every card, so the pane's regions are
+ * uniform by construction.
+ *
+ * It is owned by `servers` rather than by the app shell because its props are a
+ * `Server` — a pane about one row of this plugin's table was never an app-level
+ * concern. The whole row is passed (not a `serverId`) because the pane already
+ * has it in hand; re-deriving it per section would be a needless resource read
+ * per card, and a section that only needs the id reads `server.id`.
+ *
+ * This replaced three slots (`Deploy.Section`, `Servers.SshSetup`,
+ * `Servers.DetailHeader`) and a hardcoded form. Two of those were
+ * single-contributor micro-slots that existed only because the identity form was
+ * not itself a contribution; once it is, they collapse into peers of it.
+ */
+export const ServerDetail = defineDetailSections<{ server: Server }>(
+  "deploy.server-detail",
+);
+
 export const Servers = {
-  /**
-   * The SSH area of the server page. Its contributor owns the whole key flow
-   * (there is no separate paste field beside it), which is why it renders
-   * inline with the fields it concerns rather than as a card below the form
-   * like `Deploy.Section`.
-   */
-  SshSetup: defineRenderSlot<{
-    order: number;
-    component: ComponentType<{ server: Server }>;
-  }>("deploy.servers.ssh-setup", { docLabel: () => "ssh-setup" }),
-
-  /**
-   * Leading zone of the server page's header row (the Delete action sits at the
-   * far end). The registry owns a server's identity, not its liveness — so a
-   * status indicator is *contributed* here by the plugin that owns that fact
-   * rather than read off the row.
-   */
-  DetailHeader: defineRenderSlot<{
-    order: number;
-    component: ComponentType<{ server: Server }>;
-  }>("deploy.servers.detail-header", { docLabel: (p) => p.id }),
-
   /**
    * Extra DataView `FieldDef<Server>[]` injected by other plugins. A field
    * extension is a *component* (not plain data) so its `value` closure can

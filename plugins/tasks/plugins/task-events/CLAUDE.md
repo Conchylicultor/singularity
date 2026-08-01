@@ -6,15 +6,14 @@
 
 - Description: Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "events" → `TaskEvents`
+  - Contributes:
+    - `TaskDetailSlots.Section` "Pushes" → `TaskPushes`
+    - `TaskDetailSlots.Section` "Attempts" → `TaskAttempts`
   - Uses:
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.useEndpoint`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/row.Row`
-    - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`

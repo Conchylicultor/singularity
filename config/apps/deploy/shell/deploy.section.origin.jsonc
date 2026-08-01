@@ -1,9 +1,0 @@
-// @hash 8ff85fa1c90c
-{
-  // Hide: { "item": "<key>", "hidden": true }
-  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
-  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
-  "items": [
-    "apps.deploy.deployments:deployments"
-  ]
-}

@@ -14,7 +14,7 @@
     - `DynamicEnum.Options` "Sidebar Palette preset"
     - `ThemeEngine.TokenGroup` "Sidebar Palette"
     - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
-    - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
+    - `ThemeCustomizer.Section` "Sidebar Palette" → `SidebarPaletteSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

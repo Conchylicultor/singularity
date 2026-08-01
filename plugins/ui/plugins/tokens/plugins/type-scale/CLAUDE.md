@@ -13,7 +13,7 @@
     - `DynamicEnum.Options` "Type scale preset"
     - `ThemeEngine.TokenGroup` "Type Scale"
     - `ThemeEngine.VariantGroup` "Type Scale" → `TypeScalePicker`
-    - `ThemeCustomizer.Section` "type-scale" → `TypeScaleSection`
+    - `ThemeCustomizer.Section` "Type Scale" → `TypeScaleSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

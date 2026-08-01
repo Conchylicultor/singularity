@@ -11,7 +11,7 @@ compositions (list, 380)                    [Studio.Sidebar entry]
 ```
 
 The detail pane owns no content of its own. It hosts
-`CompositionDetail = defineDetailSections<{ id }>("composition-detail", { collapsible: true, defaultOpen: true })`,
+`CompositionDetail = defineDetailSections<{ id }>("composition-detail")`,
 and every section is a sub-plugin contributing `CompositionDetail.Section` —
 draft-actions, membership-summary, contributors, entry-points, closure-tree, and
 release's two. Adding a section means adding a plugin; this barrel never changes.

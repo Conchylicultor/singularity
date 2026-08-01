@@ -13,7 +13,7 @@
     - `DynamicEnum.Options` "Categorical preset"
     - `ThemeEngine.TokenGroup` "Categorical"
     - `ThemeEngine.VariantGroup` "Categorical" → `CategoricalPicker`
-    - `ThemeCustomizer.Section` "categorical" → `CategoricalSection`
+    - `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

@@ -6,12 +6,12 @@
 
 - Description: Lists direct child plugins with load-bearing indicators in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "sub-plugins" → `SubPluginsSection`
+  - Contributes: `PluginViewSlots.Section` "Sub-plugins" → `SubPluginsSection`
   - Uses:
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.pluginViewPane`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`

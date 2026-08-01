@@ -1,13 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { serversRootPane, serverDetailPane } from "./panes";
+import { ServerDetail } from "./slots";
+import { ServerEditForm } from "./components/server-edit-form";
 import {
   ServerItemActions,
   OpenConsoleAction,
 } from "./components/server-item-actions";
 
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
-export { Servers } from "./slots";
+export { Servers, ServerDetail } from "./slots";
 export {
   serversResource,
   generateSshKeypair,
@@ -21,6 +23,20 @@ export default {
   contributions: [
     Pane.Register({ pane: serversRootPane }),
     Pane.Register({ pane: serverDetailPane }),
+    // The pane's identity block, as a section like every other region — that is
+    // what makes "a detail pane is one slot" literally true here. `chrome:
+    // "none"` because an identity block is not a titled collapsible card.
+    //
+    // Deliberately NOT `excludeFromReorder: true`, even though an identity block
+    // should not be draggable: reorder's `applyTree` pins excluded entries LAST,
+    // so the flag would drop this block to the bottom of the pane. Add it only
+    // once reorder can pin an entry *in place*.
+    ServerDetail.Section({
+      id: "identity",
+      label: "Server",
+      chrome: "none",
+      component: ServerEditForm,
+    }),
     ServerItemActions({ id: "open-console", component: OpenConsoleAction }),
   ],
 } satisfies PluginDefinition;

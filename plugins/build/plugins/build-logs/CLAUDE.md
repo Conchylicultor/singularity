@@ -6,7 +6,7 @@
 
 - Description: Live log stream section in the build detail pane. Per-run build log data endpoint.
 - Web:
-  - Contributes: `BuildDetailSlots.Section` "logs" → `BuildLogSection`
+  - Contributes: `BuildDetailSlots.Section` "Logs" → `BuildLogSection`
   - Uses:
     - `build.BuildDetailSlots`
     - `infra/endpoints.useEndpoint`

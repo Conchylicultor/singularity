@@ -19,7 +19,7 @@ Resolving the unflattened draft would silently under-report the frontier.
 
 - Description: Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
 - Web:
-  - Contributes: `CompositionDetail.Section` "contributors" → `ContributorsSection`
+  - Contributes: `CompositionDetail.Section` "Contributors" → `ContributorsSection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `plugin-meta/composition.updateActiveDraft`

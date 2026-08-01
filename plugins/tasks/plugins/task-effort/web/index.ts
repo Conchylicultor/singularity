@@ -8,6 +8,12 @@ export default {
   description:
     "Per-task thinking-mode (effort) picker in the task detail pane; the selection is applied to Claude Code on launch.",
   contributions: [
-    TaskDetailSlots.Section({ id: "effort", label: "Thinking mode", component: TaskEffortSection }),
+    TaskDetailSlots.Section({
+      id: "effort",
+      label: "Thinking mode",
+      component: TaskEffortSection,
+      // Was a `Collapsible defaultOpen` before the host owned the card.
+      useDefaultOpen: () => true,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -4,13 +4,23 @@ import {
   PageTree,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { UpgradeAction } from "./components/upgrade-action";
-import { StorySection } from "./components/story-section";
+import {
+  StorySection,
+  StorySectionActions,
+  useIsStoryPage,
+} from "./components/story-section";
 
 export default {
   description:
     "Pages integration for Story: 'Upgrade to story' / 'Remove story' row action plus an embedded story section (renderer picker, live preview, Open in Story Builder).",
   contributions: [
     PageTree.RowActions({ id: "story", component: UpgradeAction }),
-    PageDetail.Section({ id: "story", component: StorySection }),
+    PageDetail.Section({
+      id: "story",
+      label: "Story",
+      component: StorySection,
+      actions: StorySectionActions,
+      useAvailable: useIsStoryPage,
+    }),
   ],
 } satisfies PluginDefinition;

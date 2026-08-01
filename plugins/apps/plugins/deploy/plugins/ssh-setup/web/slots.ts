@@ -13,8 +13,13 @@ export interface SshConsoleProps {
  */
 export interface SshProviderDescriptor {
   id: string;
-  /** Display name, shown in the section header ("Set up SSH access — <name>"). */
+  /**
+   * Display name, shown as a chip in the SSH section's header (beside the
+   * section's own static "Set up SSH access" title) and in the console step's
+   * title. It decorates the section; it never renames it.
+   */
   name: string;
+  /** Leading icon for that chip. */
   icon?: ComponentType<{ className?: string }>;
   /** Detects this provider from the server's console URL (client-side only). */
   match: (consoleUrl: URL) => boolean;
@@ -22,8 +27,9 @@ export interface SshProviderDescriptor {
    * Provider-specific prose for reaching a root shell in THIS provider's
    * console — and nothing else.
    *
-   * A provider contributes NO key handling: generate / paste / fingerprint /
-   * install / verify / replace belong to the collection, so they exist
+   * A provider contributes NO key handling and no section chrome: generate /
+   * paste / fingerprint / install / verify / replace belong to the collection,
+   * so they exist
    * identically for every server, including ones whose console URL is empty,
    * unparsable, or matches no provider at all. The collection also owns every
    * `<Step>` shell (`Steps` injects `number`/`isLast` onto its direct

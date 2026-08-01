@@ -4,10 +4,6 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { removeTaskDependency } from "@plugins/tasks/core";
 import {
@@ -17,7 +13,7 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
@@ -31,23 +27,16 @@ export function TaskDependents({ taskId }: { taskId: string }) {
     .directDependents(taskId)
     .map((t) => t.id);
 
+  if (dependentIds.length === 0) {
+    return <Text as="p" variant="body" tone="muted">No dependents.</Text>;
+  }
+
   return (
-    <Collapsible defaultOpen>
-      <Stack gap="sm">
-      <SectionHeaderRow variant="eyebrow">Dependents</SectionHeaderRow>
-      <CollapsibleContent>
-        {dependentIds.length === 0 ? (
-          <Text as="p" variant="body" tone="muted">No dependents.</Text>
-        ) : (
-          <Stack as="ul" direction="row" wrap gap="sm">
-            {dependentIds.map((depId) => (
-              <DependentChip key={depId} taskId={taskId} dependentId={depId} tasks={tasks} />
-            ))}
-          </Stack>
-        )}
-      </CollapsibleContent>
-      </Stack>
-    </Collapsible>
+    <Stack as="ul" direction="row" wrap gap="sm">
+      {dependentIds.map((depId) => (
+        <DependentChip key={depId} taskId={taskId} dependentId={depId} tasks={tasks} />
+      ))}
+    </Stack>
   );
 }
 

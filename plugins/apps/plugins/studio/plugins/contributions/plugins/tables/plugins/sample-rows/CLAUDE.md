@@ -6,7 +6,7 @@
 
 - Description: Sample rows section (first 10 rows) in the table detail view.
 - Web:
-  - Contributes: `TableDetail.Section` "sample-rows" → `SampleRowsSection`
+  - Contributes: `TableDetail.Section` "Sample Rows" → `SampleRowsSection`
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `infra/endpoints.useEndpoint`

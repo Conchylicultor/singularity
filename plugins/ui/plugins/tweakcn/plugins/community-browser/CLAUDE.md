@@ -7,7 +7,7 @@
 - Description: Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
 - Web:
   - Contributes:
-    - `ThemeCustomizer.Section` "community-browser" → `CommunityBrowserSection`
+    - `ThemeCustomizer.Section` "Community Themes" → `CommunityBrowserSection`
     - `QuickTheme.Section` "Theme" → `QuickThemeSection`
   - Uses:
     - `config_v2.useConfigRegistrations`

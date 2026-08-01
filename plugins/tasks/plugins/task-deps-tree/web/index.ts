@@ -11,7 +11,10 @@ export default {
   contributions: [
     TaskDetailSlots.Section({
       id: "deps-tree",
-      label: "Dependencies",
+      // "Dependency tree", not "Dependencies": `tasks.task-dependencies` owns a
+      // card by that name, and now that the host paints every title the two
+      // would collide. The id is untouched (it keys the persisted order).
+      label: "Dependency tree",
       component: DepsTreeSection,
     }),
     DepsActions({ id: "detach", component: DetachAction }),

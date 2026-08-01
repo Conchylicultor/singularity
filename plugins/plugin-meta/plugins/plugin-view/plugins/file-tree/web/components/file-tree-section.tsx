@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Section, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { FileTree } from "@plugins/code-explorer/web";
 import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -35,22 +35,20 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
   }, [data, prefix, nestedPluginsPrefix]);
 
   return (
-    <Section title="Files">
-      <Scroll axis="both" className="max-h-96 rounded-md border">
-        <FileTree
-          files={files}
-          storageKey={SECTION_VIEW}
-          selectedPath={selected}
-          onSelect={(rel) => {
-            setSelected(rel);
-            openPane(
-              filePeekPane,
-              { worktree: SELF_WORKTREE, filePath: `${prefix}${rel}` },
-              { mode: "push" },
-            );
-          }}
-        />
-      </Scroll>
-    </Section>
+    <Scroll axis="both" className="max-h-96 rounded-md border">
+      <FileTree
+        files={files}
+        storageKey={SECTION_VIEW}
+        selectedPath={selected}
+        onSelect={(rel) => {
+          setSelected(rel);
+          openPane(
+            filePeekPane,
+            { worktree: SELF_WORKTREE, filePath: `${prefix}${rel}` },
+            { mode: "push" },
+          );
+        }}
+      />
+    </Scroll>
   );
 }

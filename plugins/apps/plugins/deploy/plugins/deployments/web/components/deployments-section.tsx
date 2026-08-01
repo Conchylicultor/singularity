@@ -17,6 +17,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
+import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
   deploymentsResource,
   deployRunsResource,
@@ -48,8 +49,13 @@ const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
  * the run chips can never render from a half-loaded snapshot — a deployment
  * showing "not run" only because the run map had not arrived would be exactly
  * the wrong-state-while-loading bug.
+ *
+ * Contributed as a `ServerDetail` section, so the card, its "Deployments" title
+ * and its collapse state all belong to the host. The `SectionCard` below is NOT
+ * that card: "Deploy output" is a sub-panel *inside* this section.
  */
-export function DeploymentsSection({ serverId }: { serverId: string }): ReactElement {
+export function DeploymentsSection({ server }: { server: Server }): ReactElement {
+  const serverId = server.id;
   const loaded = useCombinedResources({
     deployments: useResource(deploymentsResource),
     runs: useResource(deployRunsResource),
@@ -57,9 +63,10 @@ export function DeploymentsSection({ serverId }: { serverId: string }): ReactEle
   const health = useServerHealth(serverId);
 
   return (
-    // `pane-gutter-flush`: the section's host card already supplies the
-    // horizontal inset, so the DataView must not add its own pane gutter on top.
-    <Stack gap="md" className="pane-gutter-flush">
+    // No `pane-gutter-flush` here: the `ServerDetail` host already declares the
+    // pane gutter spent for every section body, generically, so a DataView
+    // dropped into one is correctly inset with zero per-section code.
+    <Stack gap="md">
       <Text as="p" variant="caption" tone="muted">
         {health?.ok && health.platform
           ? `This server accepts ${health.platform} bundles.`

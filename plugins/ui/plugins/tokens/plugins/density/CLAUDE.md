@@ -15,7 +15,7 @@
     - `DynamicEnum.Options` "Density preset"
     - `ThemeEngine.TokenGroup` "Density"
     - `ThemeEngine.VariantGroup` "Density" → `DensityPicker`
-    - `ThemeCustomizer.Section` "density" → `DensitySection`
+    - `ThemeCustomizer.Section` "Density" → `DensitySection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

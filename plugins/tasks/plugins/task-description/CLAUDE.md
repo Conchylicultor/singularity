@@ -6,13 +6,10 @@
 
 - Description: Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "description" → `TaskDescription`
+  - Contributes: `TaskDetailSlots.Section` "Description" → `TaskDescription`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/pin.Pin`
-    - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

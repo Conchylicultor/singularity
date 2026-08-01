@@ -6,7 +6,7 @@
 
 - Description: Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "graph" → `TaskGraph`
+  - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/center.Center`

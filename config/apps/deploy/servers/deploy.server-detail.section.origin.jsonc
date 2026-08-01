@@ -1,9 +1,12 @@
-// @hash 4476dcf0c1c5
+// @hash cfc66bbe4a72
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.deploy.health:status"
+    "apps.deploy.deployments:deployments",
+    "apps.deploy.health:status",
+    "apps.deploy.servers:identity",
+    "apps.deploy.ssh-setup:ssh-setup"
   ]
 }

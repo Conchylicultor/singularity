@@ -4,7 +4,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { pageDetailPane, pagesTreePane } from "./panes";
 import { PagesSidebar } from "./components/pages-sidebar";
-import { BacklinksSection } from "./components/backlinks-section";
+import { BacklinksSection, useHasBacklinks } from "./components/backlinks-section";
 import { DeletePageAction } from "./components/delete-page-action";
 import { PageDetail, PageTree } from "./slots";
 
@@ -24,7 +24,12 @@ export default {
       icon: MdDescription,
       component: PagesSidebar,
     }),
-    PageDetail.Section({ id: "backlinks", component: BacklinksSection }),
+    PageDetail.Section({
+      id: "backlinks",
+      label: "Linked from",
+      component: BacklinksSection,
+      useAvailable: useHasBacklinks,
+    }),
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
   ],
 } satisfies PluginDefinition;

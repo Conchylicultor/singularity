@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Section,
+  SectionCount,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -96,67 +96,96 @@ function HealthSectionInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pluginReviews is derived inline; use stable node.id as the key
   }, [node.id, reviews]);
 
-  if (pluginReviews.length === 0) return null;
-
   return (
-    <Section title="Health" count={String(pluginReviews.length)}>
-      <Scroll axis="x">
-        <table className="w-full text-2xs">
-          <thead>
-            <tr className="text-left text-muted-foreground/60">
-              <th className="pb-xs pr-md font-medium" />
-              <th className="pb-xs pr-md font-medium">Axis</th>
-              <th className="pb-xs pr-md font-medium">Reviewed</th>
-              <th className="pb-xs pr-md font-medium">Commits</th>
-              <th className="pb-xs font-medium">Findings</th>
-            </tr>
-          </thead>
-          <tbody>
-            {enriched.map((r) => {
-              const open = r.tasks.filter((t) => t.status === "open").length;
-              const dropped = r.tasks.filter(
-                (t) => t.status === "dropped",
-              ).length;
-              const held = r.tasks.filter((t) => t.status === "held").length;
-              return (
-                <tr key={r.id} className="border-t border-border/30">
-                  <td className="py-xs pr-sm">
-                    <StatusDot color={healthColor(r.staleness, r.tasks)} />
-                  </td>
-                  <td className="py-xs pr-md font-medium text-foreground">
-                    {r.axis}
-                  </td>
-                  <td className="py-xs pr-md text-muted-foreground">
-                    <RelativeTime date={r.createdAt} />
-                  </td>
-                  <td className="py-xs pr-md text-muted-foreground">
-                    {r.staleness?.commitsSince ?? "—"}
-                    {r.staleness?.apiChanged && (
-                      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 is a tiny inline offset for the trailing "API changed" asterisk after the commit count, not container rhythm
-                      <span className="ml-1 text-warning" title="API changed">
-                        *
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-xs text-muted-foreground">
-                    {r.tasks.length === 0
-                      ? "—"
-                      : [
-                          open > 0 && `${open} open`,
-                          dropped > 0 && `${dropped} dropped`,
-                          held > 0 && `${held} held`,
-                        ]
-                          .filter(Boolean)
-                          .join(", ") || "all resolved"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Scroll>
-    </Section>
+    <Scroll axis="x">
+      <table className="w-full text-2xs">
+        <thead>
+          <tr className="text-left text-muted-foreground/60">
+            <th className="pb-xs pr-md font-medium" />
+            <th className="pb-xs pr-md font-medium">Axis</th>
+            <th className="pb-xs pr-md font-medium">Reviewed</th>
+            <th className="pb-xs pr-md font-medium">Commits</th>
+            <th className="pb-xs font-medium">Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {enriched.map((r) => {
+            const open = r.tasks.filter((t) => t.status === "open").length;
+            const dropped = r.tasks.filter(
+              (t) => t.status === "dropped",
+            ).length;
+            const held = r.tasks.filter((t) => t.status === "held").length;
+            return (
+              <tr key={r.id} className="border-t border-border/30">
+                <td className="py-xs pr-sm">
+                  <StatusDot color={healthColor(r.staleness, r.tasks)} />
+                </td>
+                <td className="py-xs pr-md font-medium text-foreground">
+                  {r.axis}
+                </td>
+                <td className="py-xs pr-md text-muted-foreground">
+                  <RelativeTime date={r.createdAt} />
+                </td>
+                <td className="py-xs pr-md text-muted-foreground">
+                  {r.staleness?.commitsSince ?? "—"}
+                  {r.staleness?.apiChanged && (
+                    // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 is a tiny inline offset for the trailing "API changed" asterisk after the commit count, not container rhythm
+                    <span className="ml-1 text-warning" title="API changed">
+                      *
+                    </span>
+                  )}
+                </td>
+                <td className="py-xs text-muted-foreground">
+                  {r.tasks.length === 0
+                    ? "—"
+                    : [
+                        open > 0 && `${open} open`,
+                        dropped > 0 && `${dropped} dropped`,
+                        held > 0 && `${held} held`,
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "all resolved"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </Scroll>
   );
+}
+
+/**
+ * How many health reviews this plugin has, or `null` while the resource is still
+ * in flight. The `null` is load-bearing: collapsing "not known yet" into `0`
+ * would make a reviewed plugin's card read as never-reviewed for the whole load
+ * window, and would paint a literal "0" count beside the title.
+ */
+function useReviewCount(node: PluginNode): number | null {
+  const reviewsResult = useResource(pluginHealthReviewsDescriptor);
+  if (reviewsResult.pending) return null;
+  return reviewsResult.data.filter((r) => r.pluginId === node.id).length;
+}
+
+/**
+ * A never-reviewed plugin has no health to show — the host paints no card.
+ *
+ * While the count is unknown the section stays hidden. `useAvailable` returns a
+ * boolean and so cannot express "not known yet"; of the two honest readings,
+ * hiding-then-appearing costs a pop-in only on the few reviewed plugins, whereas
+ * showing-then-vanishing would flash a card on every unreviewed one — and most
+ * plugins are unreviewed.
+ */
+export function useHealthAvailable({ node }: { node: PluginNode }): boolean {
+  const count = useReviewCount(node);
+  return count !== null && count > 0;
+}
+
+export function HealthCount({ node }: { node: PluginNode }) {
+  const count = useReviewCount(node);
+  // Nothing rather than "0" while the count is unknown.
+  if (count === null) return null;
+  return <SectionCount>{count}</SectionCount>;
 }
 
 export function HealthSection({ node }: { node: PluginNode }) {

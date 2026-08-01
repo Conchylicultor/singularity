@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginViewSlots } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { ExportsDetailSection } from "./components/exports-detail-section";
+import {
+  ExportsCount,
+  ExportsDetailSection,
+  useExportsAvailable,
+} from "./components/exports-detail-section";
 
 export default {
   description: "Per-plugin exports section in the plugin detail pane.",
@@ -9,6 +13,8 @@ export default {
       id: "exports",
       label: "Exports",
       component: ExportsDetailSection,
+      summary: ExportsCount,
+      useAvailable: useExportsAvailable,
     }),
   ],
 } satisfies PluginDefinition;

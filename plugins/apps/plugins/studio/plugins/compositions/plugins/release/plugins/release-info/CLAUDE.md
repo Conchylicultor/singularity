@@ -6,7 +6,7 @@
 
 - Description: Status, composition, target, platform, and timing section in the release detail pane.
 - Web:
-  - Contributes: `ReleaseDetail.Section` "info" → `ReleaseInfo`
+  - Contributes: `ReleaseDetail.Section` "Info" → `ReleaseInfo`
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
     - `primitives/css/badge.Badge`

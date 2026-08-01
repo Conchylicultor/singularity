@@ -39,7 +39,7 @@ export default {
       id: "color-palette",
       label: "Color Palette",
       component: ColorPaletteSection,
-      headerExtra: ColorPaletteHeaderDots,
+      actions: ColorPaletteHeaderDots,
     }),
   ],
 } satisfies PluginDefinition;

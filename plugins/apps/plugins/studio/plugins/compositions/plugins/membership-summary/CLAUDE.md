@@ -18,7 +18,7 @@ total.
 
 - Description: Bundle-size summary section in the composition detail pane: plugin counts per membership state.
 - Web:
-  - Contributes: `CompositionDetail.Section` "membership-summary" → `MembershipSummarySection`
+  - Contributes: `CompositionDetail.Section` "Summary" → `MembershipSummarySection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `plugin-meta/composition.useActiveMembership`

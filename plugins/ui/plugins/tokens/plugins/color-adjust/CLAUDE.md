@@ -24,7 +24,7 @@
     - `ColorAdjust.Preset` "Invert Hue"
     - `ThemeEngine.ColorTransform` "Color Transform"
     - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
-    - `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
+    - `ThemeCustomizer.Section` "Color Adjust" → `ColorAdjustSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

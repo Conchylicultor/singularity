@@ -156,13 +156,13 @@ actually edits.
 - Web:
   - Slots: `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
   - Contributes:
-    - `Deploy.Section` "Deployments" → `DeploymentsSection`
+    - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
     - `DeploymentItemActions` "converge" → `ConvergeAction`
     - `DeploymentItemActions` "ship" → `ShipAction`
     - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
   - Uses:
     - `apps/deploy/health.useServerHealth`
-    - `apps/deploy/shell.Deploy`
+    - `apps/deploy/servers.ServerDetail`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`

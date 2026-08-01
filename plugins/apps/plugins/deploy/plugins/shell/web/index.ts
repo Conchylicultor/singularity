@@ -5,8 +5,6 @@ import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { deployApp } from "../core";
 import { DeployLayout } from "./components/deploy-layout";
 
-export { Deploy } from "./slots";
-
 export default {
   description: "App shell for the deploy platform.",
   contributions: [

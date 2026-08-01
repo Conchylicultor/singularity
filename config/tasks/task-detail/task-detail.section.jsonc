@@ -1,4 +1,9 @@
-// @hash e038c5eba940
+// @hash 811856ef1c8c
+// `task-events` split into two sections (its one card nested two titled blocks,
+// which the host's own title would have made a third). Both halves take the
+// position the old combined `events` entry held, pushes before attempts — the
+// order they were stacked in inside the old card. Every other entry is the
+// hand-authored arrangement and is untouched.
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -8,7 +13,8 @@
     "apps.pages.prompt-origin:prompt-origin",
     "tasks.task-dependencies:dependencies",
     "tasks.task-dependencies:dependents",
-    "tasks.task-events:events",
+    "tasks.task-events:pushes",
+    "tasks.task-events:attempts",
     "tasks.task-attachments:attachments",
     "tasks.task-preprompt:preprompt",
     "tasks.task-effort:effort",

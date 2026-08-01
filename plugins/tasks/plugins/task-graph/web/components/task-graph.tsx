@@ -190,8 +190,8 @@ function TaskGraphLoaded({
   if (closure.length <= 1) return null;
 
   return (
-    // Self-contained card: the graph is the last detail section, so it carries
-    // its own frame rather than relying on being the band at the top.
+    // Self-contained card: this section is contributed with `chrome: "none"`
+    // (a canvas is not a titled panel), so the frame is ours to carry.
     // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-height (h-60) graph card; shrink-0 keeps it from being compressed among the stacked detail sections
     <Clip className="bg-muted/30 h-60 shrink-0 rounded-lg border">
       <GraphCanvas

@@ -19,6 +19,7 @@ would be absurd. Reach for those rather than hand-rolling a second envelope.
     - `conversations/conversation-view/push-and-exit`
     - `primitives/auto-scroll`
     - `primitives/css/color-picker`
+    - `primitives/detail-sections`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
 - Web:

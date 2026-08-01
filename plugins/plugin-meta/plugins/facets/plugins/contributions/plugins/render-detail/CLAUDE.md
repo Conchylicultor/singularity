@@ -9,12 +9,12 @@ plugin's own static contributions (slot + derived id).
 
 - Description: Per-plugin contributions section in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
+  - Contributes: `PluginViewSlots.Section` "Contributions" → `ContributionsDetailSection`
   - Uses:
     - `plugin-meta/plugin-view.PluginLink`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
 

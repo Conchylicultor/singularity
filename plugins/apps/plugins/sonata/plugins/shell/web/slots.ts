@@ -7,6 +7,10 @@ import {
   defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web";
+import {
+  defineDetailSections,
+  type DetailSection,
+} from "@plugins/primitives/plugins/detail-sections/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type {
   Annotation,
@@ -20,37 +24,48 @@ import { NoDisplay } from "./components/no-display";
 type IconType = ComponentType<{ className?: string }>;
 
 /**
- * One panel in the player's right-hand section column. The HOST owns the chrome:
- * every contribution is wrapped in the same collapsible `SectionCard` (collapsed
- * by default, the title expands it), so a section supplies a `label` and a body
- * and can never drift on padding, radius, or title typography.
- *
- * A section body is UNMOUNTED while its card is collapsed. Anything that must
- * keep running regardless (debounced persistence, transport subscriptions that
- * outlive the panel) belongs in a headless `Sonata.Effect`, not in the body.
+ * A Sonata section is scoped to the OPEN SONG, which every contributor already
+ * reads from `useSonata()` — so the pane threads no entity props at all.
  */
-export interface SonataSection {
-  label: string;
-  icon?: IconType;
-  component: ComponentType;
+type SonataSectionProps = Record<string, never>;
+
+/**
+ * The one field the generic detail-sections contract knows nothing about: which
+ * zone of the section column a panel belongs to. `"editor"` panels (a source's
+ * own editor) render above the `"player"` panels (readouts, mixer) — a pure
+ * render-time split across the column's two `.Render` zones, since `subId` does
+ * not partition reorder (the persisted layout is keyed by the base slot id).
+ * Defaults to the player zone when omitted.
+ */
+interface SonataSectionArea {
   area?: "editor" | "player";
-  /**
-   * Header-right controls, kept reachable while the card is collapsed (an on/off
-   * switch, a reset button). Rendered as a sibling of the title trigger, so it
-   * keeps its own click.
-   */
-  actions?: ComponentType;
-  /**
-   * Gate hook: when it returns `false` the section is not rendered at all — no
-   * card, no title. This is how a section says "I don't apply to the open song"
-   * (no chords to voice, no tracks to mix, not this source's editor). Because
-   * the card chrome now lives in the host, a section can no longer express that
-   * by returning `null` from its body — the host would paint an empty titled
-   * card. The hook's PRESENCE is stable per contribution, so the host branches
-   * on it once and stays rules-of-hooks clean.
-   */
-  useAvailable?: () => boolean;
 }
+
+/**
+ * One panel in the player's right-hand section column — a `DetailSection` (the
+ * shared detail-pane contract: `label`, `icon`, `component`, `actions`,
+ * `summary`, `useAvailable`, `useDefaultOpen`, `chrome`) plus Sonata's own
+ * `area`. The chrome, the collapsed-by-default open state, and the
+ * `useAvailable` gate all live in the primitive — see
+ * `primitives/detail-sections/CLAUDE.md` before adding one, in particular that a
+ * collapsed body is genuinely UNMOUNTED, so work that must outlive the panel
+ * belongs in a headless `Sonata.Effect`.
+ */
+export type SonataSection = DetailSection<SonataSectionProps> &
+  SonataSectionArea;
+
+const sonataSections = defineDetailSections<
+  SonataSectionProps,
+  SonataSectionArea
+>("sonata");
+
+/**
+ * The per-section chrome, for the section column's host (`library`'s
+ * `SectionPane`). The column owns its own layout — a collapse-to-rail strip and
+ * two `area`-filtered `.Render` zones — so it paints each section through this
+ * instead of the primitive's single-stack `Host`.
+ */
+export const SonataSectionItem = sonataSections.SectionItem;
 
 /**
  * The Sonata extension axes. Three axes, four contribution slots, plus the
@@ -239,10 +254,13 @@ export const Sonata = {
   }),
 
   // SECTION — panels in the player's right-hand column, each a collapsible
-  // `SectionCard` painted by the host. See `SonataSection` above.
-  Section: defineRenderSlot<SonataSection>("sonata.section", {
-    docLabel: (p) => p.label,
-  }),
+  // `SectionCard` painted by the host. Produced by `defineDetailSections`, which
+  // emits the slot id `sonata.section` verbatim — the SAME string this slot has
+  // always had, and the one `reorderDirectiveDescriptor` uses as its config_v2
+  // config name (`config/apps/sonata/shell/sonata.section.jsonc`). Never change
+  // the factory id: it would silently reset every user's persisted section order
+  // and their per-section collapsed state (keyed `sonata.section.<id>.open`).
+  Section: sonataSections.Section,
 };
 
 /**

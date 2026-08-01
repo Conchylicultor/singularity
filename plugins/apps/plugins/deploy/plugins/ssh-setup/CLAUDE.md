@@ -1,8 +1,20 @@
 # ssh-setup
 
-The SSH key surface of a server page: one `SectionCard` holding the numbered
-flow (create a key → open the console → install the public key → verify the
-connection).
+The SSH key surface of a server page: the numbered flow (create a key → open the
+console → install the public key → verify the connection), contributed as **one
+section** of the server detail pane's
+[`ServerDetail`](../servers/CLAUDE.md) slot.
+
+`SshSetupSection` is a **body**: the card, title, chevron and open state belong
+to the host. The contribution declares `label` (static `"Set up SSH access"`),
+`icon` (static `MdVpnKey`), `actions` (`SshSetupActions`) and
+`useDefaultOpen: () => !verified`.
+
+**The title is static on purpose.** The matched provider is per-*server*
+decoration, so it rides a chip in `actions` rather than interpolating into the
+section's own identity — otherwise the card is named differently row to row.
+Keep it that way; it is also why this pane needs no hook-derived `label` in the
+section primitive.
 
 ## The collection owns the flow; a provider owns console prose
 
@@ -15,7 +27,7 @@ deriving, fingerprinting, installing, verifying and replacing a key belong to
 `ssh-setup-section.tsx`, so they exist **identically for every server**,
 including one whose `consoleUrl` is empty, unparsable, or matches no provider.
 The section therefore **always renders**; a matched provider only decorates it
-(title suffix, icon, the console step's prose). The earlier design gave the
+(a header chip, the console step's prose). The earlier design gave the
 provider the whole flow, which meant a server with no recognized console had no
 way to set a key at all.
 
@@ -25,8 +37,9 @@ Two composition rules fall out of that split:
   children by `cloneElement`-ing `number`/`isLast` onto them, so a provider
   returning a `<Step>` would leak that injected-props protocol across a plugin
   boundary and break numbering the first time someone wrapped it in a fragment.
-- **The fingerprint is rendered exactly once**, in the card header's `actions`
-  — the one region visible both collapsed and expanded, i.e. the real status
+- **The fingerprint is rendered exactly once**, in the contribution's `actions`
+  (`ssh-setup-actions.tsx`) — the one region visible both collapsed and
+  expanded, i.e. the real status
   line. No step reprints it; the install step tells the user how to *check* it
   landed (`ssh-keygen -lf ~/.ssh/authorized_keys`) without restating the value.
   Two places showing key state is the bug this section exists to have fixed.
@@ -40,13 +53,13 @@ The section renders two different claims, and never lets one stand in for the
 other:
 
 - **Possession** — `server.sshKey !== null` means *we hold a private key and
-  know its public half*, and nothing more. It is `servers`' fact, and the card
-  header shows it as the key's SHA256 fingerprint (or `No key`).
+  know its public half*, and nothing more. It is `servers`' fact, and the
+  section header shows it as the key's SHA256 fingerprint (or `No key`).
 - **Reachability** — whether that key actually works. Only a real SSH session
   can say so, so the last step's body is `health`'s `VerifyConnectionBody`, and
   `useServerVerified(server)` — the probe succeeded *and* it ran against the key
   the server carries right now — is what drives every step's `done` state and
-  whether the card collapses.
+  seeds whether the card starts collapsed.
 
 The section deliberately owns neither fact: it composes them. Holding a key is
 never rendered as "SSH works", which was the original bug. See
@@ -61,14 +74,14 @@ and
 - Description: SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
 - Web:
   - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
-  - Contributes: `Servers.SshSetup` "ssh-setup" → `SshSetupSection`
+  - Contributes: `ServerDetail.Section` "Set up SSH access" → `SshSetupSection`
   - Uses:
     - `apps/deploy/health.useServerVerified`
     - `apps/deploy/health.VerifyConnectionBody`
     - `apps/deploy/servers.generateSshKeypair`
     - `apps/deploy/servers.importSshPrivateKey`
     - `apps/deploy/servers.Server`
-    - `apps/deploy/servers.Servers`
+    - `apps/deploy/servers.ServerDetail`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
@@ -86,7 +99,6 @@ and
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/imperative-dialog.openDialog`
-    - `primitives/section-card.SectionCard`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepCommand`
     - `primitives/setup-steps.StepDone`

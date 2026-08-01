@@ -66,7 +66,8 @@ export function GanttSection({
   allByPhase,
   visibleByPhase,
 }: {
-  title: string;
+  /** Axis-column label; omit under an already-titled host. See `TimeAxis`. */
+  title?: string;
   totalMs: number;
   phaseOrder: string[];
   phaseConfig: Record<string, PhaseConfig>;

@@ -6,7 +6,7 @@
 
 - Description: Status, trigger, commit hash, and timing section in the build detail pane.
 - Web:
-  - Contributes: `BuildDetailSlots.Section` "info" → `BuildInfo`
+  - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
   - Uses:
     - `build.BuildDetailSlots`
     - `primitives/css/badge.Badge`

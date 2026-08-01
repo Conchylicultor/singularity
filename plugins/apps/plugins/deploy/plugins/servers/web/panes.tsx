@@ -2,13 +2,10 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
-import { serversResource, type Server } from "../shared";
+import { serversResource } from "../shared";
 import { ServersList } from "./components/servers-list";
-import { ServerEditForm } from "./components/server-edit-form";
 import { ServerCreateForm } from "./components/server-create-form";
+import { ServerDetail } from "./slots";
 
 /**
  * Sentinel `:serverId` for the create state of the unified server pane. Real
@@ -89,28 +86,11 @@ function ServerDetailBody() {
     );
   }
 
+  // The whole pane body is the one section slot: identity, SSH setup and
+  // deployments are peer contributions, and the host owns all of the chrome.
   return (
     <PaneChrome pane={serverDetailPane} title={server.name}>
-      <ServerDetailContent serverId={serverId} server={server} />
+      <ServerDetail.Host server={server} />
     </PaneChrome>
-  );
-}
-
-function ServerDetailContent({ serverId, server }: { serverId: string; server: Server }) {
-  return (
-    <>
-      <ServerEditForm server={server} />
-      <Stack gap="lg" className="p-lg">
-        <Deploy.Section.Render>
-          {(s) => (
-            <Surface key={s.id} level="raised" as="section" className="p-lg">
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- section title offset inside a bg/border/padded card, not a flex-gap sibling */}
-              <Text as="h2" variant="label" className="mb-3">{s.title}</Text>
-              <s.component serverId={serverId} />
-            </Surface>
-          )}
-        </Deploy.Section.Render>
-      </Stack>
-    </>
   );
 }

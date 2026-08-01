@@ -3,11 +3,6 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -15,7 +10,10 @@ import {
   getRepoInfo,
 } from "@plugins/tasks/core";
 import { attemptsResource, pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
-import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  AttemptWithConversations,
+  Push,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -79,9 +77,38 @@ function AttemptPushList({ attemptId, githubBase }: { attemptId: string; githubB
   );
 }
 
-export function TaskEvents({ taskId }: { taskId: string }) {
+/**
+ * This task's attempts, newest first. Both sections read the same live
+ * resource — one cached query, two independent cards.
+ */
+function useTaskAttempts(taskId: string): AttemptWithConversations[] | null {
   const attemptsQ = useResource(attemptsResource);
+  if (attemptsQ.pending) return null;
+  return attemptsQ.data
+    .filter((a) => a.taskId === taskId)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+}
+
+export function TaskPushes({ taskId }: { taskId: string }) {
+  const attempts = useTaskAttempts(taskId);
   const githubBase = useGithubBase();
+
+  if (!attempts) return <Loading variant="rows" />;
+  if (attempts.length === 0) {
+    return <Text as="p" variant="body" tone="muted">No pushes yet.</Text>;
+  }
+
+  return (
+    <Stack as="ul" gap="xs">
+      {attempts.map((a) => (
+        <AttemptPushList key={a.id} attemptId={a.id} githubBase={githubBase} />
+      ))}
+    </Stack>
+  );
+}
+
+export function TaskAttempts({ taskId }: { taskId: string }) {
+  const attempts = useTaskAttempts(taskId);
   const openPane = useOpenPane();
   // Find the last conversationPane in the chain — if there are multiple
   // (host + nested), the last one is the one the user opened from here.
@@ -91,110 +118,75 @@ export function TaskEvents({ taskId }: { taskId: string }) {
     : null;
   const activeConvId = activeConvEntry?.params.convId;
 
-  if (attemptsQ.pending) return <Loading variant="rows" />;
-
-  const attempts = attemptsQ.data
-    .filter((a) => a.taskId === taskId)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  if (!attempts) return <Loading variant="rows" />;
+  if (attempts.length === 0) {
+    return <Text as="p" variant="body" tone="muted">No attempts yet.</Text>;
+  }
 
   return (
-    <Stack gap="xl">
-      <Collapsible defaultOpen>
-        <Stack gap="sm">
-        <SectionHeaderRow variant="eyebrow">Pushes</SectionHeaderRow>
-        <CollapsibleContent>
-        <Stack gap="sm">
-        {attempts.length === 0 ? (
-          <Text as="p" variant="body" tone="muted">No pushes yet.</Text>
-        ) : (
-          <Stack as="ul" gap="xs">
-            {attempts.map((a) => (
-              <AttemptPushList key={a.id} attemptId={a.id} githubBase={githubBase} />
-            ))}
+    <Stack as="ul" gap="sm">
+      {attempts.map((attempt) => {
+        const convs = attempt.conversations;
+        return (
+          <Stack
+            as="li"
+            key={attempt.id}
+            gap="sm"
+            className="rounded-md border px-md py-sm"
+          >
+            <div className="flex items-center gap-md">
+              <AttemptStatusBadge status={attempt.status} />
+              <Text className="flex-1 truncate text-caption font-mono text-muted-foreground">
+                {attempt.worktreePath.split("/").pop()}
+              </Text>
+              <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+                {formatDate(attempt.createdAt)}
+              </Text>
+            </div>
+            {convs.length === 0 ? (
+              <Text as="p" variant="caption" tone="muted" className="pl-xs">
+                No conversations.
+              </Text>
+            ) : (
+              <Stack as="ul" gap="xs">
+                {convs.map((c) => {
+                  const isActive = activeConvId === c.id;
+                  return (
+                    <li key={c.id}>
+                      <Row
+                        selected={isActive}
+                        onClick={() => {
+                          if (activeConvId === c.id && activeConvEntry) {
+                            conversationPane.close(activeConvEntry.instanceId);
+                          } else {
+                            openPane(conversationPane, {
+                              convId: c.id,
+                            }, { mode: "push" });
+                          }
+                        }}
+                        actions={
+                          <IconButton
+                            icon={MdOpenInNew}
+                            label="Open as page"
+                            tooltip="Open in a new page"
+                            onClick={() => {
+                              openPane(conversationPane, {
+                                convId: c.id,
+                              }, { mode: "root" });
+                            }}
+                          />
+                        }
+                      >
+                        <ConversationItem conv={c} />
+                      </Row>
+                    </li>
+                  );
+                })}
+              </Stack>
+            )}
           </Stack>
-        )}
-        </Stack>
-        </CollapsibleContent>
-        </Stack>
-      </Collapsible>
-
-      <Collapsible defaultOpen>
-        <Stack gap="sm">
-        <SectionHeaderRow variant="eyebrow">Attempts</SectionHeaderRow>
-        <CollapsibleContent>
-        <Stack gap="sm">
-        {attempts.length === 0 ? (
-          <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
-        ) : (
-          <Stack as="ul" gap="sm">
-            {attempts.map((attempt) => {
-              const convs = attempt.conversations;
-              return (
-                <Stack
-                  as="li"
-                  key={attempt.id}
-                  gap="sm"
-                  className="rounded-md border px-md py-sm"
-                >
-                  <div className="flex items-center gap-md">
-                    <AttemptStatusBadge status={attempt.status} />
-                    <Text className="flex-1 truncate text-caption font-mono text-muted-foreground">
-                      {attempt.worktreePath.split("/").pop()}
-                    </Text>
-                    <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
-                      {formatDate(attempt.createdAt)}
-                    </Text>
-                  </div>
-                  {convs.length === 0 ? (
-                    <Text as="p" variant="caption" tone="muted" className="pl-xs">
-                      No conversations.
-                    </Text>
-                  ) : (
-                    <Stack as="ul" gap="xs">
-                      {convs.map((c) => {
-                        const isActive = activeConvId === c.id;
-                        return (
-                          <li key={c.id}>
-                            <Row
-                              selected={isActive}
-                              onClick={() => {
-                                if (activeConvId === c.id && activeConvEntry) {
-                                  conversationPane.close(activeConvEntry.instanceId);
-                                } else {
-                                  openPane(conversationPane, {
-                                    convId: c.id,
-                                  }, { mode: "push" });
-                                }
-                              }}
-                              actions={
-                                <IconButton
-                                  icon={MdOpenInNew}
-                                  label="Open as page"
-                                  tooltip="Open in a new page"
-                                  onClick={() => {
-                                    openPane(conversationPane, {
-                                      convId: c.id,
-                                    }, { mode: "root" });
-                                  }}
-                                />
-                              }
-                            >
-                              <ConversationItem conv={c} />
-                            </Row>
-                          </li>
-                        );
-                      })}
-                    </Stack>
-                  )}
-                </Stack>
-              );
-            })}
-          </Stack>
-        )}
-        </Stack>
-        </CollapsibleContent>
-        </Stack>
-      </Collapsible>
+        );
+      })}
     </Stack>
   );
 }

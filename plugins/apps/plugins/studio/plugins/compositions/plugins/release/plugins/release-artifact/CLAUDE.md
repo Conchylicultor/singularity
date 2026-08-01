@@ -6,7 +6,7 @@
 
 - Description: Artifact path plus local preview (start/stop + live link) section in the release detail pane.
 - Web:
-  - Contributes: `ReleaseDetail.Section` "artifact" → `ReleaseArtifact`
+  - Contributes: `ReleaseDetail.Section` "Artifact" → `ReleaseArtifact`
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
     - `infra/endpoints.useEndpointMutation`

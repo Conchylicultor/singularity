@@ -7,14 +7,11 @@
 - Description: Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
 - Web:
   - Contributes:
-    - `TaskDetailSlots.Section` "dependencies" → `TaskDependencies`
-    - `TaskDetailSlots.Section` "dependents" → `TaskDependents`
+    - `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
+    - `TaskDetailSlots.Section` "Dependents" → `TaskDependents`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleContent`
     - `primitives/css/row.Row`
-    - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

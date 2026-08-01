@@ -3,8 +3,8 @@ import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
+  useIsStory,
   useStories,
   markStory,
 } from "@plugins/apps/plugins/story/plugins/marker/web";
@@ -15,9 +15,14 @@ import {
 } from "@plugins/apps/plugins/story/plugins/render/web";
 
 /**
- * Embedded story surface in the Pages page-detail pane. Renders only for pages
- * that are already stories — a renderer picker, a live preview, and a link out
- * to the focused Story Builder editor.
+ * Embedded story surface in the Pages page-detail pane — a renderer picker, a
+ * live preview, and (in the card's header) a link out to the focused Story
+ * Builder editor. The "Story" title and its card are painted by the
+ * `PageDetail.Section` host; this is the body only.
+ *
+ * Whether it appears at all is the contribution's `useAvailable`
+ * (`useIsStoryPage`), NOT a `return null` here: the host owns the chrome, so a
+ * null body would leave an empty "Story" card on every plain page.
  *
  * Converting a plain page into a story is intentionally NOT offered here: a
  * body-level "Make this a story" button read as a debug affordance leaking onto
@@ -36,9 +41,6 @@ export function StorySection({ pageId }: { pageId: string }) {
   if (storiesRes.pending) return null;
 
   const mark = storiesRes.data.find((m) => m.pageId === pageId) ?? null;
-
-  // Non-story pages show nothing here — conversion is offered through the
-  // page-tree row action, not as a body affordance on the document.
   if (!mark) return null;
 
   // Embedded preview falls back to the first contributed renderer when the story
@@ -49,16 +51,6 @@ export function StorySection({ pageId }: { pageId: string }) {
 
   return (
     <Stack gap="sm">
-      <div className="flex items-center justify-between">
-        <SectionLabel>Story</SectionLabel>
-        <Button
-          variant="ghost"
-          onClick={() => navigate(`/story/s/${pageId}`)}
-        >
-          <MdOpenInNew className="size-4" />
-          Open in Story Builder
-        </Button>
-      </div>
       <RendererPicker
         activeId={activeId}
         onSelect={(id) => void markStory(pageId, id)}
@@ -68,4 +60,26 @@ export function StorySection({ pageId }: { pageId: string }) {
       </Scroll>
     </Stack>
   );
+}
+
+/**
+ * The section's header action: a hand-off to the focused Story Builder editor.
+ * It lives on the contribution's `actions` rather than in the body so it stays
+ * reachable while the card is collapsed.
+ */
+export function StorySectionActions({ pageId }: { pageId: string }) {
+  return (
+    <Button variant="ghost" onClick={() => navigate(`/story/s/${pageId}`)}>
+      <MdOpenInNew className="icon-auto" />
+      Open in Story Builder
+    </Button>
+  );
+}
+
+/**
+ * The section's `useAvailable` gate — a plain (non-story) page paints no card at
+ * all, so the story surface never leaks onto a clean document.
+ */
+export function useIsStoryPage({ pageId }: { pageId: string }): boolean {
+  return useIsStory(pageId);
 }

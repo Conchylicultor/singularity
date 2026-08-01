@@ -4,10 +4,6 @@ import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   addTaskDependency,
@@ -19,7 +15,7 @@ import { useTaskCategoryMap } from "@plugins/tasks/plugins/task-category/web";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
@@ -37,7 +33,12 @@ function targetForSibling(
   return { kind: "root" };
 }
 
-export function TaskDependencies({ taskId }: { taskId: string }) {
+/**
+ * The section's header controls, contributed as the section's `actions` so they
+ * stay reachable while the card is collapsed. Re-reads the same live resources
+ * as the body — both are cached reads of one query, not a second fetch.
+ */
+export function TaskDependenciesActions({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const tasksResult = useResource(tasksResource);
   const categoryMap = useTaskCategoryMap();
@@ -55,53 +56,52 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
     await fetchEndpoint(addTaskDependency, { id: taskId }, { body: { dependsOnTaskId: folderCandidate.id } });
   };
 
-  if (!task) return null;
-  if (tasksResult.pending) return <Loading variant="rows" />;
+  if (!task || tasksResult.pending) return null;
 
   const target = targetForSibling(task, categoryMap);
 
   return (
-    <Collapsible defaultOpen>
-      <Stack gap="sm">
-      <SectionHeaderRow
-        variant="eyebrow"
-        actions={
-          <>
-            {folderCandidate && (
-              <Button variant="outline" onClick={addFolderAsDep}>
-                Add folder as dep
-              </Button>
-            )}
-            <TaskDraftPopover
-              trigger={<Button variant="outline">+ Prerequisite</Button>}
-              target={target}
-              relate={{ taskId, defaultMode: "prerequisite" }}
-              heading="Add prerequisite"
-            />
-            <TaskDraftPopover
-              trigger={<Button variant="outline">+ Follow-up</Button>}
-              target={target}
-              relate={{ taskId, defaultMode: "followup" }}
-              heading="Add follow-up"
-            />
-          </>
-        }
-      >
-        Dependencies
-      </SectionHeaderRow>
-      <CollapsibleContent>
-        {deps.length === 0 ? (
-          <Text as="p" variant="body" tone="muted">No dependencies.</Text>
-        ) : (
-          <Stack as="ul" direction="row" wrap gap="sm">
-            {deps.map((depId) => (
-              <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.data} />
-            ))}
-          </Stack>
-        )}
-      </CollapsibleContent>
-      </Stack>
-    </Collapsible>
+    <>
+      {folderCandidate && (
+        <Button variant="outline" onClick={addFolderAsDep}>
+          Add folder as dep
+        </Button>
+      )}
+      <TaskDraftPopover
+        trigger={<Button variant="outline">+ Prerequisite</Button>}
+        target={target}
+        relate={{ taskId, defaultMode: "prerequisite" }}
+        heading="Add prerequisite"
+      />
+      <TaskDraftPopover
+        trigger={<Button variant="outline">+ Follow-up</Button>}
+        target={target}
+        relate={{ taskId, defaultMode: "followup" }}
+        heading="Add follow-up"
+      />
+    </>
+  );
+}
+
+export function TaskDependencies({ taskId }: { taskId: string }) {
+  const task = useTask(taskId);
+  const tasksResult = useResource(tasksResource);
+
+  if (!task) return null;
+  if (tasksResult.pending) return <Loading variant="rows" />;
+
+  const deps = task.dependencies;
+
+  if (deps.length === 0) {
+    return <Text as="p" variant="body" tone="muted">No dependencies.</Text>;
+  }
+
+  return (
+    <Stack as="ul" direction="row" wrap gap="sm">
+      {deps.map((depId) => (
+        <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.data} />
+      ))}
+    </Stack>
   );
 }
 

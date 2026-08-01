@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
-import { PromptOriginSection } from "./components/prompt-origin-section";
+import {
+  PromptOriginSection,
+  usePromptOriginAvailable,
+} from "./components/prompt-origin-section";
 
 export default {
   description:
@@ -10,6 +13,9 @@ export default {
       id: "prompt-origin",
       label: "Origin",
       component: PromptOriginSection,
+      // The component used to render nothing at all when there was no live page.
+      useAvailable: usePromptOriginAvailable,
+      useDefaultOpen: () => true,
     }),
   ],
 } satisfies PluginDefinition;

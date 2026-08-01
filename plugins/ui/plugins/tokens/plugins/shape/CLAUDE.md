@@ -16,7 +16,7 @@
     - `DynamicEnum.Options` "Shape preset"
     - `ThemeEngine.TokenGroup` "Shape"
     - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
-    - `ThemeCustomizer.Section` "shape" → `ShapeSection`
+    - `ThemeCustomizer.Section` "Shape" → `ShapeSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

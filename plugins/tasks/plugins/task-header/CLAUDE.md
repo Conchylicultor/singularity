@@ -6,7 +6,7 @@
 
 - Description: Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "header" → `TaskHeader`
+  - Contributes: `TaskDetailSlots.Section` "Header" → `TaskHeader`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/model-provider.ModelSelect`

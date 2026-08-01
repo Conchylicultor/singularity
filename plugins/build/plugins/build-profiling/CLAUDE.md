@@ -6,7 +6,7 @@
 
 - Description: Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
 - Web:
-  - Contributes: `BuildDetailSlots.Section` "profiling" → `BuildProfilingSection`
+  - Contributes: `BuildDetailSlots.Section` "Profiling" → `BuildProfilingSection`
   - Uses:
     - `build.BuildDetailSlots`
     - `debug/profiling.GanttSection`
@@ -16,7 +16,6 @@
     - `debug/profiling.Span`
     - `debug/profiling.SpanDetail`
     - `infra/endpoints.useEndpoint`
-    - `primitives/css/clip.Clip`
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`

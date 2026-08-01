@@ -1,4 +1,4 @@
-// @hash e038c5eba940
+// @hash 811856ef1c8c
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -11,7 +11,8 @@
     "tasks.task-deps-tree:deps-tree",
     "tasks.task-description:description",
     "tasks.task-effort:effort",
-    "tasks.task-events:events",
+    "tasks.task-events:pushes",
+    "tasks.task-events:attempts",
     "tasks.task-graph:graph",
     "tasks.task-header:header",
     "tasks.task-preprompt:preprompt"

@@ -112,7 +112,6 @@ a real density-scaling utility backed by `--pad-card`), or
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`
-    - `apps/deploy/servers`
     - `apps/mail/reading-pane`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/graph`
@@ -120,7 +119,6 @@ a real density-scaling utility backed by `--pad-card`), or
     - `apps/website/demos/editor-toy`
     - `apps/website/demos/plugin-pyramid`
     - `apps/website/demos/sample-app`
-    - `apps/workflows/definitions`
     - `apps/workflows/editor`
     - `apps/workflows/engine`
     - `conversations/agents`

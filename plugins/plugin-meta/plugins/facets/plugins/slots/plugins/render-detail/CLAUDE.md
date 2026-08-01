@@ -8,12 +8,12 @@ Renders the slots facet as a section in the plugin detail pane: one row per slot
 
 - Description: Per-plugin slots section in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "slots" → `SlotsDetailSection`
+  - Contributes: `PluginViewSlots.Section` "Slots" → `SlotsDetailSection`
   - Uses:
     - `plugin-meta/plugin-view.PluginLink`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

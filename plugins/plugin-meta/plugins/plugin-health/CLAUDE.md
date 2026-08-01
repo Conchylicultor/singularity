@@ -6,12 +6,12 @@
 
 - Description: Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
+  - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/scroll.Scroll`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`

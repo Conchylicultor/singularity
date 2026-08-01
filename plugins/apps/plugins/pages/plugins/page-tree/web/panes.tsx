@@ -146,9 +146,7 @@ function PageDetailBody(): ReactElement {
           </Stack>
           <div className={READING_MEASURE}>
             <PageContentColumn>
-              <PageDetail.Section.Render>
-                {(s) => <s.component pageId={pageId} />}
-              </PageDetail.Section.Render>
+              <PageDetail.Host pageId={pageId} />
             </PageContentColumn>
           </div>
         </Stack>

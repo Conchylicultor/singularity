@@ -6,12 +6,11 @@
 
 - Description: Displays runtime pills (web/server/central) in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "runtimes" → `RuntimesSection`
+  - Contributes: `PluginViewSlots.Section` "Runtimes" → `RuntimesSection`
   - Uses:
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.RUNTIME_COLORS`
-    - `plugin-meta/plugin-view.Section`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
 

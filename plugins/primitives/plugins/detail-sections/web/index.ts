@@ -1,7 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { defineDetailSections } from "./internal/define-detail-sections";
-export type { DetailSections } from "./internal/define-detail-sections";
+export type {
+  DetailSection,
+  DetailSections,
+  DetailSectionsOptions,
+} from "./internal/define-detail-sections";
 
 export default {
   description:

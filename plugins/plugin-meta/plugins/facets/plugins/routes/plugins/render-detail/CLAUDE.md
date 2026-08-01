@@ -12,12 +12,12 @@ Reads `node.facets["routes"]` directly.
 
 - Description: Per-plugin routes section in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "routes" → `RoutesDetailSection`
+  - Contributes: `PluginViewSlots.Section` "Routes" → `RoutesDetailSection`
   - Uses:
     - `plugin-meta/plugin-view.PluginLink`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`

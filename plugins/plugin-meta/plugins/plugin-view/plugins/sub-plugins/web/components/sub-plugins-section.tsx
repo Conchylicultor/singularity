@@ -9,33 +9,34 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  Section,
+  SectionCount,
   type PluginNode,
   pluginViewPane,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 
-export function SubPluginsSection({ node }: { node: PluginNode }) {
-  const directChildren = node.children;
-  if (directChildren.length === 0) return null;
+/** A leaf plugin has no sub-tree to show — the host then paints no card at all. */
+export function useSubPluginsAvailable({ node }: { node: PluginNode }): boolean {
+  return node.children.length > 0;
+}
 
-  const totalDescendants = countDescendants(node);
-
+export function SubPluginsCount({ node }: { node: PluginNode }) {
+  const direct = node.children.length;
+  const total = countDescendants(node);
   return (
-    <Section
-      title="Sub-plugins"
-      count={
-        totalDescendants > directChildren.length
-          ? `${directChildren.length} direct · ${totalDescendants} total`
-          : `${directChildren.length}`
-      }
-    >
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the Section's horizontal padding so row hover backgrounds span full width */}
-      <Stack direction="col" gap="none" className="-mx-2">
-        {directChildren.map((c) => (
-          <PluginTreeNode key={c.id} node={c} depth={0} />
-        ))}
-      </Stack>
-    </Section>
+    <SectionCount>
+      {total > direct ? `${direct} direct · ${total} total` : `${direct}`}
+    </SectionCount>
+  );
+}
+
+export function SubPluginsSection({ node }: { node: PluginNode }) {
+  return (
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the section card's horizontal padding so row hover backgrounds span full width
+    <Stack direction="col" gap="none" className="-mx-2">
+      {node.children.map((c) => (
+        <PluginTreeNode key={c.id} node={c} depth={0} />
+      ))}
+    </Stack>
   );
 }
 

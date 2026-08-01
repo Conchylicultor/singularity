@@ -1,0 +1,25 @@
+// @hash cfc66bbe4a72
+// The server pane, read top to bottom: is it reachable, what is it, how do we
+// get in, what does it run.
+//
+//   status      — liveness first; it is where the old header badge sat, and it
+//                 qualifies everything below it.
+//   identity    — the record itself (name / host / user / port), plus Delete.
+//   ssh-setup   — the key flow. MUST precede deployments: converge and ship
+//                 refuse until a probe succeeds, so a reader who meets
+//                 Deployments first is offered two verbs that cannot work yet.
+//   deployments — what this server actually serves.
+//
+// Registration order (topo-sort) puts deployments ahead of ssh-setup, which is
+// why this file is not just the seeded default.
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.deploy.health:status",
+    "apps.deploy.servers:identity",
+    "apps.deploy.ssh-setup:ssh-setup",
+    "apps.deploy.deployments:deployments"
+  ]
+}

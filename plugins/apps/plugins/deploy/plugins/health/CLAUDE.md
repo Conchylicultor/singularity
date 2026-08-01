@@ -8,8 +8,9 @@
 - Web:
   - Contributes:
     - `Servers.Fields` "status" → `StatusField`
-    - `Servers.DetailHeader` "status" → `ServerStatusHeader`
+    - `ServerDetail.Section` "Status" → `ServerStatusHeader`
   - Uses:
+    - `apps/deploy/servers.ServerDetail`
     - `apps/deploy/servers.Servers`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/spacing.Stack`

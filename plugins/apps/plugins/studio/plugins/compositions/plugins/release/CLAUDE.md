@@ -48,8 +48,8 @@ top-level and untouched by this; only the Studio UI lives here.
   - Slots: `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
   - Contributes:
     - `Pane.Register` "release-detail"
-    - `CompositionDetail.Section` "release" → `ReleaseSection`
-    - `CompositionDetail.Section` "release-history" → `ReleaseHistorySection`
+    - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
+    - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/compositions.compositionDetailPane`

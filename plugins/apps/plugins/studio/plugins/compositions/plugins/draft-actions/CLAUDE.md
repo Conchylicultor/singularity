@@ -25,7 +25,7 @@ Closure) update as you type — before anything is saved.
 
 - Description: Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
 - Web:
-  - Contributes: `CompositionDetail.Section` "draft-actions" → `DraftActions`
+  - Contributes: `CompositionDetail.Section` "Draft" → `DraftActions`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/compositions.compositionDetailPane`

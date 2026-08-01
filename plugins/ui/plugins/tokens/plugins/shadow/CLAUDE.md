@@ -16,7 +16,7 @@
     - `ConfigV2.WebRegister`
     - `ThemeEngine.TokenGroup` "Shadow"
     - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
-    - `ThemeCustomizer.Section` "shadow" → `ShadowSection`
+    - `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

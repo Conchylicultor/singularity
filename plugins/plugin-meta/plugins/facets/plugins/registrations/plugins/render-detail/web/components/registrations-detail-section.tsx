@@ -1,5 +1,5 @@
 import {
-  Section,
+  SectionCount,
   RUNTIME_COLORS,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -18,36 +18,47 @@ function format(r: DocMetaRegistration): string {
   return r.doc.label ? `${r.factory}('${r.doc.label}')` : `${r.factory}()`;
 }
 
-export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
+/** The plugin's registrations, or `null` when it registers nothing. */
+function registrations(node: PluginNode): DocMetaRegistration[] | null {
   const data = node.facets?.[REGISTRATIONS_FACET_ID] as
     | DocMetaRegistration[]
     | undefined;
-  if (!data || data.length === 0) return null;
+  return data && data.length > 0 ? data : null;
+}
+
+/** No registrations ⇒ the host paints no card at all. */
+export function useRegistrationsAvailable({ node }: { node: PluginNode }): boolean {
+  return registrations(node) !== null;
+}
+
+export function RegistrationsCount({ node }: { node: PluginNode }) {
+  const data = registrations(node);
+  return data ? <SectionCount>{data.length}</SectionCount> : null;
+}
+
+export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
+  const data = registrations(node);
+  if (!data) return null;
 
   return (
-    <Section title="Registrations" count={String(data.length)}>
-      <Stack gap="2xs">
-        {data.map((r, i) => (
-          <Text
-            as="div"
-            variant="caption"
-            key={`${r.runtime}:${r.kind}:${i}`}
-            className="flex items-center gap-sm px-sm py-2xs"
-          >
-            <Text
-              as="code"
-              className="min-w-0 truncate font-mono text-foreground"
-            >
-              {format(r)}
-            </Text>
-            <span
-              className={`ml-auto shrink-0 font-mono text-3xs ${RUNTIME_COLORS[r.runtime]}`}
-            >
-              {r.runtime}
-            </span>
+    <Stack gap="2xs">
+      {data.map((r, i) => (
+        <Text
+          as="div"
+          variant="caption"
+          key={`${r.runtime}:${r.kind}:${i}`}
+          className="flex items-center gap-sm px-sm py-2xs"
+        >
+          <Text as="code" className="min-w-0 truncate font-mono text-foreground">
+            {format(r)}
           </Text>
-        ))}
-      </Stack>
-    </Section>
+          <span
+            className={`ml-auto shrink-0 font-mono text-3xs ${RUNTIME_COLORS[r.runtime]}`}
+          >
+            {r.runtime}
+          </span>
+        </Text>
+      ))}
+    </Stack>
   );
 }

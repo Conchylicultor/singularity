@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 import {
   defineFieldExtensions,
   defineItemActions,
@@ -7,18 +8,38 @@ import {
 import type { PageRow } from "@plugins/page/plugins/editor/core";
 
 /**
- * Extensible host for sections rendered below a page's editor in the
- * page-detail pane. Future plugins (e.g. Phase 2 backlinks) contribute a
- * section component that receives the page's `pageId`.
+ * Sections rendered below a page's editor in the page-detail pane. The host
+ * paints each contribution as a collapsible `SectionCard`, so a section supplies
+ * a `label` and a body and never its own title.
+ *
+ * A section that does not apply to the open page declares `useAvailable` — it
+ * must NOT `return null` from its body, which would leave an empty titled card
+ * on every page (that is exactly what "Linked from" and "Story" would do).
+ *
+ * The factory id is `"pages.detail"` — NOT `"pages"` — because the emitted slot
+ * id is `` `${id}.section` `` verbatim and `reorderDirectiveDescriptor` uses a
+ * slot id verbatim as its config_v2 config name. `pages.detail.section` is what
+ * this pane's persisted section order is already keyed by.
  */
+const pageDetailSections = defineDetailSections<{ pageId: string }>(
+  "pages.detail",
+  // `PageContentColumn` already places sections at the page's block inset — the
+  // documented invariant that the title, icon, and section list share one
+  // content edge with the blocks (see `page/editor/internal/page-column.ts`).
+  // The stack must not inset them a second time or the cards would sit visibly
+  // narrower than the text above them.
+  { inset: "none" },
+);
+
 export const PageDetail = {
-  Section: defineRenderSlot<{
-    component: ComponentType<{ pageId: string }>;
-  }>("pages.detail.section"),
+  Section: pageDetailSections.Section,
+  /** Renders every contributed section. Mounted by `pageDetailPane`. */
+  Host: pageDetailSections.Host,
   /**
    * Trailing actions in the page-detail header strip (next to the breadcrumb),
    * e.g. a favorite/star toggle. Generic by design — contributors receive the
-   * open page's `pageId` and own their own behavior.
+   * open page's `pageId` and own their own behavior. NOT a detail section: this
+   * is page-header chrome, always visible and never collapsible.
    */
   HeaderActions: defineRenderSlot<{
     component: ComponentType<{ pageId: string }>;

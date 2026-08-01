@@ -6,7 +6,7 @@
 
 - Description: Lists staged config_v2 'default for everyone' edits in the review pane with a per-config before→after diff (pluggable renderer, generic fallback) and Apply / Discard.
 - Web:
-  - Contributes: `ReviewSlots.Section` "config-defaults" → `ConfigDefaultsSection`
+  - Contributes: `ReviewSlots.Section` "Default for everyone" → `ConfigDefaultsSection`
   - Uses:
     - `config_v2/staging.GenericConfigDiff`
     - `config_v2/staging.StagedConfigDefault`

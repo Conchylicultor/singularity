@@ -11,7 +11,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  Section,
+  SectionCount,
   ConsumerList,
   RUNTIME_COLORS,
   type PluginNode,
@@ -49,32 +49,52 @@ interface SymbolRow {
   consumers: string[];
 }
 
-export function ExportsDetailSection({ node }: { node: PluginNode }) {
+/** The plugin's exported symbols, or `null` when it exports nothing. */
+function exportsData(node: PluginNode): ExportsData | null {
   const data = node.facets?.[EXPORTS_FACET_ID] as ExportsData | undefined;
   if (!data) return null;
+  return exportTotal(data) > 0 ? data : null;
+}
 
-  const total = RUNTIMES.reduce((sum, rt) => sum + data[rt].length, 0);
-  if (total === 0) return null;
+function exportTotal(data: ExportsData): number {
+  return RUNTIMES.reduce((sum, rt) => sum + data[rt].length, 0);
+}
+
+/** No exports ⇒ the host paints no card at all. */
+export function useExportsAvailable({ node }: { node: PluginNode }): boolean {
+  return exportsData(node) !== null;
+}
+
+export function ExportsCount({ node }: { node: PluginNode }) {
+  const data = exportsData(node);
+  if (!data) return null;
+  const total = exportTotal(data);
+  return (
+    <SectionCount>{`${total} export${total !== 1 ? "s" : ""}`}</SectionCount>
+  );
+}
+
+export function ExportsDetailSection({ node }: { node: PluginNode }) {
+  const data = exportsData(node);
+  if (!data) return null;
 
   const largestRuntime = RUNTIMES.reduce((best, rt) =>
     data[rt].length > data[best].length ? rt : best,
   );
 
   return (
-    <Section title="Exports" count={`${total} export${total !== 1 ? "s" : ""}`}>
-      <Stack gap="md">
-        {RUNTIMES.map((rt) =>
-          data[rt].length > 0 ? (
-            <RuntimeGroup
-              key={rt}
-              runtime={rt}
-              symbols={data[rt]}
-              defaultOpen={rt === largestRuntime}
-            />
-          ) : null,
-        )}
-      </Stack>
-    </Section>
+    <Stack gap="md">
+      {RUNTIMES.map((rt) =>
+        data[rt].length > 0 ? (
+          <RuntimeGroup
+            key={rt}
+            runtime={rt}
+            symbols={data[rt]}
+            defaultOpen={rt === largestRuntime}
+          />
+        ) : null,
+      )}
+    </Stack>
   );
 }
 

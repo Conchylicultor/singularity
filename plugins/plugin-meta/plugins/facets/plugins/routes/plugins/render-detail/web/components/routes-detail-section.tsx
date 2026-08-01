@@ -5,7 +5,7 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  Section,
+  SectionCount,
   PluginLink,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -42,59 +42,74 @@ function methodAndPath(r: RouteDef): { method: string; path: string } {
   };
 }
 
-export function RoutesDetailSection({ node }: { node: PluginNode }) {
+/** The plugin's routes + endpoint callers, or `null` when it has neither. */
+function routes(node: PluginNode): RoutesData | null {
   const data = node.facets?.[ROUTES_FACET_ID] as RoutesData | undefined;
   if (!data) return null;
+  if (data.routes.length === 0 && data.endpointCallers.length === 0) return null;
+  return data;
+}
 
-  const { routes, endpointCallers } = data;
-  if (routes.length === 0 && endpointCallers.length === 0) return null;
+/** No routes and no callers ⇒ the host paints no card at all. */
+export function useRoutesAvailable({ node }: { node: PluginNode }): boolean {
+  return routes(node) !== null;
+}
 
+export function RoutesCount({ node }: { node: PluginNode }) {
+  const data = routes(node);
+  if (!data) return null;
   const parts: string[] = [];
-  if (routes.length > 0)
-    parts.push(`${routes.length} route${routes.length !== 1 ? "s" : ""}`);
-  if (endpointCallers.length > 0)
+  if (data.routes.length > 0)
+    parts.push(`${data.routes.length} route${data.routes.length !== 1 ? "s" : ""}`);
+  if (data.endpointCallers.length > 0)
     parts.push(
-      `${endpointCallers.length} caller${endpointCallers.length !== 1 ? "s" : ""}`,
+      `${data.endpointCallers.length} caller${data.endpointCallers.length !== 1 ? "s" : ""}`,
     );
+  return <SectionCount>{parts.join(" · ")}</SectionCount>;
+}
+
+export function RoutesDetailSection({ node }: { node: PluginNode }) {
+  const data = routes(node);
+  if (!data) return null;
+
+  const { routes: routeDefs, endpointCallers } = data;
 
   return (
-    <Section title="Routes" count={parts.join(" · ")}>
-      <Stack gap="md">
-        {endpointCallers.length > 0 && <CallersBanner names={endpointCallers} />}
-        {routes.length > 0 && (
-          <Stack gap="2xs">
-            {routes.map((r) => {
-              const { method, path } = methodAndPath(r);
-              return (
-                <Text
-                  as="div"
-                  variant="caption"
-                  key={`${r.runtime}:${r.type}:${r.route}`}
-                  className="flex items-center gap-sm px-sm py-2xs"
-                >
-                  {method && (
-                    <span
-                      className={cn(
-                        "w-10 shrink-0 font-mono text-3xs font-semibold",
-                        METHOD_COLORS[method] ?? "text-muted-foreground",
-                      )}
-                    >
-                      {method}
-                    </span>
-                  )}
-                  <code className="min-w-0 truncate font-mono text-foreground">
-                    {path}
-                  </code>
-                  <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
-                    {r.runtime}
+    <Stack gap="md">
+      {endpointCallers.length > 0 && <CallersBanner names={endpointCallers} />}
+      {routeDefs.length > 0 && (
+        <Stack gap="2xs">
+          {routeDefs.map((r) => {
+            const { method, path } = methodAndPath(r);
+            return (
+              <Text
+                as="div"
+                variant="caption"
+                key={`${r.runtime}:${r.type}:${r.route}`}
+                className="flex items-center gap-sm px-sm py-2xs"
+              >
+                {method && (
+                  <span
+                    className={cn(
+                      "w-10 shrink-0 font-mono text-3xs font-semibold",
+                      METHOD_COLORS[method] ?? "text-muted-foreground",
+                    )}
+                  >
+                    {method}
                   </span>
-                </Text>
-              );
-            })}
-          </Stack>
-        )}
-      </Stack>
-    </Section>
+                )}
+                <code className="min-w-0 truncate font-mono text-foreground">
+                  {path}
+                </code>
+                <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
+                  {r.runtime}
+                </span>
+              </Text>
+            );
+          })}
+        </Stack>
+      )}
+    </Stack>
   );
 }
 

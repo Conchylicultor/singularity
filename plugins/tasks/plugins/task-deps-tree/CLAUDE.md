@@ -7,7 +7,7 @@
 - Description: Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
 - Web:
   - Contributes:
-    - `TaskDetailSlots.Section` "deps-tree" → `DepsTreeSection`
+    - `TaskDetailSlots.Section` "Dependency tree" → `DepsTreeSection`
     - `task-deps-tree.actions` "detach" → `DetachAction`
     - `task-deps-tree-sources` "Dependencies" → `DepsSource`
     - `task-deps-tree-sources` "Created" → `CreatedSource`

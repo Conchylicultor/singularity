@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
+import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { DeploymentsSection } from "./components/deployments-section";
 import {
   DeploymentItemActions,
@@ -14,10 +14,9 @@ export default {
   description:
     "Deployments section of a server's page: this server's deployments as a DataView (composition, hostnames, loopback port, last run, plus the derived install names read-only), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the live deploy log panel.",
   contributions: [
-    Deploy.Section({
+    ServerDetail.Section({
       id: "deployments",
-      title: "Deployments",
-      order: 20,
+      label: "Deployments",
       component: DeploymentsSection,
     }),
     // The two verbs and Delete are contributed into this plugin's own row-action

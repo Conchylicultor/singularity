@@ -36,8 +36,6 @@
   - Uses:
     - `page/editor.PageIcon`
     - `primitives/css/center.Center`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`

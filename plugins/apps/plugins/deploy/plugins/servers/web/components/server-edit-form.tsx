@@ -18,7 +18,6 @@ import {
 } from "../../shared/endpoints";
 import { FieldShell, fieldInputClass } from "./server-fields";
 import { DeleteServerDialog } from "./delete-server-dialog";
-import { Servers } from "../slots";
 
 /** Wire an EditableField to a text input / textarea. */
 function fieldProps(field: EditableField<string>) {
@@ -33,9 +32,16 @@ function fieldProps(field: EditableField<string>) {
 }
 
 /**
+ * The **identity section** of the server detail pane, contributed into
+ * `ServerDetail` with `chrome: "none"` — a pane's identity block is not a titled
+ * card, so it renders bare while still being a peer of the cards below it.
+ *
  * Edit state of the unified server page: the same field layout as the create
  * form, but every field autosaves through `updateServer` (the app's standard
  * debounced-autosave + sync-status cloud). Viewing a server is editing it.
+ *
+ * No padding of its own: the section host supplies the pane's inset (`p-lg`) for
+ * every section, card-chromed or bare.
  */
 export function ServerEditForm({ server }: { server: Server }) {
   const save = async (body: UpdateServerBody): Promise<void> => {
@@ -99,15 +105,8 @@ export function ServerEditForm({ server }: { server: Server }) {
   }
 
   return (
-    <Stack gap="lg" className="p-lg">
-      <Stack direction="row" align="center" justify="between" gap="sm">
-        {/* Wrapped so the header zone is one flex child even with zero
-            contributions — otherwise `justify-between` would pull Delete left. */}
-        <Stack direction="row" align="center" gap="sm">
-          <Servers.DetailHeader.Render>
-            {(s) => <s.component server={server} />}
-          </Servers.DetailHeader.Render>
-        </Stack>
+    <Stack gap="lg">
+      <Stack direction="row" align="center" justify="end" gap="sm">
         <Button
           variant="link"
           loading={remove.isPending}
@@ -142,12 +141,10 @@ export function ServerEditForm({ server }: { server: Server }) {
           {...fieldProps(consoleUrl)}
         />
       </FieldShell>
-      {/* Everything SSH-key-shaped lives in this slot. There is deliberately no
-          standalone paste field beside it: two write paths for one secret is
-          how the status and the box came to contradict each other. */}
-      <Servers.SshSetup.Render>
-        {(s) => <s.component server={server} />}
-      </Servers.SshSetup.Render>
+      {/* Deliberately NO ssh-key field here. Everything SSH-key-shaped lives in
+          the `ssh-setup` section next door, which owns the whole flow: two write
+          paths for one secret is how the status and the box came to contradict
+          each other. */}
     </Stack>
   );
 }

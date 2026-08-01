@@ -13,7 +13,7 @@
     - `DynamicEnum.Options` "Font preset"
     - `ThemeEngine.TokenGroup` "Fonts"
     - `ThemeEngine.VariantGroup` "Fonts" → `FontFamilyPicker`
-    - `ThemeCustomizer.Section` "font-family" → `FontFamilySection`
+    - `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

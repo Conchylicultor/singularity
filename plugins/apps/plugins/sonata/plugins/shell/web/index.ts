@@ -5,7 +5,7 @@ import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
 
-export { Sonata, SonataToolbar } from "./slots";
+export { Sonata, SonataToolbar, SonataSectionItem } from "./slots";
 export type { SonataSection } from "./slots";
 export {
   useSonata,

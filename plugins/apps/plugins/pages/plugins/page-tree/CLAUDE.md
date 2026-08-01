@@ -41,7 +41,7 @@ is no channel through which it could. See
     - `Pane.Register` "page-detail"
     - `Pane.Register` "pages-tree"
     - `Pages.Sidebar` "Pages" → `PagesSidebar`
-    - `PageDetail.Section` → `BacklinksSection`
+    - `PageDetail.Section` "Linked from" → `BacklinksSection`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
   - Uses:
     - `apps/pages/shell.Pages`
@@ -77,6 +77,7 @@ is no channel through which it could. See
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineFieldExtensions`
     - `primitives/data-view.defineItemActions`
+    - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`

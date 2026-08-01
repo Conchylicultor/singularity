@@ -7,7 +7,7 @@
 - Description: File-by-file code review section for the review pane. File-by-file code review section for the review pane.
 - Web:
   - Contributes:
-    - `ReviewSlots.Section` "code-review" → `CodeReviewSection`
+    - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
     - `ConfigV2.WebRegister`
   - Uses:
     - `config_v2.ConfigV2`

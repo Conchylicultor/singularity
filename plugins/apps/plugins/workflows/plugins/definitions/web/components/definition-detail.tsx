@@ -2,8 +2,6 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { DefinitionEditor } from "@plugins/apps/plugins/workflows/plugins/editor/web";
 import {
@@ -54,46 +52,44 @@ export function DefinitionDetail({
   }
 
   return (
-    <Stack gap="lg" className="p-lg">
-      <Stack direction="row" align="start" justify="between" gap="md">
-        <input
-          value={titleField.value}
-          onChange={(e) => titleField.onChange(e.target.value)}
-          onFocus={titleField.onFocus}
-          onBlur={titleField.onBlur}
-          placeholder="Untitled workflow"
-          className="text-title w-full bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
+    // The identity block (name, description, step editor) is pane chrome, not a
+    // section — it carries the pane's own `p-lg`. `WorkflowsDetail.Host` supplies
+    // its own inset, so it sits BESIDE that padded stack rather than inside it;
+    // nesting would inset every section card an extra `lg` from the title above.
+    <Stack gap="none">
+      <Stack gap="lg" className="p-lg">
+        <Stack direction="row" align="start" justify="between" gap="md">
+          <input
+            value={titleField.value}
+            onChange={(e) => titleField.onChange(e.target.value)}
+            onFocus={titleField.onFocus}
+            onBlur={titleField.onBlur}
+            placeholder="Untitled workflow"
+            className="text-title w-full bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
+          />
+          <Button
+            variant="link"
+            onClick={handleDelete}
+            className="text-destructive hover:text-destructive"
+          >
+            Delete
+          </Button>
+        </Stack>
+
+        <textarea
+          value={descriptionField.value}
+          onChange={(e) => descriptionField.onChange(e.target.value)}
+          onFocus={descriptionField.onFocus}
+          onBlur={descriptionField.onBlur}
+          placeholder="Add a description…"
+          rows={2}
+          className="text-body w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
         />
-        <Button
-          variant="link"
-          onClick={handleDelete}
-          className="text-destructive hover:text-destructive"
-        >
-          Delete
-        </Button>
+
+        <DefinitionEditor definitionId={definitionId} def={def} />
       </Stack>
 
-      <textarea
-        value={descriptionField.value}
-        onChange={(e) => descriptionField.onChange(e.target.value)}
-        onFocus={descriptionField.onFocus}
-        onBlur={descriptionField.onBlur}
-        placeholder="Add a description…"
-        rows={2}
-        className="text-body w-full resize-none bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
-      />
-
-      <DefinitionEditor definitionId={definitionId} def={def} />
-
-      <WorkflowsDetail.Section.Render>
-        {(s) => (
-          <Surface key={s.id} level="raised" as="section" className="p-lg pane-gutter-flush">
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- section title offset inside a bg/border/padded card, not a flex-gap sibling */}
-            <Text as="h2" variant="label" className="mb-3">{s.title}</Text>
-            <s.component definitionId={definitionId} />
-          </Surface>
-        )}
-      </WorkflowsDetail.Section.Render>
+      <WorkflowsDetail.Host definitionId={definitionId} />
     </Stack>
   );
 }

@@ -15,7 +15,7 @@
     - `ColorPalette.Preset` "Warm"
     - `ThemeEngine.TokenGroup` "Color Palette"
     - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
-    - `ThemeCustomizer.Section` "color-palette" → `ColorPaletteSection`
+    - `ThemeCustomizer.Section` "Color Palette" → `ColorPaletteSection`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

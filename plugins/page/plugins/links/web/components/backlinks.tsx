@@ -1,9 +1,7 @@
 import { useMemo } from "react";
 import { MdLink } from "react-icons/md";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   DataView,
   defineDataView,
@@ -22,12 +20,13 @@ export interface BacklinksProps {
 
 const BACKLINKS_VIEW = defineDataView("page.links.backlinks");
 
-// "Linked from" section: lists the pages that link to `documentId` as a
-// DataView (search/sort come free). Subscribes to the push-based
-// backlinksResource so it updates live as edits reindex. Renders nothing when
-// there are no backlinks — so a page without inbound links shows neither the
-// section nor the DataView toolbar. No coupling to the pages app or any block
-// type — navigation is the injected `onOpenPage`.
+// Lists the pages that link to `documentId` as a DataView (search/sort come
+// free). Subscribes to the push-based backlinksResource so it updates live as
+// edits reindex. Renders nothing when there are no backlinks — so a page without
+// inbound links shows no DataView toolbar either. Title-less on purpose: this is
+// a body, and whatever hosts it (the Pages page-detail section, whose host paints
+// the "Linked from" card) owns the heading. No coupling to the pages app or any
+// block type — navigation is the injected `onOpenPage`.
 export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
   const result = useResource(backlinksResource, { pageId: documentId });
 
@@ -49,25 +48,22 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
   if (rows.length === 0) return null;
 
   return (
-    <Stack as="section" gap="xs">
-      <SectionLabel>Linked from</SectionLabel>
-      <DataView<BacklinkRow>
-        rows={rows}
-        fields={fields}
-        rowKey={(row) => row.id}
-        views={["list"]}
-        storageKey={BACKLINKS_VIEW}
-        onRowActivate={(row) => onOpenPage?.(row.id)}
-        viewOptions={{
-          list: {
-            leading: (row: BacklinkRow) => (
-              <Center as="span" className="size-4 text-muted-foreground">
-                <PageIcon nodes={row.iconSvgNodes} fallback={MdLink} className="size-4" />
-              </Center>
-            ),
-          },
-        }}
-      />
-    </Stack>
+    <DataView<BacklinkRow>
+      rows={rows}
+      fields={fields}
+      rowKey={(row) => row.id}
+      views={["list"]}
+      storageKey={BACKLINKS_VIEW}
+      onRowActivate={(row) => onOpenPage?.(row.id)}
+      viewOptions={{
+        list: {
+          leading: (row: BacklinkRow) => (
+            <Center as="span" className="size-4 text-muted-foreground">
+              <PageIcon nodes={row.iconSvgNodes} fallback={MdLink} className="size-4" />
+            </Center>
+          ),
+        },
+      }}
+    />
   );
 }

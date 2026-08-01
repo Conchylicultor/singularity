@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginViewSlots } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import {
+  DependsOnCount,
   DependsOnSection,
+  UsedByCount,
   UsedBySection,
 } from "./components/dependency-tree";
 
@@ -13,11 +15,13 @@ export default {
       id: "dependencies",
       label: "Depends on",
       component: DependsOnSection,
+      summary: DependsOnCount,
     }),
     PluginViewSlots.Section({
       id: "dependents",
       label: "Used by",
       component: UsedBySection,
+      summary: UsedByCount,
     }),
   ],
 } satisfies PluginDefinition;

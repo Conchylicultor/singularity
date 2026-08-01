@@ -1,72 +1,28 @@
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import {
   Sonata,
-  type SonataSection,
+  SonataSectionItem,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
-
-/** A `Sonata.Section` contribution as the render slot hands it back. */
-type SectionItem = SonataSection & { id: string };
-
-/**
- * One section, painted as the column's uniform collapsible card. The chrome
- * lives HERE, not in the contributed component: every section is a `SectionCard`
- * by construction, so no two can drift on padding, radius, or title typography.
- *
- * Collapsed by default; the open/closed choice persists per section, per device.
- * The body is unmounted while collapsed — a section whose work must outlive its
- * panel puts that work in a headless `Sonata.Effect`.
- */
-function SectionCardHost({ section }: { section: SectionItem }) {
-  const [open, setOpen] = useDraft(`sonata.section.${section.id}.open`, false);
-  const Body = section.component;
-  const Actions = section.actions;
-  const Icon = section.icon;
-
-  return (
-    <SectionCard
-      title={section.label}
-      icon={Icon ? <Icon /> : undefined}
-      actions={Actions ? <Actions /> : undefined}
-      open={open}
-      onOpenChange={setOpen}
-    >
-      <Body />
-    </SectionCard>
-  );
-}
-
-/**
- * Applies the contribution's `useAvailable` gate before anything is painted, so
- * an inapplicable section renders no card and no title rather than an empty one.
- * The hook's presence is stable per contribution, so branching on it up here
- * keeps both leaves rules-of-hooks clean (mirrors `auth`'s `useEnabled` gate).
- */
-function GatedSection({
-  useAvailable,
-  section,
-}: {
-  useAvailable: () => boolean;
-  section: SectionItem;
-}) {
-  return useAvailable() ? <SectionCardHost section={section} /> : null;
-}
-
-function Section({ section }: { section: SectionItem }) {
-  if (section.useAvailable) {
-    return <GatedSection useAvailable={section.useAvailable} section={section} />;
-  }
-  return <SectionCardHost section={section} />;
-}
 
 /**
  * The right-hand panel column hosting the `Sonata.Section` contributions
  * (track mixer, chord readout, …). Collapsible to a thin rail so the active
  * display can take the full width; the choice persists across reloads.
+ *
+ * This owns ONLY the column: the rail toggle, the scroll body, and the two
+ * `area` zones. Each section's chrome — the collapsible `SectionCard`, its
+ * icon/actions header, the `useAvailable` gate, and the per-section persisted
+ * open state — belongs to the detail-sections primitive
+ * (`SonataSectionItem`), shared with every other detail pane in the app.
+ *
+ * The `area` split is a pure RENDER-TIME filter across the two zones: `subId`
+ * does not partition reorder (the persisted layout is keyed by the base slot id
+ * only), so both zones draw from one order. The `subId` values are kept so
+ * reorder's per-zone measurement can still tell the two apart.
  */
 export function SectionPane() {
   const [collapsed, setCollapsed] = useDraft(
@@ -112,10 +68,18 @@ export function SectionPane() {
             titles and sits tighter than the old always-expanded panels. */}
         <Stack gap="sm">
           <Sonata.Section.Render subId="editor">
-            {(s) => (s.area === "editor" ? <Section section={s} /> : null)}
+            {(s) =>
+              s.area === "editor" ? (
+                <SonataSectionItem section={s} entityProps={{}} />
+              ) : null
+            }
           </Sonata.Section.Render>
           <Sonata.Section.Render subId="player">
-            {(s) => (s.area !== "editor" ? <Section section={s} /> : null)}
+            {(s) =>
+              s.area !== "editor" ? (
+                <SonataSectionItem section={s} entityProps={{}} />
+              ) : null
+            }
           </Sonata.Section.Render>
         </Stack>
       </Scroll>

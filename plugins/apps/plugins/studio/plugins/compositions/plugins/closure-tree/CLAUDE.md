@@ -32,7 +32,7 @@ layout stops reading as a list of peers.
 
 - Description: Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
 - Web:
-  - Contributes: `CompositionDetail.Section` "closure-tree" → `ClosureTreeSection`
+  - Contributes: `CompositionDetail.Section` "Closure" → `ClosureTreeSection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/explorer.PluginTree`

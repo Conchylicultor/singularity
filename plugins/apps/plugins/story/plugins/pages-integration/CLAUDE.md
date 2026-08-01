@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `PageTree.RowActions` "story" → `UpgradeAction`
-    - `PageDetail.Section` → `StorySection`
+    - `PageDetail.Section` "Story" → `StorySection`
   - Uses:
     - `apps-core/tabs.navigate`
     - `apps/pages/page-tree.PageDetail`
@@ -23,7 +23,6 @@
     - `primitives/css/center.Center`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/ui-kit.Button`
     - `primitives/tooltip.WithTooltip`
 

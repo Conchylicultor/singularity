@@ -470,6 +470,7 @@ structurally unrepresentable.
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
+    - `primitives/detail-sections`
     - `primitives/floating-action`
     - `primitives/floating-surface`
     - `primitives/folder-picker`

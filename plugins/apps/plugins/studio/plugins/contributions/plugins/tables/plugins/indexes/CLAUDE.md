@@ -6,7 +6,7 @@
 
 - Description: Table indexes section in the table detail view.
 - Web:
-  - Contributes: `TableDetail.Section` "indexes" → `IndexesSection`
+  - Contributes: `TableDetail.Section` "Indexes" → `IndexesSection`
   - Uses:
     - `apps/studio/contributions/tables.TableDetail`
     - `infra/endpoints.useEndpoint`

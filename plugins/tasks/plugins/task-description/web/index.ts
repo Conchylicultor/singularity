@@ -6,6 +6,12 @@ export default {
   description:
     "Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.",
   contributions: [
-    TaskDetailSlots.Section({ id: "description", label: "Description", component: TaskDescription }),
+    TaskDetailSlots.Section({
+      id: "description",
+      label: "Description",
+      component: TaskDescription,
+      // Was a `Collapsible defaultOpen` before the host owned the card.
+      useDefaultOpen: () => true,
+    }),
   ],
 } satisfies PluginDefinition;

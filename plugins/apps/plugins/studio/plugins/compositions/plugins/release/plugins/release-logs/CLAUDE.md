@@ -6,7 +6,7 @@
 
 - Description: Live + persisted release log stream section in the release detail pane.
 - Web:
-  - Contributes: `ReleaseDetail.Section` "logs" → `ReleaseLogSection`
+  - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
   - Uses:
     - `apps/studio/compositions/release.ReleaseDetail`
     - `infra/endpoints.useEndpoint`

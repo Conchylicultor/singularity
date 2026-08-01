@@ -55,6 +55,8 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `layouts/full-pane.FullPane`
     - `primitives/css/center.Center`
     - `primitives/css/text.Text`
+    - `primitives/detail-sections.defineDetailSections`
+    - `primitives/detail-sections.DetailSection`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/pane-toolbar.definePaneToolbar`
     - `primitives/scoped-store.defineScopedStore`
@@ -81,6 +83,7 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `RhythmStoreProvider`
     - `Sonata`
     - `SonataProvider`
+    - `SonataSectionItem`
     - `SonataToolbar`
     - `TEMPO_MATH_FLOOR`
     - `TransposeStoreProvider`

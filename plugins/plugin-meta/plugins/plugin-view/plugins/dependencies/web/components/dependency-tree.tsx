@@ -16,7 +16,7 @@ import {
   useEnsureCompositionData,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import {
-  Section,
+  SectionCount,
   type PluginNode,
   pluginViewPane,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -26,15 +26,20 @@ import {
   type DepTreeNode,
 } from "../internal/build-dep-tree";
 
-const TITLE: Record<DepDirection, string> = {
-  deps: "Depends on",
-  dependents: "Used by",
-};
-
 const EMPTY: Record<DepDirection, string> = {
   deps: "No dependencies.",
   dependents: "Nothing depends on this.",
 };
+
+/** The dependency tree in one direction, or `null` while the graph loads. */
+function useDepTree(node: PluginNode, direction: DepDirection) {
+  useEnsureCompositionData();
+  const graph = useGraph();
+  return useMemo(
+    () => (graph ? buildDepTree(graph, node.id, direction) : null),
+    [graph, node.id, direction],
+  );
+}
 
 export function DependsOnSection({ node }: { node: PluginNode }) {
   return <DependencySection node={node} direction="deps" />;
@@ -44,6 +49,27 @@ export function UsedBySection({ node }: { node: PluginNode }) {
   return <DependencySection node={node} direction="dependents" />;
 }
 
+export function DependsOnCount({ node }: { node: PluginNode }) {
+  return <DependencyCount node={node} direction="deps" />;
+}
+
+export function UsedByCount({ node }: { node: PluginNode }) {
+  return <DependencyCount node={node} direction="dependents" />;
+}
+
+/** The tree size, readable while the card is collapsed. Silent until loaded. */
+function DependencyCount({
+  node,
+  direction,
+}: {
+  node: PluginNode;
+  direction: DepDirection;
+}) {
+  const tree = useDepTree(node, direction);
+  if (!tree || tree.total === 0) return null;
+  return <SectionCount>{tree.total}</SectionCount>;
+}
+
 function DependencySection({
   node,
   direction,
@@ -51,39 +77,21 @@ function DependencySection({
   node: PluginNode;
   direction: DepDirection;
 }) {
-  useEnsureCompositionData();
-  const graph = useGraph();
+  const tree = useDepTree(node, direction);
 
-  const tree = useMemo(
-    () => (graph ? buildDepTree(graph, node.id, direction) : null),
-    [graph, node.id, direction],
-  );
-
-  if (!graph || !tree) {
-    return (
-      <Section title={TITLE[direction]}>
-        <Loading />
-      </Section>
-    );
-  }
+  if (!tree) return <Loading />;
 
   if (tree.total === 0) {
-    return (
-      <Section title={TITLE[direction]}>
-        <Text tone="muted">{EMPTY[direction]}</Text>
-      </Section>
-    );
+    return <Text tone="muted">{EMPTY[direction]}</Text>;
   }
 
   return (
-    <Section title={TITLE[direction]} count={String(tree.total)}>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the Section's horizontal padding so row hover backgrounds span full width */}
-      <Stack direction="col" gap="none" className="-mx-2">
-        {tree.roots.map((root, i) => (
-          <DepRow key={`${root.id}-${i}`} node={root} depth={0} />
-        ))}
-      </Stack>
-    </Section>
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the section card's horizontal padding so row hover backgrounds span full width
+    <Stack direction="col" gap="none" className="-mx-2">
+      {tree.roots.map((root, i) => (
+        <DepRow key={`${root.id}-${i}`} node={root} depth={0} />
+      ))}
+    </Stack>
   );
 }
 

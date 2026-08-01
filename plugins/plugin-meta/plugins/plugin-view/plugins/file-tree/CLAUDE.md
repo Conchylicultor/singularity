@@ -6,14 +6,12 @@
 
 - Description: File tree explorer for the plugin's own files in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "file-tree" → `FileTreeSection`
+  - Contributes: `PluginViewSlots.Section` "Files" → `FileTreeSection`
   - Uses:
     - `code-explorer.FileTree`
     - `conversations/conversation-view/code/file-pane.filePeekPane`
     - `infra/endpoints.useEndpoint`
-    - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
     - `primitives/css/scroll.Scroll`
     - `primitives/data-view.defineDataView`
     - `primitives/pane.useOpenPane`

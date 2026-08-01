@@ -10,8 +10,12 @@ export default {
   contributions: [
     WorkflowsDetail.Section({
       id: "executions",
-      title: "Executions",
-      order: 10,
+      label: "Executions",
+      // The pane's only section, and the Run button lives inside its body —
+      // collapsed by default would leave the definition page with one shut bar
+      // and no way to run anything without a click. Seeds the persisted state
+      // only, so a user who closes it keeps it closed.
+      useDefaultOpen: () => true,
       component: ExecutionsSection,
     }),
     Pane.Register({ pane: executionDetailPane }),

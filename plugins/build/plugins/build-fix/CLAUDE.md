@@ -6,7 +6,7 @@
 
 - Description: Launch-agent button in the build detail pane for failed builds.
 - Web:
-  - Contributes: `BuildDetailSlots.Section` "fix" → `BuildFixSection`
+  - Contributes: `BuildDetailSlots.Section` "Fix" → `BuildFixSection`
   - Uses:
     - `build.BuildDetailSlots`
     - `infra/endpoints.useEndpoint`

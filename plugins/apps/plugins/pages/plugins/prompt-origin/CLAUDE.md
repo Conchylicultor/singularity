@@ -34,14 +34,12 @@ at all.
 
 - Description: Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "prompt-origin" → `PromptOriginSection`
+  - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
     - `page/prompt/link.usePromptTaskLink`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/css/row.SectionHeaderRow`
-    - `primitives/css/spacing.Stack`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `tasks/task-detail.TaskDetailSlots`

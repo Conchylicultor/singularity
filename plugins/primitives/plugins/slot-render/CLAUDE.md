@@ -162,8 +162,6 @@ the outcome too, with no separate code path.
     - `apps-core/tab-surface`
     - `apps/browser/shell`
     - `apps/debug/shell`
-    - `apps/deploy/servers`
-    - `apps/deploy/shell`
     - `apps/file-explorer/shell`
     - `apps/home/shell`
     - `apps/mail/shell`
@@ -182,7 +180,6 @@ the outcome too, with no separate code path.
     - `apps/website/pillars/apps`
     - `apps/website/pillars/platform`
     - `apps/website/shell`
-    - `apps/workflows/definitions`
     - `apps/workflows/shell`
     - `config_v2/fields`
     - `config_v2/settings`

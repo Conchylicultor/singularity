@@ -1,11 +1,6 @@
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
@@ -41,29 +36,22 @@ function TaskDescriptionInner({
   }, [taskId, detailTask, flushAll]);
 
   return (
-    <Collapsible defaultOpen>
-      <Stack gap="md">
-      <SectionHeaderRow variant="eyebrow">Description</SectionHeaderRow>
-      <CollapsibleContent>
-        <Stack gap="md">
-        <DescriptionView
-          value={descField.value}
-          onChange={descField.onChange}
-          onFocus={descField.onFocus}
-          onBlur={descField.onBlur}
+    <Stack gap="md">
+      <DescriptionView
+        value={descField.value}
+        onChange={descField.onChange}
+        onFocus={descField.onFocus}
+        onBlur={descField.onBlur}
+      />
+      <Stack align="end" gap="none">
+        <LaunchControl
+          getRequest={buildLaunchRequest}
+          disabled={!task.title.trim()}
+          className="w-auto"
+          openAfterLaunch={false}
         />
-        <Stack align="end" gap="none">
-          <LaunchControl
-            getRequest={buildLaunchRequest}
-            disabled={!task.title.trim()}
-            className="w-auto"
-            openAfterLaunch={false}
-          />
-        </Stack>
-        </Stack>
-      </CollapsibleContent>
       </Stack>
-    </Collapsible>
+    </Stack>
   );
 }
 

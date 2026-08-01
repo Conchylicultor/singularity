@@ -46,32 +46,20 @@ component where the caller-aware context store is correct.
 
 ## The section column (`SectionPane`)
 
-`web/components/section-pane.tsx` is the host for every `Sonata.Section`
-contribution — and it owns their **chrome**. A section supplies a `label`, an
-`icon`, and a body `component`; the host wraps each one in the shared
-[`SectionCard`](../../../../../primitives/plugins/section-card/CLAUDE.md)
-primitive (a `Card` + a collapsible title row). Three consequences worth knowing
-before you add a section:
+`Sonata.Section` is a
+[detail-sections](../../../../../primitives/plugins/detail-sections/CLAUDE.md)
+slot — read that first; it owns the card chrome, the persisted per-section open
+state, and the `useAvailable` gate. Sonata-specific on top of it:
 
-- **Cards are collapsed by default**, showing only the title row. Clicking the
-  title expands it; the choice persists per section, per device (`useDraft`,
-  key `sonata.section.<id>.open`). The column therefore reads as a list of
-  titles, not a wall of panels.
-- **A collapsed card's body is UNMOUNTED.** Anything that must keep running for
-  the open song regardless of the panel's state — debounced persistence, a
-  transport subscription that outlives the panel — belongs in a headless
-  always-mounted `Sonata.Effect`, not in the body. This is why the chord-grid and
-  Ultimate Guitar editors persist from `*PersistObserver` components rather than
-  from their editor sections, and why `rhythm-controls` writes the groove from
-  `RhythmObserver`.
-- **A section can no longer opt out with `return null`** — the host has already
-  painted the title by then, leaving an empty card. "This section doesn't apply
-  to the open song" is declared on the contribution as `useAvailable?: () =>
-  boolean` (the shell exports the shared `useHasChords` / `useHasAuthoredChord`
-  gates); the host runs it first and paints nothing when it is false.
-- Controls that must stay reachable while collapsed (an on/off switch, a reset
-  button) go in the contribution's `actions?: ComponentType`, rendered as a
-  sibling of the title trigger.
+- `web/components/section-pane.tsx` owns only the **column**: the
+  collapse-to-rail toggle, the scroll body, and two `area`-filtered zones
+  (`"editor"` above `"player"`). Each section is painted by the primitive's
+  `SonataSectionItem`.
+- **A collapsed card's body is unmounted**, so per-song work that must outlive
+  the panel lives in a headless `Sonata.Effect` — hence the chord-grid / Ultimate
+  Guitar `*PersistObserver`s and `rhythm-controls`' `RhythmObserver`.
+- The shell exports the shared `useAvailable` gates `useHasChords` /
+  `useHasAuthoredChord`.
 
 ## Song title ownership
 
@@ -109,7 +97,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-player"
   - Uses:
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SonataSection`
+    - `apps/sonata/shell.SonataSectionItem`
     - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.TEMPO_MATH_FLOOR`
     - `apps/sonata/shell.useSonata`
@@ -157,7 +145,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/pane.usePaneStore`
     - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.formatRelativeTime`
-    - `primitives/section-card.SectionCard`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values):
     - `Library`

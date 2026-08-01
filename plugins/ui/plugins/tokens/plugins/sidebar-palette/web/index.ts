@@ -39,7 +39,7 @@ export default {
       id: "sidebar-palette",
       label: "Sidebar Palette",
       component: SidebarPaletteSection,
-      headerExtra: SidebarPaletteHeaderDots,
+      actions: SidebarPaletteHeaderDots,
     }),
   ],
 } satisfies PluginDefinition;

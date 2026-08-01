@@ -6,7 +6,7 @@
 
 - Description: Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
 - Web:
-  - Contributes: `BuildDetailSlots.Section` "commits" → `BuildCommitsSection`
+  - Contributes: `BuildDetailSlots.Section` "Commits" → `BuildCommitsSection`
   - Uses:
     - `build.BuildDetailSlots`
     - `infra/endpoints.useEndpoint`

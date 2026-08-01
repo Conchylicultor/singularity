@@ -26,15 +26,15 @@ the renderer mirrors the sibling `sub-plugins` section's recursive row.
 - Description: Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and collapsing DAG diamonds via first-occurrence dedup.
 - Web:
   - Contributes:
-    - `PluginViewSlots.Section` "dependencies" → `DependsOnSection`
-    - `PluginViewSlots.Section` "dependents" → `UsedBySection`
+    - `PluginViewSlots.Section` "Depends on" → `DependsOnSection`
+    - `PluginViewSlots.Section` "Used by" → `UsedBySection`
   - Uses:
     - `plugin-meta/composition.useEnsureCompositionData`
     - `plugin-meta/composition.useGraph`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.pluginViewPane`
     - `plugin-meta/plugin-view.PluginViewSlots`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`

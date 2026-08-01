@@ -18,7 +18,7 @@ reach plugins the draft does not yet include.
 
 - Description: Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
 - Web:
-  - Contributes: `CompositionDetail.Section` "entry-points" → `EntryPointsSection`
+  - Contributes: `CompositionDetail.Section` "Entry points" → `EntryPointsSection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `plugin-meta/composition.updateActiveDraft`

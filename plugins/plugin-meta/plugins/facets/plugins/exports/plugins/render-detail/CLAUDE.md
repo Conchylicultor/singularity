@@ -10,14 +10,14 @@ Renders the exports facet as a section in the plugin detail pane: runtime export
 
 - Description: Per-plugin exports section in the plugin detail pane.
 - Web:
-  - Contributes: `PluginViewSlots.Section` "exports" → `ExportsDetailSection`
+  - Contributes: `PluginViewSlots.Section` "Exports" → `ExportsDetailSection`
   - Uses:
     - `plugin-meta/plugin-view.ConsumerList`
     - `plugin-meta/plugin-view.ExportRuntime`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.RUNTIME_COLORS`
-    - `plugin-meta/plugin-view.Section`
+    - `plugin-meta/plugin-view.SectionCount`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`

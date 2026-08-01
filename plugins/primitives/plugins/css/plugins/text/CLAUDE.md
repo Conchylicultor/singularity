@@ -189,7 +189,6 @@ fixed raw size escapes per-site via
     - `apps/sonata/transport-bar`
     - `apps/sonata/transpose`
     - `apps/story/content/text`
-    - `apps/story/pages-integration`
     - `apps/story/render`
     - `apps/story/renderers/blog`
     - `apps/story/renderers/slides`
@@ -359,7 +358,6 @@ fixed raw size escapes per-site via
     - `page/file`
     - `page/formatting/color`
     - `page/inline-date`
-    - `page/links`
     - `page/math/equation`
     - `page/math/inline`
     - `page/prompt/block`
