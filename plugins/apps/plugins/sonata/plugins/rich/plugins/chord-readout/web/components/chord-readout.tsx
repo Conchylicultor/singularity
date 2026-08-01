@@ -33,6 +33,9 @@ const KB_LOW = 60;
 const KB_HIGH = 95;
 const KB_CENTER = (KB_LOW + KB_HIGH) / 2;
 
+/** Stable "nothing lit" highlight for the no-chord keyboard (see `fitted`). */
+const NO_KEYS: readonly number[] = [];
+
 /**
  * Fit a chord's inversions to a keyboard window: octave-shift them toward the
  * center of the default window, then widen that window (in whole octaves, so it
@@ -83,8 +86,14 @@ function fitToWindow(voicings: number[][]): {
  *
  * Applicability is the contribution's `useAvailable` (`useHasChords`): the card
  * is not painted for a chordless song, so this body never renders a
- * "no chords" empty state — only the `—` placeholder when the cursor sits past
- * the last of the (existing) chords.
+ * "no chords" empty state — only the resting state below, when the playhead sits
+ * in a gap between chords (or past the last one).
+ *
+ * That resting state renders the SAME skeleton as a live chord — dash instead of
+ * the symbol, "No chord detected" instead of the quality line, an unlit keyboard
+ * instead of a voicing — rather than collapsing to a bare dash. A song's chords
+ * are separated by silences, so the panel would otherwise shrink and re-grow at
+ * every gap, jumping the whole section column with it.
  */
 export function ChordReadout() {
   const { score } = useSonata();
@@ -126,19 +135,22 @@ export function ChordReadout() {
 
   // Every inversion of the current chord (index 0 = root position), each an
   // ascending MIDI voicing, with the keyboard window they're drawn in. Used for
-  // the keyboards below the symbol.
+  // the keyboards below the symbol. With no chord under the playhead this is the
+  // default window with no voicings — the keyboard still draws, unlit.
   const fitted = useMemo(() => {
-    if (!current) return null;
+    if (!current) return { low: KB_LOW, high: KB_HIGH, voicings: [] };
     const root = chordPitches(current.data);
     return fitToWindow(root.map((_, k) => invertVoicing(root, k)));
   }, [current]);
 
-  if (!current) {
-    return (
-      // eslint-disable-next-line text/no-adhoc-typography -- large placeholder dash matching the 24px display readout (no equivalent variant above the title token, 20px)
-      <div className="text-2xl font-semibold text-muted-foreground/60">—</div>
-    );
-  }
+  // The keyboard rows to draw: the inversions (all, or just root position), or a
+  // single unlit keyboard when there's no chord.
+  const rows: readonly (readonly number[])[] =
+    fitted.voicings.length === 0
+      ? [NO_KEYS]
+      : showInversions
+        ? fitted.voicings
+        : fitted.voicings.slice(0, 1);
 
   return (
     <Stack gap="md">
@@ -149,7 +161,11 @@ export function ChordReadout() {
         <div className="flex items-baseline gap-sm">
           {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
           <div className="text-4xl font-bold tracking-tight text-foreground">
-            {current.data.symbol}
+            {current ? (
+              current.data.symbol
+            ) : (
+              <span className="text-muted-foreground/50">—</span>
+            )}
           </div>
           {roman && (
             <Text
@@ -163,65 +179,74 @@ export function ChordReadout() {
           )}
         </div>
         <Text as="div" variant="caption" className="text-muted-foreground">
-          {current.data.spelledSymbol ? `${current.data.spelledSymbol} · ` : ""}
-          {current.data.quality}
-          {current.confidence !== undefined
-            ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
-            : ""}
+          {current ? (
+            <>
+              {current.data.spelledSymbol
+                ? `${current.data.spelledSymbol} · `
+                : ""}
+              {current.data.quality}
+              {current.confidence !== undefined
+                ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
+                : ""}
+            </>
+          ) : (
+            "No chord detected"
+          )}
         </Text>
         <div className="text-2xs tabular-nums text-muted-foreground/70">
-          beats {current.start.toFixed(2)}–{current.end.toFixed(2)}
+          {/* Non-breaking space with no chord: holds the line so the block below
+              doesn't shift up. */}
+          {current
+            ? `beats ${current.start.toFixed(2)}–${current.end.toFixed(2)}`
+            : " "}
         </div>
       </Stack>
 
-      {fitted && (
+      <Stack gap="sm">
+        <div className="flex items-center justify-between">
+          <SectionLabel>Notes</SectionLabel>
+          {/* Rendered (disabled) rather than hidden with nothing to invert, so
+              the row keeps its height across the gaps between chords. */}
+          <ToggleChip
+            active={showInversions}
+            disabled={fitted.voicings.length <= 1}
+            onClick={() => setShowInversions((v) => !v)}
+          >
+            Inversions
+          </ToggleChip>
+        </div>
         <Stack gap="sm">
-          <div className="flex items-center justify-between">
-            <SectionLabel>Notes</SectionLabel>
-            {fitted.voicings.length > 1 && (
-              <ToggleChip
-                active={showInversions}
-                onClick={() => setShowInversions((v) => !v)}
-              >
-                Inversions
-              </ToggleChip>
-            )}
-          </div>
-          <Stack gap="sm">
-            {(showInversions ? fitted.voicings : fitted.voicings.slice(0, 1)).map(
-              (voicing, k) => {
-                const slash = formatChordSymbolWithBass(
-                  current.data,
-                  ((voicing[0]! % 12) + 12) % 12,
-                );
-                return (
-                  <Stack key={k} gap="xs">
-                    {/* Per-row caption — only when stacking inversions; the
-                        big symbol above already names the root chord. */}
-                    {showInversions && (
-                      <div className="text-2xs">
-                        <span className="font-medium text-foreground/80">
-                          {ORDINALS[k] ?? `${k}th`}
-                        </span>
-                        <span className="text-muted-foreground/70">
-                          {" · "}
-                          {slash}
-                        </span>
-                      </div>
-                    )}
-                    <Keyboard
-                      low={fitted.low}
-                      high={fitted.high}
-                      lit={voicing}
-                      className="h-11 w-full"
-                    />
-                  </Stack>
-                );
-              },
-            )}
-          </Stack>
+          {rows.map((voicing, k) => {
+            const bass = voicing[0];
+            return (
+              <Stack key={k} gap="xs">
+                {/* Per-row caption — only when stacking inversions; the
+                    big symbol above already names the root chord. */}
+                {showInversions && current && bass !== undefined && (
+                  <div className="text-2xs">
+                    <span className="font-medium text-foreground/80">
+                      {ORDINALS[k] ?? `${k}th`}
+                    </span>
+                    <span className="text-muted-foreground/70">
+                      {" · "}
+                      {formatChordSymbolWithBass(
+                        current.data,
+                        ((bass % 12) + 12) % 12,
+                      )}
+                    </span>
+                  </div>
+                )}
+                <Keyboard
+                  low={fitted.low}
+                  high={fitted.high}
+                  lit={voicing}
+                  className="h-11 w-full"
+                />
+              </Stack>
+            );
+          })}
         </Stack>
-      )}
+      </Stack>
     </Stack>
   );
 }
