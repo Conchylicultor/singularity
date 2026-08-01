@@ -4,7 +4,10 @@ import {
   Servers,
 } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { StatusField } from "./components/status-field";
-import { ServerStatusHeader } from "./components/status-header";
+import {
+  ServerStatusSection,
+  ServerStatusSummary,
+} from "./components/status-section";
 
 export { useServerHealthMap, useServerHealth, useServerVerified } from "./hooks";
 export { VerifyConnectionBody } from "./components/verify-connection";
@@ -18,9 +21,10 @@ export default {
     "Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow.",
   contributions: [
     Servers.Fields({ id: "status", component: StatusField }),
-    // The server pane's status line, as a peer section of the identity block
-    // rather than a micro-slot inside it. `chrome: "none"` because a one-line
-    // readout is not a titled collapsible card.
+    // The server pane's liveness, as a peer section of the identity block rather
+    // than a micro-slot inside it. The verdict badge rides `summary`, so it is
+    // readable with the card shut and the body is free to carry the probe's
+    // detail (when it ran, why it failed).
     //
     // It has to be its own contribution: `servers` owns the identity section,
     // and `servers` cannot import `health` (health already imports servers for
@@ -30,8 +34,8 @@ export default {
     ServerDetail.Section({
       id: "status",
       label: "Status",
-      chrome: "none",
-      component: ServerStatusHeader,
+      component: ServerStatusSection,
+      summary: ServerStatusSummary,
     }),
   ],
 } satisfies PluginDefinition;

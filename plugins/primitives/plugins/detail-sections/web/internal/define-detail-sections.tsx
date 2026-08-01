@@ -50,8 +50,6 @@ export interface DetailSection<EntityProps> {
   useAvailable?: (props: EntityProps) => boolean;
   /** First-render open state when the user has no persisted choice yet. */
   useDefaultOpen?: (props: EntityProps) => boolean;
-  /** `"none"` opts out of the card entirely — for a pane's identity block. */
-  chrome?: "card" | "none";
 }
 
 /**
@@ -88,10 +86,17 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
  * plugins contribute `DetailSection`s to `Section`, the pane renders
  * `<Host {...entityProps}/>`, and the host paints every section as a
  * `SectionCard` — a `Card` with a collapsible title row. There is exactly one
- * mode: the chrome is not configurable per pane, so no two panes' section stacks
- * can drift on padding, radius, title typography, or chevron placement. A pane
- * with more than one zone (Sonata's `area`-split column) paints each section
- * with `SectionItem` — the SAME chrome, laid out by the pane.
+ * mode: the chrome is not configurable per pane and there is NO per-section
+ * opt-out, so no two panes' section stacks can drift on padding, radius, title
+ * typography, or chevron placement. A pane with more than one zone (Sonata's
+ * `area`-split column) paints each section with `SectionItem` — the SAME chrome,
+ * laid out by the pane.
+ *
+ * A pane's **identity block** (title input, primary actions) is a section like
+ * any other, card and all: the entity's name lives in the pane header, so a
+ * collapsed identity card loses nothing. An earlier `chrome: "none"` opt-out for
+ * it was removed — it was indistinguishable from "this panel doesn't want your
+ * card", which is how a self-painted card frame got back in.
  *
  * ## Open state
  *
@@ -195,12 +200,6 @@ export function defineDetailSections<
     );
   }
 
-  /** `chrome: "none"` — the body bare, no card and no title, but still a peer in the stack and still reorderable. */
-  function BareSection({ section, entityProps }: SectionProps): ReactNode {
-    const Body = section.component;
-    return <Body {...entityProps} />;
-  }
-
   /**
    * Resolves the contribution's `useDefaultOpen` hook. Its own component so the
    * hook is called unconditionally (see `AvailableSection` for why the split is
@@ -221,10 +220,12 @@ export function defineDetailSections<
     );
   }
 
-  function ChromeSection({ section, entityProps }: SectionProps): ReactNode {
-    if (section.chrome === "none") {
-      return <BareSection section={section} entityProps={entityProps} />;
-    }
+  /**
+   * Resolves the open-state seed, then hands off to the ONE chrome. The branch
+   * is on the hook's *presence* (stable per contribution), so both leaves stay
+   * rules-of-hooks clean — the same split `AvailableSection` makes.
+   */
+  function OpenStateSection({ section, entityProps }: SectionProps): ReactNode {
     if (section.useDefaultOpen) {
       return (
         <DefaultOpenSection
@@ -251,7 +252,7 @@ export function defineDetailSections<
     entityProps,
   }: SectionProps & { useAvailable: (props: EntityProps) => boolean }): ReactNode {
     return useAvailable(entityProps) ? (
-      <ChromeSection section={section} entityProps={entityProps} />
+      <OpenStateSection section={section} entityProps={entityProps} />
     ) : null;
   }
 
@@ -265,7 +266,7 @@ export function defineDetailSections<
         />
       );
     }
-    return <ChromeSection section={section} entityProps={entityProps} />;
+    return <OpenStateSection section={section} entityProps={entityProps} />;
   }
 
   function Host(entityProps: EntityProps): ReactNode {

@@ -18,8 +18,8 @@
     - `primitives/graph-canvas.GraphCanvasEdge`
     - `primitives/graph-canvas.GraphCanvasGroup`
     - `primitives/graph-canvas.GraphCanvasNode`
-    - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `tasks.patchTask`
     - `tasks/task-detail.taskDetailPane`

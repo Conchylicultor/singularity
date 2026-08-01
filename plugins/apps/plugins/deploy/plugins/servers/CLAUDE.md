@@ -9,8 +9,8 @@ contributing a section, never by wrapping the pane.
 
 - **Entity prop is the whole `Server` row**, not a `serverId`: the pane has it in
   hand, so re-deriving it per section would be a resource read per card.
-- The identity form (`server-edit-form.tsx`) is itself a contribution, with
-  `chrome: "none"` — that is what makes "one slot" literal here.
+- The identity form (`server-edit-form.tsx`) is itself a contribution — that is
+  what makes "one slot" literal here — and is carded like every other section.
 - `health` contributes `status` rather than `servers` rendering a badge:
   `health` already imports `servers`, so the reverse edge would be a cycle. The
   registry owns identity, `health` owns liveness.

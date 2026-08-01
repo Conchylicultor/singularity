@@ -3,6 +3,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { serversRootPane, serverDetailPane } from "./panes";
 import { ServerDetail } from "./slots";
 import { ServerEditForm } from "./components/server-edit-form";
+import { ServerDeleteAction } from "./components/server-delete-action";
 import {
   ServerItemActions,
   OpenConsoleAction,
@@ -24,8 +25,9 @@ export default {
     Pane.Register({ pane: serversRootPane }),
     Pane.Register({ pane: serverDetailPane }),
     // The pane's identity block, as a section like every other region — that is
-    // what makes "a detail pane is one slot" literally true here. `chrome:
-    // "none"` because an identity block is not a titled collapsible card.
+    // what makes "a detail pane is one slot" literally true here. Carded like
+    // its peers: the pane header already names the server, so collapsing it
+    // loses nothing.
     //
     // Deliberately NOT `excludeFromReorder: true`, even though an identity block
     // should not be draggable: reorder's `applyTree` pins excluded entries LAST,
@@ -34,8 +36,9 @@ export default {
     ServerDetail.Section({
       id: "identity",
       label: "Server",
-      chrome: "none",
       component: ServerEditForm,
+      actions: ServerDeleteAction,
+      useDefaultOpen: () => true,
     }),
     ServerItemActions({ id: "open-console", component: OpenConsoleAction }),
   ],

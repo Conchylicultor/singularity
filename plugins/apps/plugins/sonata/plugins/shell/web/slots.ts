@@ -44,7 +44,7 @@ interface SonataSectionArea {
 /**
  * One panel in the player's right-hand section column — a `DetailSection` (the
  * shared detail-pane contract: `label`, `icon`, `component`, `actions`,
- * `summary`, `useAvailable`, `useDefaultOpen`, `chrome`) plus Sonata's own
+ * `summary`, `useAvailable`, `useDefaultOpen`) plus Sonata's own
  * `area`. The chrome, the collapsed-by-default open state, and the
  * `useAvailable` gate all live in the primitive — see
  * `primitives/detail-sections/CLAUDE.md` before adding one, in particular that a

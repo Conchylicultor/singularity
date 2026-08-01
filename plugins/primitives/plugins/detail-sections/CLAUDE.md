@@ -4,9 +4,12 @@ A detail pane is **one render slot whose sections are contributions**.
 `defineDetailSections("<id>")` → `{ Section, Host }`. Single-mode: the host paints
 every section as a [`SectionCard`](../section-card/CLAUDE.md), so a section never
 paints its own card, title, or chevron. `actions` + `summary` share the
-header-right slot (both stay visible while collapsed). `chrome: "none"` renders
-the body bare — still a stack peer, still reorderable — for a pane's identity
-block (title input, graph canvas), not as an escape hatch for a bespoke card.
+header-right slot (both stay visible while collapsed).
+
+**There is no chrome opt-out**, not even for a pane's identity block — the
+entity's name lives in the pane header, so a collapsed identity card loses
+nothing, and an opt-out reads as "this panel doesn't want your card" to the next
+author. Nothing to show ⇒ `useAvailable`; start expanded ⇒ `useDefaultOpen`.
 
 ## More than one zone: `SectionItem`
 
@@ -46,7 +49,7 @@ persisted section order — pick factory ids that reproduce the existing string.
 
 Padding and the `pane-gutter-flush` marker (`--pane-gutter: 0px`) **move
 together**, and are declared twice because two containers supply inset: the host
-stack (`p-lg`, which is also what covers `chrome: "none"` bodies) and the wrapper
+stack (`p-lg`) and the wrapper
 the host hands to `SectionCard`'s children (`SectionCard` supplies that body's
 `px-lg` but not the marker). This spends the shared pane gutter for ANY DataView
 dropped into a section, with zero per-consumer code. Drop the class → DataViews

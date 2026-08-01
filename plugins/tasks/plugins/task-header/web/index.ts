@@ -7,18 +7,18 @@ export default {
     "Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.",
   contributions: [
     TaskDetailSlots.Section({
+      // The id keys the persisted order and open state — never rename it.
       id: "header",
-      label: "Header",
+      // The pane's identity block, carded like every other section. Collapsing
+      // it loses nothing: the pane header already shows the task's title.
+      label: "Task",
       component: TaskHeader,
-      // The pane's identity block, not a panel: a title input + status + launch
-      // controls must never collapse behind a card titled "Header".
-      //
+      useDefaultOpen: () => true,
       // Deliberately NOT `excludeFromReorder` — that flag means "pinned LAST"
       // (reorder/web/internal/sorting.ts, "Excluded items pinned last"), which
       // would sink the identity block to the foot of the pane. First position
       // comes from registration order instead. Pinning it there needs a
       // pin-first notion reorder does not have yet.
-      chrome: "none",
     }),
   ],
 } satisfies PluginDefinition;

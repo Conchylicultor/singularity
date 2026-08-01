@@ -1,6 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState } from "react";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -10,18 +9,15 @@ import {
   type GraphCanvasGroup,
 } from "@plugins/primitives/plugins/graph-canvas/web";
 import { addTaskDependency } from "@plugins/tasks/core";
-import {
-  tasksResource,
-  TaskGraph as TaskGraphValue,
-  isSettled,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { isSettled, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { EdgeActions } from "./edge-actions";
+import { useTaskClosure } from "../hooks";
 
 function getGroupDepth(groupId: string, byId: Map<string, TaskListItem>): number {
   let depth = 0;
@@ -155,24 +151,8 @@ function buildGraph(
   return { nodes, edges, groups };
 }
 
-function TaskGraphLoaded({
-  taskId,
-  allTasks,
-}: {
-  taskId: string;
-  allTasks: readonly TaskListItem[];
-}) {
-  const closure = useMemo(() => {
-    const byId = new Map(allTasks.map((t) => [t.id, t]));
-    const root = byId.get(taskId);
-    // closure() excludes the queried id; re-include the root so it renders.
-    const ids = TaskGraphValue.from(allTasks)
-      .closure(taskId, { includeGroups: true })
-      .map((n) => n.id);
-    return [...(root ? [taskId] : []), ...ids]
-      .map((id) => byId.get(id))
-      .filter((t): t is TaskListItem => !!t);
-  }, [taskId, allTasks]);
+export function TaskGraph({ taskId }: { taskId: string }) {
+  const closure = useTaskClosure(taskId);
   // Clicking a node re-roots this pane in place, keeping the URL truthful.
   const openPane = useOpenPane();
   const onNavigate = useCallback(
@@ -182,18 +162,21 @@ function TaskGraphLoaded({
   const onConnect = useCallback((source: string, target: string) => {
     void fetchEndpoint(addTaskDependency, { id: target }, { body: { dependsOnTaskId: source } });
   }, []);
-  const { nodes, edges, groups } = useMemo(
-    () => buildGraph(closure, allTasks, taskId, onNavigate),
-    [closure, allTasks, taskId, onNavigate],
+  const graph = useMemo(
+    () =>
+      closure && buildGraph(closure.closure, closure.allTasks, taskId, onNavigate),
+    [closure, taskId, onNavigate],
   );
 
-  if (closure.length <= 1) return null;
+  // Only reachable while the task list is still loading: `useAvailable` keeps
+  // the card unpainted until the closure is known to have more than one node.
+  if (!graph) return <Loading />;
+  const { nodes, edges, groups } = graph;
 
   return (
-    // Self-contained card: this section is contributed with `chrome: "none"`
-    // (a canvas is not a titled panel), so the frame is ours to carry.
-    // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-height (h-60) graph card; shrink-0 keeps it from being compressed among the stacked detail sections
-    <Clip className="bg-muted/30 h-60 shrink-0 rounded-lg border">
+    // Fixed-height viewport for the canvas — the section card supplies the
+    // surface, border and radius, so this carries only the height.
+    <Clip className="h-60">
       <GraphCanvas
         nodes={nodes}
         edges={edges}
@@ -205,14 +188,5 @@ function TaskGraphLoaded({
         minZoom={0.5}
       />
     </Clip>
-  );
-}
-
-export function TaskGraph({ taskId }: { taskId: string }) {
-  const tasksResult = useResource(tasksResource);
-  return (
-    <ResourceView resource={tasksResult}>
-      {(allTasks) => <TaskGraphLoaded taskId={taskId} allTasks={allTasks} />}
-    </ResourceView>
   );
 }

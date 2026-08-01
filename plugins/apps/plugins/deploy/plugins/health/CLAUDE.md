@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `Servers.Fields` "status" → `StatusField`
-    - `ServerDetail.Section` "Status" → `ServerStatusHeader`
+    - `ServerDetail.Section` "Status" → `ServerStatusSection`
   - Uses:
     - `apps/deploy/servers.ServerDetail`
     - `apps/deploy/servers.Servers`

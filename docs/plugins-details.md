@@ -626,7 +626,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Servers.Fields` "status" → `StatusField`
-              - `ServerDetail.Section` "Status" → `ServerStatusHeader`
+              - `ServerDetail.Section` "Status" → `ServerStatusSection`
             - Uses:
               - `apps/deploy/servers.ServerDetail`
               - `apps/deploy/servers.Servers`
@@ -22452,6 +22452,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-dependencies`
           - `tasks/task-draft-form`
           - `tasks/task-events`
+          - `tasks/task-graph`
           - `tasks/task-list`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
@@ -25877,8 +25878,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/graph-canvas.GraphCanvasEdge`
           - `primitives/graph-canvas.GraphCanvasGroup`
           - `primitives/graph-canvas.GraphCanvasNode`
-          - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
+          - `primitives/loading.Loading`
           - `primitives/pane.useOpenPane`
           - `tasks.patchTask`
           - `tasks/task-detail.taskDetailPane`
@@ -25886,7 +25887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.STATUS_META`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "Header" → `TaskHeader`
+        - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
         - Uses:
           - `conversations.useConversationById`
           - `conversations/model-provider.ModelSelect`

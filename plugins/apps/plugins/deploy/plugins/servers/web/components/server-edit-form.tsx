@@ -1,23 +1,12 @@
-import {
-  fetchEndpoint,
-  useEndpointMutation,
-  EndpointError,
-} from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
 import type { Server } from "../../shared";
-import {
-  updateServer,
-  deleteServer,
-  type UpdateServerBody,
-} from "../../shared/endpoints";
+import { updateServer, type UpdateServerBody } from "../../shared/endpoints";
 import { FieldShell, fieldInputClass } from "./server-fields";
-import { DeleteServerDialog } from "./delete-server-dialog";
 
 /** Wire an EditableField to a text input / textarea. */
 function fieldProps(field: EditableField<string>) {
@@ -33,15 +22,14 @@ function fieldProps(field: EditableField<string>) {
 
 /**
  * The **identity section** of the server detail pane, contributed into
- * `ServerDetail` with `chrome: "none"` — a pane's identity block is not a titled
- * card, so it renders bare while still being a peer of the cards below it.
+ * `ServerDetail` as a plain section — an identity block is a card like its
+ * peers; the pane header is what carries the server's name.
  *
  * Edit state of the unified server page: the same field layout as the create
  * form, but every field autosaves through `updateServer` (the app's standard
  * debounced-autosave + sync-status cloud). Viewing a server is editing it.
  *
- * No padding of its own: the section host supplies the pane's inset (`p-lg`) for
- * every section, card-chromed or bare.
+ * No padding of its own: the section card supplies the body's inset.
  */
 export function ServerEditForm({ server }: { server: Server }) {
   const save = async (body: UpdateServerBody): Promise<void> => {
@@ -79,43 +67,8 @@ export function ServerEditForm({ server }: { server: Server }) {
     onSave: (v) => save({ consoleUrl: v || null }),
   });
 
-  const remove = useEndpointMutation(deleteServer);
-
-  function handleDelete() {
-    // Fire-and-forget: don't return the openDialog promise, or the button would
-    // auto-pend for the dialog's whole open lifetime. `loading={…isPending}`
-    // reflects the actual delete instead.
-    void openDialog((close) => (
-      <DeleteServerDialog
-        server={server}
-        onCancel={close}
-        onConfirm={() =>
-          remove
-            .mutateAsync({ params: { id: server.id } })
-            .then(() => close())
-            .catch((err: unknown) => {
-              // Expected delete failure — the global toast already reported it;
-              // keep the dialog open so the user can retry or cancel.
-              if (err instanceof EndpointError) return;
-              throw err;
-            })
-        }
-      />
-    ));
-  }
-
   return (
     <Stack gap="lg">
-      <Stack direction="row" align="center" justify="end" gap="sm">
-        <Button
-          variant="link"
-          loading={remove.isPending}
-          onClick={handleDelete}
-          className="text-destructive hover:text-destructive"
-        >
-          Delete
-        </Button>
-      </Stack>
       <FieldShell label="Name">
         <input className={fieldInputClass} placeholder={server.host} {...fieldProps(name)} />
       </FieldShell>
