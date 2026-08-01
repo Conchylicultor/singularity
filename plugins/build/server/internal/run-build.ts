@@ -2,9 +2,11 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, currentWorktreeName, isMain, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { buildDetailRoute } from "@plugins/build/core";
+import { getConfig } from "@plugins/config_v2/server";
+import { BUILD_EXIT_SUPERSEDED, buildDetailRoute } from "@plugins/build/core";
+import { buildConfig } from "../../shared";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { frontendHashResource } from "./frontend-hash-resource";
@@ -48,6 +50,21 @@ export async function hasLiveInflightBuild(): Promise<boolean> {
     .from(_buildRuns)
     .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
   return rows.some((r) => isPidAlive(r.pid));
+}
+
+/**
+ * The commit a live in-flight build was claimed for, or `null` if none is live.
+ *
+ * Read by the boot-adopted watch: a build that restarts this backend outlives
+ * the `triggerBuild` call that knew its commit, so the freshly-booted process
+ * recovers that baseline from the row in order to converge when the build ends.
+ */
+export async function liveInflightBuildCommit(): Promise<string | null> {
+  const rows = await db
+    .select({ pid: _buildRuns.pid, commitHash: _buildRuns.commitHash })
+    .from(_buildRuns)
+    .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
+  return rows.find((r) => isPidAlive(r.pid))?.commitHash ?? null;
 }
 
 /**
@@ -160,10 +177,16 @@ export function triggerBuild(
 ): void {
   if (inflight) return;
   inflight = true;
+  // Sampled here, outside the async body, so the commit stamped on the ledger
+  // row and the baseline `convergeMain` compares against are literally the same
+  // value on every exit path below.
+  const forCommit = getHeadCommit();
   void runTracked("build:run", async () => {
+    let ran = false;
     try {
       if (await hasLiveInflightBuild()) return;
-      await doRunBuild(trigger, opts);
+      ran = true;
+      await doRunBuild(trigger, forCommit, opts);
     } catch (err) {
       buildLog.publish(
         `Build error: ${err instanceof Error ? err.message : String(err)}`,
@@ -171,18 +194,69 @@ export function triggerBuild(
       );
     } finally {
       inflight = false;
+      // Only after a build we actually RAN. Converging on the dropped-request
+      // path instead would recurse: that path re-enters `triggerBuild`, which
+      // drops again (a build is still live), which would converge again. The
+      // live build converges for us when it ends.
+      if (ran) await convergeMain(forCommit);
     }
   });
 }
 
-function getHeadCommit(): string | null {
+export function getHeadCommit(): string | null {
   const proc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT });
   if (proc.exitCode !== 0) return null;
   return proc.stdout.toString().trim() || null;
 }
 
+/**
+ * Auto-build is a CONVERGENCE loop on "main is deployed at refs/heads/main", not
+ * a queue of push events. `triggerBuild` DROPS a request that arrives while a
+ * build is in flight — and a push landing mid-build is precisely when one does —
+ * so the request cannot be remembered, it has to be re-derived. This is that
+ * re-derivation, run at every edge where a build reaches terminal.
+ *
+ * The comparison is against the commit the finished build was FOR, not against
+ * the deployed commit, and that is what makes it loop-free in both directions:
+ *
+ *   - a build that FAILED leaves the deployed commit behind permanently, so
+ *     "deployed != head" would rebuild the same failing commit for ever;
+ *   - a build that PASSED across a mid-run merge stamps `.build-commit` with the
+ *     POST-merge head, so "deployed != head" would call it current when its
+ *     artifact was in fact assembled from two different trees.
+ *
+ * Both are answered by asking whether the tree moved since this build claimed
+ * it: it did ⇒ rebuild exactly once from the tip; it didn't ⇒ the verdict stands.
+ */
+export async function convergeMain(builtCommit: string | null): Promise<void> {
+  if (!isMain()) return;
+  if (!getConfig(buildConfig).autoBuild) return;
+  const head = getHeadCommit();
+  if (!needsRebuild(builtCommit, head)) return;
+  buildLog.publish(
+    `main advanced ${builtCommit} → ${head} during the last build — rebuilding`,
+  );
+  triggerBuild("auto");
+}
+
+/**
+ * `convergeMain`'s decision, extracted pure so the property the whole design
+ * rests on — that it cannot loop — is testable without the db/config singletons
+ * the caller binds. Every re-trigger this returns true for consumes a commit
+ * that a subsequent build will then match, so the chain always terminates.
+ *
+ * An unreadable commit on either side means "cannot tell", which must read as
+ * converged: manufacturing a difference from a missing value would mint builds
+ * for ever on a checkout where git cannot answer.
+ */
+export function needsRebuild(builtCommit: string | null, head: string | null): boolean {
+  if (builtCommit === null || head === null) return false;
+  return head !== builtCommit;
+}
+
 async function doRunBuild(
   trigger: "manual" | "auto",
+  commitHash: string | null,
   opts?: { serveComposition?: string },
 ): Promise<void> {
   // A crashed prior owner can leave an unfinished row that the partial unique
@@ -192,7 +266,6 @@ async function doRunBuild(
 
   const buildStartMs = Date.now();
   const buildId = `build-${buildStartMs}-${Math.random().toString(36).slice(2, 8)}`;
-  const commitHash = getHeadCommit();
 
   // Claim the single in-flight slot atomically. Insert *before* spawning so the
   // claiming INSERT — guarded by the build_runs_inflight_uniq partial unique index
@@ -309,6 +382,17 @@ async function doRunBuild(
       title: "Build succeeded",
       description: `Completed in ${Math.round((Date.now() - buildStartMs) / 1000)}s`,
       variant: "success",
+      linkTo,
+      dedupeKey: `build-finish:${buildId}`,
+    });
+  } else if (exitCode === BUILD_EXIT_SUPERSEDED) {
+    // Not a failure and not an alarm: the tree moved under this build, so it had
+    // nothing left to be a verdict about. `convergeMain` below mints the rebuild.
+    await recordNotification({
+      type: "build",
+      title: "Build superseded",
+      description: `${commitHash ?? "the built commit"} was replaced mid-build — rebuilding`,
+      variant: "info",
       linkTo,
       dedupeKey: `build-finish:${buildId}`,
     });

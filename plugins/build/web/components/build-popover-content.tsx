@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { triggerBuildEndpoint } from "../../core/endpoints";
+import { BUILD_EXIT_SUPERSEDED } from "../../core/exit-codes";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -204,18 +205,23 @@ function StatusDot({ run }: { run: BuildRun }) {
   if (run.exitCode === 0) {
     return <span className="block size-2 rounded-full bg-success" />;
   }
-  if (run.exitCode === -1) {
+  // Superseded shares the muted dot with canceled — neither is a fault, and
+  // neither should draw the eye the way a real failure must.
+  if (run.exitCode === -1 || run.exitCode === BUILD_EXIT_SUPERSEDED) {
     return <span className="block size-2 rounded-full bg-muted-foreground/40" />;
   }
   return <span className="block size-2 rounded-full bg-destructive" />;
 }
 
-type BuildStatus = "running" | "success" | "failed" | "canceled";
+type BuildStatus = "running" | "success" | "failed" | "canceled" | "superseded";
 
 function statusOf(run: BuildRun): BuildStatus {
   if (run.finishedAt === null) return "running";
   if (run.exitCode === 0) return "success";
   if (run.exitCode === -1) return "canceled";
+  // Its tree was replaced mid-run, so it never had a verdict to give. A rebuild
+  // from the new tip is already guaranteed (build/server's convergeMain).
+  if (run.exitCode === BUILD_EXIT_SUPERSEDED) return "superseded";
   return "failed";
 }
 
@@ -223,6 +229,7 @@ const STATUS_OPTIONS: { value: BuildStatus; label: string }[] = [
   { value: "running", label: "Running" },
   { value: "success", label: "Success" },
   { value: "failed", label: "Failed" },
+  { value: "superseded", label: "Superseded" },
   { value: "canceled", label: "Canceled" },
 ];
 
@@ -230,6 +237,7 @@ const STATUS_LABEL: Record<BuildStatus, string> = {
   running: "Running",
   success: "Success",
   failed: "Failed",
+  superseded: "Superseded",
   canceled: "Canceled",
 };
 

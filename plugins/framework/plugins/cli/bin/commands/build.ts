@@ -47,6 +47,7 @@ import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-lo
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
+import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/core";
 
 // Worktree names are gateway namespaces — same rule as composition ids (the
 // canonical TS copy lives in codegen's plugin-registry-gen.ts).
@@ -104,6 +105,18 @@ async function writeCentralRoutesManifest(root: string): Promise<void> {
   const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(manifest, null, 2) + "\n");
   await rename(tmp, CENTRAL_ROUTES_FILE);
+}
+
+/**
+ * This checkout's HEAD, or `null` when git cannot answer. Failure is a value
+ * here on purpose — the only caller compares two samples to decide whether the
+ * tree moved, and an unreadable HEAD means "cannot tell", which must read as
+ * "not superseded" rather than manufacture a difference.
+ */
+async function readHead(root: string): Promise<string | null> {
+  const result = await spawnCaptured(["git", "rev-parse", "HEAD"], { cwd: root });
+  if (result.exitCode !== 0) return null;
+  return result.stdout.trim() || null;
 }
 
 async function getCurrentBranch(): Promise<string> {
@@ -746,6 +759,15 @@ export function registerBuild(program: Command) {
       profiler.markGranted();
       endSpan();
 
+      // The commit this build is FOR — sampled here because the lock is granted
+      // and nothing has been read yet, so it brackets every source read the
+      // build goes on to make. `push` merges into the SHARED main worktree
+      // without waiting for a build, so this can change underneath us; when it
+      // does, reads from before and after the merge answer for different trees
+      // and the build's verdict is about no coherent tree at all. See
+      // `supersededBy` at the verdict funnels below.
+      const headAtStart = await readHead(root);
+
       endSpan = buildProfilerStart("sweepStaging", "build:setup", "sweep staging leftovers");
       await sweepDistLeftovers(resolve(webDir, "dist"));
       endSpan();
@@ -1041,6 +1063,18 @@ export function registerBuild(program: Command) {
       const stepRoster = (): Verdict["steps"] =>
         stepResults.map((r) => ({ label: r.label, success: r.success }));
 
+      /**
+       * The commit this checkout moved to during the build, or `null` if it did
+       * not move. Non-null means the tree this build was reading was replaced
+       * under it — so nothing it concluded is about a single coherent tree, and
+       * a failing verdict in particular says nothing about either commit.
+       */
+      const supersededBy = async (): Promise<string | null> => {
+        if (headAtStart === null) return null;
+        const head = await readHead(root);
+        return head !== null && head !== headAtStart ? head : null;
+      };
+
       // The single fatal funnel. Every post-steps failure routes through here so
       // the build's own verdict — with the failing step last, the full step
       // roster, the NOT DEPLOYED consequence, and the log pointers as the literal
@@ -1054,7 +1088,24 @@ export function registerBuild(program: Command) {
         if (stepResults.some((r) => r.id === "checks" && !r.success)) {
           pointers.push(`Check logs:  ${join(worktreeDataDir(name), "check.log")}`);
         }
-        const v: Verdict = {
+        // Asked here, at the ONE funnel every failure routes through, so no
+        // failure path can forget to ask. A build whose tree was replaced mid-run
+        // has no subject: reporting it as a failure blames whichever check
+        // happened to straddle the swap for drift that does not exist.
+        const newHead = await supersededBy();
+        const v: Verdict = newHead !== null ? {
+          ok: false,
+          headline: `BUILD SUPERSEDED — ${headAtStart!.slice(0, 9)} → ${newHead.slice(0, 9)}`,
+          reason: [
+            `NOT DEPLOYED. Nothing was published; ${buildUrl} still serves the previous build.`,
+            `This checkout moved to ${newHead.slice(0, 9)} while the build was reading it, so`,
+            `the steps below straddle two different trees and their verdict is void —`,
+            `${failedLabels.length > 0 ? failedLabels.join(", ") : "the failure"} above is NOT a real failure.`,
+            `A build of ${newHead.slice(0, 9)} follows automatically.`,
+          ],
+          pointers,
+          steps: stepRoster(),
+        } : {
           ok: false,
           headline: `BUILD FAILED — ${failedLabels.length > 0 ? failedLabels.join(", ") : "deploy"}`,
           reason,
@@ -1069,10 +1120,11 @@ export function registerBuild(program: Command) {
         // only after main's row was already closed 0 at deploy — hits closeRun's
         // isNull(finishedAt) guard as a no-op, so main's row keeps reflecting the
         // successful main deploy (decision 1).
-        if (isMainBuild) await recorder.closeRun(buildId, 1);
+        const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
+        if (isMainBuild) await recorder.closeRun(buildId, exitCode);
         await finalizeBuild(false);
         emitVerdict(v);
-        process.exit(1);
+        process.exit(exitCode);
       };
 
       const buildOkVerdict = (): Verdict => ({
@@ -1095,6 +1147,15 @@ export function registerBuild(program: Command) {
         );
       }
       const { livePath, buildCommit } = artifact;
+
+      // A build that PASSED across a mid-run tree swap still deployed an
+      // artifact assembled from two trees, so it is deployed-but-not-current
+      // rather than wrong-and-loud. Say so instead of claiming a clean deploy of
+      // either commit; `convergeMain` rebuilds from the tip regardless, and it
+      // compares against the commit this build STARTED on precisely because
+      // `.build-commit` below records the post-swap head and would look current.
+      const okHead = await supersededBy();
+      if (okHead !== null) softNotes.push(`superseded — main moved to ${okHead.slice(0, 9)} mid-build, rebuild follows`);
 
       // 6. Write registry JSON
       endSpan = buildProfilerStart("registerWorktree", "build:deploy", "register worktree");

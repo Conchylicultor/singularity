@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { buildHistoryResource } from "@plugins/build/core";
+import { BUILD_EXIT_SUPERSEDED, buildHistoryResource } from "@plugins/build/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -30,7 +30,10 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
       </Badge>
     );
   }
-  if (exitCode === -1) {
+  // Two ways a run stops being the authoritative one: its owner was killed by a
+  // newer build's restart (-1), or the tree it was reading was replaced under it
+  // (BUILD_EXIT_SUPERSEDED). Neither is a fault, and a rebuild covers both.
+  if (exitCode === -1 || exitCode === BUILD_EXIT_SUPERSEDED) {
     return (
       <Badge variant="muted" icon={<StatusDot colorClass="bg-muted-foreground/60" />}>
         Superseded

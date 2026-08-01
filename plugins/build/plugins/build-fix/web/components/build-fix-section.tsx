@@ -6,7 +6,7 @@ import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
+import { BUILD_EXIT_SUPERSEDED, type BuildRun, buildHistoryResource } from "@plugins/build/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
 export function BuildFixSection({ runId }: { runId: string }) {
@@ -14,7 +14,10 @@ export function BuildFixSection({ runId }: { runId: string }) {
   if (result.pending) return null;
   const run = result.data.find((r) => r.id === runId);
 
-  const isFailed = run && run.finishedAt !== null && run.exitCode !== 0;
+  // A superseded run has no defect to hand an agent — its tree was replaced
+  // mid-build, so its steps straddle two commits and describe neither.
+  const isFailed =
+    run && run.finishedAt !== null && run.exitCode !== 0 && run.exitCode !== BUILD_EXIT_SUPERSEDED;
   if (!isFailed) return null;
 
   return <BuildFixButton runId={runId} run={run} />;
