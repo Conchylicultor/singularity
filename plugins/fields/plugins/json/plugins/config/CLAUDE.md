@@ -26,7 +26,6 @@
 - Cross-plugin:
   - Imported by:
     - `apps/mail/mail-core`
-    - `config_v2/staging`
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`

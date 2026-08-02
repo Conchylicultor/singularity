@@ -182,7 +182,6 @@ the outcome too, with no separate code path.
     - `apps/website/shell`
     - `apps/workflows/shell`
     - `config_v2/fields`
-    - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`

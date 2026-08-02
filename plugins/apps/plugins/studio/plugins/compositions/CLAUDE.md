@@ -110,7 +110,6 @@ are no per-interaction round-trips.
     - `plugin-meta/composition.useDiffMap`
     - `plugin-meta/composition.useManifestActions`
     - `plugin-meta/composition.useManifestItems`
-    - `plugin-meta/composition.usePromoteManifestsToGit`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
@@ -133,7 +132,6 @@ are no per-interaction round-trips.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/row-actions.RowActionButton`
-    - `primitives/tooltip.WithTooltip`
   - Exports (values):
     - `comparePane`
     - `CompositionDetail`

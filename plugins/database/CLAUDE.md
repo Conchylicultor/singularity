@@ -205,7 +205,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `backup`
     - `build`
     - `build/build-commits`
-    - `config_v2/staging`
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`

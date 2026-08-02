@@ -12,8 +12,6 @@ export {
 export type { CompositionDataResult, ImpactResult } from "./internal/hooks";
 export { useManifestItems, useManifestActions } from "./internal/manifests";
 export type { ManifestActions } from "./internal/manifests";
-export { usePromoteManifestsToGit } from "./internal/promote";
-export type { PromoteManifestsToGit } from "./internal/promote";
 export {
   useActiveComposition,
   useActiveMembership,

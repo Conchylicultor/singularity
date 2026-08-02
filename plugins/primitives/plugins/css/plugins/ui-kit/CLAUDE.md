@@ -329,7 +329,6 @@ structurally unrepresentable.
     - `code-explorer`
     - `config_v2/config-link`
     - `config_v2/settings`
-    - `config_v2/staging/promote-action`
     - `conversations/agents`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/branch`
@@ -500,11 +499,9 @@ structurally unrepresentable.
     - `primitives/tree`
     - `primitives/virtual-rows`
     - `reorder`
-    - `reorder/edit-mode`
     - `reorder/editor`
     - `reorder/node-types/header`
     - `review`
-    - `review/config-defaults`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `search/quick-find`

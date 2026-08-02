@@ -234,7 +234,11 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 - Description: Web plugin runtime: slots, contributions, loader
 - Web:
   - Slots:
+<<<<<<< .merge_file_Nmp98p
     - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `config_v2.staging`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.caret-flight`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+=======
+    - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+>>>>>>> .merge_file_FPLk0J
     - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
 - Core:
   - Uses:

@@ -63,7 +63,6 @@
     - `primitives/data-view/view-core`
     - `primitives/filter-chips`
     - `primitives/view-switcher`
-    - `reorder/edit-mode`
     - `review`
     - `shell/notifications`
     - `stats`

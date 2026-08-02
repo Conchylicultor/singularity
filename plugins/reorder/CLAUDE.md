@@ -108,20 +108,9 @@ Every edit **materializes** the top-level order into a fresh `items` tree (`mate
 - **Insert (registry-driven):** node types declaring `insert` (e.g. spacer's "Add Spacer") append `insert.create()`. **Remove:** `onRemoveNode(id)` drops the node by id (top-level or inside a container).
 - **Patch:** `onPatch(id, partial)` shallow-merges into the addressed node's payload (e.g. the header collapse toggle). Containers are addressed by `id`; a hand-authored container without one gets a `crypto.randomUUID()` assigned on its first in-app write (reads never mutate config).
 
-config_v2's set-field endpoint + watcher drive the live update across tabs.
-
-**Personal vs everyone scope.** The write above is the **personal** path
-(`setConfig("items", tree)` → user layer). In **everyone** scope the middleware
-instead stages the materialized tree as a committed git-layer default via the
-generic [`config_v2/staging`](../config_v2/plugins/staging/CLAUDE.md) primitive —
-`stageDefault(pluginId, slotId, { items: tree })` — never touching the user
-layer; the staged tree shows inline as a preview (`useStagedTree`, a thin
-reorder-side adapter over `useStagedValue`). Reorder owns only the `{ items }`
-value shape + a contributed `Staging.DiffRenderer` (the moved/shown/hidden tree
-diff); the stage/apply/land machinery and the review-pane section are generic.
-The pen-button commit gate (`reorder/edit-mode`) drives Apply-all / Discard-all
-through the generic hooks. See the config_v2 doc's "Promoting a runtime edit to a
-git default" for the full pipeline.
+config_v2's set-field endpoint + watcher drive the live update across tabs. An
+in-app drag writes the **user layer only** (`setConfig("items", tree)`); changing
+a committed default means editing `config/<plugin>/<slot>.jsonc` in a worktree.
 
 ### Staleness / reconciliation semantics
 
@@ -140,7 +129,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
 
 ## Edit mode
 
-Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The pen button toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (handled by an invisible `Core.Root` contribution).
+Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The pen button toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (a registered shortcut in `reorder/edit-mode`).
 
 ## Constrained-space regimes (horizontal areas)
 
@@ -262,18 +251,16 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+<<<<<<< .merge_file_MvtUbZ
     - `Staging.DiffRenderer` → `ReorderDiffRenderer`
+=======
+    - `ConfigV2.WebRegister`
+>>>>>>> .merge_file_0x4mM8
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
-    - `config_v2/staging.Staging`
-    - `config_v2/staging.useStageDefault`
-    - `config_v2/staging.useStagedValue`
     - `primitives/css/badge.Badge`
-    - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
@@ -287,24 +274,17 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `reorder/editor.SortableReorderItem`
     - `reorder/node-types.useReorderNodeTypes`
   - Exports (types):
-    - `ReorderDiffEntry`
     - `ReorderLayout`
     - `ReorderNodeData`
-    - `ReorderScope`
     - `ReorderState`
-    - `ReorderTreesDiff`
     - `TopLevelEntry`
   - Exports (values):
-    - `diffReorderTrees`
     - `getEditMode`
-    - `getReorderScope`
     - `isNodeData`
     - `ReorderLayoutContext`
     - `setEditMode`
-    - `setReorderScope`
     - `useEditMode`
     - `useReorderedEntries`
-    - `useReorderScope`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "action-bar.item"
@@ -324,7 +304,6 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "browser.viewport"
     - `ConfigV2.Register` "build-detail.section"
     - `ConfigV2.Register` "composition-detail.section"
-    - `ConfigV2.Register` "config-detail.action"
     - `ConfigV2.Register` "conversation-item.chips"
     - `ConfigV2.Register` "conversation.above-prompt-input"
     - `ConfigV2.Register` "conversation.action-bar"

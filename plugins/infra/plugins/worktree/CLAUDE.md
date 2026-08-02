@@ -58,7 +58,6 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
   - Imported by:
     - `apps/studio/compositions/auto-serve`
     - `code-explorer`
-    - `config_v2/staging`
     - `conversations`
     - `conversations/conversation-view/op-status`
     - `conversations/runtime-tmux`

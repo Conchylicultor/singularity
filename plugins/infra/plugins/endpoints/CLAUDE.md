@@ -261,7 +261,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `code-explorer/file-resolve`
     - `config_v2`
     - `config_v2/settings`
-    - `config_v2/staging`
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`
@@ -351,7 +350,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `reports/endpoint-errors`
     - `reports/mutation-errors`
     - `review/code-review`
-    - `review/config-defaults`
     - `review/plugin-changes`
     - `screenshot`
     - `search/engine`

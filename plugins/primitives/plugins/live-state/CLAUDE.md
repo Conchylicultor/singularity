@@ -665,7 +665,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `build/build-info`
     - `config_v2`
     - `config_v2/settings`
-    - `config_v2/staging`
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`
@@ -732,7 +731,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `reports/live-state-stale-drop`
     - `review`
     - `review/code-review`
-    - `review/config-defaults`
     - `review/plugin-changes`
     - `shell/global-action-bar`
     - `shell/notifications`

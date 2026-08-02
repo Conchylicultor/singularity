@@ -160,7 +160,6 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `apps/workflows/engine`
     - `backup`
     - `build`
-    - `config_v2/staging`
     - `conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`

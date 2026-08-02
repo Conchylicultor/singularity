@@ -25,12 +25,9 @@ import {
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
-import { useStageDefault } from "@plugins/config_v2/plugins/staging/web";
-import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
+import { reorderDescriptors } from "./descriptors";
 import { useReorderConfig } from "./use-reorder-config";
-import { useStagedTree } from "./staged-tree";
 import { useEditMode } from "./edit-mode-store";
-import { useReorderScope } from "./scope-store";
 import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import { ReorderItemClaimContext } from "./item-claim";
 import {
@@ -174,7 +171,6 @@ export function ReorderListMiddleware({
 
   return (
     <ReorderListMiddlewareInner
-      slotId={slotId}
       descriptor={descriptor}
       contributions={contributions}
       renderItem={renderItem}
@@ -188,12 +184,10 @@ export function ReorderListMiddleware({
  * subscription per render site is cheap even for per-row reorderable slots.
  */
 function ReorderListMiddlewareInner({
-  slotId,
   descriptor,
   contributions,
   renderItem,
 }: {
-  slotId: string;
   descriptor: ConfigDescriptor;
   contributions: Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
@@ -201,7 +195,6 @@ function ReorderListMiddlewareInner({
   const { items, setConfig } = useReorderConfig(descriptor);
   return (
     <ReorderInner
-      slotId={slotId}
       items={items}
       setConfig={setConfig}
       contributions={contributions}
@@ -218,32 +211,19 @@ function ReorderListMiddlewareInner({
  * path.
  */
 function ReorderInner({
-  slotId,
   items,
   setConfig,
   contributions,
   renderItem,
 }: {
-  slotId: string;
   items: ReorderTree;
   setConfig: (key: string, value: unknown) => void;
   contributions: Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
 }) {
   const editMode = useEditMode();
-  const scope = useReorderScope();
-  const stageDefault = useStageDefault();
   const injected = useContext(ReorderLayoutContext);
   const nodeTypes = useReorderNodeTypes();
-
-  // While an everyone-default is staged for this slot, the staged tree is the
-  // displayed order (an inline preview of the proposed default). Otherwise the
-  // user's config_v2 effective order drives the slot. Every materialization
-  // (drag/hide/insert/remove/patch) reads from `effectiveItems` (via
-  // state/entriesRef and itemsRef below), so sequential everyone edits compose
-  // from the previously-staged order rather than the raw config.
-  const stagedTree = useStagedTree(slotId);
-  const effectiveItems = stagedTree ?? items;
 
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -272,8 +252,8 @@ function ReorderInner({
   );
 
   const state = useMemo(
-    () => applyTree(contributions, effectiveItems),
-    [contributions, effectiveItems],
+    () => applyTree(contributions, items),
+    [contributions, items],
   );
 
   const hiddenItems = useMemo(
@@ -288,34 +268,21 @@ function ReorderInner({
   // --- Refs for handlers -----------------------------------------------------
 
   const entriesRef = useLatestRef(state.entries);
-  // `itemsRef` feeds the verbatim raw-tree maps (remove/patch by id). It must
-  // mirror the DISPLAYED tree so an everyone-scope edit composes from the
-  // currently-staged order, matching `entriesRef` (also derived from
-  // `effectiveItems`).
-  const itemsRef = useLatestRef(effectiveItems);
+  // `itemsRef` feeds the verbatim raw-tree maps (remove/patch by id) — the same
+  // tree `entriesRef` is derived from.
+  const itemsRef = useLatestRef(items);
   const hiddenKeysRef = useLatestRef(
     useMemo(() => state.hidden.map((c) => contributionKey(c)!), [state.hidden]),
   );
 
-  // --- Write sink: personal (user config) vs. everyone (staged git default) --
+  // --- Write sink ------------------------------------------------------------
   // Every in-app edit funnels its freshly-materialized tree through this single
-  // choke-point. The two paths are STRICTLY DISJOINT and never double-write the
-  // user config: "personal" writes the user layer; "everyone" optimistically
-  // stages the tree for review (shown inline via `effectiveItems` until
-  // committed or discarded) and NEVER touches the user config layer.
+  // choke-point, which writes the user config layer.
   const commitTree = useCallback(
     (tree: ReorderTree) => {
-      if (scope === "everyone") {
-        // Optimistic dispatch: the staged tree shows inline immediately and
-        // becomes `effectiveItems` for this slot (display + ref source above).
-        // The generic staging value is the full config document — reorder's is
-        // a single `items` field, so wrap the tree in `{ items }`.
-        stageDefault(reorderPluginIdForSlot(slotId), slotId, { items: tree });
-        return;
-      }
       setConfig("items", tree);
     },
-    [scope, slotId, setConfig, stageDefault],
+    [setConfig],
   );
   const commitTreeRef = useLatestRef(commitTree);
 

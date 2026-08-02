@@ -100,7 +100,6 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `primitives/sync-status`
     - `primitives/tree`
     - `reorder/edit-mode`
-    - `review/config-defaults`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `shell/global-action-bar`

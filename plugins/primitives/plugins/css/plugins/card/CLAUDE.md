@@ -68,7 +68,6 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `primitives/css/layout-harness`
     - `primitives/data-view/gallery`
     - `primitives/section-card`
-    - `review/config-defaults`
     - `review/plugin-changes`
     - `ui/tweakcn/community-browser`
 

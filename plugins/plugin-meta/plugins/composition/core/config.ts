@@ -10,8 +10,8 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 // (`{ name, entryPoints, selectedContributors, extends }`, owned by `closure`)
 // plus a `category` (organisation metadata, NOT consumed by the engine) and the
 // list field's `id` identity. Runtime-editable from the Studio compositions
-// pane; `promotableToGit` lets a git-promotion land an edited set as the
-// committed default.
+// pane, where an edit lands in the per-worktree USER layer; the committed
+// default is these code seeds, changed by editing this file and pushing.
 //
 // ── Categories (the taxonomy the seeds populate) ──────────────────────────────
 //   app        — one per top-level Apps.App: the releasable products. Entry is the
@@ -29,7 +29,6 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 // "Add"), so seeded rows are editable. Order is array position — no `rank`.
 export const compositionsConfig = defineConfig({
   name: "compositions",
-  promotableToGit: true,
   fields: {
     manifests: listField({
       label: "Compositions",
@@ -121,18 +120,20 @@ export const compositionsConfig = defineConfig({
         //     default.
         //  2. `"!apps.website.demos.editor-toy.**"` drops the editor-toy demo.
         //     editor-toy embeds a live `<BlockEditor>`, and the block editor's
-        //     hard closure now reaches worktree infra: `page.editor → reorder →
-        //     config_v2.staging → infra.worktree` (staging lands a promoted config
-        //     default to git in the worktree). That taproot drags `infra.worktree`
-        //     — part of the excluded `agent-runtime` bundle — into a site meant to
-        //     be self-contained. `excludes: ["agent-runtime"]` below is the
-        //     AUTOMATED PROOF that this negative did its job: the check fails if
-        //     editor-toy's `→ infra.worktree` taproot survives into the site's
-        //     hard closure. A public site can't ship a live block editor without
-        //     also shipping the worktree/git-landing infra behind it, so
-        //     editor-toy is left out; every other demo ships. (Severing the
-        //     reorder→staging→worktree taproot to make a live editor releasable
-        //     stand-alone is a follow-up.)
+        //     hard closure used to reach worktree infra:
+        //     `page.editor → reorder → config_v2.staging → infra.worktree`
+        //     (staging landed a promoted config default to git by spinning a
+        //     worktree). That taproot dragged `infra.worktree` — part of the
+        //     excluded `agent-runtime` bundle — into a site meant to be
+        //     self-contained, so the demo was left out while every other one
+        //     shipped. **That taproot is now severed**: `config_v2/staging` was
+        //     deleted outright, and reorder no longer imports it. The negative is
+        //     therefore a candidate for removal — which would give the public site
+        //     a live in-browser block editor — but ONLY `composition-closure`
+        //     adjudicates that, never an assumption here: `excludes:
+        //     ["agent-runtime"]` below is the AUTOMATED PROOF, failing if any
+        //     `→ infra.worktree` taproot survives into the site's hard closure.
+        //     Drop the negative, run the check, and keep the result.
         //  3. `selectedContributors: ["apps.sonata.audio.piano"]` is the sampled
         //     grand behind the app-gallery's Sonata vignette — a genuine
         //     load-bearing soft option: it contributes `SonataAudio.Instrument`
@@ -221,13 +222,33 @@ export const compositionsConfig = defineConfig({
         // watchers dispatch toasts — without the host mounted those toasts would
         // silently vanish), plus the runtime theme engine and the token groups that
         // supply the base CSS variables (without these a filtered app boots
-        // unstyled and fails /api/health). Entry points (not contributors) so
-        // they're forced into the hard closure unconditionally; the
-        // theme-customizer UI stays opt-in/soft.
+        // unstyled and fails /api/health), and the REORDER layer that applies each
+        // slot's committed layout (same dead-end shape again: reorder contributes
+        // middleware INTO slot-render, which never imports it back, so a soft-only
+        // reorder is left out of every bundle — and its absence does not remove a
+        // feature, it silently re-renders every slot in raw registration order and
+        // drops the authored `config/**/<slot>.jsonc` layouts; equin.ai shipped
+        // that way). Whole `reorder.**` subtree so the node-type renderers come
+        // too — a layout naming a spacer or a header group needs them to render.
+        // The cost is ~6 plugins on a lean app. It used to be ~41: reorder's list
+        // middleware hard-imported `config_v2/staging` to stage "everyone scope"
+        // edits, and that edge dragged `database`, `infra.jobs` and
+        // `infra.worktree` (staging landed a promoted default by spinning a
+        // worktree and pushing) into every served bundle — which is what made
+        // adding reorder here fail `composition-closure` against the
+        // `agent-runtime` exclusion. Staging is now deleted, so the taproot is
+        // gone. What remains is reorder's own DnD editing machinery
+        // (`reorder.editor`, `primitives.sortable-list`, dnd-kit): the list
+        // middleware both APPLIES a layout and hosts the drag surface, so a
+        // released app cannot take one without the other. Splitting those two
+        // layers is the filed follow-up.
+        // Entry points (not contributors) so they're forced into the hard closure
+        // unconditionally; the theme-customizer UI stays opt-in/soft.
         subsystem("served-baseline", [
           "apps-core.layout",
           "infra.health",
           "shell.toast",
+          "reorder",
           "ui.theme-engine",
           "ui.tokens.color-palette",
           "ui.tokens.density",

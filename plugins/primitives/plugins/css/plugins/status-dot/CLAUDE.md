@@ -50,7 +50,6 @@ no-provider default is `md`.
     - `debug/timeline`
     - `debug/trace/pane`
     - `infra/health`
-    - `reorder/edit-mode`
     - `shell/global-action-bar`
     - `tasks/attempt-view`
     - `tasks/task-status`

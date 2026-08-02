@@ -88,7 +88,6 @@ toggle, silently resetting any child component state (e.g. an inner
     - `primitives/multi-select`
     - `primitives/tree`
     - `review/code-review`
-    - `review/config-defaults`
 - Sub-plugins:
   - **`stack`** — Sticky-stack layout primitive: <StickyStack>/<StickyStackItem> pin N sticky siblings sharing one containing block, each below the ones before it (capped; degrades to the swap hand-off).
 

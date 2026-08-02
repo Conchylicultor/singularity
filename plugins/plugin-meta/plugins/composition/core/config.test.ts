@@ -110,6 +110,19 @@ test("served-baseline forces the toast host alongside health", () => {
   expect(baseline.entryPoints).toContain("shell.toast.**");
 });
 
+test("served-baseline forces the reorder layer", () => {
+  // `reorder` registers its middleware INTO slot-render, which never imports it
+  // back — a soft-only edge, so it lands in the `available` frontier and drops
+  // out of every bundle unless forced. Unlike an ordinary contributor its absence
+  // does not remove a feature: every render slot silently falls back to raw
+  // registration order and the committed `config/**/<slot>.jsonc` layouts stop
+  // being read at all (equin.ai shipped that way — the landing sections rendered
+  // alphabetically). Forcing it as a served-baseline ENTRY keeps "a served app
+  // renders its authored slot order" true by construction.
+  const baseline = byName("served-baseline");
+  expect(baseline.entryPoints).toContain("reorder.**");
+});
+
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {
   const names = new Set(seeds.map((s) => s.name));
   for (const s of seeds) {

@@ -1119,14 +1119,6 @@
     "plugins/config_v2/plugins/settings": {
       "name": "@singularity/plugin-config_v2-settings",
     },
-    "plugins/config_v2/plugins/staging": {
-      "name": "@singularity/plugin-config_v2-staging",
-      "version": "0.0.1",
-    },
-    "plugins/config_v2/plugins/staging/plugins/promote-action": {
-      "name": "@singularity/plugin-config_v2-staging-promote-action",
-      "version": "0.0.1",
-    },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
@@ -3973,10 +3965,6 @@
       "name": "@singularity/plugin-review-code-review",
       "version": "0.0.1",
     },
-    "plugins/review/plugins/config-defaults": {
-      "name": "@singularity/plugin-review-config-defaults",
-      "version": "0.0.1",
-    },
     "plugins/review/plugins/plugin-changes": {
       "name": "@singularity/plugin-review-plugin-changes",
       "version": "0.0.1",
@@ -5663,10 +5651,6 @@
 
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
-    "@singularity/plugin-config_v2-staging": ["@singularity/plugin-config_v2-staging@workspace:plugins/config_v2/plugins/staging"],
-
-    "@singularity/plugin-config_v2-staging-promote-action": ["@singularity/plugin-config_v2-staging-promote-action@workspace:plugins/config_v2/plugins/staging/plugins/promote-action"],
-
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
@@ -7000,8 +6984,6 @@
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 
     "@singularity/plugin-review-code-review": ["@singularity/plugin-review-code-review@workspace:plugins/review/plugins/code-review"],
-
-    "@singularity/plugin-review-config-defaults": ["@singularity/plugin-review-config-defaults@workspace:plugins/review/plugins/config-defaults"],
 
     "@singularity/plugin-review-plugin-changes": ["@singularity/plugin-review-plugin-changes@workspace:plugins/review/plugins/plugin-changes"],
 

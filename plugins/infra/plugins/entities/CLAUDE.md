@@ -171,7 +171,6 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
     - `apps/story/generation`
-    - `config_v2/staging`
     - `conversations/session-chain`
     - `conversations/summary`
     - `debug/boot-profile`

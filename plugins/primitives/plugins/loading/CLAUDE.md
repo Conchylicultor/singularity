@@ -147,7 +147,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `primitives/live-state`
     - `primitives/pane`
     - `review/code-review`
-    - `review/config-defaults`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
     - `screenshot`

@@ -1,4 +1,4 @@
-// @hash 183123d8d4c6
+// @hash cfd581d970d3
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -12,7 +12,6 @@
     "improve.element-picker:element-picker",
     "infra.health:health-dot",
     "reorder.edit-mode:reorder-pen",
-    "reorder.edit-mode:reorder-scope-toggle",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "shell.notifications:notifications",

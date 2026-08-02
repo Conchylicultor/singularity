@@ -1,10 +1,9 @@
-// @hash 04e93470479c
+// @hash dc0b3749fcef
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "review.code-review:code-review",
-    "review.config-defaults:config-defaults"
+    "review.code-review:code-review"
   ]
 }

@@ -1,0 +1,1 @@
+DROP TABLE "staged_config_default" CASCADE;

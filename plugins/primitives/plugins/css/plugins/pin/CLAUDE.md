@@ -106,7 +106,6 @@ offsets expressible on the semantic ramp.
     - `primitives/sync-status`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`
-    - `reorder/edit-mode`
     - `reorder/editor`
     - `screenshot/draw-on-app`
     - `shell/global-action-bar`

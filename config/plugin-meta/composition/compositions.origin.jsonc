@@ -1,4 +1,4 @@
-// @hash 36fa6cc3d90e
+// @hash 33b55824e728
 {
   "manifests": [
     {
@@ -373,6 +373,7 @@
         "apps-core.layout.**",
         "infra.health.**",
         "shell.toast.**",
+        "reorder.**",
         "ui.theme-engine.**",
         "ui.tokens.color-palette.**",
         "ui.tokens.density.**",

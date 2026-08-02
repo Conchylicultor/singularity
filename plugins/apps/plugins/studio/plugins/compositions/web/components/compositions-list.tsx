@@ -1,9 +1,8 @@
 import { useMemo, type ReactElement } from "react";
-import { MdAdd, MdCompare, MdPublic } from "react-icons/md";
+import { MdAdd, MdCompare } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
@@ -13,7 +12,6 @@ import {
   useCompositionData,
   useManifestItems,
   useManifestActions,
-  usePromoteManifestsToGit,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve/web";
@@ -26,30 +24,9 @@ import { CompositionItemActions } from "./composition-item-actions";
 const COMPOSITIONS_VIEW = defineDataView("studio.compositions");
 
 /**
- * Stages the current compositions set as a committed git-layer "default for
- * everyone" via the composition plugin's promote API (which wraps the generic
- * config_v2 staging primitive — this pane never touches config_v2/staging
- * directly). The staged default surfaces in the review pane's "Default for
- * everyone" section, where it can be reviewed, applied (landed on `main`), or
- * discarded.
- */
-function PromoteDefaultButton(): ReactElement {
-  const { promote, ready } = usePromoteManifestsToGit();
-  return (
-    <WithTooltip content="Stage the current compositions as a committed default for everyone, reviewable in the review pane.">
-      <Button variant="outline" disabled={!ready} onClick={() => promote()}>
-        <MdPublic />
-        Set as default for everyone
-      </Button>
-    </WithTooltip>
-  );
-}
-
-/**
- * The compositions list pane's body: the list-scoped action row (New / Compare /
- * promote) above the DataView. The actions live here rather than in PaneChrome's
- * header because they act on the whole set, and "Set as default for everyone"
- * does not fit a 380px header bar.
+ * The compositions list pane's body: the list-scoped action row (New / Compare)
+ * above the DataView. The actions live here rather than in PaneChrome's header
+ * because they act on the whole set rather than on the selected composition.
  */
 export function CompositionsList(): ReactElement {
   const { isLoading } = useCompositionData();
@@ -74,21 +51,18 @@ export function CompositionsList(): ReactElement {
   return (
     <Inset pad="md">
       <Stack gap="lg">
-        <Stack direction="row" align="center" justify="between" gap="sm">
-          <Stack direction="row" align="center" gap="xs">
-            <Button variant="outline" onClick={newComposition}>
-              <MdAdd />
-              New
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => openPane(comparePane, {}, { mode: "push", side: "right" })}
-            >
-              <MdCompare />
-              Compare
-            </Button>
-          </Stack>
-          <PromoteDefaultButton />
+        <Stack direction="row" align="center" gap="xs">
+          <Button variant="outline" onClick={newComposition}>
+            <MdAdd />
+            New
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => openPane(comparePane, {}, { mode: "push", side: "right" })}
+          >
+            <MdCompare />
+            Compare
+          </Button>
         </Stack>
 
         {isLoading ? (

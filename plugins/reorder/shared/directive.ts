@@ -46,7 +46,6 @@ export function reorderDirectiveDescriptor(
 ): ConfigDescriptor<{ items: ReorderTreeFieldDef }> {
   return defineConfig({
     name: slotId,
-    promotableToGit: true,
     source: "reorder",
     // A slot's on-screen order must be a deliberate, committed layout — never
     // the natural order contributions happen to load in. `./singularity build`

@@ -115,7 +115,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `primitives/syntax-highlight`
     - `review`
     - `review/code-review`
-    - `review/config-defaults`
     - `shell/notifications`
     - `stats/cost`
     - `ui/theme-engine/quick-theme`

@@ -288,7 +288,6 @@ pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `useOptimisticResource`
 - Cross-plugin:
   - Imported by:
-    - `config_v2/staging`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/conversations-view/queue`
     - `page/editor`

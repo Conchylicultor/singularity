@@ -27,7 +27,7 @@ is future work.
 Manifests live in a [`config_v2`](../../../config_v2/CLAUDE.md) config named
 `compositions` (`core/config.ts`, `defineConfig` + a `listField` of
 `{ name, category (enum), entryPoints (string-list), selectedContributors
-(string-list), extends (string-list) }`, `promotableToGit: true`). This replaces
+(string-list), extends (string-list) }`). This replaces
 the former collected-dir / barrel registry: there is **no**
 `composition.generated.ts`, `loadCompositions()`, or
 `<plugin>/composition/index.ts` — creating or editing a manifest is now a plain
@@ -44,8 +44,8 @@ keys (`"a0"`, `"a1"`, `"a2"`, …).
 
 Because config_v2 carries a built-in **git layer** (committed default) and
 **user layer** (runtime override), a manifest set edited in the UI lands in the
-per-worktree user config; promoting it to a committed default is the filed
-`promotableToGit` follow-up.
+per-worktree user config. There is **no runtime path back to the committed
+default**: change it by editing the `core/config.ts` seeds and pushing.
 
 - `core/config.ts` — the `compositionsConfig` descriptor (core-safe: imported by
   web, server, and the future build-time check).
@@ -65,8 +65,8 @@ a plugin's file, so override is *inexpressible*; resolution is a pure union /
 hard-closure with no precedence rules. The `composition-closure` check
 (`framework/tooling/checks`) adds validity (ids resolve, names unique, every
 selection is a genuine load-bearing soft option) by reading the committed
-git-layer config off disk — runtime-only (user-layer) manifests are not
-closure-checked until promoted to git.
+git-layer config off disk — runtime-only (user-layer) manifests are never
+closure-checked.
 
 ## `excludes` — the dual of `extends` (a check-time assertion, not engine input)
 
@@ -154,16 +154,13 @@ difference (via `flattenManifest`) is exactly that pack. Run with
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `config_v2.useConfigRegistrations`
     - `config_v2.useSetConfig`
-    - `config_v2/staging.useStageConfigDefault`
     - `infra/endpoints.useEndpoint`
   - Exports (types):
     - `CompositionDataResult`
     - `DiffState`
     - `ImpactResult`
     - `ManifestActions`
-    - `PromoteManifestsToGit`
   - Exports (values):
     - `clearActive`
     - `pinAsRoot`
@@ -183,7 +180,6 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `useIsCompareMode`
     - `useManifestActions`
     - `useManifestItems`
-    - `usePromoteManifestsToGit`
 - Server:
   - Contributes: `ConfigV2.Register` "compositions"
   - Uses:

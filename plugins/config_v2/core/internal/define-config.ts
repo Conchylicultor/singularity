@@ -6,7 +6,6 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
   name?: string;
   fields: F;
   scope?: "app";
-  promotableToGit?: boolean;
   source?: ConfigSource;
   requiresAuthoredOverride?: { guidance: string[] };
 }): ConfigDescriptor<F> {
@@ -44,7 +43,6 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
     fields: opts.fields,
     defaults,
     scope: opts.scope,
-    promotableToGit: opts.promotableToGit,
     source: opts.source ?? "manual",
     requiresAuthoredOverride: opts.requiresAuthoredOverride,
   });

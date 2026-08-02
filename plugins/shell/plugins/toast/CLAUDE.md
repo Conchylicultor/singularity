@@ -19,7 +19,6 @@
   - Imported by:
     - `apps/pages/page-tree`
     - `apps/studio/compositions/auto-serve`
-    - `config_v2/staging/promote-action`
     - `debug/profiling/ops`
     - `infra/health`
     - `shell/notifications`

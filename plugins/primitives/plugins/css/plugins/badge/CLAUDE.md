@@ -59,8 +59,6 @@ same threshold and can't desync in a row.
     - `build`
     - `build/build-info`
     - `config_v2/settings`
-    - `config_v2/staging`
-    - `config_v2/staging/promote-action`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-ui/item`

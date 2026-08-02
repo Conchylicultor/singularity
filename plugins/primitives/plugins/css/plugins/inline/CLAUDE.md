@@ -98,7 +98,6 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `primitives/data-view/tree`
     - `primitives/detail-sections`
     - `primitives/tooltip`
-    - `reorder/edit-mode`
     - `reorder/editor`
     - `reports/caret-flight`
     - `reports/live-state-stale-drop`

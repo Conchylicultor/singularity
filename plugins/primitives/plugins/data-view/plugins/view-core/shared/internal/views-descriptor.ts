@@ -54,7 +54,6 @@ export function viewsDescriptor(
       // `slotId` is its directive name. Every id is registered (under the
       // consumer's plugin) so `useConfig` never throws.
       name: id,
-      promotableToGit: true,
       scope: "app",
       source: "view",
       // Config is the SINGLE SOURCE OF TRUTH for a surface's views — there is no

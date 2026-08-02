@@ -26,7 +26,6 @@
     - `code-explorer`
     - `code-explorer/file-resolve`
     - `config_v2`
-    - `config_v2/staging`
     - `conversations`
     - `conversations/conversation-progress`
     - `conversations/conversations-view/queue`

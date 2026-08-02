@@ -94,7 +94,6 @@ tokens, so anything that imports the barrels back would cycle.
     - `apps/sonata/track-mixer`
     - `apps/story/generation`
     - `config_v2`
-    - `config_v2/staging`
     - `conversations/summary`
     - `debug/boot-profile`
     - `debug/slow-ops`

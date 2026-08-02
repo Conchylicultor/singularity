@@ -20,7 +20,6 @@
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
     - `apps/story/generation`
-    - `config_v2/staging`
     - `conversations/summary`
     - `debug/boot-profile`
     - `debug/slow-ops`

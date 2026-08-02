@@ -1506,6 +1506,13 @@
       "tag": "20260730_135017_2b030391__add_deploy_deployments",
       "hash": "2b030391",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1785598105000,
+      "tag": "20260801_152825_266d6b7e__remove_config_v2_staging",
+      "hash": "266d6b7e",
+      "breakpoints": true
     }
   ]
 }
