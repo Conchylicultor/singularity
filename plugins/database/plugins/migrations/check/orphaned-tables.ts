@@ -8,22 +8,32 @@ import { Pool } from "pg";
 import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
 // The imperative-public-table allowlist lives in the derived-views core leaf
 // (the shared sink) — see that module for why it is NOT in @plugins/database/core.
-import { IMPERATIVE_PUBLIC_TABLE_NAMES } from "@plugins/database/plugins/derived-views/core";
+import {
+  IMPERATIVE_PUBLIC_TABLE_NAMES,
+  MIGRATIONS_TABLE_NAME,
+} from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling migration-applies-clean check)
 // to avoid a cross-plugin import of the framework Check type from a check file.
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
+type CheckContext = { log?: (line: string, stream: "stdout" | "stderr") => void };
 type Check = {
   id: string;
   description: string;
-  run(): Promise<CheckResult>;
+  run(ctx: CheckContext): Promise<CheckResult>;
   cacheSignature?(): string | null;
 };
 
-// The drizzle snapshot meta dir, relative to THIS check file
-// (.../migrations/check/ → .../migrations/data/meta).
-const META_DIR = join(import.meta.dir, "..", "data", "meta");
+// The migration SQL dir and the drizzle snapshot meta dir, relative to THIS check
+// file (.../migrations/check/ → .../migrations/data{,/meta}).
+const DATA_DIR = join(import.meta.dir, "..", "data");
+const META_DIR = join(DATA_DIR, "meta");
+
+// Filename → sha8 regex, inlined from the runner (server/internal/runner.ts) so
+// this check never imports a server-plugin internal — mirroring the sibling
+// fork-schema-drift check, which inlines the same pattern for the same reason.
+const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
 // PURE helper (exported for unit testing): given a parsed drizzle snapshot
 // object, return the set of declared public base-table names. The snapshot's
@@ -57,6 +67,21 @@ export function computeOrphans(
     .sort((a, b) => a.localeCompare(b));
 }
 
+// PURE helper (exported for unit testing): the migration files on disk whose
+// sha8 is absent from the live DB's applied-migration ledger — i.e. the schema
+// delta the DB has NOT caught up to yet. Non-migration filenames are ignored.
+export function pendingMigrationFiles(
+  files: readonly string[],
+  appliedHashes: ReadonlySet<string>,
+): string[] {
+  return files
+    .filter((f) => {
+      const sha8 = MIGRATION_RE.exec(f)?.[3];
+      return sha8 !== undefined && !appliedHashes.has(sha8);
+    })
+    .sort((a, b) => a.localeCompare(b));
+}
+
 // Read the latest drizzle snapshot (lexicographically-greatest *_snapshot.json,
 // timestamp-prefixed) and parse out the declared table-name set.
 function loadDeclaredTables(): Set<string> {
@@ -80,10 +105,10 @@ async function getWorktreeName(): Promise<string> {
 const check: Check = {
   id: "orphaned-db-tables",
   description:
-    "no orphaned public base tables: every live worktree-DB table is declared by a plugin's drizzle schema or in the imperative allowlist (catches dead schema left by imperative DROP/rename)",
+    "no orphaned public base tables: every live worktree-DB table is declared by a plugin's drizzle schema or in the imperative allowlist (catches dead schema left by imperative DROP/rename). Asserted only once the DB has applied every migration on disk",
   // Impure: reads the live worktree DB. Never cache.
   cacheSignature: () => null,
-  async run() {
+  async run(ctx) {
     const declared = loadDeclaredTables();
     const worktreeName = await getWorktreeName();
 
@@ -113,6 +138,50 @@ const check: Check = {
       } catch {
         return { ok: true };
       }
+
+      // SECOND PRECONDITION — the live DB must be caught up with the migration
+      // chain. This check compares the live table set against the HEAD drizzle
+      // snapshot, and that comparison is only well-formed once every migration
+      // on disk has been applied: with a migration still pending, the live
+      // schema is a PAST state of the chain, so anything a pending migration
+      // drops is live-but-undeclared by construction — not dead schema.
+      //
+      // This is not hypothetical, and getting it wrong DEADLOCKS the build:
+      // `./singularity build` runs checks BEFORE the server restart that applies
+      // migrations, so a freshly-authored `DROP TABLE` migration fails this
+      // check on every build, and the build never reaches the step that would
+      // apply it and make the check pass. (It did: `staged_config_default`,
+      // dropped by 20260801_152825_266d6b7e, wedged main's build.)
+      //
+      // So: decline to assert while the DB is behind, exactly as with the
+      // connect precondition above. Nothing is silenced — the same build applies
+      // the pending migrations on restart, so the very next run asserts against
+      // a caught-up DB and reports any real orphan then.
+      let appliedHashes: Set<string>;
+      try {
+        const ledger = await pool.query<{ hash: string }>(
+          `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
+        );
+        appliedHashes = new Set(ledger.rows.map((r) => r.hash));
+      } catch (e) {
+        // No ledger table (42P01) = a DB that has never run the migration
+        // runner: it is behind by the WHOLE chain, so there is nothing to
+        // assert against. Any other error is a real fault and propagates.
+        if ((e as { code?: string }).code === "42P01") return { ok: true };
+        throw e;
+      }
+      const pending = pendingMigrationFiles(readdirSync(DATA_DIR), appliedHashes);
+      if (pending.length > 0) {
+        ctx.log?.(
+          `orphaned-db-tables: not asserting — worktree DB "${worktreeName}" is behind ` +
+            `by ${pending.length} unapplied migration(s) (${pending.join(", ")}), so its ` +
+            `schema is not expected to match the head snapshot yet. Re-asserts once ` +
+            `the server restart applies them.`,
+          "stdout",
+        );
+        return { ok: true };
+      }
+
       const res = await pool.query<{ relname: string }>(
         `SELECT relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
       );

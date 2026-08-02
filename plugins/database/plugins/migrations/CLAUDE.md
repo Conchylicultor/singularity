@@ -84,6 +84,17 @@ The check runs uniformly in `./singularity build`, `./singularity check`, and th
 push checks step — which runs after rebase + migration normalization, i.e. when
 the branch-local migration set is final and `origin/main` is fresh.
 
+## Checks run BEFORE migrations apply
+
+In `./singularity build` the checks pass runs before the restart that applies
+pending migrations, so the live DB is at the *previous* boot's schema. A check
+comparing live schema against the head drizzle snapshot must therefore gate on
+"the DB applied every migration on disk" (read `__singularity_migrations`) and
+decline while behind — otherwise a `DROP TABLE` migration wedges the build
+permanently: checks abort it before the restart that would make them pass.
+`orphaned-db-tables` does this; `fork-schema-drift` asks an order-independent
+question and needs no such gate.
+
 ## Schema files must be synchronously loadable
 
 Schema-glob files (`server/**/internal/{tables,tables-*,schema,schema-*}.ts`) must
