@@ -32,11 +32,23 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
   "build:deploy": { label: "Deploy", color: "bg-categorical-8", bg: "bg-categorical-8/10" },
 };
 
+/**
+ * A run with no recorded spans has no Gantt to draw. Declared as the
+ * contribution's `useAvailable` rather than a `return null` in the body: the
+ * host paints the card before it reaches the body, so a null there would leave
+ * a "Profiling" bar that opens onto nothing.
+ */
+export function useHasBuildProfile({ runId }: { runId: string }): boolean {
+  const { data } = useEndpoint(getBuildRunProfile, { id: runId });
+  return data !== undefined && data.spans.length > 0;
+}
+
 export function BuildProfilingSection({ runId }: { runId: string }): ReactElement | null {
   const { data } = useEndpoint(getBuildRunProfile, { id: runId });
   const [hovered, setHovered] = useState<Span | null>(null);
   const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey: 0 }), [hovered, setHovered]);
 
+  // `useAvailable` already gated on a profile with spans; this only narrows.
   if (!data || data.spans.length === 0) return null;
 
   const grouped = groupByPhase(data.spans);

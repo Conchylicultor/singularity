@@ -162,7 +162,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/studio/compositions/release/release-logs`
     - `apps/studio/contributions`
     - `apps/studio/contributions/tables/foreign-keys`
-    - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `apps/studio/graph`
     - `apps/website/demos/agent-run`
@@ -327,7 +326,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/inclusion`
-    - `plugin-meta/plugin-view/runtimes`
     - `plugin-meta/plugin-view/sub-plugins`
     - `primitives/app-shell`
     - `primitives/command-palette`
@@ -384,10 +382,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `tasks/task-description`
     - `tasks/task-detail`
     - `tasks/task-draft-form`
-    - `tasks/task-effort`
     - `tasks/task-events`
     - `tasks/task-header`
-    - `tasks/task-preprompt`
     - `ui/segmented-progress-bar`
     - `ui/sidebar-framing/floating`
     - `ui/sidebar-framing/flush`

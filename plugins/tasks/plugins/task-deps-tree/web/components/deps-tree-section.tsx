@@ -20,6 +20,24 @@ import { DepsSources } from "../internal/deps-sources";
 // `config/tasks/task-deps-tree/task-deps-tree.jsonc`.
 const DEPS_TREE_VIEW = defineDataView("task-deps-tree");
 
+/**
+ * The cluster is just the task itself ⇒ there is no tree to draw. Declared as
+ * the contribution's `useAvailable` rather than a `return null` below: the host
+ * paints the card before it reaches the body, so a null there would leave a
+ * "Dependency tree" bar that opens onto nothing.
+ *
+ * Self-hide is a property of the CLUSTER, never of the selected task's own
+ * edges — see the note on the same gate below.
+ */
+export function useHasDepsCluster({ taskId }: { taskId: string }): boolean {
+  const result = useResource(tasksResource);
+  // Still loading ⇒ keep the card painted (the body shows its own Loading), so
+  // it does not pop in a frame after the pane. `false` here would collapse
+  // "unknown yet" into "definitely a lone task".
+  if (result.pending) return true;
+  return taskClusterIds(result.data, taskId).size > 1;
+}
+
 export function DepsTreeSection({ taskId }: { taskId: string }) {
   const result = useResource(tasksResource);
   return (
@@ -59,6 +77,9 @@ function DepsTreeSectionLoaded({
   // — while the member set it was rendering did not change at all. Deriving the
   // gate from the rendered set makes that class of bug impossible: the section
   // hides exactly when there is nothing but the task itself to draw.
+  //
+  // `useHasDepsCluster` is that same derivation, hoisted to `useAvailable` so
+  // the card itself disappears instead of opening onto nothing.
   if (memberIds.size <= 1) return null;
 
   // ONE merged DataView surface: the Dependencies / Created organisations are

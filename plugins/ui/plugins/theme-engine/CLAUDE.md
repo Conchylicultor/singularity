@@ -66,6 +66,7 @@
   - Exports (values):
     - `defineTokenGroup`
     - `themeEngineConfig`
+    - `tokenGroupMatchesSearch`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`

@@ -17,6 +17,23 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
+/**
+ * Nothing depends on this task ⇒ nothing to list. Declared as the
+ * contribution's `useAvailable` rather than an empty-state placeholder in the
+ * body: the host paints the card before it reaches the body, so "No dependents."
+ * is a titled bar the user opens onto nothing. Unlike `Dependencies`, this
+ * section has no header actions, so with an empty list it has nothing to offer
+ * at all.
+ */
+export function useHasDependents({ taskId }: { taskId: string }): boolean {
+  const tasksResult = useResource(tasksResource);
+  // Still loading ⇒ keep the card painted (the body shows its own Loading), so
+  // it does not pop in a frame after the pane. `false` here would collapse
+  // "unknown yet" into "definitely nothing".
+  if (tasksResult.pending) return true;
+  return TaskGraph.from(tasksResult.data).directDependents(taskId).length > 0;
+}
+
 export function TaskDependents({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
 

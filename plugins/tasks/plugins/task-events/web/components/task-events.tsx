@@ -89,6 +89,17 @@ function useTaskAttempts(taskId: string): AttemptWithConversations[] | null {
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 }
 
+/**
+ * A task with no attempts has neither pushes nor attempts to list. Declared as
+ * both contributions' `useAvailable` rather than an empty-state placeholder in
+ * the body: the host paints the card before it reaches the body, so "No pushes
+ * yet." is a titled bar the user opens onto nothing.
+ */
+export function useHasTaskAttempts({ taskId }: { taskId: string }): boolean {
+  const attempts = useTaskAttempts(taskId);
+  return attempts !== null && attempts.length > 0;
+}
+
 export function TaskPushes({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
   const githubBase = useGithubBase();

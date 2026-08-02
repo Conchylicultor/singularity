@@ -1,17 +1,21 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
   RUNTIME_COLORS,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 
-export function RuntimesSection({ node }: { node: PluginNode }) {
+/**
+ * At most three pills — one line, so they ride the section header as `summary`
+ * rather than sitting behind a chevron.
+ */
+export function RuntimesSummary({ node }: { node: PluginNode }) {
   return (
-    <Stack direction="row" wrap gap="xs">
+    <Inline gap="xs">
       {node.runtimes.web && <RuntimePill kind="web" />}
       {node.runtimes.server && <RuntimePill kind="server" />}
       {node.runtimes.central && <RuntimePill kind="central" />}
-    </Stack>
+    </Inline>
   );
 }
 

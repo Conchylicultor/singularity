@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdAccountTree, MdFolderOpen } from "react-icons/md";
 import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
-import { DepsTreeSection } from "./components/deps-tree-section";
+import { DepsTreeSection, useHasDepsCluster } from "./components/deps-tree-section";
 import { DepsActions, DetachAction } from "./internal/deps-actions";
 import { DepsSources, DepsSource, CreatedSource } from "./internal/deps-sources";
 
@@ -16,6 +16,8 @@ export default {
       // would collide. The id is untouched (it keys the persisted order).
       label: "Dependency tree",
       component: DepsTreeSection,
+      // Nothing but the task itself in the cluster ⇒ no card at all.
+      useAvailable: useHasDepsCluster,
     }),
     DepsActions({ id: "detach", component: DetachAction }),
     // Both sources of the merged deps-tree surface are contributed here — the

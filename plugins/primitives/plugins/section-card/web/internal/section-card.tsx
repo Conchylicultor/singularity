@@ -31,14 +31,23 @@ export interface SectionCardProps {
   /** Uncontrolled initial state. Default: collapsed. */
   defaultOpen?: boolean;
   className?: string;
-  /** The collapsible body. Unmounted while collapsed. */
-  children: ReactNode;
+  /**
+   * The collapsible body. Unmounted while collapsed.
+   *
+   * **Omit it** for a card whose whole content is one line: with no body there
+   * is nothing to expand, so the card renders as a single STATIC row — no
+   * chevron, no toggle — with the line's content in `actions`. The disclosure
+   * affordance is therefore derived, never declared: a chevron exists exactly
+   * when a body exists, so a card that opens onto nothing is unrepresentable.
+   */
+  children?: ReactNode;
 }
 
 /**
  * A titled, collapsible card: `Card` chrome around a `SectionHeaderRow` trigger
  * and a `CollapsibleContent` body. Collapsed, it is exactly one row — chevron,
- * icon, title, and whatever header actions the caller keeps reachable.
+ * icon, title, and whatever header actions the caller keeps reachable. With no
+ * `children` it is that one row permanently, and drops the chevron with it.
  *
  * This is the sanctioned home for the "card whose title expands it" shape. It
  * exists so a stack of such cards is uniform BY CONSTRUCTION: the caller supplies
@@ -60,24 +69,39 @@ export function SectionCard({
   className,
   children,
 }: SectionCardProps) {
+  // ONE header expression for both shapes, with `collapsible` DERIVED from the
+  // body's presence — so the two can never drift into "a chevron over nothing"
+  // or "a body with no way to open it".
+  //
+  // The row reads `open` / `toggle` / `contentId` off the Collapsible context,
+  // so the chevron, the aria wiring, and the actions-as-sibling split (no
+  // nested <button>) all come for free.
+  const header = (
+    <SectionHeaderRow
+      variant="title"
+      className="rounded-lg px-lg py-md"
+      collapsible={children !== undefined}
+      actions={
+        actions ? (
+          <ControlSizeProvider size="sm">{actions}</ControlSizeProvider>
+        ) : undefined
+      }
+    >
+      {icon}
+      {title}
+    </SectionHeaderRow>
+  );
+
+  if (children === undefined) {
+    // One line, permanently: no Collapsible at all, so there is no open state
+    // to persist and no body to unmount.
+    return <Card className={cn("rounded-lg p-none", className)}>{header}</Card>;
+  }
+
   return (
     <Card className={cn("rounded-lg p-none", className)}>
       <Collapsible open={open} onOpenChange={onOpenChange} defaultOpen={defaultOpen}>
-        {/* The row reads `open` / `toggle` / `contentId` off the Collapsible
-            context, so the chevron, the aria wiring, and the actions-as-sibling
-            split (no nested <button>) all come for free. */}
-        <SectionHeaderRow
-          variant="title"
-          className="rounded-lg px-lg py-md"
-          actions={
-            actions ? (
-              <ControlSizeProvider size="sm">{actions}</ControlSizeProvider>
-            ) : undefined
-          }
-        >
-          {icon}
-          {title}
-        </SectionHeaderRow>
+        {header}
         <CollapsibleContent className="px-lg pb-lg">{children}</CollapsibleContent>
       </Collapsible>
     </Card>

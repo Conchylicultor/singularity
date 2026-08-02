@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
@@ -40,6 +41,9 @@ export default {
       label: "Color Palette",
       component: ColorPaletteSection,
       actions: ColorPaletteHeaderDots,
+      // No token in this group answers the search box ⇒ no card, rather
+      // than a titled bar over a filtered-to-empty list.
+      useAvailable: ({ search }) => tokenGroupMatchesSearch(colorPaletteGroup, search),
     }),
   ],
 } satisfies PluginDefinition;

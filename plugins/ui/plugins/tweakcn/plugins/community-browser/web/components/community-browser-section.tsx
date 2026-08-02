@@ -15,6 +15,24 @@ import { ImportByUrl } from "./import-by-url";
 
 const COMMUNITY_BROWSER_VIEW = defineDataView("tweakcn.community-browser");
 
+/** The terms that make this section answer the customizer's search box. */
+const SECTION_TERMS = ["community themes", "community", "import by url", "tweakcn"];
+
+/**
+ * Declared as the contribution's `useAvailable` rather than a `return null` in
+ * the body: the host paints the card before it reaches the body, so a null
+ * there would leave a "Community Themes" bar over nothing on every
+ * non-matching query.
+ */
+export function useCommunityBrowserMatchesSearch({
+  search,
+}: {
+  search: string;
+}): boolean {
+  const q = search.trim().toLowerCase();
+  return q.length === 0 || SECTION_TERMS.some((term) => term.includes(q));
+}
+
 export function CommunityBrowserSection({ search }: { search: string }) {
   const { data, isLoading } = useEndpoint(getCatalog, {});
   const themes = data?.themes;
@@ -64,15 +82,6 @@ export function CommunityBrowserSection({ search }: { search: string }) {
         t.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
   }, [themes, q]);
-
-  const sectionMatchesSearch =
-    search.length === 0 ||
-    "community themes".includes(q) ||
-    "community".includes(q) ||
-    "import by url".includes(q) ||
-    "tweakcn".includes(q);
-
-  if (!sectionMatchesSearch) return null;
 
   return (
     <Stack gap="md">

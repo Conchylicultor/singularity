@@ -6,12 +6,10 @@
 
 - Description: Per-task thinking-mode (effort) picker in the task detail pane; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "Thinking mode" → `TaskEffortSection`
+  - Contributes: `TaskDetailSlots.Section` "Thinking mode"
   - Uses:
     - `conversations/effort-provider.EffortSelect`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/live-state.useResource`
     - `shell/notifications.toast`
     - `tasks/task-detail.TaskDetailSlots`

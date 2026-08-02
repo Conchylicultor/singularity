@@ -2,10 +2,14 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableRowCount } from "../../shared/endpoints";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
-export function RowCountSection({
+/**
+ * One number — so it rides the section header as `summary` rather than sitting
+ * behind a chevron.
+ */
+export function RowCountSummary({
   tableName,
 }: {
   tableName: string;
@@ -22,11 +26,11 @@ export function RowCountSection({
   }
 
   return (
-    <Stack direction="row" align="baseline" gap="sm" className="px-md py-sm">
-      <Text variant="title" className="tabular-nums">
+    <Inline gap="xs">
+      <Text as="span" variant="body" className="tabular-nums">
         {data.estimate != null ? data.estimate.toLocaleString() : "—"}
       </Text>
-      <Text variant="body" className="text-muted-foreground">rows (estimated)</Text>
-    </Stack>
+      <Text as="span" variant="caption" tone="muted">rows (est.)</Text>
+    </Inline>
   );
 }

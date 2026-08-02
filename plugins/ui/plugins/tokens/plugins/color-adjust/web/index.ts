@@ -6,7 +6,10 @@ import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config
 import { colorAdjustConfig } from "./internal/config";
 import { ColorAdjust } from "./slots";
 import { ColorAdjustPicker } from "./components/color-adjust-picker";
-import { ColorAdjustSection } from "./components/color-adjust-section";
+import {
+  ColorAdjustSection,
+  useColorAdjustMatchesSearch,
+} from "./components/color-adjust-section";
 import { builtInPresets } from "./presets";
 
 export { ColorAdjust } from "./slots";
@@ -40,6 +43,8 @@ export default {
       id: "color-adjust",
       label: "Color Adjust",
       component: ColorAdjustSection,
+      // Section doesn't answer the search box ⇒ no card, rather than a bar over nothing.
+      useAvailable: useColorAdjustMatchesSearch,
     }),
   ],
 } satisfies PluginDefinition;

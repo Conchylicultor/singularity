@@ -144,7 +144,9 @@ function ParamInput({
   );
 }
 
-export function ShadowSection({ search }: { search: string }) {
+// `search` is unused: whether this section appears at all is the
+// contribution's `useAvailable`, and the body lists every shadow token.
+export function ShadowSection() {
   const scopeId = useThemeScopeId();
   const config = useConfig(shadowConfig, { scopeId }) as {
     preset: string;
@@ -164,21 +166,6 @@ export function ShadowSection({ search }: { search: string }) {
   const schema = shadowGroup.schema;
   type ShadowKey = keyof typeof schema;
   const allKeys = Object.keys(schema) as ShadowKey[];
-
-  const paramLabels = ["color", "opacity", "blur", "spread", "offset"];
-  const matchesSearch = (q: string) => {
-    return (
-      allKeys.some((key) => {
-        const label = schema[key]?.label ?? (key as string);
-        const cssVar = shadowGroup.vars[key] ?? "";
-        return label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q);
-      }) ||
-      paramLabels.some((l) => l.includes(q)) ||
-      "shadow".includes(q)
-    );
-  };
-
-  if (search && !matchesSearch(search.toLowerCase())) return null;
 
   const colorOklch = channelsToOklch(mergedParams.color);
   const colorIsOverridden = overrides.color !== "";

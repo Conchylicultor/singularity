@@ -62,7 +62,9 @@ export function TypeScaleSection({ search }: { search: string }) {
     return label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q);
   });
 
-  if (visibleKeys.length === 0) return null;
+  // The empty-result case is the contribution's `useAvailable`
+  // (`tokenGroupMatchesSearch`), so this body never has to return null:
+  // a filtered-to-empty group paints no card at all.
 
   return (
     <Stack gap="xs">

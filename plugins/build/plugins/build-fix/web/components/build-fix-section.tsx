@@ -9,17 +9,41 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { BUILD_EXIT_SUPERSEDED, type BuildRun, buildHistoryResource } from "@plugins/build/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
-export function BuildFixSection({ runId }: { runId: string }) {
+/** The run, once the history resource has settled. */
+function useBuildRun(runId: string): BuildRun | null {
   const result = useResource(buildHistoryResource);
   if (result.pending) return null;
-  const run = result.data.find((r) => r.id === runId);
+  return result.data.find((r) => r.id === runId) ?? null;
+}
 
-  // A superseded run has no defect to hand an agent — its tree was replaced
-  // mid-build, so its steps straddle two commits and describe neither.
-  const isFailed =
-    run && run.finishedAt !== null && run.exitCode !== 0 && run.exitCode !== BUILD_EXIT_SUPERSEDED;
-  if (!isFailed) return null;
+/**
+ * The section exists only for a build that actually failed — a green run has
+ * nothing to fix. Declared as the contribution's `useAvailable` rather than a
+ * `return null` in the content: the host paints the card before it reaches the
+ * content, so a null here would leave a "Fix" bar over nothing.
+ *
+ * A superseded run has no defect to hand an agent either — its tree was
+ * replaced mid-build, so its steps straddle two commits and describe neither.
+ */
+export function useBuildFailed({ runId }: { runId: string }): boolean {
+  const run = useBuildRun(runId);
+  return (
+    run !== null &&
+    run.finishedAt !== null &&
+    run.exitCode !== 0 &&
+    run.exitCode !== BUILD_EXIT_SUPERSEDED
+  );
+}
 
+/**
+ * The section's whole content: one button. It rides the header as the
+ * contribution's `actions`, so the card is a single row with the action on it —
+ * there is no body, and therefore no chevron opening onto one button.
+ */
+export function BuildFixAction({ runId }: { runId: string }) {
+  const run = useBuildRun(runId);
+  // `useAvailable` already gated on a failed run; this only narrows the type.
+  if (!run) return null;
   return <BuildFixButton runId={runId} run={run} />;
 }
 

@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
-import { TaskAttempts, TaskPushes } from "./components/task-events";
+import {
+  TaskAttempts,
+  TaskPushes,
+  useHasTaskAttempts,
+} from "./components/task-events";
 
 export default {
   description:
@@ -12,6 +16,11 @@ export default {
       id: "pushes",
       label: "Pushes",
       component: TaskPushes,
+      // No attempts ⇒ nothing to list, so no card rather than one that opens
+      // onto "No pushes yet.". (A task WITH attempts but no pushes yet still
+      // shows the card — per-attempt push sets are separate keyed resources,
+      // so their emptiness is not knowable from one gate hook.)
+      useAvailable: useHasTaskAttempts,
       // Was a `Collapsible defaultOpen` before the host owned the card.
       useDefaultOpen: () => true,
     }),
@@ -19,6 +28,8 @@ export default {
       id: "attempts",
       label: "Attempts",
       component: TaskAttempts,
+      // No attempts ⇒ no card rather than one that opens onto "No attempts yet.".
+      useAvailable: useHasTaskAttempts,
       // Was a `Collapsible defaultOpen` before the host owned the card.
       useDefaultOpen: () => true,
     }),

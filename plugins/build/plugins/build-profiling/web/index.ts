@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { BuildDetailSlots } from "@plugins/build/web";
-import { BuildProfilingSection } from "./components/build-profiling-section";
+import {
+  BuildProfilingSection,
+  useHasBuildProfile,
+} from "./components/build-profiling-section";
 
 export default {
   description:
@@ -10,6 +13,7 @@ export default {
       id: "profiling",
       label: "Profiling",
       component: BuildProfilingSection,
+      useAvailable: useHasBuildProfile,
     }),
   ],
 } satisfies PluginDefinition;

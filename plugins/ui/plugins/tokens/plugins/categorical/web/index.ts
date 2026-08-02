@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { categoricalGroup } from "../shared";
 import { categoricalConfig } from "./internal/config";
@@ -38,6 +39,10 @@ export default {
       id: "categorical",
       label: "Categorical",
       component: CategoricalSection,
+      // No token in this group answers the search box ⇒ no card. The body
+      // does not filter itself, so without this the section stayed put
+      // (full) under a query that matched nothing in it.
+      useAvailable: ({ search }) => tokenGroupMatchesSearch(categoricalGroup, search),
     }),
   ],
 } satisfies PluginDefinition;

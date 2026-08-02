@@ -62,6 +62,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/pages/trash`
     - `apps/sonata/progress/loop`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `build`
     - `conversations/all-conversations`
@@ -90,6 +91,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `page/read-only-view`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/routes/render-detail`
+    - `plugin-meta/plugin-view/runtimes`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/table`

@@ -5,6 +5,8 @@ import {
   DependsOnSection,
   UsedByCount,
   UsedBySection,
+  useHasDependsOn,
+  useHasUsedBy,
 } from "./components/dependency-tree";
 
 export default {
@@ -16,12 +18,17 @@ export default {
       label: "Depends on",
       component: DependsOnSection,
       summary: DependsOnCount,
+      // No forward deps ⇒ no card, rather than one opening onto "No dependencies.".
+      useAvailable: useHasDependsOn,
     }),
     PluginViewSlots.Section({
       id: "dependents",
       label: "Used by",
       component: UsedBySection,
       summary: UsedByCount,
+      // Nothing depends on this ⇒ no card, rather than one opening onto
+      // "Nothing depends on this.".
+      useAvailable: useHasUsedBy,
     }),
   ],
 } satisfies PluginDefinition;

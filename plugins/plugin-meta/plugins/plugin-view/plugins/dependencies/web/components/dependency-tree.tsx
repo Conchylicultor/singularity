@@ -49,6 +49,27 @@ export function UsedBySection({ node }: { node: PluginNode }) {
   return <DependencySection node={node} direction="dependents" />;
 }
 
+/**
+ * An empty tree in this direction ⇒ nothing to list. Declared as each
+ * contribution's `useAvailable` rather than the body's "No dependencies." /
+ * "Nothing depends on this." placeholder: the host paints the card before it
+ * reaches the body, so the placeholder is a titled bar the user opens onto
+ * nothing. While the graph loads the section stays painted (the body shows its
+ * own Loading), so a leaf plugin's cards do not pop in and out on every visit.
+ */
+function useHasDeps(node: PluginNode, direction: DepDirection): boolean {
+  const tree = useDepTree(node, direction);
+  return tree === null || tree.total > 0;
+}
+
+export function useHasDependsOn({ node }: { node: PluginNode }): boolean {
+  return useHasDeps(node, "deps");
+}
+
+export function useHasUsedBy({ node }: { node: PluginNode }): boolean {
+  return useHasDeps(node, "dependents");
+}
+
 export function DependsOnCount({ node }: { node: PluginNode }) {
   return <DependencyCount node={node} direction="deps" />;
 }

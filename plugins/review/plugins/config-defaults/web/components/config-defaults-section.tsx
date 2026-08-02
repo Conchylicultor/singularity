@@ -39,6 +39,20 @@ import type { Source } from "@plugins/review/web";
  * a throwaway worktree off main, writes the committed config, and pushes); the
  * row disappears from this list once the job drains it.
  */
+/**
+ * Nothing staged ⇒ nothing to review. Declared as the contribution's
+ * `useAvailable` rather than the body's "No staged defaults." placeholder: the
+ * host paints the card before it reaches the body, so on the common path (no
+ * staged defaults at all) the review pane grew a "Default for everyone" bar
+ * that opened onto that placeholder. Still loading keeps the card, so it does
+ * not pop in a frame late.
+ */
+export function useHasStagedDefaults(): boolean {
+  const staged = useResource(stagedConfigDefaultsResource);
+  if (staged.pending) return true;
+  return staged.data.length > 0;
+}
+
 export function ConfigDefaultsSection({
   conversationId: _conversationId,
   source: _source,

@@ -11,6 +11,26 @@ entity's name lives in the pane header, so a collapsed identity card loses
 nothing, and an opt-out reads as "this panel doesn't want your card" to the next
 author. Nothing to show ⇒ `useAvailable`; start expanded ⇒ `useDefaultOpen`.
 
+## One line ⇒ no `component`
+
+Declare `component` and you get a collapsible card. **Omit it** — content rides
+the header as `summary` (a path, a count, chips) and/or `actions` (a select, a
+button) — and the card is one static row: no chevron, no open state. The chevron
+is derived from the body's presence, so it can never open onto one select.
+`useDefaultOpen` is type-rejected there: it describes a body.
+
+## Empty ⇒ `useAvailable`, never `return null`
+
+The host paints the card *before* the body and can't see that the body produced
+nothing — a `return null` (or a lone "No X." placeholder) leaves a titled bar
+over emptiness. Two recurring calls:
+
+- **Loading ≠ empty.** Return `true` while the resource is pending, or the card
+  pops in a frame late; let the body show its own `<Loading/>`.
+- **Header `actions` ≠ empty.** They're how the user fills it —
+  `task-dependencies` keeps its card at zero deps, its action-less `Dependents`
+  peer hides.
+
 ## More than one zone: `SectionItem`
 
 `Host` is one padded stack over one `.Render`. A pane whose sections split across

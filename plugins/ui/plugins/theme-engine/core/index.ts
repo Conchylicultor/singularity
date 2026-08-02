@@ -1,4 +1,7 @@
-export { defineTokenGroup } from "./define-token-group";
+export {
+  defineTokenGroup,
+  tokenGroupMatchesSearch,
+} from "./define-token-group";
 export type {
   TokenGroupField,
   TokenGroupSchema,

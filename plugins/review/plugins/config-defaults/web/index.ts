@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ReviewSlots } from "@plugins/review/web";
-import { ConfigDefaultsSection } from "./components/config-defaults-section";
+import {
+  ConfigDefaultsSection,
+  useHasStagedDefaults,
+} from "./components/config-defaults-section";
 import { ConfigDefaultsSummary } from "./components/config-defaults-summary";
 
 export default {
@@ -12,6 +15,8 @@ export default {
       label: "Default for everyone",
       component: ConfigDefaultsSection,
       summary: ConfigDefaultsSummary,
+      // Nothing staged ⇒ no card, rather than one opening onto "No staged defaults.".
+      useAvailable: useHasStagedDefaults,
     }),
   ],
 } satisfies PluginDefinition;

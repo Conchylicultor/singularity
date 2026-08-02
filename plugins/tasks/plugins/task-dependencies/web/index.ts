@@ -4,7 +4,10 @@ import {
   TaskDependencies,
   TaskDependenciesActions,
 } from "./components/task-dependencies";
-import { TaskDependents } from "./components/task-dependents";
+import {
+  TaskDependents,
+  useHasDependents,
+} from "./components/task-dependents";
 
 export default {
   description:
@@ -23,6 +26,9 @@ export default {
       id: "dependents",
       label: "Dependents",
       component: TaskDependents,
+      // Nothing depends on this task ⇒ no card. `Dependencies` above keeps its
+      // card even when empty: its header actions are how you add the first one.
+      useAvailable: useHasDependents,
       // Was a `Collapsible defaultOpen` before the host owned the card.
       useDefaultOpen: () => true,
     }),

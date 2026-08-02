@@ -30,27 +30,68 @@ export interface DetailSectionsOptions {
   inset?: SpaceStep;
 }
 
-/**
- * One section of a detail pane. The contribution supplies identity and a body;
- * the HOST owns the chrome, so a pane's sections are uniform by construction —
- * a section never paints its own card, title, or chevron.
- */
-export interface DetailSection<EntityProps> {
+/** The fields every section carries, whatever its shape. */
+interface DetailSectionCommon<EntityProps> {
   /** The section's title, and its click target: clicking it toggles the body. */
   label: string;
-  /** The body. Receives the pane's entity props. */
-  component: ComponentType<EntityProps>;
   /** Leading icon in the header row. Raw component; the row owns size + color. */
   icon?: ComponentType<{ className?: string }>;
   /** Header-right controls, reachable while collapsed. Rendered at `sm` density. */
   actions?: ComponentType<EntityProps>;
   /** Collapsed-state preview beside the title (a count, a +/− diff stat). */
   summary?: ComponentType<EntityProps>;
-  /** Gate hook. `false` ⇒ nothing painted at all — no card, no title. */
+  /**
+   * Gate hook. `false` ⇒ nothing painted at all — no card, no title.
+   *
+   * This is how a section that has NOTHING TO SHOW disappears: a body that
+   * `return null`s still leaves a titled bar the user can open onto emptiness,
+   * because the host paints the chrome and cannot see through the body to know
+   * it rendered nothing. Emptiness must therefore be DECLARED here, where the
+   * host can act on it before painting.
+   */
   useAvailable?: (props: EntityProps) => boolean;
+}
+
+/** A section with a body: a collapsible card, chevron and all. */
+interface DetailSectionWithBody<EntityProps>
+  extends DetailSectionCommon<EntityProps> {
+  /** The body. Receives the pane's entity props. */
+  component: ComponentType<EntityProps>;
   /** First-render open state when the user has no persisted choice yet. */
   useDefaultOpen?: (props: EntityProps) => boolean;
 }
+
+/**
+ * A section that IS one line: a value, a chip row, a single control. It declares
+ * no `component`, so the host paints one static row — no chevron, nothing to
+ * expand — with the line itself in `summary` (info) and/or `actions` (control),
+ * beside the title.
+ *
+ * At least one of the two is REQUIRED: a one-line section with neither would be
+ * a bare title over nothing, which is precisely the empty card this shape
+ * exists to remove. `useDefaultOpen` is absent for the same structural reason —
+ * there is no body for it to describe.
+ */
+type DetailSectionOneLine<EntityProps> = DetailSectionCommon<EntityProps> & {
+  component?: never;
+  useDefaultOpen?: never;
+} & (
+    | { actions: ComponentType<EntityProps> }
+    | { summary: ComponentType<EntityProps> }
+  );
+
+/**
+ * One section of a detail pane. The contribution supplies identity and content;
+ * the HOST owns the chrome, so a pane's sections are uniform by construction —
+ * a section never paints its own card, title, or chevron.
+ *
+ * Two shapes, and the shape is what decides the chrome: declare a `component`
+ * and you get a collapsible card; declare none and you get one static row. The
+ * chevron is therefore never a choice — it exists exactly when a body does.
+ */
+export type DetailSection<EntityProps> =
+  | DetailSectionWithBody<EntityProps>
+  | DetailSectionOneLine<EntityProps>;
 
 /**
  * `Extra` carries contribution fields the PANE defines and the primitive knows
@@ -97,6 +138,22 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
  * collapsed identity card loses nothing. An earlier `chrome: "none"` opt-out for
  * it was removed — it was indistinguishable from "this panel doesn't want your
  * card", which is how a self-painted card frame got back in.
+ *
+ * ## One line ⇒ no chevron
+ *
+ * A section whose whole content is one line — a path, a count, a chip row, a
+ * single button — declares NO `component` and puts that line in `summary`
+ * (info) and/or `actions` (control). The host then paints one static row: no
+ * chevron, nothing to expand, nothing to persist. The affordance is derived
+ * from the body's absence rather than declared, so "a chevron that opens onto
+ * one line" and "a body with no way to open it" are both unrepresentable.
+ *
+ * ## Nothing to show ⇒ nothing painted
+ *
+ * A body that `return null`s still leaves a titled bar the user can open onto
+ * emptiness: the host paints the chrome and cannot see through the body. A
+ * section that can have nothing to show therefore declares `useAvailable`,
+ * which is resolved BEFORE anything is painted.
  *
  * ## Open state
  *
@@ -153,6 +210,28 @@ export function defineDetailSections<
   }
 
   /**
+   * `summary` and `actions` share the header-right slot: both must stay visible
+   * (and, for actions, clickable) while the card is collapsed, and
+   * `SectionCard.title` takes a plain string — so this is the one node that can
+   * sit beside the title. It is ALSO the whole content of a one-line section,
+   * which is why the composition lives here rather than inside `CardSection`.
+   */
+  function headerRight(
+    section: SectionItem,
+    entityProps: EntityProps,
+  ): ReactNode {
+    const Actions = section.actions;
+    const Summary = section.summary;
+    if (!Summary && !Actions) return undefined;
+    return (
+      <Inline gap="xs">
+        {Summary ? <Summary {...entityProps} /> : null}
+        {Actions ? <Actions {...entityProps} /> : null}
+      </Inline>
+    );
+  }
+
+  /**
    * The card chrome. `defaultOpen` is only the seed for the persisted toggle —
    * `useDraft` resolves its initial value once, so a later flip of the
    * contribution's `useDefaultOpen` never yanks a card the user has touched.
@@ -161,30 +240,19 @@ export function defineDetailSections<
     section,
     entityProps,
     defaultOpen,
-  }: SectionProps & { defaultOpen: boolean }): ReactNode {
+    Body,
+  }: SectionProps & {
+    defaultOpen: boolean;
+    Body: ComponentType<EntityProps>;
+  }): ReactNode {
     const [open, setOpen] = useDraft(`${slotId}.${section.id}.open`, defaultOpen);
-    const Body = section.component;
     const Icon = section.icon;
-    const Actions = section.actions;
-    const Summary = section.summary;
-
-    // `summary` and `actions` share the header-right slot: both must stay
-    // visible (and, for actions, clickable) while the card is collapsed, and
-    // `SectionCard.title` takes a plain string — so this is the one node that
-    // can sit beside the title.
-    const headerRight =
-      Summary || Actions ? (
-        <Inline gap="xs">
-          {Summary ? <Summary {...entityProps} /> : null}
-          {Actions ? <Actions {...entityProps} /> : null}
-        </Inline>
-      ) : undefined;
 
     return (
       <SectionCard
         title={section.label}
         icon={Icon ? <Icon /> : undefined}
-        actions={headerRight}
+        actions={headerRight(section, entityProps)}
         open={open}
         onOpenChange={setOpen}
       >
@@ -201,6 +269,22 @@ export function defineDetailSections<
   }
 
   /**
+   * A section with no `component`: the card IS one row. No `children` reaches
+   * `SectionCard`, which is what drops the chevron and the open state — the
+   * affordance is derived from the absence of a body, never declared.
+   */
+  function OneLineSection({ section, entityProps }: SectionProps): ReactNode {
+    const Icon = section.icon;
+    return (
+      <SectionCard
+        title={section.label}
+        icon={Icon ? <Icon /> : undefined}
+        actions={headerRight(section, entityProps)}
+      />
+    );
+  }
+
+  /**
    * Resolves the contribution's `useDefaultOpen` hook. Its own component so the
    * hook is called unconditionally (see `AvailableSection` for why the split is
    * on presence, not on value).
@@ -209,13 +293,18 @@ export function defineDetailSections<
     useDefaultOpen,
     section,
     entityProps,
-  }: SectionProps & { useDefaultOpen: (props: EntityProps) => boolean }): ReactNode {
+    Body,
+  }: SectionProps & {
+    useDefaultOpen: (props: EntityProps) => boolean;
+    Body: ComponentType<EntityProps>;
+  }): ReactNode {
     const defaultOpen = useDefaultOpen(entityProps);
     return (
       <CardSection
         section={section}
         entityProps={entityProps}
         defaultOpen={defaultOpen}
+        Body={Body}
       />
     );
   }
@@ -226,17 +315,29 @@ export function defineDetailSections<
    * rules-of-hooks clean — the same split `AvailableSection` makes.
    */
   function OpenStateSection({ section, entityProps }: SectionProps): ReactNode {
+    const Body = section.component;
+    // No body ⇒ one static row, and nothing below applies: `useDefaultOpen`
+    // describes a body, and the contribution type forbids it without one.
+    if (!Body) {
+      return <OneLineSection section={section} entityProps={entityProps} />;
+    }
     if (section.useDefaultOpen) {
       return (
         <DefaultOpenSection
           useDefaultOpen={section.useDefaultOpen}
           section={section}
           entityProps={entityProps}
+          Body={Body}
         />
       );
     }
     return (
-      <CardSection section={section} entityProps={entityProps} defaultOpen={false} />
+      <CardSection
+        section={section}
+        entityProps={entityProps}
+        defaultOpen={false}
+        Body={Body}
+      />
     );
   }
 
