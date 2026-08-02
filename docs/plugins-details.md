@@ -3998,12 +3998,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Exports (values): `getTableIndexes`
                 - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
                   - Web:
-                    - Contributes: `TableDetail.Section` "Row Count" → `RowCountSection`
+                    - Contributes: `TableDetail.Section` "Row Count"
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
                       - `infra/endpoints.useEndpoint`
+                      - `primitives/css/inline.Inline`
                       - `primitives/css/placeholder.Placeholder`
-                      - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/loading.Loading`
                   - Server:
@@ -6129,7 +6129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `getBuildRunCommits`
     - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
       - Web:
-        - Contributes: `BuildDetailSlots.Section` "Fix" → `BuildFixSection`
+        - Contributes: `BuildDetailSlots.Section` "Fix"
         - Uses:
           - `build.BuildDetailSlots`
           - `infra/endpoints.useEndpoint`
@@ -17930,16 +17930,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "Runtimes" → `RuntimesSection`
+            - Contributes: `PluginViewSlots.Section` "Runtimes"
             - Uses:
               - `plugin-meta/plugin-view.PluginNode`
               - `plugin-meta/plugin-view.PluginViewSlots`
               - `plugin-meta/plugin-view.RUNTIME_COLORS`
               - `primitives/css/badge.Badge`
-              - `primitives/css/spacing.Stack`
+              - `primitives/css/inline.Inline`
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
           - Web:
-            - Contributes: `PluginViewSlots.Section` "Source Path" → `SourcePathSection`
+            - Contributes: `PluginViewSlots.Section` "Source Path"
             - Uses: `plugin-meta/plugin-view.PluginViewSlots`
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Web:
@@ -18875,6 +18875,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/trash`
               - `apps/sonata/progress/loop`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `build`
               - `conversations/all-conversations`
@@ -18903,6 +18904,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/read-only-view`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/routes/render-detail`
+              - `plugin-meta/plugin-view/runtimes`
               - `primitives/data-view`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/table`
@@ -19456,7 +19458,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-logs`
               - `apps/studio/contributions`
               - `apps/studio/contributions/tables/foreign-keys`
-              - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `apps/studio/graph`
               - `apps/website/demos/agent-run`
@@ -19621,7 +19622,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view`
               - `plugin-meta/plugin-view/dependencies`
               - `plugin-meta/plugin-view/inclusion`
-              - `plugin-meta/plugin-view/runtimes`
               - `plugin-meta/plugin-view/sub-plugins`
               - `primitives/app-shell`
               - `primitives/command-palette`
@@ -19678,10 +19678,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-description`
               - `tasks/task-detail`
               - `tasks/task-draft-form`
-              - `tasks/task-effort`
               - `tasks/task-events`
               - `tasks/task-header`
-              - `tasks/task-preprompt`
               - `ui/segmented-progress-bar`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
@@ -20146,11 +20144,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-dependencies`
               - `tasks/task-description`
               - `tasks/task-draft-form`
-              - `tasks/task-effort`
               - `tasks/task-events`
               - `tasks/task-graph`
               - `tasks/task-header`
-              - `tasks/task-preprompt`
               - `tasks/task-status`
               - `ui/segmented-progress-bar`
               - `ui/segmented-progress-bar/dots`
@@ -25803,12 +25799,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-dependencies`
     - **`task-effort`** — Per-task thinking-mode (effort) picker in the task detail pane; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "Thinking mode" → `TaskEffortSection`
+        - Contributes: `TaskDetailSlots.Section` "Thinking mode"
         - Uses:
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
           - `primitives/live-state.useResource`
           - `shell/notifications.toast`
           - `tasks/task-detail.TaskDetailSlots`
@@ -25956,12 +25950,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail`
     - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "Preprompt" → `TaskPrepromptSection`
+        - Contributes: `TaskDetailSlots.Section` "Preprompt"
         - Uses:
           - `conversations/preprompts.PrepromptSelect`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
           - `primitives/live-state.useResource`
           - `shell/notifications.toast`
           - `tasks/task-detail.TaskDetailSlots`
@@ -26588,6 +26580,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `defineTokenGroup`
           - `themeEngineConfig`
+          - `tokenGroupMatchesSearch`
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating`
