@@ -108,17 +108,26 @@ sub-form), the `EditableViewSwitcher`, and per-instance sort/filter written
 forked, silently dropping edits on reload. The per-id descriptor already scopes
 views to one surface; per-app forking stays a Settings-pane concern.
 
-**State split** (`web/internal/use-view-state.ts` → `useEphemeralViewState`,
-localStorage-only for device-local state):
+**State split** (`web/internal/use-view-ephemeral.ts` → `useViewEphemeral`, Web
+Storage for non-config state):
 
 | State | Lives in |
 |---|---|
 | Instance def `{ id, name, view:{ type, sort?, filter?, …opts } }` (array-ordered) | `viewsDescriptor` config row (user-global layer) |
 | Active instance id | localStorage `${storageKey}:active-view` (per device) |
-| Search query, tree expand map | localStorage `${storageKey}:view-state` (per device) |
+| Tree expand map, collapsed group sections | localStorage `${storageKey}:view-state` (per device) |
+| Search query | **sessionStorage** `${storageKey}:view-query` (per browser tab) |
 
-The localStorage reader stays tolerant of legacy `view-state` blobs that still
-carry `sort`/`filter` keys (they are ignored).
+The localStorage reader ignores legacy `sort`/`filter`/`query` keys in a
+`view-state` blob, so no migration is needed.
+
+**The search query is per-tab on purpose — do not move it back to
+`localStorage`.** Durable narrowings are the config row's (`sort`/`filter`/
+`groupBy`) and render as visible chips; a query is an ad-hoc gesture that outlives
+its intent if it survives a browser restart, leaving a filtered subset that reads
+as the view's whole contents. `sessionStorage` keeps the only property worth
+persisting (F5 doesn't lose your place). If a query ever *should* survive, put it
+in the URL — shareable, and the back button clears it.
 
 **The expand map is the home for tree collapse state — do not put it on a domain
 entity.** Collapse is per-`(surface, view-instance, row)` render state, and the
