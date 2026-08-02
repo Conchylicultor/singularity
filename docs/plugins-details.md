@@ -13571,6 +13571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/prompt/block`
               - `page/url-paste`
               - `primitives/css/ui-kit`
+              - `primitives/data-view`
               - `primitives/networking`
               - `primitives/overscroll-hint`
               - `primitives/pane`

@@ -54,6 +54,7 @@ rule keeps the broken shape from coming back.
     - `page/prompt/block`
     - `page/url-paste`
     - `primitives/css/ui-kit`
+    - `primitives/data-view`
     - `primitives/networking`
     - `primitives/overscroll-hint`
     - `primitives/pane`
