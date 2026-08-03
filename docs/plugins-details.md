@@ -1481,7 +1481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes:
               - `trigger` "pages.search.reindex"
-              - `page.editor.block.beforeDelete`
+              - `page.editor.block.onDelete`
               - `page.editor.block.onTrash`
               - `page.editor.block.onRestore`
             - Uses:
@@ -1524,15 +1524,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes:
               - `trigger` "pages.history.schedule"
-              - `page.editor.block.beforeDelete`
+              - `page.editor.block.onDelete`
             - Uses:
-              - `database.db`
               - `history/engine.defineHistorySource`
               - `history/engine.deleteVersions`
               - `history/engine.recordVersion`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
-              - `page/editor._blocks`
               - `page/editor.BlockDeleteHook`
               - `page/editor.BlockLifecycle`
               - `page/editor.blocksChanged`
@@ -9633,7 +9631,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/mail/thread-list`
       - `apps/pages/agent-origin`
       - `apps/pages/content-search`
-      - `apps/pages/history`
       - `apps/sonata/library`
       - `apps/sonata/playback-history`
       - `apps/sonata/rich/key-mode`
@@ -15984,7 +15981,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
-          - `infra/endpoints.useEndpointMutation`
           - `primitives/auto-scroll.useEdgeAutoScroll`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
@@ -16013,6 +16009,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/multi-select.useMultiSelect`
           - `primitives/multi-select.useMultiSelectItem`
           - `primitives/networking.subscribeWsStatus`
+          - `primitives/optimistic-mutation.enqueueResourceWrite`
           - `primitives/optimistic-mutation.OpNoLongerApplies`
           - `primitives/optimistic-mutation.useOptimisticResource`
           - `primitives/popover.InlinePopover`
@@ -16110,14 +16107,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugins/page/plugins/editor/server/internal/tables-events.ts`
           - `plugins/page/plugins/editor/server/internal/tables.ts`
         - Exports (types):
+          - `AfterCommit`
           - `Block`
           - `BlockCreateHook`
           - `BlockDeleteHook`
           - `BlockRestoreHook`
           - `BlocksChangedPayload`
           - `BlockTrashHook`
+          - `DeletedBlockRow`
           - `PageContentSnapshot`
           - `PageData`
+          - `PageForestTx`
           - `StoredBlock`
         - Exports (values):
           - `_blocks`
@@ -16146,8 +16146,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/blocks/:id/turn-into-page`
           - `POST /api/pages/:pageId/blocks/op`
           - `POST /api/pages/:pageId/blocks/patch`
-          - `POST /api/pages/:pageId/blocks/bulk-delete`
-          - `POST /api/pages/:pageId/blocks/bulk-move`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
@@ -16174,11 +16172,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockPatch`
           - `BlockTextVariant`
           - `BlockUpdate`
-          - `BulkDeleteBlocksBody`
-          - `BulkMoveBlocksBody`
-          - `BulkMovePlacement`
-          - `BulkMovePlan`
-          - `BulkMoveRefusal`
           - `ColorToken`
           - `CreateBlockBody`
           - `IdentifiedBlock`
@@ -16206,16 +16199,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
-          - `applyBulkMove`
           - `BlockFieldChangesSchema`
           - `BlockOpSchema`
           - `BlockPatchSchema`
           - `BlockSchema`
           - `blocksResource`
-          - `bulkDeleteBlocks`
-          - `BulkDeleteBlocksBodySchema`
-          - `bulkMoveBlocks`
-          - `BulkMoveBlocksBodySchema`
           - `canIndent`
           - `canOutdent`
           - `changedFields`
@@ -16258,7 +16246,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `patchBlocks`
           - `patchesFromDiff`
           - `plainOf`
-          - `planBulkMove`
           - `planForestInsert`
           - `prevVisibleLine`
           - `rankWindow`
@@ -16636,7 +16623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "page-backlinks"
           - `resource.declare` "page-links"
           - `trigger` "page.links.reindex"
-          - `page.editor.block.beforeDelete`
+          - `page.editor.block.onDelete`
           - `page.editor.block.onTrash`
           - `page.editor.block.onRestore`
         - Uses:
@@ -22490,6 +22477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UseOptimisticResourceArgs`
           - `UseOptimisticResourceResult`
         - Exports (values):
+          - `enqueueResourceWrite`
           - `OpNoLongerApplies`
           - `optimisticDivergenceReportSink`
           - `useOptimisticResource`
