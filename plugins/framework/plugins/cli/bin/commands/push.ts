@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
-import { basename, join } from "path";
+import { basename } from "path";
 import { checkBroadcasts } from "../broadcasts";
+import { normalizeGeneratedArtifacts, SKIP_POST_REWRITE_ENV } from "../git/normalize-generated";
 import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant } from "@plugins/infra/plugins/host-admission/core";
@@ -30,18 +30,28 @@ async function run(cmd: string[], cwd?: string): Promise<string> {
 async function runAllowFail(
   cmd: string[],
   cwd?: string,
+  env?: Record<string, string | undefined>,
 ): Promise<{ stdout: string; exitCode: number }> {
-  const result = await spawnCaptured(cmd, { cwd });
+  const result = await spawnCaptured(cmd, { cwd, env });
   if (result.stderr) process.stderr.write(result.stderr);
   return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }
 
-async function exec(cmd: string[], cwd?: string): Promise<void> {
-  const { exitCode } = await spawnPassthrough(cmd, { cwd });
+async function exec(cmd: string[], cwd?: string, env?: Record<string, string | undefined>): Promise<void> {
+  const { exitCode } = await spawnPassthrough(cmd, { cwd, env });
   if (exitCode !== 0) {
     process.exit(1);
   }
 }
+
+// Env for THIS push's own rebases. The `post-rewrite` hook normalizes generated
+// artifacts after any other rebase; push suppresses it because it owns the
+// ordering itself — it installs the rebased lockfile FIRST, then normalizes, so
+// the regen runs against node_modules that match the tree it is regenerating.
+const rebaseEnv = (): Record<string, string | undefined> => ({
+  ...process.env,
+  [SKIP_POST_REWRITE_ENV]: "1",
+});
 
 // Spawns a fresh process so checks see the post-rebase code on disk, not the
 // stale module cache from process start. The eslint check always considers the
@@ -108,122 +118,6 @@ async function getWorktreeRoot(): Promise<string> {
   return stdout;
 }
 
-async function getGitDir(): Promise<string> {
-  const stdout = await run(["git", "rev-parse", "--git-dir"]);
-  if (!stdout) {
-    console.error("Not in a git repository");
-    process.exit(1);
-  }
-  return stdout;
-}
-
-const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7}) /m;
-
-function findClaudeMdConflicts(root: string): string[] {
-  const offenders: string[] = [];
-  const pluginsDir = join(root, "plugins");
-  const walk = (dir: string) => {
-    let entries: string[];
-    try {
-      entries = readdirSync(dir);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
-      return;
-    }
-    for (const e of entries) {
-      const full = join(dir, e);
-      let st;
-      try {
-        st = statSync(full);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        continue;
-      }
-      if (st.isDirectory()) {
-        walk(full);
-      } else if (e === "CLAUDE.md") {
-        const txt = readFileSync(full, "utf8");
-        if (CONFLICT_MARKER_RE.test(txt)) offenders.push(full);
-      }
-    }
-  };
-  walk(pluginsDir);
-  return offenders;
-}
-
-/**
- * Post-rebase normalize. Runs only if the rebase's custom merge drivers
- * (.gitattributes) actually fired — they drop marker files in
- * .git/singularity-merge-markers/ when invoked. Without conflicts, this is
- * a no-op and the agent's commits land unchanged.
- *
- * On a marker hit, we re-derive canonical content from the rebased source
- * tree and amend the head commit:
- *   - migrations marker: regen-migrations runs the hand-edit detector first
- *     (aborts loudly if any branch-local .sql was hand-edited), then resets
- *     branch-local files and re-runs drizzle-kit generate.
- *   - generated marker: regen-generated rewrites all deterministic codegen
- *     (plugin registries, barrel stubs, docs, config origins, CLAUDE.md
- *     autogen blocks). We then scan plugins/**\/CLAUDE.md for residual
- *     conflict markers — those would be in hand-written prose, a real
- *     conflict the agent must resolve.
- */
-async function postRebaseNormalize(root: string, pushId: string): Promise<void> {
-  const gitDir = await getGitDir();
-  // git-dir may be relative to cwd (".git") or absolute; resolve via cwd.
-  const markerDir = gitDir.startsWith("/") ? join(gitDir, "singularity-merge-markers") : join(root, gitDir, "singularity-merge-markers");
-  const migrationsMarker = join(markerDir, "migrations");
-  const generatedMarker = join(markerDir, "generated");
-  const ranMigrations = existsSync(migrationsMarker);
-  const ranGenerated = existsSync(generatedMarker);
-
-  if (!ranMigrations && !ranGenerated) return; // clean rebase, no auto-resolve happened
-
-  console.log("Normalizing artifacts auto-resolved during rebase...");
-
-  if (ranMigrations) {
-    await exec(["bun", "plugins/framework/plugins/cli/bin/index.ts", "regen-migrations"], root);
-    rmSync(migrationsMarker, { force: true });
-  }
-
-  if (ranGenerated) {
-    await exec(["bun", "plugins/framework/plugins/cli/bin/index.ts", "regen-generated"], root);
-    rmSync(generatedMarker, { force: true });
-
-    const conflicted = findClaudeMdConflicts(root);
-    if (conflicted.length) {
-      console.error(
-        [
-          "",
-          "Real merge conflict in plugin CLAUDE.md prose section(s):",
-          ...conflicted.map((f) => `  ${f}`),
-          "",
-          "These are hand-written and require manual resolution. Edit the files,",
-          "remove the conflict markers, then re-run ./singularity push.",
-        ].join("\n"),
-      );
-      process.exit(1);
-    }
-  }
-
-  const dirty = await run(["git", "status", "--porcelain"], root);
-  if (!dirty) return;
-  console.log("Amending head commit with regenerated artifacts...");
-  await exec(["git", "add", "-A"], root);
-  await exec(
-    [
-      "git",
-      "-c",
-      "trailer.ifexists=replace",
-      "commit",
-      "--amend",
-      "--no-edit",
-      "--trailer",
-      `Singularity-Push=${pushId}`,
-    ],
-    root,
-  );
-}
 
 async function getMainWorktree(): Promise<string> {
   const stdout = await run(["git", "worktree", "list", "--porcelain"]);
@@ -295,11 +189,7 @@ export function registerPush(program: Command) {
 
       await checkBroadcasts("push");
 
-      // Clear stale merge-driver markers from any previous failed push.
       const root0 = await getWorktreeRoot();
-      const gitDir0 = await getGitDir();
-      const markerDir0 = gitDir0.startsWith("/") ? join(gitDir0, "singularity-merge-markers") : join(root0, gitDir0, "singularity-merge-markers");
-      rmSync(markerDir0, { recursive: true, force: true });
 
       // One push id per invocation; every commit that lands on main as part of
       // this push gets stamped with it (via `git commit --trailer` for the
@@ -404,6 +294,20 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
+      // 1b. Consume any merge marker this push did NOT produce — a manual
+      //     `git rebase origin/main` whose post-rewrite hook did not run, or an
+      //     earlier push that died between its rebase and its normalize. This
+      //     used to be a blind `rm -rf` of the marker dir, which DESTROYED that
+      //     signal: the tree still carried main's version of a generated file,
+      //     nothing re-derived it, and the checks below failed on a *.generated.ts
+      //     the agent never touched. Consuming (not discarding) is the fix; the
+      //     regen is idempotent, so a genuinely stale marker costs one no-op pass.
+      //     Runs AFTER the commit step above so the amend can never swallow
+      //     uncommitted work.
+      profiler.stepStart("normalize-inherited");
+      await normalizeGeneratedArtifacts(root0, { pushId });
+      profiler.stepEnd("normalize-inherited");
+
       // --from-main: rebase onto origin/main and push. No worktree merge.
       // Split fetch + rebase because `git pull --rebase --exec` isn't a valid
       // flag combination on Apple Git (the --exec doesn't propagate to rebase).
@@ -416,13 +320,17 @@ export function registerPush(program: Command) {
             profiler.stepEnd("fetch");
 
             profiler.stepStart("rebase");
-            await exec([
-              "git",
-              "rebase",
-              "origin/main",
-              "--exec",
-              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-            ]);
+            await exec(
+              [
+                "git",
+                "rebase",
+                "origin/main",
+                "--exec",
+                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+              ],
+              undefined,
+              rebaseEnv(),
+            );
             profiler.stepEnd("rebase");
 
             const fromMainRoot = await getWorktreeRoot();
@@ -432,7 +340,7 @@ export function registerPush(program: Command) {
             profiler.stepEnd("bun-install");
 
             profiler.stepStart("normalize");
-            await postRebaseNormalize(fromMainRoot, pushId);
+            await normalizeGeneratedArtifacts(fromMainRoot, { pushId });
             profiler.stepEnd("normalize");
 
             const ok = await runRebasedChecks(fromMainRoot, profiler);
@@ -491,13 +399,17 @@ export function registerPush(program: Command) {
           //    Singularity-Push trailer so the server can group all commits in
           //    this push as a single event.
           profiler.stepStart("rebase");
-          const { exitCode: rebaseExit } = await runAllowFail([
-            "git",
-            "rebase",
-            "main",
-            "--exec",
-            `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-          ]);
+          const { exitCode: rebaseExit } = await runAllowFail(
+            [
+              "git",
+              "rebase",
+              "main",
+              "--exec",
+              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+            ],
+            undefined,
+            rebaseEnv(),
+          );
           profiler.stepEnd("rebase");
           if (rebaseExit !== 0) {
             // Best-effort cleanup on the failure path; do not let an abort
@@ -539,7 +451,7 @@ export function registerPush(program: Command) {
           //     the final commit canonical. Aborts on hand-edited migrations
           //     or on real conflict markers in CLAUDE.md prose.
           profiler.stepStart("normalize");
-          await postRebaseNormalize(await getWorktreeRoot(), pushId);
+          await normalizeGeneratedArtifacts(await getWorktreeRoot(), { pushId });
           profiler.stepEnd("normalize");
 
           // 4. Run checks on the rebased tree — this is exactly what will land on

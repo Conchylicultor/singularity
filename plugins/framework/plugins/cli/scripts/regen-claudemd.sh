@@ -4,10 +4,11 @@
 # args: %O %A %B %P
 #
 # Strategy: do a 3-way merge of the file (handles prose). Accept the result
-# even if conflicts remain — the post-rebase normalize step rewrites the
-# autogen block (erasing benign autogen-only conflict markers) and then
-# scans for any residual markers in the prose section. If found there, it
-# fails loudly so the agent resolves the real prose conflict manually.
+# even if conflicts remain — the normalize pass rewrites the autogen block
+# (erasing benign autogen-only conflict markers) and then scans for any residual
+# markers in the prose section. If found there, it fails loudly so the agent
+# resolves the real prose conflict manually; the
+# `generated-artifacts-normalized` check re-asserts it on every later run.
 git merge-file -p "$2" "$1" "$3" > "$2.tmp" 2>/dev/null || true
 mv "$2.tmp" "$2"
 GITDIR=$(git rev-parse --git-dir)

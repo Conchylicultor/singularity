@@ -13123,6 +13123,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `handleResourceHttp`
           - `notificationsWsHandler`
     - **`cli`**
+      - Core:
+        - Exports (types): `MergeMarkerKind`
+        - Exports (values):
+          - `clearMergeMarkers`
+          - `findClaudeMdConflicts`
+          - `MERGE_MARKER_KINDS`
+          - `mergeMarkerDir`
+          - `readMergeMarkers`
+          - `resolveGitDir`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:
@@ -13360,6 +13369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`durable-signals-accounted`**
             - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
+            - **`generated-artifacts-normalized`**
             - **`host-budget`**
             - **`host-pools-declared`**
             - **`inherited-theme-defaults-scoped`**

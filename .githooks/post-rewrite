@@ -1,0 +1,48 @@
+#!/bin/sh
+# Repair generated artifacts after ANY rebase — not just the one `./singularity
+# push` drives.
+#
+# The .gitattributes merge drivers resolve a generated file by taking main's
+# side verbatim and dropping a marker in $GITDIR/singularity-merge-markers/.
+# That is deliberately a half-fix: the canonical content is re-derived from the
+# merged sources afterwards. `push` has always done that, so a push-driven
+# rebase was correct — but the repo tells agents to `git rebase origin/main` by
+# hand too (on breakage, and from push's own conflict message), and on that path
+# nothing ever consumed the marker. The checkout silently kept main's registry,
+# and the un-normalized state surfaced much later as a TS2307 in a *.generated.ts
+# nobody edited. This hook makes the repair a property of the rebase itself.
+#
+# git ignores a post-rewrite hook's exit status, so this is a side effect plus
+# loud stderr — never a gate. The `generated-artifacts-normalized` check is the
+# backstop for the case where this hook did not run at all.
+#
+# Drain the rewritten-commit list: we act on the marker, not on which commits moved.
+cat >/dev/null
+
+# Set by `push` around its own rebase (it installs the rebased lockfile before
+# normalizing) and by normalize's own amend. Both own the repair themselves.
+[ -n "$SINGULARITY_SKIP_POST_REWRITE" ] && exit 0
+
+GITDIR=$(git rev-parse --git-dir) || exit 0
+ROOT=$(git rev-parse --show-toplevel) || exit 0
+
+# `git rebase --exec 'git commit --amend …'` (how push stamps its trailer) fires
+# this hook in "amend" mode once per replayed commit, MID-rebase — where the tree
+# is not final and consuming the marker would rob the end-of-rebase pass of it.
+# Skip those; the "rebase" invocation at the end still fires.
+if [ "$1" = "amend" ] && { [ -d "$GITDIR/rebase-merge" ] || [ -d "$GITDIR/rebase-apply" ]; }; then
+  exit 0
+fi
+
+MARKERS="$GITDIR/singularity-merge-markers"
+[ -d "$MARKERS" ] || exit 0
+[ -n "$(ls -A "$MARKERS" 2>/dev/null)" ] || exit 0
+
+# Hooks inherit GIT_DIR/GIT_INDEX_FILE pointing at the rewrite in progress;
+# normalize runs its own `git add`/`git commit --amend` against the worktree and
+# must not inherit that temporary index.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
+
+cd "$ROOT" || exit 0
+echo "post-rewrite: generated artifacts were auto-resolved — normalizing..."
+SINGULARITY_SKIP_POST_REWRITE=1 ./singularity normalize-generated

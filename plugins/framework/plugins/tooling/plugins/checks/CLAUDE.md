@@ -96,6 +96,7 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
   - **`durable-signals-accounted`**
   - **`eager-tier-in-sync`**
   - **`fields-eager-in-sync`**
+  - **`generated-artifacts-normalized`**
   - **`host-budget`**
   - **`host-pools-declared`**
   - **`inherited-theme-defaults-scoped`**

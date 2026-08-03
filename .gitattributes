@@ -1,6 +1,10 @@
 # Auto-generated artifacts: resolved by custom merge drivers in plugins/framework/plugins/cli/scripts/
-# plus a post-rebase normalize step in `./singularity push` that regenerates
-# canonical content from the rebased source tree.
+# (registered into .git/config by `./singularity build`). A driver takes the
+# upstream side and drops a marker; the canonical content is then regenerated
+# from the MERGED source tree by whichever normalize pass runs first —
+# `.githooks/post-rewrite` after any rebase, `./singularity push` around its own,
+# or a full `./singularity build`. An un-normalized marker fails the
+# `generated-artifacts-normalized` check.
 
 # Plugin docs (fully generated)
 docs/plugins-compact.md                       merge=regen-generated

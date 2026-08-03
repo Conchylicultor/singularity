@@ -27,6 +27,7 @@ import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/rout
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot, getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
+import { clearMergeMarkers } from "../../core";
 import { runChecks, markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { listDatabases, forkTempPrefix } from "@plugins/database/plugins/admin/server";
 import { libpqEnv, readDatabaseConfig } from "@plugins/database/core";
@@ -130,9 +131,11 @@ async function getCurrentBranch(): Promise<string> {
 
 // Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
 // commit gets its Singularity-Conversation trailer, which in turn is how
-// push-watcher attributes commits back to the originating task. Drift here
-// is silent — no error, just orphaned pushes — so check on every build and
-// reset to the tracked value.
+// push-watcher attributes commits back to the originating task;
+// `.githooks/post-rewrite` is what normalizes generated artifacts after a
+// manual rebase. Drift here is silent in both cases — orphaned pushes, or a
+// checkout carrying main's registry — so check on every build and reset to the
+// tracked value.
 async function ensureHooksPath(): Promise<void> {
   const read = await spawnCaptured(["git", "config", "--get", "core.hooksPath"]);
   const current = read.stdout.trim();
@@ -925,6 +928,15 @@ export function registerBuild(program: Command) {
         },
         hooks,
       });
+
+      // 4b'. Every generated artifact has now been re-derived from this tree's
+      //      sources, so any merge marker a rebase left behind is answered — a
+      //      build normalizes by construction rather than by marker. Consuming
+      //      them here (and never earlier: a build that dies mid-codegen must
+      //      leave the signal intact) is what keeps the
+      //      `generated-artifacts-normalized` check from firing after a build
+      //      has already done the repair.
+      clearMergeMarkers(root);
 
       // 4c. Propagate git config to user config dir (~/.singularity/config/<worktree>/)
       endSpan = buildProfilerStart("propagateConfig", "build:codegen", "propagate config to user");
