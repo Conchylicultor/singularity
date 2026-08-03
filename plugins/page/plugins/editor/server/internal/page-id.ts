@@ -2,8 +2,8 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { _blocks } from "./tables";
+import type { PageForestTx } from "./page-forest";
 
 /**
  * Any drizzle executor these reads can ride on: the global handle (production),
@@ -97,11 +97,15 @@ export async function computePageId(
 // parent). drizzle can't emit recursive CTEs, so we use a raw `WITH RECURSIVE`
 // (mirrors collect-subtree.ts). The recursion derives each node's pageId from
 // the rule above relative to its already-resolved parent.
+//
+// Requires a `PageForestTx`: it re-scopes a whole subtree's `page_id`, moving
+// rows between the page partitions every other writer reads their forest from,
+// so it is never legal unlocked.
 export async function recomputePageIdSubtree(
+  tx: PageForestTx,
   rootId: string,
-  executor: RankExecutor = db,
 ): Promise<void> {
-  await executor.execute(sql`
+  await tx.execute(sql`
     WITH RECURSIVE resolved AS (
       -- Root: pageId derived from its current parent via the standard rule.
       SELECT

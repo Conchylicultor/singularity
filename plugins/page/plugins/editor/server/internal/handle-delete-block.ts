@@ -25,7 +25,7 @@ export const handleDeleteBlock = implement(
     // The single delete chokepoint: a subtree containing a `type="page"` block is
     // trashed (soft delete — the FK cascade never fires, so descendants +
     // page_block_docs + history survive), a page-free subtree is hard-deleted
-    // exactly as before. It runs the BeforeDelete / OnTrash lifecycle hooks.
+    // exactly as before. It runs the OnDelete / OnTrash lifecycle hooks.
     const outcome = await deleteBlocksSubtree([params.id]);
 
     // The deleted/trashed block's content list lost a row. Fan out to reindex

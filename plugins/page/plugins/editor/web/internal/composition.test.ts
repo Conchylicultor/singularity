@@ -264,7 +264,7 @@ describe("owner resolution", () => {
     const owner = (op: BlockOp) => resolveOpOwnerPage(unionRows, op, m, BASE);
     expect(owner({ kind: "split", blockId: "a1", position: 0, newId: "n1" })).toBe("shell-a");
     expect(owner({ kind: "merge", blockId: "a2" })).toBe("shell-a");
-    expect(owner({ kind: "delete", blockId: "shell-a" })).toBe(BASE);
+    expect(owner({ kind: "delete", blockIds: ["shell-a"] })).toBe(BASE);
     expect(owner({ kind: "indent", blockIds: ["a1", "a2"] })).toBe("shell-a");
     expect(owner({ kind: "insert", newId: "n1", type: "text", afterId: "a1" })).toBe("shell-a");
     expect(owner({ kind: "insert", newId: "n1", type: "text", parentId: "shell-a" })).toBe(
@@ -404,7 +404,7 @@ describe("translateOpForStore", () => {
     const v: BlockOverlayOp = {
       tag: "op",
       op: { kind: "merge", blockId: "a2" },
-      effect: { kind: "remove", id: "a2" },
+      effect: { kind: "remove", ids: ["a2"] },
     };
     expect(translateOpForStore(v, m)).toBe(v);
     expect(translateOpForStore(v, mounts(["shell-a", "shell-a"]))).toBe(v);

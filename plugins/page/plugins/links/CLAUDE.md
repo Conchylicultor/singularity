@@ -10,7 +10,7 @@
     - `resource.declare` "page-backlinks"
     - `resource.declare` "page-links"
     - `trigger` "page.links.reindex"
-    - `page.editor.block.beforeDelete`
+    - `page.editor.block.onDelete`
     - `page.editor.block.onTrash`
     - `page.editor.block.onRestore`
   - Uses:

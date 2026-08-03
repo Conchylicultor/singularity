@@ -1,19 +1,15 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import { db, currentTxId } from "@plugins/database/server";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
-import { applyBlockOp, opBlockIds } from "../../core/block-ops";
+import { applyBlockOp, opBlockIds, type BlockNode } from "../../core/block-ops";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { Editor as BlockRegistry } from "./block-registry";
-import { loadPageBlocks } from "./forest";
-import { lockPageForWrite } from "./page-write-lock";
-import { rowToNode, reconcileBlocks } from "./reconcile";
+import { withPageForest } from "./page-forest";
+import { writeForestTarget } from "./forest-writer";
+import { rowToNode } from "./reconcile";
 import { notifyStructuralChange } from "./notify-structural-change";
-import { BlockLifecycle } from "./document-hooks";
-import { recomputePageIdSubtree } from "./page-id";
-import { blocksChanged } from "./tables-events";
-import { parseBlockData } from "./parse-block-data";
 import { deleteBlocksSubtree } from "./trash-blocks";
 
 /**
@@ -44,161 +40,82 @@ function anchorTypes(): ReadonlySet<string> {
 }
 
 /**
- * The rows this op would delete, computed from an UNLOCKED read — used ONLY to
- * decide which `BeforeDelete` hooks to run before the write transaction opens
- * (see the call site). The authoritative delete set is recomputed under the page
- * lock; this one never drives a write.
+ * `move` / `bulkMove` mint their rank IN THE REDUCER, from the sibling set of
+ * the forest handed to it — this page's. So the destination's sibling space must
+ * lie inside this page, or the key is arithmetic over a partial list and
+ * collides with the siblings it cannot see (the same hazard
+ * `MoveBlockBodySchema` and `planBulkMove`'s `destSiblings` doc name).
+ *
+ * Exactly two destinations qualify: the page's own top level, and a NON-page row
+ * of this page. A sub-page row's children are keyed to that sub-page and are
+ * absent from a page-scoped load, so it is refused here — a cross-page drop is
+ * not one page's op, and the composite client store routes it to the id-scoped
+ * `moveBlock` endpoint, which locks both forests.
+ *
+ * A loud 400, never a silent clamp: a request reaching here with an out-of-page
+ * destination means a client computed an intent this endpoint cannot honour.
  */
-function predictedDeletedRows(
-  rows: Awaited<ReturnType<typeof loadPageBlocks>>,
-  body: Parameters<typeof applyBlockOp>[1],
-) {
-  const before = rows.map(rowToNode);
-  const after = applyBlockOp(before, body, { anchorTypes: anchorTypes() });
-  const { deletedIds } = reconcileBlocks(before, after);
-  const deletedSet = new Set(deletedIds);
-  return rows.filter((r) => deletedSet.has(r.id));
+function assertDestinationInPage(
+  rows: BlockNode[],
+  pageId: string,
+  parentId: string | null,
+): void {
+  if (parentId === pageId) return;
+  const parent = parentId === null ? undefined : rows.find((r) => r.id === parentId);
+  if (!parent || parent.type === PAGE_BLOCK_TYPE) {
+    throw new HttpError(
+      400,
+      `Destination parent ${parentId ?? "null"} is not inside page ${pageId}; ` +
+        `a cross-page move must use POST /api/blocks/:id/move`,
+    );
+  }
 }
 
 export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ params, body }) => {
-  // --- BeforeDelete hooks, ahead of the transaction --------------------------
-  // Backlink / attachment reconcilers snapshot state that depends on the
-  // soon-to-vanish rows. They run on the POOL (their own connections), so they
-  // must NOT be awaited inside the write transaction: that is hold-and-wait, and
-  // it stretches the connection lease — and the page write lock — over their
-  // whole duration (`database/no-pool-await-in-transaction`).
-  //
-  // So the delete set is predicted from an UNLOCKED read here, and the
-  // authoritative one is recomputed under the lock below. The two can differ only
-  // if a concurrent write changes what this op deletes, in which case the hooks
-  // ran over the predicted set — exactly the behaviour before the lock existed,
-  // since this read is the same one the handler always used.
-  const predicted = await loadPageBlocks(params.pageId);
-  const predictedDeleted = predictedDeletedRows(predicted, body);
-  const afterCallbacks: Array<() => void | Promise<void>> = [];
-  if (
-    predictedDeleted.length > 0 &&
-    !predictedDeleted.some((r) => r.type === PAGE_BLOCK_TYPE)
-  ) {
-    const cascadeIds = predictedDeleted.map((r) => r.id);
-    for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
-      const cb = await hook.beforeDelete(cascadeIds);
-      if (cb) afterCallbacks.push(cb);
-    }
-  }
-
-  // ONE transaction spans the load, the reduce and the writes, and it opens by
-  // taking this page's write lock — because this handler is a read-modify-write
-  // over the whole forest and its UPDATE reasserts every column of every changed
-  // row. Splitting the read from the write let a concurrent op's parentage be
-  // silently overwritten by a stale snapshot; `page-write-lock.ts` documents the
-  // captured interleaving. Everything that must NOT hold the lock (the hooks
-  // above, the notify fan-out, the page-delete chokepoint, the final read-back)
-  // stays outside it.
-  const applied = await db.transaction(async (tx) => {
-    await lockPageForWrite(tx, params.pageId);
-    const rows = await loadPageBlocks(params.pageId, tx);
+  // ONE locked transaction spans the load, the reduce and the writes, because
+  // this handler is a read-modify-write over the whole forest and its UPDATE
+  // reasserts every column of every changed row. `withPageForest` is what makes
+  // "the read is under the lock" true by construction — `ctx.forest()` is the
+  // only way to read, and it exists only inside the transaction. Everything that
+  // must NOT hold the lock (the delete hooks' re-push callbacks, the notify
+  // fan-out, the page-delete chokepoint, the final read-back) runs after it.
+  const { value, watermark } = await withPageForest(params.pageId, async (ctx) => {
+    const rows = await ctx.forest();
     const before = rows.map(rowToNode);
+    if (body.kind === "move" || body.kind === "bulkMove") {
+      assertDestinationInPage(before, params.pageId, body.parentId);
+    }
     const after = applyBlockOp(before, body, { anchorTypes: anchorTypes() });
 
-    const { inserted, updated, deletedIds } = reconcileBlocks(before, after);
+    // Reconciles, persists, and dispatches `OnDelete` over the AUTHORITATIVE
+    // delete set — the one this transaction really removes. There is no longer a
+    // predicted set read outside the lock, so there is nothing for the two to
+    // disagree about.
+    const write = await writeForestTarget(ctx, before, after);
 
-    // --- Delete-path lifecycle (mirrors handle-delete-block.ts) ----------------
-    const deletedSet = new Set(deletedIds);
-    const reducerDeletedRows = rows.filter((r) => deletedSet.has(r.id));
-
-    // Delete roots = deleted ids whose parent is NOT itself being deleted. Deleting
-    // only the roots and letting the FK `onDelete: "cascade"` clear descendants
-    // avoids redundant per-row deletes (and matches handle-delete-block.ts, which
-    // deletes just the root). Equivalent to deleting all `deletedIds`.
-    const rootIds = reducerDeletedRows
-      .filter((r) => r.parentId === null || !deletedSet.has(r.parentId))
-      .map((r) => r.id);
-
-    // Defensive: the reducers (`split`/`merge`/`indent`/`outdent`) already refuse
-    // to delete a `type="page"` row, so this branch should never fire — but a
-    // silently-cascading page here is the exact 2026-07-10 data-loss bug, so if one
-    // ever slips into the delete set, route the whole delete through the trash
-    // chokepoint (soft delete) instead of the inline hard delete below. The normal
-    // page-free keystroke path (the overwhelming majority) stays hard and pays no
-    // extra cost.
-    const hasPageDelete = reducerDeletedRows.some(
-      (r) => r.type === PAGE_BLOCK_TYPE,
-    );
-    const deletedRows = reducerDeletedRows;
-
-    if (inserted.length > 0) {
-      const now = new Date();
-      await tx.insert(_blocks).values(
-        inserted.map((node) => ({
-          id: node.id,
-          // In-page ops never change pageId; new nodes carry the pageId the
-          // reducer already inherited from their parent/sibling.
-          pageId: node.pageId,
-          parentId: node.parentId,
-          type: node.type,
-          data: parseBlockData(node.type, node.data),
-          rank: node.rank,
-          expanded: node.expanded,
-          createdAt: now,
-          updatedAt: now,
-        })),
-      );
-    }
-
-    for (const { id, node } of updated) {
-      await tx
-        .update(_blocks)
-        .set({
-          parentId: node.parentId,
-          type: node.type,
-          data: parseBlockData(node.type, node.data),
-          rank: node.rank,
-          expanded: node.expanded,
-          updatedAt: new Date(),
-        })
-        .where(eq(_blocks.id, id));
-    }
-
-    // Page-free hard delete stays inline (cascade clears descendants). A
-    // page-containing set is trashed AFTER this tx via the chokepoint.
-    if (rootIds.length > 0 && !hasPageDelete) {
-      await tx.delete(_blocks).where(inArray(_blocks.id, rootIds));
-    }
-
-    // pageId invariant. `split` / `merge` / `indent` / `outdent` / `insert` /
-    // `delete` cannot cross a page boundary, so surviving nodes keep their
-    // pageId and new nodes inherit it from their parent/sibling. That is
-    // ENFORCED in the reducer, not assumed: `applyIndent` and `applyMerge`
-    // no-op when the previous sibling is a `page` row, `applySplit` no-ops on a
-    // `page` row, and `applyOutdent` no-ops when the parent is one. Re-check
-    // those guards before relying on this. Given them, the hot keystroke path
-    // deliberately skips `recomputePageIdSubtree` — it is a `WITH RECURSIVE`
-    // per edit.
+    // pageId invariant: NO op reachable through this endpoint crosses a page
+    // boundary, so surviving nodes keep their pageId and new nodes inherit it
+    // from their parent/sibling — and the hot keystroke path can skip
+    // `recomputePageIdSubtree` entirely (it is a `WITH RECURSIVE` per edit).
     //
-    // `move` is the exception: it is a genuine reparent, reachable through this
-    // endpoint, and can carry a subtree into or out of a sub-page.
-    if (body.kind === "move") {
-      await recomputePageIdSubtree(body.blockId, tx);
-    }
+    // That is ENFORCED, not assumed, and re-check both halves before relying on
+    // it: the reducer no-ops when a `page` row would be crossed (`applyIndent`
+    // and `applyMerge` on a `page` previous sibling, `applySplit` on a `page`
+    // row, `applyOutdent` on a `page` parent), and the reparenting ops (`move`,
+    // `bulkMove`) are refused above unless their destination is inside this
+    // page. A cross-page move is `handleMoveBlock`'s, which locks both forests
+    // and does recompute.
 
-    // Ack token: the commit's xid8, read inside the write transaction (Rule A).
-    return {
-      watermark: await currentTxId(tx),
-      before,
-      after,
-      deletedRows,
-      rootIds,
-      hasPageDelete,
-    };
+    return { before, after, write };
   });
-  const { watermark, before, after, deletedRows, rootIds, hasPageDelete } = applied;
+  const { before, after, write } = value;
 
   // Route a page-containing delete through the trash chokepoint (soft delete +
-  // OnTrash hooks). Runs after the insert/update tx so the reducer's other diffs
-  // land first; the delete set is disjoint from the insert/update set.
-  if (hasPageDelete && rootIds.length > 0) {
-    await deleteBlocksSubtree(rootIds);
+  // OnTrash hooks). Runs after the write transaction so the reducer's other
+  // diffs land first; the delete set is disjoint from the insert/update set, and
+  // the chokepoint takes the page locks it needs itself.
+  if (write.deferredPageDelete && write.deleteRootIds.length > 0) {
+    await deleteBlocksSubtree(write.deleteRootIds);
   }
 
   // --- Notify (shared with the patch handler) --------------------------------
@@ -214,24 +131,11 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
   });
   const primaryType =
     touchedTypes.find((t) => t === PAGE_BLOCK_TYPE) ?? touchedTypes[0] ?? "block";
-  await notifyStructuralChange({ pageId: params.pageId, primaryType, deletedRows });
-
-  // A `move` that crossed a page boundary also changed the DESTINATION page's
-  // content. Fan out for it too, so its reindex subscribers (search, backlinks)
-  // see the arriving subtree — the same both-scopes emit `handleMoveBlock` does.
-  if (body.kind === "move") {
-    const [moved] = await db
-      .select({ pageId: _blocks.pageId })
-      .from(_blocks)
-      .where(eq(_blocks.id, body.blockId))
-      .limit(1);
-    if (moved && moved.pageId !== null && moved.pageId !== params.pageId) {
-      await blocksChanged.emit({ pageId: moved.pageId });
-    }
-  }
-
-  // Hooks re-push state that depended on the now-deleted rows (e.g. backlinks).
-  for (const cb of afterCallbacks) await cb();
+  await notifyStructuralChange({
+    pageId: params.pageId,
+    primaryType,
+    deletedRows: write.deletedRows,
+  });
 
   // Return the reloaded LIVE page rows (mirrors the live push payload).
   const finalRows = await db

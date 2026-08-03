@@ -1,11 +1,7 @@
-import { and, eq, isNull } from "drizzle-orm";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
-import { planForestInsert } from "../../core/block-forest";
-import { withMintedIds, type SerializedBlock } from "../../core/serialized-block";
 import { _blocks } from "./tables";
-import { parseBlockData } from "./parse-block-data";
 import { requireLiveParent, type BlockReadExecutor } from "./page-id";
 
 export type BlockRow = typeof _blocks.$inferSelect;
@@ -62,51 +58,17 @@ export async function loadPageBlocks(
 }
 
 /**
- * Insert an id-less `SerializedBlock[]` forest under `parentId`, minting fresh
- * ids and ranks. The id/rank algebra is the pure `planForestInsert`; this is
- * the thin persistence loop over its planned nodes.
- *
- * Server-minted ids make this the HISTORY-RESTORE path, and nothing else:
- * `replacePageContent` is its one caller, and a restore genuinely has no client
- * prediction to agree with (it wipes the page and rebuilds it from a snapshot,
- * with fresh ids on purpose — see the invariant note there). Every *editing*
- * forest insert — paste and duplicate alike — rides a `BlockOp` whose forest
- * arrives with ids already minted by the client (`withMintedIds`), so the client
- * can overlay the result optimistically and the server's push is a confirmation.
- * Top-level nodes use the caller-provided `rootRanks` (one per node); children
- * get a fresh open interval. Does not notify/emit — the caller does so once after
- * the surrounding transaction. Returns the new top-level ids in order.
- *
- * `pageId` is the resolved page scope for the inserted top-level nodes (their
- * nearest `type="page"` ancestor, i.e. `computePageId(parentId)`). Children
- * inherit it, except under a `type="page"` node, whose descendants are scoped to
- * that node's own id.
+ * The multi-page generalization of {@link loadPageBlocks} — the read behind
+ * `PageForestCtx.forest()`, so a write spanning several locked pages sees all of
+ * them in one query. Same live-rows-only rule, same reason.
  */
-export async function insertForest(
+export async function loadPagesBlocks(
   executor: RankExecutor,
-  args: {
-    pageId: string | null;
-    parentId: string | null;
-    rootRanks: Rank[];
-    forest: SerializedBlock[];
-  },
-): Promise<{ rootIds: string[] }> {
-  const { nodes, rootIds } = planForestInsert({
-    ...args,
-    forest: withMintedIds(args.forest),
-  });
-  // Planned nodes are parent-before-descendant, so this insert order satisfies
-  // the self-referential FK.
-  for (const node of nodes) {
-    await executor.insert(_blocks).values({
-      id: node.id,
-      pageId: node.pageId,
-      parentId: node.parentId,
-      type: node.type,
-      data: parseBlockData(node.type, node.data),
-      rank: node.rank,
-      expanded: node.expanded,
-    });
-  }
-  return { rootIds };
+  pageIds: string[],
+): Promise<BlockRow[]> {
+  if (pageIds.length === 0) return [];
+  return executor
+    .select()
+    .from(_blocks)
+    .where(and(inArray(_blocks.pageId, pageIds), isNull(_blocks.deletedAt)));
 }

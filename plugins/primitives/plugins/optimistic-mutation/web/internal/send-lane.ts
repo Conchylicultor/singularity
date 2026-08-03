@@ -1,0 +1,120 @@
+// The SEND LANE: every write for one `(resource.key, paramsKey)` tuple departs
+// in the order it was issued.
+//
+// This primitive's model is `data = pendingOps.reduce(apply, serverTruth)` — an
+// ordered fold. A consumer whose ops do not commute needs the server to apply
+// them in the order they were issued, or server truth diverges from the
+// prediction. Ordering is load-bearing: structural ops depend on their
+// predecessors' server-side effects (a second split targets the block the first
+// one created), so a concurrent send can land out of order and be durably
+// rejected for a row that is merely not committed YET.
+//
+// The registry is MODULE-LEVEL, not a per-hook ref: two mounted hooks on the
+// same tuple are two writers to ONE server-side entity, and a per-instance chain
+// would order each of them against itself only — which is exactly the hole the
+// page editor's own `writeChainRef` had. Module scope is also what lets
+// `enqueueResourceWrite` order a write for a tuple with NO mounted hook at all.
+
+import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+
+/** One tuple's lane: the tail to chain onto, and how many sends are unsettled. */
+interface Lane {
+  tail: Promise<unknown>;
+  depth: number;
+}
+
+const lanes = new Map<string, Lane>();
+
+/**
+ * The lane key for a resource tuple. Canonical (sorted-key JSON), so two mounts
+ * that build their `params` object in different key orders still share one lane.
+ *
+ * Deliberately its own derivation rather than the hook's `ackParamsKey`, which
+ * must stay byte-identical to the live-state registries' key: this one only has
+ * to be SELF-consistent, and coupling it to a foreign wire format would make the
+ * lane's identity someone else's to change.
+ */
+export function sendLaneKey(
+  resourceKey: string,
+  params: Record<string, string> | undefined,
+): string {
+  if (!params) return `${resourceKey}|{}`;
+  const obj: Record<string, string> = {};
+  for (const k of Object.keys(params).sort()) obj[k] = params[k]!;
+  return `${resourceKey}|${JSON.stringify(obj)}`;
+}
+
+/**
+ * Run `send` after every send already queued on this tuple's lane, and return
+ * its own outcome verbatim — so the caller's classification, retry and
+ * never-revert handling are untouched by the queuing.
+ *
+ * The lane is FAILURE-PROOF: it advances on settle, resolve or reject alike, so
+ * a durably-rejected send can never wedge its successors.
+ *
+ * An IDLE lane sends synchronously — there is nothing to wait for, so the lane
+ * must add neither latency nor a microtask of skew to a write that has no
+ * predecessor. A synchronous throw out of `send` therefore still propagates to
+ * the caller on that path, exactly as an unqueued call would.
+ */
+export function enqueueResourceSend<T>(laneKey: string, send: () => Promise<T>): Promise<T> {
+  const existing = lanes.get(laneKey);
+  if (existing === undefined) {
+    const run = send();
+    const lane: Lane = { tail: run, depth: 1 };
+    lanes.set(laneKey, lane);
+    trackSettle(laneKey, lane, run);
+    return run;
+  }
+  existing.depth += 1;
+  // `.then(send, send)` — the successor runs on BOTH edges. This is the whole
+  // failure-proofing: a rejected predecessor advances the lane like any other.
+  const run = existing.tail.then(send, send);
+  existing.tail = run;
+  trackSettle(laneKey, existing, run);
+  return run;
+}
+
+/**
+ * Reclaim an idle lane. A module-level registry keyed by a string would
+ * otherwise retain one entry per tuple ever written — an unbounded leak as pages
+ * are opened. A lane with nothing unsettled holds no ordering constraint, so
+ * dropping it is free: the next send finds no lane, creates a fresh one, and
+ * departs immediately — which is the correct order, there being nothing in
+ * flight to order it against.
+ */
+function trackSettle(laneKey: string, lane: Lane, run: Promise<unknown>): void {
+  const done = (): void => {
+    lane.depth -= 1;
+    if (lane.depth === 0 && lanes.get(laneKey) === lane) lanes.delete(laneKey);
+  };
+  void run.then(done, done);
+}
+
+/**
+ * Enqueue a write onto a resource tuple's send lane with NO overlay — for a
+ * write whose surface is unmounted, or whose effect no single tuple's overlay
+ * can predict. Ordering holds; there is nothing to predict.
+ *
+ * This exists because the lane registry is module-level: a page whose feed is
+ * not mounted still HAS a lane, and a write aimed at it must depart after every
+ * write already queued there. The alternative — a bare `fetch` — is not merely
+ * unpredicted, it is UNORDERED, which is the property this primitive's ordered
+ * fold depends on.
+ *
+ * It resolves the lane key exactly as `useOptimisticResource` does (same
+ * `sendLaneKey`), which is the whole point: a different derivation would order
+ * the write against nothing.
+ */
+export function enqueueResourceWrite<T, Data, P extends Record<string, string>>(
+  resource: ResourceDescriptor<Data, P>,
+  params: P | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return enqueueResourceSend(sendLaneKey(resource.key, params), fn);
+}
+
+/** Occupied lanes. Test-only introspection — pins the reclamation above. */
+export function activeSendLaneCount(): number {
+  return lanes.size;
+}

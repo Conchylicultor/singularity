@@ -25,7 +25,7 @@ export default {
     Trigger({ on: blocksChanged, do: reindexPageSearchJob, with: {}, oneShot: false }),
     // A page HARD delete / purge FK-cascades its blocks without firing the
     // reindexer for the page itself; drop its stale search doc.
-    BlockLifecycle.BeforeDelete(deletePagesSearchHook),
+    BlockLifecycle.OnDelete(deletePagesSearchHook),
     // A page TRASH deindexes it (soft delete emits no per-page blocksChanged on
     // the single-delete path); restore re-derives its doc.
     BlockLifecycle.OnTrash(trashPagesSearchHook),

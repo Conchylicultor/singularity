@@ -62,7 +62,7 @@ export const _blocks = pgTable(
     // barred (generated migrations are hash-guarded; data migrations are
     // DML-only). So the check is per-tuple, and any writer that PERMUTES ranks
     // among siblings must vacate the pairs it reassigns before claiming them —
-    // see `rank-park.ts`. A plain swap has no safe update order; only a scratch
+    // see `forest-writer.ts`. A plain swap has no safe update order; only a scratch
     // value does.
     //
     // Two PARTIAL unique indexes, both `WHERE deleted_at IS NULL`, so a TRASHED

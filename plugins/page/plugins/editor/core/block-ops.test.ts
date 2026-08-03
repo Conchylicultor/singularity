@@ -1407,7 +1407,7 @@ describe("delete", () => {
       mk("GK", "K1", gk),
       mk("OTHER", null, after(a)),
     ];
-    const out = run(blocks, { kind: "delete", blockId: "ROOT" });
+    const out = run(blocks, { kind: "delete", blockIds: ["ROOT"] });
     expect(out.map((b) => b.id).sort()).toEqual(["OTHER"]);
   });
 });
@@ -1424,11 +1424,16 @@ describe("move", () => {
       mk("A", null, r1, { expanded: false }),
       mk("B", null, r2),
     ];
-    const newRank = Rank.between(null, null).toJSON();
-    const out = run(blocks, { kind: "move", blockId: "B", parentId: "A", rank: newRank });
+    // Positional intent with no target: "after" the (empty) child list of A.
+    const out = run(blocks, {
+      kind: "move",
+      blockId: "B",
+      parentId: "A",
+      targetId: null,
+      zone: "after",
+    });
     const b = out.find((x) => x.id === "B")!;
     expect(b.parentId).toBe("A");
-    expect(b.rank).toBe(newRank);
     expect(out.find((x) => x.id === "A")!.expanded).toBe(true);
   });
 
@@ -1439,7 +1444,13 @@ describe("move", () => {
       mk("CHILD", "A", k1),
     ];
     // Try to move A under CHILD (its own descendant).
-    const out = run(blocks, { kind: "move", blockId: "A", parentId: "CHILD", rank: a });
+    const out = run(blocks, {
+      kind: "move",
+      blockId: "A",
+      parentId: "CHILD",
+      targetId: null,
+      zone: "after",
+    });
     expect(out).toEqual(blocks);
   });
 });
@@ -1449,12 +1460,12 @@ describe("move", () => {
 // ---------------------------------------------------------------------------
 
 /**
- * `bulkMove` is NOT a `BlockOp` — it has its own endpoint and its own
- * hand-computed after-state on the client — so these drive the planner directly
- * rather than through `run()`. The invariant the pair exists to protect is that
- * the server writer, the in-memory store and the provider's undo prediction all
- * derive the SAME placements from the same forest, whatever order they happen to
- * hold their rows in.
+ * `bulkMove` IS a `BlockOp` (see the `bulkMove op` describe below), but its
+ * planner carries the typed refusals and the `currentParentId` the server's
+ * park-then-place protocol reads, so these drive it directly rather than through
+ * `run()`. The invariant it exists to protect is that both sides derive the SAME
+ * placements from the same forest, whatever order they happen to hold their rows
+ * in.
  */
 describe("planBulkMove", () => {
   /**
@@ -1624,6 +1635,187 @@ describe("planBulkMove", () => {
     const out = applyBulkMove(blocks, plan);
     expect(ids(out, null)).toEqual(["A", "B", "A1", "C", "D"]);
     expect(ids(out, "A")).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The DnD / block-selection ops (`move` positional intent, `delete` sets,
+// `bulkMove`) — Stage 4a: each is a real `BlockOp` on the ordered op stream.
+// ---------------------------------------------------------------------------
+
+describe("move — positional intent", () => {
+  /** P ▸ [X, Y, Z] plus a top-level sibling T. */
+  function forest(): BlockNode[] {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    return [
+      mk("P", null, a, { expanded: false }),
+      mk("X", "P", r1),
+      mk("Y", "P", r2),
+      mk("Z", "P", r3),
+      mk("T", null, after(a)),
+    ];
+  }
+
+  /** Where each op lands `T`, read as the visible child order under P. */
+  function landedOrder(op: BlockOp): string[] {
+    return ids(run(forest(), op), "P");
+  }
+
+  test("the REDUCER mints the rank — the op carries no key at all", () => {
+    // The whole point of Stage 4a's move: `(parentId, targetId, zone)` travels,
+    // and each side resolves it against the sibling set it holds. A rank minted
+    // by a caller over a projection of the one `(parent_id, rank)` space would
+    // collide with the siblings it cannot see.
+    const out = run(forest(), {
+      kind: "move",
+      blockId: "T",
+      parentId: "P",
+      targetId: "Y",
+      zone: "after",
+    });
+    const t = out.find((b) => b.id === "T")!;
+    expect(t.parentId).toBe("P");
+    assertRankOrdering(out);
+  });
+
+  test("zone resolves against the target, both directions", () => {
+    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: "Y", zone: "after" }))
+      .toEqual(["X", "Y", "T", "Z"]);
+    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: "Y", zone: "before" }))
+      .toEqual(["X", "T", "Y", "Z"]);
+    // Before the FIRST child is the list's start, not "after nothing".
+    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: "X", zone: "before" }))
+      .toEqual(["T", "X", "Y", "Z"]);
+  });
+
+  test("a null target addresses the sibling-list BOUNDARY (append / prepend)", () => {
+    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: null, zone: "after" }))
+      .toEqual(["X", "Y", "Z", "T"]);
+    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: null, zone: "before" }))
+      .toEqual(["T", "X", "Y", "Z"]);
+  });
+
+  test("a same-parent reorder does not let the mover bound its own window", () => {
+    // X moving after Y must land BETWEEN Y and Z, which is only possible if X's
+    // own rank is excluded from the window it is minting into.
+    expect(landedOrder({ kind: "move", blockId: "X", parentId: "P", targetId: "Y", zone: "after" }))
+      .toEqual(["Y", "X", "Z"]);
+  });
+
+  test("the destination parent is opened, as every other insert path does", () => {
+    const out = run(forest(), {
+      kind: "move",
+      blockId: "T",
+      parentId: "P",
+      targetId: null,
+      zone: "after",
+    });
+    expect(out.find((b) => b.id === "P")!.expanded).toBe(true);
+  });
+
+  test("a STALE anchor refuses the whole move rather than guessing a slot", () => {
+    // The neighbour is gone, or has since moved to another parent: resolving the
+    // intent against a different sibling list would drop the block somewhere the
+    // user never pointed at.
+    const blocks = forest();
+    for (const targetId of ["ghost", "T"]) {
+      const out = run(blocks, { kind: "move", blockId: "X", parentId: "P", targetId, zone: "after" });
+      expect(out).toEqual(blocks);
+    }
+  });
+});
+
+describe("delete — a set operation", () => {
+  function forest(): BlockNode[] {
+    const r2 = after(a);
+    const r3 = after(r2);
+    return [
+      mk("A", null, a),
+      mk("A1", "A", a),
+      mk("B", null, r2),
+      mk("C", null, r3),
+    ];
+  }
+
+  test("one gesture deletes every named subtree — one op, not N", () => {
+    const out = run(forest(), { kind: "delete", blockIds: ["A", "C"] });
+    expect(out.map((b) => b.id)).toEqual(["B"]);
+  });
+
+  test("a single Backspace-delete is simply the one-element case", () => {
+    expect(run(forest(), { kind: "delete", blockIds: ["A"] }).map((b) => b.id))
+      .toEqual(["B", "C"]);
+  });
+
+  test("absent ids are skipped, not refused; an all-absent set is the identity", () => {
+    const blocks = forest();
+    expect(run(blocks, { kind: "delete", blockIds: ["ghost", "B"] }).map((b) => b.id))
+      .toEqual(["A", "A1", "C"]);
+    expect(run(blocks, { kind: "delete", blockIds: ["ghost"] })).toEqual(blocks);
+  });
+
+  test("selecting a parent AND its child deletes each once (subtrees overlap)", () => {
+    expect(run(forest(), { kind: "delete", blockIds: ["A", "A1"] }).map((b) => b.id))
+      .toEqual(["B", "C"]);
+  });
+});
+
+describe("bulkMove op", () => {
+  function forest(): BlockNode[] {
+    const r2 = after(a);
+    const r3 = after(r2);
+    const r4 = after(r3);
+    return [
+      mk("A", null, a),
+      mk("B", null, r2),
+      mk("C", null, r3),
+      mk("D", null, r4, { expanded: false }),
+    ];
+  }
+
+  test("the op arm is plan ∘ apply, byte-identical to driving the planner by hand", () => {
+    const blocks = forest();
+    const args = { ids: ["A", "B"], parentId: "D", afterId: null };
+    expect(run(blocks, { kind: "bulkMove", ...args })).toEqual(
+      applyBulkMove(blocks, planBulkMove(blocks, args)),
+    );
+  });
+
+  test("the selection moves as one body, in document order, opening the destination", () => {
+    const out = run(forest(), {
+      kind: "bulkMove",
+      ids: ["A", "B"],
+      parentId: "D",
+      afterId: null,
+    });
+    expect(ids(out, "D")).toEqual(["A", "B"]);
+    expect(ids(out, null)).toEqual(["C", "D"]);
+    expect(out.find((b) => b.id === "D")!.expanded).toBe(true);
+    assertRankOrdering(out);
+  });
+
+  test("every refusal is the IDENTITY, so a refused drag never reaches the network", () => {
+    const blocks = forest();
+    // into-selection, into-own-subtree, empty-selection — the three the planner
+    // distinguishes. The op arm collapses all of them to "nothing happened",
+    // which `dispatchOp`'s empty-diff rule then drops before dispatch.
+    expect(run(blocks, { kind: "bulkMove", ids: ["A", "B"], parentId: "B", afterId: null }))
+      .toEqual(blocks);
+    expect(run(blocks, { kind: "bulkMove", ids: ["ghost"], parentId: "D", afterId: null }))
+      .toEqual(blocks);
+  });
+
+  test("a same-parent reorder lands the run after its anchor", () => {
+    const out = run(forest(), {
+      kind: "bulkMove",
+      ids: ["A", "B"],
+      parentId: null,
+      afterId: "C",
+    });
+    expect(ids(out, null)).toEqual(["C", "A", "B", "D"]);
+    assertRankOrdering(out);
   });
 });
 
@@ -1807,16 +1999,16 @@ describe("anchors — the empty-anchor prune", () => {
     const c1 = a;
     const c2 = after(c1);
     const blocks = [anchorNode("A", null, a), mk("C1", "A", c1), mk("C2", "A", c2)];
-    const oneLeft = run(blocks, { kind: "delete", blockId: "C1" }, withAnchors);
+    const oneLeft = run(blocks, { kind: "delete", blockIds: ["C1"] }, withAnchors);
     expect(ids(oneLeft, "A")).toEqual(["C2"]);
-    const emptied = run(oneLeft, { kind: "delete", blockId: "C2" }, withAnchors);
+    const emptied = run(oneLeft, { kind: "delete", blockIds: ["C2"] }, withAnchors);
     expect(emptied).toEqual([]);
   });
 
   test("the prune runs to a fixed point through NESTED containers", () => {
     // A1 > A2 > C1. Removing C1 empties A2, which empties A1.
     const blocks = [anchorNode("A1", null, a), anchorNode("A2", "A1", a), mk("C1", "A2", a)];
-    const out = run(blocks, { kind: "delete", blockId: "C1" }, withAnchors);
+    const out = run(blocks, { kind: "delete", blockIds: ["C1"] }, withAnchors);
     expect(out).toEqual([]);
   });
 
@@ -2179,25 +2371,26 @@ function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp
     case "outdent":
       return { kind: "outdent", blockIds: [target.id] };
     case "delete":
-      return { kind: "delete", blockId: target.id };
+      return { kind: "delete", blockIds: [target.id] };
     case "insert":
       return rand() < 0.5
         ? { kind: "insert", newId, type: "text", data: { text: "" }, afterId: target.id }
         : { kind: "insert", newId, type: "text", data: { text: "" }, parentId: target.id };
     case "move": {
-      // The caller mints the rank against the destination's TRUE sibling set —
-      // the whole point of the one-forest change. Page rows are not destinations
-      // (a move into a sub-page is a cross-partition op the server recomputes).
+      // POSITIONAL intent: the REDUCER mints the rank against the destination's
+      // sibling set. Page rows are not destinations (a move into a sub-page is a
+      // cross-partition op the server refuses on this endpoint).
       const dest =
         target.type === PAGE_BLOCK_TYPE || rand() < 0.3 ? PAGE : target.id;
       const kids = childrenOf(rows, dest);
-      const last = kids.length > 0 ? Rank.from(kids[kids.length - 1]!.rank) : null;
+      const anchor = kids.length > 0 ? kids[Math.floor(rand() * kids.length)]! : null;
       const moved = rows[Math.floor(rand() * rows.length)]!;
       return {
         kind: "move",
         blockId: moved.id,
         parentId: dest,
-        rank: Rank.between(last, null).toJSON(),
+        targetId: anchor?.id ?? null,
+        zone: rand() < 0.5 ? "before" : "after",
       };
     }
   }
@@ -2436,7 +2629,7 @@ describe("split ∘ merge round-trip", () => {
       expect(prevVisibleLine(split, split.find((b) => b.id === origin.id)!)?.id).toBe("RT");
 
       // Deleting RT restores the original forest exactly.
-      const inverted = applyBlockOp(split, { kind: "delete", blockId: "RT" });
+      const inverted = applyBlockOp(split, { kind: "delete", blockIds: ["RT"] });
       expect(inverted).toEqual(rows);
       rounds++;
     }

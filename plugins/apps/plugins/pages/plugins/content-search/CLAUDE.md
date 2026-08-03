@@ -17,7 +17,7 @@
 - Server:
   - Contributes:
     - `trigger` "pages.search.reindex"
-    - `page.editor.block.beforeDelete`
+    - `page.editor.block.onDelete`
     - `page.editor.block.onTrash`
     - `page.editor.block.onRestore`
   - Uses:

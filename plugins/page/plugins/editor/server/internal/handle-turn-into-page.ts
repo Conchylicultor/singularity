@@ -6,6 +6,8 @@ import { turnIntoPage } from "../../core/endpoints";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { recomputePageIdSubtree } from "./page-id";
+import { withPageForest } from "./page-forest";
+import { insertBlocks, updateBlockFields } from "./forest-writer";
 import { notifyBlockChange } from "./notify";
 import { parseBlockData } from "./parse-block-data";
 
@@ -35,7 +37,7 @@ import { parseBlockData } from "./parse-block-data";
  */
 export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body }) => {
   const [block] = await db
-    .select()
+    .select({ pageId: _blocks.pageId, type: _blocks.type })
     .from(_blocks)
     .where(eq(_blocks.id, params.id))
     .limit(1);
@@ -45,47 +47,51 @@ export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body 
     throw new HttpError(409, `Block ${params.id} is already a page`);
   }
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(_blocks)
-      .set({
-        type: PAGE_BLOCK_TYPE,
-        data: parseBlockData(PAGE_BLOCK_TYPE, { title: body.title, icon: null }),
-        // Turn into → Page folds deterministically, rather than inheriting
-        // whatever the block had (e.g. an expanded toggle). A sub-page reads as
-        // ONE row in its parent's flow — the point of promoting content into a
-        // page is that the parent stops showing it — and the `collapsible:
-        // "always"` chevron on the page row is the way back in.
-        expanded: false,
-        updatedAt: new Date(),
-      })
-      .where(eq(_blocks.id, params.id));
+  // Two forests change: the containing page's (one of its rows becomes a page
+  // shell) and the block's own, which comes into existence here — every
+  // descendant moves into the `page_id = params.id` partition.
+  await withPageForest([block.pageId, params.id], async (ctx) => {
+    await updateBlockFields(ctx.tx, params.id, {
+      type: PAGE_BLOCK_TYPE,
+      data: parseBlockData(PAGE_BLOCK_TYPE, { title: body.title, icon: null }),
+      // Turn into → Page folds deterministically, rather than inheriting
+      // whatever the block had (e.g. an expanded toggle). A sub-page reads as
+      // ONE row in its parent's flow — the point of promoting content into a
+      // page is that the parent stops showing it — and the `collapsible:
+      // "always"` chevron on the page row is the way back in.
+      expanded: false,
+      updatedAt: new Date(),
+    });
 
-    // Read the children INSIDE the transaction: seeding is conditional on the
-    // block being childless, so a concurrent insert between an outside read and
-    // this write would leave the page with both the new child and a stray seed.
-    const children = await tx
+    // Seeding is conditional on the block being childless, so a concurrent
+    // insert would leave the page with both the new child and a stray seed. The
+    // page lock subsumes the bespoke re-read-inside-the-tx this handler used to
+    // hand-roll for exactly that TOCTOU: no concurrent structural write to
+    // either forest can interleave here at all.
+    const children = await ctx.tx
       .select({ id: _blocks.id })
       .from(_blocks)
       .where(and(eq(_blocks.parentId, params.id), isNull(_blocks.deletedAt)));
 
     if (children.length === 0) {
-      await tx.insert(_blocks).values({
-        id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        // The new page is its own `page_id` scope; its content hangs off it.
-        pageId: params.id,
-        parentId: params.id,
-        type: body.seedChild.type,
-        data: parseBlockData(body.seedChild.type, body.seedChild.data),
-        rank: Rank.between(null, null).toJSON(),
-      });
+      await insertBlocks(ctx.tx, [
+        {
+          id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          // The new page is its own `page_id` scope; its content hangs off it.
+          pageId: params.id,
+          parentId: params.id,
+          type: body.seedChild.type,
+          data: parseBlockData(body.seedChild.type, body.seedChild.data),
+          rank: Rank.between(null, null).toJSON(),
+        },
+      ]);
     }
 
     // The block just became a page, so every descendant's nearest `page` ancestor
     // changed: they move from the outer page's `page_id` partition into this
     // block's. Without this the children stay addressed to the outer page and
     // render as its content — the orphaning the patch guard exists to prevent.
-    await recomputePageIdSubtree(params.id, tx);
+    await recomputePageIdSubtree(ctx.tx, params.id);
   });
 
   const [row] = await db

@@ -13,35 +13,27 @@ export {
   turnIntoPage,
   applyBlockOpEndpoint,
   patchBlocks,
-  bulkDeleteBlocks,
-  bulkMoveBlocks,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
   TurnIntoPageBodySchema,
-  BulkDeleteBlocksBodySchema,
-  BulkMoveBlocksBodySchema,
 } from "./endpoints";
 export type {
   CreateBlockBody,
   UpdateBlockBody,
   MoveBlockBody,
   TurnIntoPageBody,
-  BulkDeleteBlocksBody,
-  BulkMoveBlocksBody,
 } from "./endpoints";
 
 export {
   BlockOpSchema,
   applyBlockOp,
-  applyBulkMove,
   canIndent,
   canOutdent,
   childrenOf,
   inDocumentOrder,
   opBlockIds,
   pasteAnchorId,
-  planBulkMove,
   prevVisibleLine,
   nextVisibleLine,
   visibleChildRule,
@@ -56,9 +48,6 @@ export type {
   BlockOpContext,
   BlockNode,
   IsAnchor,
-  BulkMovePlacement,
-  BulkMovePlan,
-  BulkMoveRefusal,
 } from "./block-ops";
 
 export {

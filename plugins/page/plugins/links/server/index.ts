@@ -29,7 +29,7 @@ export default {
     Trigger({ on: blocksChanged, do: reindexLinksJob, with: {}, oneShot: false }),
     // Re-push the backlinks panels of pages a deleted subtree linked to: the FK
     // cascade wipes those page_links edges without going through the reindexer.
-    BlockLifecycle.BeforeDelete(backlinksDeleteHook),
+    BlockLifecycle.OnDelete(backlinksDeleteHook),
     // A TRASH never cascades, so a trashed page's outgoing edges must be dropped
     // explicitly; restore rebuilds them.
     BlockLifecycle.OnTrash(backlinksTrashHook),

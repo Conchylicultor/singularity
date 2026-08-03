@@ -23,10 +23,14 @@ async function pageIdsAmong(blockIds: string[]): Promise<string[]> {
 
 // Purge / hard delete: a page's blocks FK-cascade-wipe without firing the
 // reindexer for the page itself. Drop its stale search doc AFTER the rows vanish.
-// Stays on BeforeDelete so a purge (and any page-free hard delete) deindexes.
+// The hook is handed ROWS, so "which of these were pages" is answered in memory —
+// no DB round-trip, and nothing held while the page lock is up. The deindex
+// itself is heavy re-derivation, so it rides the after-commit callback.
 export const deletePagesSearchHook: BlockDeleteHook = {
-  beforeDelete: async (blockIds) => {
-    const pageIds = await pageIdsAmong(blockIds);
+  onDelete: (rows) => {
+    const pageIds = rows
+      .filter((r) => r.type === PAGE_BLOCK_TYPE)
+      .map((r) => r.id);
     if (pageIds.length === 0) return;
     return async () => {
       await deleteSearchDocs("pages", pageIds);

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { isDescendant, selectionRoots, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
-import { planForestInsert, rankWindow } from "./block-forest";
+import { planForestInsert, positionalRank, rankWindow } from "./block-forest";
 import { IdentifiedBlockSchema, type IdentifiedBlock } from "./serialized-block";
 import {
   mergeRuns,
@@ -100,7 +100,14 @@ export type BlockOp =
       beforeId?: string | null;
       parentId?: string | null;
     }
-  | { kind: "delete"; blockId: string }
+  /**
+   * Delete each id's whole subtree. A SET operation for the reason `indent` /
+   * `outdent` are: pressing Backspace on one block is the one-element case of
+   * deleting a block selection, so one gesture stays ONE op, ONE undo entry and
+   * ONE server transaction however many roots it names. Ids absent from the
+   * forest are skipped; a fully-absent set is an identity no-op.
+   */
+  | { kind: "delete"; blockIds: string[] }
   /**
    * Dissolve a container in place: delete `blockId` and PROMOTE its children into
    * the slot it occupied among its own former siblings. Children keep their ids,
@@ -116,7 +123,47 @@ export type BlockOp =
    * container.
    */
   | { kind: "unwrap"; blockId: string }
-  | { kind: "move"; blockId: string; parentId: string | null; rank: string }
+  /**
+   * Move ONE block to a position among `parentId`'s children — POSITIONAL
+   * intent, never a rank.
+   *
+   * `page_blocks` has a single `(parent_id, rank)` ordering space that several
+   * live resources project disjointly, so a rank minted over the rows one writer
+   * happens to hold collides with the siblings it cannot see. Both sides
+   * therefore mint their own key from `(parentId, targetId, zone)` via
+   * `positionalRank`, and — as for `split` and `paste` — the server's stays
+   * authoritative while the client's drives the overlay.
+   *
+   * The destination sibling space MUST lie inside the op's own page, which is
+   * what makes the two mints agree. A cross-page drop is not one page's op (no
+   * per-page overlay can predict it) and takes the id-scoped `moveBlock`
+   * endpoint instead; the composite store is where that fork lives, and the
+   * server refuses an out-of-page destination loudly.
+   */
+  | {
+      kind: "move";
+      blockId: string;
+      parentId: string | null;
+      /** The sibling to land beside; `null` addresses the list boundary. */
+      targetId: string | null;
+      zone: "before" | "after";
+    }
+  /**
+   * Move a whole selection under `parentId`, immediately after `afterId` (or at
+   * the start of that sibling list when null) — the drag of a block selection.
+   *
+   * Positional intent for `move`'s reason; the rank/order algebra is
+   * `planBulkMove`, which both sides run over the forest they hold. A refused
+   * plan (empty selection, a destination inside the selection or its own
+   * subtree) is the identity, so a refused drag never reaches the undo stack or
+   * the network — the same discipline every other refused op follows.
+   */
+  | {
+      kind: "bulkMove";
+      ids: string[];
+      parentId: string | null;
+      afterId: string | null;
+    }
   /**
    * Insert a whole forest (a clipboard paste, a file drop) as a sibling run.
    * The forest arrives with its ids ALREADY minted (`withMintedIds`), which is
@@ -217,13 +264,20 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     beforeId: z.string().nullable().optional(),
     parentId: z.string().nullable().optional(),
   }),
-  z.object({ kind: z.literal("delete"), blockId: z.string() }),
+  z.object({ kind: z.literal("delete"), blockIds: z.array(z.string()).min(1) }),
   z.object({ kind: z.literal("unwrap"), blockId: z.string() }),
   z.object({
     kind: z.literal("move"),
     blockId: z.string(),
     parentId: z.string().nullable(),
-    rank: z.string(),
+    targetId: z.string().nullable(),
+    zone: z.enum(["before", "after"]),
+  }),
+  z.object({
+    kind: z.literal("bulkMove"),
+    ids: z.array(z.string()).min(1),
+    parentId: z.string().nullable(),
+    afterId: z.string().nullable(),
   }),
   z.object({
     kind: z.literal("paste"),
@@ -601,7 +655,6 @@ export function opBlockIds(op: BlockOp): string[] {
     case "insert":
       return [op.newId];
     case "merge":
-    case "delete":
     case "move":
     // `unwrap` also re-ranks the promoted children, deliberately omitted here —
     // the same documented under-approximation as split's adopted children and
@@ -611,7 +664,13 @@ export function opBlockIds(op: BlockOp): string[] {
       return [op.blockId];
     case "indent":
     case "outdent":
+    case "delete":
       return op.blockIds;
+    // The selection's whole id set, not just its roots: a superset is sound for
+    // both consumers (cascade-confirmation identity, and the server's notify
+    // type derivation), and the roots are the reducer's to compute.
+    case "bulkMove":
+      return op.ids;
     case "paste":
       // ROOT ids only — the same deliberate under-approximation split/merge
       // make. The whole planned forest is inserted in ONE transaction, so a
@@ -671,6 +730,8 @@ function applyOp(
       return applyUnwrap(blocks, op);
     case "move":
       return applyMove(blocks, op);
+    case "bulkMove":
+      return applyBulkMoveOp(blocks, op);
     case "paste":
       return applyPaste(blocks, op);
     case "duplicate":
@@ -702,13 +763,13 @@ function applyOp(
  *
  * Known gap, deliberate: an `insert` op naming an anchor type mints a childless
  * anchor that this pass immediately removes. Anchors are never born that way —
- * the wrap mints the anchor and its first child in ONE patch (not an op). The
- * remaining paths that CAN leave an empty anchor are `bulkDelete` and `bulkMove`,
- * which bypass the reducer entirely on both sides (their own endpoints on the
- * server, hand-computed after-states on the client), and there the surface's
- * one-line childless fallback makes the result visible and deletable rather than
- * a ghost. `paste` used to be in that list; since it became a `BlockOp` it flows
- * through `applyBlockOp` like every other op and is pruned here too.
+ * the wrap mints the anchor and its first child in ONE patch (not an op). There
+ * is no longer any op-shaped path that escapes this pass: `paste`, `duplicate`,
+ * the bulk `delete` set and `bulkMove` all flow through `applyBlockOp` on both
+ * sides, so an anchor a bulk gesture empties is pruned identically here and on
+ * the server. Only the blind `BlockPatch` writer (undo/redo) can still land a
+ * childless anchor, and there the surface's one-line childless fallback makes it
+ * visible and deletable rather than a ghost.
  */
 function pruneEmptyAnchors(
   blocks: BlockNode[],
@@ -1207,7 +1268,7 @@ export function planBulkMove(
   // Exclude everything that is moving, so the moved roots don't bound their own
   // insertion window. (The excluded ids can therefore collide transiently with a
   // still-unmoved root's rank — which is what the server's park-then-place phase
-  // exists to absorb; see `rank-park.ts`.)
+  // exists to absorb; see `forest-writer.ts`.)
   const movingSubtree = new Set(roots.flatMap((r) => subtreeIds(blocks, r)));
   const [prev, next] = rankWindow(destSiblings, args.parentId, args.afterId, movingSubtree);
   const ranks = Rank.nBetween(prev, next, roots.length);
@@ -1227,17 +1288,14 @@ export function planBulkMove(
  * to what the server's writer commits.
  *
  * Deliberately does NOT recompute `pageId` — the same in-page invariant
- * `applyMove` holds. Reparenting CAN cross a page boundary, but only the server
- * knows the whole tree, so it owns that (`recomputePageIdSubtree`); the composite
- * client store refuses cross-page bulk moves outright rather than guessing.
- *
- * Deliberately does NOT run `pruneEmptyAnchors` either. `bulkMove` is not a
- * `BlockOp`: it bypasses the reducer on both sides (its own endpoint on the
- * server, a hand-computed after-state on the client), exactly as `bulkDelete`
- * does. Pruning here would make the client's prediction diverge from the server's
- * commit, which is the one thing this pair exists to prevent.
+ * `applyMove` holds. The composite client store refuses a cross-page bulk move
+ * outright rather than guessing, and the server refuses an out-of-page
+ * destination loudly, so a `bulkMove` op never crosses a boundary.
  *
  * A refused plan is the identity — its `placements` are empty by construction.
+ * Kept separate from `planBulkMove` because the plan carries the typed
+ * `refusal` a caller may want to distinguish; `applyBulkMoveOp` is the reducer
+ * arm that composes the two and reads a refusal as the identity.
  */
 export function applyBulkMove(blocks: BlockNode[], plan: BulkMovePlan): BlockNode[] {
   let next = blocks;
@@ -1251,6 +1309,28 @@ export function applyBulkMove(blocks: BlockNode[], plan: BulkMovePlan): BlockNod
     if (parent && !parent.expanded) next = replace(next, { ...parent, expanded: true });
   }
   return next;
+}
+
+/**
+ * The `bulkMove` reducer arm: plan, then apply. A refusal is the identity, so a
+ * drag the forest cannot honour never reaches the undo stack, the overlay or the
+ * network (`dispatchOp` drops an empty diff) — the same answer every other
+ * refused op gives, rather than a distinguishable 4xx the bespoke endpoint used
+ * to raise for a state the client's own guards already prevent.
+ *
+ * `planBulkMove`'s `destSiblings` defaults to `blocks`, which is exactly right
+ * here: a `bulkMove` op's destination lies inside the op's own page (the
+ * composite refuses a cross-page selection drag, the server refuses an
+ * out-of-page destination), so the page-scoped forest IS the complete sibling
+ * set on both sides.
+ */
+function applyBulkMoveOp(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "bulkMove" }>,
+): BlockNode[] {
+  const plan = planBulkMove(blocks, op);
+  if (plan.refusal) return blocks;
+  return applyBulkMove(blocks, plan);
 }
 
 /**
@@ -1417,13 +1497,20 @@ function applyInsert(
   return add(next, newNode);
 }
 
+/**
+ * Delete each named block's whole subtree. Ids absent from the forest are
+ * skipped rather than refusing the set: a bulk delete's roots are read off the
+ * same rows the reducer folds over, so a missing one means another writer got
+ * there first and the user's intent for the rest still holds. `subtreeIds`
+ * answers `[id]` for a row it cannot find, hence the liveness filter first.
+ */
 function applyDelete(
   blocks: BlockNode[],
   op: Extract<BlockOp, { kind: "delete" }>,
 ): BlockNode[] {
-  const block = byId(blocks, op.blockId);
-  if (!block) return blocks;
-  const ids = new Set(subtreeIds(blocks, op.blockId));
+  const live = op.blockIds.filter((id) => byId(blocks, id) !== undefined);
+  if (live.length === 0) return blocks;
+  const ids = new Set(live.flatMap((id) => subtreeIds(blocks, id)));
   return remove(blocks, ids);
 }
 
@@ -1468,6 +1555,11 @@ function applyUnwrap(
   return remove(next, [block.id]);
 }
 
+/**
+ * Move one block to the position `(parentId, targetId, zone)` names, minting the
+ * rank here from the sibling set this forest holds — see `positionalRank` for
+ * why the op carries intent rather than a key.
+ */
 function applyMove(
   blocks: BlockNode[],
   op: Extract<BlockOp, { kind: "move" }>,
@@ -1478,8 +1570,23 @@ function applyMove(
   if (op.parentId !== null && isDescendant(blocks, op.blockId, op.parentId)) {
     return blocks;
   }
+  // A stale anchor refuses the move outright, as `applyInsert` refuses a missing
+  // `afterId`: the neighbour the user aimed at is gone or has since moved to
+  // another parent, and resolving the intent against a different sibling list
+  // would drop the block somewhere they never pointed at.
+  if (op.targetId !== null) {
+    const target = byId(blocks, op.targetId);
+    if (!target || target.parentId !== op.parentId) return blocks;
+  }
+  const rank = positionalRank(
+    blocks,
+    op.parentId,
+    op.targetId,
+    op.zone,
+    new Set([op.blockId]),
+  );
 
-  let next = replace(blocks, { ...block, parentId: op.parentId, rank: op.rank });
+  let next = replace(blocks, { ...block, parentId: op.parentId, rank: rank.toJSON() });
   // Open the new parent (if any).
   if (op.parentId) {
     const parent = byId(next, op.parentId);

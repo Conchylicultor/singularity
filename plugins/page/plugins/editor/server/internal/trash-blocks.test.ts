@@ -46,16 +46,17 @@ let t: TestDb;
 
 const trashCalls: string[][] = [];
 const restoreCalls: string[][] = [];
-const beforeDeleteCalls: string[][] = [];
+const onDeleteCalls: string[][] = [];
 
 beforeAll(async () => {
   t = await createTestDb({ prefix: "trash_blocks_test" });
   await runMigrations(t.db);
 
-  // Fake consumer hooks. BeforeDelete mimics the history hook: it drops
-  // `entity_versions` for any page ids in the (purge/hard-delete) set — the only
-  // place versions are destroyed. Trash NEVER runs BeforeDelete, so this fake is
-  // exactly what proves "versions survive trash, die at purge".
+  // Fake consumer hooks. OnDelete mimics the history hook: it reads the page ids
+  // straight off the handed ROWS (no DB round-trip — the point of the rows-not-ids
+  // contract) and drops their `entity_versions` from an after-commit callback,
+  // the only place versions are destroyed. Trash NEVER runs OnDelete, so this
+  // fake is exactly what proves "versions survive trash, die at purge".
   //
   // The block-data handles the seeds need are registered here too: `page` is this
   // plugin's own handle (the real one), while `text` is a throwaway stub — the
@@ -77,17 +78,19 @@ beforeAll(async () => {
             restoreCalls.push(ids);
           },
         }),
-        BlockLifecycle.BeforeDelete({
-          beforeDelete: async (ids) => {
-            beforeDeleteCalls.push(ids);
-            if (ids.length > 0) {
+        BlockLifecycle.OnDelete({
+          onDelete: (rows) => {
+            const ids = rows.map((r) => r.id);
+            onDeleteCalls.push(ids);
+            if (ids.length === 0) return;
+            return async () => {
               await t.db.execute(
                 sql`DELETE FROM entity_versions WHERE source_id = 'pages' AND entity_id IN (${sql.join(
                   ids.map((id) => sql`${id}`),
                   sql`, `,
                 )})`,
               );
-            }
+            };
           },
         }),
       ],
@@ -102,7 +105,7 @@ afterAll(async () => {
 beforeEach(async () => {
   trashCalls.length = 0;
   restoreCalls.length = 0;
-  beforeDeleteCalls.length = 0;
+  onDeleteCalls.length = 0;
   // A clean slate per test (order-independent).
   await t.db.execute(sql`DELETE FROM page_blocks`);
   await t.db.execute(sql`DELETE FROM entity_versions`);
@@ -227,8 +230,8 @@ describe("deleteBlocksSubtree — trash path (incident shape)", () => {
     expect(await countVersions("A2")).toBe(1);
     expect(await countVersions("B")).toBe(1);
 
-    // OnTrash fired with the full set; BeforeDelete (the version killer) did NOT.
-    expect(beforeDeleteCalls).toHaveLength(0);
+    // OnTrash fired with the full set; OnDelete (the version killer) did NOT.
+    expect(onDeleteCalls).toHaveLength(0);
     expect(trashCalls.flat().sort()).toEqual(["A", "A1", "A2", "A2a", "B", "B1"]);
   });
 
@@ -243,7 +246,7 @@ describe("deleteBlocksSubtree — trash path (incident shape)", () => {
     expect(await row("c1")).toBeUndefined();
     expect(await row("c1a")).toBeUndefined(); // cascade
     expect(await t.db.select().from(_trashEntries)).toHaveLength(0);
-    expect(beforeDeleteCalls.flat().sort()).toEqual(["c1", "c1a"]);
+    expect(onDeleteCalls.flat().sort()).toEqual(["c1", "c1a"]);
   });
 });
 
@@ -321,7 +324,7 @@ describe("untrashBlocks", () => {
 });
 
 describe("purgeTrashedPages", () => {
-  test("hard-deletes the roots + cascade, runs BeforeDelete (versions die only here)", async () => {
+  test("hard-deletes the roots + cascade, runs OnDelete (versions die only here)", async () => {
     await seedIncident();
     await deleteBlocksSubtree(["A", "B"], t.db);
 
@@ -340,8 +343,8 @@ describe("purgeTrashedPages", () => {
     }
     expect(await countDocs("A1")).toBe(0);
     expect(await countDocs("A2a")).toBe(0);
-    // BeforeDelete fired over the full cascade set → versions destroyed at purge.
-    expect(beforeDeleteCalls.flat().sort()).toEqual(["A", "A1", "A2", "A2a"]);
+    // OnDelete fired over the full cascade set → versions destroyed at purge.
+    expect(onDeleteCalls.flat().sort()).toEqual(["A", "A1", "A2", "A2a"]);
     expect(await countVersions("A")).toBe(0);
     expect(await countVersions("A2")).toBe(0);
 
@@ -357,10 +360,10 @@ describe("purgeTrashedPages", () => {
       (await t.db.select().from(_trashEntries))[0],
     );
     await purgeTrashedPages([entryA], t.db);
-    beforeDeleteCalls.length = 0;
+    onDeleteCalls.length = 0;
     // Second purge: nothing flagged → skipped.
     await purgeTrashedPages([entryA], t.db);
-    expect(beforeDeleteCalls).toHaveLength(0);
+    expect(onDeleteCalls).toHaveLength(0);
   });
 });
 

@@ -35,6 +35,12 @@ export type UpdateBlockBody = z.infer<typeof UpdateBlockBodySchema>;
  * Positional intent, never a rank (see `CreateBlockBodySchema.afterId`). The
  * block lands among `parentId`'s children, immediately `zone` of `targetId`.
  *
+ * The EDITOR surface no longer posts this for an ordinary drag — a same-page
+ * move is a `BlockOp` on the ordered op stream. Two callers remain, and both are
+ * writes no single page's optimistic overlay can predict: the Pages sidebar
+ * (a different surface over the derived `docRank` order) and the composite
+ * editor's CROSS-PAGE drop, which permutes two pages' forests at once.
+ *
  * `targetId: null` addresses the sibling-list boundary instead of a neighbour:
  * `"after"` appends at the end of `parentId`'s children, `"before"` prepends at
  * the start. That is what a tree "drop onto this row as a child" gesture means.
@@ -46,23 +52,6 @@ export const MoveBlockBodySchema = z.object({
   zone: z.enum(["before", "after"]),
 });
 export type MoveBlockBody = z.infer<typeof MoveBlockBodySchema>;
-
-export const BulkDeleteBlocksBodySchema = z.object({
-  ids: z.array(z.string()),
-});
-export type BulkDeleteBlocksBody = z.infer<typeof BulkDeleteBlocksBodySchema>;
-
-export const BulkMoveBlocksBodySchema = z.object({
-  ids: z.array(z.string()),
-  parentId: z.string().nullable(),
-  /**
-   * Insert the moved blocks immediately after this sibling (same parent), or at
-   * the start of `parentId` when null. The server lays them out with sequential
-   * ranks between `afterId` and the following sibling.
-   */
-  afterId: z.string().nullable(),
-});
-export type BulkMoveBlocksBody = z.infer<typeof BulkMoveBlocksBodySchema>;
 
 // Pages are blocks of `type="page"`, in document order per sidebar sibling group
 // and carrying the derived `docRank` — the SAME shape and order as the `pages`
@@ -153,16 +142,4 @@ export const patchBlocks = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/patch",
   body: BlockPatchSchema,
   response: z.object({ blocks: z.array(BlockSchema), watermark: z.string() }),
-});
-
-export const bulkDeleteBlocks = defineEndpoint({
-  route: "POST /api/pages/:pageId/blocks/bulk-delete",
-  body: BulkDeleteBlocksBodySchema,
-  response: z.object({ deleted: z.number() }),
-});
-
-export const bulkMoveBlocks = defineEndpoint({
-  route: "POST /api/pages/:pageId/blocks/bulk-move",
-  body: BulkMoveBlocksBodySchema,
-  response: z.array(BlockSchema),
 });

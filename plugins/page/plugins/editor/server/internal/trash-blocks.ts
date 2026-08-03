@@ -15,7 +15,15 @@ import {
 import { _blocks } from "./tables";
 import type { BlockRow } from "./forest";
 import { collectBlockSubtrees } from "./collect-subtree";
-import { BlockLifecycle } from "./document-hooks";
+import { BlockLifecycle, type DeletedBlockRow } from "./document-hooks";
+import {
+  deleteBlockRoots,
+  trashBlockRoots,
+  untrashBlockRoots,
+  updateBlockFields,
+  runOnDelete,
+} from "./forest-writer";
+import { withPageForest, pageScopesOf, type PageForestCtx } from "./page-forest";
 import { blocksChanged } from "./tables-events";
 
 /**
@@ -28,26 +36,15 @@ export type DeleteBlocksOutcome =
   | { trashed: true; entryIds: string[] }
   | { trashed: false };
 
-// Any drizzle executor the chokepoint can ride on: the global handle (production)
-// or a db-test-fixture's throwaway DB (tests). It must support `.transaction`, so
-// a transaction handle is NOT accepted — the chokepoint owns its own tx.
+/**
+ * Any drizzle handle these paths can OPEN their locked transaction on: the
+ * global handle (production) or a db-test-fixture's throwaway DB (tests). A
+ * transaction handle is NOT accepted — `withPageForest` owns its own tx.
+ */
 type BlockExecutor = NodePgDatabase;
-// The handle passed to a `.transaction` callback (no nested `.transaction`).
-type BlockTx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 
 const parentEq = (parentId: string | null) =>
   parentId === null ? isNull(_blocks.parentId) : eq(_blocks.parentId, parentId);
-
-async function runBeforeDelete(
-  blockIds: string[],
-): Promise<Array<() => void | Promise<void>>> {
-  const after: Array<() => void | Promise<void>> = [];
-  for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
-    const cb = await hook.beforeDelete(blockIds);
-    if (cb) after.push(cb);
-  }
-  return after;
-}
 
 async function runOnTrash(blockIds: string[]): Promise<void> {
   for (const hook of BlockLifecycle.OnTrash.getContributions()) {
@@ -80,6 +77,10 @@ async function runOnRestore(blockIds: string[]): Promise<void> {
  * The minted entry ids are RETURNED (creation order), not discarded: they are the
  * ledger handles a caller needs to offer "Undo" (restore). A single page-root
  * delete — the sidebar's delete — therefore yields exactly one id.
+ *
+ * The whole cascade set is loaded and written under the page locks of every page
+ * it spans (a sub-page's content lives in its OWN `page_id` partition), so a
+ * delete can no longer interleave with an op on any page it touches.
  */
 export async function deleteBlocksSubtree(
   rootIds: string[],
@@ -88,115 +89,115 @@ export async function deleteBlocksSubtree(
   if (rootIds.length === 0) return { trashed: false };
   const subtreeIds = await collectBlockSubtrees(rootIds, executor);
   if (subtreeIds.length === 0) return { trashed: false };
-  const rows = (await executor
-    .select()
-    .from(_blocks)
-    .where(inArray(_blocks.id, subtreeIds))) as BlockRow[];
-  const rowById = new Map(rows.map((r) => [r.id, r]));
-  const existingRootIds = rootIds.filter((id) => rowById.has(id));
-  if (existingRootIds.length === 0) return { trashed: false };
+  const scopes = await pageScopesOf(executor, subtreeIds);
 
-  const hasPage = rows.some((r) => r.type === PAGE_BLOCK_TYPE);
+  const { value } = await withPageForest(
+    scopes,
+    async (ctx): Promise<DeleteBlocksOutcome> => {
+      const rows = (await ctx.tx
+        .select()
+        .from(_blocks)
+        .where(inArray(_blocks.id, subtreeIds))) as BlockRow[];
+      const rowById = new Map(rows.map((r) => [r.id, r]));
+      const existingRootIds = rootIds.filter((id) => rowById.has(id));
+      if (existingRootIds.length === 0) return { trashed: false };
 
-  if (!hasPage) {
-    // Page-free delete set → HARD path (unchanged behavior): run BeforeDelete
-    // hooks over the full cascade set, DELETE the roots, cascade clears the rest.
-    const afterCallbacks = await runBeforeDelete(subtreeIds);
-    await executor.delete(_blocks).where(inArray(_blocks.id, existingRootIds));
-    for (const after of afterCallbacks) await after();
-    return { trashed: false };
-  }
+      const hasPage = rows.some((r) => r.type === PAGE_BLOCK_TYPE);
 
-  // --- Trash path ------------------------------------------------------------
-  // Walk each root's subtree from the already-loaded rows (no extra DB round
-  // trips), so entry assignment stays a pure in-memory partition.
-  const childrenByParent = new Map<string | null, BlockRow[]>();
-  for (const r of rows) {
-    const list = childrenByParent.get(r.parentId);
-    if (list) list.push(r);
-    else childrenByParent.set(r.parentId, [r]);
-  }
-  const subtreeOf = (rootId: string): string[] => {
-    const out: string[] = [];
-    const stack = [rootId];
-    while (stack.length > 0) {
-      const id = stack.pop()!;
-      if (!rowById.has(id)) continue;
-      out.push(id);
-      for (const child of childrenByParent.get(id) ?? []) stack.push(child.id);
-    }
-    return out;
-  };
+      if (!hasPage) {
+        // Page-free delete set → HARD path (unchanged behavior): run the delete
+        // hooks over the full cascade set, DELETE the roots, cascade clears the
+        // rest. The hooks see the rows this transaction really removes.
+        const deleted: DeletedBlockRow[] = rows.map((r) => ({
+          id: r.id,
+          type: r.type,
+          pageId: r.pageId,
+          parentId: r.parentId,
+        }));
+        await runOnDelete(ctx, deleted);
+        await deleteBlockRoots(ctx.tx, existingRootIds);
+        return { trashed: false };
+      }
 
-  const pageRootIds = existingRootIds.filter(
-    (id) => rowById.get(id)!.type === PAGE_BLOCK_TYPE,
-  );
-  const nonPageRootIds = existingRootIds.filter(
-    (id) => rowById.get(id)!.type !== PAGE_BLOCK_TYPE,
-  );
+      // --- Trash path --------------------------------------------------------
+      // Walk each root's subtree from the already-loaded rows (no extra DB round
+      // trips), so entry assignment stays a pure in-memory partition.
+      const childrenByParent = new Map<string | null, BlockRow[]>();
+      for (const r of rows) {
+        const list = childrenByParent.get(r.parentId);
+        if (list) list.push(r);
+        else childrenByParent.set(r.parentId, [r]);
+      }
+      const subtreeOf = (rootId: string): string[] => {
+        const out: string[] = [];
+        const stack = [rootId];
+        while (stack.length > 0) {
+          const id = stack.pop()!;
+          if (!rowById.has(id)) continue;
+          out.push(id);
+          for (const child of childrenByParent.get(id) ?? []) stack.push(child.id);
+        }
+        return out;
+      };
 
-  // Flag a set of rows under one entry — but only rows still LIVE, so an
-  // already-trashed nested page keeps its own entry's `trash_entry_id` ownership
-  // (restoring the outer entry then leaves the inner one trashed).
-  const flagTrashed = async (
-    tx: BlockTx,
-    ids: string[],
-    entryId: string,
-  ): Promise<void> => {
-    if (ids.length === 0) return;
-    await tx
-      .update(_blocks)
-      .set({ deletedAt: new Date(), trashEntryId: entryId })
-      .where(and(inArray(_blocks.id, ids), isNull(_blocks.deletedAt)));
-  };
+      const pageRootIds = existingRootIds.filter(
+        (id) => rowById.get(id)!.type === PAGE_BLOCK_TYPE,
+      );
+      const nonPageRootIds = existingRootIds.filter(
+        (id) => rowById.get(id)!.type !== PAGE_BLOCK_TYPE,
+      );
 
-  // Every ledger id this call mints, in creation order (page roots first, then the
-  // leftover-anchor entry if one was needed). Returned to the caller as the
-  // restore handles.
-  const entryIds: string[] = [];
+      // Every ledger id this call mints, in creation order (page roots first,
+      // then the leftover-anchor entry if one was needed). Returned to the caller
+      // as the restore handles.
+      const entryIds: string[] = [];
+      const claimed = new Set<string>();
+      let firstEntryId: string | null = null;
 
-  await executor.transaction(async (tx) => {
-    const claimed = new Set<string>();
-    let firstEntryId: string | null = null;
-
-    for (const pageRootId of pageRootIds) {
-      const label = pageData(rowById.get(pageRootId)!).title || "Untitled";
-      const entryId = await recordTrashEntry(tx, {
-        sourceId: PAGES_TRASH_SOURCE,
-        rootEntityId: pageRootId,
-        label,
-      });
-      entryIds.push(entryId);
-      if (firstEntryId === null) firstEntryId = entryId;
-      const ids = subtreeOf(pageRootId).filter((id) => !claimed.has(id));
-      for (const id of ids) claimed.add(id);
-      await flagTrashed(tx, ids, entryId);
-    }
-
-    const leftover = subtreeIds.filter((id) => !claimed.has(id));
-    if (leftover.length > 0) {
-      if (firstEntryId === null) {
-        // No page ROOT among the selection, but a page is nested under a
-        // non-page root. Anchor one entry on the first requested root; label it
-        // from the first nested page's title so the Trash UI reads sensibly.
-        const anchorId = nonPageRootIds[0] ?? existingRootIds[0]!;
-        const nestedPage = rows.find((r) => r.type === PAGE_BLOCK_TYPE);
-        const label = nestedPage
-          ? pageData(nestedPage).title || "Untitled"
-          : "Blocks";
-        firstEntryId = await recordTrashEntry(tx, {
+      for (const pageRootId of pageRootIds) {
+        const label = pageData(rowById.get(pageRootId)!).title || "Untitled";
+        const entryId = await recordTrashEntry(ctx.tx, {
           sourceId: PAGES_TRASH_SOURCE,
-          rootEntityId: anchorId,
+          rootEntityId: pageRootId,
           label,
         });
-        entryIds.push(firstEntryId);
+        entryIds.push(entryId);
+        if (firstEntryId === null) firstEntryId = entryId;
+        const ids = subtreeOf(pageRootId).filter((id) => !claimed.has(id));
+        for (const id of ids) claimed.add(id);
+        await trashBlockRoots(ctx.tx, ids, entryId);
       }
-      await flagTrashed(tx, leftover, firstEntryId);
-    }
-  });
 
-  await runOnTrash(subtreeIds);
-  return { trashed: true, entryIds };
+      const leftover = subtreeIds.filter((id) => !claimed.has(id));
+      if (leftover.length > 0) {
+        if (firstEntryId === null) {
+          // No page ROOT among the selection, but a page is nested under a
+          // non-page root. Anchor one entry on the first requested root; label it
+          // from the first nested page's title so the Trash UI reads sensibly.
+          const anchorId = nonPageRootIds[0] ?? existingRootIds[0]!;
+          const nestedPage = rows.find((r) => r.type === PAGE_BLOCK_TYPE);
+          const label = nestedPage
+            ? pageData(nestedPage).title || "Untitled"
+            : "Blocks";
+          firstEntryId = await recordTrashEntry(ctx.tx, {
+            sourceId: PAGES_TRASH_SOURCE,
+            rootEntityId: anchorId,
+            label,
+          });
+          entryIds.push(firstEntryId);
+        }
+        await trashBlockRoots(ctx.tx, leftover, firstEntryId);
+      }
+
+      // Heavy re-derivation (search deindex, backlink edge deletes) must not hold
+      // the page locks.
+      ctx.afterCommit(() => runOnTrash(subtreeIds));
+      return { trashed: true, entryIds };
+    },
+    executor,
+  );
+
+  return value;
 }
 
 /**
@@ -211,102 +212,113 @@ export async function untrashBlocks(
   entry: TrashEntry,
   executor: BlockExecutor = db,
 ): Promise<void> {
-  const restoredIds: string[] = [];
-  const affectedPageIds = new Set<string>();
+  const flaggedIdRows = await executor
+    .select({ id: _blocks.id })
+    .from(_blocks)
+    .where(eq(_blocks.trashEntryId, entry.id));
+  if (flaggedIdRows.length === 0) return;
+  // The scopes this restore permutes: every page the flagged rows live in, PLUS
+  // the workspace root — a root whose original parent is gone is reparented
+  // there, so it is always a possible destination.
+  const scopes = [
+    ...(await pageScopesOf(executor, flaggedIdRows.map((r) => r.id))),
+    null,
+  ];
 
-  await executor.transaction(async (tx) => {
-    const flagged = (await tx
-      .select()
-      .from(_blocks)
-      .where(eq(_blocks.trashEntryId, entry.id))) as BlockRow[];
-    if (flagged.length === 0) return;
-    for (const r of flagged) restoredIds.push(r.id);
+  const { value } = await withPageForest(
+    scopes,
+    async (ctx) => {
+      const restoredIds: string[] = [];
+      const affectedPageIds = new Set<string>();
+      const flagged = (await ctx.tx
+        .select()
+        .from(_blocks)
+        .where(eq(_blocks.trashEntryId, entry.id))) as BlockRow[];
+      if (flagged.length === 0) return { restoredIds, affectedPageIds };
+      for (const r of flagged) restoredIds.push(r.id);
 
-    const flaggedIds = new Set(flagged.map((r) => r.id));
-    const roots = flagged.filter(
-      (r) => r.parentId === null || !flaggedIds.has(r.parentId),
-    );
-    const rootIdSet = new Set(roots.map((r) => r.id));
+      const flaggedIds = new Set(flagged.map((r) => r.id));
+      const roots = flagged.filter(
+        (r) => r.parentId === null || !flaggedIds.has(r.parentId),
+      );
+      const rootIdSet = new Set(roots.map((r) => r.id));
 
-    for (const root of roots) {
-      let targetParentId = root.parentId;
-      let targetPageId = root.pageId;
-      let targetRank = root.rank;
+      for (const root of roots) {
+        let targetParentId = root.parentId;
+        let targetPageId = root.pageId;
+        let targetRank = root.rank;
 
-      if (root.parentId !== null) {
-        const [parent] = await tx
-          .select({ id: _blocks.id, deletedAt: _blocks.deletedAt })
-          .from(_blocks)
-          .where(eq(_blocks.id, root.parentId))
-          .limit(1);
-        const parentGone = !parent || parent.deletedAt !== null;
-        if (parentGone) {
-          // Original parent purged or still trashed → reparent to the workspace
-          // root so the restored subtree stays reachable. A `type="page"` root
-          // becomes a root page (pageId null); its own content keeps
-          // `page_id = <root>`, so the subtree is unaffected.
-          targetParentId = null;
-          targetPageId = null;
-          targetRank = (
-            await nextRankUnder(_blocks, _blocks.parentId, null, tx)
-          ).toJSON();
+        if (root.parentId !== null) {
+          const [parent] = await ctx.tx
+            .select({ id: _blocks.id, deletedAt: _blocks.deletedAt })
+            .from(_blocks)
+            .where(eq(_blocks.id, root.parentId))
+            .limit(1);
+          const parentGone = !parent || parent.deletedAt !== null;
+          if (parentGone) {
+            // Original parent purged or still trashed → reparent to the workspace
+            // root so the restored subtree stays reachable. A `type="page"` root
+            // becomes a root page (pageId null); its own content keeps
+            // `page_id = <root>`, so the subtree is unaffected.
+            targetParentId = null;
+            targetPageId = null;
+            targetRank = (
+              await nextRankUnder(_blocks, _blocks.parentId, null, ctx.tx)
+            ).toJSON();
+          }
         }
-      }
 
-      if (targetParentId === root.parentId) {
-        // Rank-collision repair (roots only — subtree-internal ranks are safe).
-        // A live sibling may have claimed the root's `(parent_id, rank)` while it
-        // was trashed; the partial unique index would reject the un-flag. The
-        // root itself is still trashed here, so `deleted_at IS NULL` excludes it.
-        const [collision] = await tx
-          .select({ id: _blocks.id })
-          .from(_blocks)
-          .where(
-            and(
-              isNull(_blocks.deletedAt),
-              parentEq(targetParentId),
-              eq(_blocks.rank, root.rank),
-            ),
-          )
-          .limit(1);
-        if (collision) {
-          targetRank = (
-            await nextRankUnder(_blocks, _blocks.parentId, targetParentId, tx)
-          ).toJSON();
+        if (targetParentId === root.parentId) {
+          // Rank-collision repair (roots only — subtree-internal ranks are safe).
+          // A live sibling may have claimed the root's `(parent_id, rank)` while
+          // it was trashed; the partial unique index would reject the un-flag.
+          // The root itself is still trashed here, so `deleted_at IS NULL`
+          // excludes it.
+          const [collision] = await ctx.tx
+            .select({ id: _blocks.id })
+            .from(_blocks)
+            .where(
+              and(
+                isNull(_blocks.deletedAt),
+                parentEq(targetParentId),
+                eq(_blocks.rank, root.rank),
+              ),
+            )
+            .limit(1);
+          if (collision) {
+            targetRank = (
+              await nextRankUnder(_blocks, _blocks.parentId, targetParentId, ctx.tx)
+            ).toJSON();
+          }
         }
-      }
 
-      if (root.pageId !== null) affectedPageIds.add(root.pageId);
-      if (targetPageId !== null) affectedPageIds.add(targetPageId);
-      if (root.type === PAGE_BLOCK_TYPE) affectedPageIds.add(root.id);
+        if (root.pageId !== null) affectedPageIds.add(root.pageId);
+        if (targetPageId !== null) affectedPageIds.add(targetPageId);
+        if (root.type === PAGE_BLOCK_TYPE) affectedPageIds.add(root.id);
 
-      await tx
-        .update(_blocks)
-        .set({
+        await updateBlockFields(ctx.tx, root.id, {
           deletedAt: null,
           trashEntryId: null,
           parentId: targetParentId,
           pageId: targetPageId,
           rank: targetRank,
           updatedAt: new Date(),
-        })
-        .where(eq(_blocks.id, root.id));
-    }
-
-    const nonRootRows = flagged.filter((r) => !rootIdSet.has(r.id));
-    if (nonRootRows.length > 0) {
-      // Subtree-internal rows: clear flags in bulk. Their `(parent_id, rank)`
-      // pairs were never contended by a live row (they moved as one body).
-      await tx
-        .update(_blocks)
-        .set({ deletedAt: null, trashEntryId: null })
-        .where(inArray(_blocks.id, nonRootRows.map((r) => r.id)));
-      for (const r of nonRootRows) {
-        if (r.pageId !== null) affectedPageIds.add(r.pageId);
+        });
       }
-    }
-  });
 
+      const nonRootRows = flagged.filter((r) => !rootIdSet.has(r.id));
+      if (nonRootRows.length > 0) {
+        await untrashBlockRoots(ctx.tx, nonRootRows.map((r) => r.id));
+        for (const r of nonRootRows) {
+          if (r.pageId !== null) affectedPageIds.add(r.pageId);
+        }
+      }
+      return { restoredIds, affectedPageIds };
+    },
+    executor,
+  );
+
+  const { restoredIds, affectedPageIds } = value;
   if (restoredIds.length === 0) return;
 
   await runOnRestore(restoredIds);
@@ -323,7 +335,7 @@ export async function untrashBlocks(
  * Purge (permanent hard-delete) a batch of trashed entries — the trash source's
  * `purge` callback, run by the retention sweep at 30 days OR by "Delete
  * permanently". For each entry: collect its still-trashed subtree (roots +
- * descendants), fire the BeforeDelete hooks over the FULL set (so
+ * descendants), fire the `OnDelete` hooks over the FULL set (so
  * `deleteVersions` / search deindex run — purge IS the deferred hard delete),
  * then DELETE the roots so the FK cascades finally reclaim content,
  * `page_block_docs`, `page_links`, ext side-tables, and attachment links.
@@ -334,13 +346,10 @@ export async function purgeTrashedPages(
   executor: BlockExecutor = db,
 ): Promise<void> {
   for (const entry of entries) {
-    const flagged = (await executor
+    const flagged = await executor
       .select({ id: _blocks.id, parentId: _blocks.parentId })
       .from(_blocks)
-      .where(eq(_blocks.trashEntryId, entry.id))) as Array<{
-      id: string;
-      parentId: string | null;
-    }>;
+      .where(eq(_blocks.trashEntryId, entry.id));
     if (flagged.length === 0) continue; // already purged or restored
 
     const flaggedIds = new Set(flagged.map((r) => r.id));
@@ -351,8 +360,24 @@ export async function purgeTrashedPages(
     // The full cascade set for the destroy hooks — collectBlockSubtrees walks
     // `parent_id` and deliberately keeps seeing trashed rows.
     const subtreeIds = await collectBlockSubtrees(rootIds, executor);
-    const afterCallbacks = await runBeforeDelete(subtreeIds);
-    await executor.delete(_blocks).where(inArray(_blocks.id, rootIds));
-    for (const after of afterCallbacks) await after();
+    const scopes = await pageScopesOf(executor, subtreeIds);
+
+    await withPageForest(
+      scopes,
+      async (ctx: PageForestCtx) => {
+        const rows = await ctx.tx
+          .select({
+            id: _blocks.id,
+            type: _blocks.type,
+            pageId: _blocks.pageId,
+            parentId: _blocks.parentId,
+          })
+          .from(_blocks)
+          .where(inArray(_blocks.id, subtreeIds));
+        await runOnDelete(ctx, rows);
+        await deleteBlockRoots(ctx.tx, rootIds);
+      },
+      executor,
+    );
   }
 }

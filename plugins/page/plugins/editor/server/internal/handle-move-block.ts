@@ -7,7 +7,9 @@ import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksChanged } from "./tables-events";
 import { loadLiveSiblings } from "./forest";
-import { recomputePageIdSubtree } from "./page-id";
+import { withPageForest } from "./page-forest";
+import { updateBlockFields } from "./forest-writer";
+import { computePageId, recomputePageIdSubtree } from "./page-id";
 
 export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => {
   if (body.parentId === params.id) {
@@ -17,12 +19,25 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
     throw new HttpError(400, "Cannot position a block relative to itself");
   }
 
-  // Read the destination sibling set and write the new rank in ONE transaction:
-  // the rank is minted against a consistent snapshot, so a concurrent insert
-  // under the same parent cannot slip between the read and the write. Mirrors
-  // the queue's `handle-reorder.ts`.
-  const { before, row } = await db.transaction(async (tx) => {
-    const [before] = await tx
+  // Name the two forests this move permutes — the block's own page and the
+  // destination's — so BOTH are locked and a cross-page move is atomic against
+  // each page's op stream. Read outside the lock deliberately: it decides which
+  // locks to take, never what to write, and everything authoritative is re-read
+  // under them. (`computePageId` is also the destination's liveness guard, so a
+  // trashed or missing parent still 404s.)
+  const [source] = await db
+    .select({ pageId: _blocks.pageId })
+    .from(_blocks)
+    .where(eq(_blocks.id, params.id))
+    .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  if (!source) throw new HttpError(404, "Not found");
+  const destPageId = await computePageId(body.parentId);
+
+  // The page lock subsumes the bespoke read-the-siblings-inside-the-tx defence
+  // this handler used to hand-roll: every read here is already under it.
+  const { value } = await withPageForest([source.pageId, destPageId], async (ctx) => {
+    const [before] = await ctx.tx
       .select({ id: _blocks.id, pageId: _blocks.pageId, type: _blocks.type })
       .from(_blocks)
       .where(eq(_blocks.id, params.id))
@@ -32,7 +47,7 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
 
     // Guards that the destination parent is LIVE (404 otherwise) and returns its
     // complete live sibling set for the rank math — see `loadLiveSiblings`.
-    const siblings = await loadLiveSiblings(tx, body.parentId);
+    const siblings = await loadLiveSiblings(ctx.tx, body.parentId);
     if (body.targetId !== null && !siblings.some((s) => s.id === body.targetId)) {
       throw new HttpError(
         400,
@@ -47,24 +62,21 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
       new Set([params.id]),
     );
 
-    await tx
-      .update(_blocks)
-      .set({
-        parentId: body.parentId,
-        rank: rank.toJSON(),
-        updatedAt: new Date(),
-      })
-      .where(eq(_blocks.id, params.id));
+    await updateBlockFields(ctx.tx, params.id, {
+      parentId: body.parentId,
+      rank: rank.toJSON(),
+      updatedAt: new Date(),
+    });
     // Reparenting may move the block (and its subtree) into a different page.
-    await recomputePageIdSubtree(params.id, tx);
+    await recomputePageIdSubtree(ctx.tx, params.id);
     if (body.parentId) {
-      await tx
-        .update(_blocks)
-        .set({ expanded: true, updatedAt: new Date() })
-        .where(eq(_blocks.id, body.parentId));
+      await updateBlockFields(ctx.tx, body.parentId, {
+        expanded: true,
+        updatedAt: new Date(),
+      });
     }
 
-    const [row] = await tx
+    const [row] = await ctx.tx
       .select()
       .from(_blocks)
       .where(eq(_blocks.id, params.id))
@@ -73,6 +85,7 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
     if (!row) throw new HttpError(404, "Not found after move");
     return { before, row };
   });
+  const { before, row } = value;
 
   // Fan out to reindex subscribers for both the old and the (possibly new) page
   // scope, deduped. The page_blocks content + sidebar live resources invalidate

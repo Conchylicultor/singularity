@@ -42,8 +42,11 @@ export type OpEffect =
   // whole planned forest lands in one server transaction, so the roots' presence
   // already implies their descendants'.
   | { kind: "create"; ids: string[] }
-  | { kind: "remove"; id: string } // merge, delete → blockId disappears
-  // indent/outdent/move → every listed block sits at its predicted parent+rank.
+  // merge → the merged block disappears; delete → every named root does. A list
+  // for the same reason `reparent` is one: deletion is a SET operation, and one
+  // gesture is one op.
+  | { kind: "remove"; ids: string[] }
+  // indent/outdent/move/bulkMove → every listed block sits at its predicted parent+rank.
   // A list, not one id: indent/outdent are set operations (a single Tab is the
   // one-element case). Only blocks that ACTUALLY moved are listed, so an op the
   // reducer partially refused still confirms on exactly what it did.
@@ -127,8 +130,12 @@ export function isReflected(blocks: Block[], e: OpEffect): boolean {
       const present = new Set(blocks.map((b) => b.id));
       return e.ids.every((id) => present.has(id));
     }
-    case "remove":
-      return !blocks.some((b) => b.id === e.id);
+    case "remove": {
+      // `ids` is never empty (a delete naming nothing is dropped before
+      // dispatch), so this is not vacuously true.
+      const present = new Set(blocks.map((b) => b.id));
+      return e.ids.every((id) => !present.has(id));
+    }
     case "reparent":
       // `moves` is never empty (a no-op op is never dispatched — `dispatchOp`
       // drops it), so this is not vacuously true.
@@ -448,8 +455,9 @@ export function buildOverlayOp(
     case "duplicate":
       return buildForestOverlayOp(op);
     case "merge":
+      return { tag: "op", op, effect: { kind: "remove", ids: [op.blockId] } };
     case "delete":
-      return { tag: "op", op, effect: { kind: "remove", id: op.blockId } };
+      return { tag: "op", op, effect: { kind: "remove", ids: op.blockIds } };
     case "unwrap": {
       // The container goes away AND its children are promoted, so the effect
       // carries both. The moved set is the container's CHILDREN, which the op
@@ -462,13 +470,15 @@ export function buildOverlayOp(
     }
     case "indent":
     case "outdent":
-    case "move": {
+    case "move":
+    case "bulkMove": {
       // Run the reducer once to read where the named blocks land, then key the
       // reparent effect on their predicted parent + rank (byte-identical to the
       // server, which runs the same reducer). Blocks the reducer refused to move
       // (a bulk indent's first child, say) are left OUT of the effect: their
       // parent+rank is unchanged, so listing them would make the apply-guard
-      // read the op as already-absorbed.
+      // read the op as already-absorbed. A `bulkMove`'s `opBlockIds` is the whole
+      // selection, so the same filter reduces it to the roots that really moved.
       const nodes = toNodes(rows);
       const moves = predictMoves(nodes, op, opBlockIds(op), anchorTypes);
       return { tag: "op", op, effect: { kind: "reparent", moves } };

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
+import type { BlockReadExecutor } from "./page-id";
 
 // Root ids plus every descendant via parent_id — the exact set ON DELETE CASCADE
 // will remove. Lets delete hooks snapshot subtree-dependent state before it
@@ -14,7 +14,7 @@ import { db } from "@plugins/database/server";
 // see exactly what vanishes.
 export async function collectBlockSubtrees(
   rootIds: string[],
-  executor: NodePgDatabase = db,
+  executor: BlockReadExecutor = db,
 ): Promise<string[]> {
   if (rootIds.length === 0) return [];
   const roots = sql.join(
@@ -35,7 +35,7 @@ export async function collectBlockSubtrees(
 /** Single-root convenience wrapper over {@link collectBlockSubtrees}. */
 export async function collectBlockSubtree(
   rootId: string,
-  executor: NodePgDatabase = db,
+  executor: BlockReadExecutor = db,
 ): Promise<string[]> {
   return collectBlockSubtrees([rootId], executor);
 }

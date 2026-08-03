@@ -9,26 +9,21 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { patchBlocks, type Block } from "../core";
+import { blocksResource, moveBlock, patchBlocks, type Block } from "../core";
 import { BlockEditorProviderInner } from "./block-editor-context";
 import type { CaretSurfaceRef } from "./caret-surface";
-import {
-  useServerBlockStore,
-  type BlockMoveDest,
-  type BlockStore,
-} from "./block-store";
+import { useServerBlockStore, type BlockStore } from "./block-store";
 import type { BlockOverlayOp } from "./internal/optimistic-block-ops";
 import {
   deriveMounts,
-  groupIdsByOwnerPage,
   groupPatchByOwnerPage,
   insertOwnerPage,
   pageByAnchor,
   remapUnionParents,
-  resolveOpOwnerPage,
   rowOwnerPage,
-  singleOwnerPage,
+  splitOpByOwnerPage,
   translateOpForStore,
   translatePatchForStore,
   translateUnionParentId,
@@ -185,14 +180,44 @@ export function CompositeServerProviderHost({
   const mountsRef = useLatestRef(mounts);
   const dataRef = useLatestRef(data);
 
-  // The owning page's live store. Throws on an unmounted page: every routed
-  // write except a patch (which has the detached-persist path) targets rows
-  // the user can currently see, so a miss is a routing bug — fail loudly.
+  // The owning page's live store. Throws on an unmounted page: an OP targets
+  // rows the user can currently see, so a miss is a routing bug — fail loudly.
+  // (The two writes that legitimately have no mounted feed — the detached patch
+  // persist and the cross-page move — never come through here.)
   const storeFor = useCallback((owner: string): BlockStore => {
     const feed = feedsRef.current.get(owner);
     if (!feed) throw new Error(`No mounted feed for page ${owner}`);
     return feed.store.current;
   }, []);
+
+  /**
+   * A drop whose source and destination live on DIFFERENT pages permutes two
+   * forests at once, and no per-page overlay can predict it: the moved row leaves
+   * the source page's `blocksResource` entirely (the server re-stamps its
+   * `page_id`), so the source feed could never confirm a `reparent` effect that
+   * names a row it will never hold again.
+   *
+   * So a cross-page move stays on the id-scoped `moveBlock` endpoint, which is
+   * already cross-page-aware (it locks BOTH forests, recomputes `page_id`, and
+   * notifies both scopes). What Stage 4 gives it is ORDER: the write is enqueued
+   * on the SOURCE page's send lane, so it still departs after every structural
+   * write the user issued before it. There is nothing to predict; there is
+   * something to order.
+   */
+  const moveAcrossPages = useCallback(
+    (sourcePageId: string, op: Extract<BlockOverlayOp, { tag: "op" }>["op"]) => {
+      if (op.kind !== "move") throw new Error(`Not a move op: ${op.kind}`);
+      const parentId = translateUnionParentId(op.parentId, mountsRef.current);
+      void enqueueResourceWrite(blocksResource, { pageId: sourcePageId }, () =>
+        fetchEndpoint(
+          moveBlock,
+          { id: op.blockId },
+          { body: { parentId, targetId: op.targetId, zone: op.zone } },
+        ),
+      );
+    },
+    [],
+  );
 
   const dispatch = useCallback(
     (v: BlockOverlayOp) => {
@@ -212,86 +237,55 @@ export function CompositeServerProviderHost({
             feed.store.current.dispatch({ tag: "patch", patch });
           } else {
             // Detached persist (undo/redo targeting a collapsed page): no
-            // mounted feed means no overlay to reconcile, so POST the patch
+            // mounted feed means no overlay to reconcile, so write the patch
             // straight to the owning page — the data stays correct, invisible
-            // until re-expanded.
-            // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- detached persist into an unmounted page: there is no visible surface to reconcile, the page's own feed re-syncs on next expand, and a rejection still surfaces loudly as an unhandled-rejection crash report.
-            void fetchEndpoint(patchBlocks, { pageId: owner }, { body: patch });
+            // until re-expanded. The send lane is MODULE-level, so the write
+            // still joins that page's own ordered stream with no mounted hook:
+            // ordering holds, there is simply nothing to predict.
+            void enqueueResourceWrite(blocksResource, { pageId: owner }, () =>
+              fetchEndpoint(patchBlocks, { pageId: owner }, { body: patch }),
+            );
           }
         }
         return;
       }
-      const owner = resolveOpOwnerPage(dataRef.current, v.op, curMounts, basePageId);
-      storeFor(owner).dispatch(translateOpForStore(v, curMounts, seenAnchorsRef.current));
-    },
-    [basePageId, storeFor],
-  );
-
-  const move = useCallback(
-    (id: string, dest: BlockMoveDest) => {
-      // Route the optimistic overlay to the SOURCE row's feed; the endpoint is
-      // id-scoped and already cross-page (the server recomputes `page_id` and
-      // notifies both pages — the push reconciles the destination feed).
-      const owner = rowOwnerPage(dataRef.current, id);
-      const parentId = translateUnionParentId(dest.parentId, mountsRef.current);
-      storeFor(owner).move(id, parentId === dest.parentId ? dest : { ...dest, parentId });
-    },
-    [storeFor],
-  );
-
-  const bulkDelete = useCallback(
-    (ids: string[]) => {
-      // Per-page groups match bulk-delete's `WHERE page_id` ownership guard;
-      // each owning store deletes its own rows, so the op never half-applies.
-      for (const [owner, group] of groupIdsByOwnerPage(dataRef.current, ids)) {
-        storeFor(owner).bulkDelete(group);
+      // A cross-page single-block drop is the ONE structural write no page's
+      // overlay can carry — see `moveAcrossPages`.
+      if (v.op.kind === "move") {
+        const rows = dataRef.current;
+        const sourcePageId = rowOwnerPage(rows, v.op.blockId);
+        const destPageId = insertOwnerPage(rows, v.op.parentId, curMounts, basePageId);
+        if (sourcePageId !== destPageId) {
+          moveAcrossPages(sourcePageId, v.op);
+          return;
+        }
       }
-    },
-    [storeFor],
-  );
-
-  const bulkMove = useCallback(
-    (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
-      const rows = dataRef.current;
-      const curMounts = mountsRef.current;
-      const anchorOwner =
-        args.afterId !== null
-          ? rowOwnerPage(rows, args.afterId)
-          : insertOwnerPage(rows, args.parentId, curMounts, basePageId);
-      // v1 guard: a multi-select drag whose roots span pages (or leave their
-      // page) fails loudly rather than half-applying — see the plan's risk #2.
-      const owner = singleOwnerPage(rows, args.ids);
-      if (owner !== anchorOwner) {
-        throw new Error(
-          `Cannot bulk-move blocks of page ${owner} into page ${anchorOwner}; ` +
-            `cross-page bulk moves are not supported`,
+      // Every other op routes to the page owning its rows; only a `delete` set
+      // may span pages, and it fans out into one op per page.
+      for (const { owner, v: routed } of splitOpByOwnerPage(
+        dataRef.current,
+        v,
+        curMounts,
+        basePageId,
+      )) {
+        storeFor(owner).dispatch(
+          translateOpForStore(routed, curMounts, seenAnchorsRef.current),
         );
       }
-      storeFor(anchorOwner).bulkMove({
-        ...args,
-        parentId: translateUnionParentId(args.parentId, curMounts),
-      });
     },
-    [basePageId, storeFor],
+    [basePageId, storeFor, moveAcrossPages],
   );
 
-  // No routed `paste` and no routed `bulkDuplicate`: both are `BlockOp`s, so they
-  // arrive through `dispatch` above, where `resolveOpOwnerPage` applies the same
-  // anchor rules these used to (row owner for `afterId`, `insertOwnerPage` when
-  // anchorless; `singleOwnerPage` over a duplicate's placement anchors, which is
-  // the same cross-page refusal, from the same helper) and `translateOpForStore`
-  // rewrites a page-link anchor `parentId` into the real page id.
+  // There are no routed write members left. Every structural mutation is a
+  // `BlockOp` (or an undo/redo `BlockPatch`), so it arrives through `dispatch`,
+  // where `resolveOpOwnerPage` applies the anchor rules the bespoke members used
+  // to (row owner for a named block, `insertOwnerPage` when anchorless,
+  // `singleOwnerPage` for the sets that must not span pages) and
+  // `translateOpForStore` rewrites a page-link anchor `parentId` into the real
+  // page id.
   const store = useMemo<BlockStore>(
-    () => ({
-      data,
-      serverData,
-      pending,
-      dispatch,
-      move,
-      bulkDelete,
-      bulkMove,
-    }),
-    [data, serverData, pending, dispatch, move, bulkDelete, bulkMove],
+    () => ({ data, serverData, pending, dispatch }),
+    [data, serverData, pending, dispatch],
   );
 
   return (

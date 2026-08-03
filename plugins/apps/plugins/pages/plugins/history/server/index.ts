@@ -17,6 +17,6 @@ export default {
     // bound) so the events plugin makes it idempotent across reboots.
     Trigger({ on: blocksChanged, do: pageHistoryScheduleJob, with: {}, oneShot: false }),
     // A page delete FK-cascades its blocks; drop the page's version history too.
-    BlockLifecycle.BeforeDelete(deletePageHistoryHook),
+    BlockLifecycle.OnDelete(deletePageHistoryHook),
   ],
 } satisfies ServerPluginDefinition;

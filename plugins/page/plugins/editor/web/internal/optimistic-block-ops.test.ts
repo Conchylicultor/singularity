@@ -68,9 +68,12 @@ describe("isReflected", () => {
     expect(isReflected(blocks, { kind: "create", ids: ["NEW"] })).toBe(false);
   });
 
-  test("remove: true when the id is absent, false when present", () => {
-    expect(isReflected(blocks, { kind: "remove", id: "GONE" })).toBe(true);
-    expect(isReflected(blocks, { kind: "remove", id: "A" })).toBe(false);
+  test("remove: true when every id is absent, false when any is present", () => {
+    expect(isReflected(blocks, { kind: "remove", ids: ["GONE"] })).toBe(true);
+    expect(isReflected(blocks, { kind: "remove", ids: ["A"] })).toBe(false);
+    expect(isReflected(blocks, { kind: "remove", ids: ["GONE", "ALSO-GONE"] })).toBe(true);
+    // A bulk delete is only absorbed once the WHOLE set is gone.
+    expect(isReflected(blocks, { kind: "remove", ids: ["GONE", "A"] })).toBe(false);
   });
 
   test("reparent: matches on id + parentId + rank; rank mismatch → false", () => {
@@ -244,10 +247,10 @@ describe("chained compose", () => {
     expect(ins.effect).toEqual({ kind: "create", ids: ["I"] });
 
     const merge = expectOp(buildOverlayOp({ kind: "merge", blockId: "P2" }, rows));
-    expect(merge.effect).toEqual({ kind: "remove", id: "P2" });
+    expect(merge.effect).toEqual({ kind: "remove", ids: ["P2"] });
 
-    const del = expectOp(buildOverlayOp({ kind: "delete", blockId: "P1" }, rows));
-    expect(del.effect).toEqual({ kind: "remove", id: "P1" });
+    const del = expectOp(buildOverlayOp({ kind: "delete", blockIds: ["P1"] }, rows));
+    expect(del.effect).toEqual({ kind: "remove", ids: ["P1"] });
 
     expect(merge.op.kind).toBe("merge");
   });
@@ -572,8 +575,8 @@ describe("sameOverlayTarget", () => {
       { kind: "split", blockId: "A", position: 1, newId: "NEW" },
       rows,
     );
-    const del = buildOverlayOp({ kind: "delete", blockId: "A" }, rows);
-    const other = buildOverlayOp({ kind: "delete", blockId: "B" }, rows);
+    const del = buildOverlayOp({ kind: "delete", blockIds: ["A"] }, rows);
+    const other = buildOverlayOp({ kind: "delete", blockIds: ["B"] }, rows);
     expect(sameOverlayTarget(split, del)).toBe(true); // both touch A
     expect(sameOverlayTarget(split, other)).toBe(false);
     // op ↔ patch across the same row

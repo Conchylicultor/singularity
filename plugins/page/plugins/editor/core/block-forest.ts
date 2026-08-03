@@ -42,6 +42,52 @@ export function rankWindow(
 }
 
 /**
+ * The rank a row lands on when dropped `zone` of `targetId` among `parentId`'s
+ * children — positional INTENT resolved into a key, over the sibling set the
+ * caller holds.
+ *
+ * This is the reducer's half of the positional-intent contract: `move` travels
+ * as `(parentId, targetId, zone)` and NEVER as a rank, because `page_blocks` has
+ * one `(parent_id, rank)` space that several live resources project disjointly.
+ * Both sides then mint their own key here — the client for its overlay, the
+ * server authoritatively — which agrees exactly as long as both hold the
+ * COMPLETE sibling set under `parentId`. That is the invariant a `move` op
+ * carries (the destination lies inside the op's own page; a cross-page drop is
+ * not one page's op — see `composite-block-store.tsx`).
+ *
+ * `targetId: null` addresses the sibling-list boundary rather than a neighbour:
+ * `"after"` appends, `"before"` prepends — byte-for-byte the contract
+ * `MoveBlockBodySchema` states for the wire.
+ *
+ * `excludeIds` are rows leaving this sibling list, so they never bound their own
+ * destination window.
+ */
+export function positionalRank(
+  nodes: BlockNode[],
+  parentId: string | null,
+  targetId: string | null,
+  zone: "before" | "after",
+  excludeIds: ReadonlySet<string>,
+): Rank {
+  const siblings = nodes
+    .filter((n) => n.parentId === parentId && !excludeIds.has(n.id))
+    .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)));
+  // Reduce the (target, zone) pair to the ONE anchor `rankWindow` understands:
+  // the sibling the row lands immediately after, or null for the list's start.
+  let afterId: string | null;
+  if (targetId === null) {
+    afterId = zone === "after" ? (siblings[siblings.length - 1]?.id ?? null) : null;
+  } else if (zone === "after") {
+    afterId = targetId;
+  } else {
+    const idx = siblings.findIndex((s) => s.id === targetId);
+    afterId = idx > 0 ? siblings[idx - 1]!.id : null;
+  }
+  const [prev, next] = rankWindow(nodes, parentId, afterId, excludeIds);
+  return Rank.between(prev, next);
+}
+
+/**
  * Plan the insertion of an already-identified forest under `parentId`, minting
  * child ranks (`Rank.nBetween`). The pure core of the server's `insertForest`:
  * returns new `BlockNode` descriptors (parent-before-descendant order, a valid

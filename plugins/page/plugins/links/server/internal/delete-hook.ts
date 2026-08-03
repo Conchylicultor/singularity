@@ -25,7 +25,7 @@ async function pageIdsAmong(blockIds: string[]): Promise<string[]> {
 // edges, and the L4 change-feed fans out to every dependent backlinksResource. No
 // hand-snapshot / re-push needed.
 export const backlinksDeleteHook: BlockDeleteHook = {
-  beforeDelete: () => undefined,
+  onDelete: () => undefined,
 };
 
 // TRASH (soft delete): the cascade never fired, so a trashed page's OUTGOING

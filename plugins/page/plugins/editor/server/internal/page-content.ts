@@ -1,4 +1,4 @@
-import { eq, and, ne, desc, isNull } from "drizzle-orm";
+import { eq, and, desc, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
@@ -6,7 +6,13 @@ import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import type { PageData } from "../../core/schemas";
 import type { SerializedBlock } from "../../core/serialized-block";
 import { _blocks } from "./tables";
-import { loadPageBlocks, insertForest } from "./forest";
+import { loadPageBlocks } from "./forest";
+import { withPageForest, pageScopesOf } from "./page-forest";
+import {
+  deletePageContentRows,
+  insertForest,
+  updateBlockFields,
+} from "./forest-writer";
 import { pageData } from "../../core/schemas";
 import { notifyBlockChange } from "./notify";
 import { parseBlockData } from "./parse-block-data";
@@ -140,34 +146,27 @@ export async function replacePageContent(
   snapshot: PageContentSnapshot,
 ): Promise<void> {
   const forest = rowsToForest(snapshot.blocks, pageId);
-  await db.transaction(async (tx) => {
+  // Two forests change: this page's content, and the one its own shell row sits
+  // in (the restore rewrites the shell's `data`, i.e. the page title the sidebar
+  // renders). `pageScopesOf` resolves the second.
+  const scopes = [pageId, ...(await pageScopesOf(db, [pageId]))];
+  await withPageForest(scopes, async (ctx) => {
     // Wipe only LIVE, NON-page content (FK cascade clears their descendants).
     // Excluding `type="page"` preserves each sub-page SHELL and — because a soft
     // delete never cascades — the sub-page's own content, which the snapshot
     // never captured (the 2026-07-10-class bug for history restore). Excluding
     // trashed rows leaves the trash intact. The page block row itself is
     // preserved (its data is overwritten below).
-    await tx
-      .delete(_blocks)
-      .where(
-        and(
-          eq(_blocks.pageId, pageId),
-          ne(_blocks.type, PAGE_BLOCK_TYPE),
-          isNull(_blocks.deletedAt),
-        ),
-      );
-    await tx
-      .update(_blocks)
-      .set({
-        data: parseBlockData(PAGE_BLOCK_TYPE, snapshot.page),
-        updatedAt: new Date(),
-      })
-      .where(eq(_blocks.id, pageId));
+    await deletePageContentRows(ctx.tx, pageId);
+    await updateBlockFields(ctx.tx, pageId, {
+      data: parseBlockData(PAGE_BLOCK_TYPE, snapshot.page),
+      updatedAt: new Date(),
+    });
     if (forest.length > 0) {
       // Surviving sub-page shells keep their ranks under `pageId`; place the
       // rebuilt content strictly after the highest surviving rank so the
       // `(parent_id, rank)` live unique index can never collide.
-      const [maxRow] = await tx
+      const [maxRow] = await ctx.tx
         .select({ rank: _blocks.rank })
         .from(_blocks)
         .where(and(eq(_blocks.parentId, pageId), isNull(_blocks.deletedAt)))
@@ -175,7 +174,7 @@ export async function replacePageContent(
         .limit(1);
       const floor = maxRow ? Rank.from(maxRow.rank) : null;
       const rootRanks = Rank.nBetween(floor, null, forest.length);
-      await insertForest(tx, { pageId, parentId: pageId, rootRanks, forest });
+      await insertForest(ctx.tx, { pageId, parentId: pageId, rootRanks, forest });
     }
   });
   await notifyBlockChange({ pageId, type: PAGE_BLOCK_TYPE, blockId: pageId });

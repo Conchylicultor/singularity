@@ -10,8 +10,6 @@ import { handleMoveBlock } from "./internal/handle-move-block";
 import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
-import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
-import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 import { untrashBlocks, purgeTrashedPages } from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
@@ -27,8 +25,6 @@ import {
   turnIntoPage,
   applyBlockOpEndpoint,
   patchBlocks,
-  bulkDeleteBlocks,
-  bulkMoveBlocks,
 } from "../core/endpoints";
 
 export { _blocks } from "./internal/tables";
@@ -37,11 +33,14 @@ export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
 export type {
+  AfterCommit,
   BlockCreateHook,
   BlockDeleteHook,
-  BlockTrashHook,
   BlockRestoreHook,
+  BlockTrashHook,
+  DeletedBlockRow,
 } from "./internal/document-hooks";
+export type { PageForestTx } from "./internal/page-forest";
 export { deleteBlocksSubtree } from "./internal/trash-blocks";
 export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/schemas";
 export type { Block, PageData } from "../core/schemas";
@@ -61,14 +60,12 @@ export default {
     [turnIntoPage.route]: handleTurnIntoPage,
     [applyBlockOpEndpoint.route]: handleApplyBlockOp,
     [patchBlocks.route]: handlePatchBlocks,
-    [bulkDeleteBlocks.route]: handleBulkDeleteBlock,
-    [bulkMoveBlocks.route]: handleBulkMoveBlock,
   },
   register: [
     blocksChanged,
     // The pages trash source: soft-deleted pages restore by clearing their
     // `deleted_at` flags (untrashBlocks) and are hard-deleted only at purge
-    // (purgeTrashedPages runs the BeforeDelete hooks + cascades).
+    // (purgeTrashedPages runs the OnDelete hooks + cascades).
     defineTrashSource({
       id: PAGES_TRASH_SOURCE,
       restore: untrashBlocks,

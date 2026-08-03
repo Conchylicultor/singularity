@@ -24,15 +24,13 @@
 - Server:
   - Contributes:
     - `trigger` "pages.history.schedule"
-    - `page.editor.block.beforeDelete`
+    - `page.editor.block.onDelete`
   - Uses:
-    - `database.db`
     - `history/engine.defineHistorySource`
     - `history/engine.deleteVersions`
     - `history/engine.recordVersion`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `page/editor._blocks`
     - `page/editor.BlockDeleteHook`
     - `page/editor.BlockLifecycle`
     - `page/editor.blocksChanged`

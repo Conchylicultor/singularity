@@ -13,9 +13,8 @@ import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/late
 import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
-  computeDrop,
+  resolveDropParent,
   selectionRoots,
-  subtreeIds,
 } from "@plugins/primitives/plugins/tree/core";
 import {
   prevVisibleLine,
@@ -23,11 +22,9 @@ import {
   runsOfNode,
   runsLength,
   applyBlockOp,
-  applyBulkMove,
   childrenOf,
   diffBlocks,
   inDocumentOrder,
-  planBulkMove,
   patchesFromDiff,
   isEmptyPatch,
   withMintedIds,
@@ -66,13 +63,14 @@ import type { BlockEditorAPI } from "./types";
 /** Human labels for the structural-undo history (tooltips / menus). */
 const OP_LABELS: Record<BlockOp["kind"], string> = {
   insert: "Insert block",
-  delete: "Delete block",
+  delete: "Delete blocks",
   split: "Split block",
   merge: "Merge blocks",
   indent: "Indent blocks",
   outdent: "Outdent blocks",
   unwrap: "Remove container",
   move: "Move block",
+  bulkMove: "Move blocks",
   paste: "Paste blocks",
   duplicate: "Duplicate blocks",
 };
@@ -87,7 +85,6 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
     case "split":
       return op.newId;
     case "merge":
-    case "delete":
     case "move":
       return op.blockId;
     case "unwrap":
@@ -98,10 +95,16 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
       return childrenOf(toNodes(before), op.blockId)[0]?.id ?? null;
     case "indent":
     case "outdent":
-      // A bulk indent/outdent is driven from block-SELECTION mode, where focus
-      // lives on the selection container, not in any block's editor. Undo/redo
-      // then falls back to the patch's own first upsert.
+    // A bulk delete names the whole selection; a single Backspace-delete names
+    // exactly one block, and only then is there a caret to restore.
+    case "delete":
+      // A bulk indent/outdent/delete is driven from block-SELECTION mode, where
+      // focus lives on the selection container, not in any block's editor.
+      // Undo/redo then falls back to the patch's own first upsert.
       return op.blockIds.length === 1 ? (op.blockIds[0] ?? null) : null;
+    case "bulkMove":
+      // Same rule, same reason: a selection drag leaves focus on the container.
+      return op.ids.length === 1 ? (op.ids[0] ?? null) : null;
     case "paste":
     // A duplicate is paste's shape exactly: clones land after their sources and
     // focus stays on the selection container. (Selecting the clones is a
@@ -1002,81 +1005,6 @@ export function BlockEditorProviderInner({
     [commitRow, liveRowsRef],
   );
 
-  const bulkDelete = useCallback(
-    (ids: string[]) => {
-      if (ids.length === 0) return;
-      // Record before firing: after = current rows minus each id's full subtree
-      // (the server cascade-deletes the subtree, so mirror that exactly).
-      const before = rowsRef.current;
-      const removed = new Set(ids.flatMap((id) => subtreeIds(before, id)));
-      const after = before.filter((b) => !removed.has(b.id));
-      recordStructural(before, after, "Delete blocks", null);
-      store.bulkDelete(ids);
-    },
-    [store, recordStructural],
-  );
-
-  const bulkMove = useCallback(
-    (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
-      if (args.ids.length === 0) return;
-      // Positional intent goes to the store (the server owns rank authority), but
-      // this editor holds the page's forest whole, so it can predict the placement
-      // locally for the undo record — exactly as `move` does. `planBulkMove` is the
-      // SAME planner the store and the server run, so the recorded after-state is
-      // byte-identical to what gets committed. No optimistic overlay: the forward
-      // write is still the bespoke endpoint, like `bulkDelete`.
-      const before = rowsRef.current;
-      const plan = planBulkMove(toNodes(before), args);
-      // A refused plan (empty selection, or a destination inside the selection)
-      // changes nothing — drop it before recording and before the network, the
-      // same discipline `dispatchOp` applies to an empty reducer diff.
-      if (plan.refusal) return;
-      const after = fromNodes(applyBulkMove(toNodes(before), plan), before);
-      // `focusId` is null for the reason `bulkDelete` passes null: a bulk move is
-      // driven from block-selection mode, where focus lives on the selection
-      // container rather than in any row. `"Move blocks"` is a literal because
-      // `bulkMove` is not a `BlockOp` and so has no `OP_LABELS` entry.
-      recordStructural(before, after, "Move blocks", null);
-      store.bulkMove(args);
-    },
-    [store, recordStructural],
-  );
-
-  const move = useCallback(
-    (id: string, zone: "before" | "after", targetId: string) => {
-      // Positional intent, never a rank: the STORE owns rank authority (the
-      // server mints it against the true sibling set; the memory store mints it
-      // over its own complete forest). But this editor legitimately holds the
-      // complete forest for the page (`blocksResource` is unfiltered), so it can
-      // predict the resulting rank locally for the optimistic overlay and the
-      // undo record. The store's value is authoritative on reconcile.
-      const before = rowsRef.current;
-      const dest = computeDrop(before, id, zone, targetId);
-      if (!dest) return;
-      const current = before.find((r) => r.id === id);
-      if (
-        current &&
-        current.parentId === dest.parentId &&
-        Rank.equals(current.rank, dest.rank)
-      ) {
-        return;
-      }
-      const after = fromOpResult(
-        before,
-        {
-          kind: "move",
-          blockId: id,
-          parentId: dest.parentId,
-          rank: dest.rank.toJSON(),
-        },
-        anchorTypes,
-      );
-      recordStructural(before, after, OP_LABELS.move, id);
-      store.move(id, { parentId: dest.parentId, rank: dest.rank, targetId, zone });
-    },
-    [store, recordStructural, anchorTypes],
-  );
-
   // Apply a single tree op optimistically AND record it for structural undo. The
   // effect is captured from the CURRENT rows (`rowsRef.current`), so chained
   // keystrokes compose; `store.dispatch` overlays the prediction and fires the
@@ -1102,6 +1030,47 @@ export function BlockEditorProviderInner({
       store.dispatch(buildOverlayOp(op, before, anchorTypes));
     },
     [store, recordStructural, anchorTypes, advanceRows],
+  );
+
+  // The three drag/selection writers are ORDINARY OPS, which is the whole point:
+  // each is a `BlockOp` dispatched through `dispatchOp`, so it gets the
+  // optimistic overlay, the undo entry, the empty-diff drop and — the reason
+  // this stage exists — a place in the page's ordered write stream. Each used to
+  // be a bespoke fire-and-forget POST outside all four.
+  //
+  // MUST stay below `dispatchOp` — they close over it, like `paste`.
+
+  const bulkDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      // ONE op, so one gesture is one undo entry and one server transaction
+      // however many roots it names — never N single deletes.
+      dispatchOp({ kind: "delete", blockIds: ids });
+    },
+    [dispatchOp],
+  );
+
+  const bulkMove = useCallback(
+    (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
+      if (args.ids.length === 0) return;
+      dispatchOp({ kind: "bulkMove", ...args });
+    },
+    [dispatchOp],
+  );
+
+  const move = useCallback(
+    (id: string, zone: "before" | "after", targetId: string) => {
+      // POSITIONAL intent only. `resolveDropParent` is the rank-FREE half of
+      // `computeDrop` on purpose: the op carries `(parentId, targetId, zone)` and
+      // each side mints its own key from its own sibling set (see
+      // `positionalRank`), so there is no rank for this layer to predict — and a
+      // drop that changes nothing is dropped by `dispatchOp`'s empty-diff rule
+      // rather than by a hand-rolled same-position check.
+      const dest = resolveDropParent(rowsRef.current, id, zone, targetId);
+      if (!dest) return;
+      dispatchOp({ kind: "move", blockId: id, parentId: dest.parentId, targetId, zone });
+    },
+    [dispatchOp],
   );
 
   // Paste a serialized forest — a plain `dispatchOp`, which is the whole point:
@@ -1646,7 +1615,7 @@ export function BlockEditorProviderInner({
         mergeBlock(next.id, runs);
       },
       remove() {
-        dispatchOp({ kind: "delete", blockId });
+        dispatchOp({ kind: "delete", blockIds: [blockId] });
       },
       indent() {
         // Thin executor: the "has a previous sibling to nest under" guard is owned

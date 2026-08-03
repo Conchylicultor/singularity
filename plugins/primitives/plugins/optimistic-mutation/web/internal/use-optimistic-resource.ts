@@ -14,6 +14,7 @@ import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { optimisticDivergenceReportSink } from "../reporter";
+import { enqueueResourceSend, sendLaneKey } from "./send-lane";
 import {
   ackPass,
   clearFailure,
@@ -218,6 +219,13 @@ export function useOptimisticResource<
   const queryKey = useMemo(() => queryKeyFor(resource.key, params), [resource.key, params]);
   const queryKeyRef = useLatestRef(queryKey);
   const targetKey = useMemo(() => JSON.stringify(queryKey), [queryKey]);
+  // This tuple's send lane (module-level, shared with every other mount on the
+  // same `(key, params)`). Read off a latest-ref at call time so dispatch/retry/
+  // drain keep stable identities while still enqueuing onto the LIVE tuple's
+  // lane — ops never outlive their tuple, so a params re-baseline swaps lanes
+  // with it.
+  const laneKey = useMemo(() => sendLaneKey(resource.key, params), [resource.key, params]);
+  const laneKeyRef = useLatestRef(laneKey);
 
   // The server-acked ops and the server's snapshots durably disagree — either
   // provably superseded (dropped, healthy) or stalled past the miss threshold
@@ -342,8 +350,12 @@ export function useOptimisticResource<
 
   // Fire (or re-fire) an op's `mutate`. Stable identity: dispatch, retry, and
   // the reconnect auto-retry all share it, reading the freshest mutate/onError
-  // off their latest-refs. Returns the outcome so the sequential failed-op
-  // drain can stop when the transport is still down.
+  // off their latest-refs. Returns the outcome so the failed-op drain can stop
+  // when the transport is still down.
+  //
+  // This is the SEND ITSELF and knows nothing about ordering: every caller runs
+  // it inside a send-lane slot (see `send-lane.ts`), so the lane is the one
+  // mechanism and classification/`failed`/`retry`/`savedAt` stay untouched by it.
   const runMutate = useCallback(
     (opId: string, vars: Vars): Promise<"resolved" | OpFailure["kind"]> => {
       return mutateRef.current(vars).then(
@@ -420,10 +432,14 @@ export function useOptimisticResource<
         ...pendingRef.current,
         { opId, vars, resolved: false, dispatchGen, misses: 0, divergenceReported: false },
       ]);
-      void runMutate(opId, vars);
+      // Onto the tuple's send lane, never straight at the network: this op's
+      // predecessors must reach the server first. Head-of-line blocking is real
+      // and deliberately invisible — the overlay above already rendered the op
+      // (never-revert), so only its WIRE departure waits.
+      void enqueueResourceSend(laneKeyRef.current, () => runMutate(opId, vars));
       return opId;
     },
-    [queryClient, commitPending, runMutate],
+    [queryClient, commitPending, runMutate, laneKeyRef],
   );
 
   // Re-fire a failed op IN PLACE: clear its failure and re-run its mutate under
@@ -441,38 +457,47 @@ export function useOptimisticResource<
   );
   const retry = useCallback(
     (opId: string) => {
-      void retryOp(opId);
+      void enqueueResourceSend(laneKeyRef.current, async () => {
+        await retryOp(opId);
+      });
     },
-    [retryOp],
+    [retryOp, laneKeyRef],
   );
 
-  // Sequential single-flight drain of failed ops, in overlay order. Ordering is
-  // load-bearing: structural ops depend on their predecessors' server-side
-  // effects (a second split targets the block the first one created), so a
-  // concurrent replay can land out of order and be durably rejected for a row
-  // that is merely not committed YET. Await each op before firing the next; a
-  // `network` outcome stops the drain (the transport is still down — every
-  // later op would fail the same way; the next reconnect edge re-drains), an
-  // `http` outcome parks that op for manual Retry and keeps draining (later
-  // ops get their in-order shot).
+  // Single-flight drain of failed ops, in overlay order. The lane sequences the
+  // sends — the drain's own job is the EARLY-STOP verdict: a `network` outcome
+  // skips the rest of the batch (the transport is still down, so every later op
+  // would fail the same way; a skipped op keeps its `failure`, so the next
+  // reconnect edge — or the cloud's Retry — re-drains from the top). An `http`
+  // outcome parks that op for manual Retry and the batch keeps going, so later
+  // ops still get their in-order shot.
+  //
+  // The whole batch is enqueued SYNCHRONOUSLY rather than awaiting each op
+  // before enqueuing the next: an await-loop would let a keystroke dispatched
+  // mid-drain slot between two older ops it may causally depend on. Occupying
+  // consecutive lane slots up front is what makes that impossible.
   const drainingRef = useRef(false);
   const drainFailed = useCallback(
-    async (kinds: ReadonlyArray<OpFailure["kind"]>) => {
+    (kinds: ReadonlyArray<OpFailure["kind"]>) => {
       if (drainingRef.current) return;
+      const opIds = pendingRef.current
+        .filter((op) => op.failure !== undefined && kinds.includes(op.failure.kind))
+        .map((op) => op.opId);
+      if (opIds.length === 0) return;
       drainingRef.current = true;
-      try {
-        const opIds = pendingRef.current
-          .filter((op) => op.failure !== undefined && kinds.includes(op.failure.kind))
-          .map((op) => op.opId);
-        for (const opId of opIds) {
+      let stopped = false;
+      const attempts = opIds.map((opId) =>
+        enqueueResourceSend(laneKeyRef.current, async () => {
+          if (stopped) return;
           const outcome = await retryOp(opId);
-          if (outcome === "network") return;
-        }
-      } finally {
+          if (outcome === "network") stopped = true;
+        }),
+      );
+      void Promise.allSettled(attempts).then(() => {
         drainingRef.current = false;
-      }
+      });
     },
-    [retryOp],
+    [retryOp, laneKeyRef],
   );
 
   // Auto-retry NETWORK-failed ops on reconnect edges (mirrors the Yjs
@@ -488,7 +513,7 @@ export function useOptimisticResource<
   // durable verdict, so re-firing them on reconnect would just repeat it —
   // they wait for an explicit `retry`.
   const retryNetworkFailed = useCallback(() => {
-    void drainFailed(["network"]);
+    drainFailed(["network"]);
   }, [drainFailed]);
   useEffect(() => {
     const socketKind = resource.origin === "central" ? "central" : "worktree";
@@ -523,12 +548,12 @@ export function useOptimisticResource<
         .map((op) => ({ opId: op.opId, vars: op.vars })),
     [pending],
   );
-  // Re-run only THIS hook's own failed ops — the SAME sequential drain as the
-  // reconnect edges (order dependence doesn't care why an op failed), widened
-  // to both kinds so the cloud's Retry also nudges network-failed ops. Stable
-  // identity: the indicator pulls it imperatively.
+  // Re-run only THIS hook's own failed ops — the SAME drain as the reconnect
+  // edges (order dependence doesn't care why an op failed), widened to both
+  // kinds so the cloud's Retry also nudges network-failed ops. Stable identity:
+  // the indicator pulls it imperatively.
   const retryAll = useCallback(() => {
-    void drainFailed(["http", "network"]);
+    drainFailed(["http", "network"]);
   }, [drainFailed]);
 
   // Re-fetch the RESOURCE (not an op) — the retry for a failing READ.

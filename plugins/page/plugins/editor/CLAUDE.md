@@ -255,6 +255,68 @@ hand-written `PATCH` or a pasted `SerializedBlock` sets `expanded` to.
   editing-surface view state — so the editor and the version-history *diff*
   deliberately disagree about what the document shows.
 
+## A page's structural writes are one ordered stream over one locked forest
+
+Two invariants, deliberately not conflated. **A is per-page and server-side; B is
+per-writer and client-side.** Between two *different* writers (a second tab, an
+MCP writer) no causal order exists, so B has nothing to preserve there — A is the
+complete and correct answer, and that is a design fact, not a residual gap.
+Design: [`research/2026-08-01-page-structural-write-contract.md`](../../../../research/2026-08-01-page-structural-write-contract.md).
+
+### A — atomicity (server)
+
+> A structural write to a page's forest reads and writes it inside ONE
+> transaction holding that page's lock. There is no way to write `page_blocks`
+> without one.
+
+`withPageForest(scopes, fn)` (`server/internal/page-forest.ts`) is the only
+producer of a `PageForestTx`, and every export of
+`server/internal/forest-writer.ts` — the only module allowed to mutate
+`_blocks` — requires one. So an unlocked write is a **tsc error**, and importing
+`_blocks` to route around the helpers is a **lint error**
+(`page-editor/no-adhoc-forest-write`). Two halves; neither is sufficient.
+
+- **`ctx.forest()` is the only read**, and it is lazy — which is what makes "the
+  read happened under the lock" true by construction, and lets a delete/purge
+  spanning many pages pay for no forest it never reads.
+- **Locks are taken in sorted key order** over a deduped set as the transaction's
+  first statements. That is the deadlock proof for multi-page writers (a
+  cross-page move, a subtree delete spanning sub-pages), not a style choice.
+- **A scope is `string | null`**; `null` is the workspace root, a real sibling
+  space with its own live unique index, so it cannot be a hole callers fall
+  through.
+- **`ctx.afterCommit(cb)`** is where notify fan-out, reindex and re-push go —
+  never inside, which would stretch the lock and await the pool from inside a
+  transaction (`database/no-pool-await-in-transaction`).
+- **Rank parking is unconditional** in `writeForestTarget`, not per-op: any diff
+  that permutes `(parent_id, rank)` among siblings transiently duplicates a pair
+  mid-loop, and the index is per-tuple and not deferrable. `pairChanged` filters
+  it, so ops that permute nothing pay nothing.
+- `BlockLifecycle.OnDelete(rows, tx)` fires from the writer, inside the lock, on
+  exactly the branch that really hard-deletes. `rows` is authoritative, so a hook
+  answers "which of these were pages" with `row.type` — no DB round-trip, nothing
+  predicted. Anything else it needs pre-delete it reads on `tx`.
+
+### B — order (client)
+
+> One writer's structural mutations reach the server in the order it issued them.
+
+Not a page-editor property: `optimistic-mutation`'s model is
+`data = pendingOps.reduce(apply, serverTruth)`, an **ordered fold**, so ops that
+don't commute need the server to apply them in issue order or truth diverges from
+the prediction forever. Ordering therefore lives in that primitive's per
+`(resource, params)` **send lane**, not in a ref here (a per-consumer chain
+ordered each mount against itself only). See its CLAUDE.md.
+
+The editor's whole job is to have **one way onto that lane**: every structural
+mutation is a `BlockOp` (or the undo/redo `BlockPatch`) dispatched through
+`BlockStore.dispatch`, so `web/block-store.ts` and the composite router are the
+only callers of `applyBlockOpEndpoint` / `patchBlocks` —
+`page-editor/no-adhoc-structural-write` makes a third one a build failure. The
+two writes with no overlay to carry them (the detached persist into a collapsed
+sub-page, and a cross-page drag) use `enqueueResourceWrite`, which is the same
+lane without a prediction.
+
 ## The caret authority (input follows the model, not the DOM)
 
 > The editor holds ONE authoritative caret location. It moves synchronously with
@@ -287,18 +349,12 @@ Nothing bounded that window; human typing speed just usually won the race.
   `paste` capture; `ctrl`/`meta` keydowns pass through untouched.
 - **A burst of mutations in one turn needs ordering the old code got for free.**
   Replay issues structural mutations back-to-back with no React commit and no
-  pause between them, which broke three assumptions a human's pauses had hidden.
-  All three are fixed at the source, not in the replay:
-  - `rowsRef` is now ADVANCED at each mutation chokepoint (`advanceRows`), not
-    only by the consumer effect — two mutations in one turn both snapshotted the
-    pre-first-mutation rows and the second reasserted the first's columns.
-  - The op endpoint holds a per-page advisory lock across load→reduce→write
-    (`server/internal/page-write-lock.ts`), and the patch endpoint takes the same
-    lock — its read was outside its write transaction, so a concurrent op's
-    parentage was overwritten from a stale snapshot.
-  - Structural writes are SERIALIZED per page on the client (`block-store.ts`'s
-    `mutate` chain): causally dependent writes were independent POSTs, so a
-    `split` could reach the server before the `convertTo` it depended on.
+  pause between them. Two of the three assumptions that broke are now the
+  enforced invariants A and B of *One ordered stream over one locked forest*
+  below; the third is local here: `rowsRef` is ADVANCED at each mutation
+  chokepoint (`advanceRows`), not only by the consumer effect — otherwise two
+  mutations in one turn both snapshot the pre-first-mutation rows and the second
+  reasserts the first's columns.
 - **KNOWN BOUND: composition input started inside the flight window is DROPPED.**
   A dead key or IME keydown carries no character (`key` is `"Dead"`/`"Process"`),
   and with no editing host there is nothing to compose into, so it is neither
@@ -781,7 +837,7 @@ structure — no per-block Lexical history.
   `BlockEditorAPI.update`, `convertTo`, and `setExpanded` are thin callers, so
   forward apply and undo/redo are symmetric by construction and a new block type's
   `editor.update(...)` is recorded automatically. (Multi-row structural ops go
-  through `dispatchOp`/`move`/`bulkDelete` + `recordStructural`.)
+  through `dispatchOp` + `recordStructural`.)
 - **Same optimistic instance.** The `patch` overlay variant flows through the SAME
   `useOptimisticResource` as forward ops, POSTing to
   `POST /api/pages/:pageId/blocks/patch` (`handle-patch-blocks.ts`, a blind
@@ -804,10 +860,10 @@ structure — no per-block Lexical history.
   subtree has already left; `applyPatch` must agree or the overlay drops rows the
   server keeps (redoing an `unwrap` lost every promoted child).
 
-**What is recorded:** all `dispatchOp` ops (`paste` and `duplicate` included — see
-below), `convertTo`, non-text `data` edits (to-do `checked`, callout color, image
-src… — via `commitRow` with `coalesceKey: blockId`), single-block `move`
-(client-known rank), `bulkDelete`, and `bulkMove`, each with an exact
+**What is recorded:** all `dispatchOp` ops — which is now every structural
+mutation, `paste` / `duplicate` / `move` / `delete` / `bulkMove` included —
+plus `convertTo` and non-text `data` edits (to-do `checked`, callout color, image
+src… — via `commitRow` with `coalesceKey: blockId`), each with an exact
 purely-computed after-state; text edits as mirrored `Y.UndoManager` items. The
 editor no longer uses `updateBlock` at all (`handle-update-block.ts` stays for
 page-level consumers: page title, sidebar expand, cover).
@@ -822,18 +878,33 @@ reachable from the editor's context is in that table.
 `record: false` — Notion doesn't undo collapse/expand; still optimistic, just off
 the stack) and `projectText` (Yjs owns text history).
 
-`bulkMove` is recorded off a client PREDICTION, not an overlay (its forward write
-is still the bespoke endpoint, like `bulkDelete`). Sound only because
-`planBulkMove`/`applyBulkMove` (`core/block-ops.ts`) are the ONE rank/order algebra
-the server writer, the memory store and that prediction all run; the planner
-document-orders its roots for the same reason the folds sort — `selectionRoots`
-preserves input-array order and the two writers hold their rows in different ones.
-Known next step: promote `bulkMove` to a real `BlockOp` (`OpEffect.reparent` and
-`buildOverlayOp`'s move arm already exist; missing are a reducer arm, the
-`opBlockIds`/`resolveOpOwnerPage`/`translateOpForStore` arms, and `parkRanks` in
-`handle-apply-block-op`). That collapses forward write, undo and redo onto one
-endpoint and one optimistic instance, killing the two-fire-and-forget-POSTs
-ordering race it shares with `move` and `bulkDelete` today.
+## Drag and block-selection writes are ops too
+
+`move`, `bulkMove` and the bulk `delete` were fire-and-forget POSTs to bespoke
+endpoints — no overlay (their eslint-disables read *"drag again to fix"*), no
+place in the write order. They are now `BlockOp`s, so DnD is optimistic and the
+two bulk endpoints are deleted. What each one had to keep:
+
+- **`move` sends POSITIONAL INTENT, never a rank**: `{ blockId, parentId,
+  targetId, zone }`. `page_blocks` has ONE `(parent_id, rank)` space that several
+  live resources project disjointly, so a key minted over the rows one writer
+  holds collides with the siblings it cannot see. Both sides mint their own from
+  `positionalRank` (`core/block-forest.ts`) and the server's stays authoritative
+  — the agreement `split` and `paste` already run under.
+- **That agreement needs the destination inside the op's own page**, which the
+  server enforces with a 400 (`assertDestinationInPage`). A **cross-page** drop
+  is not one page's op — the row leaves the source page's resource entirely, so
+  no per-page overlay could ever confirm it — and keeps the id-scoped `moveBlock`
+  endpoint (which locks both forests), enqueued on the source page's lane.
+  `moveBlock` also stays alive for the Pages sidebar, a different surface over
+  the `docRank` order.
+- **`delete` is a SET** (`blockIds`), like `indent`/`outdent`: one gesture is one
+  op, one undo entry, one transaction. A single Backspace-delete is the
+  one-element case. It is the only op that may span pages, and the composite
+  fans it out per owner (`splitOpByOwnerPage`).
+- **`bulkMove`** carries `{ ids, parentId, afterId }` and reduces through
+  `planBulkMove`; a refusal is the identity, so a refused drag never reaches the
+  undo stack or the network. Cross-page selection drags are refused loudly.
 
 ## Paste is an op (`{ kind: "paste", forest, afterId, parentId }`)
 
@@ -1375,7 +1446,6 @@ the whole document lives in React state and is discarded on unmount.
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/auto-scroll.useEdgeAutoScroll`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -1404,6 +1474,7 @@ the whole document lives in React state and is discarded on unmount.
     - `primitives/multi-select.useMultiSelect`
     - `primitives/multi-select.useMultiSelectItem`
     - `primitives/networking.subscribeWsStatus`
+    - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/optimistic-mutation.OpNoLongerApplies`
     - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/popover.InlinePopover`
@@ -1501,14 +1572,17 @@ the whole document lives in React state and is discarded on unmount.
     - `plugins/page/plugins/editor/server/internal/tables-events.ts`
     - `plugins/page/plugins/editor/server/internal/tables.ts`
   - Exports (types):
+    - `AfterCommit`
     - `Block`
     - `BlockCreateHook`
     - `BlockDeleteHook`
     - `BlockRestoreHook`
     - `BlocksChangedPayload`
     - `BlockTrashHook`
+    - `DeletedBlockRow`
     - `PageContentSnapshot`
     - `PageData`
+    - `PageForestTx`
     - `StoredBlock`
   - Exports (values):
     - `_blocks`
@@ -1537,8 +1611,6 @@ the whole document lives in React state and is discarded on unmount.
     - `POST /api/blocks/:id/turn-into-page`
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
-    - `POST /api/pages/:pageId/blocks/bulk-delete`
-    - `POST /api/pages/:pageId/blocks/bulk-move`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -1565,11 +1637,6 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockPatch`
     - `BlockTextVariant`
     - `BlockUpdate`
-    - `BulkDeleteBlocksBody`
-    - `BulkMoveBlocksBody`
-    - `BulkMovePlacement`
-    - `BulkMovePlan`
-    - `BulkMoveRefusal`
     - `ColorToken`
     - `CreateBlockBody`
     - `IdentifiedBlock`
@@ -1597,16 +1664,11 @@ the whole document lives in React state and is discarded on unmount.
   - Exports (values):
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
-    - `applyBulkMove`
     - `BlockFieldChangesSchema`
     - `BlockOpSchema`
     - `BlockPatchSchema`
     - `BlockSchema`
     - `blocksResource`
-    - `bulkDeleteBlocks`
-    - `BulkDeleteBlocksBodySchema`
-    - `bulkMoveBlocks`
-    - `BulkMoveBlocksBodySchema`
     - `canIndent`
     - `canOutdent`
     - `changedFields`
@@ -1649,7 +1711,6 @@ the whole document lives in React state and is discarded on unmount.
     - `patchBlocks`
     - `patchesFromDiff`
     - `plainOf`
-    - `planBulkMove`
     - `planForestInsert`
     - `prevVisibleLine`
     - `rankWindow`

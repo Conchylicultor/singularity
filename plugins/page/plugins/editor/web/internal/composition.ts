@@ -238,7 +238,6 @@ export function resolveOpOwnerPage(
   switch (op.kind) {
     case "split":
     case "merge":
-    case "delete":
     // `unwrap` writes only within one page: it deletes the container and
     // re-ranks its children under the container's OWN parent, all rows of the
     // container's page. So the container's owner is the whole op's owner.
@@ -247,6 +246,17 @@ export function resolveOpOwnerPage(
       return rowOwnerPage(rows, op.blockId);
     case "indent":
     case "outdent":
+      return singleOwnerPage(rows, op.blockIds);
+    // A bulk move's roots must share a page (its destination is checked against
+    // that page separately), so the same single-page rule applies — and its
+    // refusal is the same loud one, from the same helper.
+    case "bulkMove":
+      return singleOwnerPage(rows, op.ids);
+    // A delete set CAN legitimately span pages (a selection reaching into an
+    // expanded sub-page), which `splitOpByOwnerPage` resolves by issuing one op
+    // per owner BEFORE this is reached. So by the time a delete gets here it is
+    // single-page, and the loud refusal is the right answer if it is not.
+    case "delete":
       return singleOwnerPage(rows, op.blockIds);
     case "insert": {
       const anchorId = op.afterId ?? op.beforeId;
@@ -265,6 +275,43 @@ export function resolveOpOwnerPage(
       // seam (same helper, same message).
       return singleOwnerPage(rows, op.placements.map((p) => p.afterId));
   }
+}
+
+/**
+ * Route one structural op to the page(s) that own its rows — the op-shaped twin
+ * of {@link groupPatchByOwnerPage}.
+ *
+ * Exactly ONE op kind fans out: a `delete` set, which the user can legitimately
+ * build across an expanded sub-page's boundary. Each page then commits its own
+ * rows in its own transaction, so the gesture never half-applies inside a page;
+ * one gesture is still one undo entry, because recording happens once, upstream,
+ * over the union. Every other kind is single-page by construction (its guards
+ * refuse a mixed set loudly rather than silently splitting a gesture whose
+ * meaning depends on all of it landing together).
+ */
+export function splitOpByOwnerPage(
+  rows: readonly UnionRow[],
+  v: Extract<BlockOverlayOp, { tag: "op" }>,
+  mounts: Mounts,
+  basePageId: string,
+): { owner: string; v: BlockOverlayOp }[] {
+  if (v.op.kind === "delete") {
+    const groups = groupIdsByOwnerPage(rows, v.op.blockIds);
+    if (groups.size > 1) {
+      return [...groups].map(([owner, blockIds]) => ({
+        owner,
+        v: {
+          tag: "op",
+          op: { kind: "delete", blockIds },
+          // The effect is exactly `buildOverlayOp`'s for this kind, narrowed to
+          // the group — so a split op is indistinguishable from one dispatched
+          // for that page alone.
+          effect: { kind: "remove", ids: blockIds },
+        },
+      }));
+    }
+  }
+  return [{ owner: resolveOpOwnerPage(rows, v.op, mounts, basePageId), v }];
 }
 
 /**
@@ -372,7 +419,10 @@ export function translateOpForStore(
   if (byAnchor.size === 0) return v;
   let op = v.op;
   if (
-    (op.kind === "insert" || op.kind === "move" || op.kind === "paste") &&
+    (op.kind === "insert" ||
+      op.kind === "move" ||
+      op.kind === "bulkMove" ||
+      op.kind === "paste") &&
     op.parentId != null &&
     byAnchor.has(op.parentId)
   ) {

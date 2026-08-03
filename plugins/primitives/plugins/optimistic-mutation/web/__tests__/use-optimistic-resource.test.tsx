@@ -32,6 +32,7 @@ import {
   SyncStatusProvider,
 } from "@plugins/primitives/plugins/sync-status/web";
 import { useOptimisticResource } from "../internal/use-optimistic-resource";
+import { activeSendLaneCount, enqueueResourceWrite } from "../internal/send-lane";
 import { optimisticDivergenceReportSink } from "../reporter";
 import type { OptimisticDivergenceReport } from "../reporter";
 
@@ -67,6 +68,29 @@ function deferredMutate() {
       }),
   );
   return { mutate, release: (res?: MutateResult) => release(res) };
+}
+
+/** A `mutate` the test settles BY CALL, so send order is directly observable. */
+function queuedMutate() {
+  const calls: Array<{
+    vars: number;
+    resolve: (res?: MutateResult) => void;
+    reject: (err: unknown) => void;
+  }> = [];
+  const mutate = vi.fn(
+    (n: number) =>
+      new Promise<MutateResult>((resolve, reject) => {
+        calls.push({ vars: n, resolve, reject });
+      }),
+  );
+  return { mutate, calls, sent: () => calls.map((c) => c.vars) };
+}
+
+/** Drain the microtask + timer queues, so "did NOT fire" assertions mean it. */
+async function settleQueues(): Promise<void> {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 0));
+  });
 }
 
 function makeClient(): QueryClient {
@@ -584,5 +608,158 @@ describe("useOptimisticResource", () => {
     expect(reports).toHaveLength(1);
     expect(reports[0]!.kind).toBe("superseded");
     expect(reports[0]!.resourceKey).toBe(denialResource.key);
+  });
+
+  it("the send lane serializes DISPATCH: B's mutate waits on A's", async () => {
+    // The half the primitive used to enforce on retry only. Ops are an ordered
+    // fold, so their writes are an ordered stream — B may depend on A's
+    // server-side effect (a second split targets the block the first created).
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.lane-order",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, calls, sent } = queuedMutate();
+    const { result } = mountHook(client, mutate, false, resource);
+
+    act(() => {
+      result.current.dispatch(2);
+      result.current.dispatch(3);
+    });
+    // A departs immediately (an idle lane adds no latency); B is queued behind.
+    await settleQueues();
+    expect(sent()).toEqual([2]);
+    // ...and the head-of-line block is invisible: both predictions render.
+    expect(result.current.data).toEqual([2, 3]);
+
+    await act(async () => {
+      calls[0]!.resolve(undefined);
+    });
+    await waitFor(() => expect(sent()).toEqual([2, 3]));
+  });
+
+  it("a durably-rejected send does NOT wedge its successors", async () => {
+    // The lane advances on settle — resolve or reject alike. A rejected op is a
+    // sync-status state, never a stalled queue.
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.lane-wedge",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, calls, sent } = queuedMutate();
+    const { result } = mountHook(client, mutate, false, resource);
+
+    act(() => {
+      result.current.dispatch(2);
+      result.current.dispatch(3);
+    });
+    await settleQueues();
+    expect(sent()).toEqual([2]);
+
+    await act(async () => {
+      calls[0]!.reject(new EndpointError(422, { message: "nope" }));
+    });
+    await waitFor(() => expect(sent()).toEqual([2, 3]));
+    expect(result.current.failed.map((f) => f.vars)).toEqual([2]);
+    expect(result.current.data).toEqual([2, 3]); // never-revert, both still rendered
+
+    await act(async () => {
+      calls[1]!.resolve(undefined);
+    });
+  });
+
+  it("two mounts on the same (resource, params) share ONE lane", async () => {
+    // The hole a per-hook ref had: two mounted consumers of one tuple are two
+    // writers to ONE server-side entity, and a per-instance chain orders each of
+    // them against itself only.
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.lane-shared",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, calls, sent } = queuedMutate();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
+    );
+    const { result } = renderHook(
+      () => ({ a: useRows(mutate, false, resource), b: useRows(mutate, false, resource) }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.a.dispatch(2);
+    });
+    act(() => {
+      result.current.b.dispatch(3);
+    });
+    await settleQueues();
+    expect(sent()).toEqual([2]); // interleaved in dispatch order, not concurrent
+
+    await act(async () => {
+      calls[0]!.resolve(undefined);
+    });
+    await waitFor(() => expect(sent()).toEqual([2, 3]));
+    await act(async () => {
+      calls[1]!.resolve(undefined);
+    });
+  });
+
+  it("enqueueResourceWrite joins the SAME lane as a mounted hook's dispatch", async () => {
+    // The overlay-less seam: a write whose surface is unmounted (or whose effect
+    // no single tuple's overlay can predict) still has to depart in order. It
+    // must resolve the lane key exactly as the hook does — a different
+    // derivation would order it against nothing.
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.lane-detached",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, calls, sent } = queuedMutate();
+    const { result } = mountHook(client, mutate, false, resource);
+
+    act(() => {
+      result.current.dispatch(2);
+    });
+    let detachedRan = false;
+    void enqueueResourceWrite(resource, undefined, async () => {
+      detachedRan = true;
+      return Promise.resolve();
+    });
+    await settleQueues();
+    // The hook's op is still in flight, so the detached write has NOT departed.
+    expect(sent()).toEqual([2]);
+    expect(detachedRan).toBe(false);
+
+    await act(async () => {
+      calls[0]!.resolve(undefined);
+    });
+    await waitFor(() => expect(detachedRan).toBe(true));
+  });
+
+  it("an idle lane is reclaimed, so the module-level registry cannot grow unboundedly", async () => {
+    const resource = resourceDescriptor<number[]>(
+      "test.optimistic-mutation.lane-reclaim",
+      z.array(z.number()),
+      [],
+    );
+    const client = makeClient();
+    const { mutate, release } = deferredMutate();
+    const idle = activeSendLaneCount();
+    const { result } = mountHook(client, mutate, false, resource);
+
+    act(() => {
+      result.current.dispatch(2);
+    });
+    expect(activeSendLaneCount()).toBe(idle + 1); // held while a send is unsettled
+
+    await act(async () => {
+      release();
+    });
+    // Nothing unsettled ⇒ no ordering constraint left to hold ⇒ dropped.
+    await waitFor(() => expect(activeSendLaneCount()).toBe(idle));
   });
 });

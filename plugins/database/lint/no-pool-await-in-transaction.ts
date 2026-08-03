@@ -15,13 +15,22 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * a second one. With enough concurrent transactions that is a deadlock, not a
  * slowdown.
  *
- * So: inside a transaction callback, every awaited call expression must run on
- * the transaction executor. It passes if the call is
+ * The scope is not only `db.transaction(cb)`. A domain may wrap a transaction
+ * behind its own chokepoint — `withPageForest(scopes, cb)`, the page editor's
+ * forest-write lock — and the hazard is identical, so the openers are a table
+ * (`TX_SCOPE_OPENERS`) rather than one hardcoded shape. A chokepoint whose
+ * callback binds a CONTEXT object needs no extra machinery: naming `ctx` as the
+ * executor binding makes `ctx.tx.select(…)` and `helper(ctx.tx)` pass under the
+ * two conditions below exactly as `tx` does.
+ *
+ * So: inside a transaction-scope callback, every awaited call expression must run
+ * on the transaction executor. It passes if the call is
  *   (1) a member chain rooted at the executor binding — `tx.insert(…)`,
- *       `tx.select().from(…)`, `tx.execute(sql\`…\`)`; or
+ *       `tx.select().from(…)`, `tx.execute(sql\`…\`)`, `ctx.tx.insert(…)`,
+ *       `ctx.forest()`; or
  *   (2) handed the executor binding as an argument — `insertForest(tx, {…})`,
  *       `nextRankIn(_conversationGroups, tx)`, `store.run(batch, () => fn(tx))`,
- *       `emit(payload, { tx: batch.tx })`.
+ *       `emit(payload, { tx: batch.tx })`, `writeForestTarget(ctx, a, b)`.
  *
  * A struct literal declared in the callback that carries the executor
  * (`const batch = { tx, before: new Map() }`) counts as the executor for (2),
@@ -53,28 +62,95 @@ type FunctionLike =
   | TSESTree.ArrowFunctionExpression
   | TSESTree.FunctionExpression;
 
-/** `<anything>.transaction(…)` — the shape that checks out a pooled connection. */
-function isTransactionCall(node: TSESTree.Node): node is TSESTree.CallExpression {
-  return (
-    node.type === "CallExpression" &&
-    node.callee.type === "MemberExpression" &&
-    !node.callee.computed &&
-    node.callee.property.type === "Identifier" &&
-    node.callee.property.name === "transaction"
-  );
+/**
+ * A call whose CALLBACK body runs while one pooled connection is checked out.
+ *
+ * `db.transaction(cb)` is drizzle's own. It is not the only one: a domain can
+ * wrap a transaction behind a chokepoint — `withPageForest(scopes, cb)`, the
+ * page editor's forest-write lock — and the callback then binds a CONTEXT object
+ * carrying the executor (`ctx.tx`) rather than the executor itself. That is
+ * exactly the "struct literal that carries the executor" shape condition (2)
+ * already models, so the carrier machinery below needs no change at all: naming
+ * `ctx` as the binding makes `ctx.tx.select(…)` root-matched and
+ * `helper(ctx.tx)` argument-matched for free. Only the callback's ARGUMENT
+ * POSITION differs.
+ *
+ * **Why a named registry rather than a structural rule.** A convention like
+ * "any `with*(…, cb)` call opens a transaction scope" would over-match every
+ * scope helper in the repo — `withHeavyReadSlot`, `withBrowser`,
+ * `runInBackgroundLane` — none of which hold a connection, turning every
+ * legitimate pool call inside them into a build failure. A type-aware match
+ * ("is this parameter a `PageForestCtx`") is unavailable: a contributed rule
+ * file is loaded by jiti, which cannot resolve the `@plugins/*` alias, so the
+ * rule cannot name the type. A table of openers is the honest middle — one
+ * place, one line per chokepoint, and it generalizes the `.transaction`
+ * hardcode this rule already carried rather than adding a second special case.
+ */
+interface TxScopeOpener {
+  /** `member` = `<x>.transaction(cb)`; `free` = `withPageForest(…, cb)`. */
+  kind: "member" | "free";
+  name: string;
+  /** Which argument is the callback. */
+  callbackArg: number;
+  /** Where work that must NOT hold the connection belongs, for the message. */
+  remedy: string;
+}
+
+const TX_SCOPE_OPENERS: readonly TxScopeOpener[] = [
+  {
+    kind: "member",
+    name: "transaction",
+    callbackArg: 0,
+    remedy: "hoist it above the `transaction()` call",
+  },
+  {
+    kind: "free",
+    name: "withPageForest",
+    callbackArg: 1,
+    remedy:
+      "queue it on `ctx.afterCommit(…)`, which runs it the moment the write " +
+      "commits and the page lock is released",
+  },
+];
+
+/** The opener this call is, if any — the shape that checks out a connection. */
+function txScopeOpener(node: TSESTree.Node): TxScopeOpener | undefined {
+  if (node.type !== "CallExpression") return undefined;
+  const callee = node.callee;
+  if (callee.type === "Identifier") {
+    return TX_SCOPE_OPENERS.find(
+      (o) => o.kind === "free" && o.name === callee.name,
+    );
+  }
+  if (
+    callee.type === "MemberExpression" &&
+    !callee.computed &&
+    callee.property.type === "Identifier"
+  ) {
+    const property = callee.property;
+    return TX_SCOPE_OPENERS.find(
+      (o) => o.kind === "member" && o.name === property.name,
+    );
+  }
+  return undefined;
 }
 
 /**
- * The executor binding a transaction callback introduces, e.g. `tx` in
- * `db.transaction(async (tx) => …)`. `undefined` when the callback declares no
- * plain-identifier first param — there is then no executor to thread, so the
- * callback is unverifiable and we skip it rather than report every await.
+ * The executor binding a transaction callback introduces — `tx` in
+ * `db.transaction(async (tx) => …)`, `ctx` in
+ * `withPageForest(scopes, async (ctx) => …)`. `undefined` when the callback
+ * declares no plain-identifier first param — there is then no executor to
+ * thread, so the callback is unverifiable and we skip it rather than report
+ * every await. (A DESTRUCTURED param, `async ({ tx }) => …`, is that case: it
+ * binds the executor under a name the carrier walk can still see, but the
+ * binding is no longer one identifier, so the rule stays silent rather than
+ * guessing. Bind the whole context and reach through it.)
  */
-function executorBinding(call: TSESTree.CallExpression): {
-  callback: FunctionLike;
-  name: string;
-} | undefined {
-  const arg = call.arguments[0];
+function executorBinding(
+  call: TSESTree.CallExpression,
+  opener: TxScopeOpener,
+): { callback: FunctionLike; name: string } | undefined {
+  const arg = call.arguments[opener.callbackArg];
   if (
     arg?.type !== "ArrowFunctionExpression" &&
     arg?.type !== "FunctionExpression"
@@ -178,12 +254,12 @@ export default createRule({
     messages: {
       poolAwait:
         "This awaited call does not receive the transaction executor `{{tx}}`, so it runs " +
-        "on the pool while the enclosing `transaction()` already holds a pooled connection — " +
+        "on the pool while the enclosing `{{opener}}` already holds a pooled connection — " +
         "hold-and-wait, and the connection lease inflates by this call's whole duration " +
         "(seconds under event-loop lag, not milliseconds). Run it on the transaction: call " +
-        "`{{tx}}.…` directly, or pass `{{tx}}` to the helper (make its executor parameter " +
-        "REQUIRED, not `= db`). If the work genuinely must not join the transaction, hoist " +
-        "it above the `transaction()` call. See " +
+        "`{{tx}}.…` directly (`{{tx}}.tx.…` when the binding is a context object), or pass " +
+        "`{{tx}}` to the helper (make its executor parameter REQUIRED, not `= db`). If the " +
+        "work genuinely must not join the transaction, {{remedy}}. See " +
         "research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.",
     },
   },
@@ -191,16 +267,20 @@ export default createRule({
   create(context) {
     return {
       CallExpression(node: TSESTree.CallExpression) {
-        if (!isTransactionCall(node)) return;
-        const bound = executorBinding(node);
+        const opener = txScopeOpener(node);
+        if (!opener) return;
+        const bound = executorBinding(node, opener);
         if (!bound) return;
         const { callback, name } = bound;
         const carriers = executorCarriers(callback.body, name);
 
         walk(callback.body, (n) => {
-          // A nested `transaction()` rebinds the executor and is visited as its
-          // own CallExpression — its body is not ours to judge.
-          if (n !== callback.body && isTransactionCall(n)) return false;
+          // A nested scope opener rebinds the executor and is visited as its
+          // own CallExpression — its body is not ours to judge. (The `await`
+          // wrapping it is still ours, and is reported unless it threads our
+          // executor: a second checked-out connection is the hold-and-wait
+          // shape whichever chokepoint opens it.)
+          if (n !== callback.body && txScopeOpener(n)) return false;
 
           if (n.type !== "AwaitExpression") return true;
           const call = n.argument;
@@ -212,7 +292,15 @@ export default createRule({
             [...carriers].some((c) => mentionsName(a, c)),
           );
           if (!rootedAtTx && !threadsTx) {
-            context.report({ node: call, messageId: "poolAwait", data: { tx: name } });
+            context.report({
+              node: call,
+              messageId: "poolAwait",
+              data: {
+                tx: name,
+                opener: opener.kind === "member" ? "transaction()" : `${opener.name}()`,
+                remedy: opener.remedy,
+              },
+            });
           }
           return true;
         });

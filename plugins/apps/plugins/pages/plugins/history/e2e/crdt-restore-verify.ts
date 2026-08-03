@@ -227,7 +227,7 @@ await withBrowser(async (h) => {
   // must be given a FREE slot: the restore re-minted its rows from scratch, so
   // the pre-restore row's own `(parent_id, rank)` pair is occupied again, and
   // re-claiming it is a genuine collision the unique index fires on (loudly, by
-  // design — see `rank-park.ts`). Clean the row up right after.
+  // design — see `forest-writer.ts`). Clean the row up right after.
   const freeRank = Rank.between(
     Rank.from(
       rowsAfter

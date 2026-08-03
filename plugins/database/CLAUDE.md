@@ -85,9 +85,18 @@ without re-checking it.**
 
 Transaction hold-time is bounded by two halves of one guardrail: the
 `database/no-pool-await-in-transaction` ESLint rule (no awaiting the pool inside a
-`db.transaction` callback — hold-and-wait), and the **required** `exec` parameter on
+transaction-scope callback — hold-and-wait), and the **required** `exec` parameter on
 query helpers like `listBlockingDepIds`, which turns the transitive version of that
 leak into a tsc error.
+
+A "transaction scope" is not only `db.transaction(cb)`. A domain may wrap one
+behind its own chokepoint whose callback binds a CONTEXT object rather than the
+executor — `withPageForest(scopes, cb)`, the page editor's forest-write lock,
+where the executor is `ctx.tx`. Those live in the rule's `TX_SCOPE_OPENERS`
+table; **add a line there when you introduce another**, or the rule goes silently
+blind inside it. The branded-executor half has a worked example there too:
+`PageForestTx` is mintable only by `withPageForest`, so an unlocked forest write
+is a tsc error (`plugins/page/plugins/editor/CLAUDE.md`).
 
 Gating at the query (rather than around whole loader bodies) puts the gate on the
 actual scarce resource — held connections — so an in-memory loader that issues no
@@ -185,7 +194,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `apps/mail/thread-list`
     - `apps/pages/agent-origin`
     - `apps/pages/content-search`
-    - `apps/pages/history`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
     - `apps/sonata/rich/key-mode`
