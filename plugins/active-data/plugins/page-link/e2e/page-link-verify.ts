@@ -45,10 +45,14 @@ await withBrowser(async (h) => {
   // The chip is the only element carrying the id in its `title` (the raw text
   // fallback carries none), so a hit here IS the chip.
   async function chipFor(id: string) {
-    const chip = page.locator(`button[title*="${id}"]`).first();
-    // The content-block lookup is a fetch, so the chip appears a beat later.
-    await chip.waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
-    return chip;
+    const chips = page.locator(`button[title*="${id}"]`);
+    // Polled, not `waitFor`: an absent chip is the outcome the next line
+    // ASSERTS on, so it must not arrive as a thrown timeout. The content-block
+    // lookup is a fetch, so the chip can appear a beat after first paint.
+    for (let i = 0; i < 20 && (await chips.count()) === 0; i++) {
+      await page.waitForTimeout(500);
+    }
+    return chips.first();
   }
 
   async function verify(kind: string, id: string, expectedPageId: string) {
