@@ -71,8 +71,10 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
   empty?: () => z.infer<S>;
   /**
    * Per-type markdown. A void container has no text of its own, so the central
-   * orchestrator's default is a blank line and its children carry the content;
-   * declare this only to emit a structural marker line.
+   * orchestrator's DEFAULT is already the right thing: the derived
+   * `<type …>…</type>` tag, with the container's appearance payload projected
+   * onto its attributes and its children serialized inside. Declare this only to
+   * pick a different tag name or a prettier attribute form.
    */
   markdown?: BlockMarkdown<z.infer<S>>;
   /**

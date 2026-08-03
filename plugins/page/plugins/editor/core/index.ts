@@ -1,4 +1,4 @@
-export { BlockSchema, PageRowSchema, PageDataSchema, PageCoverSchema, SvgNodeSchema, PAGE_BLOCK_TYPE, PAGES_TRASH_SOURCE, pageData, pageBlockHandle } from "./schemas";
+export { BlockSchema, PageRowSchema, PageDataSchema, PageCoverSchema, SvgNodeSchema, PAGE_BLOCK_TYPE, PAGES_TRASH_SOURCE, pageData, pageBlockHandle, pageBlockMarkdown } from "./schemas";
 export type { Block, PageRow, PageData, PageCover, BlockData } from "./schemas";
 
 export { pagesResource, blocksResource } from "./resources";
@@ -80,7 +80,12 @@ export {
 } from "./rich-text";
 export type { Mark, ColorToken, TextRun, RichText } from "./rich-text";
 
-export { INLINE_SYNTAXES, matchInlineFormat } from "./inline-markdown";
+export {
+  INLINE_SYNTAXES,
+  matchInlineFormat,
+  parseInlineMarkdown,
+  serializeInlineMarkdown,
+} from "./inline-markdown";
 export type { InlineSyntax, InlineFormatMatch, InlineFormatContext } from "./inline-markdown";
 
 export { $appendRuns, colorCssValue, runsToLexical, serializeBlockRuns, tokenOf } from "./runs-lexical";
@@ -104,8 +109,17 @@ export {
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
+  markdownParseTagName,
 } from "./markdown";
-export type { BlockMarkdown, MdSerializeCtx, MdParseCtx } from "./markdown";
+export type {
+  BlockMarkdown,
+  BlockTag,
+  BlockTagBody,
+  MarkdownContext,
+  MarkdownNode,
+  MdSerializeCtx,
+  MdParseCtx,
+} from "./markdown";
 
 export { textDataSchema, textBlockSchema } from "./text-data";
 export type { TextData, TextBearingSchema } from "./text-data";

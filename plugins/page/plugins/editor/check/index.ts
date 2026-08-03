@@ -5,6 +5,7 @@ import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { importBarrel, registerBarrelStubs } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { markdownParseTagName, type BlockHandle } from "../core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 
 // Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
@@ -244,4 +245,85 @@ const anchorHasDecoration: Check = {
   },
 };
 
-export default [check, anchorHasDecoration];
+/**
+ * At most ONE block type may own a markdown tag name on the parse side.
+ *
+ * A tag name is how `parseMarkdownToForest` routes `<name …>` back to a type, so
+ * two claimants have no resolution — the parser throws, and it throws on the
+ * user's PASTE rather than at build time. The live hazard is `page`, which two
+ * handles register (the editor's own for the server write boundary, `sub-page`'s
+ * for the web renderer) while `page-link` owns `<page>` on parse: any of the
+ * three dropping `serializeOnly`, or a new type picking a taken name, breaks
+ * every markdown paste.
+ *
+ * `markdownParseTagName` is the SAME resolution the runtime uses, imported
+ * rather than restated, so the check cannot drift from what it checks.
+ */
+const markdownTagNamesUnique: Check = {
+  id: "page.editor:markdown-tag-names-unique",
+  description:
+    "at most one block handle claims each markdown tag name on parse (`markdown.tag.serializeOnly` opts the others out)",
+  async run(): Promise<CheckResult> {
+    const root = await getWorktreeRoot();
+    const tree = await buildEnrichedTree(root);
+    registerBarrelStubs(root);
+
+    const candidateDirs = new Set<string>();
+    for (const [dir, node] of tree.byDir) {
+      const facet = getFacet(node, contributionsFacetDef);
+      if (!facet) continue;
+      for (const c of facet.runtime) {
+        if (c.kind === "slot" && c.slotId === WEB_BLOCK_SLOT) {
+          if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
+          break;
+        }
+      }
+    }
+    if (candidateDirs.size === 0) {
+      return {
+        ok: false,
+        message:
+          "No web `Editor.Block` contributions found in the enriched plugin tree — the " +
+          "barrel-imported contributions facet is empty, so tag-name uniqueness could not be " +
+          "verified. This is a check/tooling failure, not a clean pass.",
+      };
+    }
+
+    // tag name -> "<plugin id> (<block type>)" for each claimant.
+    const claimants = new Map<string, string[]>();
+    for (const dir of candidateDirs) {
+      const mod = await importBarrel(join(dir, "web", "index.ts"));
+      const def = mod.default as { contributions?: unknown } | undefined;
+      if (!Array.isArray(def?.contributions)) continue;
+      for (const raw of def.contributions) {
+        const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
+        if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
+        const name = markdownParseTagName(c.block);
+        if (name === null) continue;
+        const list = claimants.get(name) ?? [];
+        list.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
+        claimants.set(name, list);
+      }
+    }
+
+    const conflicts = [...claimants.entries()]
+      .filter(([, list]) => new Set(list).size > 1)
+      .sort(([a], [b]) => a.localeCompare(b));
+    if (conflicts.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message:
+        `${conflicts.length} markdown tag name(s) are claimed by more than one block type, so ` +
+        `every markdown paste would throw:\n${conflicts
+          .map(([name, list]) => `  <${name}> ← ${[...new Set(list)].sort().join(", ")}`)
+          .join("\n")}`,
+      hint:
+        "Either rename one type's tag (`markdown.tag.name`), or mark the one that only EMITS it " +
+        "as `markdown.tag.serializeOnly: true` — the way `page` does, so `<page id=…/>` " +
+        "serializes from a sub-page and parses back as a `page-link`.",
+    };
+  },
+};
+
+export default [check, anchorHasDecoration, markdownTagNamesUnique];

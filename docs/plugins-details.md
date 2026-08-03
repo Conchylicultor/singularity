@@ -16210,6 +16210,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockOpContext`
           - `BlockPage`
           - `BlockPatch`
+          - `BlockTag`
+          - `BlockTagBody`
           - `BlockTextVariant`
           - `BlockUpdate`
           - `ColorToken`
@@ -16220,6 +16222,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `InlineSyntax`
           - `IsAnchor`
           - `Mark`
+          - `MarkdownContext`
+          - `MarkdownNode`
           - `MdParseCtx`
           - `MdSerializeCtx`
           - `MoveBlockBody`
@@ -16268,6 +16272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listBlocks`
           - `listPages`
           - `MARK_ORDER`
+          - `markdownParseTagName`
           - `matchInlineFormat`
           - `mergeRuns`
           - `moveBlock`
@@ -16277,12 +16282,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `opBlockIds`
           - `PAGE_BLOCK_TYPE`
           - `pageBlockHandle`
+          - `pageBlockMarkdown`
           - `PageCoverSchema`
           - `pageData`
           - `PageDataSchema`
           - `PageRowSchema`
           - `PAGES_TRASH_SOURCE`
           - `pagesResource`
+          - `parseInlineMarkdown`
           - `parseMarkdownToForest`
           - `pasteAnchorId`
           - `patchBlocks`
@@ -16301,6 +16308,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serializeBlockRuns`
           - `SerializedBlockSchema`
           - `serializeForestToMarkdown`
+          - `serializeInlineMarkdown`
           - `sortMarks`
           - `splitRuns`
           - `SvgNodeSchema`
@@ -16985,6 +16993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.pageBlockMarkdown`
           - `page/editor.PageDataSchema`
         - Exports (values): `subPageBlock`
     - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
@@ -16998,6 +17007,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `page/editor.defineBlock`
+          - `page/editor.runsLength`
           - `page/editor.textDataSchema`
         - Exports (values): `textBlock`
     - **`to-do`** — To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.

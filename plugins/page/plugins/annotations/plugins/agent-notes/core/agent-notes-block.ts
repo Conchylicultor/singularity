@@ -31,13 +31,11 @@ export const agentNotesBlock = defineContainerBlock({
   icon: MdAutoAwesome,
   aliases: ["agent", "agents", "ai", "notes", "findings", "report"],
   empty: () => ({}),
-  // One-way markdown: `text/plain` is the EXTERNAL projection only (internal
-  // copy/paste is lossless through the `BLOCKS_MIME` JSON forest). A void
-  // container has no text, so this emits the MARKER ALONE and the children —
-  // serialized generically, indented two spaces under it by the central walk —
-  // carry the content. The marker is the point: it is what lets a reader (human
-  // or agent) of a page's markdown tell these lines were written BY an agent
-  // rather than by the page's author. No `parseLine`: claiming a prefix would
-  // convert real prose on paste.
-  markdown: { serialize: () => "**[Agent notes]**" },
+  // `<agent-notes>…</agent-notes>` — a real round-tripping syntax, replacing the
+  // one-way `**[Agent notes]**` marker. What the marker was for is unchanged (a
+  // reader of the page's markdown can tell these lines were written BY an agent
+  // rather than by the page's author), and the card now survives the round trip
+  // instead of dissolving into its contents. Still no prefix claim: a tag is
+  // explicit, so it can never convert real prose on paste.
+  markdown: { tag: { body: "children" } },
 });

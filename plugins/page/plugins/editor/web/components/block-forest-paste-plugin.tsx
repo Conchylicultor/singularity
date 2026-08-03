@@ -4,7 +4,10 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { parseMarkdownToForest, type SerializedBlock } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
-import type { BlockTextPluginProps } from "../internal/block-text-extensions";
+import {
+  blockTextProtectedSpans,
+  type BlockTextPluginProps,
+} from "../internal/block-text-extensions";
 import { resolvePastedBlock } from "../internal/block-paste-handlers";
 import { BLOCKS_MIME, decidePaste } from "../internal/clipboard";
 
@@ -58,7 +61,10 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
             return false;
           }
         } else {
-          forest = parseMarkdownToForest(decision.text, handles);
+          forest = parseMarkdownToForest(decision.text, {
+            handles,
+            protectedSpans: blockTextProtectedSpans(),
+          });
         }
         // Empty/unparseable forest (e.g. whitespace-only multi-line) → let the
         // native paste run; never swallow the event for nothing.

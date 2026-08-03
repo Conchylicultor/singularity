@@ -22,6 +22,7 @@
   - Uses:
     - `page/editor.defineBlock`
     - `page/editor.PAGE_BLOCK_TYPE`
+    - `page/editor.pageBlockMarkdown`
     - `page/editor.PageDataSchema`
   - Exports (values): `subPageBlock`
 

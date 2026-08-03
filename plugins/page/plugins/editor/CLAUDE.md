@@ -1362,8 +1362,32 @@ The delimiter table (`core/inline-markdown.ts`) is **closed core data, not a
 slot** — block prefixes use `Editor.Block` because block types are an open set,
 but `Mark` is a closed persisted `z.enum`. Its tests pin the marks as exactly
 `MARK_ORDER` minus `underline` (no markdown syntax for it), so a sixth mark fails
-the suite until someone decides its syntax. In `core/` because `markdown.ts`'s
-`MdSerializeCtx.plain` will need the same delimiters for clipboard export.
+the suite until someone decides its syntax. In `core/` because the clipboard
+converter reads the same table.
+
+### The same table, read left-to-right
+
+`matchInlineFormat` answers "did the char I just typed close a span" — clamped to
+the caret's line, closer at end-of-string. Clipboard export/paste asks about the
+whole string, so the module carries a second pair over the SAME table
+(`serializeInlineMarkdown` / `parseInlineMarkdown`), reached only through
+`MdSerializeCtx.md` / `MdParseCtx.runs`. `ctx.plain` stays as the raw escape
+hatch for a type whose syntax is not inline markdown at all (a fenced body, a
+LaTeX expression). Read the module header for the escaping rule; three decisions
+that look wrong until you know why:
+
+- **`MarkdownContext.protectedSpans` is required, not optional.** Decorator
+  tokens are plain substrings of `TextRun.text` and `\(latex\)` is full of `_`
+  and `*` — an optional parameter is one a caller silently forgets. A masked span
+  becomes its own UNMARKED run, byte-for-byte what `walkNode` gives a decorator.
+- **The parser mirrors `matchInlineFormat`'s two whitespace rules**, so what the
+  user can type and what pasted text parses as cannot diverge — which is why the
+  serializer hoists boundary whitespace OUT of a marked group (`**a **` →
+  `**a** `). Invisible when rendered; it is what makes `parse ∘ serialize` an
+  identity rather than merely convergent.
+- **`color` and `underline` get tags** (`<color value="…">`, `<u>`): color is a
+  run attribute, not a mark, and underline is the one mark with no delimiter.
+  `link` uses native `[text](url)`.
 
 Two traps:
 
@@ -1482,6 +1506,58 @@ the whole document lives in React state and is discarded on unmount.
   something the pure `convertTo` cannot express — a server-backed transition
   (today: into a sub-page, re-partitioning `page_id` across a page boundary). The
   block-actions menu renders that whole zone only when `serverSync`.
+
+## Markdown is a LOSSLESS PROJECTION of the forest
+
+> Lenient on parse (foreign markdown pastes as it always did), CANONICAL on
+> serialize: anything this codebase emits re-parses to the same forest.
+
+`core/markdown.ts` stays the pure orchestrator that never names a block type. Its
+void fallback is now the generic **`tag`** (`<name attrs>…</name>`, body parsed
+recursively) instead of `() => ""` — which is why a type with no markdown
+declaration at all (callout, image, video, audio, file, embed, bookmark) is
+covered. Design:
+[`research/2026-08-03-page-markdown-block-roundtrip.md`](../../../research/2026-08-03-page-markdown-block-roundtrip.md);
+`markdown.test.ts`'s fuzzed round-trip property test is the executable statement
+— extend it for a new block type rather than adding a one-off case.
+
+- **Only STRING fields become plain attributes**; everything else (numbers,
+  booleans, `null`, objects) is JSON-encoded into one `data` attribute. An
+  attribute value is a string both ways, so `width="640"` would read back as the
+  string `"640"` — the "prettier" projection is lossy exactly where it claims not
+  to be. Override `attrs` + `parseAttrs` TOGETHER for a nicer form.
+- **`body` is declared, never derived** — and specifically not from
+  `collapsible: "always"`, whose set includes `toggle`, which must keep emitting
+  its children folded. `"children-when-expanded"` exists for `page` alone.
+- **The walk takes an explicit "consumed my children" signal** from the
+  serializer; it recurses unconditionally otherwise. Do not infer it.
+- **Container `markdownPrefixes` stay inert for parsing** (`derivedParsePrefixes`
+  needs a text lens, which a container can never have): `todo`'s `"TODO "` is a
+  TYPING-time wrap only, so a `TODO ` line in pasted prose stays prose.
+- **`quote` and `prompt` declare `body: "text"`** because they are the only
+  text-bearing types with no prefix (`> ` belongs to `toggle`); without it they
+  serialized as bare paragraphs and came back as `text`.
+- **`page/text` emits `<text/>` for an EMPTY paragraph** only. Blank lines stay
+  skipped on parse — correct CommonMark for foreign markdown. The asymmetry is
+  the contract: what we emit round-trips, what a user pastes stays lenient.
+
+### The page tags
+
+`<page id="…"/>` needs a row id, which `SerializedBlock` deliberately lacks — so
+the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
+`web/serialize-blocks.ts` stamps `id: block.id`. Both its consumers overwrite it
+(`withMintedIds`): the id is provenance, never a destination identity.
+
+- `page-link` owns `<page>` on parse; the sub-page handle's tag is
+  `serializeOnly` (two non-`serializeOnly` handles on one name is a loud error).
+  **Markdown parse alone can never mint a sub-page** — that means minting a
+  `page_id` partition and restamping a subtree, which only the server's
+  turn-into-page op does. The id is what lets a future diff/merge reconcile
+  against the EXISTING row.
+- A **body on a parsed `<page>` is a loud rejection**, so authoritative sub-page
+  writes can be enabled later without a syntax change.
+- A parsed forest is uniformly `expanded: true` — a self-closing tag cannot
+  distinguish "collapsed" from "childless", and blocks are born expanded.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -1689,6 +1765,8 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockOpContext`
     - `BlockPage`
     - `BlockPatch`
+    - `BlockTag`
+    - `BlockTagBody`
     - `BlockTextVariant`
     - `BlockUpdate`
     - `ColorToken`
@@ -1699,6 +1777,8 @@ the whole document lives in React state and is discarded on unmount.
     - `InlineSyntax`
     - `IsAnchor`
     - `Mark`
+    - `MarkdownContext`
+    - `MarkdownNode`
     - `MdParseCtx`
     - `MdSerializeCtx`
     - `MoveBlockBody`
@@ -1747,6 +1827,7 @@ the whole document lives in React state and is discarded on unmount.
     - `listBlocks`
     - `listPages`
     - `MARK_ORDER`
+    - `markdownParseTagName`
     - `matchInlineFormat`
     - `mergeRuns`
     - `moveBlock`
@@ -1756,12 +1837,14 @@ the whole document lives in React state and is discarded on unmount.
     - `opBlockIds`
     - `PAGE_BLOCK_TYPE`
     - `pageBlockHandle`
+    - `pageBlockMarkdown`
     - `PageCoverSchema`
     - `pageData`
     - `PageDataSchema`
     - `PageRowSchema`
     - `PAGES_TRASH_SOURCE`
     - `pagesResource`
+    - `parseInlineMarkdown`
     - `parseMarkdownToForest`
     - `pasteAnchorId`
     - `patchBlocks`
@@ -1780,6 +1863,7 @@ the whole document lives in React state and is discarded on unmount.
     - `serializeBlockRuns`
     - `SerializedBlockSchema`
     - `serializeForestToMarkdown`
+    - `serializeInlineMarkdown`
     - `sortMarks`
     - `splitRuns`
     - `SvgNodeSchema`

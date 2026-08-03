@@ -48,9 +48,11 @@ describe("todoBlock (derived + forced facts)", () => {
     expect(todoBlock.markdownPrefixes).toEqual(["TODO ", "TODO: "]);
   });
 
-  it("serializes to the marker alone — a void container has no text of its own", () => {
-    expect(todoBlock.markdown?.serialize?.({}, { plain: () => "", ordinal: 1 })).toBe(
-      "**[TODO]**",
-    );
+  it("maps to a round-tripping <todo> tag, not a one-way marker", () => {
+    // A void container has no text of its own, so its markdown mapping is the
+    // generic TAG: the children go inside it and it comes back as a container.
+    // The retired `**[…]**` marker could only ever go one way.
+    expect(todoBlock.markdown?.serialize).toBeUndefined();
+    expect(todoBlock.markdown?.tag).toEqual({ body: "children" });
   });
 });

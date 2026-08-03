@@ -44,15 +44,12 @@ export const contextBlock = defineContainerBlock({
   // opposite-direction cards with no way to tell which is which.
   aliases: ["instructions", "guidance", "conventions", "rules"],
   empty: () => ({}),
-  // One-way markdown: `text/plain` is the EXTERNAL projection only (internal
-  // copy/paste is lossless through the `BLOCKS_MIME` JSON forest). A void
-  // container has no text to serialize, so this emits the MARKER ALONE and the
-  // children — serialized generically, indented two spaces under it by the
-  // central walk — carry the content. That is deliberately not the callout's
-  // blank line: the whole point of a context card is that an agent reading a
-  // page's markdown can tell these lines are addressed to it, and with the
-  // marker present the children's indentation is meaningful rather than
-  // dangling. No `parseLine`: claiming a prefix would convert real prose on
-  // paste.
-  markdown: { serialize: () => "**[Agent context]**" },
+  // `<context>…</context>` — a real round-tripping syntax, replacing the one-way
+  // `**[Agent context]**` marker. The point of the marker survives (an agent
+  // reading a page's markdown can still tell these lines are addressed to it,
+  // and the children's indentation is anchored rather than dangling) and the
+  // card now comes BACK as a card instead of dissolving into its contents.
+  // Still no prefix claim: a tag is explicit, so it can never convert real prose
+  // on paste the way a `parseLine` prefix would.
+  markdown: { tag: { body: "children" } },
 });

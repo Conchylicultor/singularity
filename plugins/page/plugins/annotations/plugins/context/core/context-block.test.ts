@@ -38,9 +38,11 @@ describe("contextBlock (derived + forced facts)", () => {
     expect(contextBlock.splitChildWhenExpanded).toBeUndefined();
   });
 
-  it("serializes to the marker alone — a void container has no text of its own", () => {
-    expect(contextBlock.markdown?.serialize?.({}, { plain: () => "", ordinal: 1 })).toBe(
-      "**[Agent context]**",
-    );
+  it("maps to a round-tripping <context> tag, not a one-way marker", () => {
+    // A void container has no text of its own, so its markdown mapping is the
+    // generic TAG: the children go inside it and it comes back as a container.
+    // The retired `**[…]**` marker could only ever go one way.
+    expect(contextBlock.markdown?.serialize).toBeUndefined();
+    expect(contextBlock.markdown?.tag).toEqual({ body: "children" });
   });
 });

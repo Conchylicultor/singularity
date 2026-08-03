@@ -15,6 +15,12 @@ export const promptBlock = defineBlock({
   aliases: ["agent", "ask", "launch", "claude", "ai"],
   empty: () => ({ text: [] }),
   placeholder: "Ask an agent…",
+  // A prompt has no markdown prefix of its own (nothing in CommonMark means
+  // "ask an agent"), so without a tag it serialized as a bare paragraph and came
+  // back as `text` — the same silent type loss `quote` had. `body: "text"` puts
+  // the prompt's own text between the tags; the tasks it launched are link rows,
+  // not payload, so there is nothing else to carry.
+  markdown: { tag: { body: "text" } },
   // v1's prompt is this block's own text only, so Enter at the end starts an
   // ordinary paragraph rather than a second prompt; Backspace at the very start
   // resets to a paragraph and Enter on an empty prompt breaks out of it. Same

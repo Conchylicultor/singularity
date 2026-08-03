@@ -80,6 +80,7 @@ import {
   type BlockPasteHandler,
 } from "../internal/block-paste-handlers";
 import { BLOCKS_MIME } from "../internal/clipboard";
+import { blockTextProtectedSpans } from "../internal/block-text-extensions";
 
 /** The editor drops *between* rows only — it has no tree `child` reparent zone. */
 type SiblingZone = Extract<DropZone, "before" | "after">;
@@ -513,7 +514,13 @@ function SelectionLayer({
       if (clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, roots);
       clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
-      clipboardData.setData("text/plain", serializeForestToMarkdown(forest, handles));
+      clipboardData.setData(
+        "text/plain",
+        serializeForestToMarkdown(forest, {
+          handles,
+          protectedSpans: blockTextProtectedSpans(),
+        }),
+      );
       e.preventDefault();
       return true;
     },
@@ -616,7 +623,10 @@ function SelectionLayer({
       } else {
         const text = e.clipboardData.getData("text/plain");
         if (!text.trim()) return;
-        forest = parseMarkdownToForest(text, handles);
+        forest = parseMarkdownToForest(text, {
+          handles,
+          protectedSpans: blockTextProtectedSpans(),
+        });
       }
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();

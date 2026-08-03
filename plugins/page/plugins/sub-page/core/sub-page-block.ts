@@ -1,4 +1,9 @@
-import { defineBlock, PAGE_BLOCK_TYPE, PageDataSchema } from "@plugins/page/plugins/editor/core";
+import {
+  defineBlock,
+  pageBlockMarkdown,
+  PAGE_BLOCK_TYPE,
+  PageDataSchema,
+} from "@plugins/page/plugins/editor/core";
 
 /**
  * The sub-page block: a `type="page"` row rendered INLINE in its parent page's
@@ -21,4 +26,9 @@ export const subPageBlock = defineBlock({
   // Always show the collapse chevron: a collapsed page mounts no children, so
   // `hasChildren` is false and without this no chevron would ever appear.
   collapsible: "always",
+  // THE shared `page` markdown mapping — this handle is the one the WEB registry
+  // (and therefore the clipboard) resolves for `type="page"`, so it must carry
+  // it. Imported, never restated: `page-link` owns `<page>` on parse, and a
+  // second handle claiming the same tag name is a loud error.
+  markdown: pageBlockMarkdown,
 });

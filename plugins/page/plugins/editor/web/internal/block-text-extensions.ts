@@ -81,6 +81,22 @@ export function getBlockTextExtensions(): readonly BlockTextExtension[] {
   return extensions;
 }
 
+/**
+ * The registered token patterns, as the `MarkdownContext.protectedSpans` the
+ * markdown conversion requires. An inline decorator token (`[[block-…]]`,
+ * `[[date:…]]`, `\(latex\)`) is a plain substring inside `TextRun.text`, so the
+ * marks-aware inline scan must be told to leave those bytes alone — inline LaTeX
+ * is full of `_` and `*`.
+ *
+ * Read at call time, never memoized: extensions register during plugin load, and
+ * a snapshot taken too early would silently degrade to no protection.
+ */
+export function blockTextProtectedSpans(): RegExp[] {
+  return extensions
+    .map((e) => e.deserializePattern)
+    .filter((p): p is RegExp => p !== undefined);
+}
+
 /** Node classes to feed into a block editor's `LexicalComposer` config. */
 export function blockTextNodes(): Klass<LexicalNode>[] {
   return extensions

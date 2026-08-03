@@ -37,12 +37,13 @@ export const todoBlock = defineContainerBlock({
   // the intent rather than surprising a sentence. Longest-first matching in the
   // plugin means `TODO: ` wins over `TODO ` where both could apply.
   markdownPrefixes: ["TODO ", "TODO: "],
-  // One-way markdown for the EXTERNAL `text/plain` projection (internal
-  // copy/paste is lossless through the `BLOCKS_MIME` JSON forest). A void
-  // container has no text, so this emits the MARKER ALONE and the children —
-  // indented two spaces under it by the central walk — carry the content.
-  // Deliberately NOT `TODO`, the same string the prefix claims: this projection
-  // has no matching `parseLine` (a void type derives none), so emitting the
-  // trigger would produce markdown that reads as re-convertible and is not.
-  markdown: { serialize: () => "**[TODO]**" },
+  // `<todo>…</todo>` — a real round-tripping syntax, replacing the one-way
+  // `**[TODO]**` marker. The marker was honest about what it could do (a void
+  // type derives no `parseLine`, so emitting the `TODO ` trigger would have read
+  // as re-convertible and was not); a tag can carry the children, so the card
+  // survives a markdown round trip instead of dissolving into its contents.
+  //
+  // The `markdownPrefixes` above stay a TYPING-time trigger only: the tag pass
+  // keys on the tag name, so a `TODO ` line in pasted prose still stays prose.
+  markdown: { tag: { body: "children" } },
 });

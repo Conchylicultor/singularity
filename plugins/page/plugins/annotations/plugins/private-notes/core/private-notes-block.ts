@@ -27,10 +27,8 @@ export const privateNotesBlock = defineContainerBlock({
   icon: MdVisibilityOff,
   aliases: ["private", "hidden", "secret", "personal", "invisible", "draft"],
   empty: () => ({}),
-  // One-way markdown for the EXTERNAL `text/plain` projection (internal
-  // copy/paste is lossless through the `BLOCKS_MIME` JSON forest). A void
-  // container has no text, so this emits the MARKER ALONE and the children carry
-  // the content, indented two spaces under it by the central walk.
+  // `<private-notes>…</private-notes>` — a real round-tripping syntax, replacing
+  // the one-way `**[Private]**` marker.
   //
   // The children ARE serialized here, and that is correct: this serializer runs
   // for the CLIPBOARD, and a human copying their own page must get their own
@@ -38,5 +36,5 @@ export const privateNotesBlock = defineContainerBlock({
   // must filter this family by audience rather than lean on a lossy serializer
   // (see `page/annotations/CLAUDE.md`) — a serializer that dropped its children
   // would silently eat the user's text on Cmd+C.
-  markdown: { serialize: () => "**[Private]**" },
+  markdown: { tag: { body: "children" } },
 });

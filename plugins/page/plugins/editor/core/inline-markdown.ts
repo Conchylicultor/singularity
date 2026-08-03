@@ -1,14 +1,22 @@
 /**
- * Inline markdown formatting shortcuts: the delimiter table, plus the pure
- * matcher that decides whether the character the user just typed CLOSED one.
+ * Inline markdown formatting shortcuts: the delimiter table, plus the two pure
+ * consumers of it —
+ *
+ *  - `matchInlineFormat`, which decides whether the character the user just
+ *    typed CLOSED a span (typing-time autoformat), and
+ *  - `serializeInlineMarkdown` / `parseInlineMarkdown`, the whole-string
+ *    `RichText` ⇄ markdown pair used by `markdown.ts` for clipboard export and
+ *    paste. They are NOT expressible in terms of `matchInlineFormat`: it clamps
+ *    to the caret's line and demands the closer at end-of-string, because it
+ *    answers a different question.
  *
  * The table is plain data in `core/` rather than a slot because `Mark` is a
  * closed, persisted `z.enum` with a fixed `MARK_ORDER` (`rich-text.ts`) — a
  * sixth mark is a core edit plus a migration, never a contribution. Being data
  * in a leaf module is also what lets the *server* reuse it: `markdown.ts`'s
- * `MdSerializeCtx.plain` already declares the intent to render `**`/`_`/`` ` ``
- * on clipboard export, and a second copy of the delimiters there could drift
- * from the one the editor types against.
+ * `MdSerializeCtx.md` renders `**`/`_`/`` ` `` on clipboard export through the
+ * pair below, so a second copy of the delimiters there could drift from the one
+ * the editor types against.
  *
  * This is a syntax layer ABOVE the persisted model, so it imports `Mark` /
  * `sortMarks` from `./rich-text` instead of being appended to it. Nothing here
@@ -17,7 +25,15 @@
  * bootstrap (`inline-markdown.test.ts`).
  */
 
-import { type Mark, sortMarks } from "./rich-text";
+import {
+  coalesce,
+  COLOR_TOKENS,
+  sortMarks,
+  type ColorToken,
+  type Mark,
+  type RichText,
+  type TextRun,
+} from "./rich-text";
 
 /** One delimiter row: `tag` wraps `marks`, symmetrically on both sides. */
 export interface InlineSyntax {
@@ -214,4 +230,643 @@ export function matchInlineFormat(
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Whole-string `RichText` ⇄ inline markdown
+// ---------------------------------------------------------------------------
+//
+// THE ESCAPING RULE, stated once (both directions implement exactly this):
+//
+//   On serialize, every literal occurrence of one of
+//
+//        \  *  _  ~  `  [  ]  <
+//
+//   is prefixed with a backslash. That is precisely the set of characters that
+//   can BEGIN a construct this parser recognizes — a delimiter row's tag
+//   (`*`, `_`, `~`, `` ` ``), a link (`[`, with `]` closing its text), a tag
+//   (`<`) — plus the escape character itself. On parse, a backslash followed by
+//   one of those characters yields the character alone; a backslash followed by
+//   anything else is a literal backslash (CommonMark's rule, restricted to the
+//   set we own).
+//
+//   Nothing else is escaped: `(`, `)`, `>`, `#` and `-` carry no INLINE meaning
+//   here, and block-level syntax is `markdown.ts`'s concern. Inside a URL the
+//   set is narrower — `\` and `)` only — because a URL is read verbatim up to
+//   its first unescaped `)`.
+//
+// PROTECTED SPANS (`\(latex\)`, `[[block-…]]`, `[[date:…]]`, …) are matched
+// FIRST and masked out of the scan in both directions: their bytes are emitted
+// verbatim on serialize (never escaped) and taken verbatim on parse (never
+// scanned for delimiters). Inline LaTeX is full of `_` and `*`, which is the
+// whole reason this parameter exists. A protected span becomes its OWN run
+// carrying no marks and no color — byte-for-byte what `runs-lexical.ts`'s
+// `walkNode` produces for a decorator node — though it does inherit an enclosing
+// link, as that walk does too.
+//
+// CANONICAL OUTPUT, and the identity it buys: a delimiter may never flank
+// whitespace (`matchInlineFormat`'s two whitespace rules, mirrored below so what
+// the user can TYPE and what pasted text PARSES as cannot diverge), so the
+// serializer HOISTS boundary whitespace out of every delimiter-marked group
+// first — `**a **` is emitted as `**a** `. That is invisible when rendered (a
+// mark on a space paints nothing) and makes the round trip exact:
+//
+//     parseInlineMarkdown(serializeInlineMarkdown(runs, p), p) === canonical(runs)
+//
+// where `canonical` is `coalesce`, plus that hoist, plus splitting a protected
+// span off into its own unmarked run — and is the identity on anything the
+// editor produces from a selection that does not straddle a space, because that
+// is exactly the shape `runs-lexical.ts` reads back out of Lexical.
+
+/**
+ * Stand-in character for a protected span's bytes while scanning. NUL cannot
+ * appear in a delimiter tag, a link, or a tag name, so every `startsWith` test
+ * fails inside a masked region BY CONSTRUCTION rather than by a range check
+ * every call site would have to remember.
+ */
+const MASK = "\u0000";
+
+/** The escape set — see THE ESCAPING RULE above. */
+const ESCAPABLE = new Set(["\\", "*", "_", "~", "`", "[", "]", "<"]);
+
+/**
+ * Marks that have a delimiter row, i.e. the ones whose group boundaries are
+ * whitespace-sensitive. Derived from the table so it cannot drift from it
+ * (today: everything but `underline`, which is tag-wrapped and therefore safe).
+ */
+const DELIMITED_MARKS = new Set<Mark>(INLINE_SYNTAXES.flatMap((row) => [...row.marks]));
+
+/**
+ * `text` with every `protectedSpans` match replaced by `MASK` repeated to the
+ * SAME length, so indices into the mask and into the original text share one
+ * basis and no caller has to translate between them.
+ *
+ * Patterns are re-created flagless-plus-`g` from `.source` (mirroring
+ * `runs-lexical.ts`'s token loop, the other consumer of these same
+ * `deserializePattern`s), and a zero-length match advances by one rather than
+ * spinning forever.
+ */
+function maskProtected(text: string, protectedSpans: RegExp[]): string {
+  if (protectedSpans.length === 0 || text.length === 0) return text;
+  const chars = text.split("");
+  for (const pattern of protectedSpans) {
+    const re = new RegExp(pattern.source, "g");
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      if (m[0].length === 0) {
+        re.lastIndex += 1;
+        continue;
+      }
+      for (let i = m.index; i < m.index + m[0].length; i++) chars[i] = MASK;
+    }
+  }
+  return chars.join("");
+}
+
+// ---------------------------------------------------------------------------
+// Serialize: runs → markdown
+// ---------------------------------------------------------------------------
+
+/** One wrapping construct around a contiguous run range. */
+interface Wrapper {
+  /** Identity for "is this already applied by an enclosing wrapper". */
+  key: string;
+  open: string;
+  close: string;
+}
+
+/**
+ * Nesting order for the delimiter marks, OUTERMOST FIRST — the one decision this
+ * has to state (see `wrappersOf` for why `code` must stay last). The delimiters
+ * themselves are read off the table, so only the ORDER lives here; a row's tag
+ * cannot drift from a second copy. `inline-markdown.test.ts` pins that this
+ * covers every delimited mark.
+ */
+const MARK_NESTING: readonly Mark[] = ["bold", "italic", "strikethrough", "code"];
+
+/** `(mark, its single-mark row's tag)` in `MARK_NESTING` order. */
+const MARK_TAGS: readonly (readonly [Mark, string])[] = MARK_NESTING.flatMap((mark) => {
+  const row = INLINE_SYNTAXES.find((r) => r.marks.length === 1 && r.marks[0] === mark);
+  return row ? [[mark, row.tag] as const] : [];
+});
+
+/** Backslash-escape a URL's `\` and `)` (see THE ESCAPING RULE). */
+function escapeUrl(url: string): string {
+  return url.replace(/[\\)]/g, (c) => `\\${c}`);
+}
+
+/** Apply THE ESCAPING RULE to literal text, leaving protected spans verbatim. */
+function escapeText(text: string, protectedSpans: RegExp[]): string {
+  const masked = maskProtected(text, protectedSpans);
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!;
+    if (masked[i] === MASK) {
+      out += c;
+      continue;
+    }
+    if (ESCAPABLE.has(c)) out += "\\";
+    out += c;
+  }
+  return out;
+}
+
+/**
+ * The wrappers a run needs, OUTERMOST FIRST. The order is the nesting order and
+ * is load-bearing twice over: `bold` before `italic` is what makes a bold+italic
+ * run emit `***x***` (which the table's longest-tag-first parse reads back as
+ * ONE row rather than two nested spans), and `code` LAST is what keeps a code
+ * span innermost — its content is parsed verbatim, so a delimiter emitted inside
+ * one would never be read back.
+ */
+function wrappersOf(run: TextRun): Wrapper[] {
+  const out: Wrapper[] = [];
+  if (run.link) {
+    out.push({ key: `link:${run.link}`, open: "[", close: `](${escapeUrl(run.link)})` });
+  }
+  if (run.color && run.color !== "default") {
+    out.push({
+      key: `color:${run.color}`,
+      open: `<color value="${run.color}">`,
+      close: "</color>",
+    });
+  }
+  const marks = new Set(run.marks ?? []);
+  // `underline` is the one mark markdown has no delimiter for, so it gets a tag.
+  if (marks.has("underline")) {
+    out.push({ key: "mark:underline", open: "<u>", close: "</u>" });
+  }
+  for (const [mark, tag] of MARK_TAGS) {
+    if (marks.has(mark)) out.push({ key: `mark:${mark}`, open: tag, close: tag });
+  }
+  return out;
+}
+
+/**
+ * Split leading / trailing whitespace off every delimiter-marked run, so no
+ * emitted delimiter ever flanks a space (see CANONICAL OUTPUT above). The
+ * whitespace keeps the run's tag-wrapped attributes (underline / color / link),
+ * which are whitespace-safe; only the delimiter marks are dropped from it.
+ */
+function hoistBoundaryWhitespace(runs: RichText): RichText {
+  const out: RichText = [];
+  for (const run of runs) {
+    const marks = run.marks ?? [];
+    if (!marks.some((m) => DELIMITED_MARKS.has(m))) {
+      out.push(run);
+      continue;
+    }
+    const leadLen = run.text.length - run.text.trimStart().length;
+    const trailLen =
+      leadLen === run.text.length ? 0 : run.text.length - run.text.trimEnd().length;
+    if (leadLen === 0 && trailLen === 0) {
+      out.push(run);
+      continue;
+    }
+    const lead = run.text.slice(0, leadLen);
+    const trail = trailLen === 0 ? "" : run.text.slice(run.text.length - trailLen);
+    const core = run.text.slice(leadLen, run.text.length - trailLen);
+    const kept = marks.filter((m) => !DELIMITED_MARKS.has(m));
+    const bare = (text: string): TextRun => ({
+      text,
+      ...(kept.length > 0 ? { marks: kept } : {}),
+      ...(run.color ? { color: run.color } : {}),
+      ...(run.link ? { link: run.link } : {}),
+    });
+    if (lead.length > 0) out.push(bare(lead));
+    if (core.length > 0) out.push({ ...run, text: core });
+    if (trail.length > 0) out.push(bare(trail));
+  }
+  return coalesce(out);
+}
+
+/**
+ * Split every protected span into its OWN run, dropping the marks and colour the
+ * surrounding run carried (an enclosing link is kept — `walkNode` keeps it too).
+ * This is the serialize-side statement of the same rule the parser applies: a
+ * decorator token is never marked, so a mark may not span one. Without it the
+ * round trip still converges, but takes two cycles instead of one.
+ */
+function splitProtectedSpans(runs: RichText, protectedSpans: RegExp[]): RichText {
+  if (protectedSpans.length === 0) return runs;
+  const out: RichText = [];
+  for (const run of runs) {
+    const masked = maskProtected(run.text, protectedSpans);
+    let i = 0;
+    let plainFrom = 0;
+    const pushPlain = (end: number): void => {
+      if (end > plainFrom) out.push({ ...run, text: run.text.slice(plainFrom, end) });
+    };
+    while (i < masked.length) {
+      if (masked[i] !== MASK) {
+        i += 1;
+        continue;
+      }
+      let j = i;
+      while (j < masked.length && masked[j] === MASK) j += 1;
+      pushPlain(i);
+      out.push(
+        run.link
+          ? { text: run.text.slice(i, j), link: run.link }
+          : { text: run.text.slice(i, j) },
+      );
+      plainFrom = j;
+      i = j;
+    }
+    pushPlain(run.text.length);
+  }
+  return coalesce(out);
+}
+
+/**
+ * Greedy maximal grouping: take the outermost wrapper the first run still needs,
+ * extend it over every following run that also needs it, and emit it ONCE around
+ * the recursively-emitted range. The runs themselves stay FLAT — marks are a
+ * per-run set, never a tree; the nesting exists only in the emitted string.
+ */
+function emitRuns(runs: RichText, applied: Set<string>, protectedSpans: RegExp[]): string {
+  const pendingOf = (run: TextRun): Wrapper[] =>
+    wrappersOf(run).filter((w) => !applied.has(w.key));
+  let out = "";
+  let i = 0;
+  while (i < runs.length) {
+    const pending = pendingOf(runs[i]!);
+    if (pending.length === 0) {
+      out += escapeText(runs[i]!.text, protectedSpans);
+      i += 1;
+      continue;
+    }
+    const wrapper = pending[0]!;
+    // `code` is LAST in `wrappersOf`'s order, so reaching it as the outermost
+    // pending wrapper means it is the only one left on this run — and the group
+    // may only extend over runs that are likewise code-and-nothing-else, since a
+    // code span's content is parsed verbatim.
+    const codeOnly = wrapper.key === "mark:code";
+    let j = i + 1;
+    while (j < runs.length) {
+      const next = pendingOf(runs[j]!);
+      if (!next.some((w) => w.key === wrapper.key)) break;
+      if (codeOnly && next.length !== 1) break;
+      j += 1;
+    }
+    applied.add(wrapper.key);
+    out += wrapper.open + emitRuns(runs.slice(i, j), applied, protectedSpans) + wrapper.close;
+    applied.delete(wrapper.key);
+    i = j;
+  }
+  return out;
+}
+
+/**
+ * Render runs as canonical inline markdown: marks as delimiters, `link` as
+ * `[text](url)`, `color` as `<color value="…">`, `underline` as `<u>`, every
+ * literal delimiter character backslash-escaped, and every `protectedSpans`
+ * match emitted verbatim. Round-trips through {@link parseInlineMarkdown} — see
+ * the section header for the exact statement.
+ */
+export function serializeInlineMarkdown(runs: RichText, protectedSpans: RegExp[]): string {
+  const canonical = hoistBoundaryWhitespace(
+    splitProtectedSpans(coalesce(runs), protectedSpans),
+  );
+  return emitRuns(canonical, new Set(), protectedSpans);
+}
+
+// ---------------------------------------------------------------------------
+// Parse: markdown → runs
+// ---------------------------------------------------------------------------
+
+/** The two strings the scan reads, in one shared index basis. */
+interface Scan {
+  text: string;
+  masked: string;
+}
+
+/** Attributes accumulated by the enclosing wrappers at the current scan depth. */
+interface ScanAttrs {
+  marks: Mark[];
+  color?: ColorToken;
+  link?: string;
+}
+
+function runWith(text: string, attrs: ScanAttrs): TextRun {
+  const run: TextRun = { text };
+  if (attrs.marks.length > 0) run.marks = sortMarks(attrs.marks);
+  if (attrs.color) run.color = attrs.color;
+  if (attrs.link) run.link = attrs.link;
+  return run;
+}
+
+/** `s.text[i]` starts a backslash escape that consumes `s.text[i + 1]`. */
+function isEscapeAt(s: Scan, i: number, to: number): boolean {
+  if (s.text[i] !== "\\" || s.masked[i] === MASK) return false;
+  return i + 1 < to && s.masked[i + 1] !== MASK && ESCAPABLE.has(s.text[i + 1]!);
+}
+
+/** A tag construct: `<u>…</u>` or `<color value="…">…</color>`. */
+interface TagSyntax {
+  name: string;
+  open: RegExp;
+  /** The attributes it contributes, or null when the match is not valid. */
+  attrs(match: RegExpExecArray): Partial<ScanAttrs> | null;
+}
+
+const TAG_SYNTAXES: readonly TagSyntax[] = [
+  { name: "u", open: /^<u>/, attrs: () => ({ marks: ["underline"] }) },
+  {
+    name: "color",
+    open: /^<color value="([a-z]+)">/,
+    attrs: (m) => {
+      const value = m[1]! as ColorToken;
+      // An unrecognized colour is not a failure — parsing foreign markdown is
+      // lenient, so the tag simply stays literal text.
+      return COLOR_TOKENS.includes(value) && value !== "default" ? { color: value } : null;
+    },
+  },
+];
+
+/** Index of the `</name>` closing the `<name…>` opened before `from`, or null. */
+function findTagClose(s: Scan, from: number, to: number, name: string): number | null {
+  const close = `</${name}>`;
+  const openPrefix = `<${name}`;
+  let depth = 1;
+  let j = from;
+  while (j < to) {
+    if (s.masked[j] === MASK) {
+      j += 1;
+      continue;
+    }
+    if (isEscapeAt(s, j, to)) {
+      j += 2;
+      continue;
+    }
+    if (j + close.length <= to && s.text.startsWith(close, j)) {
+      depth -= 1;
+      if (depth === 0) return j;
+      j += close.length;
+      continue;
+    }
+    if (j + openPrefix.length <= to && s.text.startsWith(openPrefix, j)) {
+      depth += 1;
+      j += openPrefix.length;
+      continue;
+    }
+    j += 1;
+  }
+  return null;
+}
+
+interface TagMatch {
+  attrs: Partial<ScanAttrs>;
+  contentStart: number;
+  contentEnd: number;
+  end: number;
+}
+
+function matchTag(s: Scan, i: number, to: number): TagMatch | null {
+  const rest = s.text.slice(i, to);
+  for (const syntax of TAG_SYNTAXES) {
+    const m = syntax.open.exec(rest);
+    if (!m) continue;
+    const attrs = syntax.attrs(m);
+    if (attrs === null) continue;
+    const contentStart = i + m[0].length;
+    const closeAt = findTagClose(s, contentStart, to, syntax.name);
+    if (closeAt === null) continue;
+    return {
+      attrs,
+      contentStart,
+      contentEnd: closeAt,
+      end: closeAt + `</${syntax.name}>`.length,
+    };
+  }
+  return null;
+}
+
+interface LinkMatch {
+  textStart: number;
+  textEnd: number;
+  url: string;
+  end: number;
+}
+
+/** `[text](url)` starting at `i`, or null when this `[` opens no link. */
+function matchLink(s: Scan, i: number, to: number): LinkMatch | null {
+  let depth = 1;
+  let j = i + 1;
+  while (j < to) {
+    if (s.masked[j] === MASK) {
+      j += 1;
+      continue;
+    }
+    if (isEscapeAt(s, j, to)) {
+      j += 2;
+      continue;
+    }
+    const c = s.text[j]!;
+    if (c === "\n") return null;
+    if (c === "[") depth += 1;
+    else if (c === "]") {
+      depth -= 1;
+      if (depth === 0) break;
+    }
+    j += 1;
+  }
+  if (j >= to || depth !== 0) return null;
+  const closeBracket = j;
+  // Empty link text would swallow the brackets and leave nothing behind.
+  if (closeBracket === i + 1) return null;
+  if (closeBracket + 1 >= to || s.text[closeBracket + 1] !== "(") return null;
+
+  let k = closeBracket + 2;
+  let url = "";
+  while (k < to) {
+    const c = s.text[k]!;
+    if (c === "\n") return null;
+    if (c === "\\" && k + 1 < to) {
+      url += s.text[k + 1]!;
+      k += 2;
+      continue;
+    }
+    if (c === ")") break;
+    url += c;
+    k += 1;
+  }
+  if (k >= to || s.text[k] !== ")") return null;
+  // An empty URL is not a link — stay literal rather than eat the brackets.
+  if (url.length === 0) return null;
+  return { textStart: i + 1, textEnd: closeBracket, url, end: k + 1 };
+}
+
+interface DelimiterMatch {
+  marks: readonly Mark[];
+  contentStart: number;
+  contentEnd: number;
+  end: number;
+}
+
+/**
+ * The delimiter row opening at `i`, tried LONGEST TAG FIRST (the table's own
+ * order, which IS the precedence rule). The admission rules mirror
+ * `matchInlineFormat`:
+ *
+ *  - no whitespace immediately inside either delimiter, so `2 * 3 * 4` stays
+ *    literal arithmetic and `**a **` is not a bold span;
+ *  - non-empty content;
+ *  - both delimiters must be a WHOLE run of their character — the same rule
+ *    `matchInlineFormat` spells "repeating-char", and what stops `**` stealing
+ *    the outer stars of `***x***` or `****` italicizing a lone `*`;
+ *  - for the `_` family, punctuation-or-space flanks on the outside, so
+ *    `snake_case_name` stays literal.
+ */
+function matchDelimiter(s: Scan, i: number, to: number): DelimiterMatch | null {
+  for (const row of INLINE_SYNTAXES) {
+    const d = row.tag.length;
+    const char = row.tag[0]!;
+    if (i + d >= to) continue;
+    if (!s.masked.startsWith(row.tag, i)) continue;
+    if (WHITESPACE.test(s.text[i + d]!)) continue;
+    if (s.text[i + d] === char) continue;
+    if (i > 0 && s.text[i - 1] === char) continue;
+    if (!row.intraword) {
+      const before = i > 0 ? s.text[i - 1] : undefined;
+      if (before !== undefined && !PUNCTUATION_OR_SPACE.test(before)) continue;
+    }
+
+    let closeStart: number | null = null;
+    for (let j = i + d; j + d <= to; j++) {
+      if (s.text[j] === "\n") break;
+      if (s.masked[j] === MASK) continue;
+      if (isEscapeAt(s, j, to)) {
+        j += 1;
+        continue;
+      }
+      if (!s.masked.startsWith(row.tag, j)) continue;
+      if (j === i + d) continue;
+      if (WHITESPACE.test(s.text[j - 1]!)) continue;
+      if (s.text[j - 1] === char) continue;
+      if (j + d < to && s.text[j + d] === char) continue;
+      if (!row.intraword) {
+        const after = j + d < to ? s.text[j + d] : undefined;
+        if (after !== undefined && !PUNCTUATION_OR_SPACE.test(after)) continue;
+      }
+      closeStart = j;
+      break;
+    }
+    if (closeStart === null) continue;
+    return {
+      marks: row.marks,
+      contentStart: i + d,
+      contentEnd: closeStart,
+      end: closeStart + d,
+    };
+  }
+  return null;
+}
+
+/**
+ * Scan `[from, to)` under `attrs`, pushing FLAT runs into `out`. `literal` is set
+ * inside a code span: escapes and protected spans still resolve there (a
+ * decorator token materializes regardless of the surrounding marks), but no
+ * delimiter, link or tag does — CommonMark's code-span precedence.
+ */
+function scanSpan(
+  s: Scan,
+  from: number,
+  to: number,
+  attrs: ScanAttrs,
+  out: RichText,
+  literal: boolean,
+): void {
+  let buf = "";
+  const flush = (): void => {
+    if (buf.length > 0) {
+      out.push(runWith(buf, attrs));
+      buf = "";
+    }
+  };
+  let i = from;
+  while (i < to) {
+    if (s.masked[i] === MASK) {
+      let j = i;
+      while (j < to && s.masked[j] === MASK) j += 1;
+      flush();
+      // A decorator token is never marked or coloured, but does inherit an
+      // enclosing link — byte-for-byte `runs-lexical.ts`'s `walkNode`.
+      out.push(
+        attrs.link
+          ? { text: s.text.slice(i, j), link: attrs.link }
+          : { text: s.text.slice(i, j) },
+      );
+      i = j;
+      continue;
+    }
+    if (isEscapeAt(s, i, to)) {
+      buf += s.text[i + 1]!;
+      i += 2;
+      continue;
+    }
+    if (!literal) {
+      const c = s.text[i]!;
+      if (c === "<") {
+        const tag = matchTag(s, i, to);
+        if (tag) {
+          flush();
+          scanSpan(
+            s,
+            tag.contentStart,
+            tag.contentEnd,
+            {
+              ...attrs,
+              ...tag.attrs,
+              marks: sortMarks([...attrs.marks, ...(tag.attrs.marks ?? [])]),
+            },
+            out,
+            false,
+          );
+          i = tag.end;
+          continue;
+        }
+      }
+      if (c === "[") {
+        const link = matchLink(s, i, to);
+        if (link) {
+          flush();
+          scanSpan(s, link.textStart, link.textEnd, { ...attrs, link: link.url }, out, false);
+          i = link.end;
+          continue;
+        }
+      }
+      const delim = matchDelimiter(s, i, to);
+      if (delim) {
+        flush();
+        scanSpan(
+          s,
+          delim.contentStart,
+          delim.contentEnd,
+          { ...attrs, marks: sortMarks([...attrs.marks, ...delim.marks]) },
+          out,
+          delim.marks.includes("code"),
+        );
+        i = delim.end;
+        continue;
+      }
+    }
+    buf += s.text[i]!;
+    i += 1;
+  }
+  flush();
+}
+
+/**
+ * Parse inline markdown into canonical `RichText`. Lenient by design (foreign
+ * markdown pastes as well as it can; an unmatched delimiter, tag or bracket is
+ * literal text), and canonical on output — `coalesce`d, marks `sortMarks`ed, no
+ * zero-length runs. See the section header for the round-trip statement and the
+ * escaping rule.
+ */
+export function parseInlineMarkdown(text: string, protectedSpans: RegExp[]): RichText {
+  const s: Scan = { text, masked: maskProtected(text, protectedSpans) };
+  const out: RichText = [];
+  scanSpan(s, 0, text.length, { marks: [] }, out, false);
+  return coalesce(out);
 }

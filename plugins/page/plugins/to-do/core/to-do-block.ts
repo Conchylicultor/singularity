@@ -17,7 +17,7 @@ export const toDoBlock = defineBlock({
   // capture `[ ] x` as the text).
   markdown: {
     precedence: 10,
-    serialize: (d, ctx) => `- [${d.checked ? "x" : " "}] ` + ctx.plain(d.text),
+    serialize: (d, ctx) => `- [${d.checked ? "x" : " "}] ` + ctx.md(d.text),
     parseLine: (line, ctx) => {
       const m = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/.exec(line);
       if (!m) return null;

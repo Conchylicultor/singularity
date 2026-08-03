@@ -16,7 +16,7 @@ export const numberedListBlock = defineBlock({
   // parse `1.`/`2)`/`10.` etc. The literal number is discarded — numbering is
   // positional, derived at render.
   markdown: {
-    serialize: (d, ctx) => `${ctx.ordinal}. ` + ctx.plain(d.text),
+    serialize: (d, ctx) => `${ctx.ordinal}. ` + ctx.md(d.text),
     parseLine: (line, ctx) => {
       const m = /^\d+[.)]\s+(.*)$/.exec(line);
       return m ? { text: ctx.runs(m[1]!) } : null;

@@ -17,6 +17,7 @@ import {
   withMintedIds,
   type Block,
   type BlockNode,
+  type IdentifiedBlock,
   type SerializedBlock,
 } from "../core";
 import { serializeForest } from "./serialize-blocks";
@@ -56,6 +57,14 @@ function after(prev: Rank): Rank {
 
 function leaf(type: string, data?: unknown): SerializedBlock {
   return { type, data, expanded: false, children: [] };
+}
+
+/** Drop the stamped row ids, for comparing STRUCTURE against a `SerializedBlock`. */
+function withoutIds(forest: IdentifiedBlock[]): SerializedBlock[] {
+  return forest.map(({ id: _id, children, ...rest }) => ({
+    ...rest,
+    children: withoutIds(children),
+  }));
 }
 
 /** Planner output (`BlockNode[]`, string ranks) as document rows. */
@@ -109,7 +118,21 @@ describe("serializeForest", () => {
       rootRanks: Rank.nBetween(null, null, 1),
       forest: withMintedIds([original]),
     });
-    expect(serializeForest(rowsOf(nodes), rootIds)).toEqual([original]);
+    // Ids are stripped for the STRUCTURAL comparison: `serializeForest` stamps
+    // each node's source row id (the markdown walk needs it — a `<page id="…"/>`
+    // tag has no other source of identity), and those ids are freshly minted
+    // here. That the ids are the source rows' is pinned by its own test below.
+    expect(withoutIds(serializeForest(rowsOf(nodes), rootIds))).toEqual([original]);
+  });
+
+  test("stamps each node's SOURCE row id", () => {
+    // Provenance, never a destination identity: both consumers (copy→paste and
+    // duplicate) run the forest through `withMintedIds`, which overwrites it.
+    const rows = [mk("root", null, r0, { type: "toggle" }), mk("kid", "root", r0)];
+    const [s] = serializeForest(rows, ["root"]);
+    expect(s!.id).toBe("root");
+    expect(s!.children.map((c) => c.id)).toEqual(["kid"]);
+    expect(withMintedIds(serializeForest(rows, ["root"]))[0]!.id).not.toBe("root");
   });
 
   test("a COLLAPSED subtree still serializes whole (rows, not visible lines)", () => {

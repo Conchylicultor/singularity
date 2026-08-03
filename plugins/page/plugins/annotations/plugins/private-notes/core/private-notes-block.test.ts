@@ -43,9 +43,11 @@ describe("privateNotesBlock (derived + forced facts)", () => {
     expect(privateNotesBlock.splitChildWhenExpanded).toBeUndefined();
   });
 
-  it("serializes to the marker alone — a void container has no text of its own", () => {
-    expect(privateNotesBlock.markdown?.serialize?.({}, { plain: () => "", ordinal: 1 })).toBe(
-      "**[Private]**",
-    );
+  it("maps to a round-tripping <private-notes> tag, not a one-way marker", () => {
+    // A void container has no text of its own, so its markdown mapping is the
+    // generic TAG: the children go inside it and it comes back as a container.
+    // The retired `**[…]**` marker could only ever go one way.
+    expect(privateNotesBlock.markdown?.serialize).toBeUndefined();
+    expect(privateNotesBlock.markdown?.tag).toEqual({ body: "children" });
   });
 });

@@ -24,7 +24,8 @@ is each one for?", never "is there a context card?".
 **Nothing feeds page content to an agent yet.** A `/prompt` launch sends only that
 block's own text (`page/prompt/block`), and `serializeForestToMarkdown` has only
 clipboard callers. So all four blocks currently do exactly one thing: mark a run
-of blocks visually, and emit a marker line in the external markdown projection.
+of blocks visually, and round-trip through the markdown projection as their own
+`<context>` / `<todo>` / `<agent-notes>` / `<private-notes>` tag.
 
 The consequence to be honest about: **`/private` does not yet hide anything**,
 because nothing yet reads any of these. It is a promise about a channel that does

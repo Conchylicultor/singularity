@@ -37,9 +37,11 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     expect(agentNotesBlock.splitChildWhenExpanded).toBeUndefined();
   });
 
-  it("serializes to the marker alone — a void container has no text of its own", () => {
-    expect(agentNotesBlock.markdown?.serialize?.({}, { plain: () => "", ordinal: 1 })).toBe(
-      "**[Agent notes]**",
-    );
+  it("maps to a round-tripping <agent-notes> tag, not a one-way marker", () => {
+    // A void container has no text of its own, so its markdown mapping is the
+    // generic TAG: the children go inside it and it comes back as a container.
+    // The retired `**[…]**` marker could only ever go one way.
+    expect(agentNotesBlock.markdown?.serialize).toBeUndefined();
+    expect(agentNotesBlock.markdown?.tag).toEqual({ body: "children" });
   });
 });

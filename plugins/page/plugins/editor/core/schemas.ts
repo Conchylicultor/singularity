@@ -2,6 +2,7 @@ import { z } from "zod";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { defineBlock } from "./define-block";
+import type { BlockMarkdown } from "./markdown";
 
 // A block `data` payload that has been validated against its block type's schema.
 // Type-only brand (no runtime shape) — mintable ONLY by `parseBlockData()` on the
@@ -109,14 +110,54 @@ export function pageData(block: Pick<Block, "data">): PageData {
   return PageDataSchema.parse(block.data);
 }
 
+/**
+ * The `page` row's markdown mapping, declared ONCE and shared by BOTH handles
+ * that register the type — `pageBlockHandle` below (server `Editor.BlockData`)
+ * and `sub-page`'s web renderer handle. A second copy would let the two disagree
+ * about the tag name, and two handles claiming one tag name on PARSE is a loud
+ * error.
+ */
+export const pageBlockMarkdown: BlockMarkdown<PageData> = {
+  tag: {
+    name: "page",
+    // A sub-page's children live under a DIFFERENT `page_id` partition and are
+    // mounted only while the row is expanded (`deriveMounts`), so a collapsed
+    // page's children are not in the forest at all. Emitting `<page id="x"/>`
+    // for it states that, and stops a future server-side walk from loading rows
+    // the editing surface never had.
+    body: "children-when-expanded",
+    // A page's identity IS its row id, which no `data` field carries — this is
+    // the one tag that reads `ctx.id`, and why the serialize walk takes
+    // `MarkdownNode` rather than the id-less `SerializedBlock`.
+    attrs: (_data, ctx) => {
+      if (ctx.id === undefined) {
+        throw new Error(
+          "markdown: a `page` block can only be serialized from an IDENTIFIED forest — " +
+            "its id is its identity, and an id-less <page/> could never be reconciled " +
+            "against the row it came from.",
+        );
+      }
+      return { id: ctx.id };
+    },
+    // SERIALIZE ONLY: `<page id="x"/>` parses back as a `page-link`, never as a
+    // sub-page. **Markdown parse alone can never mint a sub-page** — minting one
+    // means minting its `page_id` partition and restamping a subtree, which only
+    // the server's turn-into-page op does (and neither handle declares a `label`,
+    // so it cannot be menu-created either). The id in the tag is precisely what
+    // lets a future diff/merge reconcile the tag against the EXISTING sub-page
+    // row instead of re-minting it.
+    serializeOnly: true,
+  },
+};
+
 // The block handle for the reserved `type="page"` node. Owned by `editor/core` —
 // NOT by the `sub-page` renderer plugin — because `handle-turn-into-page` and
 // `replacePageContent` write page rows directly, so page creation must not depend
 // on the sub-page plugin being enabled. `editor/server` contributes THIS handle to
-// the server `Editor.BlockData` registry; the `sub-page` web renderer reuses it
-// directly rather than declaring a second handle for the same type — a `type` is
-// defined, and registered, exactly once.
+// the server `Editor.BlockData` registry; the `sub-page` web renderer declares its
+// own handle for the same type, sharing `pageBlockMarkdown` above.
 export const pageBlockHandle = defineBlock({
   type: PAGE_BLOCK_TYPE,
   schema: PageDataSchema,
+  markdown: pageBlockMarkdown,
 });
