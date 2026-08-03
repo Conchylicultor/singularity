@@ -3573,6 +3573,10 @@
       "name": "@singularity/plugin-primitives-data-view-view-order",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/date-picker": {
+      "name": "@singularity/plugin-primitives-date-picker",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/detail-sections": {
       "name": "@singularity/plugin-primitives-detail-sections",
       "version": "0.0.1",
@@ -6810,6 +6814,8 @@
     "@singularity/plugin-primitives-data-view-view-core": ["@singularity/plugin-primitives-data-view-view-core@workspace:plugins/primitives/plugins/data-view/plugins/view-core"],
 
     "@singularity/plugin-primitives-data-view-view-order": ["@singularity/plugin-primitives-data-view-view-order@workspace:plugins/primitives/plugins/data-view/plugins/view-order"],
+
+    "@singularity/plugin-primitives-date-picker": ["@singularity/plugin-primitives-date-picker@workspace:plugins/primitives/plugins/date-picker"],
 
     "@singularity/plugin-primitives-detail-sections": ["@singularity/plugin-primitives-detail-sections@workspace:plugins/primitives/plugins/detail-sections"],
 

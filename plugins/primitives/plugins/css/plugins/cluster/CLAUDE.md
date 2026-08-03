@@ -74,6 +74,7 @@ defined in exactly one place. The distinct export buys two things:
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/avatar`
+    - `primitives/date-picker`
     - `stats/commits`
     - `ui/theme-engine/theme-customizer`
     - `ui/tokens/shadow`

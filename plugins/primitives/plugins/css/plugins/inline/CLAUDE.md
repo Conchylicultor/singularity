@@ -88,6 +88,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `page/editor`
     - `page/embed`
     - `page/formatting/link`
+    - `page/inline-date`
     - `page/read-only-view`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/routes/render-detail`

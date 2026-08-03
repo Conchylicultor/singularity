@@ -26,9 +26,15 @@ tests can pin it. `addUnits` shifts via `Date` setters, so month/year arithmetic
 and DST stay calendar-correct.
 
 The value inputs (`web/components/date-filter.tsx`) are a popover-driven anchor
-chooser (presets + a custom-relative builder + an exact-date picker), composed
-from the shared primitives (`InlinePopover`, `Row`, `Stack`/`Inset`, `Text`,
-`SectionLabel`, `Button`).
+chooser: a Relative section (presets + the custom-relative builder) above an
+Exact date `<Calendar>` (`@plugins/primitives/plugins/date-picker/web`).
+
+**The Relative section is not redundant with the calendar** — a calendar can
+only express `{kind:"date"}`. Deleting it would drop `{kind:"relative"}` anchors
+("3 days ago"), which is the whole point of the union. The calendar emits
+`toISODay(d)`, i.e. the same bare `yyyy-mm-dd` both the web predicate and the
+server filter-sql contributor resolve through `resolveAnchorDay`; emitting a
+full ISO instant instead would silently change filter semantics on both sides.
 
 ## Within operators
 
@@ -54,6 +60,7 @@ row (incomplete rule), mirroring the scalar operators.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Separator`
     - `primitives/data-view.DataViewSlots`
+    - `primitives/date-picker.Calendar`
     - `primitives/popover.InlinePopover`
 - Core:
   - Exports (types):

@@ -339,6 +339,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
+    - `primitives/date-picker`
     - `primitives/detail-sections`
     - `primitives/diff-view`
     - `primitives/expandable`

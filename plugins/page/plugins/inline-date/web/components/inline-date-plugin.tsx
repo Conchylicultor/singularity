@@ -7,9 +7,11 @@ import {
   $isTextNode,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   atWordBoundary,
   CaretTriggerMenu,
@@ -27,9 +29,14 @@ import { buildMenu, type DateOption } from "../internal/date-options";
  * Esc / outside-press dismiss; the menu renders through `CaretTriggerMenu`,
  * caret-anchored since `@` appears mid-line.
  *
- * The query is parsed by chrono into a concrete instant. Selecting the "date" row
- * inserts a `[[date:<iso>]]` chip; the "reminder" row mints a UUID and inserts a
- * `[[reminder:<id>:<iso>]]` chip that the server schedules a notification for.
+ * The query filters the relative presets (Today / Tomorrow / Yesterday) AND is
+ * parsed by chrono into a concrete instant — so the preset vocabulary the menu
+ * advertises at rest stays reachable as you type it (`@tod` still offers a
+ * pressable `Today`). Selecting the "date" row inserts a `[[date:<iso>]]` chip;
+ * the "reminder" row mints a UUID and inserts a `[[reminder:<id>:<iso>]]` chip
+ * that the server schedules a notification for. A footer states the grammar
+ * chrono accepts, since a menu that just closes on an unparseable query reads as
+ * a bug rather than as guidance.
  */
 export function InlineDatePlugin(_: BlockTextPluginProps) {
   const [lexicalEditor] = useLexicalComposerContext();
@@ -66,7 +73,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
     isQueryValid: (q) => !/[@\n]/.test(q) && buildMenu(q, new Date()).open,
   });
 
-  // `buildMenu` runs here for RENDER (hint vs. options) and again inside
+  // `buildMenu` runs here for RENDER (the option rows) and again inside
   // `isQueryValid` for the OPEN gate — the same double evaluation the old
   // sync()+render performed; the model is deliberately not threaded through the hook.
   const menu = useMemo(() => buildMenu(caret.query, new Date()), [caret.query]);
@@ -84,39 +91,55 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
       width="lg"
       padding="xs"
     >
-      {menu.hint ? (
-        <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
-          Keep typing a date…
-        </Text>
-      ) : (
-        <Stack gap="none">
-          {/* eslint-disable-next-line data-view/no-adhoc-row-list -- caret typeahead menu (transient chrome) */}
-          {options.map((option, i) => (
-            <Row
-              key={`${option.kind}-${i}`}
-              selected={i === activeIndex}
-              icon={
-                option.kind === "reminder" ? (
-                  <MdNotificationsActive className="text-muted-foreground" />
-                ) : (
-                  <MdCalendarToday className="text-muted-foreground" />
-                )
-              }
-              onMouseEnter={() => setActiveIndex(i)}
-              // Commit on pointerdown through the menu's `commit` (pointerdown-
-              // timed + `editor.update`-wrapped), so a click matches Enter — a
-              // mousedown-time commit would never fire (the press perturbs the
-              // caret and unmounts this row first). See `useCaretMenu`.
-              onPointerDown={(e: React.PointerEvent) => {
-                e.preventDefault();
-                commit(i);
-              }}
-            >
-              <span className="truncate">{option.label}</span>
-            </Row>
-          ))}
-        </Stack>
-      )}
+      <Stack gap="none">
+        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- caret typeahead menu (transient chrome) */}
+        {options.map((option, i) => (
+          <Row
+            key={`${option.kind}-${i}`}
+            selected={i === activeIndex}
+            icon={
+              option.kind === "reminder" ? (
+                <MdNotificationsActive className="text-muted-foreground" />
+              ) : (
+                <MdCalendarToday className="text-muted-foreground" />
+              )
+            }
+            onMouseEnter={() => setActiveIndex(i)}
+            // Commit on pointerdown through the menu's `commit` (pointerdown-
+            // timed + `editor.update`-wrapped), so a click matches Enter — a
+            // mousedown-time commit would never fire (the press perturbs the
+            // caret and unmounts this row first). See `useCaretMenu`.
+            onPointerDown={(e: React.PointerEvent) => {
+              e.preventDefault();
+              commit(i);
+            }}
+          >
+            {/* The label owns the slack; `detail` (the absolute day behind a
+                relative label) sits in its own rigid track, never floated over
+                the label — the overlap rule in the `css` skill. */}
+            <Fill>
+              <Text>{option.label}</Text>
+            </Fill>
+            {option.detail ? (
+              <Text variant="caption" tone="muted">
+                {option.detail}
+              </Text>
+            ) : null}
+          </Row>
+        ))}
+        {/* Persistent grammar footer — the accepted formats are otherwise
+            invisible, and a menu that silently closes on an unparseable query
+            reads as a bug. Shown in the hint state too (where it is the only
+            content), so "keep typing" always says WHAT to type. */}
+        <Inset
+          pad="xs"
+          className={cn(options.length > 0 && "border-border border-t")}
+        >
+          <Text variant="caption" tone="muted">
+            tomorrow · next fri 3pm · jun 17 · 2026-06-17
+          </Text>
+        </Inset>
+      </Stack>
     </CaretTriggerMenu>
   );
 }

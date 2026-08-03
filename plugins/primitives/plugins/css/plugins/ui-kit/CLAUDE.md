@@ -415,6 +415,7 @@ structurally unrepresentable.
     - `page/formatting/color`
     - `page/formatting/link`
     - `page/image`
+    - `page/inline-date`
     - `page/math/equation`
     - `page/math/inline`
     - `page/prompt/block`
@@ -469,6 +470,7 @@ structurally unrepresentable.
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
+    - `primitives/date-picker`
     - `primitives/detail-sections`
     - `primitives/floating-action`
     - `primitives/floating-surface`

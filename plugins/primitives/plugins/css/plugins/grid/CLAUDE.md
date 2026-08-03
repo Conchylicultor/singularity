@@ -78,6 +78,7 @@ Shared (both paths):
     - `debug/health-monitor`
     - `page/formatting/color`
     - `primitives/data-view/gallery`
+    - `primitives/date-picker`
     - `primitives/icon-picker`
     - `primitives/loading`
     - `screenshot`

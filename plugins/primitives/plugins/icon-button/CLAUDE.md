@@ -91,6 +91,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`
+    - `primitives/date-picker`
     - `primitives/folder-picker`
     - `primitives/launch`
     - `primitives/overflow-menu`

@@ -23,6 +23,7 @@
   - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor + useInfiniteQuery), and the ScrollSentinel component.
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.
   - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
+  - **`date-picker`** — Themed date-picker primitive: <Calendar> month grid, <TimeField> native clock input, <DatePickerPanel> (presets + calendar + time + clear), and <DatePickerPopover>. Day math lives in core/ and is local-calendar, never UTC.
   - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
   - **`diff-view`** — Generic side-by-side / text diff renderer primitive. Exposes TextDiff (two in-memory strings), DiffView/DiffOrImageView (worktree file vs a git ref), DiffRenderer, and the shiki token helpers.
   - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.

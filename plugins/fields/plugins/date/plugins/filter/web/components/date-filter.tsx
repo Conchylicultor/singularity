@@ -6,6 +6,8 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { fromISODay, toISODay } from "@plugins/primitives/plugins/date-picker/core";
+import { Calendar } from "@plugins/primitives/plugins/date-picker/web";
 import {
   formatAnchor,
   type DateAnchor,
@@ -122,7 +124,10 @@ function AnchorChooser({
     <InlinePopover
       open={open}
       onOpenChange={setOpen}
-      width="md"
+      // `fit` (not a fixed role) so the 7-column month grid sizes the panel
+      // naturally; `min-w-64` keeps the pre-calendar floor and
+      // `max-w-(--available-width)` caps it, so it can neither clip nor sprawl.
+      width="fit"
       trigger={
         <Button variant="outline">
           <MdCalendarToday />
@@ -159,13 +164,14 @@ function AnchorChooser({
           <Separator />
           <Stack gap="2xs">
             <SectionLabel>Exact date</SectionLabel>
-            <input
-              type="date"
-              className={NATIVE_CONTROL}
-              value={exactIso}
-              onChange={(e) =>
-                e.target.value && pick({ kind: "date", iso: e.target.value })
-              }
+            {/*
+              `toISODay` is local-midnight, so the emitted operand stays the bare
+              `yyyy-mm-dd` calendar day `resolveAnchorDay` (and its server
+              filter-sql twin) already resolve — never a full ISO instant.
+            */}
+            <Calendar
+              value={fromISODay(exactIso)}
+              onSelect={(d) => pick({ kind: "date", iso: toISODay(d) })}
             />
           </Stack>
         </Stack>

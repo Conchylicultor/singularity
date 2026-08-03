@@ -23,10 +23,19 @@
     - `page/editor.BlockTextPluginProps`
     - `page/editor.registerBlockTextExtension`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/row.Row`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/date-picker.DatePickerPanel`
+    - `primitives/popover.InlinePopover`
     - `primitives/text-editor/caret-trigger.atWordBoundary`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`

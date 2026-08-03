@@ -386,6 +386,7 @@ fixed raw size escapes per-site via
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/data-view/view-core`
+    - `primitives/date-picker`
     - `primitives/diff-view`
     - `primitives/error-boundary`
     - `primitives/filter-chips`

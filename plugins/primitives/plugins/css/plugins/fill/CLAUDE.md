@@ -68,8 +68,10 @@ composes last.
     - `debug/trace/pane`
     - `debug/trace/spans`
     - `debug/trace/stall`
+    - `page/inline-date`
     - `page/prompt/block`
     - `primitives/data-view`
+    - `primitives/date-picker`
     - `primitives/error-boundary`
     - `primitives/setup-steps`
 

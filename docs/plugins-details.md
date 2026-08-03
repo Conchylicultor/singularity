@@ -12114,6 +12114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Separator`
               - `primitives/data-view.DataViewSlots`
+              - `primitives/date-picker.Calendar`
               - `primitives/popover.InlinePopover`
           - Core:
             - Exports (types):
@@ -12137,7 +12138,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`inline`** — Date field type: data-view inline cell editor (native date input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "date" → `DateEditor`
-            - Uses: `primitives/data-view.DataViewSlots`
+            - Uses:
+              - `primitives/data-view.DataViewSlots`
+              - `primitives/date-picker.DatePickerPopover`
         - **`storage`** — Date field type: DB storage capability — maps to a Postgres timestamptz column.
           - Server:
             - Contributes: `fields.storage` "date"
@@ -13565,6 +13568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
+              - `page/inline-date`
               - `page/prompt/block`
               - `page/url-paste`
               - `primitives/css/ui-kit`
@@ -16575,10 +16579,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockTextPluginProps`
           - `page/editor.registerBlockTextExtension`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/row.Row`
+          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/date-picker.DatePickerPanel`
+          - `primitives/popover.InlinePopover`
           - `primitives/text-editor/caret-trigger.atWordBoundary`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
@@ -18473,6 +18486,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
+              - `primitives/date-picker`
               - `primitives/diff-view`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
@@ -18583,6 +18597,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view`
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/avatar`
+              - `primitives/date-picker`
               - `stats/commits`
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
@@ -18684,8 +18699,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/pane`
               - `debug/trace/spans`
               - `debug/trace/stall`
+              - `page/inline-date`
               - `page/prompt/block`
               - `primitives/data-view`
+              - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/setup-steps`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -18708,6 +18725,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/health-monitor`
               - `page/formatting/color`
               - `primitives/data-view/gallery`
+              - `primitives/date-picker`
               - `primitives/icon-picker`
               - `primitives/loading`
               - `screenshot`
@@ -18763,6 +18781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/embed`
               - `page/formatting/link`
+              - `page/inline-date`
               - `page/read-only-view`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/routes/render-detail`
@@ -18848,9 +18867,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversations-view`
               - `debug/timeline`
+              - `page/inline-date`
               - `page/prompt/block`
               - `primitives/bar`
               - `primitives/css/row`
+              - `primitives/date-picker`
               - `primitives/error-boundary`
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
@@ -19492,6 +19513,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
+              - `primitives/date-picker`
               - `primitives/detail-sections`
               - `primitives/diff-view`
               - `primitives/expandable`
@@ -19959,6 +19981,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/data-view/view-core`
+              - `primitives/date-picker`
               - `primitives/diff-view`
               - `primitives/error-boundary`
               - `primitives/filter-chips`
@@ -20067,6 +20090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `fields/enum/inline`
               - `fields/tags/inline`
+              - `page/inline-date`
               - `page/prompt/block`
               - `primitives/data-view`
               - `primitives/data-view/view-core`
@@ -20371,6 +20395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/formatting/color`
               - `page/formatting/link`
               - `page/image`
+              - `page/inline-date`
               - `page/math/equation`
               - `page/math/inline`
               - `page/prompt/block`
@@ -20425,6 +20450,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
+              - `primitives/date-picker`
               - `primitives/detail-sections`
               - `primitives/floating-action`
               - `primitives/floating-surface`
@@ -21299,6 +21325,54 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `seedRanks`
               - `setRowOrder`
               - `SetRowOrderBodySchema`
+    - **`date-picker`** — Themed date-picker primitive: <Calendar> month grid, <TimeField> native clock input, <DatePickerPanel> (presets + calendar + time + clear), and <DatePickerPopover>. Day math lives in core/ and is local-calendar, never UTC.
+      - Web:
+        - Uses:
+          - `primitives/css/center.Center`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/line.Line`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/css/ui-kit.Separator`
+          - `primitives/icon-button.IconButton`
+          - `primitives/popover.InlinePopover`
+          - `primitives/popover.InlinePopoverProps`
+        - Exports (types):
+          - `CalendarProps`
+          - `DatePickerPanelProps`
+          - `DatePickerPopoverProps`
+          - `TimeFieldProps`
+        - Exports (values):
+          - `Calendar`
+          - `DatePickerPanel`
+          - `DatePickerPopover`
+          - `TimeField`
+      - Cross-plugin:
+        - Imported by:
+          - `fields/date/filter`
+          - `fields/date/inline`
+          - `page/inline-date`
+      - Core:
+        - Exports (types): `RelativeDayLabel`
+        - Exports (values):
+          - `addDays`
+          - `addMonths`
+          - `buildMonthGrid`
+          - `fromISODay`
+          - `isSameDay`
+          - `isSameMonth`
+          - `monthTitle`
+          - `normalizeWeekStart`
+          - `relativeDayLabel`
+          - `startOfDay`
+          - `startOfMonth`
+          - `toISODay`
+          - `weekdayLabels`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Web:
         - Uses:
@@ -21699,6 +21773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-core`
+          - `primitives/date-picker`
           - `primitives/folder-picker`
           - `primitives/launch`
           - `primitives/overflow-menu`
@@ -22885,10 +22960,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/formatting/color`
           - `page/formatting/link`
+          - `page/inline-date`
           - `page/math/inline`
           - `page/page-link`
           - `primitives/data-view`
           - `primitives/data-view/view-core`
+          - `primitives/date-picker`
           - `primitives/folder-picker`
           - `primitives/launch`
           - `reorder`

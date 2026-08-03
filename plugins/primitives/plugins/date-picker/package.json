@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-date-picker",
+  "description": "Date-picker primitive: local-day math (core) + Calendar / TimeField / DatePickerPanel / DatePickerPopover (web).",
+  "private": true,
+  "version": "0.0.1"
+}

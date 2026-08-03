@@ -116,6 +116,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
+    - `primitives/date-picker`
     - `primitives/diff-view`
     - `primitives/folder-picker`
     - `primitives/icon-picker`
