@@ -4,32 +4,23 @@ import {
   TaskDependencies,
   TaskDependenciesActions,
 } from "./components/task-dependencies";
-import {
-  TaskDependents,
-  useHasDependents,
-} from "./components/task-dependents";
 
 export default {
   description:
-    "Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.",
+    "Both ends of the task's dependency edges in one card: the tasks it runs after and the tasks it blocks, as removable chips, with prerequisite / follow-up add affordances (and a quick-add for the folder task when applicable) in the header.",
   contributions: [
+    // ONE card for the relation, not one per direction: `Dependencies` and
+    // `Dependents` were the same edge read from opposite ends, painted with
+    // identical chrome — two titles and two cards for a fact the user reads as
+    // one. The header actions already spanned both directions.
     TaskDetailSlots.Section({
       id: "dependencies",
       label: "Dependencies",
       component: TaskDependencies,
       // The former SectionHeaderRow `actions`, now the card's header controls.
       actions: TaskDependenciesActions,
-      // Was a `Collapsible defaultOpen` before the host owned the card.
-      useDefaultOpen: () => true,
-    }),
-    TaskDetailSlots.Section({
-      id: "dependents",
-      label: "Dependents",
-      component: TaskDependents,
-      // Nothing depends on this task ⇒ no card. `Dependencies` above keeps its
-      // card even when empty: its header actions are how you add the first one.
-      useAvailable: useHasDependents,
-      // Was a `Collapsible defaultOpen` before the host owned the card.
+      // The card stays painted with no relations at all (no `useAvailable`):
+      // its header actions are how the first one gets added.
       useDefaultOpen: () => true,
     }),
   ],

@@ -76,6 +76,7 @@ defined in exactly one place. The distinct export buys two things:
     - `primitives/avatar`
     - `primitives/date-picker`
     - `stats/commits`
+    - `tasks/task-dependencies`
     - `ui/theme-engine/theme-customizer`
     - `ui/tokens/shadow`
 

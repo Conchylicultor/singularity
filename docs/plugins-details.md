@@ -18609,6 +18609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/avatar`
               - `primitives/date-picker`
               - `stats/commits`
+              - `tasks/task-dependencies`
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
         - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
@@ -25472,15 +25473,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
-    - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
+    - **`task-dependencies`** — Both ends of the task's dependency edges in one card: the tasks it runs after and the tasks it blocks, as removable chips, with prerequisite / follow-up add affordances (and a quick-add for the folder task when applicable) in the header.
       - Web:
-        - Contributes:
-          - `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
-          - `TaskDetailSlots.Section` "Dependents" → `TaskDependents`
+        - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/css/cluster.Cluster`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
