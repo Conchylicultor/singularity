@@ -9366,8 +9366,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/claude-cli`
           - `primitives/launch`
           - `tasks`
+          - `tasks/auto-start`
           - `tasks/task-draft-form`
-          - `tasks/task-header`
           - `tasks/tasks-core`
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
@@ -23434,6 +23434,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell`
           - `shell/action-bar`
           - `stats`
+          - `tasks/task-description`
           - `tasks/task-draft-form`
           - `tasks/task-list`
           - `ui/segmented-progress-bar`
@@ -24058,6 +24059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -24173,6 +24175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "task-deps-tree.actions"
       - `ConfigV2.Register` "task-detail.section"
       - `ConfigV2.Register` "task-draft-form.action"
+      - `ConfigV2.Register` "task-prompt.launch-option"
       - `ConfigV2.Register` "tasks.fields"
       - `ConfigV2.Register` "tasks.list-actions"
       - `ConfigV2.Register` "tasks.task-actions"
@@ -25408,13 +25411,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/attempt`
           - `conversations/conversation-view/push-profiling`
           - `debug/profiling/ops`
-    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
+    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive, and contributes the auto-start model picker as a launch option of the task's Prompt card. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Web:
-        - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
+        - Contributes:
+          - `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
+          - `TaskPrompt.LaunchOption` "Auto-start" → `TaskAutoStartControl`
         - Uses:
+          - `conversations/model-provider.ModelSelect`
           - `primitives/css/badge.Badge`
           - `primitives/live-state.useResource`
+          - `tasks.AutoStartModel`
           - `tasks.setAutoStart`
+          - `tasks/task-description.TaskPrompt`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskAutoStartRow`
         - Exports (values):
@@ -25440,7 +25448,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `conversations`
           - `tasks`
-          - `tasks/task-header`
     - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
       - Server:
         - Contributes: `taskCategory` "reports"
@@ -25567,13 +25574,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `buildDepsTree`
           - `taskClusterIds`
-    - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
+    - **`task-description`** — Prompt section of the task detail pane: the description editor, the contributed launch options (TaskPrompt.LaunchOption), and the Launch button — everything that feeds the agent's first turn, in one card. Inline file-link parsing routes clicks to the active file-peek context.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "Description" → `TaskDescription`
+        - Slots: `TaskPrompt.LaunchOption` ← `tasks.auto-start`, `tasks.task-effort`, `tasks.task-preprompt`
+        - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
@@ -25585,6 +25594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch.LaunchControl`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
+          - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `primitives/text-editor/paste-images.AttachmentThumbnail`
@@ -25594,10 +25604,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-detail.useFlushAll`
           - `tasks/task-detail.useRegisterFlush`
+        - Exports (types): `TaskLaunchOption`
+        - Exports (values): `TaskPrompt`
+      - Cross-plugin:
+        - Imported by:
+          - `tasks/auto-start`
+          - `tasks/task-effort`
+          - `tasks/task-preprompt`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
       - Web:
         - Slots:
-          - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-effort`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`, `tasks.task-preprompt`
+          - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`
           - `taskDetailPane.Actions`
           - `tasksRootPane.Actions`
         - Contributes:
@@ -25635,11 +25652,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-description`
-          - `tasks/task-effort`
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-header`
-          - `tasks/task-preprompt`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
@@ -25698,15 +25713,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve`
           - `improve/element-picker`
           - `tasks/task-dependencies`
-    - **`task-effort`** — Per-task thinking-mode (effort) picker in the task detail pane; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
+    - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of the task detail's Prompt card; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "Thinking mode"
+        - Contributes: `TaskPrompt.LaunchOption` "Thinking mode" → `TaskEffortControl`
         - Uses:
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.useResource`
           - `shell/notifications.toast`
-          - `tasks/task-detail.TaskDetailSlots`
+          - `tasks/task-description.TaskPrompt`
         - Exports (values): `useTaskEffort`
       - Server:
         - Contributes: `resource.declare` "task-efforts"
@@ -25780,12 +25795,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-status.STATUS_META`
-    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
+    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
         - Uses:
           - `conversations.useConversationById`
-          - `conversations/model-provider.ModelSelect`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
@@ -25793,11 +25807,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/editable-field.useEditableField`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
-          - `tasks.AutoStartModel`
           - `tasks.patchTask`
-          - `tasks.setAutoStart`
           - `tasks.useTask`
-          - `tasks/auto-start.useTaskAutoStart`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-detail.useRegisterFlush`
@@ -25849,15 +25860,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-category`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
-    - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
+    - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of the task detail's Prompt card; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
-        - Contributes: `TaskDetailSlots.Section` "Preprompt"
+        - Contributes: `TaskPrompt.LaunchOption` "Preprompt" → `TaskPrepromptControl`
         - Uses:
           - `conversations/preprompts.PrepromptSelect`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.useResource`
           - `shell/notifications.toast`
-          - `tasks/task-detail.TaskDetailSlots`
+          - `tasks/task-description.TaskPrompt`
         - Exports (values): `useTaskPreprompt`
       - Server:
         - Contributes: `resource.declare` "task-preprompts"
