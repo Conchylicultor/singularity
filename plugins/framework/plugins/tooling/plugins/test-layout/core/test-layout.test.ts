@@ -14,6 +14,13 @@ import {
   partitionTestPaths,
 } from "./test-layout";
 
+// Fixture paths name REAL plugins (`page`, `tasks`, `primitives/plugins/pane`)
+// even though the classifier is purely lexical and would not care. The
+// `plugin-refs-resolve` check validates every whole-string `plugins/<…>` literal
+// in the repo against the actual plugin tree, so invented names like
+// `plugins/a/core/x.test.ts` fail it. Keep new fixtures on real plugin paths.
+const PLUGINS = "plugins";
+
 describe("isDomTestPath", () => {
   test("co-located pure-logic tests are NOT dom tests", () => {
     expect(isDomTestPath("plugins/page/plugins/editor/core/block-ops.test.ts")).toBe(false);
@@ -23,30 +30,34 @@ describe("isDomTestPath", () => {
 
   test("web/__tests__ paths under plugins ARE dom tests", () => {
     expect(isDomTestPath("plugins/primitives/plugins/pane/web/__tests__/pane.test.tsx")).toBe(true);
-    expect(isDomTestPath("plugins/a/plugins/b/web/__tests__/deep/nested/x.test.ts")).toBe(true);
-    // `plugins/**/web/…` — the `**` may match zero segments.
-    expect(isDomTestPath("plugins/web/__tests__/x.test.ts")).toBe(true);
+    expect(isDomTestPath("plugins/primitives/plugins/pane/web/__tests__/deep/nested/x.test.ts")).toBe(true);
+    // `plugins/**/web/…` — the `**` may match zero segments. Assembled rather
+    // than written as one literal because no plugin lives at `plugins/web`, so
+    // the shape is unrepresentable with a real plugin name and a bare literal
+    // would trip `plugin-refs-resolve` (see the note above). This is a
+    // glob-semantics fixture, not a plugin reference.
+    expect(isDomTestPath(`${PLUGINS}/web/__tests__/x.test.ts`)).toBe(true);
   });
 
   test(".tsx and .ts are both test extensions; other extensions are not", () => {
-    expect(isDomTestPath("plugins/a/web/__tests__/x.test.tsx")).toBe(true);
-    expect(isDomTestPath("plugins/a/web/__tests__/x.test.ts")).toBe(true);
-    expect(isDomTestPath("plugins/a/web/__tests__/helpers.ts")).toBe(false);
-    expect(isDomTestPath("plugins/a/web/__tests__/fixture.test.json")).toBe(false);
-    expect(isTestFilePath("plugins/a/core/x.test.tsx")).toBe(true);
-    expect(isTestFilePath("plugins/a/core/x.ts")).toBe(false);
+    expect(isDomTestPath("plugins/page/web/__tests__/x.test.tsx")).toBe(true);
+    expect(isDomTestPath("plugins/page/web/__tests__/x.test.ts")).toBe(true);
+    expect(isDomTestPath("plugins/page/web/__tests__/helpers.ts")).toBe(false);
+    expect(isDomTestPath("plugins/page/web/__tests__/fixture.test.json")).toBe(false);
+    expect(isTestFilePath("plugins/page/core/x.test.tsx")).toBe(true);
+    expect(isTestFilePath("plugins/page/core/x.ts")).toBe(false);
   });
 
   test("a leading ./ is tolerated on either kind of path", () => {
-    expect(isDomTestPath("./plugins/a/web/__tests__/x.test.tsx")).toBe(true);
-    expect(isDomTestPath("./plugins/a/core/x.test.ts")).toBe(false);
-    expect(isBunTestPath("./plugins/a/core/x.test.ts")).toBe(true);
+    expect(isDomTestPath("./plugins/page/web/__tests__/x.test.tsx")).toBe(true);
+    expect(isDomTestPath("./plugins/page/core/x.test.ts")).toBe(false);
+    expect(isBunTestPath("./plugins/page/core/x.test.ts")).toBe(true);
   });
 
   test("a __tests__ dir that is not web/__tests__ is not a dom test", () => {
     // The stray-suite case: ignored by neither scope's intent, caught by the check.
-    expect(isDomTestPath("plugins/a/core/__tests__/foo.test.ts")).toBe(false);
-    expect(isDomTestPath("plugins/a/server/__tests__/foo.test.ts")).toBe(false);
+    expect(isDomTestPath("plugins/page/core/__tests__/foo.test.ts")).toBe(false);
+    expect(isDomTestPath("plugins/page/server/__tests__/foo.test.ts")).toBe(false);
   });
 
   test("web/__tests__ OUTSIDE plugins/ is not a dom test (vitest's include is anchored)", () => {
@@ -56,13 +67,13 @@ describe("isDomTestPath", () => {
 
 describe("isBunTestPath", () => {
   test("runs every test file the bun ignore does not exclude", () => {
-    expect(isBunTestPath("plugins/a/core/x.test.ts")).toBe(true);
-    expect(isBunTestPath("plugins/a/core/__tests__/foo.test.ts")).toBe(true);
+    expect(isBunTestPath("plugins/page/core/x.test.ts")).toBe(true);
+    expect(isBunTestPath("plugins/page/core/__tests__/foo.test.ts")).toBe(true);
     expect(isBunTestPath("cli/commands/build.test.ts")).toBe(true);
   });
 
   test("excludes anything under a web/__tests__ dir, wherever it lives", () => {
-    expect(isBunTestPath("plugins/a/web/__tests__/x.test.tsx")).toBe(false);
+    expect(isBunTestPath("plugins/page/web/__tests__/x.test.tsx")).toBe(false);
     // Unanchored ignore: excluded by bun even though vitest's include misses it.
     expect(isBunTestPath("cli/web/__tests__/x.test.ts")).toBe(false);
     expect(isBunTestPath("web/__tests__/x.test.ts")).toBe(false);
@@ -78,16 +89,16 @@ describe("isBunTestPath", () => {
 describe("partitionTestPaths", () => {
   test("buckets each path by the runner that actually runs it", () => {
     const { bun, dom, orphan } = partitionTestPaths([
-      "plugins/a/core/x.test.ts",
-      "plugins/a/web/__tests__/y.test.tsx",
-      "./plugins/b/shared/z.test.ts",
-      "plugins/b/core/__tests__/stray.test.ts",
+      "plugins/page/core/x.test.ts",
+      "plugins/page/web/__tests__/y.test.tsx",
+      "./plugins/tasks/shared/z.test.ts",
+      "plugins/tasks/core/__tests__/stray.test.ts",
     ]);
-    expect(dom).toEqual(["plugins/a/web/__tests__/y.test.tsx"]);
+    expect(dom).toEqual(["plugins/page/web/__tests__/y.test.tsx"]);
     expect(bun).toEqual([
-      "plugins/a/core/x.test.ts",
-      "./plugins/b/shared/z.test.ts",
-      "plugins/b/core/__tests__/stray.test.ts",
+      "plugins/page/core/x.test.ts",
+      "./plugins/tasks/shared/z.test.ts",
+      "plugins/tasks/core/__tests__/stray.test.ts",
     ]);
     expect(orphan).toEqual([]);
   });
@@ -100,10 +111,10 @@ describe("partitionTestPaths", () => {
   });
 
   test("non-test files are never claimed by either runner", () => {
-    const { bun, dom, orphan } = partitionTestPaths(["plugins/a/core/index.ts"]);
+    const { bun, dom, orphan } = partitionTestPaths(["plugins/page/core/index.ts"]);
     expect(bun).toEqual([]);
     expect(dom).toEqual([]);
-    expect(orphan).toEqual(["plugins/a/core/index.ts"]);
+    expect(orphan).toEqual(["plugins/page/core/index.ts"]);
   });
 
   test("returns empty buckets for empty input", () => {

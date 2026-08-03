@@ -13664,6 +13664,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `provisionCollectedDir`
               - `provisionEntries`
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
+        - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
+          - Core:
+            - Exports (values):
+              - `BUN_TEST_IGNORE`
+              - `DOM_TEST_INCLUDE`
+              - `isBunTestPath`
+              - `isDomTestPath`
+              - `isTestFilePath`
+              - `partitionTestPaths`
+              - `TEST_FILE_GLOB`
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
             - Uses:
