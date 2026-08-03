@@ -1,4 +1,12 @@
-import { type ReactElement, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -20,6 +28,7 @@ import type {
 } from "@plugins/tasks/core";
 import { useActiveRelateContext } from "../active-relate-context";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
+import { appendSnippet, type TaskDraftInsert } from "../insert-request";
 
 const HEAD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
 
@@ -49,8 +58,12 @@ export interface TaskDraftPopoverProps {
   target: TaskChainTarget;
   captures?: CaptureKind[];
   relate?: TaskDraftRelate;
-  /** Initial markdown text for the head card. Images inline as attachment refs. */
-  initialText?: string;
+  /**
+   * One-shot request to insert markdown into the head card, minted by
+   * `draftInsert()`. Applied once per request id and *added* to whatever the user
+   * has already drafted — never a replacement. Images inline as attachment refs.
+   */
+  insert?: TaskDraftInsert;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   heading?: string;
@@ -85,6 +98,7 @@ function TaskDraftFormContent({
   heading,
   footerStart,
   onSuccess,
+  headInsertRef,
 }: {
   tasks: readonly TaskListItem[];
   cards: CardDraft[];
@@ -110,6 +124,7 @@ function TaskDraftFormContent({
   heading: string | undefined;
   footerStart: ReactNode;
   onSuccess: ((taskIds: string[]) => void) | undefined;
+  headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
 }) {
   const effectiveRelateTaskId =
     relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null;
@@ -168,6 +183,7 @@ function TaskDraftFormContent({
       heading={heading}
       footerStart={footerStart}
       onSuccess={onSuccess}
+      headInsertRef={headInsertRef}
     />
   );
 }
@@ -201,6 +217,7 @@ function InsertBeforeForm({
   heading,
   footerStart,
   onSuccess,
+  headInsertRef,
 }: {
   cards: CardDraft[];
   setCards: React.Dispatch<React.SetStateAction<CardDraft[]>>;
@@ -227,6 +244,7 @@ function InsertBeforeForm({
   heading: string | undefined;
   footerStart: ReactNode;
   onSuccess: ((taskIds: string[]) => void) | undefined;
+  headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
 }) {
   // Seed from the all-children default; the remount-on-children-change re-seeds.
   const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
@@ -323,6 +341,7 @@ function InsertBeforeForm({
       showStandalone={relateTaskHasDeps}
       heading={heading}
       footerStart={footerStart}
+      headInsertRef={headInsertRef}
     />
   );
 }
@@ -333,7 +352,7 @@ export function TaskDraftPopover({
   target,
   captures = ["url"],
   relate,
-  initialText,
+  insert,
   open: controlledOpen,
   onOpenChange,
   heading,
@@ -384,13 +403,42 @@ export function TaskDraftPopover({
     if (newest) setAutoFocusId(newest);
   }, [cards, setCards]);
 
-  // When initialText arrives (draw-on-app screenshot), seed the head card so
-  // the image appears inline in the editor via the paste-images machinery.
+  // The single funnel every programmatic insert goes through — the external
+  // request below and the in-form `TaskDraftFormSlots.Action` buttons alike, so
+  // "attach this to my draft" cannot mean two different things depending on
+  // whether the popover happened to be open already.
+  //
+  // Caret insert when the head editor is mounted (the snippet deserializes into
+  // its chip on the way in and the user keeps typing after it); append to the
+  // head card's markdown when it is not — popover still closed, or the form is
+  // behind its tasks-loading fallback. Both paths ADD to the draft.
+  const headInsertRef = useRef<((snippet: string) => void) | null>(null);
+  const applyInsert = useCallback(
+    (snippet: string) => {
+      const insertAtCaret = headInsertRef.current;
+      if (insertAtCaret) {
+        insertAtCaret(snippet);
+        return;
+      }
+      setCards((prev) => [
+        { ...prev[0]!, text: appendSnippet(prev[0]!.text, snippet) },
+        ...prev.slice(1),
+      ]);
+      seenIdsRef.current = new Set();
+    },
+    [setCards],
+  );
+
+  // Apply each insertion request once. Keyed on the request id (not the text) so
+  // requesting the same snippet twice inserts twice, and so a remount — closing
+  // and reopening the popover — never re-applies one already taken. The ref
+  // outlives the popover's content because this component is always mounted.
+  const appliedInsertIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!initialText) return;
-    setCards((prev) => [{ ...prev[0]!, text: initialText }, ...prev.slice(1)]);
-    seenIdsRef.current = new Set();
-  }, [initialText, setCards]);
+    if (!insert || appliedInsertIdRef.current === insert.id) return;
+    appliedInsertIdRef.current = insert.id;
+    applyInsert(insert.text);
+  }, [insert, applyInsert]);
 
   // On the open transition, snapshot the current URL and re-seed every card's
   // `includeUrl` from the live per-app default. Whether to attach the URL is
@@ -460,6 +508,7 @@ export function TaskDraftPopover({
             heading={heading}
             footerStart={footerStart}
             onSuccess={onSuccess}
+            headInsertRef={headInsertRef}
           />
         )}
       </ResourceView>

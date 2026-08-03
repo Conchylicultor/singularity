@@ -6,7 +6,7 @@ import { getImproveOpenState, setImproveOpen, subscribeImproveOpen } from "../in
 import { IMPROVEMENTS_CATEGORY_ID } from "../../shared/constants";
 
 export function ImproveButton() {
-  const { open, text } = useSyncExternalStore(subscribeImproveOpen, getImproveOpenState);
+  const { open, insert } = useSyncExternalStore(subscribeImproveOpen, getImproveOpenState);
 
   return (
     <TaskDraftPopover
@@ -21,7 +21,7 @@ export function ImproveButton() {
       tooltip="Improve"
       target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
       captures={["url", "screenshot"]}
-      initialText={text}
+      insert={insert}
       heading="Improve this app"
     />
   );

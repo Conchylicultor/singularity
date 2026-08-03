@@ -13844,8 +13844,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `primitives/css/ui-kit.Button`
       - `shell/action-bar.ActionBar`
+      - `tasks/task-draft-form.draftInsert`
+      - `tasks/task-draft-form.TaskDraftInsert`
       - `tasks/task-draft-form.TaskDraftPopover`
-    - Exports (values): `openImproveWithText`
+    - Exports (values): `insertIntoImproveDraft`
   - Server:
     - Contributes:
       - `trigger` "improve.apply-group"
@@ -13875,7 +13877,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
         - Uses:
           - `active-data.ActiveData`
-          - `improve.openImproveWithText`
+          - `improve.insertIntoImproveDraft`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
@@ -24751,7 +24753,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ActionBar.Item` → `DrawOnAppButton`
         - Uses:
-          - `improve.openImproveWithText`
+          - `improve.insertIntoImproveDraft`
           - `infra/attachments.uploadAttachment`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
@@ -25696,9 +25698,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CardDraft`
           - `ChainModel`
           - `TaskDraftActionProps`
+          - `TaskDraftInsert`
           - `TaskDraftPopoverProps`
           - `TaskDraftRelate`
         - Exports (values):
+          - `draftInsert`
           - `setActiveRelateContext`
           - `TaskDraftFormSlots`
           - `TaskDraftPopover`

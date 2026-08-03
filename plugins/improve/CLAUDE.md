@@ -10,8 +10,10 @@
   - Uses:
     - `primitives/css/ui-kit.Button`
     - `shell/action-bar.ActionBar`
+    - `tasks/task-draft-form.draftInsert`
+    - `tasks/task-draft-form.TaskDraftInsert`
     - `tasks/task-draft-form.TaskDraftPopover`
-  - Exports (values): `openImproveWithText`
+  - Exports (values): `insertIntoImproveDraft`
 - Server:
   - Contributes:
     - `trigger` "improve.apply-group"

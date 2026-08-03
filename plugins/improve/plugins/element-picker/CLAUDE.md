@@ -6,8 +6,8 @@ tracks the element under the pointer) and clicks any element; its metadata —
 the full plugin/slot **composition lineage**, containing pane, current URL, and a
 fine-grained element descriptor (tag + role + accessible label + an id/test-id
 anchored CSS path) — is captured, serialized to a single-line
-`<ui-context …>…</ui-context>` tag, and handed to the Improve popover via
-`Improve.OpenWithText`. There it renders as a rich inline chip, and on submit the
+`<ui-context …>…</ui-context>` tag, and inserted into the Improve draft via
+`insertIntoImproveDraft`. There it renders as a rich inline chip, and on submit the
 tag flows verbatim into the agent prompt. The **same** chip renders wherever the
 tag later appears (the sent user message, assistant text) because it is just an
 `active-data` inline contribution — one registry, every surface (see below).
@@ -116,7 +116,7 @@ still reads pre-split legacy flat-body tags (`LEGACY_BODY_PREAMBLE`).
     - `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
   - Uses:
     - `active-data.ActiveData`
-    - `improve.openImproveWithText`
+    - `improve.insertIntoImproveDraft`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

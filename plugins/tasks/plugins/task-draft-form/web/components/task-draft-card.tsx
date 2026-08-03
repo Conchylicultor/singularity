@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type CSSProperties, useCallback, useRef } from "react";
+import { type CSSProperties, useRef } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -33,6 +33,14 @@ export interface TaskDraftCardProps {
   onRemove: () => void;
   onSubmitChord: () => void;
   isHead?: boolean;
+  /**
+   * Optional host-owned home for this card's insert-at-caret handle. Supplied for
+   * the head card so the host can drive the same insertion path the card's own
+   * action slot uses; omitted, the card keeps the handle to itself.
+   */
+  insertRef?:
+    | React.MutableRefObject<((snippet: string) => void) | null>
+    | undefined;
 
   // Capture-context toggles. Each is rendered iff the corresponding
   // capability is enabled by the host (omitted handlers = capability off).
@@ -121,6 +129,7 @@ export function TaskDraftCard({
   onRemove,
   onSubmitChord,
   isHead = false,
+  insertRef: hostInsertRef,
   includeUrl,
   onToggleUrl,
   includeScreenshot,
@@ -152,13 +161,15 @@ export function TaskDraftCard({
   // Drives the head-card action slot (e.g. the element picker): the snippet
   // lands at the caret, deserialized into its chip by the editor's node
   // extensions. Falls back to the end of the document when the editor was never
-  // focused (no live selection).
-  const insertRef = useRef<((snippet: string) => void) | null>(null);
-  const insertText = useCallback((snippet: string) => {
+  // focused (no live selection). The host may own the handle instead, so its own
+  // programmatic inserts go through this exact path.
+  const localInsertRef = useRef<((snippet: string) => void) | null>(null);
+  const insertRef = hostInsertRef ?? localInsertRef;
+  const insertText = (snippet: string) => {
     const insert = insertRef.current;
     if (!insert) throw new Error("TaskDraftCard: editor not mounted");
     insert(snippet);
-  }, []);
+  };
 
   const showRelate = isHead && !!onRelateModeChange;
 

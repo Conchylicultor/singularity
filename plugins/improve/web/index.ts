@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { ImproveButton } from "./components/improve-button";
 
-export { openImproveWithText } from "./internal/open-store";
+export { insertIntoImproveDraft } from "./internal/open-store";
 
 export default {
   description:

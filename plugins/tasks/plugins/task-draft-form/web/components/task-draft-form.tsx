@@ -60,6 +60,12 @@ export interface TaskDraftFormProps {
   showStandalone?: boolean;
   heading?: string;
   footerStart?: ReactNode;
+  /**
+   * Receives the head card editor's insert-at-caret handle while it is mounted,
+   * so the host can route programmatic inserts (see `TaskDraftPopover`'s insert
+   * funnel) through the same path the in-form action buttons use.
+   */
+  headInsertRef?: React.MutableRefObject<((snippet: string) => void) | null>;
 }
 
 const NEW_CARD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
@@ -110,6 +116,7 @@ export function TaskDraftForm({
   showStandalone,
   heading,
   footerStart,
+  headInsertRef,
 }: TaskDraftFormProps) {
   const isAgentWorktree = useIsAgentWorktree();
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -229,6 +236,7 @@ export function TaskDraftForm({
                   )}
                   <TaskDraftCard
                     isHead={isHead}
+                    insertRef={isHead ? headInsertRef : undefined}
                     cardId={card.localId}
                     index={idx}
                     text={card.text}
