@@ -16026,6 +16026,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useCaretQuery`
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
+          - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
           - `primitives/undo-redo.useScopedUndoRedo`
           - `reorder.isNodeData`
           - `reorder.TopLevelEntry`
@@ -23459,6 +23460,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/slot-render.defineRenderSlot`
+          - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
         - Exports (types):
           - `NodeExtension`
           - `TextEditorPluginProps`
@@ -23509,6 +23511,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-page-link`
               - `page/math/inline`
               - `page/url-paste`
+        - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.
+          - Cross-plugin:
+            - Imported by:
+              - `page/editor`
+              - `primitives/text-editor`
+          - Web:
+            - Exports (values): `DecoratorNavPlugin`
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
           - Web:
             - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`

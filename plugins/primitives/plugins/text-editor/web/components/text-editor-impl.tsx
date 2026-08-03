@@ -9,7 +9,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
-import { DecoratorNavPlugin } from "../internal/decorator-nav-plugin";
+import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
 import { DecoratorBlockPlugin } from "../internal/decorator-block-plugin";
 import { ExtensionPastePlugin } from "../internal/extension-paste-plugin";
 import { TextEditorSlots, useMergedNodeExtensions } from "../slots";

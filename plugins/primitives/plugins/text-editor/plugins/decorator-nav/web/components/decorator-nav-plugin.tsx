@@ -10,16 +10,26 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
-// Caret navigation across an inline decorator node (e.g. a pasted image).
-// Lexical's default plain-text arrow handler delegates to the native
-// Selection.modify, which in Chromium refuses to step across an inline
-// contenteditable=false decorator span — so the caret gets stuck on one side
-// of the node. The default handler still consumes the event, so a lower
-// priority can't recover. We run before it (EDITOR priority is the lowest) and
-// step the caret across the decorator explicitly with Lexical node APIs.
+// Caret navigation across an inline decorator node (e.g. a pasted image, a
+// `@date` chip). Chromium will not step a caret across an inline
+// contenteditable=false span in one press: the intermediate stop is the
+// ELEMENT-boundary position beside the span, at which no caret is painted — so
+// the caret appears to vanish and only reappears on the second press. We run at
+// HIGH priority and step across the decorator explicitly with Lexical node APIs,
+// landing on the far side in one press.
 //
-// This lives in the editor core rather than any one node plugin so every inline
-// decorator — present and future — is keyboard-navigable for free.
+// This is its own plugin rather than an internal of any one editor because there
+// is more than one Lexical host in the app (the generic text editor and the page
+// block editor), and inline decorators are contributed by yet other plugins. A
+// fix that lives inside one host silently does not exist in the other — which is
+// exactly how the page editor's `@date` chips ended up un-crossable while the
+// same chip class worked in the prompt editor. Both hosts mount this; every
+// inline decorator — present and future — is keyboard-navigable for free.
+//
+// KNOWN BOUND: when the decorator is the FIRST or LAST thing in its paragraph
+// there is no text position on the far side to land on, so the caret still ends
+// up at the unpainted element boundary. Fixing that needs a caret seam (a
+// zero-width text node) in the decorator contract itself, not a key handler.
 export function DecoratorNavPlugin() {
   const [editor] = useLexicalComposerContext();
 

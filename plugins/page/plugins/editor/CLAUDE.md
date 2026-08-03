@@ -477,6 +477,34 @@ Three rules keep this from leaking:
   waits on the other side is the executor's business, which is why "Backspace goes
   back to the title" needed no new intent, op, or resolver branch.
 
+## Caret geometry is stated in LINE BOXES (`internal/caret-geometry.ts`)
+
+"Is the caret on the first / last **visual** line" (which decides whether an arrow
+moves within the block or crosses to the next one) and "place the caret at pixel
+column *x*" are both answered by comparing **line boxes** — never the caret's *y*
+against the contenteditable's padded box. A block's soft lines are `<br>`-separated
+runs inside one `<p>`, and a collapsed `Range` paints **nothing** on an empty soft
+line or beside an inline decorator, so anything derived from the root's box is a
+guess. Rules that look redundant but are not:
+
+- **Every rect read returns a real box or `null`; `null` degrades to the STRUCTURAL
+  edges**, never to `onTopLine/onBottomLine = true` (which would claim the caret is
+  on both edges of a multi-line block at once).
+- **Unmeasurable positions borrow the box of the child at the anchor offset** — the
+  `<br>` forming the empty line, the chip the caret stands before. That child is
+  always on the caret's own line.
+- **`edgeLineRect` walks leaves INWARD from the edge**, so an unmeasurable trailing
+  leaf hands off to the leaf before it. Climbing to the parent instead returns a box
+  spanning every line at once. A `<br>` has no client rects but does have a bounding
+  box — that fallback is the last line of any block ending in a blank line.
+- **A hit-test's `(element, childOffset)` is translated to a Lexical child index**;
+  element offset 0 would land every hit on the block's first line. A hit resolving to
+  the RootNode, a `LineBreakNode` or a **decorator** lands *beside* it — an
+  element-typed point on a decorator is a caret the browser cannot paint.
+
+Spec: `e2e/soft-line-caret-verify.ts`. Crossing a decorator sideways belongs to
+`primitives/text-editor/decorator-nav` (mounted by both Lexical hosts), not here.
+
 ## Visible-line invariants (Enter / Backspace / Delete)
 
 Split, merge, and the keystroke ladders all restate one fact: the user's mental
@@ -1491,6 +1519,7 @@ the whole document lives in React state and is discarded on unmount.
     - `primitives/text-editor/caret-trigger.useCaretMenu`
     - `primitives/text-editor/caret-trigger.useCaretQuery`
     - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
+    - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
     - `primitives/undo-redo.useScopedUndoRedo`
     - `reorder.isNodeData`
     - `reorder.TopLevelEntry`

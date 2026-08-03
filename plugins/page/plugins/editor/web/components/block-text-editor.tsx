@@ -9,6 +9,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LinkNode } from "@lexical/link";
+import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
 import {
   $getRoot,
   $getSelection,
@@ -364,6 +365,13 @@ export function BlockTextEditor({
           unified undo stack via the seam's Y.UndoManager. */}
       <CollabTextPlugin block={block} />
       <KeyboardPlugin blockId={block.id} editor={editor} />
+      {/* Crossing an inline decorator (a `@date` chip, an inline page link, an
+          inline formula) in ONE arrow press. Mounted AFTER KeyboardPlugin so it
+          registers second within the same priority bucket: the block-edge
+          crossing above gets first refusal, and this only ever fires for a caret
+          that has a decorator directly beside it — never at a block boundary,
+          where the adjacent-sibling lookup finds nothing. */}
+      <DecoratorNavPlugin />
       <BlockMenuPlugin blockId={block.id} />
       <MarkdownShortcutPlugin block={block} />
       {/* Block-level markdown PREFIXES first, then inline delimiters. The order
