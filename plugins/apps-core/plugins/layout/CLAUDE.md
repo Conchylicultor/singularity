@@ -15,8 +15,10 @@
     - `apps-core.useActiveApp`
     - `apps-core.usePathname`
     - `apps-core/tab-surface.AppTabsBody`
+    - `apps-core/tabs.navigate`
     - `apps-core/tabs.TabsProvider`
     - `apps-core/tabs.useTabs`
+    - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

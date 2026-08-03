@@ -9,6 +9,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, TooltipProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   setBasePath,
@@ -23,9 +24,9 @@ import {
   defaultApp,
   matchAppForPath,
 } from "@plugins/apps-core/web";
-import { TabsProvider, useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import { TabsProvider, useTabs, navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
-import { shouldRedirectToDefaultApp } from "../internal/redirect-gate";
+import { resolveUnmatchedUrl } from "../internal/unmatched-url";
 
 /**
  * Replace the URL and notify the router/pathname subscribers.
@@ -36,10 +37,10 @@ import { shouldRedirectToDefaultApp } from "../internal/redirect-gate";
  * reparsing, and a later cold boot can no longer tell which app instance the
  * entry belonged to.
  *
- * Preserving is safe here because this redirect only fires when the URL matches
- * NO app, in which case `bootTabs` already resolved `urlAppId` through the
- * `seedAppId` → `defaultApp(apps)` fallback (`use-tabs.tsx:247-248`) — the very
- * app `defaultPath` points at. So the preserved `appId` already agrees with the
+ * Preserving is safe here because this redirect only fires on bare `/`, where
+ * `bootTabs` already resolved `urlAppId` through the `seedAppId` →
+ * `defaultApp(apps)` fallback (`use-tabs.tsx:247-248`) — the very app
+ * `defaultPath` points at. So the preserved `appId` already agrees with the
  * post-redirect URL, and the preserved route is `[]`/pending (an unmatched URL
  * seeds no resolved route). Nothing stale survives the rewrite.
  */
@@ -100,48 +101,36 @@ export function AppsLayout() {
   // safe failure direction — preserve the URL, show the error surface.
   const anyAppShellLoadError = useHasLoadErrorUnder("apps/plugins/");
 
-  // The canonicalization redirect must stay URL-driven: it rewrites the address
-  // bar to a real app when the URL matches none, so its "matched" signal is
-  // whether the URL resolves to an app — `matchAppForPath(pathname)`. NOT
-  // `useActiveApp()`, which now derives from the FOCUSED TAB's app (the snapshot
-  // model) and would report a match even on an unmatched URL, defeating the
-  // redirect. Chrome identity (theme/rail) legitimately follows the focused tab
-  // via `activeApp`; canonicalization legitimately follows the URL — kept apart.
+  // This decision must stay URL-driven: it judges the address bar itself (does
+  // any app own this path?), so its "matched" signal is `matchAppForPath(pathname)`.
+  // NOT `useActiveApp()`, which derives from the FOCUSED TAB's app (the snapshot
+  // model) and would report a match even on an unmatched URL — reporting "all
+  // fine" on exactly the broken links this is here to catch. Chrome identity
+  // (theme/rail) legitimately follows the focused tab via `activeApp`; URL
+  // adjudication legitimately follows the URL — kept apart.
   const urlMatchedId = matchAppForPath(pathname, apps)?.id;
-  const defaultPath = defaultApp(apps)?.path;
+  const fallbackApp = defaultApp(apps);
+  const defaultPath = fallbackApp?.path;
 
-  // Canonicalize a path that matches no app to the default app (the one declaring
-  // `default: true`, else the only/first registered app). This is the ONLY raw
-  // `replaceState` redirect in the app, and it is DESTRUCTIVE — it overwrites the
-  // address bar — so it must never fire on a URL that could still resolve.
-  //
-  // - Bare `/` ⇒ redirect immediately: there is nothing to destroy, and this
-  //   keeps the common cold-start instant.
-  // - A non-bare unmatched path ⇒ redirect ONLY once the deferred tier has
-  //   SETTLED and no app shell failed to load. While loading, an app shell whose
-  //   `path` owns this URL may still register; redirecting now would wipe a valid
-  //   deep link. If a shell failed, we render an error surface instead of ever
-  //   destroying the URL (see the suppressed-surface branch below).
+  // ONE rule decides both the redirect and what the tabs area paints, so the two
+  // can never disagree (see `resolveUnmatchedUrl` for the full case table).
+  const outcome = resolveUnmatchedUrl({
+    matched: !!urlMatchedId,
+    hasDefault: !!defaultPath,
+    isBareRoot: pathname === "/",
+    deferredComplete,
+    anyAppShellLoadError,
+  });
+
+  // Canonicalize bare `/` to the default app (the one declaring `default: true`,
+  // else the only/first registered app). This is the ONLY raw `replaceState`
+  // redirect in the app, and it is DESTRUCTIVE — it overwrites the address bar —
+  // so it fires ONLY where there is nothing to destroy. A non-bare unmatched
+  // path is a broken link, not a path to canonicalize: it keeps its URL and gets
+  // the not-found surface below.
   useEffect(() => {
-    if (
-      shouldRedirectToDefaultApp({
-        matched: !!urlMatchedId,
-        hasDefault: !!defaultPath,
-        isBareRoot: pathname === "/",
-        deferredComplete,
-        anyAppShellLoadError,
-      })
-    ) {
-      redirectTo(defaultPath!);
-    }
-  }, [pathname, urlMatchedId, defaultPath, deferredComplete, anyAppShellLoadError]);
-
-  // While the redirect is suppressed for a non-bare unmatched path, show a
-  // loading (still settling) or error (a shell failed) surface in the tabs area
-  // instead of letting the seed tab paint the default app at the wrong URL.
-  const suppressed = !urlMatchedId && !!defaultPath && pathname !== "/";
-  const showLoadError = suppressed && deferredComplete && anyAppShellLoadError;
-  const showLoading = suppressed && !deferredComplete;
+    if (outcome === "redirect") redirectTo(defaultPath!);
+  }, [outcome, defaultPath]);
 
   const basePath = activeApp?.path ?? "";
 
@@ -172,9 +161,15 @@ export function AppsLayout() {
           <TabBarHost />
           {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible fill leaf below the rigid tab bar; bounds the framed surface's own scroll */}
           <div className="min-h-0 min-w-0 flex-1">
-            {showLoadError ? (
+            {outcome === "load-error" ? (
               <AppLoadErrorSurface />
-            ) : showLoading ? (
+            ) : outcome === "not-found" ? (
+              <NoSuchRouteSurface
+                pathname={pathname}
+                defaultPath={defaultPath}
+                defaultName={fallbackApp?.tooltip}
+              />
+            ) : outcome === "loading" ? (
               <Center className="size-full">
                 <Loading variant="spinner" label="Loading…" />
               </Center>
@@ -207,6 +202,50 @@ function AppLoadErrorSurface() {
         <Button variant="outline" onClick={() => location.reload()}>
           Retry
         </Button>
+      </Stack>
+    </Center>
+  );
+}
+
+/**
+ * Shown when the URL matches no registered app and the tier has settled healthy
+ * — i.e. no app will ever own this path. The address bar is deliberately left
+ * intact: this replaces a silent `replaceState` to the homepage, whose whole
+ * problem was destroying the evidence. The offending path is echoed back because
+ * it is the one actionable detail (a link that lost its app prefix, e.g.
+ * `/tasks/t/<id>` instead of `/agents/tasks/t/<id>`, is only diagnosable if the
+ * user can still see it).
+ *
+ * The way out is the sanctioned `navigate()`, not another raw history write, so
+ * leaving is a real navigation that mints its own history entry.
+ */
+function NoSuchRouteSurface({
+  pathname,
+  defaultPath,
+  defaultName,
+}: {
+  pathname: string;
+  defaultPath: string | undefined;
+  defaultName: string | undefined;
+}) {
+  return (
+    <Center className="size-full">
+      <Stack gap="sm" align="center" className="max-w-md">
+        <Stack gap="2xs" align="center">
+          <Text variant="heading">This page doesn't exist</Text>
+          <Text variant="body" tone="muted">
+            No installed app handles this address. The link may be outdated or
+            mistyped.
+          </Text>
+        </Stack>
+        <Badge mono title={pathname}>
+          {pathname}
+        </Badge>
+        {defaultPath ? (
+          <Button variant="outline" onClick={() => navigate(defaultPath)}>
+            Go to {defaultName ?? "the home app"}
+          </Button>
+        ) : null}
       </Stack>
     </Center>
   );

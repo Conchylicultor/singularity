@@ -30,6 +30,7 @@ same threshold and can't desync in a row.
     - `formatStatusLabel`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/layout`
     - `apps-core/surface/floating`
     - `apps/deploy/deployments`
     - `apps/deploy/ssh-setup`

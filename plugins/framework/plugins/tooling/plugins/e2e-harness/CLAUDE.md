@@ -33,6 +33,7 @@ rule keeps the broken shape from coming back.
 - Cross-plugin:
   - Imported by:
     - `active-data/page-link`
+    - `apps-core/layout`
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
     - `apps/pages/history`

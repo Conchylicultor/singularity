@@ -5085,8 +5085,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.useActiveApp`
           - `apps-core.usePathname`
           - `apps-core/tab-surface.AppTabsBody`
+          - `apps-core/tabs.navigate`
           - `apps-core/tabs.TabsProvider`
           - `apps-core/tabs.useTabs`
+          - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -13576,6 +13578,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/page-link`
+              - `apps-core/layout`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
               - `apps/pages/history`
@@ -18268,6 +18271,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `formatStatusLabel`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/layout`
               - `apps-core/surface/floating`
               - `apps/deploy/deployments`
               - `apps/deploy/ssh-setup`
