@@ -1304,6 +1304,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
               - `apps-core/tabs.navigate`
+              - `integrations/gmail.GMAIL_BLOCKER_BODY`
+              - `integrations/gmail.GmailAccessAction`
               - `integrations/gmail.useGmailAccess`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
@@ -1312,7 +1314,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
               - `primitives/loading.Loading`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -1347,6 +1348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/mail-core._mailThreads`
               - `apps/mail/mail-core.requireGmailToken`
               - `database.db`
+              - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
@@ -1391,9 +1393,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Mail.Banner` → `MailSyncBanner`
               - `Mail.RailBadge` → `MailSyncDot`
             - Uses:
-              - `apps-core/tabs.navigate`
               - `apps/mail/shell.Mail`
               - `infra/endpoints.useEndpointMutation`
+              - `integrations/gmail.GmailAccessAction`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
@@ -5462,7 +5464,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/shell`
           - `apps/home/app-cards`
           - `apps/mail/shell`
-          - `apps/mail/sync-status`
           - `apps/story/pages-integration`
           - `build`
           - `config_v2/config-link`
@@ -15523,19 +15524,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
-    - **`gmail`** — Gmail access toggle and Google scope requirement. Surfaces the Gmail access toggle in Settings.
+    - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister`
           - `Auth.ScopeRequirement` "Read, send, and manage Gmail messages"
         - Uses:
           - `auth.Auth`
+          - `auth.ConnectButton`
+          - `auth.GrantAccessButton`
           - `auth.missingScopes`
           - `auth.useAccountStatus`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-        - Exports (types): `GmailAccess`
-        - Exports (values): `useGmailAccess`
+          - `config_v2.useSetConfig`
+          - `primitives/css/ui-kit.Button`
+        - Exports (types):
+          - `GmailAccess`
+          - `GmailAccessBlocker`
+        - Exports (values):
+          - `GMAIL_BLOCKER_BODY`
+          - `GmailAccessAction`
+          - `useGmailAccess`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses:
@@ -15550,10 +15560,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/mail-core`
           - `apps/mail/shell`
           - `apps/mail/sync`
+          - `apps/mail/sync-status`
           - `apps/mail/sync/auto-resume`
       - Core:
         - Exports (types): `GmailTokenResult`
-        - Exports (values): `GMAIL_SCOPES`
+        - Exports (values):
+          - `GMAIL_SCOPES`
+          - `GOOGLE_PROVIDER_ID`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -20296,7 +20309,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/mail/reading-pane`
-              - `apps/mail/shell`
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -20430,6 +20442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve`
               - `improve/element-picker`
               - `infra/events-test`
+              - `integrations/gmail`
               - `layouts/full-pane`
               - `layouts/miller`
               - `layouts/route-fallback`

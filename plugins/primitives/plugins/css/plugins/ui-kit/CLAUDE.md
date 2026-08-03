@@ -265,7 +265,6 @@ structurally unrepresentable.
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
-    - `apps/mail/shell`
     - `apps/mail/sync-status`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
@@ -399,6 +398,7 @@ structurally unrepresentable.
     - `improve`
     - `improve/element-picker`
     - `infra/events-test`
+    - `integrations/gmail`
     - `layouts/full-pane`
     - `layouts/miller`
     - `layouts/route-fallback`

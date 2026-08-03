@@ -177,7 +177,6 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/agent-manager/shell`
     - `apps/home/app-cards`
     - `apps/mail/shell`
-    - `apps/mail/sync-status`
     - `apps/story/pages-integration`
     - `build`
     - `config_v2/config-link`

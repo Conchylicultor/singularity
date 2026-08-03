@@ -336,7 +336,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
-    - **`gmail`** — Gmail access toggle and Google scope requirement. Surfaces the Gmail access toggle in Settings.
+    - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:

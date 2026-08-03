@@ -4,3 +4,8 @@
 // enables Gmail access in Settings; Google's `include_granted_scopes=true` (set in
 // the Google provider descriptor) keeps previously granted scopes (e.g. Drive).
 export const GMAIL_SCOPES = ["https://mail.google.com/"] as const;
+
+// The auth provider the Gmail scope is granted on. Named once here so this
+// plugin's scope requirement, its access hook, and its access action can never
+// drift onto different providers.
+export const GOOGLE_PROVIDER_ID = "google";

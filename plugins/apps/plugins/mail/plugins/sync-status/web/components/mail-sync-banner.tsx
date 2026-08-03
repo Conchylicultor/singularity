@@ -1,11 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 import { MdErrorOutline, MdOpenInNew, MdWarningAmber } from "react-icons/md";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import {
   MAIL_SYNC_REMEDIATION,
   type MailSyncErrorCode,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { mailSyncEndpoint } from "@plugins/apps/plugins/mail/plugins/sync/core";
+import { GmailAccessAction } from "@plugins/integrations/plugins/gmail/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -42,6 +42,19 @@ export function MailSyncBanner(): ReactElement | null {
   const code: MailSyncErrorCode = view.error?.code ?? "unknown";
   const remediation = MAIL_SYNC_REMEDIATION[code];
 
+  // The recorded technical reason ("…needs consent (missing-scopes)"). Shown as
+  // a muted detail line under the remediation copy: the human copy says what to
+  // do, this says what the server actually saw — which is the difference between
+  // a diagnosable banner and a shrug, especially for the `unknown` code.
+  const detail = view.error?.message;
+
+  // Both unhealthy phases offer the SAME actions, driven only by the classified
+  // code's remediation — the phase decides how loud the banner looks, never
+  // whether the user is given a way out. (Keying the fix affordance off `error`
+  // alone would silently strip it the day a reconnect-able failure is classified
+  // as non-terminal.)
+  const actions = <RemediationActions remediation={remediation} />;
+
   if (view.phase === "warning") {
     return (
       <BannerShell
@@ -49,49 +62,69 @@ export function MailSyncBanner(): ReactElement | null {
         icon={<MdWarningAmber className="size-4" />}
         title={remediation.title}
         body={remediation.body}
-        actions={<RetryButton />}
+        detail={detail}
+        actions={actions}
       />
     );
   }
 
-  // error — terminal until the user acts. Offer the remediation-specific action
-  // plus a manual retry.
-  const learnMoreUrl = remediation.learnMoreUrl;
+  // error — terminal until the user acts.
   return (
     <BannerShell
       tone="error"
       icon={<MdErrorOutline className="size-4" />}
       title={remediation.title}
       body={remediation.body}
-      actions={
-        <>
-          {remediation.action === "reconnect" ? (
-            // Mail never imports `@plugins/auth`; it routes to the Settings app
-            // (the same path the connect empty-state uses), where the user
-            // reconnects Google from the Accounts surface.
-            <Button variant="ghost" onClick={() => navigate("/settings")}>
-              Open Settings
-            </Button>
-          ) : null}
-          {remediation.action === "enable-api" && learnMoreUrl ? (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                window.open(learnMoreUrl, "_blank", "noopener,noreferrer");
-              }}
-            >
-              Enable Gmail API
-              <MdOpenInNew className="size-4" />
-            </Button>
-          ) : null}
-          <RetryButton />
-        </>
-      }
+      detail={detail}
+      actions={actions}
     />
   );
 }
 
-/** "Sync now" trigger. The mutation's global toast surfaces any failure. */
+/**
+ * The remediation-specific control that actually resolves the failure, plus the
+ * manual retry as the secondary. Leading with the fix (rather than sending the
+ * user to Settings to work out what to change) is the whole point: `reconnect`
+ * opens Google's consent popup in place, and granting auto-resumes sync via
+ * `sync/auto-resume`'s ready-edge watcher — no second trip back here.
+ */
+function RemediationActions({
+  remediation,
+}: {
+  remediation: (typeof MAIL_SYNC_REMEDIATION)[MailSyncErrorCode];
+}): ReactElement {
+  const learnMoreUrl = remediation.learnMoreUrl;
+  return (
+    <>
+      {remediation.action === "reconnect" ? (
+        // Mail never imports `@plugins/auth` — the Gmail integration brokers the
+        // connect/grant flow. `reconnect` forces the grant affordance even when
+        // local state looks healthy: the server saw an auth failure the
+        // browser's cached scope list can't see.
+        <GmailAccessAction reconnect />
+      ) : null}
+      {remediation.action === "enable-api" && learnMoreUrl ? (
+        <Button
+          variant="outline"
+          onClick={() => {
+            window.open(learnMoreUrl, "_blank", "noopener,noreferrer");
+          }}
+        >
+          Enable Gmail API
+          <MdOpenInNew className="size-4" />
+        </Button>
+      ) : null}
+      <RetryButton />
+    </>
+  );
+}
+
+/**
+ * "Sync now" trigger. A failure the user can act on comes back as a 409 whose
+ * body is the remediation copy (see the sync plugin's `handleMailSync`), so the
+ * global auto-toast reads as a sentence rather than "HTTP 500"; a genuine bug
+ * still 500s and files a crash report.
+ */
 function RetryButton(): ReactElement {
   const sync = useEndpointMutation(mailSyncEndpoint);
   return (
@@ -121,12 +154,15 @@ function BannerShell({
   icon,
   title,
   body,
+  detail,
   actions,
 }: {
   tone: BannerTone;
   icon: ReactNode;
   title: ReactNode;
   body?: ReactNode;
+  /** The raw server-recorded reason, rendered muted under `body`. */
+  detail?: ReactNode;
   actions?: ReactNode;
 }): ReactElement {
   return (
@@ -142,6 +178,11 @@ function BannerShell({
             <Text variant="label">{title}</Text>
             {body != null ? (
               <Text variant="caption">{body}</Text>
+            ) : null}
+            {detail != null ? (
+              <Text variant="caption" tone="muted">
+                {detail}
+              </Text>
             ) : null}
           </Stack>
         </Fill>

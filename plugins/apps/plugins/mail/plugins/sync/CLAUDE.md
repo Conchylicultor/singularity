@@ -114,8 +114,12 @@ idle → (bootstrap) → backfilling → (window done / cap hit) → delta ⇄ (
 - **`POST /api/mail/sync`** (`handlers.ts`) — manual "connect / sync now": arms
   the account and, when already in `delta`, kicks an immediate delta. The trigger
   used by the phase-3 UI and for worktree testing (the tick is main-only and
-  won't fire in a worktree). When Gmail isn't connected, `requireGmailToken()`
-  throws and the failure surfaces loudly.
+  won't fire in a worktree). A failure whose classified code is user-actionable
+  (broken connection: `auth` / `api_disabled` / `quota`) answers **409** with the
+  same remediation sentence the banner shows, so the caller's auto-toast is
+  readable; `unknown` — the class we failed to classify, i.e. a real bug —
+  rethrows, 500s, and files a crash report. Nothing is swallowed either way: the
+  raw reason is already recorded on `mail_sync_state.lastError`.
 - **`POST /api/mail/hydrate`** (`handlers.ts` → `hydrate.ts`) — on-demand body
   fetch, the "fetch only when opened" half of the model. Body `{ messageId }`. If
   the message is already hydrated (or is a legacy full-backfilled row —
@@ -208,6 +212,7 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `apps/mail/mail-core._mailThreads`
     - `apps/mail/mail-core.requireGmailToken`
     - `database.db`
+    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `infra/jobs.NonRetryableError`

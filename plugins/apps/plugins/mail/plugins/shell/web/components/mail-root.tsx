@@ -1,11 +1,14 @@
 import { useEffect, useRef, type ReactElement, type ReactNode } from "react";
-import { useGmailAccess } from "@plugins/integrations/plugins/gmail/web";
+import {
+  useGmailAccess,
+  GmailAccessAction,
+  GMAIL_BLOCKER_BODY,
+} from "@plugins/integrations/plugins/gmail/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MAIL_APP_PATH } from "../slots";
 
 /**
@@ -16,7 +19,7 @@ import { MAIL_APP_PATH } from "../slots";
  * the sidebar and thread list rather than a static "connected" card.
  */
 export function MailRoot(): ReactElement {
-  const { enabled, connected, scopesGranted, loading, ready } = useGmailAccess();
+  const { blocker, loading, ready } = useGmailAccess();
 
   // Fire the inbox redirect exactly once per mount, on the edge where the
   // mailbox becomes ready. Navigate by URL (not the pane object) so this shell
@@ -39,28 +42,18 @@ export function MailRoot(): ReactElement {
     );
   }
 
-  if (!enabled) {
+  // One empty state for every unmet prerequisite: the integration names the
+  // blocker, supplies its copy, and renders the control that resolves it right
+  // here — so the landing is never a dead end telling the user to go and find
+  // the fix in Settings themselves.
+  if (blocker != null) {
     return (
       <EmptyState
         title="Mail"
-        body="Enable Gmail access in Settings to connect your inbox."
-        action={
-          <Button variant="outline" onClick={() => navigate("/settings")}>
-            Open Settings
-          </Button>
-        }
+        body={GMAIL_BLOCKER_BODY[blocker]}
+        action={<GmailAccessAction />}
       />
     );
-  }
-
-  if (!connected) {
-    return (
-      <EmptyState title="Mail" body="Connect your Google account to use Mail." />
-    );
-  }
-
-  if (!scopesGranted) {
-    return <EmptyState title="Mail" body="Grant Gmail access to continue." />;
   }
 
   // ready — the effect above swaps the route to the inbox view; show a spinner
