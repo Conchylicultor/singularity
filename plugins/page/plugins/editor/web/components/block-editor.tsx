@@ -976,7 +976,13 @@ function SelectionLayer({
       const subtree = new Set(roots.flatMap((r) => subtreeIds(rows, r)));
       setBulkDragState({ roots, subtree });
     } else {
+      // Dragging a block that is NOT in the live selection ends that selection
+      // (Notion's model) — otherwise a stale highlight would sit over blocks the
+      // gesture never touched. This used to be a side effect of the rail button
+      // stealing focus on mousedown; `RailButton` now suppresses that (it is what
+      // makes the bulk arm above reachable at all), so the clear has to be said.
       setBulkDragState(null);
+      clearSelection();
     }
   };
 

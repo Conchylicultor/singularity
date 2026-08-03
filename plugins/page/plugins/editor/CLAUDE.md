@@ -699,6 +699,29 @@ the container's `onCopy` (the bar renders *outside* the container, so the event 
 the button). `copySelectionViaButton` handles both explicitly. Cmd+C / Cmd+X are
 unaffected — they originate inside the container.
 
+The third invariant is what the first two cost every control rendered *inside* the
+container:
+
+> **The rail never takes the keyboard.** A gutter control ACTS ON a block, so it
+> must not become the focus target that ends block-selection mode.
+
+Neither rule above yields: focus-scoping is what keeps the highlighted selection and
+the live keyboard in agreement, since `onKeyDown` answers only to
+`e.target === container` — a selection surviving a focus move onto a button would be
+highlighted but keyboard-inert. So every control in `block-rail.tsx` goes through
+`RailButton`, which suppresses the press's default (the same mousedown +
+`preventDefault` idiom `block-row.tsx` uses for Shift+click). Without it, mousedown on
+the drag handle cleared the selection before dnd-kit's 4px activation distance was
+travelled, and every multi-block drag silently degraded to a single-block `move`.
+Nothing downstream wants that default: `PointerSensor` activates off `pointerdown`,
+the block-actions popover opens on `click` and refocuses by an explicit `.focus()`,
+and Tab still reaches the handle.
+
+Consequence one level up: **dragging a block that is not in the live selection clears
+that selection explicitly** (`onDragStart`'s non-bulk arm — Notion's model). It used
+to be a side effect of the focus steal, so it now has to be said, or a single-block
+drag leaves a stale highlight over blocks the gesture never touched.
+
 ### A text drag becomes a block selection at the first boundary
 
 `onPointerDown`'s two entry points (background marquee, text) feed one tracking loop:

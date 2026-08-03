@@ -19,6 +19,19 @@ export interface BlockSelectionDriver {
   /** Assert the selection container — not a block's editor — holds focus. */
   checkSelectionOwnsFocus(label: string): Promise<void>;
   /**
+   * The selection bar's live "N selected" count (0 when nothing is selected —
+   * the bar stays mounted, faded, so an empty selection reads as 0 rather than
+   * as a missing element).
+   *
+   * This is the DIRECT measurement of whether a selection survived a gesture,
+   * not a proxy for it. The alternative — inferring the selection from the
+   * gesture's OUTCOME ("did two blocks move?") — reads the same number through
+   * everything the gesture also touches, so it can move for a dozen unrelated
+   * reasons and cannot say WHEN the selection was lost. Read it mid-gesture and
+   * it says exactly that.
+   */
+  selectedCount(): Promise<number>;
+  /**
    * Click block `blockIndex`, enter selection mode, and extend the range once
    * per `extendKeys` entry (none = the single clicked block).
    */
@@ -101,5 +114,5 @@ export function blockSelectionDriver(page: Page, r: Report): BlockSelectionDrive
     await checkSelectionOwnsFocus(`${label} (entry)`);
   }
 
-  return { checkSelectionOwnsFocus, enterBlockSelection };
+  return { checkSelectionOwnsFocus, selectedCount, enterBlockSelection };
 }

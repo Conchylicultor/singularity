@@ -16,16 +16,19 @@
 //   D. optimism: with the op endpoint stalled 4s the reorder is on screen long
 //      before the server could answer, from ONE op POST, and the confirming push
 //      neither duplicates nor reverts it
+//   E. DRAG a multi-selection by the gutter handle: the press does not cost the
+//      selection, the run moves as one rigid body from ONE op POST, the selection
+//      survives its own drop, and one Cmd+Z reverses the whole thing
 //
-// PRE-EXISTING DEFECT, deliberately not encoded as a spec here: DRAGGING a
-// multi-selection never reaches the bulk path in a real browser. `mouse.down()`
-// on the gutter drag handle focuses that <button>, and `useBlockSelection`'s
-// `onFocusCapture` clears the selection for any focus target that is not the
-// container itself — so by the time dnd-kit fires `onDragStart` the selection is
-// empty and the gesture degrades to a single-block move. Measured (selection
-// count 2 -> 2 on hover -> 0 on mouse-down), and unrelated to the write path, so
-// phase B drives `bulkMove` through the keyboard nudge, which is its one live
-// caller today.
+// B and E pin the SAME op (`bulkMove`) through its two entry points — the
+// KEYBOARD nudge and a real DRAG — separately and on purpose, because they fail
+// independently. Only the drag has to carry a live block selection past a
+// mousedown on a <button>: block-selection mode is focus-scoped, so until the
+// rail suppressed the press's default, that mousedown moved focus off the
+// selection container and `onFocusCapture` cleared the selection before dnd-kit
+// had travelled its 4px activation distance (measured: count 2 -> 2 on hover ->
+// 0 on mouse-down). `onDragStart` then saw an empty selection and every
+// multi-block drag silently degraded to a single-block `move`.
 //
 // Usage: bun plugins/page/plugins/editor/e2e/drag-reorder-verify.ts [--base <url>] [--headed]
 import {
@@ -47,7 +50,8 @@ const DRAG_STEPS = 12;
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  const { enterBlockSelection } = blockSelectionDriver(page, r);
+  const { checkSelectionOwnsFocus, enterBlockSelection, selectedCount } =
+    blockSelectionDriver(page, r);
 
   const blockTexts = (): Promise<string[]> =>
     page.evaluate(() =>
@@ -84,8 +88,21 @@ await withBrowser(async (h) => {
    * the editor resolves an "after" zone. The handle only becomes hoverable once
    * its row is hovered (the gutter controls are `pointer-events-none` at rest),
    * so the pointer moves onto the row first.
+   *
+   * `afterGrab` runs INSIDE the gesture — after the press, before the pointer
+   * has travelled dnd-kit's 4px activation distance. That window is the only
+   * place an assertion about what the PRESS did can land: everything the
+   * mousedown did to focus has already happened, and the drag has not yet
+   * started, so nothing can have masked it. The same reading taken after the
+   * drop is a composite of press + drag + drop — it could not say which of the
+   * three lost what it measures, and a drop that re-derived the state would hide
+   * the press entirely.
    */
-  const dragRow = async (from: number, to: number): Promise<number> => {
+  const dragRow = async (
+    from: number,
+    to: number,
+    afterGrab?: () => Promise<void>,
+  ): Promise<number> => {
     const rowBox = async (i: number) => {
       const box = await page.locator("[data-block-id]").nth(i).boundingBox();
       if (!box) throw new Error(`row ${i} has no box`);
@@ -103,6 +120,7 @@ await withBrowser(async (h) => {
     if (!hb) throw new Error(`row ${from} has no drag handle`);
     await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
     await page.mouse.down();
+    if (afterGrab) await afterGrab();
     // PointerSensor needs >4px before the drag starts at all.
     await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2 + 8, { steps: 3 });
 
@@ -202,6 +220,81 @@ await withBrowser(async (h) => {
   await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(3000);
   r.eq("D: the reorder survives a reload", await blockTexts(), want);
+
+  // ---- E: DRAGGING a multi-selection -----------------------------------------
+  // The other entry point to phase B's op, and the only one that has to keep a
+  // block selection alive across a mousedown on the gutter handle's <button>.
+  //
+  // On its OWN fresh page: D ends in a reload, and a phase reading order out of
+  // whatever A-D left behind would be a spec about the script rather than about
+  // the editor.
+  const multi = await openBlankPage(page, base, { settleMs: 3000 });
+  for (const word of ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot"]) {
+    await page.keyboard.type(word);
+    await page.waitForTimeout(250);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(250);
+  }
+  await page.waitForTimeout(2000); // the doc→data.text projection (~1s)
+  const beforeE = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", ""];
+  r.eq("E: setup: six typed blocks on a fresh page", await blockTexts(), beforeE);
+
+  // charlie + delta. The run starts at row 2 rather than at the top of the
+  // document because a LIVE selection bar is pinned over the first ~46px of the
+  // block list, horizontally centred: `dragRow` hovers a row at its centre to
+  // reveal the gutter controls, and over rows 0-1 that centre lands on the bar
+  // instead of on the row.
+  await enterBlockSelection("E", 2, "Shift+ArrowDown");
+  r.eq("E: the gesture starts from a two-block selection", await selectedCount(), 2);
+
+  // Count this gesture's writes. `stallRoute` is the harness's only request
+  // observer and there is no count-only variant; `times: 0` stalls nothing, so
+  // this is that counter with the stall turned off. Registered AFTER the seed, so
+  // the typing's own splits are not in the tally, and last, so it — not phase D's
+  // long-spent route on the same pattern — is the handler that answers.
+  const opsE = await stallRoute(page, "**/api/pages/*/blocks/op", { ms: 0, times: 0 });
+
+  // Grab charlie's handle (row 2, a member of the selection) and drop into
+  // foxtrot's lower half.
+  await dragRow(2, 5, async () => {
+    r.eq(
+      "E: the PRESS on the drag handle costs nothing of the selection",
+      await selectedCount(),
+      2,
+    );
+  });
+  await page.waitForTimeout(2500);
+
+  // `bulkMove({ ids: [charlie, delta], parentId: <the page's top level>,
+  // afterId: foxtrot })`. The lower half of foxtrot's row is its "after" zone, so
+  // `onDragEnd`'s bulk arm resolves `afterId` to foxtrot itself; `planBulkMove`
+  // takes the selection ROOTS in document order, excludes the moving subtree from
+  // the insertion window so the run cannot bound itself, and mints two ranks in
+  // the window (foxtrot, trailing-empty-block) — one per root, in that order. So
+  // charlie and delta land contiguous and in their own order between foxtrot and
+  // the trailing empty block, and every other row keeps the rank it had.
+  const afterE = ["alpha", "bravo", "echo", "foxtrot", "charlie", "delta", ""];
+  r.eq(
+    "E: the dragged selection moved as ONE rigid body, internal order intact",
+    await blockTexts(),
+    afterE,
+  );
+  r.eq(
+    "E: ... nothing else re-ranked, and in AUTHORITATIVE rows",
+    await serverTexts(multi.pageId),
+    afterE,
+  );
+  r.eq("E: the whole drag was ONE op POST", opsE.count, 1);
+
+  // The fix restated as an observable rather than inferred from the outcome: the
+  // selection container held focus for the entire gesture, so the selection it
+  // owns is still there to act on afterwards.
+  r.eq("E: the selection survives its own drop", await selectedCount(), 2);
+  await checkSelectionOwnsFocus("E (after the drop)");
+
+  await page.keyboard.press("Meta+z");
+  await page.waitForTimeout(2500);
+  r.eq("E: one Cmd+Z reverses the whole multi-block drag", await blockTexts(), beforeE);
 
   r.finish();
 });
