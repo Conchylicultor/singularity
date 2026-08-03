@@ -51,9 +51,12 @@ export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body 
       .set({
         type: PAGE_BLOCK_TYPE,
         data: parseBlockData(PAGE_BLOCK_TYPE, { title: body.title, icon: null }),
-        // Turn into → Page keeps its content visible inline deterministically,
-        // rather than inheriting whatever the block had (e.g. a collapsed toggle).
-        expanded: true,
+        // Turn into → Page folds deterministically, rather than inheriting
+        // whatever the block had (e.g. an expanded toggle). A sub-page reads as
+        // ONE row in its parent's flow — the point of promoting content into a
+        // page is that the parent stops showing it — and the `collapsible:
+        // "always"` chevron on the page row is the way back in.
+        expanded: false,
         updatedAt: new Date(),
       })
       .where(eq(_blocks.id, params.id));
