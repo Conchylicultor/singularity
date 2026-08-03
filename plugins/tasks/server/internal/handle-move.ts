@@ -2,7 +2,11 @@ import { eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
-import { _tasks, isDescendant } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _tasks,
+  isDescendant,
+  unionTaskClusters,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { moveTask } from "../../core/endpoints";
 
 export const handleMove = implement(moveTask, async ({ params, body }) => {
@@ -53,6 +57,13 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
       body.zone,
       new Set([params.id]),
     );
+
+    // Union at or before the edge write, never after: a re-file into a folder is
+    // a membership edge, and the label must never lag behind it. On the same tx,
+    // so the union and the folder write commit or roll back together.
+    if (body.folderId !== null) {
+      await unionTaskClusters(params.id, body.folderId, tx);
+    }
 
     await tx
       .update(_tasks)

@@ -6,6 +6,7 @@ import type { TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
 import { findNextRankInFolder, isDescendant, listTasks, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
+import { unionTaskClusters } from "./clusters";
 import type { DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
@@ -36,10 +37,23 @@ export interface UpdateTaskPatch {
 }
 
 export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) {
+  // Handed the pool, run the whole creation in ONE transaction; handed a tx, join
+  // it (the caller owns the boundary — `handle-insert-between` already calls this
+  // under `withTaskStatusBatch`). The INSERT and the folder union must be atomic:
+  // the union's `FOR UPDATE` is only a real lock inside a transaction, and having
+  // both commit together removes the crash window as well. Only the pool path
+  // wraps, and on that path the caller holds no locks, so this cannot deadlock.
+  if (exec === db) return db.transaction((tx) => createTaskOn(input, tx));
+  return createTaskOn(input, exec);
+}
+
+async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   const id =
     input.id ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const folderId = input.folderId ?? null;
   const rank = input.rank ?? (await findNextRankInFolder(folderId, exec));
+  // No `clusterId` here: it is derived from `folderId`, never an input, and it is
+  // written by the union below rather than computed inline.
   await exec.insert(_tasks).values({
     id,
     folderId,
@@ -50,6 +64,15 @@ export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) 
     rank: rank.toJSON(),
     description: input.description ?? null,
   });
+  // Filing under a folder IS a membership edge, so the new task joins the
+  // folder's cluster — routed through `unionTaskClusters` rather than an inline
+  // `clusterLabelOf` read so it inherits the `FOR UPDATE`. An unlocked
+  // read-then-write here would strand the new task on a label its folder had
+  // already left: read F's label L1, a concurrent union moves F's whole cluster
+  // to L0, then this INSERT lands L1 — a label no other row carries. That is the
+  // vanishing-from-its-tree failure this column exists to prevent, and it needs
+  // no crash, just ordinary concurrency.
+  if (folderId) await unionTaskClusters(id, folderId, exec);
   // No parent force-expand here: expand/collapse is device-local view state
   // owned by the data-view primitive, not a column. The tree reveals a new child
   // client-side (`useTreeRow.addChild` expands the row it created under), so the
@@ -63,7 +86,25 @@ export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) 
   return full!;
 }
 
-export async function updateTask(id: string, patch: UpdateTaskPatch) {
+export async function updateTask(
+  id: string,
+  patch: UpdateTaskPatch,
+  exec: DbExecutor = db,
+) {
+  // Same executor-resolving split as `createTask`, for the same reason: a folder
+  // re-file unions, and the union's `FOR UPDATE` is only a real lock inside a
+  // transaction. Opening one here also makes the union and the folder write
+  // atomic, so the two can no longer disagree. Only the pool path wraps, and on
+  // that path the caller holds no locks, so this cannot deadlock.
+  if (exec === db) return db.transaction((tx) => updateTaskOn(id, patch, tx));
+  return updateTaskOn(id, patch, exec);
+}
+
+async function updateTaskOn(
+  id: string,
+  patch: UpdateTaskPatch,
+  exec: DbExecutor,
+) {
   const dbPatch: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof patch.title === "string") {
     dbPatch.title = patch.title;
@@ -86,15 +127,24 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     if (patch.folderId === id) {
       throw new Error("Cannot file a task into itself");
     }
-    if (patch.folderId !== null && (await isDescendant(id, patch.folderId))) {
+    if (
+      patch.folderId !== null &&
+      (await isDescendant(id, patch.folderId, exec))
+    ) {
       throw new Error("Cannot file a task into its own descendant");
+    }
+    if (patch.folderId !== null) {
+      // Union BEFORE the write, and only after the self/descendant guards — a
+      // rejected re-file must not union. On the same executor as the write, so
+      // the label and the folder edge commit or roll back together.
+      await unionTaskClusters(id, patch.folderId, exec);
     }
     dbPatch.folderId = patch.folderId;
   }
   // Snapshot status before the write so we can detect a flip
   // (typical: drop/hold transitions).
-  const before = await readTaskStatus(id);
-  const [updated] = await db
+  const before = await readTaskStatus(id, exec);
+  const [updated] = await exec
     .update(_tasks)
     .set(dbPatch)
     .where(eq(_tasks.id, id))
@@ -105,8 +155,8 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
   // `createTask`: the tree opens a collapsed drop target itself
   // (`TreeList.onDragEnd`), and the destination folder's `updatedAt` is not a
   // fact about the folder.
-  await emitStatusChangeIfChanged(id, before);
-  const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  await emitStatusChangeIfChanged(id, before, exec);
+  const [row] = await exec.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
@@ -156,6 +206,16 @@ export async function addTaskDependency(
   if (await taskDependsOn(dependsOnTaskId, taskId, exec)) {
     throw new Error("Cycle detected in dependencies");
   }
+  // THE ORDERING RULE: union at or before the edge write, NEVER after. A
+  // committed union whose edge write is lost over-approximates membership —
+  // harmless, that IS the invariant (membership grows, never shrinks). A
+  // committed edge write whose union is lost UNDER-approximates, which is exactly
+  // the bug this label exists to fix. So the union goes first, and it goes after
+  // the guards above so a rejected cycle can never fuse two clusters.
+  //
+  // This is the only writer of `task_dependencies` — all 7 server and 6 web call
+  // sites funnel through here — so this one line covers every edge creation.
+  await unionTaskClusters(taskId, dependsOnTaskId, exec);
   const prev = await readTaskStatus(taskId, exec);
   await exec
     .insert(_taskDependencies)

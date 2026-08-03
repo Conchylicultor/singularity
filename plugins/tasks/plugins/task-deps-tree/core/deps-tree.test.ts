@@ -7,16 +7,23 @@ import { taskClusterIds } from "./cluster";
 // Minimal TaskListItem factory. `deps` is `task.dependencies` (dependent →
 // dependency), OLDEST edge first — the tasks_v ordering buildDepsTree relies on
 // for the primary-parent pick. `folderId` is the creation ("created under") edge.
+// `clusterId` is the persisted membership label (see cluster.ts); `null` — the
+// default — means "never unioned", i.e. its own singleton cluster.
 function task(
   id: string,
   deps: string[] = [],
-  opts: { folderId?: string | null; status?: TaskStatus } = {},
+  opts: {
+    folderId?: string | null;
+    status?: TaskStatus;
+    clusterId?: string | null;
+  } = {},
 ): TaskListItem {
   const status = opts.status ?? "new";
   return {
     id,
     folderId: opts.folderId ?? null,
     groupId: null,
+    clusterId: opts.clusterId ?? null,
     title: id,
     titleAuto: true,
     author: "user",
@@ -47,63 +54,92 @@ function extras(rows: DepsTreeRow[], id: string): string[] {
 
 const members = (...ids: string[]) => new Set(ids);
 
+// Membership is no longer a graph walk over live edges — it is a filter on the
+// persisted `clusterId` label (`clusterId ?? id`). These tests pin the LABEL
+// semantics only; that the label is written monotonically (grows on edge
+// creation, never shrinks on removal) is a server-side property, proven in
+// `tasks-core/server/internal/mutations/clusters.test.ts` and
+// `tasks/server/internal/deps-tree-move.test.ts`.
 describe("taskClusterIds", () => {
-  test("follows dependency edges in BOTH directions (blockers and dependents)", () => {
-    // A ← B ← C (B depends on A, C depends on B). Seed from the middle: the
-    // cluster reaches the blocker A AND the dependent C.
-    const tasks = [task("A"), task("B", ["A"]), task("C", ["B"])];
-    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "C"));
-  });
-
-  test("pulls in created children (creation edge, downward)", () => {
-    // B and C were created under A (folderId = A), no dependency edges.
-    const tasks = [task("A"), task("B", [], { folderId: "A" }), task("C", [], { folderId: "A" })];
-    expect(taskClusterIds(tasks, "A")).toEqual(members("A", "B", "C"));
-  });
-
-  test("pulls in the creator and siblings (creation edge, upward + across)", () => {
-    // Viewing a created child B reaches its creator A and its sibling C — 'two
-    // independent tasks shown because one created the other'.
-    const tasks = [task("A"), task("B", [], { folderId: "A" }), task("C", [], { folderId: "A" })];
-    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "C"));
-  });
-
-  test("unions dependency and creation relations", () => {
-    // A created B (folder). B depends on X. X created Y. Seed B ⇒ all four.
+  test("same label ⇒ member; different label ⇒ not a member", () => {
     const tasks = [
-      task("A"),
-      task("B", ["X"], { folderId: "A" }),
-      task("X"),
-      task("Y", [], { folderId: "X" }),
+      task("A", [], { clusterId: "A" }),
+      task("B", [], { clusterId: "A" }),
+      task("Z", [], { clusterId: "Z" }),
     ];
-    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B", "X", "Y"));
+    expect(taskClusterIds(tasks, "A")).toEqual(members("A", "B"));
+    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B"));
+    expect(taskClusterIds(tasks, "Z")).toEqual(members("Z"));
+  });
+
+  test("membership ignores live edges entirely — only the label decides", () => {
+    // B depends on A and was created under A, yet carries a different label:
+    // the edges are irrelevant to the set. (In production the union at edge
+    // creation makes this state unreachable; the point is that the READ never
+    // second-guesses the persisted label.)
+    const tasks = [
+      task("A", [], { clusterId: "A" }),
+      task("B", ["A"], { folderId: "A", clusterId: "other" }),
+    ];
+    expect(taskClusterIds(tasks, "A")).toEqual(members("A"));
+  });
+
+  test("a null label is a SINGLETON — two unlabelled tasks are not grouped", () => {
+    // The load-bearing case for `clusterId ?? id`. NULL means "never unioned",
+    // so each such task is its own cluster. Reading NULL as a shared label
+    // (e.g. grouping on the raw column) would fuse every never-unioned task in
+    // the DB — today over half of them — into one phantom mega-cluster.
+    const tasks = [task("A"), task("B"), task("C", [], { clusterId: "C" })];
+    expect(taskClusterIds(tasks, "A")).toEqual(members("A"));
+    expect(taskClusterIds(tasks, "B")).toEqual(members("B"));
+  });
+
+  test("a null-label root still collects tasks labelled with its own id", () => {
+    // The asymmetric shape the union leaves behind: `min(id)` wins, so the
+    // winner keeps `NULL` (never rewritten) while the loser is stamped with the
+    // winner's id. Both must still read as one cluster.
+    const tasks = [task("A"), task("B", [], { clusterId: "A" })];
+    expect(taskClusterIds(tasks, "A")).toEqual(members("A", "B"));
+    expect(taskClusterIds(tasks, "B")).toEqual(members("A", "B"));
+  });
+
+  test("the root is always a member of its own cluster", () => {
+    const tasks = [task("A"), task("B", [], { clusterId: "B" })];
+    expect(taskClusterIds(tasks, "A")).toContain("A");
+    expect(taskClusterIds(tasks, "B")).toContain("B");
+  });
+
+  test("unknown root yields empty", () => {
+    expect(taskClusterIds([task("A")], "missing")).toEqual(new Set());
   });
 
   test("detaching a dependency edge does not change the member set", () => {
     // The rule the deps tree must obey: rewiring the tree NEVER changes the set
-    // of tasks it lists, only their nesting. A > B > C, all created under A —
-    // moving C to the top level drops its dependency edge, and every member
-    // still sees the same three tasks from every seed.
+    // of tasks it lists, only their nesting. Client-side this is now trivially
+    // true — the read does not look at `dependencies` at all — so this case is
+    // kept only as a statement of intent.
+    //
+    // THE REAL GUARD IS SERVER-SIDE: that the label survives an edge removal is
+    // a property of the WRITE path, and it is proven in
+    // `plugins/tasks/server/internal/deps-tree-move.test.ts`
+    // ("a root-drop must not eject the moved task from its cluster") and in
+    // `tasks-core/server/internal/mutations/clusters.test.ts`
+    // ("union is monotone: removing the edge does not un-union"). Do not delete
+    // those without replacing this guarantee.
     const before = [
-      task("A"),
-      task("B", ["A"], { folderId: "A" }),
-      task("C", ["B"], { folderId: "A" }),
+      task("A", [], { clusterId: "A" }),
+      task("B", ["A"], { folderId: "A", clusterId: "A" }),
+      task("C", ["B"], { folderId: "A", clusterId: "A" }),
     ];
     const after = [
-      task("A"),
-      task("B", ["A"], { folderId: "A" }),
-      task("C", [], { folderId: "A" }),
+      task("A", [], { clusterId: "A" }),
+      task("B", ["A"], { folderId: "A", clusterId: "A" }),
+      task("C", [], { folderId: "A", clusterId: "A" }),
     ];
     for (const seed of ["A", "B", "C"]) {
       expect(taskClusterIds(before, seed)).toEqual(members("A", "B", "C"));
       expect(taskClusterIds(after, seed)).toEqual(members("A", "B", "C"));
     }
-  });
-
-  test("isolated task yields just itself; unknown root yields empty", () => {
-    const tasks = [task("A"), task("B", ["X"]), task("X")];
-    expect(taskClusterIds(tasks, "A")).toEqual(members("A"));
-    expect(taskClusterIds(tasks, "missing")).toEqual(new Set());
   });
 });
 

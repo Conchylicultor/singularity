@@ -53,8 +53,9 @@ export async function findNextRankInFolder(
 export async function isDescendant(
   ancestorId: string,
   candidateId: string,
+  exec: DbExecutor = db,
 ): Promise<boolean> {
-  const all = await db
+  const all = await exec
     .select({ id: _tasks.id, folderId: _tasks.folderId })
     .from(_tasks);
   const byId = new Map(all.map((r) => [r.id, r.folderId] as const));

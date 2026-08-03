@@ -243,6 +243,7 @@ export const tasksResource = queryResource(tasksDescriptor, {
     id: tasks.id,
     folderId: tasks.folderId,
     groupId: tasks.groupId,
+    clusterId: tasks.clusterId,
     title: tasks.title,
     titleAuto: tasks.titleAuto,
     author: tasks.author,

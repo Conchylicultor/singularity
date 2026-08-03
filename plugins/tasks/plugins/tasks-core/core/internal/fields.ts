@@ -28,6 +28,10 @@ export const taskFields = {
   // Display-only organization hierarchy (a "folder"). NOT a dependency.
   folderId: nullable(textField()),
   groupId: nullable(textField()),
+  // Monotone dependency-tree membership label (union-find representative =
+  // min(id) over the cluster). NULL ⇒ never unioned ⇒ its own singleton cluster.
+  // Grows on edge creation, NEVER shrinks on edge removal — that is the point.
+  clusterId: nullable(textField()),
   title: textField(),
   // Whether `title` is a machine-generated label rather than human-authored.
   titleAuto: boolField(),

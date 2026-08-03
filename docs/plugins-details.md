@@ -25326,6 +25326,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.listTasks`
       - `tasks/tasks-core.removeTaskDependency`
       - `tasks/tasks-core.taskAttachments`
+      - `tasks/tasks-core.unionTaskClusters`
       - `tasks/tasks-core.updateTask`
       - `tasks/tasks-core.withTaskStatusBatch`
     - Exports (values): `armTaskAutoStart`
@@ -25619,9 +25620,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.StatusBadge`
           - `tasks/task-status.StatusIcon`
       - Core:
-        - Uses:
-          - `tasks/tasks-core.TaskGraph`
-          - `tasks/tasks-core.TaskListItem`
         - Exports (types): `DepsTreeRow`
         - Exports (values):
           - `buildDepsTree`
@@ -26081,6 +26079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AttemptSchema`
           - `attemptsResource`
           - `AttemptStatusSchema`
+          - `clusterLabelOf`
           - `conversationAttachments`
           - `conversationCascadeSignatures`
           - `ConversationKindSchema`
@@ -26147,6 +26146,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskStatusChanged`
           - `TaskStatusSchema`
           - `touchConversationViewed`
+          - `unionTaskClusters`
           - `updateConversation`
           - `updateConversationsTitleForTask`
           - `updateTask`
@@ -26268,7 +26268,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/auto-start`
           - `tasks/reports-investigation`
           - `tasks/task-category`
-          - `tasks/task-deps-tree`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
           - `tasks/task-title`

@@ -50,6 +50,10 @@ const tasksEntity = defineEntity("tasks", taskFields, {
   indexes: (t) => [
     index("tasks_folder_rank_idx").on(t.folderId, t.rank),
     index("tasks_group_id_idx").on(t.groupId),
+    // The union's `WHERE cluster_id = $loser` relabel. No FK on the column: the
+    // label is a representative id, not a reference — a cluster's representative
+    // can be a dropped task, and an FK would add a cascade we do not want.
+    index("tasks_cluster_id_idx").on(t.clusterId),
   ],
 });
 export const _tasks = tasksEntity.table;

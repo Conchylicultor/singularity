@@ -120,6 +120,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `AttemptSchema`
     - `attemptsResource`
     - `AttemptStatusSchema`
+    - `clusterLabelOf`
     - `conversationAttachments`
     - `conversationCascadeSignatures`
     - `ConversationKindSchema`
@@ -186,6 +187,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `taskStatusChanged`
     - `TaskStatusSchema`
     - `touchConversationViewed`
+    - `unionTaskClusters`
     - `updateConversation`
     - `updateConversationsTitleForTask`
     - `updateTask`
@@ -307,7 +309,6 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `tasks/auto-start`
     - `tasks/reports-investigation`
     - `tasks/task-category`
-    - `tasks/task-deps-tree`
     - `tasks/task-effort`
     - `tasks/task-preprompt`
     - `tasks/task-title`

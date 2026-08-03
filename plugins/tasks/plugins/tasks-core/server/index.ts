@@ -127,6 +127,11 @@ export type {
   UpdateTaskPatch,
 } from "./internal/mutations/tasks";
 
+// Monotone dependency-tree membership (`tasks.clusterId`). Every writer of a
+// membership edge (dependency edge or `folderId`) must union at or before the
+// edge write; nothing ever un-unions.
+export { clusterLabelOf, unionTaskClusters } from "./internal/mutations/clusters";
+
 export { createAttempt, deleteAttempt } from "./internal/mutations/attempts";
 export type { CreateAttemptInput } from "./internal/mutations/attempts";
 

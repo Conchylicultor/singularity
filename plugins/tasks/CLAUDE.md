@@ -45,6 +45,7 @@
     - `tasks/tasks-core.listTasks`
     - `tasks/tasks-core.removeTaskDependency`
     - `tasks/tasks-core.taskAttachments`
+    - `tasks/tasks-core.unionTaskClusters`
     - `tasks/tasks-core.updateTask`
     - `tasks/tasks-core.withTaskStatusBatch`
   - Exports (values): `armTaskAutoStart`
