@@ -16,6 +16,7 @@
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/agent-manager/plugins/worktree-switcher: watched boot slot ActionBar.Item
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
+//   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/marker: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
@@ -48,7 +49,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/pages/plugins/agent-origin",
   "apps/plugins/pages/plugins/content-search",
   "apps/plugins/pages/plugins/history",
-  "apps/plugins/pages/plugins/page-tree",
   "apps/plugins/pages/plugins/prompt-origin",
   "apps/plugins/pages/plugins/starred",
   "apps/plugins/pages/plugins/trash",

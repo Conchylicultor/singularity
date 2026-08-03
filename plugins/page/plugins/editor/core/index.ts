@@ -6,6 +6,8 @@ export { pagesResource, blocksResource } from "./resources";
 export {
   listPages,
   listBlocks,
+  getBlockPage,
+  BlockPageSchema,
   createBlock,
   updateBlock,
   deleteBlock,
@@ -19,6 +21,7 @@ export {
   TurnIntoPageBodySchema,
 } from "./endpoints";
 export type {
+  BlockPage,
   CreateBlockBody,
   UpdateBlockBody,
   MoveBlockBody,

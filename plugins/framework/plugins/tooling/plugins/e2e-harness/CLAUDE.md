@@ -32,6 +32,7 @@ rule keeps the broken shape from coming back.
 - Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
 - Cross-plugin:
   - Imported by:
+    - `active-data/page-link`
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
     - `apps/pages/history`

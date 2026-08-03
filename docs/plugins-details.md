@@ -6,7 +6,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`active-data`** — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
   - Web:
-    - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
+    - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
     - Contributes:
       - `MarkdownEnhancerSlot`
       - `InlineTextWalkerSlot`
@@ -82,6 +82,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `active-data/attempt`
       - `active-data/conv`
+      - `active-data/page-link`
       - `active-data/plugin-link`
       - `active-data/task`
       - `active-data/task-link`
@@ -113,6 +114,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/status-dot.StatusDot`
           - `primitives/pane.useOpenPane`
         - Exports (values): `ConvChip`
+    - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
+      - Web:
+        - Contributes: `ActiveData.Tag` "(?<!\/)block-\d+-[a-z0-9]{4,8}(?![/.])\b" → `PageLinkChip`
+        - Uses:
+          - `active-data.ActiveData`
+          - `apps/pages/page-tree.pageDetailPane`
+          - `infra/endpoints.useEndpoint`
+          - `page/editor.PageIcon`
+          - `primitives/css/link-chip.LinkChip`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.useResource`
+          - `primitives/pane.useOpenPane`
+        - Exports (values): `PageLinkChip`
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
         - Contributes:
@@ -1622,6 +1636,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pagesTreeRoute`
           - Cross-plugin:
             - Imported by:
+              - `active-data/page-link`
               - `apps/agent-manager/pages-nav`
               - `apps/pages/agent-origin`
               - `apps/pages/content-search`
@@ -13560,6 +13575,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
           - Cross-plugin:
             - Imported by:
+              - `active-data/page-link`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
               - `apps/pages/history`
@@ -14144,6 +14160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `active-data/page-link`
           - `active-data/plugin-link`
           - `active-data/task`
           - `apps-core/surface/floating/wallpaper`
@@ -16155,6 +16172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes:
           - `GET /api/pages`
           - `GET /api/pages/:pageId/blocks`
+          - `GET /api/blocks/:id/page`
           - `POST /api/blocks`
           - `PATCH /api/blocks/:id`
           - `DELETE /api/blocks/:id`
@@ -16185,6 +16203,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockNode`
           - `BlockOp`
           - `BlockOpContext`
+          - `BlockPage`
           - `BlockPatch`
           - `BlockTextVariant`
           - `BlockUpdate`
@@ -16217,6 +16236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `applyBlockOpEndpoint`
           - `BlockFieldChangesSchema`
           - `BlockOpSchema`
+          - `BlockPageSchema`
           - `BlockPatchSchema`
           - `BlockSchema`
           - `blocksResource`
@@ -16235,6 +16255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineBlock`
           - `deleteBlock`
           - `diffBlocks`
+          - `getBlockPage`
           - `IdentifiedBlockSchema`
           - `inDocumentOrder`
           - `INLINE_SYNTAXES`
@@ -16294,6 +16315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `xmlTextToRuns`
       - Cross-plugin:
         - Imported by:
+          - `active-data/page-link`
           - `apps/pages/agent-origin`
           - `apps/pages/content-search`
           - `apps/pages/history`
@@ -18897,6 +18919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/attempt`
               - `active-data/conv`
+              - `active-data/page-link`
               - `active-data/plugin-link`
               - `active-data/task`
               - `active-data/task-link`
@@ -22105,6 +22128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data`
           - `active-data/attempt`
+          - `active-data/page-link`
           - `active-data/task`
           - `active-data/task-link`
           - `apps/agent-manager/worktree-switcher`
@@ -22714,6 +22738,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data/attempt`
           - `active-data/conv`
+          - `active-data/page-link`
           - `active-data/plugin-link`
           - `active-data/task`
           - `active-data/task-link`

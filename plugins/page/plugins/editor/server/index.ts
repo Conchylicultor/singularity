@@ -3,6 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
 import { handleListPages } from "./internal/handle-list-pages";
 import { handleListBlocks } from "./internal/handle-list-blocks";
+import { handleGetBlockPage } from "./internal/handle-get-block-page";
 import { handleCreateBlock } from "./internal/handle-create-block";
 import { handleUpdateBlock } from "./internal/handle-update-block";
 import { handleDeleteBlock } from "./internal/handle-delete-block";
@@ -18,6 +19,7 @@ import { pageBlockHandle, PAGES_TRASH_SOURCE } from "../core/schemas";
 import {
   listPages,
   listBlocks,
+  getBlockPage,
   createBlock,
   updateBlock,
   deleteBlock,
@@ -53,6 +55,7 @@ export default {
   httpRoutes: {
     [listPages.route]: handleListPages,
     [listBlocks.route]: handleListBlocks,
+    [getBlockPage.route]: handleGetBlockPage,
     [createBlock.route]: handleCreateBlock,
     [updateBlock.route]: handleUpdateBlock,
     [deleteBlock.route]: handleDeleteBlock,

@@ -70,6 +70,25 @@ export const listBlocks = defineEndpoint({
   response: z.array(BlockSchema),
 });
 
+// Which page an arbitrary block id opens: the row itself when it IS a page,
+// its denormalized nearest page ancestor otherwise. `found: false` is the
+// legitimate "there is no page to open" answer — an unknown id, a trashed row,
+// or a page-less block at the forest root — NOT an error: every id-bearing
+// surface outside the editor (a link written in a conversation, a stale
+// bookmark) is allowed to name a block that is gone.
+export const BlockPageSchema = z.discriminatedUnion("found", [
+  z.object({ found: z.literal(false) }),
+  z.object({ found: z.literal(true), pageId: z.string(), isPage: z.boolean() }),
+]);
+export type BlockPage = z.infer<typeof BlockPageSchema>;
+
+// The reverse lookup the `pages` resource cannot answer: it carries only
+// `type="page"` rows, so a CONTENT block's id resolves to its page only here.
+export const getBlockPage = defineEndpoint({
+  route: "GET /api/blocks/:id/page",
+  response: BlockPageSchema,
+});
+
 // Create any block. A top-level page = `{ parentId: null, type: "page", data:
 // { title, icon } }`. The server computes `pageId` from the parent.
 export const createBlock = defineEndpoint({

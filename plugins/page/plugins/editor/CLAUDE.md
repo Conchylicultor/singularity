@@ -1633,6 +1633,7 @@ the whole document lives in React state and is discarded on unmount.
   - Routes:
     - `GET /api/pages`
     - `GET /api/pages/:pageId/blocks`
+    - `GET /api/blocks/:id/page`
     - `POST /api/blocks`
     - `PATCH /api/blocks/:id`
     - `DELETE /api/blocks/:id`
@@ -1663,6 +1664,7 @@ the whole document lives in React state and is discarded on unmount.
     - `BlockNode`
     - `BlockOp`
     - `BlockOpContext`
+    - `BlockPage`
     - `BlockPatch`
     - `BlockTextVariant`
     - `BlockUpdate`
@@ -1695,6 +1697,7 @@ the whole document lives in React state and is discarded on unmount.
     - `applyBlockOpEndpoint`
     - `BlockFieldChangesSchema`
     - `BlockOpSchema`
+    - `BlockPageSchema`
     - `BlockPatchSchema`
     - `BlockSchema`
     - `blocksResource`
@@ -1713,6 +1716,7 @@ the whole document lives in React state and is discarded on unmount.
     - `defineBlock`
     - `deleteBlock`
     - `diffBlocks`
+    - `getBlockPage`
     - `IdentifiedBlockSchema`
     - `inDocumentOrder`
     - `INLINE_SYNTAXES`
@@ -1772,6 +1776,7 @@ the whole document lives in React state and is discarded on unmount.
     - `xmlTextToRuns`
 - Cross-plugin:
   - Imported by:
+    - `active-data/page-link`
     - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`
