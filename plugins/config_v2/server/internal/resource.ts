@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { join } from "node:path";
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { configV2ValuesSchema, configV2ConflictEntrySchema, configV2TiersSchema, configV2ScopesMapSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
@@ -16,18 +17,20 @@ const descriptorByPath = new Map<string, ConfigDescriptor>();
 const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
 let configGetter: ConfigGetter | null = null;
 
-// In-memory derived state, the single source the aggregate loaders read so a
+// In-memory derived state, the single source these aggregate loaders read so a
 // subscribe / WS-reconnect-replay / boot-snapshot read is a pure memory read
 // (no per-load filesystem walk). The AUTHORITATIVE predicates are still on disk
-// (scopeHasOwnConfig / computeDescriptorConflict); these caches are recomputed
-// from them via the refresh* fns ONLY when a config file actually changes
-// (boot, fork, scoped write/delete) — so they can never drift, while the loaders
-// stop touching disk.
+// (scopeHasOwnConfig / effective-vs-default); these caches are recomputed from
+// them via the refresh* fns ONLY when a config file actually changes (boot,
+// fork, scoped write/delete), so the loaders stop touching disk.
+//
+// Being event-fed, they are only as fresh as the events: a config file that
+// changes without producing a watcher callback leaves them stale until the next
+// restart. conflict-paths used to be maintained this way too and no longer is —
+// see the fingerprint-memoized derivation below.
 
 // storePath → scopeIds the descriptor has its own config for (empty paths omitted).
 const scopeMembers = new Map<string, string[]>();
-// storePaths with a conflict in base OR any of their scopes.
-const conflictPaths = new Set<string>();
 // storePath → count of BASE fields differing from defaults (zero-count omitted).
 const modifiedCounts = new Map<string, number>();
 
@@ -119,27 +122,41 @@ export async function getConfigSnapshot(): Promise<ConfigSnapshotResult> {
   return { global, scopes };
 }
 
+// The three user-layer files a descriptor's conflict state is a function of, for
+// one scope. `scopeId` undefined → base config (paths land exactly where they do
+// today); a scoped call rebuilds the trio under the scope's @app/<id> segment via
+// userScopedDir, so a stale scoped override surfaces the same way base conflicts
+// do. Shared by the conflict computation and its fingerprint, so the memo can
+// never key off a different set of files than the value it caches.
+function conflictFilePaths(
+  storePath: string,
+  scopeId?: string,
+): { origin: string; override: string; ancestor: string } {
+  const parts = storePath.replace(/\.jsonc$/, "").split("/");
+  const dir = parts.slice(0, -1).join("/");
+  const name = parts[parts.length - 1]!;
+  const scopedDir = userScopedDir(dir, scopeId);
+  return {
+    origin: join(scopedDir, `${name}.origin.jsonc`),
+    override: join(scopedDir, `${name}.jsonc`),
+    ancestor: join(scopedDir, `${name}.ancestor.jsonc`),
+  };
+}
+
 // Compute a SINGLE descriptor's conflict state for the given scope, or null when
-// it has no conflict. `scopeId` undefined → base config (paths land exactly where
-// they do today). A scoped call rebuilds the origin / override / ancestor trio
-// under the scope's @app/<id> segment via userScopedDir, surfacing a stale scoped
-// override the same way base conflicts surface. Per-descriptor (not whole-map) so
-// the conflicts resource recomputes only the descriptor that actually changed.
+// it has no conflict. Per-descriptor (not whole-map) so the conflicts resource
+// recomputes only the descriptor that actually changed. Reads and parses all
+// three files — go through derivedDescriptorConflict, which skips this when the
+// files are provably unchanged.
 function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV2ConflictEntry | null {
   const descriptor = descriptorByPath.get(storePath);
   if (!descriptor) {
     throw new Error(`[config-v2] no descriptor registered for conflicts path "${storePath}"`);
   }
-  const parts = storePath.replace(/\.jsonc$/, "").split("/");
-  const dir = parts.slice(0, -1).join("/");
-  const name = parts[parts.length - 1]!;
+  const files = conflictFilePaths(storePath, scopeId);
 
-  const scopedDir = userScopedDir(dir, scopeId);
-  const userOriginPath = join(scopedDir, `${name}.origin.jsonc`);
-  const userOverwritesPath = join(scopedDir, `${name}.jsonc`);
-
-  const origin = jsoncConfigProxy(userOriginPath);
-  const overwrites = jsoncConfigProxy(userOverwritesPath);
+  const origin = jsoncConfigProxy(files.origin);
+  const overwrites = jsoncConfigProxy(files.override);
 
   if (hasConflict(origin, overwrites)) {
     const originData = origin.read();
@@ -157,7 +174,7 @@ function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV
     // fields. A corrupt ancestor fails loud here exactly like a corrupt
     // origin/override above — consistent with how this treats its inputs.
     let trueConflictKeys: string[] | undefined;
-    const ancestor = jsoncConfigProxy(join(scopedDir, `${name}.ancestor.jsonc`));
+    const ancestor = jsoncConfigProxy(files.ancestor);
     if (ancestor.exists()) {
       const base = ancestor.read()!.content as Record<string, JsonValue>;
       trueConflictKeys = threeWayMerge(
@@ -201,11 +218,72 @@ function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV
   return null;
 }
 
+// Identity stamp for one file: "-" when absent, else (inode, mtime-ns, size).
+//
+// `ino` is what makes this airtight rather than merely likely. Every writer in
+// this plugin goes through jsoncConfigProxy.write, which writes a temp file and
+// renames it into place — so the inode changes on EVERY write, including an
+// acknowledge-conflict restamp that only swaps the 12 hex chars in the `// @hash`
+// header and is therefore byte-length-identical (and can land in the same
+// millisecond) as the file it replaced. mtime-ns + size then cover in-place
+// writes from an external editor.
+function fileStamp(path: string): string {
+  const st = statSync(path, { bigint: true, throwIfNoEntry: false });
+  if (!st) return "-";
+  return `${st.ino}:${st.mtimeNs}:${st.size}`;
+}
+
+// Fingerprint-keyed memo of computeDescriptorConflict, keyed by (storePath,
+// scopeId). Unbounded only in the number of (descriptor × scope) pairs the
+// process ever observes; a vanished scope leaves one small stale entry that can
+// never be returned for another key.
+const conflictMemo = new Map<string, { fingerprint: string; entry: ConfigV2ConflictEntry | null }>();
+
+// THE conflict derivation. A descriptor's conflict state is a pure function of
+// its file trio plus the descriptor itself (code — constant for the process), so
+// memoize the expensive part on a fingerprint of that trio taken straight off the
+// filesystem.
+//
+// The load-bearing property is WHERE THE KEY COMES FROM: the disk, not an event.
+// The aggregate conflict-paths set used to be maintained purely from watcher
+// callbacks, so any change that produced no CALLBACK left the nav badge wrong
+// until the next restart while the detail pane — which re-derives from disk —
+// said the opposite. config-watcher only calls back for paths some CacheEntry
+// registered, and scoped entries exist only for scopes discovered at boot or
+// forked in-process: a scoped override appearing under @app/<id> for any other
+// scope therefore reaches nobody. (Plus the generic hazards: a dropped fsevent, a
+// writer parcel doesn't observe.) With a disk-derived key the worst case of a
+// missed event is a recompute, never a wrong answer.
+//
+// Cost: statSync is roughly two orders of magnitude cheaper than
+// read + JSONC-parse + hash — a measured ~10ms to sweep every descriptor
+// (~250 of them, ~800 stats) against ~1.2s just to re-read the same file trios.
+// Deliberately NOT infra/corpus-index:
+// that primitive walks directories, persists its index to disk and gates on the
+// heavy-read pool — this one indexes a fixed, already-known path trio per
+// descriptor, lives only in this process, and must be cheap enough to run inside
+// a resource loader.
+function derivedDescriptorConflict(storePath: string, scopeId?: string): ConfigV2ConflictEntry | null {
+  const files = conflictFilePaths(storePath, scopeId);
+  const fingerprint = `${fileStamp(files.origin)}|${fileStamp(files.override)}|${fileStamp(files.ancestor)}`;
+  const memoKey = `${storePath}|${scopeId ?? ""}`;
+
+  const memo = conflictMemo.get(memoKey);
+  if (memo && memo.fingerprint === fingerprint) return memo.entry;
+
+  const entry = computeDescriptorConflict(storePath, scopeId);
+  conflictMemo.set(memoKey, { fingerprint, entry });
+  return entry;
+}
+
+// The detail-pane banner. Routed through the same memo as the aggregate below so
+// the two surfaces share one code path AND one cache — they read the identical
+// value for a descriptor, not two independently-derived ones.
 export const configV2ConflictServerResource = defineExternalResource<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>({
   key: "config-v2.conflicts",
   mode: "push",
   schema: configV2ConflictEntrySchema.nullable(),
-  loader: whenRegistryReady(({ path, scopeId }) => computeDescriptorConflict(path, scopeId)),
+  loader: whenRegistryReady(({ path, scopeId }) => derivedDescriptorConflict(path, scopeId)),
 });
 
 // The whole scope-membership map, read from the in-memory cache (no filesystem
@@ -235,37 +313,62 @@ export function refreshScopeMembers(storePath: string): void {
   if (changed) configV2ScopesServerResource.notify({});
 }
 
-// Union of conflicting storePaths across base + every app scope, read from the
-// in-memory set (no per-load rescan). Backs the nav-row warning badge and
-// rail/sidebar dots.
-export const configV2ConflictPathsServerResource = defineExternalResource<ConfigV2ConflictPaths, {}>({
-  key: "config-v2.conflict-paths",
-  mode: "push",
-  schema: configV2ConflictPathsSchema,
-  loader: whenRegistryReady(() => [...conflictPaths]),
-});
-
-// Whether a descriptor conflicts in base OR any of its (in-memory) scopes. Reads
-// only that one descriptor's files (bounded), so it's cheap to run on a change.
+// Whether a descriptor conflicts in base OR any app scope. Bounded to that one
+// descriptor's files, so it is cheap enough to run both per-change and inside the
+// aggregate sweep.
+//
+// Scopes are enumerated straight from the filesystem (discoverScopeIds), NOT from
+// the event-fed scopeMembers map: a derivation founded on the disk must not
+// inherit another cache's staleness, or a scope that appeared without a watcher
+// event would be invisible to the badge again. discoverScopeIds is one stat for
+// the (usually absent) @app dir, and an absent file trio computes to null — so
+// listing a scope that has no files for THIS descriptor costs three stats and
+// answers "no conflict".
 function descriptorHasAnyConflict(storePath: string): boolean {
-  if (computeDescriptorConflict(storePath) !== null) return true;
-  for (const sid of scopeMembers.get(storePath) ?? []) {
-    if (computeDescriptorConflict(storePath, sid) !== null) return true;
+  if (derivedDescriptorConflict(storePath) !== null) return true;
+  const descriptor = descriptorByPath.get(storePath);
+  const hierarchyPath = descriptor && hierarchyByDescriptor.get(descriptor);
+  if (!hierarchyPath) return false;
+  for (const sid of discoverScopeIds(hierarchyPath)) {
+    if (derivedDescriptorConflict(storePath, sid) !== null) return true;
   }
   return false;
 }
 
-// Recompute one descriptor's aggregate conflict status and update the in-memory
-// set; notify the conflict-paths resource iff the set changed. Relies on
-// scopeMembers being current, so callers refresh scope membership first. Called
-// at boot and on every conflict-affecting change for that descriptor.
+// Union of conflicting storePaths across base + every app scope. Backs the
+// nav-row warning badge and rail/sidebar dots.
+//
+// THE AUTHORITY: derived on every load from the same computeDescriptorConflict
+// (through the same memo) that the per-descriptor `config-v2.conflicts` resource
+// answers the detail-pane banner with, so the badge and the banner cannot
+// disagree by construction. It is a filesystem sweep, but a stat-only one for
+// every descriptor whose files haven't moved since the last derivation.
+export const configV2ConflictPathsServerResource = defineExternalResource<ConfigV2ConflictPaths, {}>({
+  key: "config-v2.conflict-paths",
+  mode: "push",
+  schema: configV2ConflictPathsSchema,
+  loader: whenRegistryReady(() => [...descriptorByPath.keys()].filter((p) => descriptorHasAnyConflict(p))),
+});
+
+// Set last PUBLISHED to subscribers — change detection for the push path ONLY,
+// never the value any loader reads. (It used to be the value, which is exactly
+// how the badge could get stuck disagreeing with the detail pane.)
+const publishedConflictPaths = new Set<string>();
+
+// Push path: on a watcher callback or an in-process resolution, re-derive THIS
+// descriptor and notify subscribers immediately if its membership flipped, so
+// fixing a conflict clears the badge without waiting for anything to re-read.
+// Purely a latency optimization now — the loader re-derives from disk on every
+// load regardless, so failing to call this can delay a push but can never leave a
+// wrong value behind. Also called at boot to seed both the memo and this snapshot
+// (so the first real change doesn't emit a spurious notify).
 export function refreshConflictPaths(storePath: string): void {
   if (!descriptorByPath.has(storePath)) return;
-  const had = conflictPaths.has(storePath);
+  const had = publishedConflictPaths.has(storePath);
   const has = descriptorHasAnyConflict(storePath);
   if (has === had) return;
-  if (has) conflictPaths.add(storePath);
-  else conflictPaths.delete(storePath);
+  if (has) publishedConflictPaths.add(storePath);
+  else publishedConflictPaths.delete(storePath);
   configV2ConflictPathsServerResource.notify({});
 }
 

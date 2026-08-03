@@ -153,8 +153,8 @@ async function buildEntry(
     }
 
     // A scoped origin/override file appearing or disappearing changes the
-    // descriptor's customized-scope set. Refresh membership BEFORE conflicts so
-    // the aggregate conflict-paths set sees the current scopes.
+    // descriptor's customized-scope set, which the config-v2.scopes resource
+    // publishes.
     if (scopeId) refreshScopeMembers(storePath);
 
     notifyValues(storePath, scopeId);
@@ -226,8 +226,9 @@ function notifyTiers(storePath: string, scopeId: string): void {
 // The conflicts loader is keyed by `{ path, scopeId? }`, so notify only this
 // descriptor's path. A scoped change re-notifies only that scope; a BASE change
 // also re-notifies every known un-forked scope of THIS path, which resolves base
-// live (mirrors notifyValues/notifyTiers). The aggregate conflict-paths set is
-// maintained incrementally for this path.
+// live (mirrors notifyValues/notifyTiers). refreshConflictPaths then pushes the
+// aggregate conflict-paths set if THIS path's membership flipped — a latency
+// optimization only; that resource re-derives from disk on every load.
 function notifyConflicts(storePath: string, scopeId: string): void {
   if (scopeId) {
     configV2ConflictServerResource.notify({ path: storePath, scopeId });
@@ -248,7 +249,6 @@ function notifyConflicts(storePath: string, scopeId: string): void {
 // which also change the descriptor's customized-scope set. Mirrors the fan-out
 // the watcher's onFileChange performs.
 export function notifyDescriptorScopeChange(storePath: string, scopeId: string): void {
-  // Refresh membership first so notifyConflicts' aggregate sees current scopes.
   refreshScopeMembers(storePath);
   notifyValues(storePath, scopeId);
   notifyConflicts(storePath, scopeId);
@@ -328,9 +328,12 @@ export async function initRegistry(): Promise<void> {
       }
     }
 
-    // Warm the in-memory derived caches the aggregate loaders read (scope
-    // membership + conflict-paths), so their first load is a memory read rather
-    // than a filesystem walk. Membership first — refreshConflictPaths reads it.
+    // Warm the derived state behind the aggregate resources: the scopes and
+    // modified-counts maps their loaders read (so a first load is a memory read,
+    // not a filesystem walk), and — for conflict-paths, whose loader re-derives
+    // from disk — the fingerprint memo plus the published-set snapshot, so the
+    // first load is stat-only and the first real change doesn't emit a spurious
+    // notify.
     for (const { descriptor, hierarchyPath } of registered) {
       const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
       refreshScopeMembers(storePath);

@@ -23,13 +23,18 @@ export async function initConfigWatcher(): Promise<void> {
         if (watchers.has(p)) notifyWatchers(p);
       }
     },
-    // No blanket reconcile. Config files only ever change in-process (setConfig /
-    // fork) or via ./singularity build propagation, and the parcel subscription
-    // above fires on every disk write regardless of which process wrote it — so a
-    // missed event is structurally impossible. The default 30s reconcile re-fired
-    // EVERY watched path (2 per descriptor), each re-reading from disk and re-running
-    // a full conflicts recompute, producing an O(N²) idle I/O storm with nothing
-    // changed. Disable it; rely on the real fs-event path.
+    // No blanket reconcile. The default 30s one re-fired EVERY watched path (2 per
+    // descriptor), each re-reading from disk and re-running a full conflicts
+    // recompute, producing an O(N²) idle I/O storm with nothing changed.
+    //
+    // These events are therefore a PUSH-LATENCY mechanism, not a correctness one:
+    // config files normally change in-process (setConfig / fork) or via
+    // ./singularity build propagation and parcel fires on every disk write
+    // regardless of writer, but an event can still be missed (an out-of-band
+    // writer parcel doesn't see, a dropped fsevent). Nothing downstream may treat
+    // "no event" as "no change" — derived state must be founded on the disk (see
+    // the fingerprint-memoized conflict derivation in resource.ts), so a missed
+    // event can only delay a push, never leave a wrong value behind.
     reconcileMs: null,
     extensions: [".jsonc"],
   });
