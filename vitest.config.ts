@@ -8,8 +8,16 @@ import path from "path";
 // Convention: jsdom/React tests live co-located in each plugin's
 // `web/__tests__/` folder and are auto-discovered here — no per-plugin config.
 // Pure-logic tests stay as `bun:test` files next to their source (never under a
-// `__tests__/` folder), so the two runners never cross-load. Run with
-// `bun run test:dom` from the repo root.
+// `__tests__/` folder). Run with `./singularity test <path>`, which drives both
+// runners, or `bun run test:dom` for this suite alone.
+//
+// The file layout alone does NOT keep the runners apart — for a long time this
+// comment claimed it did. `include` below is only half of the split: it scopes
+// vitest off bun's files, and `bunfig.toml`'s `pathIgnorePatterns` is the exact
+// complementary half that scopes `bun test` off these. The two literals are a
+// pair, bound by the `test-layout:runner-split` check
+// (plugins/framework/plugins/tooling/plugins/test-layout), which fails if either
+// side goes missing or a test file imports the other runner. Edit neither alone.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {

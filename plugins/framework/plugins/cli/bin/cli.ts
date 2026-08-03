@@ -12,6 +12,7 @@ import { registerRegenMigrations } from "./commands/regen-migrations";
 import { registerRelease } from "./commands/release";
 import { registerServeApp } from "./commands/serve-app";
 import { registerStart } from "./commands/start";
+import { registerTest } from "./commands/test";
 import { runCli } from "./run-cli";
 
 /**
@@ -49,5 +50,6 @@ registerRegenMigrations(program);
 registerRelease(program);
 registerServeApp(program);
 registerStart(program);
+registerTest(program);
 
 await runCli(program);

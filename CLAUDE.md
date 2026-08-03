@@ -229,10 +229,19 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 
 ### Testing
 
-Optional and manual — nothing runs them automatically. The runner is chosen by
-where the file lives, so the two never cross-load. Always pass an explicit path;
-there is no "run everything" target (a bare `bun test` would load the vitest
-files and fail). Requires `node_modules`, so run after a build or `bun install`.
+Optional and manual — nothing runs them automatically. Requires `node_modules`,
+so run after a build or `bun install`.
+
+**Use `./singularity test`** — the only command that knows about both runners. It
+routes each test file to its runner by location and always reports both buckets,
+including an empty one:
+
+```bash
+./singularity test plugins/primitives/plugins/optimistic-mutation   # both suites
+./singularity test                                                  # everything
+```
+
+The two runners underneath, still directly runnable for narrow targeting:
 
 - **`bun:test`** — pure logic, next to source as `*.test.ts(x)`, never under `__tests__/`.
   ```bash
@@ -242,6 +251,13 @@ files and fail). Requires `node_modules`, so run after a build or `bun install`.
   ```bash
   bun run test:dom plugins/primitives/plugins/pane   # omit path for the full suite
   ```
+
+Either one aimed at a *folder* gives a true but partial answer — it runs its own
+share and says nothing about the other's, so green ≠ the plugin's tests passed.
+
+The split itself (which runner owns which path, and the `test-layout:runner-split`
+check binding it) lives in
+[`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
 
 ### Coding Style
 

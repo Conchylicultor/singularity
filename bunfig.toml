@@ -6,3 +6,19 @@
 # `SINGULARITY_WORKTREE=<worktree>` prefix. See test/bun-preload.ts for the why.
 [test]
 preload = ["./test/bun-preload.ts"]
+
+# The other half of the runner split. `vitest.config.ts` scopes itself with
+# `include: ["plugins/**/web/__tests__/**/*.test.{ts,tsx}"]`; without the line
+# below `bun test` scoped itself to NOTHING, so the asymmetry — not the file
+# layout — was what made `bun test <plugin-dir>` load the vitest-only jsdom
+# suites and die on imports only vite resolves. A plausible command produced
+# failures indistinguishable from real ones.
+#
+# This is deliberately `**/web/__tests__/**` and not the looser
+# `**/__tests__/**`: it must be the EXACT complement of vitest's include. Under
+# the looser glob a stray `core/__tests__/` suite would fall in neither runner's
+# scope and silently never run — the quiet version of the same bug.
+#
+# The two literals are a pair. The `test-layout:runner-split` check fails if
+# either one goes missing, so this cannot be edited or deleted on its own.
+pathIgnorePatterns = ["**/web/__tests__/**"]

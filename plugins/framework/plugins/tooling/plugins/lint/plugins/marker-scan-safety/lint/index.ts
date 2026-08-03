@@ -25,6 +25,13 @@ export default {
       // FULL mask; only the final statement text is sliced from the strings-kept
       // copy at identical offsets so downstream sees real module specifiers.
       "plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/check/parse.ts",
+      // Token-in-string: asserts vitest.config.ts still contains the literal
+      // `include` glob that scopes vitest off bun:test's files. The glob IS a
+      // string literal with no enclosing marker call, so a full mask erases the
+      // one thing being asserted. Comments must still be masked — the file
+      // documents the pair in prose that quotes the same glob, and matching that
+      // prose would keep the check passing after the live directive was deleted.
+      "plugins/framework/plugins/tooling/plugins/test-layout/check/index.ts",
       // Unit tests of maskSource's `{ strings: false }` behavior itself.
       "plugins/plugin-meta/plugins/parse-utils/core/mask-source.test.ts",
       // Test fixtures exercising find-marker-calls / mask behavior.

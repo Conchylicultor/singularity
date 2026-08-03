@@ -15,6 +15,7 @@ when it is an ordered *stage sequence* rather than a helper, in
 | `build-composition` | **Produce one composition's artifact set, hermetically.** Filtered registries + generated migration SQL + the web dist, as a function of (source tree, composition) only. No cluster, no gateway, no ledger — runs on a bare host from a fresh `git clone`. |
 | `release` | Wraps `build-composition` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
 | `check` | Run the repo validation checks (also the first step of `push`, and mid-`build`). |
+| `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
 | `push` | Checks → merge the worktree branch back into main → push. |
 | `regen-generated` / `regen-migrations` | The repo-tree codegen and migration-generation pipelines as standalone commands (used by the normalize pass). |
 | `normalize-generated` | Marker-gated repair of generated artifacts a merge driver auto-resolved. Invoked by the `post-rewrite` hook; rarely run by hand. |

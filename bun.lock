@@ -2585,6 +2585,10 @@
         "babel-plugin-react-compiler": "1.0.0",
       },
     },
+    "plugins/framework/plugins/tooling/plugins/test-layout": {
+      "name": "@singularity/plugin-framework-tooling-test-layout",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/web-artifacts": {
       "name": "@singularity/plugin-framework-tooling-web-artifacts",
       "version": "0.0.1",
@@ -6382,6 +6386,8 @@
     "@singularity/plugin-framework-tooling-provision": ["@singularity/plugin-framework-tooling-provision@workspace:plugins/framework/plugins/tooling/plugins/provision"],
 
     "@singularity/plugin-framework-tooling-react-compiler": ["@singularity/plugin-framework-tooling-react-compiler@workspace:plugins/framework/plugins/tooling/plugins/react-compiler"],
+
+    "@singularity/plugin-framework-tooling-test-layout": ["@singularity/plugin-framework-tooling-test-layout@workspace:plugins/framework/plugins/tooling/plugins/test-layout"],
 
     "@singularity/plugin-framework-tooling-web-artifacts": ["@singularity/plugin-framework-tooling-web-artifacts@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts"],
 
