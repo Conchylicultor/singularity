@@ -9,6 +9,7 @@ import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2Resource, removeDescriptorScope } from "@plugins/config_v2/core";
 import type { ConfigV2ConflictEntry, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
@@ -163,10 +164,38 @@ function ConfigDetailBody({
   // rejection. The config view refreshes via its live-state resource on success.
   // Every reconcile body carries the selected `scopeId` (undefined = Base) so it
   // targets the scope the user is editing.
-  const { mutate: acknowledge } = useEndpointMutation(acknowledgeConflict);
-  const { mutate: resetOverride } = useEndpointMutation(deleteOverride);
-  const { mutate: merge } = useEndpointMutation(mergeConflict);
-  const { mutate: removeScope } = useEndpointMutation(removeDescriptorScope);
+  //
+  // `isPending` is threaded onto each button's `loading` prop. `Button` auto-pends
+  // only when its onClick RETURNS a promise; these handlers use `mutate` (which
+  // returns void so a rejection stays inside the mutation and reaches the global
+  // toast, never an unhandled rejection), so the pending state has to be passed
+  // explicitly — same shape as ServerDeleteAction. Without it a resolution that
+  // works is indistinguishable from a dead button.
+  const acknowledgeM = useEndpointMutation(acknowledgeConflict);
+  const resetOverrideM = useEndpointMutation(deleteOverride);
+  const removeScopeM = useEndpointMutation(removeDescriptorScope);
+  // Merge is the one resolution whose success can leave the banner standing: when
+  // fields conflict on both sides it keeps the stale hash on purpose so the
+  // conflict stays surfaced. A spinner alone would read as "nothing happened", so
+  // report the outcome — how many fields it settled, and how many still need the
+  // user — from the response the endpoint already returns.
+  const mergeM = useEndpointMutation(mergeConflict, {
+    onSuccess: ({ resolved, conflictKeys }) => {
+      showToast(
+        resolved
+          ? { description: "Merged — conflict resolved", variant: "success" }
+          : {
+              title: `${conflictKeys.length} field${conflictKeys.length === 1 ? "" : "s"} still need${conflictKeys.length === 1 ? "s" : ""} your attention`,
+              description: `Merged the rest. Resolve ${conflictKeys.join(", ")} below, then merge again.`,
+              variant: "warning",
+            },
+      );
+    },
+  });
+  const { mutate: acknowledge } = acknowledgeM;
+  const { mutate: resetOverride } = resetOverrideM;
+  const { mutate: merge } = mergeM;
+  const { mutate: removeScope } = removeScopeM;
 
   const handleDismiss = useCallback(() => {
     acknowledge({ body: { storePath: registration.storePath, scopeId } });
@@ -212,6 +241,7 @@ function ConfigDetailBody({
         {scopeId && !showRaw && (
           <Button
             variant="ghost"
+            loading={removeScopeM.isPending}
             onClick={handleStopCustomizing}
           >
             <MdLayersClear className="size-3.5" />
@@ -224,6 +254,7 @@ function ConfigDetailBody({
               <Text variant="caption" tone="muted">Reset all fields?</Text>
               <Button
                 variant="ghost"
+                loading={resetOverrideM.isPending}
                 onClick={handleResetAll}
                 className="bg-destructive/20 text-destructive hover:bg-destructive/30"
               >
@@ -285,6 +316,7 @@ function ConfigDetailBody({
                         </Button>
                         <Button
                           variant="ghost"
+                          loading={resetOverrideM.isPending}
                           onClick={handleAcceptAll}
                           className="bg-destructive/20 hover:bg-destructive/30"
                         >
@@ -325,6 +357,7 @@ function ConfigDetailBody({
                 <span>Defaults updated — no conflicts</span>
                 <Button
                   variant="ghost"
+                  loading={acknowledgeM.isPending}
                   onClick={handleDismiss}
                   className="shrink-0 bg-warning/20 hover:bg-warning/30"
                 >
@@ -355,6 +388,7 @@ function ConfigDetailBody({
                     {canMerge && (
                       <Button
                         variant="ghost"
+                        loading={mergeM.isPending}
                         onClick={handleMerge}
                         className="bg-warning/20 hover:bg-warning/30"
                       >
@@ -364,6 +398,7 @@ function ConfigDetailBody({
                     )}
                     <Button
                       variant="ghost"
+                      loading={resetOverrideM.isPending}
                       onClick={handleAcceptAll}
                       className="bg-warning/20 hover:bg-warning/30"
                     >
@@ -371,6 +406,7 @@ function ConfigDetailBody({
                     </Button>
                     <Button
                       variant="ghost"
+                      loading={acknowledgeM.isPending}
                       onClick={handleDismiss}
                       className="bg-warning/20 hover:bg-warning/30"
                     >

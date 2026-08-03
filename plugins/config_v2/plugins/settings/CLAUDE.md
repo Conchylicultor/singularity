@@ -51,6 +51,7 @@
     - `primitives/pane.useOpenPane`
     - `primitives/popover.InlinePopover`
     - `primitives/syntax-highlight.HighlightedCode`
+    - `shell/toast.showToast`
   - Exports (values):
     - `configDetailPane`
     - `configDetailRoute`

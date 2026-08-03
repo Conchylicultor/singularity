@@ -6677,6 +6677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/popover.InlinePopover`
           - `primitives/syntax-highlight.HighlightedCode`
+          - `shell/toast.showToast`
         - Exports (values):
           - `configDetailPane`
           - `configDetailRoute`
@@ -24962,6 +24963,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/page-tree`
           - `apps/studio/compositions/auto-serve`
+          - `config_v2/settings`
           - `debug/profiling/ops`
           - `infra/health`
           - `shell/notifications`
