@@ -152,6 +152,38 @@ describe("NotificationsClient — reconnect + resync", () => {
     expect(subFrames(socket2)).toHaveLength(0); // no per-sub resends
   });
 
+  test("a replayed sub whose cached value was gc'd echoes NO version/etag, so the server cannot short-circuit it", async () => {
+    // The sub outlives the cache entry: React Query gc's an observer-less query
+    // after gcTime while the sub lives on in `channel.subs` (a boot-hydrated
+    // config for an app the user has not opened yet is exactly that). Echoing a
+    // version/etag we can no longer back would buy an `up-to-date` carrying no
+    // value — a wedge no later frame heals for a resource whose version never
+    // moves. `kept` is the control: same replay, value still cached.
+    const { client, hub, socket, qc } = await setup();
+    for (const k of ["gcd", "kept"]) client.observe(k, {}, undefined, pushSchema);
+    for (const k of ["gcd", "kept"]) {
+      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: k }, version: 4, epoch: "boot-1", etag: `e-${k}` });
+    }
+    qc.removeQueries({ queryKey: ["gcd"] }); // gcTime elapsed for the unobserved query
+
+    socket.serverClose();
+    await vi.advanceTimersByTimeAsync(500);
+    const socket2 = nextSocket(hub);
+    socket2.open();
+
+    const batch = batchFrames(socket2)[0]!;
+    const gcd = batch.entries.find((e) => e.key === "gcd")!;
+    expect(gcd.version).toBeUndefined(); // unbacked → no freshness claim
+    expect(gcd.etag).toBeUndefined();
+    const kept = batch.entries.find((e) => e.key === "kept")!;
+    expect(kept.version).toBe(4); // backed → short-circuit still available
+    expect(kept.etag).toBe("e-kept");
+
+    // The full-path sub-ack the omission forces lands the value back.
+    socket2.serverSend({ kind: "sub-ack", key: "gcd", params: {}, value: { status: "refetched" }, version: 4, epoch: "boot-1" });
+    expect(qc.getQueryData(["gcd"])).toEqual({ status: "refetched" });
+  });
+
   test("H2: a server restart resets version counters — the batch echoes the OLD epoch, lower-version sub-acks APPLY, and the new epoch is re-learned", async () => {
     const { client, hub, socket, qc } = await setup();
     const keys = ["k0", "k1", "k2"];

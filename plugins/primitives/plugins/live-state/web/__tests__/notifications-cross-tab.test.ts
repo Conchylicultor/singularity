@@ -166,6 +166,38 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     expect(byTab.get("tab-B")!.complete).toBe(true);
   });
 
+  test("a broadcast value-less `up-to-date` never poisons a tab holding no value — its own sub-ack still applies", async () => {
+    // The fan-out H6b pins has a sharp edge: a value-less ack is meaningful ONLY
+    // to the tab that asked. Tab A holds k at version 0 (a config-style resource
+    // whose version never moves again); tab B then opens the same surface with a
+    // fresh sub and an empty cache while A's replay is being answered.
+    const { hub, qcA, qcB, clientA, clientB, s1 } = await elect();
+    clientA.observe("k", {}, undefined, pushSchema);
+    s1.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v0" }, version: 0, epoch: "b1" });
+    await flush(); // drain that ack's rx broadcast while B still holds no sub
+    expect(qcB.getQueryData(["k"])).toBeUndefined();
+
+    clientB.observe("k", {}, undefined, pushSchema);
+    await flush(); // B's sub relays to S1; its ack is in flight
+    expect(hub.server.openSockets()).toHaveLength(1);
+
+    // A's replay echoed (epoch, version 0), so the server short-circuits with a
+    // value-less `up-to-date` — broadcast to BOTH tabs. B holds a sub for k, so
+    // the no-sub gate passes, but B has no value: it must NOT adopt version 0.
+    s1.serverSend({ kind: "up-to-date", key: "k", params: {}, version: 0, epoch: "b1" });
+    await flush();
+    expect(qcB.getQueryData(["k"])).toBeUndefined();
+
+    // B's own sub-ack arrives at the SAME version. Pre-fix B had already adopted
+    // 0, so this was dropped as stale — and since a config version never moves
+    // again, B stayed `pending` forever, rendering `descriptor.defaults` ("No
+    // views configured") until a page reload.
+    s1.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v0" }, version: 0, epoch: "b1" });
+    await flush();
+    expect(qcB.getQueryData(["k"])).toEqual({ status: "v0" });
+    expect(qcA.getQueryData(["k"])).toEqual({ status: "v0" }); // A never lost its value
+  });
+
   test("H6b: one server frame fans out to BOTH tabs' caches (leader dispatches locally and broadcasts rx)", async () => {
     const { hub, qcA, qcB, clientA, clientB, s1 } = await elect();
     // Both tabs subscribe k through the single leader socket.

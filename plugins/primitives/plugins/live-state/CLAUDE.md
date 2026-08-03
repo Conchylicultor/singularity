@@ -105,6 +105,18 @@ together with the sub entry, a present entry guarantees the schema is
 registered, so the apply paths can parse safely — dropping the gate reintroduces
 the "no schema registered for key=…" crash (pinned by the `no-sub gate` test).
 
+**`entry.version`/`etag` must always name a value THIS tab currently holds** —
+the WS twin of `fetchOverHttp`'s never-settle-with-a-placeholder rule, gated on
+the same `hasAppliedValue` predicate at three points: `handleServerMessage`
+ignores a value-less `up-to-date` for a never-applied entry, and
+`replaySubs`/`sendSub` echo `version`/`etag` only when backed by a cached value.
+Do not "restore" an unconditional echo (an earlier comment claimed the cached
+value always survives a reconnect — it does not: the sub outlives the query,
+which React Query gc's after `gcTime`) and do not make the ignored `up-to-date`
+force a resub (its own ack is already in flight, and congestion is what triggers
+this path). Adopting a version you cannot back silently drops your own
+value-carrying `sub-ack` as stale.
+
 **`sub-error` frames carry `params` and heal through `applyInvalidate`.** The
 frame is `{ kind, id?, key, params, reason }`; `params` exists so the
 shared-socket broadcast is gated on the local sub entry exactly like every other

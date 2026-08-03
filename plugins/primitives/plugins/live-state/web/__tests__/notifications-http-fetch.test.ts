@@ -185,11 +185,19 @@ describe("NotificationsClient — HTTP fetch path", () => {
   });
 
   test("5: same-epoch stale drop, never-applied → throws ResourceStaleReadError", async () => {
-    const { client, socket, fetchQueue } = await setup();
+    const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    // up-to-date adopts version+epoch WITHOUT writing the cache — so entry.version
-    // is 5 while no server-vouched value was ever applied.
-    socket.serverSend({ kind: "up-to-date", key: "k", params: {}, version: 5, epoch: "b1" });
+    // A versioned entry whose cache holds NO server-vouched value. The vehicle is
+    // React Query gc'ing the observer-less query out from under a live sub (the
+    // real production state): apply a real sub-ack for the version+epoch, then
+    // reset the entry to a never-applied placeholder (`updatedAt: 0`, exactly a
+    // descriptor's initialData — the same idiom as case 3).
+    //
+    // Deliberately NOT via an `up-to-date` frame: a value-less ack may no longer
+    // advance a never-applied entry's version (see handleServerMessage's
+    // no-applied-value guard), so that state is now unreachable by construction.
+    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "gc'd" }, version: 5, epoch: "b1" });
+    qc.setQueryData(queryKeyFor("k", {}), { status: "placeholder" }, { updatedAt: 0 });
 
     fetchQueue.push(makeResponse({ body: { value: { status: "v3-stale" }, version: 3, epoch: "b1" } }));
     await expect(client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback")).rejects.toBeInstanceOf(
@@ -257,10 +265,13 @@ describe("NotificationsClient — HTTP fetch path", () => {
   });
 
   test("8b: cross-epoch drop (case 3) never-applied → throws with reason stale-epoch", async () => {
-    const { client, socket, fetchQueue } = await setup();
+    const { client, qc, socket, fetchQueue } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    // up-to-date stamps entry.epoch=b1=serverEpoch and version 5 without applying.
-    socket.serverSend({ kind: "up-to-date", key: "k", params: {}, version: 5, epoch: "b1" });
+    // Same gc'd-cache vehicle as case 5: the sub-ack stamps entry.epoch=b1=
+    // serverEpoch and version 5, then the query is reset to a never-applied
+    // placeholder. (An `up-to-date` can no longer stamp a never-applied entry.)
+    socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "gc'd" }, version: 5, epoch: "b1" });
+    qc.setQueryData(queryKeyFor("k", {}), { status: "placeholder" }, { updatedAt: 0 });
 
     fetchQueue.push(makeResponse({ body: { value: { status: "old-boot" }, version: 9, epoch: "b0" } }));
     await expect(client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback")).rejects.toMatchObject({

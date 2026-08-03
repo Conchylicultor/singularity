@@ -1016,9 +1016,18 @@ export class NotificationsClient {
    * a server restart reset its counters. The pre-reset version is echoed in the
    * batch entry (with the channel's known server epoch) so a SAME-boot server
    * answers every already-current sub from its in-memory version counter — one
-   * `up-to-date-batch` frame, zero loader runs. `sub.etag` is deliberately
-   * KEPT and echoed too: the cached TanStack value survives a reconnect (the
-   * socket dropped, not the page), so it still describes a value we hold.
+   * `up-to-date-batch` frame, zero loader runs.
+   *
+   * **Echo `version`/`etag` ONLY when we can still back them with a value**
+   * (`hasAppliedValue`) — THE INVARIANT (see `handleServerMessage`): a sub's
+   * `version`/`etag` name a value THIS tab actually holds. It used to be assumed
+   * that "the cached TanStack value survives a reconnect (the socket dropped, not
+   * the page)", but the sub outlives the cache entry: React Query gc's an
+   * observer-less query after `gcTime` (5 min), while the sub lives on in
+   * `channel.subs`. A boot-hydrated config for an app the user has not opened is
+   * exactly that — so an unqualified echo asks the server to short-circuit a
+   * value we no longer have, and the answering `up-to-date` carries none. Omit
+   * both and the server takes the full path and sends the value.
    *
    * Snapshot + build + send happen in ONE synchronous task, so an `observe()`
    * cannot interleave between the baseline reset and the send, and the probe
@@ -1053,7 +1062,15 @@ export class NotificationsClient {
       etag?: string;
       version?: number;
     }> = [];
+    // Counted, not traced per sub: a replay carries the tab's whole set (hundreds
+    // of subs), and the always-on channel logs transitions, not per-item lines.
+    let unbacked = 0;
     for (const sub of channel.subs.values()) {
+      // Can we still back a freshness claim with the value it describes? A
+      // gc'd cache entry (or one that never applied) makes both the version and
+      // the etag lies that the server would answer `up-to-date` to — see the
+      // doc comment above.
+      const backed = this.hasAppliedValue(sub.key, sub.params);
       // Capture the version BEFORE the baseline reset — it names the state the
       // cached value was produced under, which is exactly what the server's
       // short-circuit compares. The reset itself keeps the apply-lower-version
@@ -1064,12 +1081,13 @@ export class NotificationsClient {
       // can't be read as the resync's (liveFrameSeq is a monotonic counter and
       // is never reset).
       sub.lastAckVersion = -1;
+      if (!backed) unbacked++;
       entries.push({
         id: this.nextMsgId++,
         key: sub.key,
         params: sub.params,
-        ...(sub.etag !== undefined ? { etag: sub.etag } : {}),
-        ...(knownVersion >= 0 ? { version: knownVersion } : {}),
+        ...(backed && sub.etag !== undefined ? { etag: sub.etag } : {}),
+        ...(backed && knownVersion >= 0 ? { version: knownVersion } : {}),
       });
     }
     channel.ws.send(
@@ -1081,6 +1099,7 @@ export class NotificationsClient {
         entries,
       }),
     );
+    if (unbacked > 0) trace(`replaySubs socket=${socket} unbacked=${unbacked}/${entries.length}`);
     this.emitDebug();
   }
 
@@ -1092,7 +1111,14 @@ export class NotificationsClient {
     // cleared it) sends the right thing. Single subs never echo a version —
     // a fresh observe has no baseline and a recovery resub must NOT have one
     // (see forceFullResub); the version echo lives in the replay batch.
-    const etag = channel.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
+    //
+    // Same backing rule as the replay batch: an etag we cannot back with a
+    // cached value would buy an `up-to-date` that carries none. A resurrected
+    // keep-alive sub whose query was gc'd is the reachable case (SUB_KEEPALIVE_MS
+    // is shorter than React Query's gcTime today, so it is narrow — but the
+    // invariant should hold by construction, not by that margin).
+    const sub = channel.subs.get(`${key}\0${paramsKey(params)}`);
+    const etag = sub !== undefined && this.hasAppliedValue(key, params) ? sub.etag : undefined;
     trace(`sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}`);
     channel.ws.send(
       JSON.stringify({
@@ -1219,6 +1245,31 @@ export class NotificationsClient {
     }
     if (msg.version <= entry.version) {
       trace(`drop key=${msg.key} params=${pk} msgVersion=${msg.version} haveVersion=${entry.version} reason=stale-version`);
+      return;
+    }
+    // THE INVARIANT: `entry.version` names the version of a value THIS tab
+    // actually holds. A value-less `up-to-date` says "what you have is still
+    // current" — meaningless, and actively destructive, when we have nothing.
+    //
+    // The shared socket broadcasts EVERY frame to EVERY tab, and the gate above
+    // is only "do I hold a sub for this (key, params)", never "was this ack
+    // answering MY request". So another tab's replay short-circuit
+    // (`up-to-date`/`up-to-date-batch`, the only frames the server answers a
+    // version echo with) reaches a tab that has an in-flight first sub and an
+    // empty cache. Adopting its version there poisons the guard above: our own
+    // value-carrying `sub-ack` arrives at the SAME version and is dropped as
+    // stale — and for a resource whose version rarely moves (a config doc sits
+    // at 0 until its file changes) nothing ever exceeds it again, so the query
+    // stays `pending` forever and `useConfig` serves `descriptor.defaults`. That
+    // is the "No views configured" wedge that only a page reload cured.
+    //
+    // Ignore, don't resub: the entry exists because THIS tab sent a sub, so its
+    // answer is already in flight and will apply against our untouched -1
+    // baseline. A resub would add load to the congested server that widened the
+    // race in the first place. This is the WS twin of `fetchOverHttp`'s
+    // never-settle-with-a-placeholder rule (same `hasAppliedValue` predicate).
+    if (msg.kind === "up-to-date" && !this.hasAppliedValue(msg.key, msg.params)) {
+      trace(`drop key=${msg.key} params=${pk} version=${msg.version} reason=no-applied-value`);
       return;
     }
     if (msg.kind === "sub-ack") {
