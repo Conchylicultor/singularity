@@ -32,6 +32,22 @@ export async function blockText(block: Locator): Promise<string> {
   return (await block.innerText()).replace(/ /g, " ").trim();
 }
 
+/**
+ * Every editable block's rendered text, in document order — the whole-document
+ * read the structural scripts assert on.
+ *
+ * Deliberately `textContent`, not `blockText`'s `innerText`: this is the reader
+ * the three structural scripts (paste / duplicate / drag-reorder) each had a
+ * byte-identical copy of, and their expectations are pinned against it.
+ */
+export function blockTexts(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll('[data-block-id] [contenteditable="true"]')].map(
+      (el) => (el.textContent ?? "").trim(),
+    ),
+  );
+}
+
 export interface CaretState {
   hasSelection: boolean;
   collapsed?: boolean;

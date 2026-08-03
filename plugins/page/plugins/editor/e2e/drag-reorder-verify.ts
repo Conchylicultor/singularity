@@ -37,8 +37,13 @@ import {
   stallRoute,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { editableBlocks, openBlankPage } from "./support/blank-page";
+import {
+  blockTexts as readBlockTexts,
+  editableBlocks,
+  openBlankPage,
+} from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
+import { awaitDocument } from "./support/optimistic";
 
 const base = baseUrl();
 const r = report();
@@ -53,12 +58,7 @@ await withBrowser(async (h) => {
   const { checkSelectionOwnsFocus, enterBlockSelection, selectedCount } =
     blockSelectionDriver(page, r);
 
-  const blockTexts = (): Promise<string[]> =>
-    page.evaluate(() =>
-      [...document.querySelectorAll('[data-block-id] [contenteditable="true"]')].map((el) =>
-        (el.textContent ?? "").trim(),
-      ),
-    );
+  const blockTexts = (): Promise<string[]> => readBlockTexts(page);
 
   /** The page's rows as the SERVER holds them, in document (rank) order. */
   const serverTexts = (pageId: string): Promise<string[]> =>
@@ -197,17 +197,17 @@ await withBrowser(async (h) => {
   const t0 = await dragRow(0, 1); // "one" after "two"; the clock starts at the DROP
   const want = ["two", "one", "three", ""];
 
-  let renderedAt = -1;
-  while (Date.now() - t0 < STALL_MS) {
-    if (JSON.stringify(await blockTexts()) === JSON.stringify(want)) {
-      renderedAt = Date.now() - t0;
-      break;
-    }
-    await page.waitForTimeout(20);
-  }
+  // A reorder moves rows that are already mounted and hydrated, so it has ONE
+  // milestone, not the structure-then-text pair a paste/duplicate has — hence no
+  // `grewBeyond`. The wait's predicate is the asserted document either way.
+  const { textAt: renderedAt } = await awaitDocument(page, blockTexts, {
+    expected: want,
+    timeoutMs: STALL_MS / 2,
+    startedAt: t0,
+  });
   r.ok(
     `D: the reorder rendered before the server answered (${renderedAt}ms vs a ${STALL_MS}ms stall)`,
-    renderedAt >= 0 && renderedAt < STALL_MS / 2,
+    renderedAt >= 0,
   );
   r.eq("D: the whole drag was ONE op POST", opRoute.count, 1);
 

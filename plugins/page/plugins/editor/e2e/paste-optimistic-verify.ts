@@ -17,6 +17,12 @@
 // blocks are on screen well before the server could possibly have answered.
 // That is only passable by a genuine optimistic overlay.
 //
+// ROWS and TEXT are asserted as separate milestones, both inside the stall: a
+// pasted row paints one commit before its text hydrates, so waiting for the row
+// and then reading the text is a race (it lost 2 runs in 4, reading `["","",""]`)
+// AND a weaker claim — "rendered before the server answered" would be satisfied
+// by 13 empty boxes. `awaitDocument` makes the wait's predicate the assertion.
+//
 // Usage: bun plugins/page/plugins/editor/e2e/paste-optimistic-verify.ts [--base <url>]
 import {
   baseUrl,
@@ -24,7 +30,8 @@ import {
   stallRoute,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { blockTexts, editableBlocks, openBlankPage } from "./support/blank-page";
+import { awaitDocument } from "./support/optimistic";
 import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
@@ -48,14 +55,7 @@ await withBrowser(async (h) => {
   );
   await page.waitForTimeout(2000); // doc -> data.text projection
 
-  const blockTexts = (): Promise<string[]> =>
-    page.evaluate(() =>
-      [...document.querySelectorAll('[data-block-id] [contenteditable="true"]')].map(
-        (el) => (el.textContent ?? "").trim(),
-      ),
-    );
-
-  const texts = await blockTexts();
+  const texts = await blockTexts(page);
   r.eq("setup: the fixture typed cleanly", texts.slice(0, 3), [
     "line 00",
     "line 01",
@@ -86,53 +86,60 @@ await withBrowser(async (h) => {
 
   // Cmd+A selected EVERY block — the N typed ones plus the trailing empty — so
   // the copied forest is `before` blocks and a correct paste doubles the doc.
-  const before = (await blockTexts()).length;
+  // `pasteAnchorId` anchors after the document-last selection root and the
+  // selection is NOT replaced, so the forest is appended whole. Written as a
+  // transform of `before` so the expectation cannot drift from the fixture.
+  const before = await blockTexts(page);
+  const doubled = [...before, ...before];
+
   const t0 = Date.now();
   await page.keyboard.press("Meta+v");
 
-  // Poll for the pasted rows. A correct optimistic paste shows them on the
-  // keystroke; a server-dependent one cannot beat STALL_MS.
-  let renderedAt = -1;
-  for (let i = 0; i < 400; i++) {
-    if ((await blockTexts()).length > before) {
-      renderedAt = Date.now() - t0;
-      break;
-    }
-    await page.waitForTimeout(20);
-  }
+  // Two milestones, because they answer two questions and a pasted block's ROW
+  // lands a beat before its TEXT does — the row from the structural overlay, the
+  // text once that block's editor mounts and its content doc pre-applies the
+  // seed in a passive effect. Both must beat the server, or the "optimistic"
+  // claim only covers empty boxes. The wait's predicate is the assertion below,
+  // so there is no second read to race (see ./support/optimistic.ts).
+  const { rowsAt, textAt, last: optimistic } = await awaitDocument(page, () => blockTexts(page), {
+    grewBeyond: before.length,
+    expected: doubled,
+    timeoutMs: STALL_MS / 2,
+    startedAt: t0,
+  });
 
+  // The deadline IS the bound, so reaching the milestone at all carries the
+  // timing claim — no second comparison that could disagree with it.
   r.ok(
-    `paste rendered before the server answered (${renderedAt}ms vs a ${STALL_MS}ms stall)`,
-    renderedAt >= 0 && renderedAt < STALL_MS / 2,
+    `paste ROWS rendered before the server answered (${rowsAt}ms vs a ${STALL_MS}ms stall)`,
+    rowsAt >= 0,
+  );
+  r.ok(
+    `paste TEXT rendered before the server answered (${textAt}ms vs a ${STALL_MS}ms stall)`,
+    textAt >= 0,
   );
   r.eq("the paste really did go through the op pipeline", opRoute.count, 1);
 
-  // Content is correct while still unconfirmed — the overlay, not the push.
-  const optimistic = await blockTexts();
-  r.eq(
-    "the optimistic rows carry the pasted content",
-    optimistic.slice(before, before + 3),
-    ["line 00", "line 01", "line 02"],
-  );
-  r.eq("the whole forest landed at once", optimistic.length, before * 2);
+  // Content is correct while still unconfirmed — the overlay, not the push. The
+  // WHOLE document, so a block that never hydrated cannot hide past the third.
+  r.eq("the optimistic rows are the doubled document", optimistic, doubled);
 
   // ---- Let the server catch up; the push must CONFIRM, not duplicate --------
   // `release()` resolves once the held POST has actually been continued, so the
   // wait below covers only the server's work and the push — not a guess at how
   // much of the stall is left.
+  //
+  // This one stays a blind wait, deliberately: the assertion is that the push
+  // changed NOTHING, and a poll-until-equal would be satisfied at t=0 by the
+  // document already on screen and prove nothing. A fixed wait is only a defect
+  // when it stands in for the thing being asserted.
   await opRoute.release();
   await page.waitForTimeout(3000);
 
-  const settled = await blockTexts();
   r.eq(
     "the confirming push neither duplicates nor drops the pasted blocks",
-    settled.length,
-    before * 2,
-  );
-  r.eq(
-    "server truth matches what the user already saw",
-    settled.slice(before, before + 3),
-    ["line 00", "line 01", "line 02"],
+    await blockTexts(page),
+    doubled,
   );
   // Releasing the stall must not have provoked a SECOND write. The count is the
   // only thing standing between "the server confirmed the paste" and "the rows
@@ -140,13 +147,17 @@ await withBrowser(async (h) => {
   r.eq("still exactly one op POST after the push", opRoute.count, 1);
 
   // A reload proves the rows really persisted with the client-minted ids — the
-  // one assertion the never-revert overlay cannot fake. Wait for a block to
-  // MOUNT rather than for a fixed delay: a blind timeout reads an empty document
+  // one assertion the never-revert overlay cannot fake. Wait for the DOCUMENT
+  // rather than for a fixed delay: a blind timeout reads a half-painted forest
   // whenever hydration is a beat slow, which fails as loudly as a lost paste.
   await page.reload({ waitUntil: "domcontentloaded" });
   await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
-  await page.waitForTimeout(3000); // let the rest of the forest paint
-  r.eq("the pasted blocks survive a reload", (await blockTexts()).length, before * 2);
+  const reloaded = await awaitDocument(page, () => blockTexts(page), {
+    expected: doubled,
+    timeoutMs: 30_000,
+    pollMs: 100, // a cold hydration, not a sub-frame race — no need to spin at 20ms
+  });
+  r.eq("the pasted blocks survive a reload", reloaded.last, doubled);
 
   r.finish();
 });

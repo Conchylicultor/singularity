@@ -30,8 +30,13 @@ import {
   stallRoute,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { editableBlocks, openBlankPage } from "./support/blank-page";
+import {
+  blockTexts as readBlockTexts,
+  editableBlocks,
+  openBlankPage,
+} from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
+import { awaitDocument } from "./support/optimistic";
 
 const base = baseUrl();
 const r = report();
@@ -47,12 +52,7 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
   const { checkSelectionOwnsFocus, enterBlockSelection } = blockSelectionDriver(page, r);
 
-  const blockTexts = (): Promise<string[]> =>
-    page.evaluate(() =>
-      [
-        ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-      ].map((el) => (el.textContent ?? "").trim()),
-    );
+  const blockTexts = (): Promise<string[]> => readBlockTexts(page);
 
   // Ids are the only way to tell a clone from its source (they render identical
   // text), and the only way to say "nothing ELSE changed" about an undo.
@@ -243,29 +243,26 @@ await withBrowser(async (h) => {
   // clone's ROW lands a beat before its TEXT does: the row comes from the
   // structural overlay, the text from the clone's content doc pre-applying its
   // `data.text` seed once its editor mounts. Both must beat the server, or the
-  // "optimistic" claim only covers empty boxes.
-  let rowsAt = -1;
-  let textAt = -1;
-  for (let i = 0; i < 400; i++) {
-    const texts = await blockTexts();
-    if (rowsAt < 0 && texts.length > before.length) rowsAt = Date.now() - t0;
-    if (JSON.stringify(texts) === JSON.stringify(doubled)) {
-      textAt = Date.now() - t0;
-      break;
-    }
-    await page.waitForTimeout(20);
-  }
+  // "optimistic" claim only covers empty boxes. `awaitDocument` states that rule
+  // once (see ./support/optimistic.ts) — the deadline is the bound, so reaching
+  // a milestone at all carries the timing claim.
+  const { rowsAt, textAt, last: optimistic } = await awaitDocument(page, blockTexts, {
+    grewBeyond: before.length,
+    expected: doubled,
+    timeoutMs: STALL_MS / 2,
+    startedAt: t0,
+  });
 
   r.ok(
     `E: clone rows rendered before the server answered (${rowsAt}ms vs a ${STALL_MS}ms stall)`,
-    rowsAt >= 0 && rowsAt < STALL_MS / 2,
+    rowsAt >= 0,
   );
   r.ok(
     `E: clone TEXT rendered before the server answered (${textAt}ms vs a ${STALL_MS}ms stall)`,
-    textAt >= 0 && textAt < STALL_MS / 2,
+    textAt >= 0,
   );
   r.eq("E: the whole gesture was ONE op POST", opRoute.count, 1);
-  r.eq("E: the optimistic rows are the doubled document", await blockTexts(), doubled);
+  r.eq("E: the optimistic rows are the doubled document", optimistic, doubled);
 
   // ---- Let the server catch up; the push must CONFIRM, not duplicate ---------
   await page.waitForTimeout(STALL_MS + 3000);
