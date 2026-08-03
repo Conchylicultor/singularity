@@ -4,7 +4,11 @@
 // `task-events` split into two sections (its one card nested two titled blocks,
 // which the host's own title would have made a third). Both halves take the
 // position the old combined `events` entry held, pushes before attempts — the
-// order they were stacked in inside the old card. Every other entry is the
+// order they were stacked in inside the old card.
+// `preprompt` and `effort` left this slot: they are launch configuration, and
+// now ride the Prompt card's own launch-option slot beside the Launch button
+// (config/tasks/task-description/task-prompt.launch-option.jsonc) instead of
+// trailing the pane as two one-line cards. Every other entry is the
 // hand-authored arrangement and is untouched.
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
@@ -17,8 +21,6 @@
     "tasks.task-events:pushes",
     "tasks.task-events:attempts",
     "tasks.task-attachments:attachments",
-    "tasks.task-preprompt:preprompt",
-    "tasks.task-effort:effort",
     "tasks.task-graph:graph"
   ]
 }

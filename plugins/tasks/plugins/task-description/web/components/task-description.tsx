@@ -10,6 +10,7 @@ import { taskDetailResource, type Task } from "@plugins/tasks/plugins/tasks-core
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { DescriptionView } from "./description-view";
+import { LaunchOptions } from "./launch-options";
 
 function TaskDescriptionInner({
   taskId,
@@ -43,6 +44,7 @@ function TaskDescriptionInner({
         onFocus={descField.onFocus}
         onBlur={descField.onBlur}
       />
+      <LaunchOptions taskId={taskId} />
       <Stack align="end" gap="none">
         <LaunchControl
           getRequest={buildLaunchRequest}

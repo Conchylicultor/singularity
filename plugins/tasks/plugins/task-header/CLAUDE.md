@@ -4,12 +4,11 @@
 
 ## Plugin reference
 
-- Description: Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
+- Description: Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
   - Uses:
     - `conversations.useConversationById`
-    - `conversations/model-provider.ModelSelect`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
@@ -17,11 +16,8 @@
     - `primitives/editable-field.useEditableField`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `tasks.AutoStartModel`
     - `tasks.patchTask`
-    - `tasks.setAutoStart`
     - `tasks.useTask`
-    - `tasks/auto-start.useTaskAutoStart`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-detail.useRegisterFlush`

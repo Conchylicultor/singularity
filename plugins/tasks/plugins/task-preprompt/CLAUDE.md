@@ -4,15 +4,15 @@
 
 ## Plugin reference
 
-- Description: Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
+- Description: Per-task preprompt picker, contributed as a launch option of the task detail's Prompt card; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
 - Web:
-  - Contributes: `TaskDetailSlots.Section` "Preprompt"
+  - Contributes: `TaskPrompt.LaunchOption` "Preprompt" → `TaskPrepromptControl`
   - Uses:
     - `conversations/preprompts.PrepromptSelect`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.useResource`
     - `shell/notifications.toast`
-    - `tasks/task-detail.TaskDetailSlots`
+    - `tasks/task-description.TaskPrompt`
   - Exports (values): `useTaskPreprompt`
 - Server:
   - Contributes: `resource.declare` "task-preprompts"

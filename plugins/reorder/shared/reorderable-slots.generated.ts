@@ -99,6 +99,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "task-deps-tree.actions", pluginId: "tasks.task-deps-tree" },
   { slotId: "task-detail.section", pluginId: "tasks.task-detail" },
   { slotId: "task-draft-form.action", pluginId: "tasks.task-draft-form" },
+  { slotId: "task-prompt.launch-option", pluginId: "tasks.task-description" },
   { slotId: "tasks.fields", pluginId: "tasks.task-list" },
   { slotId: "tasks.list-actions", pluginId: "tasks.task-list" },
   { slotId: "tasks.task-actions", pluginId: "tasks.task-list" },

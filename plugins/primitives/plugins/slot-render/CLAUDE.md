@@ -214,6 +214,7 @@ the outcome too, with no separate code path.
     - `shell`
     - `shell/action-bar`
     - `stats`
+    - `tasks/task-description`
     - `tasks/task-draft-form`
     - `tasks/task-list`
     - `ui/segmented-progress-bar`
