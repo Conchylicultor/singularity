@@ -51,8 +51,9 @@ tag later appears (the sent user message, assistant text) because it is just an
   nearest interactive *ancestor*, so it only **seeds** the search: descend to the
   deepest visible descendant containing the point. `<svg>` subtrees are not
   descended into (the glyph stands in for its host control); boxless
-  (`display:contents`) marker spans are traversed, never selected. Corollary:
-  a picker affordance must never `disabled` itself while active.
+  (`display:contents`) marker spans are traversed, never selected. `PickerButton`
+  stays `disabled` while armed on purpose: picking its own (non-hit-testable)
+  button each e2e run is the live regression test for this.
 - **Rich chip.** `components/ui-context-tag.tsx` is an `active-data` **inline
   contribution** (`ActiveData.Tag`, `display:"inline"`, pattern `UI_CONTEXT_RE`):
   it parses the matched `<ui-context>…</ui-context>` substring back into metadata

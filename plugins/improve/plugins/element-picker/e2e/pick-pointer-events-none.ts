@@ -29,14 +29,21 @@ await withBrowser(async (h) => {
   await bar.hover();
   const picker = page.getByRole("button", { name: "Pick UI element" }).first();
   await picker.waitFor({ state: "visible", timeout: 10_000 });
-  const target = (await picker.boundingBox())!;
   await picker.click();
 
   const overlay = page.locator("[data-element-picker]").first();
   await overlay.waitFor({ state: "attached", timeout: 10_000 });
 
+  // Measure only now: the bar hover-expands over a 200ms `max-width` transition
+  // (unpinned), so a box read before it settles points off-screen — past the
+  // viewport's right edge, where `elementFromPoint` legitimately returns null.
+  await page.waitForTimeout(400);
+  const target = (await picker.boundingBox())!;
+
   // 2. Hover the picker button itself — the element the inspector could not see
-  //    before, since arming it used to disable (and so de-hit-test) it.
+  //    before, since arming it used to disable (and so de-hit-test) it. Approach
+  //    from a neighbouring point so a real `mousemove` is guaranteed to fire.
+  await page.mouse.move(target.x - 40, target.y + target.height / 2);
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
   await page.waitForTimeout(200);
   await snap(page, OUT, "hover");

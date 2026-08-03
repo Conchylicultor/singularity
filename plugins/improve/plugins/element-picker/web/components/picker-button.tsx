@@ -22,11 +22,17 @@ export function PickerButton({
 
   return (
     <>
-      {/* Deliberately NOT `disabled` while active: the overlay already swallows
-          the press in the capture phase, and disabling turns the button into a
-          `pointer-events:none` element — i.e. unpickable, which is exactly the
-          bug that made picking this button report the toolbar wrapper instead. */}
-      <IconButton icon={MdAdsClick} label={label} onClick={() => setActive(true)} />
+      {/* Disabled while picking — and therefore `pointer-events:none`, i.e. NOT
+          hit-testable. That is deliberate: `resolveTarget` resolves elements the
+          browser's hit test skips, so this button doubles as the live regression
+          test for that (the e2e picks it every run). Do not "fix" a failed pick
+          here by dropping `disabled` — the bug would be in resolve-target.ts. */}
+      <IconButton
+        icon={MdAdsClick}
+        label={label}
+        disabled={active}
+        onClick={() => setActive(true)}
+      />
       {active && (
         <PickerOverlay
           onPick={(el) => {
