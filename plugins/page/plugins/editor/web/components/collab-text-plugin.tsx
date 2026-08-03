@@ -12,9 +12,13 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
-import { coalesce, runsOf, type Block } from "../../core";
+import { coalesce, runsLength, runsOf, type Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { serializeBlockRuns } from "../internal/block-text-extensions";
+import {
+  collabHydrationReportSink,
+  type CollabHydrationReason,
+} from "../internal/hydration-report";
 import {
   useCollabBlockDoc,
   useLocalCollabBlockDoc,
@@ -48,7 +52,7 @@ const PROJECT_DEBOUNCE_MS = 1000;
  *
  * Returns the (stable) doc-update callback to hand to `useCollabBlockDoc`.
  */
-function useTextProjection(block: Block): () => void {
+function useTextProjection(block: Block, hydrationRef: HydrationOpsRef): () => void {
   const { projectText } = useBlockEditor();
   const [editor] = useLexicalComposerContext();
   const blockRef = useLatestRef(block);
@@ -60,6 +64,22 @@ function useTextProjection(block: Block): () => void {
     if (!dirtyRef.current) return;
     dirtyRef.current = false;
     const runs = serializeBlockRuns(editor);
+    // HYDRATION GUARD. `runs` is what this binding RENDERS; the doc is what the
+    // block actually holds. An editor showing nothing while its doc holds text
+    // is a binding that never hydrated — `@lexical/yjs` ingests a doc solely
+    // through the `observeDeep` events fired AFTER its binding attaches, so a
+    // binding that missed them renders empty FOREVER (see `binding-replica.ts`)
+    // while the doc and the server keep every character.
+    //
+    // Two things must happen, and the second is the reason this lives in front
+    // of the write rather than beside it: projecting here would persist the
+    // blindness into `page_blocks.data.text`, turning a recoverable render bug
+    // into the row saying the block is empty. A derived value may not overwrite
+    // the source it disagrees with.
+    if (runsLength(runs) === 0 && hydrationRef.current.docContentLength() > 0) {
+      hydrationRef.current.onBlindBinding();
+      return;
+    }
     const current = coalesce(
       runsOf((blockRef.current.data as Record<string, unknown> | null)?.text),
     );
@@ -95,15 +115,115 @@ function useTextProjection(block: Block): () => void {
 }
 
 /**
+ * What the projection flush needs from the content-doc seam to run its
+ * hydration guard. It arrives through a ref because the guard lives INSIDE the
+ * projection callback, which the seam hook takes as an argument — so the two
+ * are mutually dependent by construction and the ref is the seam between them.
+ * Inert until the effect below fills it; a flush before that reads the no-op.
+ */
+interface HydrationOps {
+  docContentLength: () => number;
+  onBlindBinding: () => void;
+}
+type HydrationOpsRef = { current: HydrationOps };
+
+/**
+ * How long a block's doc may stay empty while its ROW says otherwise before
+ * that counts as starvation rather than "the subscription has not arrived yet".
+ * A block's editor mounts before its `page-block-doc` subscription settles, so
+ * "empty right now" is the normal opening state and proves nothing; the window
+ * is what turns it into evidence. One shot, re-armed only when the row changes
+ * — not a poll.
+ */
+const STARVATION_SETTLE_MS = 5000;
+
+const INERT_HYDRATION: HydrationOps = {
+  docContentLength: () => 0,
+  onBlindBinding: () => {},
+};
+
+/**
+ * Recover a block whose rendered text no longer agrees with its content doc or
+ * with the server, and report it. Two independent triggers, because either side
+ * can be the one that fell behind and each is observable from a different place:
+ *
+ * - **blind binding** — driven by the projection flush (a doc update happened,
+ *   so the doc is the thing that moved), from {@link useTextProjection};
+ * - **starved doc** — driven by the ROW, the other independent witness of the
+ *   block's content: a `data.text` push carrying text while this client's doc
+ *   is empty and nothing here ever typed into it means the `page-block-doc`
+ *   push that should have hydrated the doc never arrived. Row-driven precisely
+ *   because a starved doc receives no doc updates at all, so the projection's
+ *   own trigger can never fire for it.
+ *
+ * `hasLocalEdits` is what keeps the second trigger honest: a doc the user just
+ * emptied legitimately trails its own ~1s row projection.
+ */
+function useHydrationGuard(
+  block: Block,
+  doc: CollabBlockDoc,
+  hydrationRef: HydrationOpsRef,
+): void {
+  const blockRef = useLatestRef(block);
+  const { docContentLength, hasLocalEdits, rehydrate } = doc;
+
+  const recover = useEventCallback((reason: CollabHydrationReason, shownLength: number) => {
+    const b = blockRef.current;
+    collabHydrationReportSink.emit({
+      reason,
+      blockId: b.id,
+      shownLength,
+      docLength: docContentLength(),
+      rowLength: runsLength(runsOf((b.data as Record<string, unknown> | null)?.text)),
+    });
+    rehydrate();
+  });
+
+  // Fill the ref the projection flush reads. Both members are stable
+  // (`useEventCallback`), so this runs once per mount — and the flush only ever
+  // runs from a timer or an unmount, i.e. never before this effect.
+  useEffect(() => {
+    hydrationRef.current = {
+      docContentLength,
+      onBlindBinding: () => recover("blind-binding", 0),
+    };
+    return () => {
+      hydrationRef.current = INERT_HYDRATION;
+    };
+  }, [hydrationRef, docContentLength, recover]);
+
+  const rowLength = runsLength(
+    runsOf((block.data as Record<string, unknown> | null)?.text),
+  );
+  useEffect(() => {
+    if (rowLength === 0) return;
+    if (hasLocalEdits()) return;
+    if (docContentLength() > 0) return;
+    // Re-verify after the settle window rather than acting on the opening
+    // state (see STARVATION_SETTLE_MS). Cleared on unmount and re-armed only
+    // when the row's length changes, which is what bounds the recovery to one
+    // attempt per new piece of evidence instead of a retry loop.
+    const timer = setTimeout(() => {
+      if (hasLocalEdits() || docContentLength() > 0) return;
+      recover("starved-doc", 0);
+    }, STARVATION_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [rowLength, docContentLength, hasLocalEdits, recover]);
+}
+
+/**
  * The projection + undo-capture callbacks handed to whichever content-doc hook
  * runs. Storage-agnostic: the same `doc → data.text` projection and 1:1
  * `Y.UndoManager`-item mirroring apply on both the server and in-memory paths.
  */
-function useCollabCallbacks(block: Block): {
+function useCollabCallbacks(
+  block: Block,
+  hydrationRef: HydrationOpsRef,
+): {
   onContentChange: () => void;
   onUndoableEdit: (edit: CapturedBlockDocEdit) => void;
 } {
-  const onContentChange = useTextProjection(block);
+  const onContentChange = useTextProjection(block, hydrationRef);
   const { recordTextEdit } = useBlockEditor();
   // Stage 3b: each new coalesced local editing run in this block's content doc
   // (one Y.UndoManager stack item — the seam does the grouping and filters out
@@ -118,7 +238,8 @@ function useCollabCallbacks(block: Block): {
 
 /** Server-synced content-doc binding: the CRDT transport (subscription + FK gate). */
 function ServerCollabTextPlugin({ block }: { block: Block }) {
-  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block);
+  const hydrationRef = useRef<HydrationOps>(INERT_HYDRATION);
+  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block, hydrationRef);
   const { serverIds } = useBlockEditor();
   // Doc-init FK gate (Stage 4a): a freshly created / split block renders from
   // the optimistic overlay before its `_blocks` row exists server-side —
@@ -132,18 +253,24 @@ function ServerCollabTextPlugin({ block }: { block: Block }) {
     onContentChange,
     onUndoableEdit,
   );
+  useHydrationGuard(block, doc, hydrationRef);
   return <CollabBinding block={block} doc={doc} />;
 }
 
 /** In-memory content-doc binding (`persist={false}`): a purely local `Y.Doc`, no network. */
 function LocalCollabTextPlugin({ block }: { block: Block }) {
-  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block);
+  const hydrationRef = useRef<HydrationOps>(INERT_HYDRATION);
+  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block, hydrationRef);
   const doc = useLocalCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
     onContentChange,
     onUndoableEdit,
   );
+  // The blind-binding arm applies here too (a local doc can outrun its binding
+  // the same way); the starved-doc arm self-disables — a local provider reports
+  // `hasLocalEdits` unconditionally, since there is no server to be behind.
+  useHydrationGuard(block, doc, hydrationRef);
   return <CollabBinding block={block} doc={doc} />;
 }
 
@@ -209,9 +336,16 @@ function CollabBinding({ block, doc }: { block: Block; doc: CollabBlockDoc }) {
     };
   }, [editor]);
 
+  // `key` is the re-attach: `CollaborationPlugin` builds its binding exactly
+  // once per mount (behind its own ref), so a binding that lost hydration can
+  // only be rebuilt by remounting it. The seam drops its replica in the same
+  // act, so the rebuilt binding attaches to an EMPTY doc and takes the content
+  // as post-attach events — the construction invariant it depends on. The
+  // generation only ever changes when `rehydrate()` runs.
   return (
     <LexicalCollaboration>
       <CollaborationPlugin
+        key={doc.attachGeneration}
         id={block.id}
         providerFactory={providerFactory}
         shouldBootstrap={false}

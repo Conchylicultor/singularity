@@ -91,7 +91,7 @@ export type { InlineSyntax, InlineFormatMatch, InlineFormatContext } from "./inl
 export { $appendRuns, colorCssValue, runsToLexical, serializeBlockRuns, tokenOf } from "./runs-lexical";
 export type { RunsTokenExtension } from "./runs-lexical";
 
-export { runsToXmlText, xmlTextToRuns } from "./runs-yjs";
+export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
 export type { RunsXmlTextOptions } from "./runs-yjs";
 
 export { SerializedBlockSchema, IdentifiedBlockSchema, withMintedIds } from "./serialized-block";

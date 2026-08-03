@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Doc, encodeStateAsUpdate, UndoManager } from "yjs";
 import type { Provider } from "@lexical/yjs";
 import { LinkNode } from "@lexical/link";
@@ -14,7 +21,13 @@ import {
   blockDocInit,
   blockDocUpdate,
 } from "@plugins/page/plugins/editor-collab/core";
-import { $appendRuns, runsOf, runsToXmlText, type RichText } from "../../core";
+import {
+  $appendRuns,
+  runsOf,
+  runsToXmlText,
+  xmlTextContentLength,
+  type RichText,
+} from "../../core";
 import {
   $paragraphsPlainLength,
   blockTextNodes,
@@ -130,6 +143,14 @@ export interface CapturedBlockDocEdit {
 export interface BlockDocProvider extends Provider {
   markBlockRowConfirmed(): void;
   onServerState(state: string | null): void;
+  /**
+   * Re-read the server's authoritative state into the doc (the READ-side
+   * counterpart to `retryFlush`). Driven by the consumer's hydration guard, the
+   * only thing positioned to notice that this doc is short of the server.
+   */
+  rehydrateFromServer(): void;
+  /** Has any local edit ever entered this doc? (starvation discriminator) */
+  readonly hasLocalEdits: boolean;
   onSaveState(cb: () => void): () => void;
   getSaveState(): CollabSaveState;
   retryFlush(): void;
@@ -391,6 +412,28 @@ export interface CollabBlockDoc {
   /** For `CollaborationPlugin`'s `providerFactory` prop. */
   providerFactory: CollabProviderFactory;
   /**
+   * Bump this on the mounted `CollaborationPlugin`'s `key`. It changes only
+   * when {@link rehydrate} runs, and a changed key is what actually re-attaches
+   * the binding (Lexical builds its binding once per mount, behind a ref).
+   */
+  attachGeneration: number;
+  /**
+   * Live plain-text length of the CANONICAL doc — what this block's content
+   * REALLY is, independent of what any binding managed to render. Half of the
+   * hydration guard's comparison; the other half is the consumer's own
+   * serialization of the editor.
+   */
+  docContentLength: () => number;
+  /** Whether any local edit ever entered this doc (starvation discriminator). */
+  hasLocalEdits: () => boolean;
+  /**
+   * Recover a block whose rendered text no longer agrees with its doc or with
+   * the server: re-read the authoritative state AND re-attach the binding to a
+   * fresh, empty replica. Both halves are needed because either side can be the
+   * one that is behind (see `collab-text-plugin`'s guard).
+   */
+  rehydrate: () => void;
+  /**
    * The block's prose durability, straight off the provider (`useSyncExternalStore`).
    * Report it to the surface's sync-status cloud — the transport is the only
    * thing that knows whether the bytes landed.
@@ -447,6 +490,16 @@ interface CollabDocHold {
   ensure: (id: string) => CollabDocEntry;
   /** The currently-held entry, WITHOUT acquiring one. Null before first `ensure`. */
   peek: () => CollabDocEntry | null;
+  /**
+   * Discard this hold's replica so the NEXT `providerFactory` call mints a
+   * fresh, EMPTY one — the other half of re-attaching a binding (see
+   * {@link CollabBlockDoc.rehydrate}). Without it, a rebuilt binding would
+   * attach to the retained replica, which by then holds content, and Lexical
+   * would render empty forever: the binding hydrates EXCLUSIVELY from
+   * post-attach events (see `binding-replica.ts`). Destroying eagerly is safe —
+   * the outgoing binding's own unmount calls `disconnect()`, which is guarded.
+   */
+  resetReplica: () => void;
   /**
    * The hold's per-binding {@link BindingReplica} over `id`'s entry, created
    * lazily on first call (the providerFactory call). One replica per hook
@@ -571,7 +624,19 @@ function useCollabDocHold(
   // not mint a registry entry from a render-phase `useSyncExternalStore` probe.
   const peek = useEventCallback((): CollabDocEntry | null => heldRef.current);
 
-  return { ensure, peek, ensureReplica };
+  const resetReplica = useEventCallback((): void => {
+    // Drop the REFERENCE now (so the next providerFactory mints a fresh, empty
+    // replica) but destroy the old one a macrotask later: the outgoing binding
+    // is still mounted until React processes the remount this reset is paired
+    // with, and destroying its doc out from under it would leave a live binding
+    // syncing into a dead doc. Same deferral, same reason, as the entry's.
+    const old = replicaRef.current;
+    replicaRef.current = null;
+    cancelReplicaDestroy();
+    if (old) setTimeout(() => old.replica.destroy(), 0);
+  });
+
+  return { ensure, peek, ensureReplica, resetReplica };
 }
 
 /**
@@ -665,6 +730,39 @@ function useSaveState(
   return { saveState, retrySave };
 }
 
+/**
+ * The hydration-recovery surface shared by both hooks: read the canonical doc,
+ * and put a block that lost hydration back together. `attachGeneration` is
+ * state (not a ref) precisely because its only job is to change a React key.
+ */
+function useRehydration(
+  hold: CollabDocHold,
+): Pick<CollabBlockDoc, "attachGeneration" | "docContentLength" | "hasLocalEdits" | "rehydrate"> {
+  const [attachGeneration, setAttachGeneration] = useState(0);
+  const { peek, resetReplica } = hold;
+
+  const docContentLength = useEventCallback((): number => {
+    const entry = peek();
+    return entry ? xmlTextContentLength(yDocContent(entry.doc)) : 0;
+  });
+
+  const hasLocalEdits = useEventCallback((): boolean => peek()?.provider.hasLocalEdits ?? false);
+
+  const rehydrate = useEventCallback((): void => {
+    const entry = peek();
+    if (!entry) return;
+    // Order matters only in that both must happen: the re-read refills a doc
+    // that is behind the server, the re-attach refills an editor that is behind
+    // its doc, and the guard cannot tell which side was short without knowing
+    // the answer it is trying to recover from.
+    entry.provider.rehydrateFromServer();
+    resetReplica();
+    setAttachGeneration((g) => g + 1);
+  });
+
+  return { attachGeneration, docContentLength, hasLocalEdits, rehydrate };
+}
+
 export function useCollabBlockDoc(
   blockId: string,
   dataText: unknown,
@@ -700,7 +798,8 @@ export function useCollabBlockDoc(
 
   const { saveState, retrySave } = useSaveState(blockId, hold);
   const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
-  return { providerFactory, saveState, retrySave };
+  const rehydration = useRehydration(hold);
+  return { providerFactory, saveState, retrySave, ...rehydration };
 }
 
 /**
@@ -729,7 +828,8 @@ export function useLocalCollabBlockDoc(
 
   const { saveState, retrySave } = useSaveState(blockId, hold);
   const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
-  return { providerFactory, saveState, retrySave };
+  const rehydration = useRehydration(hold);
+  return { providerFactory, saveState, retrySave, ...rehydration };
 }
 
 /**

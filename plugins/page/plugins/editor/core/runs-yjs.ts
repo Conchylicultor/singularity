@@ -1,6 +1,6 @@
 import type { Klass, LexicalNode } from "lexical";
 import { LinkNode } from "@lexical/link";
-import type { XmlText } from "yjs";
+import { XmlText } from "yjs";
 import {
   readYDoc,
   yDocContent,
@@ -65,6 +65,38 @@ export function runsToXmlText(
  * `Y.Doc` (which is what `runsToXmlText` and the `@lexical/yjs` binding
  * produce); anything else fails loudly.
  */
+/**
+ * How much content a block's `Y.XmlText` holds, read straight off the CRDT — no
+ * headless Lexical editor, unlike {@link xmlTextToRuns}, which builds one per
+ * call. Deliberately a count and not runs: the caller
+ * (`collab-text-plugin`'s hydration guard, run once per projection window per
+ * dirty block) only ever compares it against ZERO — "does this doc hold anything
+ * the editor is not showing" — and paying for a full replica to answer that
+ * would put an editor construction on every typing burst.
+ *
+ * Characters for text, and **1 per embedded node** (an inline page-link / date /
+ * math decorator is a `Y.XmlElement`, not a string insert): a block holding one
+ * chip and no prose is not empty, and counting only strings would make the
+ * guard read it as a doc that never received anything.
+ *
+ * Counts LIVE content only — tombstones never appear in `toDelta()` — which is
+ * the right basis: deleted text is not something the editor is failing to render.
+ */
+export function xmlTextContentLength(xmlText: XmlText): number {
+  let total = 0;
+  const walk = (node: XmlText): void => {
+    for (const op of node.toDelta() as { insert: unknown }[]) {
+      if (typeof op.insert === "string") total += op.insert.length;
+      // Element children are the block's own paragraphs (recurse) or an
+      // embedded decorator (one unit of content in its own right).
+      else if (op.insert instanceof XmlText) walk(op.insert);
+      else total += 1;
+    }
+  };
+  walk(xmlText);
+  return total;
+}
+
 export function xmlTextToRuns(
   xmlText: XmlText,
   opts: RunsXmlTextOptions = {},

@@ -1408,6 +1408,31 @@ rejected — candidacy is published even for a *dismissed* trigger, so one liter
 `[[` in a line would silently disable autoformat for the rest of the node. The
 right fix is the trigger owner consuming the keystroke.
 
+### The hydration guard (a view may not overwrite what it disagrees with)
+
+`@lexical/yjs` has NO read-the-doc operation: a binding ingests its doc solely
+through post-attach `observeDeep` events, and the doc itself is hydrated solely
+by the `page-block-doc` push. So both views of a block's text can silently fall
+behind the one owner, and the symptom is identical — an empty block whose content
+is safe on the server, restored by a reload. `collab-text-plugin`'s guard is what
+makes that state observable and self-correcting:
+
+- **`shown === 0 && doc > 0`** (from the projection flush) — the binding never
+  hydrated. **`doc === 0 && row > 0 && never edited here`** (from the row, after a
+  settle window, since a starved doc receives no doc updates to trigger on) — the
+  doc is behind the server.
+- Recovery is one verb, `CollabBlockDoc.rehydrate()`: re-read the authoritative
+  state (the idempotent `doc-init`, which is also the provider's ONLY read-side
+  recovery — everything else there is write-side) **and** re-attach the binding by
+  bumping `attachGeneration`, which the seam pairs with dropping its replica so the
+  rebuilt binding still attaches to an EMPTY doc.
+- **The guard sits in FRONT of the projection write, not beside it.** Projecting a
+  blind editor persists the blindness into `data.text` — a derived value
+  overwriting the source it disagrees with, and an absorbed failure (empty runs
+  read as a legitimately empty block). Every occurrence is reported
+  (`collabHydrationReportSink` → `reports/collab-hydration`): a silent self-heal is
+  indistinguishable from a bug that never happened.
+
 ### Hardening
 
 Validated against offline/reconnect, multi-tab, agent concurrency, and history
@@ -1643,6 +1668,8 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `CaretFlightAbortReport`
     - `CaretSurface`
     - `CaretSurfaceRef`
+    - `CollabHydrationReason`
+    - `CollabHydrationReport`
     - `FormatToolbarValue`
     - `MarkButtonProps`
     - `PageIconProps`
@@ -1656,6 +1683,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `BlockTextRenderer`
     - `BlockTypeList`
     - `caretFlightReportSink`
+    - `collabHydrationReportSink`
     - `colorCssValue`
     - `Editor`
     - `filterBlockTypes`
@@ -1880,6 +1908,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `visibleChildRule`
     - `withMintedIds`
     - `withRuns`
+    - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
   - Imported by:
@@ -1939,6 +1968,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `page/url-paste`
     - `page/video`
     - `reports/caret-flight`
+    - `reports/collab-hydration`
   - Extended by:
     - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
     - `apps/pages/starred` (table `page_blocks_ext_starred`)

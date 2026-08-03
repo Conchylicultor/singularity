@@ -3937,6 +3937,10 @@
       "name": "@singularity/plugin-reports-caret-flight",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/collab-hydration": {
+      "name": "@singularity/plugin-reports-collab-hydration",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/crash": {
       "name": "@singularity/plugin-reports-crash",
       "version": "0.0.1",
@@ -6988,6 +6992,8 @@
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
 
     "@singularity/plugin-reports-caret-flight": ["@singularity/plugin-reports-caret-flight@workspace:plugins/reports/plugins/caret-flight"],
+
+    "@singularity/plugin-reports-collab-hydration": ["@singularity/plugin-reports-collab-hydration@workspace:plugins/reports/plugins/collab-hydration"],
 
     "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
 

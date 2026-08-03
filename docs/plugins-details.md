@@ -13728,7 +13728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.caret-flight`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -16101,6 +16101,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CaretFlightAbortReport`
           - `CaretSurface`
           - `CaretSurfaceRef`
+          - `CollabHydrationReason`
+          - `CollabHydrationReport`
           - `FormatToolbarValue`
           - `MarkButtonProps`
           - `PageIconProps`
@@ -16114,6 +16116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockTextRenderer`
           - `BlockTypeList`
           - `caretFlightReportSink`
+          - `collabHydrationReportSink`
           - `colorCssValue`
           - `Editor`
           - `filterBlockTypes`
@@ -16338,6 +16341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `visibleChildRule`
           - `withMintedIds`
           - `withRuns`
+          - `xmlTextContentLength`
           - `xmlTextToRuns`
       - Cross-plugin:
         - Imported by:
@@ -16397,6 +16401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/url-paste`
           - `page/video`
           - `reports/caret-flight`
+          - `reports/collab-hydration`
         - Extended by:
           - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
           - `apps/pages/starred` (table `page_blocks_ext_starred`)
@@ -18396,6 +18401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/file-links`
               - `reorder`
               - `reports/caret-flight`
+              - `reports/collab-hydration`
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
               - `reports/render-loop`
@@ -18857,6 +18863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tooltip`
               - `reorder/editor`
               - `reports/caret-flight`
+              - `reports/collab-hydration`
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
               - `reports/render-loop`
@@ -24309,7 +24316,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.caret-flight`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
@@ -24394,6 +24401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/trace/engine`
       - `infra/boot-snapshot`
       - `reports/caret-flight`
+      - `reports/collab-hydration`
       - `reports/crash`
       - `reports/endpoint-errors`
       - `reports/launch-fix`
@@ -24424,6 +24432,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `caretFlightFingerprint`
           - `CaretFlightPayloadSchema`
+    - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `CollabHydrationCollector`
+          - `Reports.KindView` → `CollabHydrationKindView`
+        - Uses:
+          - `page/editor.collabHydrationReportSink`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "collab-hydration"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `CollabHydrationPayload`
+        - Exports (values):
+          - `collabHydrationFingerprint`
+          - `CollabHydrationPayloadSchema`
     - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
       - Web:
         - Contributes:

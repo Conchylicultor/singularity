@@ -110,6 +110,20 @@ export class LocalYjsProvider implements BlockDocProvider {
 
   onServerState(): void {}
 
+  // There is no server to be behind, so the doc can never be starved: the
+  // hydration guard's re-read arm is inert here. Its OTHER arm (a binding that
+  // renders less than its doc holds) still applies on this transport, and is
+  // healed by the consumer re-attaching the binding — which needs nothing from
+  // the provider.
+  rehydrateFromServer(): void {}
+
+  // A local doc is its own authority: `data.text` is only ever its seed, so
+  // "the row holds text this doc does not" is not a reachable state and the
+  // starvation check never consults this.
+  get hasLocalEdits(): boolean {
+    return true;
+  }
+
   // Save state is CONSTANT: with no transport there is never an outstanding
   // flush, so the state can never change and a subscriber can never fire. The
   // unsubscribe is a no-op because nothing was ever subscribed, and `retryFlush`

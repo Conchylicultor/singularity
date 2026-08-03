@@ -24,6 +24,11 @@ export type {
   CaretFlightAbortReason,
   CaretFlightAbortReport,
 } from "./internal/caret-authority";
+export { collabHydrationReportSink } from "./internal/hydration-report";
+export type {
+  CollabHydrationReason,
+  CollabHydrationReport,
+} from "./internal/hydration-report";
 export { PageContentColumn } from "./components/page-content-column";
 export { BLOCK_INSET, BLOCK_INDENT, MARKER_GUTTER } from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";

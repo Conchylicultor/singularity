@@ -32,6 +32,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-turn-unconfirmed",
   "client-live-state-stale-drop",
   "client-caret-flight",
+  "client-collab-hydration",
   "boot-snapshot",
   "plugin-load",
   "client-storage",

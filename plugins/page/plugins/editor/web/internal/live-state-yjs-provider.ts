@@ -174,12 +174,30 @@ export class LiveStateYjsProvider implements Provider {
    */
   private blockGone = false;
   /**
-   * Post-sync 409 recovery mode: the doc row vanished under us. The next
-   * doc-init must seed from the FULL local doc state (never the `data.text`
-   * seed — that would be an independent encoding of content the local doc
-   * already holds and merge as duplication).
+   * Recovery mode: the next doc-init must seed from the FULL local doc state
+   * (never the `data.text` seed — that would be an independent encoding of
+   * content the local doc already holds and merge as duplication). Set by both
+   * recovery paths: the post-sync 409 (the doc row vanished under us) and
+   * {@link rehydrateFromServer} (the reader lost its way).
    */
   private reinitFromLocalDoc = false;
+  /**
+   * The 409 half of {@link reinitFromLocalDoc}: the doc row vanished while the
+   * block still lives, which no sanctioned path does. Kept separate so only
+   * that path carries the loud "investigate what deleted the row" console
+   * error — a `rehydrateFromServer` re-read is a recovery, not an anomaly in
+   * the doc store.
+   */
+  private docRowVanished = false;
+  /**
+   * Has any LOCAL edit ever entered this doc (any update whose origin is not
+   * this provider — i.e. the binding)? The discriminator for the starvation
+   * check in `collab-text-plugin`: "the row holds text my doc does not" is
+   * proof this client is behind the server ONLY for a doc nobody here has
+   * edited. A doc the user just emptied legitimately trails its own ~1s row
+   * projection, and must not be mistaken for one that never received anything.
+   */
+  private everEdited = false;
   /** Latest value from the live subscription (undefined until first load). */
   private serverState: string | null | undefined = undefined;
   /** Last applied wire state — skips redundant decode+apply on echoes. */
@@ -505,6 +523,7 @@ export class LiveStateYjsProvider implements Provider {
    */
   private readonly onDocUpdate = (update: Uint8Array, origin: unknown): void => {
     if (origin === this) return;
+    this.everEdited = true;
     this.pendingUpdates.push(update);
     this.scheduleFlush();
     // The keystroke edge: bytes now owed to the server ⇒ `syncing`, whether or
@@ -570,6 +589,7 @@ export class LiveStateYjsProvider implements Provider {
             this.synced = false;
             this.initStarted = false;
             this.reinitFromLocalDoc = true;
+            this.docRowVanished = true;
             this.maybeInit();
             return;
           }
@@ -623,8 +643,40 @@ export class LiveStateYjsProvider implements Provider {
     void this.initDoc();
   }
 
+  /**
+   * Re-read the server's authoritative state into the live doc, from scratch.
+   *
+   * The provider's whole recovery surface is otherwise WRITE-side (retryFlush,
+   * the 409 re-init, teardown retention, the offline requeue): every failure it
+   * anticipates is "bytes did not reach the server". This is the READ-side
+   * counterpart — "bytes did not reach the editor" — and it exists because the
+   * live-state push is the ONLY thing that ever hydrates a doc whose row was
+   * created by somebody else, so a single missed `page-block-doc` push leaves
+   * this doc permanently short of the server with no way to notice.
+   *
+   * Deliberately the SAME path as the 409 recovery rather than a second
+   * mechanism: `doc-init` is idempotent first-writer-wins AND returns the
+   * authoritative state, so it is simultaneously the re-read and the re-assert.
+   * `reinitFromLocalDoc` keeps the seed honest (the full local doc, never a
+   * `data.text` re-encoding that would merge as duplication), and `markSynced`
+   * re-queues the local state so nothing this doc holds is dropped by the
+   * round trip.
+   */
+  get hasLocalEdits(): boolean {
+    return this.everEdited;
+  }
+
+  rehydrateFromServer(): void {
+    if (this.destroyed || this.blockGone) return;
+    this.synced = false;
+    this.initStarted = false;
+    this.reinitFromLocalDoc = true;
+    this.maybeInit();
+  }
+
   private async initDoc(): Promise<void> {
     const recovering = this.reinitFromLocalDoc;
+    const rowVanished = this.docRowVanished;
     let seed: Uint8Array;
     if (recovering && this.doc.store.clients.size > 0) {
       // Post-409 recovery: the LOCAL doc is the best-known content (the
@@ -687,7 +739,8 @@ export class LiveStateYjsProvider implements Provider {
     if (this.destroyed) return;
     this.offlineWarned = false;
     this.lastError = null;
-    if (recovering) {
+    if (rowVanished) {
+      this.docRowVanished = false;
       // The block is ALIVE yet its doc row had vanished — no sanctioned path
       // does that (doc rows only die with their block). We recovered (row
       // re-created from the full local state, queue resumes below), but the

@@ -130,6 +130,7 @@ same threshold and can't desync in a row.
     - `primitives/file-links`
     - `reorder`
     - `reports/caret-flight`
+    - `reports/collab-hydration`
     - `reports/live-state-stale-drop`
     - `reports/optimistic-divergence`
     - `reports/render-loop`

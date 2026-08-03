@@ -300,6 +300,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "release", id: "release", loader: () => import("@plugins/release/server"), dependsOn: ["database", "fields/plugins/server-capabilities", "fields/plugins/server-capabilities-loader", "infra/plugins/endpoints", "infra/plugins/launcher", "infra/plugins/paths", "infra/plugins/runtime-profiler", "primitives/plugins/data-view", "primitives/plugins/data-view/plugins/server-query", "primitives/plugins/keyset", "primitives/plugins/log-channels"] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },
   { pluginPath: "reports/plugins/caret-flight", id: "reports.caret-flight", loader: () => import("@plugins/reports/plugins/caret-flight/server"), dependsOn: ["reports"] },
+  { pluginPath: "reports/plugins/collab-hydration", id: "reports.collab-hydration", loader: () => import("@plugins/reports/plugins/collab-hydration/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/crash", id: "reports.crash", loader: () => import("@plugins/reports/plugins/crash/server"), dependsOn: ["build/plugins/server-build-id", "reports"] },
   { pluginPath: "reports/plugins/live-state-stale-drop", id: "reports.live-state-stale-drop", loader: () => import("@plugins/reports/plugins/live-state-stale-drop/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/noise-rules", id: "reports.noise-rules", loader: () => import("@plugins/reports/plugins/noise-rules/server"), dependsOn: ["reports"] },
