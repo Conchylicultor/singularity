@@ -3,19 +3,12 @@ import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { collectMarkerLineage } from "../internal/marker-lineage";
+import { resolveTarget } from "../internal/resolve-target";
 
 interface Highlight {
   rect: DOMRect;
   pluginId?: string;
   tag: string;
-}
-
-/** Resolve the real element under the pointer, skipping picker chrome. */
-function resolveTarget(x: number, y: number): Element | null {
-  const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-  if (el.closest("[data-element-picker]")) return null;
-  return el;
 }
 
 export function PickerOverlay({

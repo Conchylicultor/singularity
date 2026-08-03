@@ -22,12 +22,11 @@ export function PickerButton({
 
   return (
     <>
-      <IconButton
-        icon={MdAdsClick}
-        label={label}
-        disabled={active}
-        onClick={() => setActive(true)}
-      />
+      {/* Deliberately NOT `disabled` while active: the overlay already swallows
+          the press in the capture phase, and disabling turns the button into a
+          `pointer-events:none` element — i.e. unpickable, which is exactly the
+          bug that made picking this button report the toolbar wrapper instead. */}
+      <IconButton icon={MdAdsClick} label={label} onClick={() => setActive(true)} />
       {active && (
         <PickerOverlay
           onPick={(el) => {

@@ -44,6 +44,15 @@ tag later appears (the sent user message, assistant text) because it is just an
   underlying element. Window capture-phase `mousemove`/`click`/`keydown` track
   the hovered element, select on click (`preventDefault`+`stopPropagation`), and
   cancel on Esc. Targets inside `[data-element-picker]` are skipped.
+- **Hit-testing ignores `pointer-events`** (`internal/resolve-target.ts`).
+  `elementFromPoint` answers "what would receive a click here?" — the app's
+  interactivity policy — but picking is inspection. Disabled controls, icon
+  glyphs and click-through layers are invisible to it and mis-resolve to their
+  nearest interactive *ancestor*, so it only **seeds** the search: descend to the
+  deepest visible descendant containing the point. `<svg>` subtrees are not
+  descended into (the glyph stands in for its host control); boxless
+  (`display:contents`) marker spans are traversed, never selected. Corollary:
+  a picker affordance must never `disabled` itself while active.
 - **Rich chip.** `components/ui-context-tag.tsx` is an `active-data` **inline
   contribution** (`ActiveData.Tag`, `display:"inline"`, pattern `UI_CONTEXT_RE`):
   it parses the matched `<ui-context>…</ui-context>` substring back into metadata
