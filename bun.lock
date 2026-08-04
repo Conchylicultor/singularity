@@ -3080,6 +3080,15 @@
       "name": "@singularity/plugin-page-links",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/markdown-apply": {
+      "name": "@singularity/plugin-page-markdown-apply",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/link": "^0.44.0",
+        "lexical": "^0.44.0",
+        "yjs": "^13.6.20",
+      },
+    },
     "plugins/page/plugins/math": {
       "name": "@singularity/plugin-page-math",
       "version": "0.0.1",
@@ -6666,6 +6675,8 @@
     "@singularity/plugin-page-inline-page-link": ["@singularity/plugin-page-inline-page-link@workspace:plugins/page/plugins/inline-page-link"],
 
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
+
+    "@singularity/plugin-page-markdown-apply": ["@singularity/plugin-page-markdown-apply@workspace:plugins/page/plugins/markdown-apply"],
 
     "@singularity/plugin-page-math": ["@singularity/plugin-page-math@workspace:plugins/page/plugins/math"],
 

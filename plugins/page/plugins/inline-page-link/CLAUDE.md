@@ -6,8 +6,12 @@
 
 - Description: Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
 - Server:
-  - Contributes: `page.links.extractor` "* (all blocks)"
-  - Uses: `page/links.PageLinks`
+  - Contributes:
+    - `page.links.extractor` "* (all blocks)"
+    - `page.inline-token` "\[\[(block-\d+-[a-z0-9]+)\]\]"
+  - Uses:
+    - `page/editor.Editor`
+    - `page/links.PageLinks`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`

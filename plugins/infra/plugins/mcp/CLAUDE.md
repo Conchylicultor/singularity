@@ -15,6 +15,7 @@
     - `debug/profiling/runtime`
     - `debug/queue-health`
     - `debug/timeline`
+    - `page/markdown-apply`
     - `plugin-meta/plugin-health`
     - `tasks`
 - Server:

@@ -55,6 +55,7 @@ rule keeps the broken shape from coming back.
     - `page/editor-collab`
     - `page/image`
     - `page/inline-date`
+    - `page/markdown-apply`
     - `page/prompt/block`
     - `page/url-paste`
     - `primitives/css/ui-kit`

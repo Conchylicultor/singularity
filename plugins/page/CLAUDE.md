@@ -43,10 +43,11 @@
   - **`inline-date`** — Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
   - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
+  - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the read_page / write_page / edit_page MCP tools, the structural patch, and the per-block content-doc splice.
   - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
     - Plugins:
       - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
-      - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit.
+      - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit. Inline math token pattern at the server markdown boundary: protects `\(<latex>\)` spans from the marks-aware inline scan.
       - **`render`** — Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
   - **`numbered-list`** — Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary.

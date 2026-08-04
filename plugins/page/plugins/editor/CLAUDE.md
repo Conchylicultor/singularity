@@ -1505,6 +1505,11 @@ that look wrong until you know why:
   tokens are plain substrings of `TextRun.text` and `\(latex\)` is full of `_`
   and `*` — an optional parameter is one a caller silently forgets. A masked span
   becomes its own UNMARKED run, byte-for-byte what `walkNode` gives a decorator.
+  **Both runtimes supply it**: `blockTextProtectedSpans()` exists twice — over
+  the web `registerBlockTextExtension` registry, and over the server's
+  `Editor.InlineToken` contribution. They cannot drift: each token plugin
+  contributes the same `core/` regex constant to both, only the Lexical
+  (de)serialization halves being web-only.
 - **The parser mirrors `matchInlineFormat`'s two whitespace rules**, so what the
   user can type and what pasted text parses as cannot diverge — which is why the
   serializer hoists boundary whitespace OUT of a marked group (`**a **` →
@@ -1880,10 +1885,12 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `StoredBlock`
   - Exports (values):
     - `_blocks`
+    - `applyPageBlockPatch`
     - `BlockLifecycle`
     - `blocksChanged`
     - `BlockSchema`
     - `blocksLiveResource`
+    - `blockTextProtectedSpans`
     - `deleteBlocksSubtree`
     - `Editor`
     - `PAGE_BLOCK_TYPE`
@@ -2092,6 +2099,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `page/inline-date`
     - `page/inline-page-link`
     - `page/links`
+    - `page/markdown-apply`
     - `page/math/equation`
     - `page/math/inline`
     - `page/numbered-list`

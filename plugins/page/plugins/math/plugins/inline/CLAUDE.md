@@ -4,7 +4,10 @@
 
 ## Plugin reference
 
-- Description: Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit.
+- Description: Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit. Inline math token pattern at the server markdown boundary: protects `\(<latex>\)` spans from the marks-aware inline scan.
+- Server:
+  - Contributes: `page.inline-token` "\\\(([^\n]*?)\\\)"
+  - Uses: `page/editor.Editor`
 - Web:
   - Uses:
     - `page/editor.BlockTextPluginProps`

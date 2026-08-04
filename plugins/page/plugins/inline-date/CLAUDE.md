@@ -6,13 +6,16 @@
 
 - Description: Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
 - Server:
-  - Contributes: `trigger` "page.reminders.reconcile"
+  - Contributes:
+    - `trigger` "page.reminders.reconcile"
+    - `page.inline-token` "\[\[(?:date:([0-9TZ:.+-]+)|reminder:([a-f0-9-]+):([0-9TZ:.+-]+))\]\]"
   - Uses:
     - `database.db`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `page/editor._blocks`
     - `page/editor.blocksChanged`
+    - `page/editor.Editor`
     - `shell/notifications.recordNotification`
   - DB schema: `plugins/page/plugins/inline-date/server/internal/tables.ts`
   - Register:

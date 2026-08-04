@@ -6,6 +6,11 @@ import { blockDocInit, blockDocUpdate } from "../core";
 
 export { _pageBlockDocs } from "./internal/tables";
 export { blockContentServerResource } from "./internal/resource";
+// The doc store, for a server-side writer that must edit a block's text with no
+// mounted editor (today `page/markdown-apply`). Bytes in, bytes out — exporting
+// them costs this plugin nothing of its content-agnostic charter, which a
+// runs-aware or Lexical-aware export would breach.
+export { loadBlockDoc, initBlockDoc, mergeBlockDocUpdate } from "./internal/doc-store";
 
 export default {
   description:

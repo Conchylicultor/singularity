@@ -4,8 +4,8 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import { patchBlocks } from "../../core/endpoints";
-import { namesField } from "../../core/block-diff";
-import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { namesField, type BlockPatch } from "../../core/block-diff";
+import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { withPageForest } from "./page-forest";
 import { writeBlockPatch, type ResolvedBlockPatch } from "./forest-writer";
@@ -13,11 +13,11 @@ import { notifyStructuralChange } from "./notify-structural-change";
 import { untrashBlocks, deleteBlocksSubtree } from "./trash-blocks";
 
 /**
- * Generic minimal-change patch handler (the undo/redo inverse path). Creates the
+ * Generic minimal-change patch applier (the undo/redo inverse path). Creates the
  * given full rows, applies each update's NAMED fields, and deletes the given
  * ids, all in one locked transaction. Unlike `handleApplyBlockOp` it runs no
- * reducer — the client has already computed the exact changes (a forward/reverse
- * {@link BlockPatch} derived from a before/after diff), so this handler is an
+ * reducer — the caller has already computed the exact changes (a forward/reverse
+ * {@link BlockPatch} derived from a before/after diff), so this is an
  * authoritative row-level writer onto the CURRENT state.
  *
  * Two invariants make it safe to be blind:
@@ -36,18 +36,27 @@ import { untrashBlocks, deleteBlocksSubtree } from "./trash-blocks";
  *    conflict. The partition catches it: a trashed page-shell create restores its
  *    WHOLE subtree via the trash chokepoint (CRDT docs + history survived, so the
  *    restore is byte-exact); a trashed content-row create just clears its flags
- *    and applies the client's row. Cmd+Z after a page delete thereby restores the
+ *    and applies the patch's row. Cmd+Z after a page delete thereby restores the
  *    full subtree.
  *  - **Re-trash-on-redo.** A `deleteIds` containing a `type="page"` root routes
  *    back through the chokepoint (a fresh trash entry); page-free stays hard.
+ *
+ * Exported (not merely the endpoint's body) because it is THE sanctioned forest
+ * write: `page-editor/no-adhoc-forest-write` forbids any other plugin touching
+ * `_blocks`, so a server-side writer that computes its own `BlockPatch` — today
+ * `page/markdown-apply`, which diffs an incoming markdown document against the
+ * stored forest — routes through this one path rather than growing a second.
  */
-export const handlePatchBlocks = implement(patchBlocks, async ({ params, body }) => {
+export async function applyPageBlockPatch(
+  pageId: string,
+  patch: BlockPatch,
+): Promise<{ blocks: Block[]; watermark: string }> {
   // Which of this patch's creates land on a TRASHED row. Resolvable without the
   // page read (a live row is never `deleted_at IS NOT NULL`), which is what lets
   // the page-root restore below run BEFORE the write transaction opens — it is
   // its own locked write via the chokepoint, and nesting one lock inside another
   // would take them out of the sorted order that keeps writers deadlock-free.
-  const createIds = body.creates.map((b) => b.id);
+  const createIds = patch.creates.map((b) => b.id);
   const trashedRows =
     createIds.length > 0
       ? await db
@@ -58,23 +67,23 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   const trashedById = new Map(trashedRows.map((r) => [r.id, r]));
   // A trashed PAGE shell is restored wholesale by the chokepoint below, which
   // owns its parentage and repairs a rank its slot lost while it was trashed.
-  // The patch must therefore not also re-assert the client's row over it — that
+  // The patch must therefore not also re-assert its own row over it — that
   // would put back the very `(parent_id, rank)` the repair moved off, and the
   // live unique index would reject it. So these ids are excluded from every
   // write bucket.
   const pageUntrashIds = new Set(
-    body.creates
+    patch.creates
       .filter((b) => trashedById.get(b.id)?.type === PAGE_BLOCK_TYPE)
       .map((b) => b.id),
   );
-  const creates = body.creates.filter((b) => !pageUntrashIds.has(b.id));
+  const creates = patch.creates.filter((b) => !pageUntrashIds.has(b.id));
 
   // --- Un-trash a page root: restore its whole entry via the chokepoint, then
   // consume the now-empty ledger row. The restored subtree is disjoint from this
   // page's own rows except the shell, which untrashBlocks re-links (and re-ranks
   // on collision). Its content docs + version history survived the trash, so
   // nothing is re-seeded.
-  for (const b of body.creates) {
+  for (const b of patch.creates) {
     const trashed = trashedById.get(b.id);
     if (trashed?.type !== PAGE_BLOCK_TYPE) continue;
     const entryId = trashed.trashEntryId;
@@ -90,18 +99,18 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     await db.delete(_trashEntries).where(eq(_trashEntries.id, entryId));
   }
 
-  const { value, watermark } = await withPageForest(params.pageId, async (ctx) => {
-    // The forest read is INSIDE the lock. This handler is a BLIND writer (its
-    // values come from the client, not from this read), so it needs no atomic
-    // read of its own — but the op handler does, and without this lock its
-    // window would still be open to a patch: a `convertTo` patch committing
+  const { value, watermark } = await withPageForest(pageId, async (ctx) => {
+    // The forest read is INSIDE the lock. This is a BLIND writer (its values
+    // come from the caller, not from this read), so it needs no atomic read of
+    // its own — but the op handler does, and without this lock its window
+    // would still be open to a patch: a `convertTo` patch committing
     // between an op's read and its write left the op reasserting the pre-convert
     // `type`, which is how a bullet typed immediately after an Enter turned back
     // into a paragraph.
     const rows = await ctx.forest();
     const stored = new Map(rows.map((r) => [r.id, r]));
 
-    // Un-trash a CONTENT row: clear its flags and apply the client's row.
+    // Un-trash a CONTENT row: clear its flags and apply the patch's row.
     const untrashes = creates.filter(
       (b) => !stored.has(b.id) && trashedById.has(b.id),
     );
@@ -115,10 +124,10 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     const overwrites = creates.filter((b) => stored.has(b.id));
 
     // An update naming a row that is not live is a skip — see the header.
-    const updates = body.updates.filter((u) => stored.has(u.id));
+    const updates = patch.updates.filter((u) => stored.has(u.id));
 
     // --- Delete path ---------------------------------------------------------
-    const deletedSet = new Set(body.deleteIds);
+    const deletedSet = new Set(patch.deleteIds);
     const deletedRows = rows
       .filter((r) => deletedSet.has(r.id))
       .map((r) => ({ id: r.id, type: r.type, pageId: r.pageId, parentId: r.parentId }));
@@ -176,7 +185,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     // doesn't name `type` doesn't change it), else a deleted row's —
     // defaulting to a content type.
     const primaryType =
-      body.creates[0]?.type ??
+      patch.creates[0]?.type ??
       (updates[0] ? stored.get(updates[0].id)!.type : undefined) ??
       deletedRows[0]?.type ??
       "block";
@@ -193,7 +202,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
 
   if (didWrite) {
     await notifyStructuralChange({
-      pageId: params.pageId,
+      pageId,
       primaryType,
       deletedRows: write.deletedRows,
     });
@@ -202,7 +211,12 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   const finalRows = await db
     .select()
     .from(_blocks)
-    .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
+    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)))
     .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
   return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
-});
+}
+
+/** The HTTP face of {@link applyPageBlockPatch} — validation and nothing else. */
+export const handlePatchBlocks = implement(patchBlocks, ({ params, body }) =>
+  applyPageBlockPatch(params.pageId, body),
+);

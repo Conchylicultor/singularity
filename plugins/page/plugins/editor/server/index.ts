@@ -47,8 +47,11 @@ export { deleteBlocksSubtree } from "./internal/trash-blocks";
 export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/schemas";
 export type { Block, PageData } from "../core/schemas";
 export { serializePageContent, replacePageContent } from "./internal/page-content";
+// The one sanctioned forest write for a caller holding a computed `BlockPatch`
+// (`page-editor/no-adhoc-forest-write` forbids every other route into `_blocks`).
+export { applyPageBlockPatch } from "./internal/handle-patch-blocks";
 export type { PageContentSnapshot, StoredBlock } from "./internal/page-content";
-export { Editor } from "./internal/block-registry";
+export { Editor, blockTextProtectedSpans } from "./internal/block-registry";
 
 export default {
   description: "Block-based document editor — tables, routes, and live state.",

@@ -108,6 +108,7 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`
     - `page/editor`
+    - `page/markdown-apply`
     - `primitives/data-view/view-order`
     - `primitives/tree`
     - `tasks`
