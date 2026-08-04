@@ -152,6 +152,7 @@ fixed raw size escapes per-site via
     - `apps/browser/webview`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
@@ -400,6 +401,7 @@ fixed raw size escapes per-site via
     - `primitives/graph-canvas`
     - `primitives/icon-picker`
     - `primitives/launch`
+    - `primitives/log-channels`
     - `primitives/markdown`
     - `primitives/pane`
     - `primitives/rank-reorder`

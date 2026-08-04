@@ -1,6 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { clientLog } from "./client-log";
+export {
+  LiveLogChannel,
+  LogEntryList,
+  type LiveLogChannelProps,
+  type LogEntryListProps,
+} from "./components/live-log-channel";
 
 export default {
   description:

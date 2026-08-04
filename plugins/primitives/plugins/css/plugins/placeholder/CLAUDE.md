@@ -13,6 +13,8 @@
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`
+    - `apps/deploy/deployments`
+    - `apps/deploy/release-pipeline`
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`

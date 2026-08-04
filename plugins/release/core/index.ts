@@ -2,6 +2,7 @@ export { RELEASE_LOG_CHANNEL, RELEASE_TARGETS, releaseTargetById } from "./targe
 export type { ReleaseTarget } from "./targets";
 export {
   PLATFORM_TAGS,
+  PlatformTagSchema,
   isPlatformTag,
   platformTagFor,
   hostPlatformTag,
@@ -13,6 +14,11 @@ export {
 export type { PlatformTag, PlatformTagResult } from "./platforms";
 export {
   triggerReleaseEndpoint,
+  ReleaseIntentSchema,
+  STAGED_INTENT,
+  releaseCandidateEndpoint,
+  releaseLatestRunEndpoint,
+  ReleaseLatestRunResponseSchema,
   previewEndpoint,
   stopPreviewEndpoint,
   releaseLogsEndpoint,
@@ -23,10 +29,18 @@ export {
   QueryReleaseHistoryResponseSchema,
 } from "./endpoints";
 export type {
+  ReleaseIntent,
+  ReleaseLatestRunResponse,
   ReleaseLogLine,
   ReleaseLogsResponse,
   QueryReleaseHistoryBody,
 } from "./endpoints";
+export {
+  BundleResolutionSchema,
+  StalenessSchema,
+  ReleaseCandidateResponseSchema,
+} from "./candidate";
+export type { ReleaseCandidateResponse } from "./candidate";
 export {
   ReleaseRunSchema,
   releaseRunResource,

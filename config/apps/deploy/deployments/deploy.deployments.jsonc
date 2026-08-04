@@ -1,23 +1,19 @@
 // @hash 6ec84829688d
 {
   "views": [
-    // The record: the three fields a human authors, plus the last run's outcome.
+    // What a person scans down the list: which composition, what its release
+    // candidate is in (contributed by `release-pipeline`), and how its last
+    // converge/ship went. Everything else — the hostnames, the loopback port,
+    // the DERIVED install names (run user, install dir, systemd unit, Caddy
+    // site) — lives in the row's own pane (`dep/:deploymentId`), which is where
+    // a deployment is read and acted on.
     {
       "id": "deployments",
       "name": "Deployments",
       "view": {
         "type": "list",
-        "visibleFields": ["composition", "hostnames", "loopbackPort", "run"]
+        "visibleFields": ["composition", "release", "run"]
       }
-    },
-    // Everything, including the DERIVED install names (run user, install dir,
-    // systemd unit, Caddy site). Kept as a second view rather than columns on the
-    // first so the model is visible on demand without four read-only strings
-    // crowding the row a person actually edits.
-    {
-      "id": "install",
-      "name": "Install",
-      "view": { "type": "table" }
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { deployRunsResource as deployRunsDescriptor, type DeployRun } from "../../core/runs";
+import type { RunDeploymentBody } from "../../core/endpoints";
 import type { Deployment } from "../../core/schemas";
 
 /**
@@ -34,13 +35,22 @@ export function runningOnServer(serverId: string): DeployRun | undefined {
  * Record a run as started. Callers MUST have checked
  * {@link runningOnServer} in the same synchronous turn — see
  * `startDeployRun`, which is where that pairing lives.
+ *
+ * Takes the whole `RunDeploymentBody` rather than a loose `verb`, so the union's
+ * own guarantee — `release` exists on `ship` and cannot exist on `converge` —
+ * is what fills the run record, instead of a second rule about which fields go
+ * together.
  */
-export function startRun(opts: { deployment: Deployment; verb: DeployRun["verb"] }): DeployRun {
+export function startRun(opts: { deployment: Deployment; body: RunDeploymentBody }): DeployRun {
+  const { body } = opts;
   const run: DeployRun = {
     deploymentId: opts.deployment.id,
     serverId: opts.deployment.serverId,
     compositionId: opts.deployment.compositionId,
-    verb: opts.verb,
+    verb: body.verb,
+    // Exactly what was passed as `--release`: a converge has no such flag, and a
+    // ship that named no run legitimately pinned nothing.
+    release: body.verb === "ship" ? body.release ?? null : null,
     status: "running",
     startedAt: new Date().toISOString(),
     finishedAt: null,

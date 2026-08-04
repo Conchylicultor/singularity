@@ -17,6 +17,8 @@
  * mappings are single-sourced here.
  */
 
+import { z } from "zod";
+
 export const PLATFORM_TAGS = [
   "darwin-arm64",
   "darwin-x64",
@@ -25,6 +27,13 @@ export const PLATFORM_TAGS = [
 ] as const;
 
 export type PlatformTag = (typeof PLATFORM_TAGS)[number];
+
+/**
+ * The wire form of {@link PLATFORM_TAGS} — for an endpoint body/query that names
+ * a platform. Built FROM the closed list rather than restating it, so a new tag
+ * is one line above and validation follows for free.
+ */
+export const PlatformTagSchema = z.enum(PLATFORM_TAGS);
 
 export function isPlatformTag(value: string): value is PlatformTag {
   return (PLATFORM_TAGS as readonly string[]).includes(value);

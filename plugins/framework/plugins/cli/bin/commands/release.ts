@@ -9,17 +9,12 @@ import {
   realpathSync,
   renameSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
-import {
-  REPO_ROOT,
-  SINGULARITY_DIR,
-  currentWorktreeName,
-} from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { asFsPath } from "@plugins/framework/plugins/plugin-id/core";
 import { buildPluginTree, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
@@ -41,6 +36,13 @@ import {
   isPlatformTag,
   type PlatformTag,
 } from "@plugins/release/core";
+import {
+  claimLatestPointer,
+  newReleaseRunId,
+  pruneReleaseRunDirs,
+  readGitProvenance,
+  releaseOutDir,
+} from "@plugins/release/plugins/bundles/server";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -56,13 +58,15 @@ import {
 //     config/                      raw git-layer config tree (SINGULARITY_REPO_CONFIG_DIR)
 //     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
 //     web/                         filtered Vite dist (served statically)
-//     RELEASE.json                 { composition, target, platform, builtAt, port, runId }
+//     RELEASE.json                 { composition, target, platform, builtAt, port, runId, commitSha, commitDirty }
 //     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
 //     bundle/<Name>.app, <Name>.dmg     tauri target: desktop bundle (the shippable)
 //
 // `launch` self-roots SINGULARITY_DIR under <out>/data and points the start
-// binaries at the vendored natives via env, so the bundle is fully isolated. The
-// sibling `<comp>-<target>/latest` symlink points at the current <run-id>.
+// binaries at the vendored natives via env, so the bundle is fully isolated. A
+// sibling `<comp>-<target>/latest-<platform>` symlink points at the current
+// PACKED <run-id> — see @plugins/release/plugins/bundles for why it is claimed
+// only after packing, and never by a `--dev` or tauri run.
 
 const DEFAULT_PORT = 9100;
 
@@ -93,29 +97,6 @@ const FILTERED_SERVER_REGISTRY =
   "plugins/framework/plugins/server-core/core/server.composition.generated.ts";
 const FILTERED_WEB_REGISTRY =
   "plugins/framework/plugins/web-sdk/core/web.composition.generated.ts";
-
-// The canonical twins live in `plugins/release/server/internal/out-dir.ts`, but
-// the CLI cannot import them through the `@plugins/release/server` barrel: that
-// barrel eagerly pulls in `@plugins/database/server`, which throws at import time
-// when `SINGULARITY_WORKTREE` is unset (e.g. during build-time docgen). The path
-// shape is plain, so we rebuild it inline here — KEEP IN SYNC with out-dir.ts.
-function newReleaseRunId(): string {
-  return `release-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function releaseOutDir(
-  composition: string,
-  target: string,
-  runId: string,
-): string {
-  return join(
-    SINGULARITY_DIR,
-    "releases",
-    currentWorktreeName(),
-    `${composition}-${target}`,
-    runId,
-  );
-}
 
 /** The tag of the machine cutting the release, or a loud failure. */
 function hostTagOrThrow(): PlatformTag {
@@ -703,6 +684,16 @@ export function registerRelease(program: Command) {
         }
         console.log(`  Output: ${out}`);
 
+        // ── 0. Provenance, read BEFORE anything touches the tree ─────────────
+        // Step 1 (`build-composition`) writes generated files into the checkout,
+        // so a dirty read taken after it reports every release as dirty and says
+        // nothing about what the human left behind. Untracked files count: vite
+        // builds them into the dist, so they are part of the artifact.
+        const provenance = await readGitProvenance(root);
+        console.log(
+          `  Commit: ${provenance.commitSha}${provenance.commitDirty ? " (dirty worktree)" : ""}`,
+        );
+
         // ── 1. Composition artifact phase (hermetic) ─────────────────────────
         // `build-composition` is the ARTIFACT half of `./singularity build`:
         // filtered composition registries, generated migration SQL and the web
@@ -922,18 +913,12 @@ export function registerRelease(program: Command) {
           builtAt: new Date().toISOString(),
           port,
           runId,
+          ...provenance,
         };
         writeFileSync(
           join(out, "RELEASE.json"),
           JSON.stringify(manifest, null, 2) + "\n",
         );
-
-        // Refresh the stable `latest` pointer alongside the versioned run dirs
-        // (`<comp>-<target>/latest → <run-id>`). Done once here so both `--dev`
-        // and packed/tauri flows — which all reach this point — share it.
-        const latest = join(dirname(out), "latest");
-        rmSync(latest, { force: true });
-        symlinkSync(runId, latest);
 
         // ── 3.5. Pre-warm asset-mirror caches for the composition closure ────
         // Bakes out/asset-mirror/<id>/<file> into the staged tree so the bundle
@@ -1008,6 +993,28 @@ export function registerRelease(program: Command) {
           target: opts.target,
           platform,
         });
+
+        // ── 6. Claim the pointer, then sweep ─────────────────────────────────
+        // The pointer is claimed HERE and nowhere else: only a PACKED run may
+        // name itself `latest-<platform>`, so `ship`'s bare (no `--release`)
+        // path can never resolve a `--dev` staging dir. Keyed by platform, so a
+        // host build and a cross-built candidate of the same composition no
+        // longer overwrite each other.
+        const compDir = dirname(out);
+        claimLatestPointer(compDir, runId, platform);
+
+        // A run dir is a whole staged app; `~/.singularity/releases/` has no
+        // other retention. Runs a pointer names are never swept.
+        const pruned = pruneReleaseRunDirs(
+          currentWorktreeName(),
+          opts.composition,
+          opts.target,
+        );
+        if (pruned.removed.length > 0) {
+          console.log(
+            `\n[prune] Removed ${pruned.removed.length} old run dir(s): ${pruned.removed.join(", ")}`,
+          );
+        }
 
         console.log("\n[done] Self-contained binary:");
         console.log(`  ${binaryPath}`);

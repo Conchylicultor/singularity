@@ -245,6 +245,10 @@
       "name": "@singularity/plugin-apps-deploy-health",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/release-pipeline": {
+      "name": "@singularity/plugin-apps-deploy-release-pipeline",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/servers": {
       "name": "@singularity/plugin-apps-deploy-servers",
       "version": "0.0.1",
@@ -3974,6 +3978,10 @@
       "name": "@singularity/plugin-release",
       "version": "0.0.1",
     },
+    "plugins/release/plugins/bundles": {
+      "name": "@singularity/plugin-release-bundles",
+      "version": "0.0.1",
+    },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
       "version": "0.0.1",
@@ -5327,6 +5335,8 @@
     "@singularity/plugin-apps-deploy-deployments": ["@singularity/plugin-apps-deploy-deployments@workspace:plugins/apps/plugins/deploy/plugins/deployments"],
 
     "@singularity/plugin-apps-deploy-health": ["@singularity/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
+
+    "@singularity/plugin-apps-deploy-release-pipeline": ["@singularity/plugin-apps-deploy-release-pipeline@workspace:plugins/apps/plugins/deploy/plugins/release-pipeline"],
 
     "@singularity/plugin-apps-deploy-servers": ["@singularity/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
 
@@ -7085,6 +7095,8 @@
     "@singularity/plugin-primitives-virtual-rows": ["@singularity/plugin-primitives-virtual-rows@workspace:plugins/primitives/plugins/virtual-rows"],
 
     "@singularity/plugin-release": ["@singularity/plugin-release@workspace:plugins/release"],
+
+    "@singularity/plugin-release-bundles": ["@singularity/plugin-release-bundles@workspace:plugins/release/plugins/bundles"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

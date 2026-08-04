@@ -109,6 +109,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/browser/webview`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
@@ -354,6 +355,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/icon-picker`
     - `primitives/launch`
     - `primitives/loading`
+    - `primitives/log-channels`
     - `primitives/multi-select`
     - `primitives/pane`
     - `primitives/prompt-editor`

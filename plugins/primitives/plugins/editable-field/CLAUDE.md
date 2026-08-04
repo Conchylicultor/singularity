@@ -45,6 +45,7 @@ never stamped a save. The persistent `savedAt` value can't be coalesced away.
   - Exports (values): `useEditableField`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/pages/page-tree`
     - `apps/sonata/library`

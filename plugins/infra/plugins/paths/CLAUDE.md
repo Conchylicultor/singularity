@@ -69,6 +69,7 @@
     - `primitives/log-channels`
     - `primitives/terminal`
     - `release`
+    - `release/bundles`
     - `reports`
     - `review/plugin-changes`
     - `stats/commits`

@@ -63,7 +63,6 @@ offsets expressible on the semantic ramp.
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/solo`
     - `apps/browser/webview`
-    - `apps/deploy/deployments`
     - `apps/pages/page-tree`
     - `apps/sonata/library`
     - `apps/sonata/notation`
@@ -72,7 +71,6 @@ offsets expressible on the semantic ramp.
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/songsheet`
-    - `apps/studio/compositions/release/release-logs`
     - `apps/website/demos/release-switcher`
     - `build`
     - `build/build-logs`
@@ -100,6 +98,7 @@ offsets expressible on the semantic ramp.
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/icon-picker`
+    - `primitives/log-channels`
     - `primitives/multi-select`
     - `primitives/row-actions`
     - `primitives/search`

@@ -12,21 +12,21 @@ import {
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import {
   deploymentsResource,
   deployRunsResource,
-  deriveInstall,
-  updateDeployment,
   type Deployment,
   type DeployRun,
 } from "../../core";
 import { RUN_STATE_OPTIONS, runStateOf } from "../internal/deploy-runs";
+import { deploymentDetailPane } from "../panes";
+import { Deployments } from "../slots";
 import { DeploymentItemActions } from "./deployment-item-actions";
 import { AddDeploymentDialog } from "./add-deployment-dialog";
 import { DeployLogPanel } from "./deploy-log-panel";
@@ -40,10 +40,9 @@ const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
  *
  * A deployment is `(composition × server) → { hostnames, loopbackPort }`, so on
  * this pane the server half is fixed and only the composition and its URL vary.
- * Three of the fields are the record; the rest are **derived** from the
- * composition name (`core/derive.ts`) and carry no `onEdit`, which is what makes
- * them read-only by construction rather than by convention — there is no second
- * place to author an install dir or a run user.
+ * The row carries only what a person scans down the list — the composition, the
+ * last run, and (contributed) the release state; the record's editable fields and
+ * the derived install names live in the row's own pane, one click away.
  *
  * The two resources are gated together (`useCombinedResources`), so the list and
  * the run chips can never render from a half-loaded snapshot — a deployment
@@ -105,7 +104,10 @@ function DeploymentsBody({
   runs: Record<string, DeployRun>;
   loading: boolean;
 }): ReactNode {
-  const update = useEndpointMutation(updateDeployment);
+  const openPane = useOpenPane();
+  // The selection is the ROUTE, never local state: the highlighted row and the
+  // open column are then the same fact, and a deep link paints correctly.
+  const selectedId = deploymentDetailPane.useRouteEntry()?.params.deploymentId;
 
   const fields = useMemo<FieldDef<Deployment>[]>(
     () => [
@@ -117,30 +119,6 @@ function DeploymentsBody({
         value: (d) => d.compositionId,
       },
       {
-        id: "hostnames",
-        label: "Hostnames",
-        type: "tags",
-        values: (d) => d.hostnames,
-        // Caddy serves these; the endpoint validates each against a DNS-label
-        // regex, so a typo is a 400 naming the field rather than a broken site.
-        onEditValues: async (d, next) => {
-          await update.mutateAsync({ params: { id: d.id }, body: { hostnames: next } });
-        },
-        sortable: false,
-      },
-      {
-        id: "loopbackPort",
-        label: "Loopback port",
-        type: "int",
-        value: (d) => d.loopbackPort,
-        onEdit: async (d, next) => {
-          await update.mutateAsync({
-            params: { id: d.id },
-            body: { loopbackPort: Number(next) },
-          });
-        },
-      },
-      {
         id: "run",
         label: "Last run",
         type: "enum",
@@ -150,36 +128,11 @@ function DeploymentsBody({
         // Trailing, so the list row keeps it out of the truncating subtitle line.
         align: "end",
       },
-      // ── Derived. No `onEdit` on any of them, because none of them is a value
-      //    anyone gets to choose: `runUser` in particular exists only to be
-      //    non-root, and a field with a default is a field someone can set back
-      //    to `root`.
-      {
-        id: "runUser",
-        label: "Run user",
-        type: "text",
-        value: (d) => deriveInstall(d.compositionId).runUser,
-      },
-      {
-        id: "installDir",
-        label: "Install dir",
-        type: "text",
-        value: (d) => deriveInstall(d.compositionId).installDir,
-      },
-      {
-        id: "unit",
-        label: "systemd unit",
-        type: "text",
-        value: (d) => deriveInstall(d.compositionId).unit,
-      },
-      {
-        id: "caddySite",
-        label: "Caddy site",
-        type: "text",
-        value: (d) => deriveInstall(d.compositionId).caddySitePath,
-      },
+      // The `release` column is NOT here: it is contributed through
+      // `Deployments.Fields` by whichever plugin owns the release pipeline, so
+      // this list never names that feature (the `Servers.Fields` precedent).
     ],
-    [runs, update],
+    [runs],
   );
 
   const creators: CreateOption[] = [
@@ -205,6 +158,7 @@ function DeploymentsBody({
       <DataView<Deployment>
         rows={rows}
         fields={fields}
+        fieldExtensions={Deployments.Fields}
         rowKey={(d) => d.id}
         views={["list", "table"]}
         defaultView="list"
@@ -212,6 +166,14 @@ function DeploymentsBody({
         loading={loading}
         itemActions={DeploymentItemActions}
         creators={creators}
+        selectedRowId={selectedId}
+        onRowActivate={(d) =>
+          openPane(
+            deploymentDetailPane,
+            { deploymentId: d.id },
+            { mode: "push", side: "right" },
+          )
+        }
         emptyState="Nothing is deployed on this server yet."
       />
     </>

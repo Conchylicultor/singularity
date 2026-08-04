@@ -55,6 +55,7 @@ The dialog content `render` is responsible for its own panel chrome and a
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/deployments`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`

@@ -39,10 +39,12 @@ registration.)
   shows up in the build Gantt as a build that isn't one.) So the spawning backend
   survives the whole release; pid-liveness + boot reconcile gives
   restart-durability — ownership is *more* stable than build's.
-- **Versioned out-dir.** `releaseOutDir` (in `server/internal/out-dir.ts`) roots
+- **Versioned out-dir.** `releaseOutDir` (in `plugins/bundles/server`, which is
+  DB-free so the CLI shares it) roots
   each release at `<SINGULARITY_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/`
-  — versioned per run, not overwrite-in-place, so builds are kept and a `latest`
-  symlink (written by the CLI) points at the current `<run-id>`. The 104-byte
+  — versioned per run, not overwrite-in-place, so builds are kept and a
+  `latest-<platform>` symlink (written by the CLI once a run is PACKED) points at
+  the current `<run-id>`. The 104-byte
   Unix-socket cap no longer constrains this path: `launcher/bin/launch.ts` reroots
   the embedded-PG, PgBouncer, and gateway per-worktree backend sockets onto short
   `/tmp` dirs — the PG/PgBouncer sockets to a `/tmp/sgs-XXXXXX` dir via
@@ -54,6 +56,69 @@ registration.)
   binary with `SINGULARITY_DIR=<tmp>` + `SINGULARITY_LISTEN=:<free>`, tracked in an in-memory
   Map projected into the `release.previews` external resource. Stop kills the
   process group and removes the data dir. Boot reconcile reaps dead previews.
+
+## Intent: what a run is FOR
+
+`triggerRelease({ composition, target, intent })` takes a `ReleaseIntent`, and
+that value is the only thing that changes the argv:
+
+| intent | argv | `release_runs.kind` |
+| --- | --- | --- |
+| `{ kind: "staged" }` | `--dev` (host platform) | `staged` |
+| `{ kind: "candidate", platform }` | `--platform <tag>`, **no** `--dev` | `candidate` |
+
+A union, not `{ dev?, platform? }`, so **"a candidate always names its platform"**
+is unrepresentable-otherwise. `intent` is `.optional()` on the endpoint body
+(resolved to `STAGED_INTENT` in `handleRelease`, the one place) rather than
+`.default()`: `defineEndpoint` types the client body from the schema's *output*,
+so a zod default would make `intent` **required** for every existing caller.
+
+`kind` is stamped at claim time from the request — what a run was FOR is decided
+by the caller, never inferred later from what happens to be on disk.
+
+## `GET /api/release/candidate?composition&platform`
+
+*What would `ship` pick here, and where did it come from?* →
+`{ resolution, run, staleness }`. **The filesystem says whether a shippable
+bundle exists and matches; the DB says where it came from.** `resolution` is the
+EXACT `BundleResolution` `resolveBundle` returns — the same value
+`./singularity deploy ship` acts on — so a consumer renders
+`bundleRefusalMessage(resolution.refusal)` verbatim and **never re-derives
+shippability**. `run` is legitimately `null` (hand-run CLI releases are
+deliberately absent from `release_runs`). `staleness` compares the **manifest's**
+provenance, not the row's: they agree by construction, but the manifest always
+exists.
+
+Owned here, not by deploy: the only deploy-specific input is the platform, so
+this adds no server-side edge from deploy toward release.
+
+A `dedupe: true` GET, **not** a live resource — a per-composition collection
+resource would be unbounded. Consumers refetch on the `release.history-revision`
+tick.
+
+## `GET /api/release/latest?composition=<name>`
+
+*What is the newest run of this composition, whatever its state?* →
+`{ run: ReleaseRun | null }`.
+
+**Both endpoints exist because neither can answer the other's question.** The
+candidate asks the **filesystem** — *what would `ship` pick* — a resolved bundle,
+so it is blind by construction to a build still running or one that just failed.
+This asks the **DB** — *what is the newest run*, any status. A pipeline needs
+both, gated together. Scoped `(namespace, composition) ORDER BY started_at DESC
+LIMIT 1`, exactly the `release_runs_ns_comp_started_idx` prefix.
+
+`run` is wrapped in an object, not a top-level `ReleaseRunSchema.nullable()`:
+`implement()` turns a `null` return into **204** and `fetchEndpoint` turns 204
+into `undefined`, indistinguishable from still-loading. Applies to any
+`implement()` handler whose absence is meaningful.
+
+**Never borrow `queryReleaseHistory` to fetch one row.** It is a
+server-delegated DataView source whose augmentors key off `dataViewId`; an
+invented surface id works only until an augmentor matches it.
+
+`internal/wire-columns.ts` is the one `release_runs` projection all four read
+paths select; add a column there, not per-site.
 
 ## Public surface (for the Studio UI)
 
@@ -71,18 +136,20 @@ For agent-run / standalone CLI releases, the **canonical filesystem path is the
 registry** — there is no DB query. To find releases:
 
 1. List `~/.singularity/releases/<worktree>/` — one `<comp>-<target>/` dir per
-   composition+target, each holding versioned `<run-id>/` dirs plus a `latest`
-   symlink.
-2. Follow `<comp>-<target>/latest` → the current `<run-id>/`.
+   composition+target, each holding versioned `<run-id>/` dirs plus one
+   `latest-<platform>` symlink per platform ever packed.
+2. Follow `<comp>-<target>/latest-<platform>` → the current packed `<run-id>/`.
+   A `--dev` (staged-only) or tauri run claims NO pointer — so a pointer always
+   names a shippable bundle. See `plugins/bundles/`.
 3. Read `<run-id>/RELEASE.json` — self-describing: `composition`, `target`,
-   `platform`, `builtAt`, `port`, `runId`.
+   `platform`, `builtAt`, `port`, `runId`, `commitSha`, `commitDirty`.
 4. The shippable bundle lives inside `<run-id>/`:
    - **tauri** → `<run-id>/bundle/<Name>.app` and `<Name>.dmg`
    - **web** → `<run-id>/dist/<comp>-<target>-<platform>` (self-extracting binary)
 
 Standalone CLI releases are **deliberately NOT recorded in `release_runs`** —
 that table is the Studio engine's dev/preview history only. Discoverability for
-hand-run releases is the path + `latest` symlink + `RELEASE.json`, not a registry
+hand-run releases is the path + `latest-<platform>` symlink + `RELEASE.json`, not a registry
 query, keeping the CLI cleanly DB-free.
 
 ## Testing a release renders (end-to-end)
@@ -202,7 +269,6 @@ nothing remote is built here.
     - `infra/paths.currentWorktreeName`
     - `infra/paths.pruneWorktreeReleaseArtifacts`
     - `infra/paths.REPO_ROOT`
-    - `infra/paths.SINGULARITY_DIR`
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
     - `primitives/data-view/server-query.augmentServerQuery`
@@ -214,13 +280,15 @@ nothing remote is built here.
     - `primitives/keyset.orderByClauses`
     - `primitives/keyset.seekPredicate`
     - `primitives/log-channels.defineLogSink`
+    - `release/bundles.compareToHead`
+    - `release/bundles.newReleaseRunId`
+    - `release/bundles.releaseOutDir`
+    - `release/bundles.resolveBundle`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports (values):
     - `_releaseRuns`
     - `collectReleaseEnv`
-    - `newReleaseRunId`
     - `Release`
-    - `releaseOutDir`
     - `triggerRelease`
   - Resources:
     - `release.history-revision` (push)
@@ -228,6 +296,8 @@ nothing remote is built here.
     - `release.run` (push)
   - Routes:
     - `POST /api/release`
+    - `GET /api/release/candidate`
+    - `GET /api/release/latest`
     - `POST /api/release/runs/:id/preview`
     - `POST /api/release/runs/:id/preview/stop`
     - `GET /api/release/runs/:id/logs`
@@ -237,17 +307,22 @@ nothing remote is built here.
     - `infra/endpoints.defineEndpoint`
     - `primitives/data-view.FilterGroupSchema`
     - `primitives/live-state.resourceDescriptor`
+    - `release/bundles.ReleaseManifestSchema`
   - Exports (types):
     - `PlatformTag`
     - `PlatformTagResult`
     - `Preview`
     - `QueryReleaseHistoryBody`
+    - `ReleaseCandidateResponse`
+    - `ReleaseIntent`
+    - `ReleaseLatestRunResponse`
     - `ReleaseLogLine`
     - `ReleaseLogsResponse`
     - `ReleaseRun`
     - `ReleaseTarget`
   - Exports (values):
     - `bunCompileTarget`
+    - `BundleResolutionSchema`
     - `goEnvFor`
     - `hostPlatformTag`
     - `isLinuxTag`
@@ -255,6 +330,7 @@ nothing remote is built here.
     - `PLATFORM_TAGS`
     - `platformTagFor`
     - `platformTagFromUname`
+    - `PlatformTagSchema`
     - `previewEndpoint`
     - `PreviewSchema`
     - `previewStateResource`
@@ -263,6 +339,11 @@ nothing remote is built here.
     - `QueryReleaseHistoryResponseSchema`
     - `RELEASE_LOG_CHANNEL`
     - `RELEASE_TARGETS`
+    - `releaseCandidateEndpoint`
+    - `ReleaseCandidateResponseSchema`
+    - `ReleaseIntentSchema`
+    - `releaseLatestRunEndpoint`
+    - `ReleaseLatestRunResponseSchema`
     - `releaseLogsEndpoint`
     - `ReleaseLogsResponseSchema`
     - `releaseRunResource`
@@ -270,11 +351,15 @@ nothing remote is built here.
     - `releaseRunsRevisionResource`
     - `releaseTargetById`
     - `SortRuleSchema`
+    - `STAGED_INTENT`
+    - `StalenessSchema`
     - `stopPreviewEndpoint`
     - `triggerReleaseEndpoint`
 - Cross-plugin:
   - Imported by: `auth/apple-signing`
 - Shared:
   - Exports (types): `ReleaseStatus`
+- Sub-plugins:
+  - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
 
 <!-- AUTOGENERATED:END -->

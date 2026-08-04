@@ -25,6 +25,7 @@ no-provider default is `md`.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/release-pipeline`
     - `apps/website/demos/agent-run`
     - `apps/website/demos/app-gallery`
     - `conversations/conversation-view/jsonl-viewer`

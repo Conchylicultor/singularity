@@ -1,17 +1,17 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { JumpToBottomButton, useStickyScroll } from "@plugins/primitives/plugins/auto-scroll/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
+import { ReconnectingEventSource } from "@plugins/primitives/plugins/networking/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getLogChannels } from "@plugins/primitives/plugins/log-channels/core";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
-
-const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
+import type { LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
+import {
+  LiveLogChannel,
+  LogEntryList,
+} from "@plugins/primitives/plugins/log-channels/web";
 
 type ChannelRef =
   | { source: "backend"; id: string; label: string }
@@ -96,77 +96,38 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
         })}
       </Stack>
 
-      {/* Keyed on selectedKey: switching channels remounts LogChannelView, which
+      {/* Keyed on selectedKey: switching channels remounts the view, which
           naturally re-initializes its entries + WS/SSE subscriptions for the new
           channel — no effect-based reset needed. */}
-      {selected && <LogChannelView key={selectedKey} selected={selected} />}
+      {selected &&
+        (selected.source === "backend" ? (
+          // A backend channel is exactly what the shared primitive subscribes
+          // to, so this branch is the primitive — no local WS/de-dup/scroll copy.
+          <Fill axis="y">
+            <LiveLogChannel key={selectedKey} channel={selected.id} fill />
+          </Fill>
+        ) : (
+          <GatewayLogChannel key={selectedKey} worktree={selected.worktree} />
+        ))}
     </Stack>
   );
 }
 
-// Per-channel log display. Owns the entries buffer, the WS (backend) / SSE
-// (gateway) subscription, and the stick-to-bottom scroll. Remounted by the
-// parent on every channel switch (keyed by selectedKey), so its state resets
-// without any in-component reset effect.
-function LogChannelView({ selected }: { selected: ChannelRef }) {
+/**
+ * The gateway-sourced channel: backend stdout/stderr streamed by the GATEWAY as
+ * SSE, not by this app's `/ws/logs`. That transport is why it cannot be
+ * `LiveLogChannel` — but the rows are the same rows, so it renders through the
+ * primitive's `LogEntryList` rather than re-deriving the markup.
+ */
+function GatewayLogChannel({ worktree }: { worktree: string }) {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
-
-  const selectedRef = useLatestRef(selected);
 
   const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
     useStickyScroll({ threshold: 32 });
 
-  const isBackendSource = selected.source === "backend";
-  const isGatewaySource = selected.source === "gateway";
-
-  // Backend-sourced channels: WebSocket to the app's /ws/logs.
-  useReconnectingWebSocket({
-    url: WS_URL,
-    enabled: isBackendSource,
-    onOpen: (ws) => {
-      const sel = selectedRef.current;
-      if (sel.source !== "backend") return;
-      const msg: ClientMessage = {
-        type: "subscribe",
-        channel: sel.id,
-        ...(lastSeqRef.current > 0 && { fromSequence: lastSeqRef.current }),
-      };
-      ws.send(JSON.stringify(msg));
-    },
-    onMessage: (event) => {
-      const msg: ServerMessage = JSON.parse(event.data);
-      switch (msg.type) {
-        case "history":
-          if (msg.entries.length === 0) break;
-          setEntries((prev) => [...prev, ...msg.entries]);
-          lastSeqRef.current = Math.max(
-            lastSeqRef.current,
-            msg.entries[msg.entries.length - 1]!.seq,
-          );
-          break;
-        case "entry":
-          if (msg.seq <= lastSeqRef.current) break;
-          lastSeqRef.current = msg.seq;
-          setEntries((prev) => [...prev, msg]);
-          break;
-        case "error":
-          setEntries((prev) => [
-            ...prev,
-            { seq: lastSeqRef.current + 1, line: `[error] ${msg.error}`, stream: "stderr", timestamp: Date.now() },
-          ]);
-          lastSeqRef.current += 1;
-          break;
-      }
-    },
-  });
-
-  // Gateway-sourced channel: SSE stream of backend stdout/stderr.
   useEffect(() => {
-    if (!isGatewaySource) return;
-    // isGatewaySource guarantees selected.source === "gateway"
-    const gatewaySelected = selected as Extract<ChannelRef, { source: "gateway" }>;
-    const url = `/gateway/worktrees/${encodeURIComponent(gatewaySelected.worktree)}/logs`;
+    const url = `/gateway/worktrees/${encodeURIComponent(worktree)}/logs`;
     const es = new ReconnectingEventSource({
       url,
       events: ["history", "entry"],
@@ -186,7 +147,7 @@ function LogChannelView({ selected }: { selected: ChannelRef }) {
     });
 
     return () => es.close();
-  }, [isGatewaySource, selected]);
+  }, [worktree]);
 
   return (
     // The jump-to-bottom off-ramp is pinned against this cell, not the scroller,
@@ -195,32 +156,16 @@ function LogChannelView({ selected }: { selected: ChannelRef }) {
     // invisible: "stuck at the bottom" and "logs stopped arriving" looked
     // identical.
     <Fill axis="y" className="relative">
-    <Scroll
-      fill
-      ref={scrollRef}
-      className="h-full rounded-md border bg-muted/30 p-lg font-mono text-caption"
-    >
-      {entries.map((entry) => (
-        <div
-          key={entry.seq}
-          className={cn(
-            "flex gap-sm",
-            entry.stream === "stderr" ? "text-destructive" : "text-foreground",
-          )}
-        >
-          <span className="shrink-0 text-muted-foreground">
-            {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-          </span>
-          <span>{entry.line}</span>
-        </div>
-      ))}
-      {/* Must stay the last child: it marks the true end of the content. */}
-      {bottomSentinel}
-    </Scroll>
-    {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
-    <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-      <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
-    </Pin>
+      <LogEntryList
+        entries={entries}
+        fill
+        scrollRef={scrollRef}
+        bottomSentinel={bottomSentinel}
+      />
+      {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
+      <Pin to="bottom" style={{ bottom: "0.25rem" }}>
+        <JumpToBottomButton handle={{ isFollowing, jumpToBottom }} />
+      </Pin>
     </Fill>
   );
 }

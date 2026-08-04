@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-release-bundles",
+  "description": "On-disk release-bundle registry: which bundle would ship for a (composition, platform), why not, and what source it was built from.",
+  "private": true,
+  "version": "0.0.1"
+}

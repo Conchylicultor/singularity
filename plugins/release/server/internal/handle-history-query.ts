@@ -25,27 +25,12 @@ import {
 import type { ReleaseRun } from "../../core";
 import { queryReleaseHistory } from "../../core";
 import { _releaseRuns } from "./tables";
-
-// The public wire projection: every `release_runs` column EXCEPT `pid` (an
-// internal liveness marker, never part of ReleaseRun). Mirrors what
-// `release-history-resource.ts` selects. `release_runs` is a plain `pgTable`
-// (not a `pgView`), so we spread this explicit map — not the `viewColumns(view)`
-// symbol hack the conversations handler needs for its `pgView` source — and add
-// the augmentors' join columns alongside it.
-const WIRE_COLUMNS = {
-  id: _releaseRuns.id,
-  composition: _releaseRuns.composition,
-  target: _releaseRuns.target,
-  namespace: _releaseRuns.namespace,
-  status: _releaseRuns.status,
-  startedAt: _releaseRuns.startedAt,
-  finishedAt: _releaseRuns.finishedAt,
-  exitCode: _releaseRuns.exitCode,
-  platform: _releaseRuns.platform,
-  artifactPath: _releaseRuns.artifactPath,
-  port: _releaseRuns.port,
-  error: _releaseRuns.error,
-} as const;
+// The public wire projection — every `release_runs` column EXCEPT `pid`, shared
+// with the per-id resource and the candidate endpoint so a new column reaches
+// all three. `release_runs` is a plain `pgTable` (not a `pgView`), so we spread
+// it — not the `viewColumns(view)` symbol hack the conversations handler needs
+// for its `pgView` source — and add the augmentors' join columns alongside it.
+import { RELEASE_RUN_WIRE_COLUMNS } from "./wire-columns";
 
 // Binds each filterable/sortable fieldId → its physical `release_runs` column,
 // with the field-type token (resolving the operator→SQL builder) and `nullable`
@@ -134,7 +119,7 @@ export const handleHistoryQuery = implement(queryReleaseHistory, async ({ body }
   // Explicit flat projection (wire columns + the augmentors' sort-key columns)
   // over a `$dynamic()` query so the augmentors' joins can be applied.
   let q: PgSelect = db
-    .select({ ...WIRE_COLUMNS, ...aug.projection })
+    .select({ ...RELEASE_RUN_WIRE_COLUMNS, ...aug.projection })
     .from(_releaseRuns)
     .$dynamic();
   for (const j of aug.joins) q = j.apply(q);

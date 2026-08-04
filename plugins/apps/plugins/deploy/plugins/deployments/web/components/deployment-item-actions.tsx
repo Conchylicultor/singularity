@@ -36,8 +36,13 @@ export const DeploymentItemActions = defineItemActions<Deployment>(
  * them: the platform a deploy needs is discovered by that probe, so a button that
  * would certainly be refused says so before it is pressed. Every other refusal
  * stays the CLI's, reported after the fact on the row.
+ *
+ * Exported because the deployment pane's pipeline gates the same verbs on the
+ * same facts. Sharing the hook rather than the sentences is the point: a row
+ * tooltip and a pipeline step must never disagree about why something is
+ * blocked.
  */
-function useBlockedReason(deployment: Deployment): string | null {
+export function useBlockedReason(deployment: Deployment): string | null {
   const runsResult = useResource(deployRunsResource);
   const health = useServerHealth(deployment.serverId);
 

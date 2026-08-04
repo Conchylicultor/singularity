@@ -99,6 +99,7 @@ double-gutter; keep it without the padding → they go flush to the card edge. S
   - Exports (values): `defineDetailSections`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/events/sources`
     - `apps/pages/page-tree`

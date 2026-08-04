@@ -39,7 +39,6 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `apps/workflows/editor`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
-    - `debug/logs`
     - `debug/slow-ops`
     - `layouts/miller`
     - `page/code-block`

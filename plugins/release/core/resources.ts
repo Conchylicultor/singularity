@@ -9,6 +9,12 @@ export const ReleaseRunSchema = z.object({
   composition: z.string(),
   target: z.string(),
   namespace: z.string(),
+  // WHY this run was cut, stamped from the request's `ReleaseIntent` at claim
+  // time. `candidate` is packed and built for a named platform — a bundle `ship`
+  // can pick; `staged` is a `--dev` run that claims no `latest-<platform>`
+  // pointer and is previewable only. Never null: pre-existing rows read `staged`
+  // through the column default, which is what they were.
+  kind: z.enum(["staged", "candidate"]),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.coerce.date(),
   finishedAt: z.coerce.date().nullable(),
@@ -16,6 +22,11 @@ export const ReleaseRunSchema = z.object({
   platform: z.string().nullable(),
   artifactPath: z.string().nullable(),
   port: z.number().int().nullable(),
+  // Provenance of the source tree this run was cut from. Null on runs that never
+  // wrote a manifest, and on rows predating provenance. `commitDirty` forces
+  // `Staleness.unknown` — the sha names the parent commit, not the bytes.
+  commitSha: z.string().nullable(),
+  commitDirty: z.boolean().nullable(),
   error: z.string().nullable(),
 });
 

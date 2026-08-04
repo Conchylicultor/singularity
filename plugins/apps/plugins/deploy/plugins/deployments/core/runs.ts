@@ -46,6 +46,21 @@ export const DeployRunSchema = z.object({
   serverId: z.string(),
   compositionId: z.string(),
   verb: DeployVerbSchema,
+  /**
+   * The release run id this `ship` pinned (`--release <runId>`), or null.
+   *
+   * Null covers both "this was a converge" and "this ship named no run and took
+   * whatever `latest-<platform>` pointed at" — the two cases where there is no
+   * pinned id to record, which is exactly what the CLI was told. Recorded so
+   * *what is live on this box* is answerable from the run record instead of by
+   * reading back the argv line out of the log channel.
+   *
+   * Deliberately NOT validated semantically here: whether that run exists, is
+   * packed, matches the composition and matches the host's platform is
+   * `resolveBundle`'s verdict, and re-checking it here would be a second
+   * implementation of discovery. The CLI owns every refusal.
+   */
+  release: z.string().nullable(),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.string(),
   /** Null while `running`. */

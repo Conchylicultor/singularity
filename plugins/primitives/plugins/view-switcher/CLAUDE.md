@@ -30,6 +30,7 @@ The shared **view-switching primitive**. It offers two things:
     - `ViewSwitcher`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/release-pipeline`
     - `primitives/data-view/view-core`
     - `primitives/tabbed-view`
 

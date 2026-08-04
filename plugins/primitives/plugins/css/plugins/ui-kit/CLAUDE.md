@@ -262,6 +262,7 @@ structurally unrepresentable.
     - `apps/browser/webview`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`
@@ -484,6 +485,7 @@ structurally unrepresentable.
     - `primitives/imperative-dialog`
     - `primitives/launch`
     - `primitives/loading`
+    - `primitives/log-channels`
     - `primitives/multi-select`
     - `primitives/overflow-menu`
     - `primitives/pane`

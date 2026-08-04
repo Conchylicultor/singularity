@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 
 export const _releaseRuns = pgTable(
@@ -13,6 +21,13 @@ export const _releaseRuns = pgTable(
     // producing namespace lets the history resource and orphan sweep scope to
     // their own runs so inherited rows don't surface as phantom state.
     namespace: text("namespace").notNull().default(MAIN_WORKTREE_NAME),
+    // Why this run was cut: `candidate` (packed, built for a named platform —
+    // shippable) vs `staged` (a `--dev` run, previewable only, claiming no
+    // `latest-<platform>` pointer). Stamped from the request's `ReleaseIntent`
+    // at claim time. NOT NULL with a `staged` default so every row that existed
+    // before candidates reads as what it actually was, and no consumer has to
+    // handle a null third state.
+    kind: text("kind").notNull().default("staged"), // staged|candidate
     status: text("status").notNull().default("running"), // running|succeeded|failed
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -20,6 +35,15 @@ export const _releaseRuns = pgTable(
     platform: text("platform"),
     artifactPath: text("artifact_path"), // staged --out dir (from RELEASE.json)
     port: integer("port"), // baked release port (RELEASE.json.port)
+    // Provenance, copied off RELEASE.json at completion. `git rev-parse HEAD` of
+    // the source tree read BEFORE the artifact phase, and whether that tree was
+    // dirty (`git status --porcelain`, untracked included — vite builds
+    // untracked files into the dist). Nullable: runs that fail before writing a
+    // manifest, and rows inherited from before provenance existed, have neither.
+    // A dirty run's sha names its PARENT commit, not its bytes — which is why
+    // `compareToHead` reports dirty as `unknown` and never as `current`.
+    commitSha: text("commit_sha"),
+    commitDirty: boolean("commit_dirty"),
     error: text("error"),
     // OS pid of the detached `./singularity release` process that owns this run.
     // It outlives backend restarts, so its liveness — not an in-process flag — is

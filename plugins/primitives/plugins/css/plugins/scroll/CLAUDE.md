@@ -46,7 +46,11 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/tab-bar`
+<<<<<<< .merge_file_geZI6s
     - `apps/deploy/deployments`
+=======
+    - `apps/mail/mailbox`
+>>>>>>> .merge_file_j2dw89
     - `apps/mail/reading-pane`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
@@ -87,7 +91,6 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `debug/claude-cli-calls`
     - `debug/live-state-churn/emit`
     - `debug/live-state-health`
-    - `debug/logs`
     - `debug/memory`
     - `debug/queue`
     - `debug/read-set`
@@ -109,6 +112,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `primitives/diff-view`
     - `primitives/folder-picker`
     - `primitives/icon-picker`
+    - `primitives/log-channels`
     - `primitives/pane`
     - `primitives/syntax-highlight`
     - `review`

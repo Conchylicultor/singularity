@@ -72,8 +72,26 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/auto-scroll.JumpToBottomButton`
+    - `primitives/auto-scroll.useStickyScroll`
+    - `primitives/copy-to-clipboard.CopyButton`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/networking.subscribeWsStatus`
-  - Exports (values): `clientLog`
+    - `primitives/networking.useReconnectingWebSocket`
+  - Exports (types):
+    - `LiveLogChannelProps`
+    - `LogEntryListProps`
+  - Exports (values):
+    - `clientLog`
+    - `LiveLogChannel`
+    - `LogEntryList`
 - Server:
   - Uses:
     - `infra/endpoints.implement`
@@ -111,9 +129,11 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/release-pipeline`
     - `apps/events/refresh`
     - `apps/mail/sync`
     - `apps/sonata/piano-roll`
+    - `apps/studio/compositions/release/release-logs`
     - `build`
     - `conversations/transcript-retention`
     - `database`
@@ -125,6 +145,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
     - `debug/boot-events`
     - `debug/boot-watchdog`
     - `debug/health-monitor`
+    - `debug/logs`
     - `debug/op-rate`
     - `debug/paging-probe`
     - `debug/render-profiler`

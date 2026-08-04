@@ -61,6 +61,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/ssh-setup`
 - Shared:
   - Exports (types):

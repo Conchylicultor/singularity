@@ -7,12 +7,16 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import "@plugins/fields/plugins/server-capabilities-loader/server";
 import {
   triggerReleaseEndpoint,
+  releaseCandidateEndpoint,
+  releaseLatestRunEndpoint,
   previewEndpoint,
   stopPreviewEndpoint,
   releaseLogsEndpoint,
   queryReleaseHistory,
 } from "../core/endpoints";
 import { handleRelease } from "./internal/handle-release";
+import { handleReleaseCandidate } from "./internal/handle-candidate";
+import { handleLatestRun } from "./internal/handle-latest-run";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
 import { handleHistoryQuery } from "./internal/handle-history-query";
@@ -23,7 +27,9 @@ import { releaseRunsRevisionResource } from "./internal/history-revision-resourc
 import { previewStateResource } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
 export { triggerRelease } from "./internal/run-release";
-export { releaseOutDir, newReleaseRunId } from "./internal/out-dir";
+// `releaseOutDir` / `newReleaseRunId` are NOT re-exported here: they now live in
+// `@plugins/release/plugins/bundles/server`, which is DB-free and therefore
+// importable by a CLI process — import them from there.
 export { Release, collectReleaseEnv } from "./internal/env-provider";
 
 export default {
@@ -35,6 +41,8 @@ export default {
   ],
   httpRoutes: {
     [triggerReleaseEndpoint.route]: handleRelease,
+    [releaseCandidateEndpoint.route]: handleReleaseCandidate,
+    [releaseLatestRunEndpoint.route]: handleLatestRun,
     [previewEndpoint.route]: handlePreview,
     [stopPreviewEndpoint.route]: handleStopPreview,
     [releaseLogsEndpoint.route]: handleReleaseLogs,

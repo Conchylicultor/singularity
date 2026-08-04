@@ -44,9 +44,9 @@
  * `main`, or the spawning backend's own worktree when the D5 UI shells out.
  */
 import type { Command } from "commander";
-import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { eq, or } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
@@ -77,6 +77,8 @@ import {
 import { convergeScript, sq } from "./internal/converge-script";
 import { sshRun, sshUpload, type SshTarget } from "@plugins/infra/plugins/ssh/server";
 import { isLinuxTag, isPlatformTag, type PlatformTag } from "@plugins/release/core";
+import { bundleRefusalMessage } from "@plugins/release/plugins/bundles/core";
+import { resolveBundle } from "@plugins/release/plugins/bundles/server";
 import {
   classifyEdges,
   expandEntrySeeds,
@@ -577,156 +579,11 @@ function assertCaddySafeHostname(hostname: string): void {
 }
 
 // ── D4: bundle discovery + the activate script ────────────────────────────────
-
-interface Bundle {
-  runId: string;
-  /** The self-extracting binary to ship. */
-  localPath: string;
-  /** Its name on disk — carries the platform, which is why the unit cannot. */
-  binaryName: string;
-}
-
-/** `RELEASE.json`, the bundle's own self-description. */
-interface ReleaseManifest {
-  composition: string;
-  target: string;
-  platform: string;
-  runId: string;
-}
-
-/**
- * The ONE directory ship looks in for a composition's bundles, resolved once.
- *
- * **Which namespace it keys on, and why.** `releaseOutDir` roots every release
- * at `<SINGULARITY_DIR>/releases/<namespace>/<comp>-<target>/`, where the
- * namespace is `currentWorktreeName()` — i.e. `SINGULARITY_WORKTREE`, falling
- * back to `main`. Ship keys on exactly the same call, which is what makes the
- * two agree in each of the two real situations:
- *
- * - **hand-run release + hand-run ship** — neither process has
- *   `SINGULARITY_WORKTREE`, so both see `releases/singularity/`, even when the
- *   CLI is invoked from a worktree checkout. (Confirmed against a real
- *   cross-build: `release --platform linux-x64` from this worktree wrote
- *   `releases/singularity/website-web/<run-id>/`, NOT `releases/att-…/`.)
- * - **Studio-triggered release + UI-triggered ship** — both run inside the
- *   worktree backend, so both see `releases/<that worktree>/`.
- *
- * The mismatch is the CROSS pair (a Studio release, then a hand-run ship), and
- * it is deliberately left as a loud miss: this function is never called for more
- * than one namespace, and every refusal below prints the absolute path it looked
- * in. Searching both namespaces would make "which bundle am I shipping?"
- * ambiguous, which is strictly worse than a miss you can read in one line.
- */
-function bundleRoot(composition: string): { namespace: string; compDir: string } {
-  const namespace = currentWorktreeName();
-  return {
-    namespace,
-    compDir: join(SINGULARITY_DIR, "releases", namespace, `${composition}-web`),
-  };
-}
-
-/**
- * The hint every bundle-discovery refusal carries: which namespace was searched,
- * and the one way the answer can be "it exists, but not here".
- */
-function namespaceHint(namespace: string): string {
-  return (
-    `Release namespace: "${namespace}" (from SINGULARITY_WORKTREE, else main). ` +
-    `A release cut from the Studio UI lands under its own worktree's namespace instead, ` +
-    `and ship deliberately does not search a second one.`
-  );
-}
-
-/**
- * Resolve which bundle to ship.
- *
- * The canonical filesystem layout IS the registry (see
- * `plugins/release/CLAUDE.md`, §Discovery) — there is no DB query: run dirs
- * under {@link bundleRoot}, a `latest` symlink at the current one, and a
- * self-describing `RELEASE.json` inside each.
- */
-function resolveBundle(opts: {
-  composition: string;
-  platform: PlatformTag;
-  release?: string;
-}): Bundle {
-  const { composition, platform } = opts;
-  const { namespace, compDir } = bundleRoot(composition);
-  if (!existsSync(compDir)) {
-    refuse(
-      `no release of "${composition}" found. Looked in:\n  ${compDir}\n` +
-        `${namespaceHint(namespace)}\n` +
-        `Build one: ./singularity release --composition ${composition} --target web --platform ${platform}`,
-    );
-  }
-
-  let runDir: string;
-  if (opts.release !== undefined) {
-    runDir = join(compDir, opts.release);
-    if (!existsSync(runDir)) {
-      const runs = readdirSync(compDir).filter((d) => d !== "latest");
-      refuse(
-        `release run "${opts.release}" does not exist. Looked in:\n  ${runDir}\n` +
-          `Available runs in ${compDir}: ${runs.length > 0 ? runs.sort().join(", ") : "(none)"}\n` +
-          namespaceHint(namespace),
-      );
-    }
-  } else {
-    const latest = join(compDir, "latest");
-    if (!existsSync(latest)) {
-      refuse(
-        `no \`latest\` release pointer. Looked for:\n  ${latest}\n` +
-          `${namespaceHint(namespace)}\n` +
-          `Pass --release <run-id> to name a run explicitly.`,
-      );
-    }
-    runDir = realpathSync(latest);
-  }
-
-  const manifestPath = join(runDir, "RELEASE.json");
-  if (!existsSync(manifestPath)) {
-    refuse(`${runDir} holds no RELEASE.json — it is not a complete release run.`);
-  }
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ReleaseManifest;
-
-  // Every field is cross-checked against something ELSE that knows it, so a
-  // mismatch is caught here — loudly, by name — rather than at `systemctl
-  // start`, where it would present as a crash loop.
-  if (manifest.composition !== composition) {
-    refuse(
-      `${manifestPath} was built for composition "${manifest.composition}", not "${composition}".`,
-    );
-  }
-  if (manifest.target !== "web") {
-    refuse(
-      `${manifestPath} is a "${manifest.target}" release; only the \`web\` target is shippable to a server.`,
-    );
-  }
-  // The platform is DISCOVERED on both sides — the release's own record of what
-  // it built, and the server's own `uname`. Comparing two observed facts leaves
-  // no third place for a human to have typed it wrong.
-  if (manifest.platform !== platform) {
-    refuse(
-      `platform mismatch: ${manifestPath} is ${manifest.platform}, but the server reports ` +
-        `${platform}. Rebuild with --platform ${platform}.`,
-    );
-  }
-  const runId = basename(runDir);
-  if (manifest.runId !== runId) {
-    refuse(
-      `${manifestPath} declares runId "${manifest.runId}" but sits in "${runId}" — the release dir is inconsistent.`,
-    );
-  }
-
-  const binaryName = `${composition}-web-${platform}`;
-  const localPath = join(runDir, "dist", binaryName);
-  if (!existsSync(localPath)) {
-    refuse(
-      `${localPath} is missing — that release was staged (\`--dev\`) but never packed into a shippable binary.`,
-    );
-  }
-  return { runId, localPath, binaryName };
-}
+//
+// Bundle discovery itself lives in `@plugins/release/plugins/bundles` — the one
+// authority on "which bundle would ship, and why not", shared with the (future)
+// HTTP surface that has to answer the same question without exiting a process.
+// Ship's only job here is to turn its refusal into this command's exit.
 
 /**
  * Activate an uploaded bundle: entrypoint symlink → flip `current` → restart →
@@ -960,7 +817,7 @@ export function registerDeploy(program: Command) {
     .requiredOption("--server <server>", "Registered deploy server (id, or its name)")
     .option(
       "--release <run-id>",
-      "Release run to ship (default: the `latest` symlink for <composition>-web)",
+      "Release run to ship (default: the `latest-<platform>` symlink for <composition>-web, which only a packed run ever claims)",
     )
     .action(
       async (composition: string, opts: { server: string; release?: string }) => {
@@ -968,12 +825,16 @@ export function registerDeploy(program: Command) {
         const { install, deployment, server } = target;
 
         // The platform is taken from the server's health row, never a flag —
-        // and `resolveBundle` asserts RELEASE.json agrees with it.
-        const bundle = resolveBundle({
+        // and `resolveBundle` asserts RELEASE.json agrees with it. It returns a
+        // verdict rather than exiting, so the same call answers for a UI; the
+        // exit is this command's own translation of a refusal.
+        const resolution = resolveBundle({
           composition,
           platform: target.platform,
           release: opts.release,
         });
+        if (!resolution.ok) refuse(bundleRefusalMessage(resolution.refusal));
+        const bundle = resolution;
         const dir = releaseDir(composition, bundle.runId);
 
         console.log(`Shipping "${composition}" ${bundle.runId} to ${server.name} (${server.host})`);

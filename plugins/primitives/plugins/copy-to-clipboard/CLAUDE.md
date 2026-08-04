@@ -15,10 +15,12 @@
   - Imported by:
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/studio/compositions/release/release-logs`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/code-block`
     - `primitives/filepath-breadcrumb`
+    - `primitives/log-channels`
     - `primitives/setup-steps`
     - `review/code-review`
     - `review/plugin-changes/file-changes`

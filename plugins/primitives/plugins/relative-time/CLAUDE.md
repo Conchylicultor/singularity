@@ -11,6 +11,7 @@
     - `apps/browser/start-page`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/release-pipeline`
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`

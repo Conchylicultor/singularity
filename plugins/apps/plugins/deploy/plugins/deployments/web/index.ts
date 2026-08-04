@@ -1,23 +1,41 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DeploymentsSection } from "./components/deployments-section";
+import { DeploymentOverview } from "./components/deployment-overview";
 import {
   DeploymentItemActions,
   ConvergeAction,
   ShipAction,
   DeleteDeploymentAction,
 } from "./components/deployment-item-actions";
+import { deploymentDetailPane } from "./panes";
+import { DeploymentDetail } from "./slots";
 
-export { DeploymentItemActions } from "./components/deployment-item-actions";
+export {
+  DeploymentItemActions,
+  useBlockedReason,
+} from "./components/deployment-item-actions";
+export { DeploymentDetail, Deployments } from "./slots";
+export { deploymentDetailPane } from "./panes";
 
 export default {
   description:
-    "Deployments section of a server's page: this server's deployments as a DataView (composition, hostnames, loopback port, last run, plus the derived install names read-only), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the live deploy log panel.",
+    "Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, the live deploy log panel, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the release pipeline.",
   contributions: [
     ServerDetail.Section({
       id: "deployments",
       label: "Deployments",
       component: DeploymentsSection,
+    }),
+    Pane.Register({ pane: deploymentDetailPane }),
+    // The record and its derived install: this plugin's own content, contributed
+    // through the same slot every other section uses — the pane's owner gets no
+    // privileged mount point.
+    DeploymentDetail.Section({
+      id: "overview",
+      label: "Overview",
+      component: DeploymentOverview,
     }),
     // The two verbs and Delete are contributed into this plugin's own row-action
     // slot rather than hard-rendered, so the row's affordances stay a set the

@@ -63,7 +63,7 @@ export function startDeployRun(opts: {
     ...(body.verb === "ship" && body.release ? ["--release", body.release] : []),
   ];
 
-  const run = startRun({ deployment, verb: body.verb });
+  const run = startRun({ deployment, body });
   deployLog.publish(`$ ${argv.join(" ")}`);
   void runTracked("deploy:run", () => pump(argv, run));
   return run;

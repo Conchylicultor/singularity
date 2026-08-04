@@ -33,6 +33,7 @@ same threshold and can't desync in a row.
     - `apps-core/layout`
     - `apps-core/surface/floating`
     - `apps/deploy/deployments`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
     - `apps/events/sources`

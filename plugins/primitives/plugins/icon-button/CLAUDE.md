@@ -43,7 +43,6 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `apps/browser/proxy`
     - `apps/browser/tabs`
     - `apps/browser/webview`
-    - `apps/deploy/deployments`
     - `apps/mail/reading-pane`
     - `apps/pages/history`
     - `apps/pages/page-tree`
@@ -62,7 +61,6 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `apps/story/renderers/slides`
     - `apps/story/shell`
     - `apps/studio/compositions/entry-points`
-    - `apps/studio/compositions/release/release-logs`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
     - `apps/workflows/definitions`

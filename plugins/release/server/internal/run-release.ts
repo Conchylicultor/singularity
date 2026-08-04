@@ -11,8 +11,12 @@ import {
   pruneWorktreeReleaseArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { releaseTargetById } from "../../core/targets";
+import type { ReleaseIntent } from "../../core/endpoints";
 import { collectReleaseEnv } from "./env-provider";
-import { releaseOutDir, newReleaseRunId } from "./out-dir";
+import {
+  releaseOutDir,
+  newReleaseRunId,
+} from "@plugins/release/plugins/bundles/server";
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
 
@@ -120,13 +124,28 @@ function isUniqueViolation(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === "23505";
 }
 
-export function triggerRelease(composition: string, target: string): void {
+/**
+ * What to cut, and why.
+ *
+ * An options object rather than positional args because `intent` is the
+ * parameter that changes what the artifact IS (staged vs shippable), and a third
+ * positional would read as an afterthought at every call site.
+ */
+export interface TriggerReleaseOptions {
+  composition: string;
+  target: string;
+  /** See `ReleaseIntent` — decides `--dev` vs `--platform <tag>`, and `kind`. */
+  intent: ReleaseIntent;
+}
+
+export function triggerRelease(opts: TriggerReleaseOptions): void {
+  const { composition } = opts;
   if (inflight) return;
   inflight = true;
   void runTracked("release:run", async () => {
     try {
       if (await isAnyReleaseAlive(composition)) return;
-      await doRunRelease(composition, target);
+      await doRunRelease(opts);
     } catch (err) {
       releaseLog.publish(
         `Release error: ${err instanceof Error ? err.message : String(err)}`,
@@ -144,9 +163,13 @@ interface ReleaseManifest {
   platform: string;
   builtAt: string;
   port: number;
+  /** Provenance the CLI stamps before its artifact phase; absent on old bundles. */
+  commitSha?: string;
+  commitDirty?: boolean;
 }
 
-async function doRunRelease(composition: string, target: string): Promise<void> {
+async function doRunRelease(opts: TriggerReleaseOptions): Promise<void> {
+  const { composition, target, intent } = opts;
   const targetDef = releaseTargetById(target);
   // The endpoint validates the target before calling, but guard here too so a
   // direct call can't spawn the CLI with no args.
@@ -173,6 +196,10 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
       id: releaseId,
       composition,
       target,
+      // Stamped from the intent, at claim time — before the CLI has produced
+      // anything. What a run WAS FOR is decided by the request, not inferred
+      // later from whether an artifact happens to be on disk.
+      kind: intent.kind,
       pid: process.pid,
       namespace: currentWorktreeName(),
     });
@@ -188,6 +215,16 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
   // undefined and behavior is byte-identical to before.
   const extraEnv = await collectReleaseEnv(target);
 
+  // The intent IS the argv difference, and nothing else is:
+  //
+  // - `staged`    → `--dev`, host platform. Byte-identical to what this spawned
+  //                 before intents existed: staged only, no pointer claimed.
+  // - `candidate` → NO `--dev` (it must pack, or it is not shippable) plus
+  //                 `--platform <tag>` (it must be built for the host that will
+  //                 run it, which is discovered, never typed).
+  const intentArgs =
+    intent.kind === "staged" ? ["--dev"] : ["--platform", intent.platform];
+
   const proc = Bun.spawn(
     [
       "./singularity",
@@ -195,7 +232,7 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
       "--composition",
       composition,
       ...targetDef.buildArgs(composition),
-      "--dev",
+      ...intentArgs,
       "--out",
       out,
     ],
@@ -282,6 +319,11 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
       platform: manifest?.platform ?? null,
       artifactPath: succeeded ? out : null,
       port: manifest?.port ?? null,
+      // Copied off the manifest, never re-read from git here: the run's source
+      // state is what the CLI saw BEFORE its artifact phase, and this backend
+      // reads the row long after that tree has moved on.
+      commitSha: manifest?.commitSha ?? null,
+      commitDirty: manifest?.commitDirty ?? null,
       error: succeeded
         ? null
         : `Release exited with code ${exitCode} after ${Math.round((Date.now() - startMs) / 1000)}s`,

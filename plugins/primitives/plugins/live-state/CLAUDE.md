@@ -634,6 +634,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/browser/start-page`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/release-pipeline`
     - `apps/deploy/servers`
     - `apps/events/event-list`
     - `apps/events/events-core`
