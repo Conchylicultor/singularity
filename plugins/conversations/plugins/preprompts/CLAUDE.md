@@ -35,7 +35,6 @@
     - `conversations`
     - `conversations/conversation-preprompt`
     - `primitives/launch`
-    - `tasks/task-draft-form`
     - `tasks/task-preprompt`
 - Shared:
   - Exports (values): `prepromptsConfig`

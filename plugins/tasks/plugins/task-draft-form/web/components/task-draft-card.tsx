@@ -5,12 +5,12 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { HeadToolbar } from "./head-toolbar";
-import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { ModelChip, type ChainModel } from "./model-chip";
+import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
+import { LaunchOptionChips } from "./launch-option-chips";
 import { RelateModeChip } from "./relate-mode-chip";
 import {
   InsertBeforeChildren,
@@ -22,14 +22,13 @@ export interface TaskDraftCardProps {
   cardId: string;
   index: number;
   text: string;
-  model: ChainModel;
-  prepromptId: string | null;
+  /** Contributed launch-option values, keyed by option id. */
+  launchOptions: LaunchOptionValues;
   autoFocus: boolean;
   removable: boolean;
   disabled: boolean;
   onTextChange: (next: string) => void;
-  onModelChange: (next: ChainModel) => void;
-  onPrepromptChange: (next: string | null) => void;
+  onLaunchOptionsChange: (next: LaunchOptionValues) => void;
   onRemove: () => void;
   onSubmitChord: () => void;
   isHead?: boolean;
@@ -118,14 +117,12 @@ export function TaskDraftCard({
   cardId,
   index,
   text,
-  model,
-  prepromptId,
+  launchOptions,
   autoFocus,
   removable,
   disabled,
   onTextChange,
-  onModelChange,
-  onPrepromptChange,
+  onLaunchOptionsChange,
   onRemove,
   onSubmitChord,
   isHead = false,
@@ -208,16 +205,11 @@ export function TaskDraftCard({
       {isHead && <HeadToolbar insertText={insertText} />}
       <Stack direction="row" wrap align="center" justify="between" gap="sm" className="pt-xs">
         <Stack direction="row" wrap align="center" gap="md">
-          <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
-          <Stack direction="row" align="center" gap="xs">
-            <Text as="span" variant="caption" tone="muted">Preprompt</Text>
-            <PrepromptSelect
-              value={prepromptId}
-              onChange={onPrepromptChange}
-              disabled={disabled}
-              ariaLabel="Preprompt"
-            />
-          </Stack>
+          <LaunchOptionChips
+            values={launchOptions}
+            onChange={onLaunchOptionsChange}
+            disabled={disabled}
+          />
           {showRelate && (
             <RelateModeChip
               value={relateMode}

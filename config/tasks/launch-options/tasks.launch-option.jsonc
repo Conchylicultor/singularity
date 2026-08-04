@@ -1,0 +1,22 @@
+// @hash ff9842d74fd5
+// Launch options, ordered as the launch itself resolves them — WHETHER it
+// starts (auto-start model), WHAT is prepended to the first turn (preprompt),
+// then HOW hard it thinks (thinking mode).
+// ONE order, TWO surfaces: the task detail's Prompt card reads it top-down as a
+// vertical stack of label + control rows, and the task-draft popover reads it
+// left-to-right as a chip row. Both render this slot, so a change here moves
+// both.
+// Node forms: "pluginId:id" (an item, terse) |
+// { "item": "pluginId:id", "hidden": true } (drop it from the slot) |
+// { "type": "spacer", "id": "<unique-id>" } (a blank gap).
+// At most one spacer per slot.
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "tasks.auto-start.launch-option:auto-start",
+    "tasks.task-preprompt:preprompt",
+    "tasks.task-effort:effort"
+  ]
+}

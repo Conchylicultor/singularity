@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 export const TaskChainTargetSchema = z.discriminatedUnion("kind", [
   // Root task stamped with a category (system filing paths, e.g. Improve).
@@ -21,15 +20,13 @@ export const TaskChainRelateSchema = z.object({
 });
 export type TaskChainRelate = z.infer<typeof TaskChainRelateSchema>;
 
-export const TaskChainLaunchSchema = ConversationModelSchema.nullable();
-export type TaskChainLaunch = z.infer<typeof TaskChainLaunchSchema>;
-
 export const TaskChainCardSchema = z.object({
   text: z.string().min(1),
-  launch: TaskChainLaunchSchema,
-  // Preprompt id (config list-item) appended to the agent's system prompt on
-  // launch. Omitted / undefined means no preprompt.
-  prepromptId: z.string().optional(),
+  // Contributed launch-option values, keyed by option id — the registry in
+  // `tasks/launch-options` owns what an id means and how its value is applied,
+  // so this contract does not name a single option. Each value is validated by
+  // the registered option's own schema; an unknown id is a 400.
+  options: z.record(z.string(), z.unknown()).optional(),
   url: z.string().optional(),
   attachmentIds: z.array(z.string()).optional(),
   // When false, this card does not block on the previous card (parallel launch).

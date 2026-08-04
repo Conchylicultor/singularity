@@ -4,22 +4,25 @@
 
 ## Plugin reference
 
-- Description: Per-task preprompt picker, contributed as a launch option of the task detail's Prompt card; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
+- Description: Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
 - Web:
-  - Contributes: `TaskPrompt.LaunchOption` "Preprompt" → `TaskPrepromptControl`
+  - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
   - Uses:
     - `conversations/preprompts.PrepromptSelect`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.useResource`
     - `shell/notifications.toast`
-    - `tasks/task-description.TaskPrompt`
+    - `tasks/launch-options.TaskLaunch`
   - Exports (values): `useTaskPreprompt`
 - Server:
-  - Contributes: `resource.declare` "task-preprompts"
+  - Contributes:
+    - `resource.declare` "task-preprompts"
+    - `taskLaunchApply` "preprompt"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `tasks/launch-options.TaskLaunchApply`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
@@ -33,6 +36,9 @@
   - Routes:
     - `PUT /api/task-preprompts/:taskId`
     - `DELETE /api/task-preprompts/:taskId`
+- Core:
+  - Uses: `tasks/launch-options.defineLaunchOption`
+  - Exports (values): `prepromptLaunchOption`
 - Cross-plugin:
   - Imported by:
     - `conversations`

@@ -4,22 +4,25 @@
 
 ## Plugin reference
 
-- Description: Per-task thinking-mode (effort) picker, contributed as a launch option of the task detail's Prompt card; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
+- Description: Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
 - Web:
-  - Contributes: `TaskPrompt.LaunchOption` "Thinking mode" → `TaskEffortControl`
+  - Contributes: `TaskLaunch.Option` "Thinking mode" → `EffortLaunchControl`
   - Uses:
     - `conversations/effort-provider.EffortSelect`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.useResource`
     - `shell/notifications.toast`
-    - `tasks/task-description.TaskPrompt`
+    - `tasks/launch-options.TaskLaunch`
   - Exports (values): `useTaskEffort`
 - Server:
-  - Contributes: `resource.declare` "task-efforts"
+  - Contributes:
+    - `resource.declare` "task-efforts"
+    - `taskLaunchApply` "effort"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `tasks/launch-options.TaskLaunchApply`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
@@ -33,6 +36,12 @@
   - Routes:
     - `PUT /api/task-efforts/:taskId`
     - `DELETE /api/task-efforts/:taskId`
+- Core:
+  - Uses:
+    - `conversations/effort-provider.EffortLevel`
+    - `conversations/effort-provider.EffortLevelSchema`
+    - `tasks/launch-options.defineLaunchOption`
+  - Exports (values): `effortLaunchOption`
 - Cross-plugin:
   - Imported by:
     - `conversations`

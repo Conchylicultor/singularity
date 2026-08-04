@@ -11,7 +11,6 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 export async function armTaskAutoStart(args: {
   taskId: string;
   model: ConversationModel;
-  dependencies: readonly string[];
   cause: string;
 }): Promise<void> {
   const { taskId, model, cause } = args;

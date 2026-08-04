@@ -4159,6 +4159,14 @@
       "name": "@singularity/plugin-tasks-auto-start",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/auto-start/plugins/launch-option": {
+      "name": "@singularity/plugin-tasks-auto-start-launch-option",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/launch-options": {
+      "name": "@singularity/plugin-tasks-launch-options",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/reports-investigation": {
       "name": "@singularity/plugin-tasks-reports-investigation",
       "version": "0.0.1",
@@ -7154,6 +7162,10 @@
     "@singularity/plugin-tasks-attempt-view": ["@singularity/plugin-tasks-attempt-view@workspace:plugins/tasks/plugins/attempt-view"],
 
     "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
+
+    "@singularity/plugin-tasks-auto-start-launch-option": ["@singularity/plugin-tasks-auto-start-launch-option@workspace:plugins/tasks/plugins/auto-start/plugins/launch-option"],
+
+    "@singularity/plugin-tasks-launch-options": ["@singularity/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 
     "@singularity/plugin-tasks-reports-investigation": ["@singularity/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 

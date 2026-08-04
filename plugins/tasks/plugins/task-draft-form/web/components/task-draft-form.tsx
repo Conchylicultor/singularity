@@ -1,6 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { MdAdd, MdScience } from "react-icons/md";
 import {
   DndContext,
@@ -19,17 +18,20 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
-import type { ChainModel } from "./model-chip";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
+import {
+  useLaunchOptionDefaults,
+  type LaunchOptionValues,
+} from "@plugins/tasks/plugins/launch-options/web";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 
 export interface CardDraft {
   localId: string;
   text: string;
-  model: ChainModel;
-  // Selected preprompt id (config list-item) appended to the agent's system
-  // prompt on launch. null = none.
-  prepromptId: string | null;
+  // Contributed launch-option values keyed by option id (see
+  // `@plugins/tasks/plugins/launch-options`). Open by construction, so a new
+  // option needs no field here.
+  options: LaunchOptionValues;
   includeUrl: boolean;
   includeScreenshot: boolean;
   linkedToPrev: boolean;
@@ -68,8 +70,6 @@ export interface TaskDraftFormProps {
   headInsertRef?: React.MutableRefObject<((snippet: string) => void) | null>;
 }
 
-const NEW_CARD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
-
 function useIsAgentWorktree(): boolean {
   return useMemo(() => {
     const host = window.location.hostname;
@@ -81,15 +81,13 @@ function useIsAgentWorktree(): boolean {
 }
 
 export function makeCard(
-  model: ChainModel,
-  prepromptId: string | null = null,
+  options: LaunchOptionValues,
   includeUrl = false,
 ): CardDraft {
   return {
     localId: crypto.randomUUID(),
     text: "",
-    model,
-    prepromptId,
+    options,
     includeUrl,
     includeScreenshot: false,
     linkedToPrev: true,
@@ -135,6 +133,7 @@ export function TaskDraftForm({
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
   const appCaptureUrlDefault = useCaptureUrlDefault();
+  const optionDefaults = useLaunchOptionDefaults();
   const supportsUrl = captures.includes("url");
   const supportsScreenshot = captures.includes("screenshot");
   const captureUrlDefault = supportsUrl && appCaptureUrlDefault;
@@ -145,31 +144,24 @@ export function TaskDraftForm({
     onCardsChange(next);
   };
 
-  const insertAt = (idx: number) => {
-    if (submitting) return;
-    const inheritFrom = cards[idx] ?? cards[idx - 1];
-    const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
-    const card = makeCard(
-      model,
-      inheritFrom?.prepromptId ?? null,
+  // A new card inherits the neighbour's whole launch configuration — one spread,
+  // so a future option is carried along without touching this.
+  const cardAfter = (inheritFrom: CardDraft | undefined) =>
+    makeCard(
+      { ...optionDefaults, ...inheritFrom?.options },
       inheritFrom?.includeUrl ?? captureUrlDefault,
     );
+
+  const insertAt = (idx: number) => {
+    if (submitting) return;
+    const card = cardAfter(cards[idx] ?? cards[idx - 1]);
     const next = [...cards.slice(0, idx), card, ...cards.slice(idx)];
     onCardsChange(next);
   };
 
   const appendChainCard = () => {
     if (submitting) return;
-    const inheritFrom = cards[cards.length - 1];
-    const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
-    onCardsChange([
-      ...cards,
-      makeCard(
-        model,
-        inheritFrom?.prepromptId ?? null,
-        inheritFrom?.includeUrl ?? captureUrlDefault,
-      ),
-    ]);
+    onCardsChange([...cards, cardAfter(cards[cards.length - 1])]);
   };
 
   const toggleLink = (idx: number) => {
@@ -240,14 +232,12 @@ export function TaskDraftForm({
                     cardId={card.localId}
                     index={idx}
                     text={card.text}
-                    model={card.model}
-                    prepromptId={card.prepromptId}
+                    launchOptions={card.options}
                     autoFocus={autoFocusId === card.localId}
                     removable={cards.length > 1}
                     disabled={submitting}
                     onTextChange={(t) => updateCard(idx, { text: t })}
-                    onModelChange={(m) => updateCard(idx, { model: m })}
-                    onPrepromptChange={(p) => updateCard(idx, { prepromptId: p })}
+                    onLaunchOptionsChange={(o) => updateCard(idx, { options: o })}
                     onRemove={() => removeAt(idx)}
                     onSubmitChord={() => {
                       if (!disabled) onSubmit();

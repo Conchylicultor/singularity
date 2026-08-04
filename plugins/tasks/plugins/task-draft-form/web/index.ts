@@ -11,8 +11,6 @@ export type {
   CardDraft,
   CaptureKind,
 } from "./components/task-draft-form";
-export type { ChainModel } from "./components/model-chip";
-
 
 export {
   setActiveRelateContext,

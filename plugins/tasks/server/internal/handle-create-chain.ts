@@ -3,7 +3,6 @@ import {
   addTaskDependency,
   createTask,
   getTask,
-  getTaskDependencyIds,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   scheduleTaskTitleUpdate,
@@ -18,9 +17,11 @@ import { type TaskChainCard } from "../../core/task-chain-types";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTaskChain } from "../../core/endpoints";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
-import { armTaskAutoStart } from "./arm-auto-start";
+import {
+  TaskLaunchApply,
+  type TaskLaunchApplyEntry,
+} from "@plugins/tasks/plugins/launch-options/server";
 import { rewireDependencies } from "./rewire-dependencies";
-import { setTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 
 export const handleCreateChain = implement(createTaskChain, async ({ body }) => {
@@ -79,6 +80,36 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
     cardAttachments.push(resolved);
   }
 
+  // Same fail-fast invariant for launch options: resolve every value against
+  // its registered option BEFORE any task exists, so an unknown id or a bad
+  // value can't leave half a chain behind. An id no plugin claims is a 400 —
+  // a client sending it is a real bug, not a setting to drop silently.
+  const applies = new Map(
+    TaskLaunchApply.getContributions().map((c) => [c.def.id, c]),
+  );
+  const cardLaunchValues: {
+    entry: TaskLaunchApplyEntry<unknown>;
+    value: unknown;
+  }[][] = [];
+  for (let i = 0; i < body.cards.length; i++) {
+    const resolved: { entry: TaskLaunchApplyEntry<unknown>; value: unknown }[] = [];
+    for (const [id, raw] of Object.entries(body.cards[i]!.options ?? {})) {
+      const entry = applies.get(id);
+      if (!entry) {
+        throw new HttpError(400, `card ${i}: unknown launch option "${id}"`);
+      }
+      const parsed = entry.def.schema.safeParse(raw);
+      if (!parsed.success) {
+        throw new HttpError(
+          400,
+          `card ${i}: invalid launch option "${id}": ${parsed.error.message}`,
+        );
+      }
+      resolved.push({ entry, value: parsed.data });
+    }
+    cardLaunchValues.push(resolved);
+  }
+
   const author = body.target.kind === "category" ? "improve-plugin" : "user";
   const groupId = body.relate ? body.relate.taskId : null;
   const taskIds: string[] = [];
@@ -116,10 +147,6 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
         await taskAttachments.add(newTask.id, attachments.map((a) => a.id));
       }
 
-      if (card.prepromptId) {
-        await setTaskPreprompt(newTask.id, card.prepromptId);
-      }
-
       if (isHead && body.relate) {
         const selective =
           body.relate.mode === "followup" && body.relate.insertBefore
@@ -137,23 +164,10 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
         await addTaskDependency(newTask.id, taskIds[i - 1]!);
       }
 
-      if (card.launch !== null) {
-        let depsForAutoStart: string[];
-        if (isHead && body.relate?.mode === "followup") {
-          depsForAutoStart = [body.relate.taskId];
-        } else if (isHead && body.relate?.mode === "prerequisite") {
-          depsForAutoStart = await getTaskDependencyIds(newTask.id);
-        } else if (!isHead && card.linkedToPrev !== false) {
-          depsForAutoStart = [taskIds[i - 1]!];
-        } else {
-          depsForAutoStart = [];
-        }
-        await armTaskAutoStart({
-          taskId: newTask.id,
-          model: card.launch,
-          dependencies: depsForAutoStart,
-          cause: "user-launch",
-        });
+      // Applied last: the dependencies above are already written, so an option
+      // that gates on them (auto-start) sees the task's real blocking set.
+      for (const { entry, value } of cardLaunchValues[i]!) {
+        await entry.apply({ taskId: newTask.id, cause: "user-launch" }, value);
       }
     }
   });

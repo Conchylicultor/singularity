@@ -1,10 +1,10 @@
-// @hash aea893639ee7
+// @hash ff9842d74fd5
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "tasks.auto-start:auto-start",
+    "tasks.auto-start.launch-option:auto-start",
     "tasks.task-effort:effort",
     "tasks.task-preprompt:preprompt"
   ]

@@ -4,7 +4,6 @@ import {
   createTask,
   getConversation,
   getTask,
-  getTaskDependencyIds,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { DEFAULT_MODEL, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
@@ -139,10 +138,8 @@ first or to disable autostart to avoid launching agents prematurely.`,
       rewireDependencies({ newTaskId: task.id, targetId, relation }),
     );
 
-    const deps = relation === "followup" ? [targetId]
-      : await getTaskDependencyIds(task.id);
     const model = normalizeModel(autostart);
-    await armTaskAutoStart({ taskId: task.id, model, dependencies: deps, cause: "mcp-add-task" });
+    await armTaskAutoStart({ taskId: task.id, model, cause: "mcp-add-task" });
 
     return {
       content: [

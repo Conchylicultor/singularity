@@ -4,6 +4,11 @@ import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/e
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import type { CardDraft } from "../components/task-draft-form";
 import {
+  launchOptionValue,
+  pickKnownOptions,
+  type LaunchOptionInfo,
+} from "@plugins/tasks/plugins/launch-options/web";
+import {
   createTaskChain,
   type TaskChainRelate,
   type TaskChainSubmitBody,
@@ -15,6 +20,12 @@ export interface SubmitArgs {
   target: TaskChainTarget;
   relate: TaskChainRelate | undefined;
   url: string;
+  /**
+   * The live launch-option registry. Passed in rather than read here: reading
+   * it is a hook, so it belongs in the submitting component and this stays a
+   * pure function of an explicit list.
+   */
+  options: readonly LaunchOptionInfo[];
   // Optional hook so the popover can close before screenshot capture.
   beforeScreenshot?: () => void;
 }
@@ -23,17 +34,15 @@ export interface SubmitOutcome {
   ok: boolean;
   errorMessage?: string;
   taskIds?: string[];
-  launchedCount: number;
   totalCount: number;
 }
 
 export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
   const trimmed = args.cards.map((c) => ({ ...c, text: c.text.trim() }));
   const totalCount = trimmed.length;
-  const launchedCount = trimmed.filter((c) => c.model !== "queue").length;
 
   if (trimmed.some((c) => !c.text)) {
-    return { ok: false, errorMessage: "All cards need text", launchedCount, totalCount };
+    return { ok: false, errorMessage: "All cards need text", totalCount };
   }
 
   // One screenshot per submission, shared across cards that requested it.
@@ -51,7 +60,7 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
       scale: window.devicePixelRatio || 1,
     });
     if (!blob) {
-      return { ok: false, errorMessage: "Screenshot failed", launchedCount, totalCount };
+      return { ok: false, errorMessage: "Screenshot failed", totalCount };
     }
     const uploaded = await uploadAttachment(blob, "page.png", "image/png");
     screenshotAttachmentId = uploaded.id;
@@ -69,8 +78,9 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
       const attachmentIds = Array.from(idSet);
       return {
         text: c.text,
-        launch: c.model === "queue" ? null : c.model,
-        prepromptId: c.prepromptId ?? undefined,
+        // Values whose option is no longer registered are dropped rather than
+        // sent: a stale localStorage draft must not 400 the whole submit.
+        options: pickKnownOptions(c.options, args.options),
         url: c.includeUrl ? args.url : undefined,
         attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
         linkedToPrev: i > 0 && !c.linkedToPrev ? false : undefined,
@@ -80,12 +90,11 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
 
   try {
     const json = await fetchEndpoint(createTaskChain, {}, { body });
-    return { ok: true, taskIds: json.taskIds, launchedCount, totalCount };
+    return { ok: true, taskIds: json.taskIds, totalCount };
   } catch (err) {
     return {
       ok: false,
       errorMessage: `Submit failed: ${getEndpointErrorMessage(err)}`,
-      launchedCount,
       totalCount,
     };
   }
@@ -98,29 +107,38 @@ function cardSummary(text: string): string {
   return trimmed.length > 80 ? `${trimmed.slice(0, 79)}…` : trimmed;
 }
 
+/** A card's launch configuration, as the options themselves describe it. */
+function optionSummaries(
+  card: CardDraft,
+  options: readonly LaunchOptionInfo[],
+): string[] {
+  return options.flatMap((o) => {
+    const summary = o.summarize?.(launchOptionValue(card.options, o));
+    return summary ? [summary] : [];
+  });
+}
+
 /**
- * Title + detail for the post-submit notification. The title states the action
- * ("Task created" / "Task queued"); the description names the specific task(s)
- * so the bell entry is self-explanatory rather than a bare verb.
+ * Title + detail for the post-submit notification. The title states the action;
+ * the description names the specific task(s) — plus whatever the launch options
+ * say about themselves — so the bell entry is self-explanatory rather than a
+ * bare verb. The host reads no option by name: it once branched on the
+ * auto-start value to say "queued" vs "created", which put one option's
+ * vocabulary into generic chrome.
  */
 export function describeOutcome(
   outcome: SubmitOutcome,
   cards: CardDraft[],
+  options: readonly LaunchOptionInfo[],
 ): { title: string; description: string } {
   if (cards.length === 1) {
     const card = cards[0]!;
-    const summary = cardSummary(card.text);
-    if (card.model === "queue") {
-      return { title: "Task queued", description: summary };
-    }
-    return { title: "Task created", description: `${summary} · ${card.model}` };
+    const parts = [cardSummary(card.text), ...optionSummaries(card, options)];
+    return { title: "Task created", description: parts.filter(Boolean).join(" · ") };
   }
   const summaries = cards.map((c) => cardSummary(c.text)).filter(Boolean).join(" → ");
-  if (outcome.launchedCount === 0) {
-    return { title: `${outcome.totalCount} tasks queued`, description: summaries };
-  }
   return {
     title: `${outcome.totalCount} tasks created`,
-    description: `${outcome.launchedCount} launched · ${summaries}`,
+    description: summaries,
   };
 }

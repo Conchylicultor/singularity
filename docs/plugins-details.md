@@ -9810,8 +9810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/claude-cli`
           - `primitives/launch`
           - `tasks`
-          - `tasks/auto-start`
-          - `tasks/task-draft-form`
+          - `tasks/auto-start/launch-option`
           - `tasks/tasks-core`
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
@@ -9856,7 +9855,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/conversation-preprompt`
           - `primitives/launch`
-          - `tasks/task-draft-form`
           - `tasks/task-preprompt`
       - Shared:
         - Exports (values): `prepromptsConfig`
@@ -14068,6 +14066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/caret-trigger`
               - `release`
               - `reorder`
+              - `tasks/launch-options`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses: `infra/paths.HOME_DIR`
@@ -24019,7 +24018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell`
           - `shell/action-bar`
           - `stats`
-          - `tasks/task-description`
+          - `tasks/launch-options`
           - `tasks/task-draft-form`
           - `tasks/task-list`
           - `ui/segmented-progress-bar`
@@ -24768,8 +24767,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "task-deps-tree.actions"
       - `ConfigV2.Register` "task-detail.section"
       - `ConfigV2.Register` "task-draft-form.action"
-      - `ConfigV2.Register` "task-prompt.launch-option"
       - `ConfigV2.Register` "tasks.fields"
+      - `ConfigV2.Register` "tasks.launch-option"
       - `ConfigV2.Register` "tasks.list-actions"
       - `ConfigV2.Register` "tasks.task-actions"
       - `ConfigV2.Register` "text-editor.plugin"
@@ -25865,10 +25864,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/rank.rankAdjacentTo`
       - `primitives/rank.rankAfterSibling`
       - `tasks/auto-start.setTaskAutoStart`
+      - `tasks/launch-options.TaskLaunchApply`
+      - `tasks/launch-options.TaskLaunchApplyEntry`
       - `tasks/task-category.setTaskCategory`
       - `tasks/task-effort.inheritTaskEffort`
       - `tasks/task-preprompt.inheritTaskPreprompt`
-      - `tasks/task-preprompt.setTaskPreprompt`
       - `tasks/task-title.scheduleTaskTitleUpdate`
       - `tasks/task-title.synthesiseTitleFallback`
       - `tasks/tasks-core._tasks`
@@ -25933,7 +25933,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `MoveTaskBody`
       - `SetAutoStartBody`
       - `TaskChainCard`
-      - `TaskChainLaunch`
       - `TaskChainRelate`
       - `TaskChainRelateMode`
       - `TaskChainSubmitBody`
@@ -25960,7 +25959,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `SetAutoStartBodySchema`
       - `setTaskAutoStart`
       - `TaskChainCardSchema`
-      - `TaskChainLaunchSchema`
       - `TaskChainRelateModeSchema`
       - `TaskChainRelateSchema`
       - `TaskChainSubmitBodySchema`
@@ -25973,6 +25971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/dependencies`
       - `conversations/conversation-view/tasks-panel`
       - `tasks/auto-start`
+      - `tasks/auto-start/launch-option`
       - `tasks/task-dependencies`
       - `tasks/task-deps-tree`
       - `tasks/task-description`
@@ -26025,18 +26024,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/attempt`
           - `conversations/conversation-view/push-profiling`
           - `debug/profiling/ops`
-    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive, and contributes the auto-start model picker as a launch option of the task's Prompt card. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
+    - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Web:
-        - Contributes:
-          - `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
-          - `TaskPrompt.LaunchOption` "Auto-start" → `TaskAutoStartControl`
+        - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
-          - `conversations/model-provider.ModelSelect`
           - `primitives/css/badge.Badge`
           - `primitives/live-state.useResource`
-          - `tasks.AutoStartModel`
           - `tasks.setAutoStart`
-          - `tasks/task-description.TaskPrompt`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskAutoStartRow`
         - Exports (values):
@@ -26062,6 +26056,61 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `conversations`
           - `tasks`
+          - `tasks/auto-start/launch-option`
+      - Plugins:
+        - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), or clears the marker when the draft says Off.
+          - Web:
+            - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
+            - Uses:
+              - `conversations/model-provider.ModelSelect`
+              - `tasks.setAutoStart`
+              - `tasks/auto-start.useTaskAutoStart`
+              - `tasks/launch-options.TaskLaunch`
+          - Server:
+            - Contributes: `taskLaunchApply` "auto-start"
+            - Uses:
+              - `tasks.armTaskAutoStart`
+              - `tasks/auto-start.setTaskAutoStart`
+              - `tasks/launch-options.TaskLaunchApply`
+          - Core:
+            - Uses:
+              - `conversations/model-provider.ConversationModel`
+              - `conversations/model-provider.ConversationModelSchema`
+              - `conversations/model-provider.DEFAULT_MODEL`
+              - `tasks/launch-options.defineLaunchOption`
+            - Exports (values): `autoStartLaunchOption`
+    - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its drafted value is applied to a newly created task, so the chain endpoint applies them generically.
+      - Web:
+        - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
+        - Uses: `primitives/slot-render.defineRenderSlot`
+        - Exports (types):
+          - `LaunchBinding`
+          - `LaunchControlProps`
+          - `LaunchOptionEntry`
+          - `LaunchOptionInfo`
+          - `LaunchOptionValues`
+          - `TaskLaunchOption`
+        - Exports (values):
+          - `launchOptionValue`
+          - `pickKnownOptions`
+          - `TaskLaunch`
+          - `useLaunchOptionDefaults`
+      - Cross-plugin:
+        - Imported by:
+          - `tasks`
+          - `tasks/auto-start/launch-option`
+          - `tasks/task-description`
+          - `tasks/task-draft-form`
+          - `tasks/task-effort`
+          - `tasks/task-preprompt`
+      - Server:
+        - Exports (types):
+          - `TaskLaunchApplyEntry`
+          - `TaskLaunchContext`
+        - Exports (values): `TaskLaunchApply`
+      - Core:
+        - Exports (types): `LaunchOptionDef`
+        - Exports (values): `defineLaunchOption`
     - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
       - Server:
         - Contributes: `taskCategory` "reports"
@@ -26185,9 +26234,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `buildDepsTree`
           - `taskClusterIds`
-    - **`task-description`** — Prompt section of the task detail pane: the description editor, the contributed launch options (TaskPrompt.LaunchOption), and the Launch button — everything that feeds the agent's first turn, in one card. Inline file-link parsing routes clicks to the active file-peek context.
+    - **`task-description`** — Prompt section of the task detail pane: the description editor, the contributed launch options (tasks/launch-options), and the Launch button — everything that feeds the agent's first turn, in one card. Inline file-link parsing routes clicks to the active file-peek context.
       - Web:
-        - Slots: `TaskPrompt.LaunchOption` ← `tasks.auto-start`, `tasks.task-effort`, `tasks.task-preprompt`
         - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
@@ -26205,23 +26253,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch.LaunchControl`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
-          - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `primitives/text-editor/paste-images.AttachmentThumbnail`
           - `primitives/text-editor/paste-images.isAttachmentUrl`
           - `tasks.patchTask`
           - `tasks.useTask`
+          - `tasks/launch-options.LaunchOptionEntry`
+          - `tasks/launch-options.TaskLaunch`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-detail.useFlushAll`
           - `tasks/task-detail.useRegisterFlush`
-        - Exports (types): `TaskLaunchOption`
-        - Exports (values): `TaskPrompt`
-      - Cross-plugin:
-        - Imported by:
-          - `tasks/auto-start`
-          - `tasks/task-effort`
-          - `tasks/task-preprompt`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines the TaskDetail.Section slot and the flush-registry context that section sub-plugins share.
       - Web:
         - Slots:
@@ -26274,8 +26316,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.useCurrentAppId`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `conversations/model-provider.ModelSelect`
-          - `conversations/preprompts.PrepromptSelect`
           - `infra/attachments.uploadAttachment`
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.getEndpointErrorMessage`
@@ -26301,11 +26341,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor/paste-images.extractAttachmentIds`
           - `shell/notifications.toast`
+          - `tasks/launch-options.LaunchOptionEntry`
+          - `tasks/launch-options.LaunchOptionInfo`
+          - `tasks/launch-options.launchOptionValue`
+          - `tasks/launch-options.LaunchOptionValues`
+          - `tasks/launch-options.pickKnownOptions`
+          - `tasks/launch-options.TaskLaunch`
+          - `tasks/launch-options.useLaunchOptionDefaults`
         - Exports (types):
           - `ActiveRelateContext`
           - `CaptureKind`
           - `CardDraft`
-          - `ChainModel`
           - `TaskDraftActionProps`
           - `TaskDraftInsert`
           - `TaskDraftPopoverProps`
@@ -26326,22 +26372,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve`
           - `improve/element-picker`
           - `tasks/task-dependencies`
-    - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of the task detail's Prompt card; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
+    - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
-        - Contributes: `TaskPrompt.LaunchOption` "Thinking mode" → `TaskEffortControl`
+        - Contributes: `TaskLaunch.Option` "Thinking mode" → `EffortLaunchControl`
         - Uses:
           - `conversations/effort-provider.EffortSelect`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.useResource`
           - `shell/notifications.toast`
-          - `tasks/task-description.TaskPrompt`
+          - `tasks/launch-options.TaskLaunch`
         - Exports (values): `useTaskEffort`
       - Server:
-        - Contributes: `resource.declare` "task-efforts"
+        - Contributes:
+          - `resource.declare` "task-efforts"
+          - `taskLaunchApply` "effort"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
+          - `tasks/launch-options.TaskLaunchApply`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
@@ -26355,6 +26404,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes:
           - `PUT /api/task-efforts/:taskId`
           - `DELETE /api/task-efforts/:taskId`
+      - Core:
+        - Uses:
+          - `conversations/effort-provider.EffortLevel`
+          - `conversations/effort-provider.EffortLevelSchema`
+          - `tasks/launch-options.defineLaunchOption`
+        - Exports (values): `effortLaunchOption`
       - Cross-plugin:
         - Imported by:
           - `conversations`
@@ -26473,22 +26528,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-category`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
-    - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of the task detail's Prompt card; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
+    - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
-        - Contributes: `TaskPrompt.LaunchOption` "Preprompt" → `TaskPrepromptControl`
+        - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
         - Uses:
           - `conversations/preprompts.PrepromptSelect`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.useResource`
           - `shell/notifications.toast`
-          - `tasks/task-description.TaskPrompt`
+          - `tasks/launch-options.TaskLaunch`
         - Exports (values): `useTaskPreprompt`
       - Server:
-        - Contributes: `resource.declare` "task-preprompts"
+        - Contributes:
+          - `resource.declare` "task-preprompts"
+          - `taskLaunchApply` "preprompt"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
+          - `tasks/launch-options.TaskLaunchApply`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
@@ -26502,6 +26560,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes:
           - `PUT /api/task-preprompts/:taskId`
           - `DELETE /api/task-preprompts/:taskId`
+      - Core:
+        - Uses: `tasks/launch-options.defineLaunchOption`
+        - Exports (values): `prepromptLaunchOption`
       - Cross-plugin:
         - Imported by:
           - `conversations`

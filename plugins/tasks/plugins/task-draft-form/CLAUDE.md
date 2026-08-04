@@ -5,8 +5,17 @@ toolbar Improve button (`plugins/improve`) and the conversation `+` button
 (`plugins/conversations/.../new-child-task`).
 
 The form is a chain of cards: index 0 is the head, each later card is blocked
-by the previous one. Per-card `model` chip controls auto-launch (queue / sonnet
-/ opus). The head card honors a few extra knobs:
+by the previous one.
+
+Each card's `options: Record<string, unknown>` holds the **launch-option** values
+(auto-start model, preprompt, thinking mode, …), keyed by option id. This form
+knows none of them: it renders `tasks/launch-options`' slot — the same one the
+task detail's Prompt card renders — and ships the map to the chain endpoint,
+which applies each value through the option's own server half. Adding a launch
+setting is a plugin folder; a new field on `CardDraft` means the abstraction
+leaked.
+
+The head card honors a few extra knobs:
 
 - `relate?: { taskId, defaultMode }` — adds a `prerequisite | follow-up` toggle.
   `follow-up` makes the new task wait on `relate.taskId`. `prerequisite` makes
@@ -41,8 +50,6 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `apps-core.useCurrentAppId`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `conversations/model-provider.ModelSelect`
-    - `conversations/preprompts.PrepromptSelect`
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -68,11 +75,17 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor/paste-images.extractAttachmentIds`
     - `shell/notifications.toast`
+    - `tasks/launch-options.LaunchOptionEntry`
+    - `tasks/launch-options.LaunchOptionInfo`
+    - `tasks/launch-options.launchOptionValue`
+    - `tasks/launch-options.LaunchOptionValues`
+    - `tasks/launch-options.pickKnownOptions`
+    - `tasks/launch-options.TaskLaunch`
+    - `tasks/launch-options.useLaunchOptionDefaults`
   - Exports (types):
     - `ActiveRelateContext`
     - `CaptureKind`
     - `CardDraft`
-    - `ChainModel`
     - `TaskDraftActionProps`
     - `TaskDraftInsert`
     - `TaskDraftPopoverProps`

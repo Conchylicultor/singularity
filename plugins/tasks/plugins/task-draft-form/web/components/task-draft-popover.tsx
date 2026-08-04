@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -20,20 +19,25 @@ import {
   type CardDraft,
   type CaptureKind,
 } from "./task-draft-form";
-import type { ChainModel } from "./model-chip";
 import { describeOutcome, submitChain } from "../internal/submit";
 import type {
   TaskChainRelateMode,
   TaskChainTarget,
 } from "@plugins/tasks/core";
+import {
+  TaskLaunch,
+  useLaunchOptionDefaults,
+  type LaunchOptionValues,
+} from "@plugins/tasks/plugins/launch-options/web";
 import { useActiveRelateContext } from "../active-relate-context";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { appendSnippet, type TaskDraftInsert } from "../insert-request";
 
-const HEAD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
-
-function freshCards(includeUrl: boolean): CardDraft[] {
-  return [makeCard(HEAD_DEFAULT_MODEL, null, includeUrl)];
+function freshCards(
+  optionDefaults: LaunchOptionValues,
+  includeUrl: boolean,
+): CardDraft[] {
+  return [makeCard({ ...optionDefaults }, includeUrl)];
 }
 
 function draftScope(target: TaskChainTarget): string {
@@ -250,6 +254,9 @@ function InsertBeforeForm({
   const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
     () => new Set(relateTaskChildren.map((c) => c.id)),
   );
+  // The live launch-option registry: reading it is a hook, so it happens here
+  // and `submitChain` / `describeOutcome` stay pure over an explicit list.
+  const launchOptions = TaskLaunch.Option.useContributions();
 
   const submit = async () => {
     if (submitting) return;
@@ -285,6 +292,7 @@ function InsertBeforeForm({
         target: effectiveTarget,
         relate: effectiveRelate,
         url,
+        options: launchOptions,
         beforeScreenshot: () => setOpen(false),
       });
       if (!outcome.ok) {
@@ -296,7 +304,11 @@ function InsertBeforeForm({
         });
         return;
       }
-      toast({ type: "task", ...describeOutcome(outcome, cards), variant: "success" });
+      toast({
+        type: "task",
+        ...describeOutcome(outcome, cards, launchOptions),
+        variant: "success",
+      });
       onSuccess?.(outcome.taskIds ?? []);
       resetForm();
       setOpen(false);
@@ -365,9 +377,14 @@ export function TaskDraftPopover({
 
   const appCaptureUrlDefault = useCaptureUrlDefault();
   const captureUrlDefault = captures.includes("url") && appCaptureUrlDefault;
+  const optionDefaults = useLaunchOptionDefaults();
+  // `:v2` — `CardDraft` traded `model`/`prepromptId` for the open `options` map.
+  // `readDraft` blind-casts, so a pre-refactor card would deserialize with the
+  // old fields; renaming the key lets the old one expire on its 7-day TTL, which
+  // is the repo's precedent for a draft shape change (no migration exists).
   const [cards, setCards, clearCards] = useDraft<CardDraft[]>(
-    "task-draft:cards",
-    () => freshCards(captureUrlDefault),
+    "task-draft:cards:v2",
+    () => freshCards(optionDefaults, captureUrlDefault),
     { scope: draftScope(target) },
   );
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
