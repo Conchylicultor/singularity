@@ -11,7 +11,9 @@ collapsed, Enter splits into a sibling, like a bullet).
 Typing `> ` at the start of a block converts it into a toggle (the matched prefix
 is stripped, trailing text preserved), opening it by default; the conversion is
 driven generically by the editor's markdown-shortcut plugin, which reads every
-block type's declared `markdownPrefixes` from the dispatch slot.
+block type's declared conversion prefixes from the dispatch slot. `> ` is real
+markdown syntax, so it is a `markdownPrefixes` entry (it round-trips through
+copy/paste too) — not the typing-only `typingPrefixes`.
 
 Toggles nest with the editor's existing indent/outdent (Tab / Shift-Tab) — no
 toggle-specific nesting logic.

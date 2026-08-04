@@ -117,7 +117,7 @@ child's type can never reach the container. The one container-shaped rung in the
 generic ladder is `unwrap` — Backspace at the start of the first child — and it is
 the editor's, not this plugin's.
 
-Also absent: `markdownPrefixes` (`/context` is the only entry point; every short
+Also absent: `typingPrefixes` (`/context` is the only entry point; every short
 prefix worth claiming is taken, and one that matched real prose would convert
 paragraphs nobody asked to convert) and any `Editor.Block` renderer of its own —
 an anchor renders no row, so it registers the primitive's shared `ContainerNoRow`.

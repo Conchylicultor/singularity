@@ -99,7 +99,7 @@ export type { SerializedBlock, IdentifiedBlock } from "./serialized-block";
 
 export { rankWindow, planForestInsert } from "./block-forest";
 
-export { defineBlock } from "./define-block";
+export { conversionPrefixesOf, defineBlock } from "./define-block";
 export type { BlockHandle, BlockTextVariant } from "./define-block";
 
 export { rowDataOf } from "./row-data";

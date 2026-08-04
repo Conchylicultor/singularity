@@ -80,24 +80,21 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
   /**
    * Typed prefixes that WRAP the line into this container (e.g. `"TODO "`).
    *
-   * Legal on a void container even though a void type derives no markdown
-   * PARSER from them, because the two readers of this field are different
-   * mechanisms and only one of them cares about text:
+   * A container's prefix is a TYPING trigger by construction — that is the only
+   * one of `defineBlock`'s two prefix fields it can declare. `markdownPrefixes`
+   * is markdown line syntax, and markdown syntax for a container is its `<tag>`;
+   * a prefix could never parse into one anyway (a void type has no text lens, so
+   * no line parser is derived from it).
    *
-   * - `markdown.ts`'s `parserFor` derives a parse rule from prefixes only for a
-   *   handle with a `text` lens, so for a container it stays inert — pasted
-   *   markdown never converts prose into a container, which is the property that
-   *   made this field look inapplicable;
-   * - `MarkdownShortcutPlugin` reads the handle directly on TYPING, strips the
-   *   prefix from the live editor and calls `convertTo` — which, for a
-   *   `wrapOnConvert` type, wraps. So the line the user was typing becomes the
-   *   container's first child with the prefix removed, exactly as `/<container>`
-   *   on that line would have.
+   * `MarkdownShortcutPlugin` reads it on TYPING, strips the prefix from the live
+   * editor and calls `convertTo` — which, for a `wrapOnConvert` type, wraps. So
+   * the line the user was typing becomes the container's first child with the
+   * prefix removed, exactly as `/<container>` on that line would have.
    *
    * Declare one only for a marker distinctive enough that real prose starting
    * with it is vanishingly rare: the conversion is silent and mid-sentence.
    */
-  markdownPrefixes?: string[];
+  typingPrefixes?: string[];
 }
 
 /**

@@ -9,8 +9,10 @@ turns into an interactive checkbox marker (left of the text) and a strikethrough
 Typing `[] ` or `[ ] ` at the start of a block converts it into a to-do (the
 matched prefix is stripped, trailing text preserved); the conversion is driven
 generically by the editor's markdown-shortcut plugin, which reads every block
-type's declared `markdownPrefixes` from the dispatch slot and seeds the target
-type's `empty()` payload.
+type's declared conversion prefixes from the dispatch slot and seeds the target
+type's `empty()` payload. Those two are `typingPrefixes`, not `markdownPrefixes`
+— markdown's task-list syntax is the `- [ ] ` this block's own `markdown`
+declaration owns, so a pasted `[] x` line stays prose.
 
 To-dos nest with the editor's existing indent/outdent (Tab / Shift-Tab) — no
 to-do-specific nesting logic.

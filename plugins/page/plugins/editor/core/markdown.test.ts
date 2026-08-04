@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { defineBlock, type BlockHandle } from "./define-block";
+import { conversionPrefixesOf, defineBlock, type BlockHandle } from "./define-block";
 import { textBlockSchema, textDataSchema } from "./text-data";
 import { plainOf, runsLength, type RichText } from "./rich-text";
 import type { SerializedBlock } from "./serialized-block";
@@ -60,7 +60,7 @@ const toDo = defineBlock({
       return { text: ctx.runs(m[2]!), checked: m[1]!.toLowerCase() === "x" };
     },
   },
-  markdownPrefixes: ["[] ", "[ ] "],
+  typingPrefixes: ["[] ", "[ ] "],
 });
 
 const numberedList = defineBlock({
@@ -88,11 +88,13 @@ const toggle = defineBlock({
 // `quote` declares NO `markdownPrefixes` — the canonical `> ` belongs to
 // `toggle` — so without a tag it serialized as a bare paragraph and came back as
 // `text`. `body: "text"` is the fix, and `prompt` (no prefix either) is the same
-// shape.
+// shape. Its `| ` is a `typingPrefixes` entry, which the clipboard pipeline
+// never reads: `| ` is a markdown TABLE ROW.
 const quote = defineBlock({
   type: "quote",
   schema: textDataSchema,
   empty: () => ({ text: [] }),
+  typingPrefixes: ["| "],
   markdown: { tag: { body: "text" } },
 });
 
@@ -123,7 +125,7 @@ const context = defineBlock({
   schema: z.object({}),
   empty: () => ({}),
   anchor: true,
-  markdownPrefixes: ["TODO "],
+  typingPrefixes: ["TODO "],
   markdown: { tag: { body: "children" } },
 });
 
@@ -230,7 +232,7 @@ const codeBlock = defineBlock({
     },
     serialize: (d) => "```" + (d.language ?? "") + "\n" + d.code + "\n```",
   },
-  markdownPrefixes: ["```"],
+  typingPrefixes: ["```"],
 });
 
 const equation = defineBlock({
@@ -242,7 +244,7 @@ const equation = defineBlock({
     parseLine: (line) =>
       line.startsWith("$$") ? { expression: line.slice(2).trim() } : null,
   },
-  markdownPrefixes: ["$$"],
+  typingPrefixes: ["$$"],
 });
 
 const divider = defineBlock({
@@ -253,7 +255,7 @@ const divider = defineBlock({
     serialize: () => "---",
     parseLine: (line) => (line.trim() === "---" ? {} : null),
   },
-  markdownPrefixes: ["---"],
+  typingPrefixes: ["---"],
 });
 
 // Registration order: bulleted-list BEFORE to-do, so a test that `- [ ] x` parses
@@ -683,13 +685,69 @@ describe("annotation containers (a real syntax, not a one-way marker)", () => {
     expect(parse(serialize(forest))).toEqual(forest);
   });
 
-  test("a container's `markdownPrefixes` stay a TYPING trigger — `TODO ` in prose is prose", () => {
-    // `derivedParsePrefixes` only fires for a handle with a text lens, which a
-    // container can never have, and the tag pass keys on the tag NAME. So a
-    // pasted line that happens to start with the wrap trigger stays a paragraph.
+  test("a container's `typingPrefixes` are invisible to the parser — `TODO ` in prose is prose", () => {
+    // Nothing in this module reads `typingPrefixes`, and the tag pass keys on
+    // the tag NAME. So a pasted line that happens to start with the wrap trigger
+    // stays a paragraph.
     const forest = parse("TODO write the docs");
     expect(forest[0]!.type).toBe("text");
     expect(dataText(forest[0]!)).toBe("TODO write the docs");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A typing shortcut is NOT markdown line syntax
+// ---------------------------------------------------------------------------
+//
+// The executable statement of why `BlockHandle` carries two prefix fields. Every
+// case below is a prefix a user can TYPE to convert a block, whose markdown
+// meaning is something else entirely (or nothing at all) — so the clipboard
+// pipeline must not claim it.
+
+describe("typingPrefixes never reach the markdown pipeline", () => {
+  test("a markdown TABLE body does not become quote blocks", () => {
+    // `quote` converts on a typed `| `, which is exactly a table row's opening
+    // in markdown. Had `| ` been a `markdownPrefixes` entry, `derivedParsePrefixes`
+    // would claim both lines and the pasted table would arrive as two quotes with
+    // the pipes eaten. Tables have no block type yet, so the honest answer is
+    // prose — verbatim, so nothing is lost.
+    const forest = parse(["| a | b |", "| - | - |"].join("\n"));
+    expect(forest.map((b) => b.type)).toEqual(["text", "text"]);
+    expect(forest.map(dataText)).toEqual(["| a | b |", "| - | - |"]);
+  });
+
+  test("`| ` is a conversion prefix but not a markdown one", () => {
+    expect(conversionPrefixesOf(quote as BlockHandle<unknown>)).toEqual(["| "]);
+    expect(quote.markdownPrefixes).toBeUndefined();
+  });
+
+  test("markdown syntax is ALSO a typing shortcut — the union is a superset", () => {
+    // A `markdownPrefixes` entry needs no restating: anything the parser claims
+    // is by definition something the user can type.
+    expect(conversionPrefixesOf(bulletedList as BlockHandle<unknown>)).toEqual([
+      "* ",
+      "- ",
+      "+ ",
+    ]);
+    // …while a type carrying only input-only entries hands back exactly those.
+    expect(conversionPrefixesOf(toDo as BlockHandle<unknown>)).toEqual(["[] ", "[ ] "]);
+    // Ordering when a type declares BOTH: markdown syntax first, input-only after.
+    const both = defineBlock({
+      type: "both",
+      schema: textDataSchema,
+      empty: () => ({ text: [] }),
+      markdownPrefixes: ["# "],
+      typingPrefixes: ["! "],
+    });
+    expect(conversionPrefixesOf(both as BlockHandle<unknown>)).toEqual(["# ", "! "]);
+  });
+
+  test("a to-do's `[] ` shorthand is typing-only: pasted, it stays prose", () => {
+    // The markdown task-list syntax is `- [ ] `, which `to-do`'s own `parseLine`
+    // owns. The bare `[] ` shorthand exists for the keyboard alone.
+    const forest = parse("[] buy milk");
+    expect(forest[0]!.type).toBe("text");
+    expect(dataText(forest[0]!)).toBe("[] buy milk");
   });
 });
 

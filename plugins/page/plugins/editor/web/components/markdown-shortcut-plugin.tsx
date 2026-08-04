@@ -2,17 +2,23 @@ import { useEffect, useMemo } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { $getRoot, COLLABORATION_TAG, HISTORIC_TAG } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import type { Block, RowData } from "../../core";
+import { conversionPrefixesOf, type Block, type RowData } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { INLINE_FORMAT_TAG } from "../internal/inline-format-tag";
 
 /**
- * Markdown block-shortcut affordance. Each block type declares its own
- * `markdownPrefixes` (e.g. a bulleted list owns `["* ", "- ", "+ "]`); this
- * plugin reads them generically from the dispatch slot — it never names a
- * specific block type, so adding a heading/quote/to-do type needs zero changes
- * here.
+ * Markdown block-shortcut affordance. Each block type declares the prefixes that
+ * convert into it — `markdownPrefixes` for real markdown line syntax (a bulleted
+ * list owns `["* ", "- ", "+ "]`), `typingPrefixes` for input-only shorthands (a
+ * quote owns `["| "]`, which in markdown would be a table row) — and this plugin
+ * reads the UNION generically from the dispatch slot via `conversionPrefixesOf`.
+ * It never names a specific block type, so adding a heading/quote/to-do type
+ * needs zero changes here.
+ *
+ * It is the ONLY consumer of that union: markdown syntax is always also
+ * typeable, but the reverse does not hold, and the clipboard pipeline
+ * (`core/markdown.ts`) reads `markdownPrefixes` alone.
  *
  * It fires only on the *transition* into a prefixed state (the previous text did
  * not start with the prefix, the new text does). That makes it trigger the
@@ -27,12 +33,13 @@ import { INLINE_FORMAT_TAG } from "../internal/inline-format-tag";
  * unmounts this editor, so a row write claiming to carry the stripped text can
  * never actually strip anything.
  *
- * Because most text-like block types share one renderer, the conversion
- * reconciles IN PLACE: the same Lexical instance keeps focus, so text the user
- * keeps typing flows straight into the now-bulleted block. (`quote` and
- * `prompt` still own their own dispatch component, so converting into those two
- * remounts the editor — the strip lands first regardless, which is the point of
- * the ordering above.)
+ * Because every text-bearing block type now dispatches the SAME renderer (a type
+ * change is a re-style — see the presentation-API section of this plugin's
+ * CLAUDE.md), the conversion reconciles IN PLACE: the same Lexical instance
+ * keeps focus, so text the user keeps typing flows straight into the now-bulleted
+ * (or quoted) block. Converting into a VOID type (divider, code, equation) or a
+ * `wrapOnConvert` container does remount — the strip lands first regardless,
+ * which is the point of the ordering above.
  *
  * **A transition only counts when the USER produced it.** The listener is tag-
  * guarded because a text transition is not by itself evidence of typing:
@@ -65,7 +72,7 @@ export function MarkdownShortcutPlugin({ block }: { block: Block }) {
       collapsible?: "always";
     }[] = [];
     for (const c of contributions) {
-      for (const prefix of c.block.markdownPrefixes ?? []) {
+      for (const prefix of conversionPrefixesOf(c.block)) {
         out.push({
           prefix,
           type: c.block.type,

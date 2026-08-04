@@ -5,7 +5,7 @@ import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { importBarrel, registerBarrelStubs } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { markdownParseTagName, type BlockHandle } from "../core";
+import { conversionPrefixesOf, markdownParseTagName, type BlockHandle } from "../core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 
 // Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
@@ -326,4 +326,86 @@ const markdownTagNamesUnique: Check = {
   },
 };
 
-export default [check, anchorHasDecoration, markdownTagNamesUnique];
+/**
+ * At most ONE block type may declare any given conversion prefix.
+ *
+ * `MarkdownShortcutPlugin` flattens every handle's prefixes into one
+ * longest-first list and converts on the FIRST match, so a duplicated prefix
+ * resolves by registration order — i.e. by nothing the author of either block
+ * type controls, and silently. Typing `> ` would mint a toggle or a quote
+ * depending on which plugin the registry happened to walk first, and the loser's
+ * shortcut would simply never fire.
+ *
+ * The union is read through `conversionPrefixesOf`, the SAME resolution the
+ * runtime uses, so the check cannot drift from what it checks — both prefix
+ * fields are covered, and a prefix moved between them stays covered.
+ */
+const blockPrefixesUnique: Check = {
+  id: "page.editor:block-prefixes-unique",
+  description:
+    "no two block handles declare the same conversion prefix (`markdownPrefixes` ∪ `typingPrefixes`), which the typing shortcut would resolve by registration order",
+  async run(): Promise<CheckResult> {
+    const root = await getWorktreeRoot();
+    const tree = await buildEnrichedTree(root);
+    registerBarrelStubs(root);
+
+    const candidateDirs = new Set<string>();
+    for (const [dir, node] of tree.byDir) {
+      const facet = getFacet(node, contributionsFacetDef);
+      if (!facet) continue;
+      for (const c of facet.runtime) {
+        if (c.kind === "slot" && c.slotId === WEB_BLOCK_SLOT) {
+          if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
+          break;
+        }
+      }
+    }
+    if (candidateDirs.size === 0) {
+      return {
+        ok: false,
+        message:
+          "No web `Editor.Block` contributions found in the enriched plugin tree — the " +
+          "barrel-imported contributions facet is empty, so prefix uniqueness could not be " +
+          "verified. This is a check/tooling failure, not a clean pass.",
+      };
+    }
+
+    // prefix -> "<plugin id> (<block type>)" for each declaring handle.
+    const claimants = new Map<string, string[]>();
+    for (const dir of candidateDirs) {
+      const mod = await importBarrel(join(dir, "web", "index.ts"));
+      const def = mod.default as { contributions?: unknown } | undefined;
+      if (!Array.isArray(def?.contributions)) continue;
+      for (const raw of def.contributions) {
+        const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
+        if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
+        for (const prefix of conversionPrefixesOf(c.block)) {
+          const list = claimants.get(prefix) ?? [];
+          list.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
+          claimants.set(prefix, list);
+        }
+      }
+    }
+
+    const conflicts = [...claimants.entries()]
+      .filter(([, list]) => new Set(list).size > 1)
+      .sort(([a], [b]) => a.localeCompare(b));
+    if (conflicts.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message:
+        `${conflicts.length} conversion prefix(es) are declared by more than one block type, so ` +
+        `which one a user's keystroke converts into is decided by registration order:\n${conflicts
+          .map(([prefix, list]) => `  "${prefix}" ← ${[...new Set(list)].sort().join(", ")}`)
+          .join("\n")}`,
+      hint:
+        "Give one of the types a different prefix. A prefix is a scarce, global namespace: `> ` " +
+        "belongs to `toggle`, which is why `quote` types with `| ` instead. If the prefix is real " +
+        "markdown line syntax it belongs on `markdownPrefixes`; if it only converts when TYPED " +
+        "(`| `, `[] `, ```` ``` ````) it belongs on `typingPrefixes` — but either way, only once.",
+    };
+  },
+};
+
+export default [check, anchorHasDecoration, markdownTagNamesUnique, blockPrefixesUnique];

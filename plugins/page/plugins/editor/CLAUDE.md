@@ -1556,12 +1556,19 @@ covered. Design:
   its children folded. `"children-when-expanded"` exists for `page` alone.
 - **The walk takes an explicit "consumed my children" signal** from the
   serializer; it recurses unconditionally otherwise. Do not infer it.
-- **Container `markdownPrefixes` stay inert for parsing** (`derivedParsePrefixes`
-  needs a text lens, which a container can never have): `todo`'s `"TODO "` is a
-  TYPING-time wrap only, so a `TODO ` line in pasted prose stays prose.
+- **A typing shortcut and markdown line syntax are two different declarations.**
+  `markdownPrefixes` is markdown syntax and feeds serialize + parse + typing;
+  `typingPrefixes` converts on TYPING only and this module never reads it.
+  `quote` types with `| `, which in markdown is a **table row** — one field for
+  both would make a pasted markdown table a wall of quotes. Same for `to-do`'s
+  `[] `, `code-block`'s ```` ``` ````, `equation`'s `$$`, `divider`'s `---` and
+  `todo`'s `TODO `, each of whose real markdown is declared elsewhere on the
+  handle. `conversionPrefixesOf` (the union) has exactly one consumer, the
+  shortcut plugin; `page.editor:block-prefixes-unique` keeps two types off one
+  prefix.
 - **`quote` and `prompt` declare `body: "text"`** because they are the only
-  text-bearing types with no prefix (`> ` belongs to `toggle`); without it they
-  serialized as bare paragraphs and came back as `text`.
+  text-bearing types with no MARKDOWN prefix (`> ` belongs to `toggle`); without
+  it they serialized as bare paragraphs and came back as `text`.
 - **`page/text` emits `<text/>` for an EMPTY paragraph** only. Blank lines stay
   skipped on parse — correct CommonMark for foreign markdown. The asymmetry is
   the contract: what we emit round-trips, what a user pastes stays lenient.
@@ -1840,6 +1847,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `collapsedAnchorAbove`
     - `COLOR_TOKENS`
     - `colorCssValue`
+    - `conversionPrefixesOf`
     - `createBlock`
     - `CreateBlockBodySchema`
     - `dataEqual`

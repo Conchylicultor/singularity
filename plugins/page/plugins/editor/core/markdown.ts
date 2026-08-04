@@ -218,21 +218,27 @@ export function defaultTextHandle(handles: Handle[]): Handle | undefined {
 // Generic resolution (derives serialize/parse from the lens + prefixes)
 // ---------------------------------------------------------------------------
 
-/** First `markdownPrefixes` entry not starting with a backtick or `[`, else "". */
+/**
+ * The CANONICAL markdown prefix this type emits: the first `markdownPrefixes`
+ * entry (the rest are parse-only aliases), else "".
+ *
+ * It reads the field whole. It used to skip entries starting with a backtick or
+ * `[` — a substring sniff standing in for "that one isn't really markdown
+ * syntax", which was true (a code fence, a to-do's `[] ` typing trigger) but
+ * unstated: those prefixes now live on `typingPrefixes`, which this side never
+ * sees, so the sniff has nothing left to catch.
+ */
 function outputPrefix(h: Handle): string {
-  return (
-    (h.markdownPrefixes ?? []).find(
-      (p) => !p.startsWith("`") && !p.startsWith("["),
-    ) ?? ""
-  );
+  return h.markdownPrefixes?.[0] ?? "";
 }
 
-/** Derived parse prefixes for a text-bearing handle: fences and `[`-prefixes are
- *  excluded (owned by fence / explicit-parseLine passes), sorted longest-first. */
+/**
+ * Derived parse prefixes for a text-bearing handle, sorted longest-first so a
+ * more specific marker wins. Every `markdownPrefixes` entry is claimable by
+ * construction — the field means markdown line syntax and nothing else.
+ */
 function derivedParsePrefixes(h: Handle): string[] {
-  return (h.markdownPrefixes ?? [])
-    .filter((p) => !p.startsWith("`") && !p.startsWith("["))
-    .sort((a, b) => b.length - a.length);
+  return [...(h.markdownPrefixes ?? [])].sort((a, b) => b.length - a.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -583,10 +589,10 @@ export function parseMarkdownToForest(
     // `</name>` (depth-counted, so containers nest), and the dedented body
     // recurses through this same function.
     //
-    // Container `markdownPrefixes` stay inert here, deliberately: a container
-    // has no text lens so `derivedParsePrefixes` never fires for it, and this
-    // pass keys on the tag name alone — so a `TODO ` line in pasted prose stays
-    // prose (that prefix drives the TYPING-time wrap only).
+    // Nothing here (or anywhere else in this module) reads `typingPrefixes`:
+    // that field is input syntax, not markdown syntax, so a `TODO ` line in
+    // pasted prose stays prose and a `| ` line stays a table row rather than
+    // becoming a quote. This pass keys on the tag NAME alone.
     if (content.startsWith("<")) {
       const claimed = claimTag(lines, i, indent, content, tagParsers, fences, parseCtx, ctx);
       if (claimed) {

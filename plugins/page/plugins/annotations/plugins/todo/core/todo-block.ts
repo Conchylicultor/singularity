@@ -36,14 +36,15 @@ export const todoBlock = defineContainerBlock({
   // type: `TODO` in prose is a convention, not a word, so the conversion lands on
   // the intent rather than surprising a sentence. Longest-first matching in the
   // plugin means `TODO: ` wins over `TODO ` where both could apply.
-  markdownPrefixes: ["TODO ", "TODO: "],
+  typingPrefixes: ["TODO ", "TODO: "],
   // `<todo>…</todo>` — a real round-tripping syntax, replacing the one-way
   // `**[TODO]**` marker. The marker was honest about what it could do (a void
   // type derives no `parseLine`, so emitting the `TODO ` trigger would have read
   // as re-convertible and was not); a tag can carry the children, so the card
   // survives a markdown round trip instead of dissolving into its contents.
   //
-  // The `markdownPrefixes` above stay a TYPING-time trigger only: the tag pass
-  // keys on the tag name, so a `TODO ` line in pasted prose still stays prose.
+  // `TODO ` is markdown's business nowhere: it lives on `typingPrefixes`, which
+  // the clipboard pipeline never reads, so a `TODO ` line in pasted prose stays
+  // prose.
   markdown: { tag: { body: "children" } },
 });

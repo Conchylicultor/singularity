@@ -26,7 +26,10 @@ export const dividerBlock = defineBlock({
   // the third "-" appears. The convert path gates the `text` carry on the
   // target's `acceptsText` (derived from this schema having no `text` key), so
   // no `text` key is written — the write boundary would reject it as unknown.
-  markdownPrefixes: ["---"],
+  // TYPING-only: the `markdown` declaration above already owns `---` on both
+  // sides of the clipboard pipeline (a void type derives no prefix parser
+  // anyway, having no text lens).
+  typingPrefixes: ["---"],
   // A 1px rule inside `Inset y="sm"`: seat the rail on the rule itself, not the
   // phantom body line the default would assume (which sits well below it).
   gutterFirstLineCenter: "calc(var(--space-sm) + 0.5px)",

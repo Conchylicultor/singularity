@@ -45,7 +45,10 @@ describe("todoBlock (derived + forced facts)", () => {
     // plugin reads them off the handle, and dropping them (they were once absent
     // from the declaration surface) silently kills the `TODO ` trigger while
     // everything else still works.
-    expect(todoBlock.markdownPrefixes).toEqual(["TODO ", "TODO: "]);
+    expect(todoBlock.typingPrefixes).toEqual(["TODO ", "TODO: "]);
+    // And they are TYPING prefixes, not markdown line syntax: the card's
+    // markdown is its `<todo>` tag, so a `TODO ` line in pasted prose is prose.
+    expect(todoBlock.markdownPrefixes).toBeUndefined();
   });
 
   it("maps to a round-tripping <todo> tag, not a one-way marker", () => {

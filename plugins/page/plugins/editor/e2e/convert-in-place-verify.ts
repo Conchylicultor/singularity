@@ -173,6 +173,20 @@ const cases: Case[] = [
     wantText: "toggled",
     marker: ">",
   },
+  {
+    // The other half of the prefix split: `| ` is a `typingPrefixes` entry, so
+    // it converts here exactly like a `markdownPrefixes` one — the shortcut
+    // plugin reads the UNION (`conversionPrefixesOf`). It is deliberately NOT
+    // markdown syntax (`| ` opens a table row), which `markdown.test.ts` pins on
+    // the clipboard side; this case pins the typing side.
+    label: "typing '| '",
+    type: async (page) => {
+      await page.keyboard.type("| wisdom", { delay: 25 });
+    },
+    wantType: "quote",
+    wantText: "wisdom",
+    marker: "|",
+  },
 ];
 
 await withBrowser(async (h) => {

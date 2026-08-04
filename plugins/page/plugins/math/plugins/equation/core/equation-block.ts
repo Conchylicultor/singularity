@@ -20,5 +20,7 @@ export const equationBlock = defineBlock({
   },
   // Typing `$$` at the start of a text block converts it into an equation block.
   // The generic MarkdownShortcutPlugin reads this off the slot — no editor changes.
-  markdownPrefixes: ["$$"],
+  // TYPING-only: the `markdown` declaration above already owns `$$` on both
+  // sides of the clipboard pipeline, and it reads `expression`, not `text`.
+  typingPrefixes: ["$$"],
 });

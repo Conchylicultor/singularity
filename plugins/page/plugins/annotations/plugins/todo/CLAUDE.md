@@ -11,15 +11,14 @@ annotation has:
 
 ## Typing `TODO ` wraps the line
 
-`markdownPrefixes: ["TODO ", "TODO: "]`. The markdown-shortcut plugin strips the
+`typingPrefixes: ["TODO ", "TODO: "]`. The markdown-shortcut plugin strips the
 prefix from the live editor and calls `convertTo`, which for a `wrapOnConvert`
 type WRAPS — so the line being typed becomes the card's first child, caret
 unmoved. It is the only annotation with a typed trigger because it is the only
 marker people already type: `TODO` in prose is a convention, not a word.
 
-That field is legal on a void container even though the *parse* direction derives
-nothing from it — see the `markdownPrefixes` note in
-[`page/container`](../../../container/CLAUDE.md) before "fixing" either.
+Typing-only by construction: the card's markdown is its `<todo>` tag, so a
+`TODO ` line in *pasted* prose stays prose.
 
 ## It is not `page/to-do`, and both are right
 

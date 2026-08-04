@@ -25,8 +25,10 @@ export const toDoBlock = defineBlock({
     },
   },
   // Typing `[] ` or `[ ] ` at the start of a block converts it into a to-do,
-  // preserving any trailing text.
-  markdownPrefixes: ["[] ", "[ ] "],
+  // preserving any trailing text. TYPING-only: markdown's task-list syntax is
+  // the `- [ ] ` the `markdown` declaration above owns, so these two shorthands
+  // are an input affordance and never reach the clipboard pipeline.
+  typingPrefixes: ["[] ", "[ ] "],
   // Render an interactive checkbox marker bound to `checked`; strike through the
   // text when done. Driven generically by the editor's shared text renderer.
   toggle: { field: "checked" },

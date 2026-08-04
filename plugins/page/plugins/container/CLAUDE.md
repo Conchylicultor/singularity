@@ -104,13 +104,11 @@ coherently declare is simply absent — `placeholder`, `marker`, `textVariant`,
 and `gutterFirstLineCenter` (the surface seats the decoration on the first
 child's borrowed first line).
 
-`markdownPrefixes` **is** accepted, and is not the exception it looks like. Two
-mechanisms read that field: `parserFor` derives a markdown parse rule only for a
-handle with a `text` lens, so on a container it stays inert (pasted prose can
-never become a container); `MarkdownShortcutPlugin` reads it on TYPING and calls
-`convertTo`, which for a `wrapOnConvert` type wraps — so the line being typed
-becomes the container's first child, prefix stripped. `page/annotations/todo`'s
-`TODO ` is the one user today.
+`typingPrefixes` **is** accepted (and `markdownPrefixes` is not): a container's
+markdown syntax is its `<tag>`, so its prefix can only ever be a typing trigger.
+`MarkdownShortcutPlugin` reads it and calls `convertTo`, which for a
+`wrapOnConvert` type wraps — the line being typed becomes the container's first
+child, prefix stripped. `page/annotations/todo`'s `TODO ` is the one user today.
 
 ## Three web shells, one per structural half of a container
 

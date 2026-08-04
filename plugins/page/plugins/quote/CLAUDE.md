@@ -10,10 +10,15 @@ the same element tree. No `padding` / `inset`: the line supplies the page rail's
 left inset like every other text block.
 
 Quotes store the shared `{ text }` payload and are reachable from the slash menu,
-the insert menu, and "Turn into". They intentionally declare **no**
-`markdownPrefixes`: the canonical Markdown quote prefix `> ` is already claimed
-by the `toggle` block, so quotes are not auto-created by typing `> ` and do not
-round-trip through Markdown copy/paste.
+the insert menu, "Turn into" — and by typing **`| ` at the start of a block**
+(`typingPrefixes: ["| "]`). `> ` is not available: the canonical Markdown quote
+prefix is already claimed by the `toggle` block.
+
+`| ` is a `typingPrefixes` entry, never `markdownPrefixes`: in markdown `| ` opens
+a **table row**, so the clipboard parser must not claim it (a pasted table would
+arrive as a wall of quotes). Quote thus declares no *markdown* line syntax at
+all — which is why it needs `markdown: { tag: { body: "text" } }`: with no prefix
+to emit it would serialize as a bare paragraph and parse back as `text`.
 
 Quotes nest with the editor's existing indent/outdent (Tab / Shift-Tab) and
 Enter splits into a sibling quote — no quote-specific nesting logic.

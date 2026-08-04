@@ -100,11 +100,34 @@ export interface BlockHandle<T> {
    */
   emptyRowData(): RowData;
   /**
-   * Leading text that auto-converts a block into this type (e.g. `["* ", "- "]`
-   * for a bulleted list). The shared text editor strips the matched prefix and
-   * converts via `BlockEditorAPI.convertTo`, preserving any trailing text.
+   * This type's canonical MARKDOWN LINE SYNTAX (e.g. `["* ", "- ", "+ "]` for a
+   * bulleted list, `["# "]` for an H1). It feeds the clipboard markdown pipeline
+   * — `outputPrefix` emits the FIRST entry, `derivedParsePrefixes` claims them
+   * all on parse — and, as a superset consumer, the typing-time shortcut
+   * (`conversionPrefixesOf`): real markdown syntax is always also something the
+   * user may type.
+   *
+   * Declare a prefix here ONLY if a line starting with it genuinely means this
+   * block type in markdown. A prefix that merely *converts on typing* is a
+   * {@link typingPrefixes} entry — see the note there for why conflating the two
+   * turned a pasted markdown table into a wall of quote blocks.
    */
   markdownPrefixes?: string[];
+  /**
+   * Leading text that auto-converts a block into this type when TYPED at line
+   * start, but which is NOT markdown line syntax (e.g. `["| "]` for a quote,
+   * `["[] "]` for a to-do, ` ``` ` for a code block). The shared text editor
+   * strips the matched prefix and converts via `BlockEditorAPI.convertTo`,
+   * preserving any trailing text; the markdown pipeline never sees these.
+   *
+   * The split exists because the two mechanisms genuinely disagree. `| ` is a
+   * fine quote shortcut — nothing else in the editor starts a line with it — but
+   * in markdown it is a TABLE ROW, so a single field feeding both would make
+   * `derivedParsePrefixes` claim it and turn every row of a pasted table into a
+   * quote block. Declaring it here keeps the typing affordance and leaves the
+   * parser alone.
+   */
+  typingPrefixes?: string[];
   /**
    * Backspace at the very start of this block first converts it to this type
    * (keeping text + children) instead of merging — Notion's "reset block type".
@@ -253,6 +276,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   empty?: () => z.infer<S>;
   markdown?: BlockMarkdown<z.infer<S>>;
   markdownPrefixes?: string[];
+  typingPrefixes?: string[];
   resetToOnBackspaceAtStart?: string;
   breakOutOnEmptyEnter?: string;
   marker?: string;
@@ -289,6 +313,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     empty: opts.empty,
     emptyRowData: () => rowDataOf(opts.empty?.() ?? {}),
     markdownPrefixes: opts.markdownPrefixes,
+    typingPrefixes: opts.typingPrefixes,
     resetToOnBackspaceAtStart: opts.resetToOnBackspaceAtStart,
     breakOutOnEmptyEnter: opts.breakOutOnEmptyEnter,
     marker: opts.marker,
@@ -308,4 +333,16 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   // `text` presence tracks `acceptsText`, which mirrors the brand by construction
   // (every text block composes `textBlockSchema`).
   return handle as BlockHandle<z.infer<S>> & TextLens<S>;
+}
+
+/**
+ * Every prefix that converts a block when TYPED at line start: markdown line
+ * syntax is always also a typing shortcut, plus the input-only ones.
+ *
+ * THE single resolution of that union, so the shortcut plugin and the
+ * `page.editor:block-prefixes-unique` check read one definition — a consumer
+ * hand-concatenating the two fields is how they would drift.
+ */
+export function conversionPrefixesOf(h: BlockHandle<unknown>): string[] {
+  return [...(h.markdownPrefixes ?? []), ...(h.typingPrefixes ?? [])];
 }
