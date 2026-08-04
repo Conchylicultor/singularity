@@ -6,7 +6,7 @@ import {
   usePromptInsert,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
-import { sendPendingTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -29,14 +29,14 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   // Latest-draft ref so the send handler doesn't capture stale state.
   const draftRef = useLatestRef(draft);
 
-  // The pending-turn store owns the whole send lifecycle (POST, retry,
+  // The pending-turn store owns the whole send lifecycle (delivery, retry,
   // transcript confirmation); the draft is cleared synchronously so a second
   // Enter is a no-op and the editor stays typable while the send is in flight.
   const send = useCallback(() => {
     const current = draftRef.current;
     if (isDraftEmpty(current) || disabled) return;
     clearDraft();
-    sendPendingTurn(conversation.id, current);
+    sendConversationTurn(conversation.id, { text: current });
   }, [conversation.id, disabled, clearDraft]);
 
   const placeholder = disabled

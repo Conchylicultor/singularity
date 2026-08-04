@@ -6,6 +6,12 @@ import { AskUserQuestionToolView } from "./components/ask-user-question-tool-vie
 import { AnswerHereButton } from "./components/answer-here-button";
 import { ANSWER_MARKER } from "../shared";
 
+// Re-exported so the module EVALUATES at plugin load rather than when the
+// answer form first mounts: a persisted failed answer's Retry must find this
+// delivery in the registry after a reload, when the question is long gone and
+// the form no longer renders. See pending-turn/web/internal/delivery.ts.
+export { answerQuestionDelivery } from "./internal/delivery";
+
 export default {
   description:
     "Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.",

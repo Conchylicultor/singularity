@@ -72,7 +72,6 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/prompt-input`
-    - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/resume`
     - `conversations/summary`

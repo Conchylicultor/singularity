@@ -1,10 +1,8 @@
 import { useCallback, useSyncExternalStore } from "react";
 import {
   EndpointError,
-  fetchEndpoint,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
-import { postConversationTurn } from "@plugins/conversations/core";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { report } from "@plugins/reports/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -24,30 +22,45 @@ import {
   subscribePendingTurns,
   writePendingTurns,
 } from "./persist";
+import {
+  getTurnDelivery,
+  POST_TURN_DELIVERY_ID,
+  UnknownTurnDeliveryError,
+  type TurnDelivery,
+} from "./delivery";
 
 // ---------------------------------------------------------------------------
-// Durable pending-turn store — the owner of the ENTIRE send lifecycle. On Enter
-// a record is created synchronously (pre-POST) so the echo is instant; the POST,
-// the confirmation deadline, transcript reconciliation, and failure reporting
-// all run here. Records persist in localStorage (per conversation), so a
-// refresh or server restart never loses an in-flight send: every send resolves
-// explicitly to sent / failed-post / unconfirmed — no silent path exists.
+// Durable pending-turn store — the owner of the ENTIRE send lifecycle, and the
+// SINGLE ENTRY POINT for sending a turn from the browser. On send a record is
+// created synchronously (pre-request) so the echo is instant; the delivery, the
+// confirmation deadline, transcript reconciliation, and failure reporting all
+// run here. Records persist in localStorage (per conversation), so a refresh or
+// server restart never loses an in-flight send: every send resolves explicitly
+// to sent / failed-post / unconfirmed — no silent path exists.
+//
+// "Single entry point" is the load-bearing part. Every surface that puts text
+// in front of the agent — the prompt input, the template chips, the Send/Queue/
+// Go button, Push & Close's wrap-up prompt, an AskUserQuestion answer — routes
+// through `sendConversationTurn`, differing ONLY in its `TurnDelivery` (see
+// delivery.ts). A surface that calls its endpoint directly gets none of the
+// guarantees below, silently; `turn-send-safety/no-adhoc-turn-send` makes that
+// a lint error rather than a thing to remember.
 //
 // Never-revert (vocabulary borrowed from primitives/optimistic-mutation): the
 // transcript is ground truth; once a record matched (`sent`/`queued`) a late
-// POST outcome can only enrich it, never regress it. This holds SYMMETRICALLY —
-// a POST failure that lands first is not final either: the matcher keeps
+// delivery outcome can only enrich it, never regress it. This holds SYMMETRICALLY —
+// a delivery failure that lands first is not final either: the matcher keeps
 // `failed-post`/`unconfirmed` records in play, so a turn the agent actually
 // received retires its own failure card (see reconcile.ts). Only the transcript
-// resolves a record; no POST outcome, in either direction, is the last word.
+// resolves a record; no delivery outcome, in either direction, is the last word.
 // Failures are manual-retry only — the tmux paste race can strand text in the
 // CLI input box, so re-send must be a deliberate user action.
 //
 // Multi-tab: all tabs render the shared records; only `ownerTabId === getTabId()`
-// drives the POST promise and the deadline timer. `deadlineAt` is absolute, so
+// drives the delivery promise and the deadline timer. `deadlineAt` is absolute, so
 // any tab's reconcile pass can adopt an orphaned record whose owner tab closed.
 //
-// This module owns the SIDE EFFECTS only — storage, timers, the POST, the
+// This module owns the SIDE EFFECTS only — storage, timers, the delivery, the
 // report. The record→record transition itself lives in reconcile.ts as two pure
 // passes (match, then sweep), where it is bun:test-covered for the idempotence
 // the render-effect driver depends on. See that file's header.
@@ -65,14 +78,33 @@ export type PendingTurnState =
 
 export interface PendingTurnRecord {
   id: string;
-  /** Tab that drives the POST promise, the deadline timer, and the report. */
+  /** Tab that drives the delivery promise, the deadline timer, and the report. */
   ownerTabId: string;
-  /** Original draft text — what Retry re-POSTs and Copy-to-draft restores. */
+  /**
+   * The echoed text — what the pending card shows, what Copy-to-draft restores,
+   * and the transcript-match target until a delivery reports a `resolvedText`.
+   */
   text: string;
   /** The server's finalText (attachment refs rewritten) — what matching uses. */
   resolvedText: string | null;
+  /**
+   * Which registered {@link TurnDelivery} carried this turn, and the payload it
+   * was handed. Both serializable so Retry re-dispatches correctly after a
+   * reload. Absent on records written before deliveries existed — read them
+   * through {@link deliveryFor}, never directly.
+   */
+  deliveryId?: string;
+  payload?: unknown;
+  /**
+   * Whether the in-flight echo card renders (default true). `false` is for
+   * surfaces that already show their own in-flight state inline — the
+   * AskUserQuestion answer form, whose delivered turn the transcript hides
+   * anyway. Failure cards render regardless: a send that needs Retry must be
+   * reachable no matter which surface started it.
+   */
+  echo?: boolean;
   state: PendingTurnState;
-  failureKind?: "http" | "network";
+  failureKind?: "http" | "network" | "delivery";
   errorMessage?: string;
   /** Count of user-text events at first reconcile — earlier rows never match. */
   baselineUserText: number | null;
@@ -84,7 +116,7 @@ export interface PendingTurnRecord {
   reported?: boolean;
 }
 
-const POST_TIMEOUT_MS = 30_000;
+const DELIVERY_TIMEOUT_MS = 30_000;
 const MAX_RECORDS_PER_CONV = 10;
 
 interface ConvEntry {
@@ -95,7 +127,7 @@ interface ConvEntry {
 
 const EMPTY: PendingTurnRecord[] = [];
 const entries = new Map<string, ConvEntry>();
-/** Record ids whose POST promise is live in THIS tab (distinguishes an
+/** Record ids whose delivery promise is live in THIS tab (distinguishes an
  * in-flight send from a `sending` record found after a reload). */
 const inflightPosts = new Set<string>();
 
@@ -245,29 +277,50 @@ function onTimer(conversationId: string, recordId: string): void {
   updateRecord(conversationId, recordId, () => record);
 }
 
-// --- POST leg --------------------------------------------------------------
+// --- delivery leg ----------------------------------------------------------
 
-async function runPost(
+/**
+ * Resolve a record's delivery + payload. The ONE place the legacy shape is
+ * understood: a record written before deliveries existed carries neither field
+ * and is, by definition, a plain `postConversationTurn` send of its own text.
+ */
+function deliveryFor(rec: PendingTurnRecord): {
+  delivery: TurnDelivery<unknown>;
+  payload: unknown;
+} {
+  return {
+    delivery: getTurnDelivery(rec.deliveryId ?? POST_TURN_DELIVERY_ID),
+    payload: rec.deliveryId == null ? { text: rec.text } : rec.payload,
+  };
+}
+
+async function runDelivery(
   conversationId: string,
-  recordId: string,
-  text: string,
+  rec: PendingTurnRecord,
 ): Promise<void> {
+  const recordId = rec.id;
   try {
-    const res = await fetchEndpoint(
-      postConversationTurn,
-      { id: conversationId },
-      { body: { text }, signal: AbortSignal.timeout(POST_TIMEOUT_MS) },
+    // Inside the try on purpose: an unregistered delivery (its owning plugin
+    // never loaded) is a failed send like any other — it lands on the card with
+    // Retry + Copy-to-draft rather than escaping as an unhandled rejection.
+    const { delivery, payload } = deliveryFor(rec);
+    const res = await delivery.send(
+      conversationId,
+      payload,
+      AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
     );
     const now = Date.now();
     updateRecord(conversationId, recordId, (r) => {
       // Never revert: the transcript may already have matched this record
-      // (sent/queued) before the POST response landed — only enrich it.
+      // (sent/queued) before the delivery response landed — only enrich it.
       const enriched = {
         ...r,
+        // A delivery whose endpoint rewrites nothing reports `null`; the
+        // record then keeps matching on its own echoed `text`.
         resolvedText: res.resolvedText,
         postedAt: now,
         // A record the transcript already resolved has nothing left to confirm,
-        // so the POST response must not arm a deadline behind it.
+        // so the delivery response must not arm a deadline behind it.
         deadlineAt: isTranscriptResolved(r.state)
           ? undefined
           : (r.deadlineAt ?? now + CONFIRM_DEADLINE_MS),
@@ -277,15 +330,23 @@ async function runPost(
         : enriched;
     });
   } catch (err) {
-    const failureKind = err instanceof EndpointError ? "http" : "network";
+    const failureKind =
+      err instanceof UnknownTurnDeliveryError
+        ? "delivery"
+        : err instanceof EndpointError
+          ? "http"
+          : "network";
     updateRecord(conversationId, recordId, (r) =>
-      // A record already confirmed by the transcript outranks a late POST error.
+      // A record already confirmed by the transcript outranks a late failure.
       r.state === "sending"
         ? {
             ...r,
             state: "failed-post",
             failureKind,
-            errorMessage: getEndpointErrorMessage(err),
+            errorMessage:
+              failureKind === "delivery"
+                ? (err as Error).message
+                : getEndpointErrorMessage(err),
           }
         : r,
     );
@@ -296,14 +357,37 @@ async function runPost(
 
 // --- public API ------------------------------------------------------------
 
-/** Create the record synchronously (instant echo) and start the POST. */
-export function sendPendingTurn(conversationId: string, text: string): string {
+/**
+ * How a surface describes the turn it wants sent. Either shape works; the
+ * second exists so a surface whose turn does NOT travel over
+ * `postConversationTurn` still gets the identical lifecycle. `delivery` and
+ * `payload` are tied together by `P`, so a delivery can never be paired with a
+ * payload it does not understand.
+ */
+export type TurnSend<P> =
+  | { text: string; echo?: boolean }
+  | { text: string; echo?: boolean; delivery: TurnDelivery<P>; payload: P };
+
+/**
+ * THE entry point for sending a turn from the browser. Creates the record
+ * synchronously (instant echo) and starts the delivery. Returns immediately —
+ * the record, not the promise, is the caller's feedback channel, so no surface
+ * needs its own in-flight state, error toast, or retry affordance.
+ */
+export function sendConversationTurn<P>(
+  conversationId: string,
+  turn: TurnSend<P>,
+): string {
   const entry = getEntry(conversationId);
+  const hasDelivery = "delivery" in turn;
   const record: PendingTurnRecord = {
     id: crypto.randomUUID(),
     ownerTabId: getTabId(),
-    text,
+    text: turn.text,
     resolvedText: null,
+    deliveryId: hasDelivery ? turn.delivery.id : POST_TURN_DELIVERY_ID,
+    payload: hasDelivery ? turn.payload : { text: turn.text },
+    echo: turn.echo ?? true,
     state: "sending",
     baselineUserText: null,
     createdAt: Date.now(),
@@ -319,11 +403,16 @@ export function sendPendingTurn(conversationId: string, text: string): string {
   }
   commit(conversationId, entry, next);
   inflightPosts.add(record.id);
-  void runPost(conversationId, record.id, text);
+  void runDelivery(conversationId, record);
   return record.id;
 }
 
-/** Manual re-POST of a failed/unconfirmed record's original text. */
+/**
+ * Manual re-send of a failed/unconfirmed record, through the SAME delivery it
+ * was created with — which is why the record persists `{ deliveryId, payload }`
+ * rather than a closure: this runs just as often after a reload, in a tab that
+ * never saw the original send.
+ */
 export function retryPendingTurn(conversationId: string, recordId: string): void {
   const entry = getEntry(conversationId);
   const rec = entry.records.find((r) => r.id === recordId);
@@ -344,7 +433,7 @@ export function retryPendingTurn(conversationId: string, recordId: string): void
     reported: false,
   }));
   inflightPosts.add(recordId);
-  void runPost(conversationId, recordId, rec.text);
+  void runDelivery(conversationId, rec);
 }
 
 export function dismissPendingTurn(conversationId: string, recordId: string): void {

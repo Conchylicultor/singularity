@@ -16,7 +16,7 @@
     - `conversations.useConversation`
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
-    - `infra/endpoints.fetchEndpoint`
+    - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -27,7 +27,6 @@
     - `primitives/floating-action.FloatingActionFadeIn`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `primitives/responsive-overflow.ResponsiveOverflow`
-    - `shell/notifications.toast`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

@@ -1,9 +1,9 @@
 # prompt-input
 
 Draft management only. Enter clears the draft **synchronously** and hands the
-text to `sendPendingTurn` (the `pending-turn` plugin), which owns the whole send
-lifecycle — the POST, retry, transcript-verified confirmation, and failure
-surfacing. There is no local POST, no `sending` disable (the editor stays
+text to `sendConversationTurn` (the `pending-turn` plugin), the one entry point
+for every turn send — it owns delivery, retry, transcript-verified confirmation,
+and failure surfacing. There is no local POST, no `sending` disable (the editor stays
 typable so messages can queue), and no send-failure toast here: a failed send
 renders as a pending-turn card in the transcript, never as a restored draft.
 
@@ -19,7 +19,7 @@ renders as a pending-turn card in the transcript, never as a restored draft.
     - `conversations/conversation-view.Conversation`
     - `conversations/conversation-view.isDraftEmpty`
     - `conversations/conversation-view.usePromptInsert`
-    - `conversations/conversation-view/pending-turn.sendPendingTurn`
+    - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditor`

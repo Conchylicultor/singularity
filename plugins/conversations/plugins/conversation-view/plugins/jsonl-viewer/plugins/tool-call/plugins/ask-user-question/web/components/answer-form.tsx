@@ -1,10 +1,10 @@
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
+import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import { ANSWER_MARKER } from "../../shared";
+import { answerQuestionDelivery } from "../internal/delivery";
 import { OptionBody, OptionRow } from "./option-row";
 import { type Question } from "./answer-model";
 
@@ -135,23 +135,22 @@ export function AnswerForm({
     updateAnswer(qi, { ...current, otherActive: true });
   };
 
-  const m = useEndpointMutation(answerAskUserQuestion, {
-    onSuccess: () => clearDraft(),
-    onError: (err) =>
-      toast({
-        type: "conversation",
-        title: "Answer failed",
-        description: err.message,
-        variant: "error",
-      }),
-  });
+  const canSubmit = answers.every((a, qi) => isAnswered(a, questions[qi]!));
 
-  const allAnswered = answers.every((a, qi) => isAnswered(a, questions[qi]!));
-  const canSubmit = allAnswered && !m.isPending;
-
+  // An answer is a turn: it reaches the agent through the same tmux paste and
+  // can be lost the same way, so it goes through the one send entry point and
+  // inherits the confirmation deadline, the unconfirmed report and Retry.
+  // `echo: false` — the question card is this send's in-flight display, and the
+  // delivered turn is hidden from the transcript by our own EventFilter.
   const handleSubmit = () => {
     const text = serializeAnswers(questions, answers);
-    m.mutate({ params: { id: convId }, body: { text } });
+    clearDraft();
+    sendConversationTurn(convId, {
+      text,
+      echo: false,
+      delivery: answerQuestionDelivery,
+      payload: { text },
+    });
   };
 
   // Enter submits once every question is answered, from anywhere in the form
@@ -221,11 +220,10 @@ export function AnswerForm({
         );
       })}
       <Stack direction="row" gap="none" justify="end">
-        <Button
-          loading={m.isPending}
-          disabled={!allAnswered}
-          onClick={handleSubmit}
-        >
+        {/* No `loading` state: the send returns synchronously and this form is
+            replaced by the card's answered view as soon as the transcript
+            confirms — a spinner here would race that hand-off. */}
+        <Button disabled={!canSubmit} onClick={handleSubmit}>
           Submit
         </Button>
       </Stack>

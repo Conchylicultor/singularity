@@ -8957,6 +8957,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `conversations/conversation-view/pending-turn.defineTurnDelivery`
+                      - `conversations/conversation-view/pending-turn.sendConversationTurn`
+                      - `infra/endpoints.fetchEndpoint`
                       - `infra/endpoints.useEndpointMutation`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
@@ -8970,6 +8973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/live-state.useResource`
                       - `primitives/persistent-draft.useDraft`
                       - `shell/notifications.toast`
+                    - Exports (values): `answerQuestionDelivery`
                   - Server:
                     - Uses:
                       - `conversations.answerPrompt`
@@ -9266,7 +9270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/pane.PaneIconAction`
-        - **`pending-turn`** — Owner of the entire turn-send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that POSTs the turn, verifies delivery against the transcript (normalized-text match), files a report when a 200'd turn never lands, and renders the per-record PendingTurnCard. The prompt-input calls sendPendingTurn on Enter; the jsonl-viewer drives reconcilePendingTurns on every events change. No slot contributions.
+        - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
           - Web:
             - Uses:
               - `infra/endpoints.EndpointError`
@@ -9283,17 +9287,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `PendingTurnRecord`
               - `PendingTurnState`
+              - `TurnDelivery`
+              - `TurnDeliveryResult`
+              - `TurnSend`
             - Exports (values):
+              - `defineTurnDelivery`
               - `dismissPendingTurn`
               - `PendingTurnCard`
               - `reconcilePendingTurns`
               - `retryPendingTurn`
-              - `sendPendingTurn`
+              - `sendConversationTurn`
               - `usePendingTurns`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/prompt-input`
+              - `conversations/conversation-view/prompt-templates`
+              - `conversations/conversation-view/push-and-exit`
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Web:
             - Contributes: `Conversation.PromptInput` → `PromptInput`
@@ -9302,7 +9313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.Conversation`
               - `conversations/conversation-view.isDraftEmpty`
               - `conversations/conversation-view.usePromptInsert`
-              - `conversations/conversation-view/pending-turn.sendPendingTurn`
+              - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/persistent-draft.useDraft`
               - `primitives/prompt-editor.PromptEditor`
@@ -9319,7 +9330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversation`
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
-              - `infra/endpoints.fetchEndpoint`
+              - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -9330,7 +9341,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/floating-action.FloatingActionFadeIn`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `primitives/responsive-overflow.ResponsiveOverflow`
-              - `shell/notifications.toast`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
@@ -9343,12 +9353,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ConfigV2.WebRegister`
             - Uses:
               - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
               - `conversations.useConversation`
               - `conversations.useConversationById`
               - `conversations.useHasActiveSiblingInWorktree`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view.isDraftEmpty`
               - `conversations/conversation-view/code.useEditedFiles`
+              - `conversations/conversation-view/pending-turn.defineTurnDelivery`
+              - `conversations/conversation-view/pending-turn.sendConversationTurn`
+              - `conversations/conversation-view/pending-turn.usePendingTurns`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -9359,6 +9373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/persistent-draft.useDraft`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `shell/notifications.toast`
+            - Exports (values): `pushAndExitDelivery`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses:
@@ -14727,7 +14742,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/pending-turn`
-          - `conversations/conversation-view/prompt-templates`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/resume`
@@ -25571,7 +25585,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-input`
-          - `conversations/conversation-view/prompt-templates`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/conversation-view/resume`
           - `conversations/summary`

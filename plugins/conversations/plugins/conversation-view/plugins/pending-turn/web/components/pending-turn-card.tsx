@@ -33,6 +33,13 @@ function copyToDraft(conversationId: string, text: string): void {
  * `queued`/`sent` — there the native queue-op row / real user-text row has
  * taken over the display. All feedback lives inside the card itself; a
  * reconciled message gets no extra indicator.
+ *
+ * `echo: false` records suppress the IN-FLIGHT card only — their surface shows
+ * its own inline pending state (and the transcript may hide the delivered turn
+ * entirely, as the AskUserQuestion answer does). Their failure card still
+ * renders: a send that needs Retry must be reachable however it started, or the
+ * silent surface becomes a second class of silent send — the exact thing this
+ * plugin exists to eliminate.
  */
 export function PendingTurnCard({
   conversationId,
@@ -51,6 +58,7 @@ export function PendingTurnCard({
   });
 
   if (record.state === "queued" || record.state === "sent") return null;
+  if (inFlight && record.echo === false) return null;
 
   if (inFlight) {
     // Card chrome mirrors UserTextRow in a dimmed "pending" treatment, with the

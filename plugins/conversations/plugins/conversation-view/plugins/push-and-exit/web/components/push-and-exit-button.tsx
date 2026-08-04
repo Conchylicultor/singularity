@@ -5,9 +5,12 @@ import type { IconType } from "react-icons";
 import { MdDeleteForever, MdErrorOutline, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useHasActiveSiblingInWorktree, useConversation, useConversationById } from "@plugins/conversations/web";
-import { postConversationTurn, stopConversation } from "@plugins/conversations/core";
+import { stopConversation } from "@plugins/conversations/core";
 import { fetchEndpoint, getEndpointErrorMessage, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { startPushAndExit } from "../../shared";
+import { sendConversationTurn, usePendingTurns } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import { useConfig } from "@plugins/config_v2/web";
+import { pushAndExitConfig } from "../../shared";
+import { pushAndExitDelivery } from "../internal/delivery";
 import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
 import { exitConversation } from "@plugins/conversations/plugins/conversation-view/plugins/exit/core";
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
@@ -19,16 +22,23 @@ import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { deriveExitMode, type Mode } from "./exit-mode";
 
-// One action per mode: a `run` thunk owning its typed fetchEndpoint call (so
-// each mode's differing param/body/response types stay encapsulated in its own
-// closure — no `any`), plus the verb for the error toast and an optional
-// success toast. A single runner (`onClick`) drives all of them, so every
-// action shares the same in-flight guard, double-click protection, and error
-// handling — no per-mode try/toast duplication.
+// One action per mode: a `run` thunk owning its typed call (so each mode's
+// differing param/body/response types stay encapsulated in its own closure — no
+// `any`), plus the verb for the error toast and an optional success toast. A
+// single runner (`onClick`) drives all of them, so every action shares the same
+// in-flight guard, double-click protection, and error handling — no per-mode
+// try/toast duplication.
+//
+// The turn-sending modes (send / queue / go / push-and-exit) return
+// SYNCHRONOUSLY: they hand the turn to `sendConversationTurn` and the
+// pending-turn card owns the echo, the failure state and Retry from there.
+// Awaiting a turn POST here would give the button a private, weaker lifecycle
+// than the Enter key's — which is exactly how these three drifted into
+// bypassing the optimistic path in the first place.
 type ActionSpec = {
   verb: string;
   successToast?: string;
-  run: () => Promise<void>;
+  run: () => void | Promise<void>;
 };
 
 // Resume's handler throws HttpError(409, msg) → the server serializes the bare
@@ -90,6 +100,16 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: convId });
   const [busy, setBusy] = useState(false);
   const draftRef = useLatestRef(draft);
+  // Client-side read of the very prompt the server injects for Push & Close —
+  // the record echoes it and matches the transcript on it.
+  const { prompt: pushPrompt } = useConfig(pushAndExitConfig);
+  // Double-click protection for the turn-sending modes. These runs are
+  // synchronous, so `busy` (which spans the thunk) no longer covers them — the
+  // shared pending-turn state does, and covers rather more: a second click
+  // while the first request is still open is blocked no matter which surface
+  // started it. `sending` only, so queueing further messages stays open once
+  // the request has landed.
+  const sendInFlight = usePendingTurns(convId).some((r) => r.state === "sending");
 
   const filesResult = useEditedFiles(convId);
   // Per-attempt bounded sub — correct for arbitrarily old attempts; gating the
@@ -125,12 +145,14 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const hasSession = !!live.claudeSessionId;
   // `provisional` (data still loading) keeps the neutral mode un-clickable.
-  // `busy` (any in-flight POST) is handled via the button's `loading` prop,
-  // which both disables the clicked button and shows its spinner — uniform
-  // double-click protection across every action.
+  // Double-click protection comes from whichever half owns the in-flight state:
+  // `busy` + the button's `loading` prop for the awaited actions, `sendInFlight`
+  // for the turn-sending ones whose thunk returns immediately.
+  const sendsATurn =
+    mode === "send" || mode === "queue" || mode === "go" || mode === "push-and-exit";
   const disabled = mode === "restore"
     ? !hasSession
-    : live.status === "starting" || provisional;
+    : live.status === "starting" || provisional || (sendsATurn && sendInFlight);
 
   function specFor(m: Mode): ActionSpec | null {
     switch (m) {
@@ -145,20 +167,22 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         const current = draftRef.current;
         if (isDraftEmpty(current)) return null;
         return {
-          // Same turn POST for both; the server skips the C-c interrupt when the
+          // Same turn send for both; the server skips the C-c interrupt when the
           // agent is working so the turn is queued rather than sent immediately.
           verb: m === "queue" ? "Queue" : "Send",
-          run: async () => {
-            await fetchEndpoint(postConversationTurn, { id: convId }, { body: { text: current } });
+          run: () => {
+            // Clear first, exactly as Enter does: the draft is spent the moment
+            // the record exists, and the record holds the text for Retry.
             clearDraft();
+            sendConversationTurn(convId, { text: current });
           },
         };
       }
       case "go":
         return {
           verb: "Go",
-          run: async () => {
-            await fetchEndpoint(postConversationTurn, { id: convId }, { body: { text: "Go" } });
+          run: () => {
+            sendConversationTurn(convId, { text: "Go" });
           },
         };
       case "stop":
@@ -172,7 +196,17 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       case "push-and-exit":
         return {
           verb: "Push & Close",
-          run: () => fetchEndpoint(startPushAndExit, { id: convId }),
+          run: () => {
+            // The wrap-up prompt is a turn like any other: echo it, confirm it
+            // against the transcript, report it if it never lands. The text is
+            // read from the same config the server sends verbatim, so the two
+            // sides match by construction.
+            sendConversationTurn(convId, {
+              text: pushPrompt,
+              delivery: pushAndExitDelivery,
+              payload: null,
+            });
+          },
         };
       // Same action either way: closing a conversation touches no task state,
       // so it is safe to offer even when the exit decision is undecidable.

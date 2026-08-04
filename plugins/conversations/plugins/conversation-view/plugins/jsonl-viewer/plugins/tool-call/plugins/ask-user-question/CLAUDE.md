@@ -43,6 +43,9 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `conversations/conversation-view/pending-turn.defineTurnDelivery`
+    - `conversations/conversation-view/pending-turn.sendConversationTurn`
+    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -56,6 +59,7 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
     - `primitives/live-state.useResource`
     - `primitives/persistent-draft.useDraft`
     - `shell/notifications.toast`
+  - Exports (values): `answerQuestionDelivery`
 - Server:
   - Uses:
     - `conversations.answerPrompt`

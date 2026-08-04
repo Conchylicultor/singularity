@@ -17,6 +17,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/events/plugins/events-core", id: "apps.events.events-core", loader: () => import("@plugins/apps/plugins/events/plugins/events-core/lint"), dependsOn: [] },
   { pluginPath: "config_v2/plugins/config-link", id: "config_v2.config-link", loader: () => import("@plugins/config_v2/plugins/config-link/lint"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card", id: "conversations.conversation-view.jsonl-viewer.collapsible-card", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/lint"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/conversation-view/plugins/pending-turn", id: "conversations.conversation-view.pending-turn", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/pending-turn/lint"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/bun-safety", id: "framework.tooling.lint.bun-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/button-safety", id: "framework.tooling.lint.button-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety/lint"), dependsOn: [] },

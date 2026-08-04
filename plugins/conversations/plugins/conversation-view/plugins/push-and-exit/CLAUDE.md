@@ -11,12 +11,16 @@
     - `ConfigV2.WebRegister`
   - Uses:
     - `config_v2.ConfigV2`
+    - `config_v2.useConfig`
     - `conversations.useConversation`
     - `conversations.useConversationById`
     - `conversations.useHasActiveSiblingInWorktree`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view.isDraftEmpty`
     - `conversations/conversation-view/code.useEditedFiles`
+    - `conversations/conversation-view/pending-turn.defineTurnDelivery`
+    - `conversations/conversation-view/pending-turn.sendConversationTurn`
+    - `conversations/conversation-view/pending-turn.usePendingTurns`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -27,6 +31,7 @@
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `shell/notifications.toast`
+  - Exports (values): `pushAndExitDelivery`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses:
