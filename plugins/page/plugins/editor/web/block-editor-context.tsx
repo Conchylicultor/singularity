@@ -39,10 +39,14 @@ import {
 } from "../core";
 import {
   appendRunsToBlockDoc,
-  captureBlockDocEdit,
   truncateBlockDocFrom,
-  type CapturedBlockDocEdit,
 } from "./internal/use-collab-block-doc";
+import {
+  blockDocOwnerOf,
+  captureBlockDocEdit,
+  type CapturedBlockDocEdit,
+} from "./internal/collab-session";
+import type { ProjectTextFn } from "./internal/doc-sourced-runs";
 import {
   buildOverlayOp,
   buildPatchOverlayOp,
@@ -382,8 +386,14 @@ interface BlockEditorContextValue {
    * WITHOUT recording on the undo stack (Yjs owns text history). Keeps row
    * readers — search, backlinks, history snapshots, read-only views — fresh.
    * No-ops when the block row no longer exists.
+   *
+   * `runs` is branded `DocSourcedRuns`: only `projectableRunsOf` (which reads
+   * the block's own content `Y.Doc`) can produce that type, so persisting a
+   * value the projection did not read from the doc's OWNER is a compile error —
+   * never again a serialization of some editor's VIEW of it. See
+   * `internal/doc-sourced-runs.ts`.
    */
-  projectText: (blockId: string, runs: RichText) => void;
+  projectText: ProjectTextFn;
   /**
    * Text-history recorder: mirror ONE captured `Y.UndoManager` item (a
    * coalesced typing run in `blockId`'s content doc) onto the unified undo
@@ -878,7 +888,7 @@ export function BlockEditorProviderInner({
   // break the 1:1 LIFO correspondence (`um.undo()` pops exactly one item).
   const recordDocEdit = useCallback(
     (blockId: string, label: string, edit: () => void) => {
-      const captured = captureBlockDocEdit(blockId, edit);
+      const captured = captureBlockDocEdit(blockDocOwnerOf(blockId), edit);
       if (captured) recordTextEdit(blockId, captured, label);
     },
     [recordTextEdit],
@@ -981,8 +991,8 @@ export function BlockEditorProviderInner({
   // stack would double-count it. Still flows through the shared optimistic
   // patch pipeline (server write + `blocksChanged` fan-out) and no-ops when
   // the row is unchanged or gone.
-  const projectText = useCallback(
-    (blockId: string, runs: RichText) => {
+  const projectText = useCallback<ProjectTextFn>(
+    (blockId, runs) => {
       // Existence gate against the RENDER-FRESH rows, not `rowsRef` (Stage 3b
       // fix): the projection's unmount flush fires while a structural patch
       // that deleted this block is committing — `rowsRef` still lists the row
@@ -1344,7 +1354,9 @@ export function BlockEditorProviderInner({
           // `captureBlockDocEdit` runs `append` synchronously (surgery uses
           // `discrete: true`), so a throw propagates out of the microtask
           // BEFORE the dispatch — the source row is never removed.
-          const docEdit = captureBlockDocEdit(target.id, () => append(mergingRuns));
+          const docEdit = captureBlockDocEdit(blockDocOwnerOf(target.id), () =>
+            append(mergingRuns),
+          );
           store.dispatch(buildOverlayOp(op, before, anchorTypes));
           recordStructuralWithDocEdit(before, after, OP_LABELS.merge, sourceId, docEdit, {
             blockId: sourceId,
@@ -1581,7 +1593,7 @@ export function BlockEditorProviderInner({
         // record can interleave within the same task).
         const { before, after } = applyOverlay(op);
         queueMicrotask(() => {
-          const docEdit = captureBlockDocEdit(blockId, () => {
+          const docEdit = captureBlockDocEdit(blockDocOwnerOf(blockId), () => {
             authority.surgeryOf(blockId)?.truncateAt?.(position);
           });
           recordStructuralWithDocEdit(before, after, OP_LABELS.split, newId, docEdit);

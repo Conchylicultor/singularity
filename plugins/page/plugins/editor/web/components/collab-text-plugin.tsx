@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
 import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
+  COLLABORATION_TAG,
   COMMAND_PRIORITY_CRITICAL,
   REDO_COMMAND,
   UNDO_COMMAND,
@@ -12,120 +13,33 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
-import { coalesce, runsLength, runsOf, type Block } from "../../core";
+import { runsLength, runsOf, type Block, type BlockTextVariant } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
-import { serializeBlockRuns } from "../internal/block-text-extensions";
+import {
+  $xmlBasisContentLength,
+  serializeBlockRuns,
+} from "../internal/block-text-extensions";
 import {
   collabHydrationReportSink,
   type CollabHydrationReason,
 } from "../internal/hydration-report";
+import type { CapturedBlockDocEdit } from "../internal/collab-session";
 import {
   useCollabBlockDoc,
   useLocalCollabBlockDoc,
-  type CapturedBlockDocEdit,
   type CollabBlockDoc,
 } from "../internal/use-collab-block-doc";
+import { HydrationPlaceholder } from "./hydration-placeholder";
 
 /**
- * Debounce for the `content doc → data.text` projection write. Heavy on
- * purpose: rows only need to trail the doc closely enough for search /
- * backlinks / history — sub-second staleness is fine, and
- * a long window keeps `blocksChanged` fan-out bounded during a typing run.
+ * How long a burst of content-doc updates settles before the blind-binding
+ * check reads the editor. The same window the seam's projection uses, for the
+ * same reason (one check per typing run, not one per keystroke) — and it must
+ * not be zero: `syncYjsChangesToLexical` commits on a microtask, so a same-turn
+ * check would read an editor exactly one microtask stale and call every
+ * keystroke a blind binding.
  */
-const PROJECT_DEBOUNCE_MS = 1000;
-
-/**
- * Keep `page_blocks.data.text` current from the authoritative content doc
- * (per-block CRDT plan, Stage 3a). Trigger: every `Y.Doc` update (local AND
- * server-applied — push-based, never a poll), debounced to one trailing write.
- * Value: the bound editor's serialized runs — the collab binding mirrors the
- * doc into Lexical synchronously, so serializing the editor is byte-identical
- * to `xmlTextToRuns` on the doc (same walk, same extension set) without a
- * headless replica per flush.
- *
- * The write goes through `projectText`: NOT recorded on the undo stack (Yjs
- * owns text history) and never echoed into this editor (it is
- * bound to the doc; `data.text` is only read once, as the doc-init seed).
- * Skip-if-unchanged keeps no-op churn out of `blocksChanged`. Multiple
- * connected clients each project the same runs — idempotent/convergent,
- * accepted for the my-devices+agents concurrency target.
- *
- * Returns the (stable) doc-update callback to hand to `useCollabBlockDoc`.
- */
-function useTextProjection(block: Block, hydrationRef: HydrationOpsRef): () => void {
-  const { projectText } = useBlockEditor();
-  const [editor] = useLexicalComposerContext();
-  const blockRef = useLatestRef(block);
-  const dirtyRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flush = useEventCallback(() => {
-    timerRef.current = null;
-    if (!dirtyRef.current) return;
-    dirtyRef.current = false;
-    const runs = serializeBlockRuns(editor);
-    // HYDRATION GUARD. `runs` is what this binding RENDERS; the doc is what the
-    // block actually holds. An editor showing nothing while its doc holds text
-    // is a binding that never hydrated — `@lexical/yjs` ingests a doc solely
-    // through the `observeDeep` events fired AFTER its binding attaches, so a
-    // binding that missed them renders empty FOREVER (see `binding-replica.ts`)
-    // while the doc and the server keep every character.
-    //
-    // Two things must happen, and the second is the reason this lives in front
-    // of the write rather than beside it: projecting here would persist the
-    // blindness into `page_blocks.data.text`, turning a recoverable render bug
-    // into the row saying the block is empty. A derived value may not overwrite
-    // the source it disagrees with.
-    if (runsLength(runs) === 0 && hydrationRef.current.docContentLength() > 0) {
-      hydrationRef.current.onBlindBinding();
-      return;
-    }
-    const current = coalesce(
-      runsOf((blockRef.current.data as Record<string, unknown> | null)?.text),
-    );
-    // Runs are canonical (coalesced, sorted marks), so JSON equality is exact.
-    if (JSON.stringify(runs) === JSON.stringify(current)) return;
-    projectText(blockRef.current.id, runs);
-  });
-
-  useEffect(() => {
-    return () => {
-      // Unmount (navigation, block removal): flush the pending
-      // projection now so rows never lag the doc past the debounce window.
-      // Only fires when a doc update marked us dirty — a never-synced editor
-      // (still empty, subscription pending) must NOT project its emptiness.
-      // `projectText` no-ops when the row is already gone (merge / delete).
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      flush();
-    };
-  }, [flush]);
-
-  // Event-driven debounce: each doc update marks dirty and arms ONE trailing
-  // timer (not reset per keystroke), so a continuous typing run projects at
-  // most once per PROJECT_DEBOUNCE_MS instead of starving until a pause.
-  return useEventCallback(() => {
-    dirtyRef.current = true;
-    if (timerRef.current === null) {
-      timerRef.current = setTimeout(flush, PROJECT_DEBOUNCE_MS);
-    }
-  });
-}
-
-/**
- * What the projection flush needs from the content-doc seam to run its
- * hydration guard. It arrives through a ref because the guard lives INSIDE the
- * projection callback, which the seam hook takes as an argument — so the two
- * are mutually dependent by construction and the ref is the seam between them.
- * Inert until the effect below fills it; a flush before that reads the no-op.
- */
-interface HydrationOps {
-  docContentLength: () => number;
-  onBlindBinding: () => void;
-}
-type HydrationOpsRef = { current: HydrationOps };
+const BLIND_BINDING_SETTLE_MS = 1000;
 
 /**
  * How long a block's doc may stay empty while its ROW says otherwise before
@@ -137,35 +51,34 @@ type HydrationOpsRef = { current: HydrationOps };
  */
 const STARVATION_SETTLE_MS = 5000;
 
-const INERT_HYDRATION: HydrationOps = {
-  docContentLength: () => 0,
-  onBlindBinding: () => {},
-};
-
 /**
  * Recover a block whose rendered text no longer agrees with its content doc or
  * with the server, and report it. Two independent triggers, because either side
  * can be the one that fell behind and each is observable from a different place:
  *
- * - **blind binding** — driven by the projection flush (a doc update happened,
- *   so the doc is the thing that moved), from {@link useTextProjection};
+ * - **blind binding** — driven by a content-doc update (the doc is the thing
+ *   that moved), settled and then compared against what THIS editor renders;
  * - **starved doc** — driven by the ROW, the other independent witness of the
  *   block's content: a `data.text` push carrying text while this client's doc
  *   is empty and nothing here ever typed into it means the `page-block-doc`
  *   push that should have hydrated the doc never arrived. Row-driven precisely
- *   because a starved doc receives no doc updates at all, so the projection's
- *   own trigger can never fire for it.
+ *   because a starved doc receives no doc updates at all, so the doc-side
+ *   trigger can never fire for it.
  *
  * `hasLocalEdits` is what keeps the second trigger honest: a doc the user just
  * emptied legitimately trails its own ~1s row projection.
+ *
+ * The guard is now purely a DETECTOR: it no longer stands in front of the
+ * projection write, because the projection reads the doc rather than this
+ * editor and so can no longer persist a blind binding's emptiness (R1 of
+ * `research/2026-08-03-page-block-content-session-one-owner.md`). What is left
+ * is a real, recoverable RENDER defect — reported and healed in place, retired
+ * in the stage that makes hydration a proven request/response.
  */
-function useHydrationGuard(
-  block: Block,
-  doc: CollabBlockDoc,
-  hydrationRef: HydrationOpsRef,
-): void {
+function useHydrationGuard(block: Block, doc: CollabBlockDoc): void {
+  const [editor] = useLexicalComposerContext();
   const blockRef = useLatestRef(block);
-  const { docContentLength, hasLocalEdits, rehydrate } = doc;
+  const { docContentLength, hasLocalEdits, rehydrate, subscribeDocUpdates } = doc;
 
   const recover = useEventCallback((reason: CollabHydrationReason, shownLength: number) => {
     const b = blockRef.current;
@@ -179,18 +92,34 @@ function useHydrationGuard(
     rehydrate();
   });
 
-  // Fill the ref the projection flush reads. Both members are stable
-  // (`useEventCallback`), so this runs once per mount — and the flush only ever
-  // runs from a timer or an unmount, i.e. never before this effect.
+  // Blind binding: the doc holds content this editor renders NOTHING of.
+  // `@lexical/yjs` ingests a doc solely through the `observeDeep` events fired
+  // AFTER its binding attaches, so a binding that missed them renders empty
+  // FOREVER (see `binding-replica.ts`) while the doc and the server keep every
+  // character. Comparing against ZERO is what makes this basis-independent —
+  // the two counts disagree on any non-empty block (see `$xmlBasisContentLength`).
+  const checkBlindBinding = useEventCallback(() => {
+    if (docContentLength() === 0) return;
+    if (runsLength(serializeBlockRuns(editor)) > 0) return;
+    recover("blind-binding", 0);
+  });
+
   useEffect(() => {
-    hydrationRef.current = {
-      docContentLength,
-      onBlindBinding: () => recover("blind-binding", 0),
-    };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = subscribeDocUpdates(() => {
+      // ONE trailing window per burst, not reset per update — the same shape
+      // (and reason) as the seam's projection debounce.
+      if (timer !== null) return;
+      timer = setTimeout(() => {
+        timer = null;
+        checkBlindBinding();
+      }, BLIND_BINDING_SETTLE_MS);
+    });
     return () => {
-      hydrationRef.current = INERT_HYDRATION;
+      if (timer !== null) clearTimeout(timer);
+      unsubscribe();
     };
-  }, [hydrationRef, docContentLength, recover]);
+  }, [subscribeDocUpdates, checkBlindBinding]);
 
   const rowLength = runsLength(
     runsOf((block.data as Record<string, unknown> | null)?.text),
@@ -212,35 +141,69 @@ function useHydrationGuard(
 }
 
 /**
- * The projection + undo-capture callbacks handed to whichever content-doc hook
- * runs. Storage-agnostic: the same `doc → data.text` projection and 1:1
- * `Y.UndoManager`-item mirroring apply on both the server and in-memory paths.
+ * PROVE that this binding renders what its replica holds — the read half of the
+ * session's hydration state (stage 4; the machine itself lives in
+ * `collab-session.ts`, read its module comment first).
+ *
+ * The check runs on the first `COLLABORATION_TAG` commit after the
+ * authoritative apply, and it MUST: `syncYjsChangesToLexical` commits WITHOUT
+ * `discrete` while yjs emits `doc.on('update')` at the tail of the same
+ * `applyUpdate`, so inside any of our own handlers the editor is exactly one
+ * microtask stale — a same-turn comparison would call every keystroke a blind
+ * binding. Verified against the installed packages, not assumed.
+ *
+ * The tag filter is not decoration. Two other commits arrive on this editor and
+ * neither says anything about hydration: Lexical's own initial commit for a
+ * freshly-created editor state (untagged), and `$ensureEditorNotEmpty`'s
+ * follow-up, which `@lexical/yjs` fires from `onUpdate` OUTSIDE its tagged
+ * block.
+ *
+ * The mount-time probe is `promoteOnly`: this listener registers in an effect,
+ * and `CollaborationPlugin` is a CHILD, so its `connect()` has already run —
+ * ordinarily still inside the same synchronous effect flush (so the commit is
+ * yet to come), but a probe that could conclude DISAGREEMENT there would read a
+ * merely-pending commit as a stalled binding. It may therefore only confirm.
  */
-function useCollabCallbacks(
+function useHydrationVerification(doc: CollabBlockDoc): void {
+  const [editor] = useLexicalComposerContext();
+  const { verifyRendered } = doc;
+  useEffect(() => {
+    verifyRendered(editor.getEditorState().read($xmlBasisContentLength), true);
+    return editor.registerUpdateListener(({ tags, editorState }) => {
+      if (!tags.has(COLLABORATION_TAG)) return;
+      verifyRendered(editorState.read($xmlBasisContentLength));
+    });
+  }, [editor, verifyRendered]);
+}
+
+/**
+ * The undo-capture callback handed to whichever content-doc hook runs.
+ * Storage-agnostic: 1:1 `Y.UndoManager`-item mirroring applies on both the
+ * server and in-memory paths.
+ *
+ * Stage 3b: each new coalesced local editing run in this block's content doc
+ * (one Y.UndoManager stack item — the seam does the grouping and filters out
+ * remote applies, replays, and split/merge-folded edits) is mirrored 1:1 onto
+ * the app's single document-level undo stack, interleaved with structural
+ * entries in true chronological order.
+ *
+ * The `doc → data.text` projection used to be its sibling here. It is now owned
+ * by the seam (`use-collab-block-doc.ts`), which holds the canonical doc it
+ * reads — this component no longer participates in it at all.
+ */
+function useUndoableEditRecorder(
   block: Block,
-  hydrationRef: HydrationOpsRef,
-): {
-  onContentChange: () => void;
-  onUndoableEdit: (edit: CapturedBlockDocEdit) => void;
-} {
-  const onContentChange = useTextProjection(block, hydrationRef);
+): (edit: CapturedBlockDocEdit) => void {
   const { recordTextEdit } = useBlockEditor();
-  // Stage 3b: each new coalesced local editing run in this block's content doc
-  // (one Y.UndoManager stack item — the seam does the grouping and filters out
-  // remote applies, replays, and split/merge-folded edits) is mirrored 1:1
-  // onto the app's single document-level undo stack, interleaved with
-  // structural entries in true chronological order.
-  const onUndoableEdit = useEventCallback((edit: CapturedBlockDocEdit) =>
+  return useEventCallback((edit: CapturedBlockDocEdit) =>
     recordTextEdit(block.id, edit),
   );
-  return { onContentChange, onUndoableEdit };
 }
 
 /** Server-synced content-doc binding: the CRDT transport (subscription + FK gate). */
-function ServerCollabTextPlugin({ block }: { block: Block }) {
-  const hydrationRef = useRef<HydrationOps>(INERT_HYDRATION);
-  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block, hydrationRef);
-  const { serverIds } = useBlockEditor();
+function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
+  const onUndoableEdit = useUndoableEditRecorder(block);
+  const { projectText, serverIds } = useBlockEditor();
   // Doc-init FK gate (Stage 4a): a freshly created / split block renders from
   // the optimistic overlay before its `_blocks` row exists server-side —
   // seeding then would FK-violate. Gate on AUTHORITATIVE presence; the same
@@ -250,28 +213,34 @@ function ServerCollabTextPlugin({ block }: { block: Block }) {
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
     rowConfirmed,
-    onContentChange,
+    projectText,
     onUndoableEdit,
   );
-  useHydrationGuard(block, doc, hydrationRef);
-  return <CollabBinding block={block} doc={doc} />;
+  useHydrationGuard(block, doc);
+  useHydrationVerification(doc);
+  return <CollabBinding block={block} doc={doc} textVariant={textVariant} />;
 }
 
 /** In-memory content-doc binding (`persist={false}`): a purely local `Y.Doc`, no network. */
-function LocalCollabTextPlugin({ block }: { block: Block }) {
-  const hydrationRef = useRef<HydrationOps>(INERT_HYDRATION);
-  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block, hydrationRef);
+function LocalCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
+  const onUndoableEdit = useUndoableEditRecorder(block);
+  const { projectText } = useBlockEditor();
   const doc = useLocalCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
-    onContentChange,
+    projectText,
     onUndoableEdit,
   );
   // The blind-binding arm applies here too (a local doc can outrun its binding
   // the same way); the starved-doc arm self-disables — a local provider reports
   // `hasLocalEdits` unconditionally, since there is no server to be behind.
-  useHydrationGuard(block, doc, hydrationRef);
-  return <CollabBinding block={block} doc={doc} />;
+  useHydrationGuard(block, doc);
+  // Shares the machine rather than forking it. A local session is locally
+  // authoritative for its whole life, so it is already `hydrated` by the time
+  // any commit arrives and this listener is a no-op — which is exactly what
+  // makes `stalled` structurally unreachable on this transport.
+  useHydrationVerification(doc);
+  return <CollabBinding block={block} doc={doc} textVariant={textVariant} />;
 }
 
 /**
@@ -297,7 +266,11 @@ function LocalCollabTextPlugin({ block }: { block: Block }) {
  * transport reports a permanently idle state (nothing to save), which the
  * cloud aggregates to silence.
  */
-function CollabBinding({ block, doc }: { block: Block; doc: CollabBlockDoc }) {
+function CollabBinding({
+  block,
+  doc,
+  textVariant,
+}: CollabTextPluginProps & { doc: CollabBlockDoc }) {
   const { providerFactory, saveState, retrySave } = doc;
   const [editor] = useLexicalComposerContext();
 
@@ -343,15 +316,28 @@ function CollabBinding({ block, doc }: { block: Block; doc: CollabBlockDoc }) {
   // as post-attach events — the construction invariant it depends on. The
   // generation only ever changes when `rehydrate()` runs.
   return (
-    <LexicalCollaboration>
-      <CollaborationPlugin
-        key={doc.attachGeneration}
-        id={block.id}
-        providerFactory={providerFactory}
-        shouldBootstrap={false}
-      />
-    </LexicalCollaboration>
+    <>
+      <LexicalCollaboration>
+        <CollaborationPlugin
+          key={doc.attachGeneration}
+          id={block.id}
+          providerFactory={providerFactory}
+          shouldBootstrap={false}
+        />
+      </LexicalCollaboration>
+      {/* The only thing this plugin renders. `LexicalComposer` emits no DOM, so
+          it lands in `TextBlockLayout`'s `relative` leaf cell — the same
+          positioned ancestor Lexical's own placeholder resolves against. */}
+      <HydrationPlaceholder block={block} doc={doc} textVariant={textVariant} />
+    </>
   );
+}
+
+/** What a text block hands its content-doc binding. */
+interface CollabTextPluginProps {
+  block: Block;
+  /** The block type's typography, so the hydration skeleton matches its line. */
+  textVariant: BlockTextVariant;
 }
 
 /**
@@ -361,11 +347,11 @@ function CollabBinding({ block, doc }: { block: Block; doc: CollabBlockDoc }) {
  * `LiveStateYjsProvider` (subscription + doc-init/doc-update); the in-memory
  * (`persist={false}`) path binds a purely local `Y.Doc` that never networks.
  */
-export function CollabTextPlugin({ block }: { block: Block }) {
+export function CollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
   const { serverSync } = useBlockEditor();
   return serverSync ? (
-    <ServerCollabTextPlugin block={block} />
+    <ServerCollabTextPlugin block={block} textVariant={textVariant} />
   ) : (
-    <LocalCollabTextPlugin block={block} />
+    <LocalCollabTextPlugin block={block} textVariant={textVariant} />
   );
 }

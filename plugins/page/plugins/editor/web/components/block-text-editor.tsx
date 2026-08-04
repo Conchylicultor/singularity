@@ -53,20 +53,7 @@ import {
 } from "../internal/collab-text-surgery";
 import type { FlightInput } from "../internal/caret-authority";
 import type { KeystrokeKey } from "../internal/keystroke-intent";
-import "./block-document-scale.css";
-
-// Maps a semantic typography variant to its document-scale role. The block
-// editor is a *document* surface, so its editable text uses the larger, airier
-// `doc-text-*` reading scale (Notion parity) rather than the dense UI-chrome
-// `text-*` utilities. See block-document-scale.css for the rationale.
-const VARIANT_CLASS: Record<BlockTextVariant, string> = {
-  title: "doc-text-title",
-  heading: "doc-text-heading",
-  subheading: "doc-text-subheading",
-  body: "doc-text-body",
-  label: "doc-text-label",
-  caption: "doc-text-caption",
-};
+import { TEXT_VARIANT_CLASS } from "./text-variant-class";
 
 /**
  * The Lexical command each buffered {@link KeystrokeKey} replays through, so a
@@ -275,8 +262,10 @@ export function BlockTextEditor({
         // focus now, caret to content start on first sync). `opts.scroll`
         // (default false) declares whether the landing follows the caret;
         // `opts.onLanded` is how the caret authority learns the caret is really
-        // HERE (not merely mounted) and can flush what it buffered meanwhile.
-        focusHydratingAware(ed, opts?.scroll ?? false, opts?.onLanded);
+        // HERE (not merely mounted) and can flush what it buffered meanwhile;
+        // `opts.onLandingLost` is its failure dual, for the hydrating landing
+        // that has to be abandoned because focus moved away meanwhile.
+        focusHydratingAware(ed, opts?.scroll ?? false, opts);
       },
       // The three precise placements are synchronous by construction (they land
       // the caret against content that is already there), so they report the
@@ -341,13 +330,13 @@ export function BlockTextEditor({
       <RichTextPlugin
         contentEditable={
           <ContentEditable
-            className={cn("outline-none py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant], contentClassName)}
+            className={cn("outline-none py-xs", insetClass({ r: BLOCK_INSET }), TEXT_VARIANT_CLASS[textVariant], contentClassName)}
             onFocus={() => editor.onFocus()}
           />
         }
         placeholder={
           isEmpty && isFocused && effectivePlaceholder ? (
-            <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant])}>
+            <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), TEXT_VARIANT_CLASS[textVariant])}>
               {effectivePlaceholder}
             </div>
           ) : null
@@ -363,7 +352,7 @@ export function BlockTextEditor({
       {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
           split/merge are content-doc-aware, and text edits ride the
           unified undo stack via the seam's Y.UndoManager. */}
-      <CollabTextPlugin block={block} />
+      <CollabTextPlugin block={block} textVariant={textVariant} />
       <KeyboardPlugin blockId={block.id} editor={editor} />
       {/* Crossing an inline decorator (a `@date` chip, an inline page link, an
           inline formula) in ONE arrow press. Mounted AFTER KeyboardPlugin so it

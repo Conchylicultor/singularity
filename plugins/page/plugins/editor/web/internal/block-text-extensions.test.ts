@@ -26,11 +26,28 @@ import {
   type SerializedLexicalNode,
 } from "lexical";
 import { $isLinkNode, LinkNode } from "@lexical/link";
+import type { XmlText } from "yjs";
+import { readYDoc } from "@plugins/primitives/plugins/collab-doc/core";
 import type { RichText } from "../../core";
+import { runsLength } from "../../core/rich-text";
+import {
+  TokenNode,
+  paragraphsToXmlText,
+  prng,
+  randomParagraphs,
+  randomRuns,
+  tokenOpts,
+} from "../../core/runs-corpus";
+import {
+  runsToXmlText,
+  xmlTextContentLength,
+  xmlTextToRuns,
+} from "../../core/runs-yjs";
 import {
   $linearCaretOffset,
   $paragraphsPlainLength,
   $placeCaretAtLinearOffset,
+  $xmlBasisContentLength,
   nodePlainLength,
   registerBlockTextExtension,
   runsToLexical,
@@ -413,5 +430,105 @@ describe("nodePlainLength", () => {
     } finally {
       unregister();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The Yjs basis: `$xmlBasisContentLength` ⟷ `xmlTextContentLength`
+// ---------------------------------------------------------------------------
+//
+// The property that makes a hydration check statable at all: what the editor
+// RENDERS and what the content doc HOLDS must be counted in the same basis. One
+// walks the Lexical tree, the other the `Y.XmlText`; they must agree on every
+// input, or a perfectly-hydrated block reads as starved.
+//
+// Corpus (generators + the synthetic inline decorator) is shared with
+// `core/runs-yjs.test.ts` via `core/runs-corpus.ts`, so both properties fuzz the
+// same inputs.
+
+/** Hydrate a headless editor from the doc and read its rendered length. */
+function editorBasisLength(xmlText: XmlText): number {
+  return readYDoc(
+    xmlText.doc!,
+    (editor) => editor.getEditorState().read(() => $xmlBasisContentLength()),
+    { nodes: [LinkNode, TokenNode] },
+  );
+}
+
+/** What the OTHER (stored-runs) basis would say — the arithmetic to avoid. */
+function runsBasisLength(xmlText: XmlText): number {
+  return runsLength(xmlTextToRuns(xmlText, tokenOpts));
+}
+
+describe("$xmlBasisContentLength", () => {
+  // The expected numbers below are the Yjs REPRESENTATION, spelled out so a
+  // change in `@lexical/yjs`'s shape breaks here with an explanation rather than
+  // only as an opaque property failure. Every text node costs its chars + 1 (its
+  // property `Y.Map`); a line break and a decorator cost 1; elements cost 0.
+  test("fixtures: text, break, decorator, link, paragraph join", () => {
+    // One text node: 5 chars + its property map.
+    const hello = runsToXmlText([{ text: "hello" }], tokenOpts);
+    expect(editorBasisLength(hello)).toBe(6);
+    expect(xmlTextContentLength(hello)).toBe(6);
+    expect(runsBasisLength(hello)).toBe(5);
+
+    // "a" + break + "b" → (1+1) + 1 + (1+1).
+    const soft = runsToXmlText([{ text: "a\nb" }], tokenOpts);
+    expect(editorBasisLength(soft)).toBe(5);
+    expect(xmlTextContentLength(soft)).toBe(5);
+
+    // Inline decorator → 1, NOT its 11-char token: (1+1) + 1 + (1+1) = 5, while
+    // the runs basis spells the token out and says 12.
+    const chip = runsToXmlText([{ text: "x[[tok-a1]]y" }], tokenOpts);
+    expect(editorBasisLength(chip)).toBe(5);
+    expect(xmlTextContentLength(chip)).toBe(5);
+    expect(runsBasisLength(chip)).toBe(12);
+
+    // LinkNode recurses, contributing nothing for itself: (1+2) + (1+2).
+    const link = runsToXmlText(
+      [{ text: "ab" }, { text: "cd", link: "https://x" }],
+      tokenOpts,
+    );
+    expect(editorBasisLength(link)).toBe(6);
+    expect(xmlTextContentLength(link)).toBe(6);
+
+    // Paragraph join: 0 in the Yjs basis, +1 per join in the runs basis.
+    const twoParas = paragraphsToXmlText([[{ text: "ab" }], [{ text: "cde" }]], tokenOpts);
+    expect(editorBasisLength(twoParas)).toBe(7);
+    expect(xmlTextContentLength(twoParas)).toBe(7);
+    expect(runsBasisLength(twoParas)).toBe(6);
+  });
+
+  test("seeded corpus: the two walks agree on every generated block", () => {
+    const rand = prng(20260803);
+    // Non-vacuity counters: the corpus must actually contain the two shapes
+    // where the naive (stored-runs) comparison is false, or this property would
+    // pass without ever exercising the thing it exists to pin.
+    let cases = 0;
+    let divergentFromRunsBasis = 0;
+    let multiParagraph = 0;
+
+    for (let i = 0; i < 120; i++) {
+      // Single-paragraph blocks, straight from runs (the shape the editor mints).
+      const runs = randomRuns(rand);
+      const single = runsToXmlText(runs, tokenOpts);
+      expect(editorBasisLength(single)).toBe(xmlTextContentLength(single));
+      cases++;
+      if (runsBasisLength(single) !== xmlTextContentLength(single)) divergentFromRunsBasis++;
+
+      // Multi-paragraph blocks — the join divergence `runsToLexical` cannot make.
+      const paras = randomParagraphs(rand);
+      const many = paragraphsToXmlText(paras, tokenOpts);
+      expect(editorBasisLength(many)).toBe(xmlTextContentLength(many));
+      cases++;
+      if (paras.length > 1) multiParagraph++;
+      if (runsBasisLength(many) !== xmlTextContentLength(many)) divergentFromRunsBasis++;
+    }
+
+    expect(cases).toBe(240);
+    expect(multiParagraph).toBeGreaterThan(0);
+    // The whole point: on a large fraction of the corpus the OTHER basis
+    // disagrees, so the equality above is a real constraint and not a tautology.
+    expect(divergentFromRunsBasis).toBeGreaterThan(20);
   });
 });

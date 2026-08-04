@@ -35,10 +35,16 @@ import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   planForestInsert,
+  runsToXmlText,
   withMintedIds,
   type Block,
+  type RichText,
   type SerializedBlock,
 } from "../../core";
+import {
+  projectableRunsOf,
+  type DocSourcedRuns,
+} from "../internal/doc-sourced-runs";
 import { fromNodes } from "../internal/optimistic-block-ops";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import {
@@ -75,6 +81,18 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // Harness
 // ---------------------------------------------------------------------------
+
+/**
+ * `runs` as the projection would actually produce them: round-tripped THROUGH a
+ * content `Y.Doc`, since `projectText` only accepts doc-sourced runs (the
+ * `DocSourcedRuns` brand — see `internal/doc-sourced-runs.ts`). A cast here
+ * would defeat the very invariant the brand exists to state.
+ */
+function docRuns(runs: RichText): DocSourcedRuns {
+  const doc = runsToXmlText(runs).doc;
+  if (!doc) throw new Error("docRuns: seed XmlText is not attached to a doc");
+  return projectableRunsOf(doc);
+}
 
 function seed(): Block[] {
   const forest: SerializedBlock[] = ["A", "B"].map((text) => ({
@@ -207,10 +225,18 @@ function mount() {
   const register = async (
     id: string,
     onKey?: (key: string) => void,
+    /**
+     * Which half of the landing contract this fake honors. `"landed"` is the
+     * ordinary surface; `"lost"` is the hydrating editor that took DOM focus and
+     * then found focus gone by the time its content arrived — it must report the
+     * abandonment, not simply return (see `focusHydratingAware`).
+     */
+    landing: "landed" | "lost" = "landed",
   ): Promise<FakeBlock> => {
     const received: FlightInput[] = [];
     const handle: BlockFocusHandle = {
-      focus: (opts) => opts?.onLanded?.(),
+      focus: (opts) =>
+        landing === "landed" ? opts?.onLanded?.() : opts?.onLandingLost?.(),
       replayInput: (entries) => {
         for (const entry of entries) {
           received.push(entry);
@@ -253,7 +279,9 @@ function mount() {
      * provider re-renders because the DOCUMENT changed.
      */
     commit: async (blockId: string) => {
-      await act(async () => ctx().projectText(blockId, [{ text: `x${++projections}` }]));
+      await act(async () =>
+        ctx().projectText(blockId, docRuns([{ text: `x${++projections}` }])),
+      );
     },
     /** Stop the surface from rendering a line for `ids` (a collapsed ancestor). */
     hide: async (ids: string[]) => {
@@ -434,6 +462,42 @@ describe("a failed landing is a state, not a silence", () => {
     expect(origin.text()).toBe("hi");
     expect(reports).toHaveLength(1);
     expect(reports[0]).toMatchObject({ reason: "target-never-rendered", targetId });
+    expect(fireEvent.keyDown(t.container(), { key: "x" })).toBe(true);
+  });
+
+  // Neither of the authority's own bounds can see this one: the target IS
+  // rendered (so `reconcile` never trips) and focus never left the block list
+  // (so `focusout` never fires). Without the surface reporting the loss, the
+  // flight is permanent — the keyboard stays held and the user types into
+  // nothing, which is strictly worse than the misrouting the authority exists to
+  // fix. So a surface that abandons a landing MUST say so.
+  it("aborts when the target's own landing policy reports the landing lost", async () => {
+    const t = mount();
+    const originId = t.id("B");
+    const origin = await t.register(originId);
+    await act(async () => t.ctx().makeBlockAPI(originId).onFocus());
+
+    let targetId = "";
+    await act(async () => {
+      targetId = t.ctx().makeBlockAPI(originId).insertAfter(TEXT, { text: [] });
+    });
+    type(t.container(), "hi");
+    expect(origin.received).toEqual([]);
+
+    // The target mounts — and its hydrating landing gives up (focus moved off
+    // its root before the content doc arrived).
+    await t.register(targetId, undefined, "lost");
+
+    expect(origin.text()).toBe("hi");
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({
+      reason: "landing-focus-lost",
+      targetId,
+      originId,
+      buffered: 2,
+      replayedInto: originId,
+    });
+    // The keyboard is released rather than held forever.
     expect(fireEvent.keyDown(t.container(), { key: "x" })).toBe(true);
   });
 

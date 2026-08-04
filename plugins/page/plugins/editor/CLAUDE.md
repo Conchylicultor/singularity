@@ -127,8 +127,9 @@ Three rules keep the exception from eating the rule it excepts:
 
 The cost this buys back: moving a block INTO or OUT OF a frame changes its DOM
 parent, which remounts its Lexical instance. It fires only on that transition
-(never per keystroke), and the content `Y.Doc` is ref-counted with a deferred
-destroy so text survives; `e2e/indent-caret-verify.ts` is the caret spec.
+(never per keystroke), and the block's content owner outlives the remount (one
+deferred session end — see *One owner per block*) so text survives;
+`e2e/indent-caret-verify.ts` is the caret spec.
 
 `read-only-view` renders the forest recursively, so it dispatches the same slot
 with `inset: 0` (no hover rail there) — one contribution, both surfaces.
@@ -368,7 +369,13 @@ Nothing bounded that window; human typing speed just usually won the race.
   Lexical root is childless until the collab pre-seed lands, and there is nothing
   to insert into until then. `CaretLandOptions.onLanded` is that signal;
   `focusHydratingAware` fires it on both branches. A landing policy that takes the
-  caret and never reports back leaves the authority holding the keyboard.
+  caret and never reports back leaves the authority holding the keyboard —
+  **so a landing RESOLVES, one way or the other**. `onLandingLost` is the failure
+  dual (focus moved off the root before content arrived → abort
+  `landing-focus-lost`). Neither authority bound covers it: `focusout` only sees
+  focus leave the block LIST (a steal onto another block, or onto `<body>` with a
+  `null` `relatedTarget`, is invisible), and `reconcile` only counts commits
+  rendering no line for a target that IS rendered.
 - **Replay must be INDISTINGUISHABLE from typing**, and that is four rules, each
   paid for by a shipped bug (`replayInput` in block-text-editor):
   - **One character per commit** — never coalesce a text run. The block markdown
@@ -1080,6 +1087,10 @@ Consequences worth knowing:
 > `page_blocks.data.text` is a ~1 s-debounced **projection** of it — one writer
 > (`projectText`), one reader (the doc-init seed).
 
+That writer only accepts values READ FROM the doc (`DocSourcedRuns`, see the
+projection under *Per-block CRDT text*), so the projection cannot persist a
+value it did not read from the owner.
+
 Row text is writable at block **creation** only: a brand-new id has no doc, so
 its row is that doc's only seed (`use-collab-block-doc.ts`). `insertAfter`,
 `BlockOp.insert.data`, `split.tailData`/`split.runs`/`merge.runs` and
@@ -1219,25 +1230,139 @@ migration — a block with no content doc lazy-seeds from `data.text` on first m
 
 The transport seam is `internal/use-collab-block-doc.ts` — the ONLY place the
 editor knows how content docs sync, so a future delta-WS transport swaps in behind
-it and nothing else changes. It ref-counts one `{ doc, provider }` per block id
-(strict-mode double mounts and second readers share one doc; deferred destroy on
-last release) and wires `internal/live-state-yjs-provider.ts`: **in** = the
-`blockContentResource` keyed live subscription (`applyUpdate` with provider origin
-— the echo guard), **out** = first-writer-wins `doc-init` seeding (live doc
-hydrated ONLY from the server's authoritative response, closing the duplicate-seed
-hazard) + debounced (~300 ms) `doc-update` posts of merged local updates.
+it and nothing else changes. It wires `internal/live-state-yjs-provider.ts`:
+**in** = the `blockContentResource` keyed live subscription (`applyUpdate` with
+provider origin — the echo guard), **out** = first-writer-wins `doc-init` seeding
+(live doc hydrated ONLY from the server's authoritative response, closing the
+duplicate-seed hazard) + debounced (~300 ms) `doc-update` posts of merged local
+updates.
+
+#### One owner per block, one session per binding
+
+Lifetime lives in `internal/collab-session.ts` (read its module comment before
+touching any of it):
+
+> A block has ONE **owner** (`BlockDocOwner`) — canonical `Y.Doc`, transport
+> provider, `Y.UndoManager` — and each mounted binding has ONE **session**
+> (`CollabSession`) holding it. The session owns the replica's lifetime, the
+> hold on the owner, and **the single retention policy**.
+
+- **`session.end()` is the ONLY deferred teardown**, and it defers twice for two
+  different reasons. One macrotask, because a remount-in-place keeps the very
+  replica it holds — Lexical guards `providerFactory` AND `createBinding` behind
+  refs (`@lexical/react` 0.44), so StrictMode's simulated remount never re-calls
+  either, and `session.retain()` cancels the pending end. Then push-based onto
+  the binding's own `disconnect()` while the replica is still CONNECTED
+  (`BindingReplica.isConnected` / `setDisconnectListener`), so recovery racing an
+  unmount cannot destroy a replica a live binding still relays through. Order
+  inside one end is load-bearing: replica first (its disconnect's eager flush
+  queues the last bytes), owner second (so `readyForTeardown` sees them).
+- **Nothing releases by block id** — a session holds the owner *reference*, so a
+  stale hold can never decrement the owner that replaced its own.
+  `blockDocOwnerOf(id)` is the one id-keyed READ left, for the editor context's
+  mutation chokepoints, which pair it with `captureBlockDocEdit(owner, edit)`.
+- **The owner's refcount and undo-capture suppression are `private`.**
+  Suppression is the *scope* of `captureEdit()`, not a field another listener
+  reads, so "who raised it" has exactly one answer.
+
+#### A session PROVES its hydration, and the proof gates the write path
+
+> What this binding RENDERS equals what this session's replica HOLDS.
+
+`SessionState` states it: `attaching → hydrating → hydrated | stalled`,
+**monotonic** and **per session** (recovery is a new session), so a later
+re-assert — the `markBlockRowConfirmed` doc-init, a second push, a StrictMode
+re-`connect()` — cannot re-open a gate a proof already closed. Two arms, picked
+at `start()` from the render-time `rowConfirmed`:
+
+- **Locally authoritative** (`!rowConfirmed`, and all of memory mode): the
+  content is this client's own deterministic seed, applied *after* the binding
+  attached, so no remote answer can be missing and there is nothing to prove —
+  `attaching → hydrated` inside one synchronous `connect()`. **This is what
+  keeps the instant-split path instant**: `maybeInit()` returns immediately
+  while the row is unconfirmed, so waiting on the server here would cost a
+  freshly-split block a full round trip. It also makes `stalled` structurally
+  unreachable in memory mode.
+- **Server authoritative**: `hydrating` until the first `COLLABORATION_TAG`
+  commit proves agreement — or until the transport announces `sync` with
+  nothing renderable in the replica. That second exit is load-bearing: Yjs
+  emits no event for an apply that integrates nothing, so **no commit is ever
+  scheduled** and every genuinely-empty block would wait forever.
+
+**The check cannot be synchronous.** `syncYjsChangesToLexical` commits without
+`discrete` and `$commitPendingUpdates` is micro-tasked, while yjs emits
+`doc.on('update')` at the tail of the same `applyUpdate` — inside our own
+handlers the editor is exactly one microtask stale, so a same-turn comparison
+calls every keystroke a blind binding. Hence the first-tagged-commit rule; the
+tag also excludes Lexical's untagged initial commit and `$ensureEditorNotEmpty`'s
+untagged follow-up. Do **not** force synchrony with `editor.read()` — from a Yjs
+handler it re-enters `syncLexicalUpdateToYjs` inside that doc's own transaction
+cleanup. The mount-time probe is `promoteOnly`: a merely-pending commit is
+indistinguishable from a blind one, so it may confirm but never conclude.
+
+Compare only `$xmlBasisContentLength()` against `xmlTextContentLength()` (the
+fuzz-pinned pair — **agreement witnesses, not character counts**), measured on
+the session's own **replica**: the canonical would import another binding's
+concurrency into this verdict.
+
+**It gates the WRITE path, never the editing host.** `hydrating` = the
+projection does not persist and the transport does not flush.
+`contentEditable={false}` would **deadlock the caret authority** (a
+non-focusable root makes the landing's `root.focus()` a no-op, and `reconcile()`
+only counts commits where the target is NOT rendered — it IS — so the flight
+never ends and the keyboard is held). The replica is empty by construction at
+attach, so typing into it is a legitimate concurrent edit that merges. The gate
+is open in `attaching`, `hydrated` and `stalled` (a failure must not hold the
+user's bytes hostage — it gets a Retry) and is released the moment `end()` is
+called, so an unmount always flushes; a held queue is DEFERRED, never dropped.
+
+**Placeholder:** `runsLength(runsOf(block.data.text))` — row non-empty + not
+`hydrated` ⇒ skeleton at roughly that length (`HydrationPlaceholder`;
+`primitives/loading`'s ~120 ms delay means a prompt doc unmounts it before it
+paints); row empty ⇒ **nothing**, or most of a fresh page becomes a loading
+screen; `stalled` ⇒ a Retry, right-aligned so it never covers the live line.
+
+Until stage 5 (the diff-shaped `doc-init` pull) hydration is still the delivered
+push, so the detector below stays the net for a push that never arrives.
 
 ### Projection + content-doc-aware split/merge
 
-- **`doc → data.text` projection.** `useTextProjection` observes the block's `Y.Doc`
-  (push-based, local + server-applied), debounces ~1 s, serializes the bound
-  editor's runs (byte-identical to `xmlTextToRuns` on the doc — same walk, no
-  headless replica), and writes changed runs through `projectText` (`commitRow`
-  with `record: false`, since Yjs owns text history) into the shared optimistic
-  patch pipeline. It never echoes into the editor (`data.text` is read once, as the
-  doc-init seed); skip-if-unchanged bounds churn; it flushes on unmount, never from
-  a never-synced editor. Rows trail the doc by ≤1 s, so search / backlinks /
-  history stay fresh.
+- **`doc → data.text` projection — a pure function of the OWNER.** It lives in
+  the seam (`use-collab-block-doc.ts`), not in a consumer, and reads the
+  canonical doc: `projectableRunsOf(entry.doc)` → `xmlTextToRuns`, which *is*
+  `readYDoc(doc, e => serializeBlockRuns(e, extensions), …)` — the same walk and
+  the same function object the live editor's own serialization uses, over a
+  headless replica. Trigger: every canonical-doc update (push-based, local +
+  server-applied), debounced ~1 s trailing. Changed runs go through `projectText`
+  (`commitRow` with `record: false`, since Yjs owns text history) into the shared
+  optimistic patch pipeline. It never echoes into any editor (`data.text` is read
+  once, as the doc-init seed); skip-if-unchanged bounds churn; it flushes on
+  teardown, never from a doc nothing ever wrote to. Rows trail the doc by ≤1 s,
+  so search / backlinks / history stay fresh.
+
+  **It may not read an editor — `projectText` takes `DocSourcedRuns`**
+  (`internal/doc-sourced-runs.ts`): a brand keyed on a module-private `unique
+  symbol`, produced only by `projectableRunsOf`, so persisting a value not read
+  from the doc is a **tsc error** (same class as `PageForestTx` /
+  `RowData`'s `{ text?: never }`). An editor is a VIEW that can silently fall
+  behind — `@lexical/yjs` has no read-the-doc operation — and empty runs are
+  indistinguishable from a legitimately empty block. Never swap `xmlTextToRuns`
+  for a raw `toDelta()` walk: producing runs raw re-derives marks from
+  `CollabTextNode` property sync, link nesting from embedded `XmlText`, and
+  decorator tokens from node instances `ext.serializeNode(node)` needs. Counting
+  gets away with a raw walk (`xmlTextContentLength`); producing runs does not.
+
+  **The three other `serializeBlockRuns` callers stay editor-sourced.** Split /
+  merge (`keyboard-plugin.tsx`) and `BlockFocusHandle.readRuns` want *what is on
+  screen now, including uncommitted keystrokes* (`readRuns` is how `mergeNext`
+  gets the next block's content without waiting the ~1 s projection). The
+  discriminator: **a structural op reads the view; a persisted projection reads
+  the owner.**
+
+  **Flush-then-release is one cleanup in `useCollabDocHold`, in that order** —
+  the final flush reads the canonical doc, so it must run while the hold still
+  holds the entry. Do not split it across hooks and re-inherit the ordering from
+  React's hook-declaration order.
 - **Split (Enter)** keeps the row pipeline verbatim and additionally truncates the
   ORIGIN block's live editor from the caret (`BlockFocusHandle.truncateAt` →
   `internal/collab-text-surgery.ts`), driven THROUGH LEXICAL so the collab binding
@@ -1417,21 +1542,26 @@ behind the one owner, and the symptom is identical — an empty block whose cont
 is safe on the server, restored by a reload. `collab-text-plugin`'s guard is what
 makes that state observable and self-correcting:
 
-- **`shown === 0 && doc > 0`** (from the projection flush) — the binding never
-  hydrated. **`doc === 0 && row > 0 && never edited here`** (from the row, after a
-  settle window, since a starved doc receives no doc updates to trigger on) — the
-  doc is behind the server.
-- Recovery is one verb, `CollabBlockDoc.rehydrate()`: re-read the authoritative
-  state (the idempotent `doc-init`, which is also the provider's ONLY read-side
-  recovery — everything else there is write-side) **and** re-attach the binding by
-  bumping `attachGeneration`, which the seam pairs with dropping its replica so the
-  rebuilt binding still attaches to an EMPTY doc.
-- **The guard sits in FRONT of the projection write, not beside it.** Projecting a
-  blind editor persists the blindness into `data.text` — a derived value
-  overwriting the source it disagrees with, and an absorbed failure (empty runs
-  read as a legitimately empty block). Every occurrence is reported
-  (`collabHydrationReportSink` → `reports/collab-hydration`): a silent self-heal is
-  indistinguishable from a bug that never happened.
+- **`shown === 0 && doc > 0`** (armed by `CollabBlockDoc.subscribeDocUpdates`,
+  read after a settle window) — the binding never hydrated. **`doc === 0 && row >
+  0 && never edited here`** (from the row, after its own window, since a starved
+  doc receives no doc updates to trigger on) — the doc is behind the server. Both
+  compare against **zero**, which is what keeps them basis-free: the doc-side and
+  editor-side length walks agree with each other but with no character count (see
+  `$xmlBasisContentLength`).
+- Recovery is one verb, `CollabBlockDoc.rehydrate()`: **end this block's content
+  session and start a new one.** A new session IS a fresh EMPTY replica (the
+  binding-behind-its-doc half) plus an authoritative re-read (the idempotent
+  `doc-init` — the provider's ONLY read-side recovery, everything else there is
+  write-side), so the guard never has to decide which side was short. The caller's
+  only other job is bumping `attachGeneration` onto the `CollaborationPlugin`
+  `key`: Lexical builds its binding once per mount behind a ref, so a changed key
+  is the only thing that re-attaches one.
+- **It is a DETECTOR, not a write gate.** It no longer stands in front of the
+  projection: the projection reads the doc, so it cannot persist a blind
+  binding's emptiness. What is left is a real, recoverable RENDER defect —
+  reported (`collabHydrationReportSink` → `reports/collab-hydration`) because a
+  silent self-heal is indistinguishable from a bug that never happened.
 
 ### Hardening
 
@@ -1470,9 +1600,9 @@ restore.
   re-queue at the head and retry on the live-state socket's reopen, the browser's
   `online` event (an idle WS may not surface a close promptly), the next server
   push, or the next local edit. Unexpected HTTP errors still throw loudly. Teardown
-  is loss-safe: the registry's deferred destroy finalizes only when the provider is
+  is loss-safe: the session's deferred end finalizes the owner only when the provider is
   `readyForTeardown` (queue drained, or block server-confirmed gone), so an unmount
-  during a transient outage RETAINS the entry and drains on the next reconnect edge.
+  during a transient outage RETAINS the owner and drains on the next reconnect edge.
   Known edge: closing the TAB while offline loses the last unflushed edits — the same
   class as an unflushed autosave.
 - **The `data.text` projection dispatches an UPDATE, and an update never
@@ -1619,6 +1749,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`

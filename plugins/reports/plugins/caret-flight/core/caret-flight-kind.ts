@@ -17,12 +17,16 @@ export const CaretFlightPayloadSchema = z.object({
   // collapsed ancestor); `focus-left-surface` = focus moved out of the block
   // list; `target-cannot-hold-input` = the target mounted but is a void block
   // with nowhere to put typed characters; `surface-detached` = the editor
-  // unmounted mid-flight.
+  // unmounted mid-flight; `landing-focus-lost` = the target's own landing policy
+  // reported the landing abandoned (a hydrating editor took DOM focus, and focus
+  // had moved off its root by the time its content arrived) — a steal the
+  // `focusout` bound cannot see because it stayed inside the block list.
   reason: z.enum([
     "target-never-rendered",
     "focus-left-surface",
     "target-cannot-hold-input",
     "surface-detached",
+    "landing-focus-lost",
   ]),
   // The block the caret was flying to, and the one it left. Both are volatile
   // uuids — deliberately excluded from the fingerprint.

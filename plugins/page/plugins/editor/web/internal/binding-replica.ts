@@ -125,11 +125,14 @@ import type { Provider, ProviderAwareness } from "@lexical/yjs";
  * state — its own — which the binding now correctly skips: no remote states
  * ever render, by construction rather than by a clientID coincidence.
  *
- * Lifecycle: owned by the hook hold in `use-collab-block-doc.ts` — created
- * lazily with the hold, deferred-destroyed alongside the entry release so it
- * survives StrictMode remounts (CollaborationPlugin never re-calls its
- * providerFactory on a simulated remount). `destroy()` detaches the relay and
- * destroys the replica doc; the canonical side is untouched.
+ * Lifecycle: owned by ONE `CollabSession` (`collab-session.ts`) — minted
+ * lazily on the session's `providerFactory` call and destroyed by the
+ * session's single deferred end, which survives StrictMode remounts
+ * (CollaborationPlugin never re-calls its providerFactory on a simulated
+ * remount) and refuses to destroy a replica a binding still holds
+ * ({@link BindingReplica.isConnected} /
+ * {@link BindingReplica.setDisconnectListener}). `destroy()` detaches the
+ * relay and destroys the replica doc; the canonical side is untouched.
  *
  * Events implemented (the exact set `CollaborationPlugin` listens for):
  * `sync` (isSynced) and `status` ({status}); `update`/`reload` are accepted
@@ -194,6 +197,16 @@ export class BindingReplica implements Provider {
   private readonly canonical: Doc;
   private readonly canonicalProvider: CanonicalProviderPort;
   private readonly connection: CanonicalConnection;
+  /**
+   * Announced at the END of every {@link connect}, once the relay is attached,
+   * the transport delegated and the catch-up state applied — i.e. once the
+   * replica holds everything the canonical knew at connect time. The owning
+   * {@link CollabSession} reads its own replica there to decide whether its
+   * binding has anything to prove (see `collab-session.ts`). Deliberately a
+   * plain callback rather than a fifth event: it is a single-owner lifecycle
+   * signal, not something a `CollaborationPlugin` subscribes to.
+   */
+  private readonly onConnected: (() => void) | undefined;
 
   /**
    * The synchronous re-entrancy latch (see the module comment): true while
@@ -205,6 +218,7 @@ export class BindingReplica implements Provider {
   /** This replica's own share of the refcounted canonical connection. */
   private canonicalConnected = false;
   private destroyed = false;
+  private disconnectListener: (() => void) | null = null;
 
   private readonly syncListeners = new Set<(isSynced: boolean) => void>();
   private readonly statusListeners = new Set<(arg: { status: string }) => void>();
@@ -215,10 +229,12 @@ export class BindingReplica implements Provider {
     canonical: Doc,
     canonicalProvider: CanonicalProviderPort,
     connection: CanonicalConnection,
+    onConnected?: () => void,
   ) {
     this.canonical = canonical;
     this.canonicalProvider = canonicalProvider;
     this.connection = connection;
+    this.onConnected = onConnected;
   }
 
   get awareness(): ProviderAwareness {
@@ -290,9 +306,13 @@ export class BindingReplica implements Provider {
       this.relaying = false;
     }
     this.emitSync(true);
+    // LAST: the replica now holds everything the canonical knew, so the owning
+    // session can read it and decide what its binding has to prove.
+    this.onConnected?.();
   }
 
   disconnect(): void {
+    const wasConnected = this.canonicalConnected;
     if (this.canonicalConnected) {
       this.canonicalConnected = false;
       this.connection.release(); // last replica out disconnects the transport
@@ -304,6 +324,35 @@ export class BindingReplica implements Provider {
       this.canonicalProvider.off("sync", this.forwardSync);
     }
     this.emitStatus("disconnected");
+    // Announce the release LAST, once this replica is fully detached: the
+    // listener's whole purpose is "it is now safe to destroy me".
+    if (wasConnected) this.disconnectListener?.();
+  }
+
+  /**
+   * Is a binding currently holding this replica connected? The session's
+   * teardown reads it to refuse destroying a replica a live binding still
+   * relays through (see `collab-session.ts`).
+   */
+  get isConnected(): boolean {
+    return this.canonicalConnected;
+  }
+
+  /** Has {@link destroy} run? (its `replicaDoc` must not be read afterwards) */
+  get isDestroyed(): boolean {
+    return this.destroyed;
+  }
+
+  /**
+   * Register the (single) owner callback invoked when a connected replica is
+   * released by its binding — the push-based counterpart to
+   * {@link isConnected}, and the same shape as the transport's
+   * `setTeardownReadyListener`: a deferred destroy that found the replica
+   * still in use finishes HERE rather than on a second timer. One owner per
+   * replica (the {@link CollabSession} that minted it); pass `null` to clear.
+   */
+  setDisconnectListener(cb: (() => void) | null): void {
+    this.disconnectListener = cb;
   }
 
   on(type: "sync", cb: (isSynced: boolean) => void): void;
@@ -350,6 +399,9 @@ export class BindingReplica implements Provider {
    */
   destroy(): void {
     if (this.destroyed) return;
+    // A destroy is not a binding letting go — the session already decided.
+    // Clearing first also keeps `disconnect()` below from re-entering it.
+    this.disconnectListener = null;
     this.disconnect();
     this.destroyed = true;
     this._awareness.destroy();

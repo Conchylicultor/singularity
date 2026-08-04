@@ -85,5 +85,7 @@ function reasonExplanation(data: CaretFlightPayload): string {
       return `\`${data.targetId}\` mounted but registered no \`replayInput\`, i.e. it is a void block (image, divider, embed …) with nowhere to put typed characters. A caret landing was claimed for a block that can never accept typing — look at which caller created it.`;
     case "surface-detached":
       return `The block list's interaction surface was detached mid-flight (the editor unmounted — a page navigation, a pane swap). Expected if the user navigated away mid-keystroke; a repeating row means the surface is remounting under normal editing.`;
+    case "landing-focus-lost":
+      return `\`${data.targetId}\` mounted and took DOM focus, but by the time its content doc arrived focus had moved off its root — so the caret is not in it and the landing was abandoned (\`CaretLandOptions.onLandingLost\`, reported by \`focusHydratingAware\`). Unlike \`focus-left-surface\`, the steal stayed INSIDE the block list (or left \`document.activeElement\` on \`<body>\`), which the authority's \`focusout\` bound cannot observe. Find what focused something else during the hydration window: a reconcile in the block the user LEFT calling \`rootElement.focus()\` is the known culprit shape, and a root that was not focusable at all (a non-editable host) produces the same signature.`;
   }
 }

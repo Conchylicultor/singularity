@@ -74,10 +74,20 @@ export function runsToXmlText(
  * the editor is not showing" — and paying for a full replica to answer that
  * would put an editor construction on every typing burst.
  *
- * Characters for text, and **1 per embedded node** (an inline page-link / date /
- * math decorator is a `Y.XmlElement`, not a string insert): a block holding one
- * chip and no prose is not empty, and counting only strings would make the
- * guard read it as a doc that never received anything.
+ * Characters for text, and **1 per embedded node**: a block holding one chip and
+ * no prose is not empty, and counting only strings would make the guard read it
+ * as a doc that never received anything.
+ *
+ * "Embedded node" is `@lexical/yjs`'s representation, which is coarser than the
+ * word suggests — an inline page-link / date / math decorator is a
+ * `Y.XmlElement`, a line break is an embedded `Y.Map`, and **every text node
+ * carries a `Y.Map` of its own properties ahead of its string**. So this is NOT
+ * a character count: `"hello"` is 6, not 5. It is a same-basis WITNESS, only
+ * ever meaningful against another count taken in the same basis — either zero
+ * (what the shipped hydration guard compares to) or the editor-side twin
+ * `$xmlBasisContentLength` (`web/internal/block-text-extensions.ts`), which
+ * mirrors this walk node for node. Re-basing either half onto "content only"
+ * means re-basing BOTH, in lockstep.
  *
  * Counts LIVE content only — tombstones never appear in `toDelta()` — which is
  * the right basis: deleted text is not something the editor is failing to render.

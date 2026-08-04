@@ -27,8 +27,19 @@ const targetTitle = `LinkTarget-${Date.now().toString(36)}`;
 const createRes = await fetch(`${base}/api/blocks`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ parentId: null, type: "page", data: { title: targetTitle } }),
+  // `icon` is REQUIRED (nullable, no default) by the page block's data schema —
+  // omitting it is a 400 at the server write boundary, not a silent default.
+  body: JSON.stringify({
+    parentId: null,
+    type: "page",
+    data: { title: targetTitle, icon: null },
+  }),
 });
+if (!createRes.ok) {
+  throw new Error(
+    `crdt-adjacent-surfaces: creating the backlink target failed (${createRes.status}): ${await createRes.text()}`,
+  );
+}
 const target = (await createRes.json()) as { id?: string };
 const targetId = target.id;
 r.ok("target page created", createRes.ok && !!targetId, targetId);

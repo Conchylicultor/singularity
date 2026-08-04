@@ -108,6 +108,14 @@ export type CaretFlightAbortReason =
   /** The target mounted but registered no `replayInput` — a void block, which
    *  has nowhere to put typed characters. */
   | "target-cannot-hold-input"
+  /** The target's landing policy accepted the caret and then reported the
+   *  landing LOST (`CaretLandOptions.onLandingLost`): a hydrating editor took
+   *  DOM focus, and by the time its content arrived focus had moved off its
+   *  root, so the caret is not there and never will be. Distinct from
+   *  `focus-left-surface`, which is the authority observing focus leave the
+   *  block list — this one is a steal that stayed INSIDE the surface (or left
+   *  `document.activeElement` on `<body>`), which `focusout` cannot see. */
+  | "landing-focus-lost"
   /** The interaction surface was detached (the editor unmounted mid-flight). */
   | "surface-detached";
 
@@ -464,6 +472,14 @@ export function createCaretAuthority({
    * lands (`editorState: null` + `shouldBootstrap={false}` mean there is nothing
    * to insert into), so the policy reports back through `onLanded` and the
    * authority keeps buffering until then.
+   *
+   * That wait needs a failure edge as well as a success one: an asynchronous
+   * landing can be given up on by the surface itself (focus moved off the
+   * hydrating editor before its content arrived), and neither of the authority's
+   * own bounds can see it — `focusout` only fires for focus leaving the block
+   * LIST, and `reconcile` only counts commits that render no line for a target
+   * that is in fact rendered. So the policy also gets `onLandingLost`, and a
+   * surface that reports it aborts the flight loudly instead of hanging it.
    */
   function landFlight(handle: BlockFocusHandle): void {
     const inFlight = flight;
@@ -483,17 +499,22 @@ export function createCaretAuthority({
       inFlight.policy(handle, {});
       return;
     }
-    let landed = false;
+    let settled = false;
     inFlight.policy(handle, {
       onLanded: () => {
-        if (landed || flight !== inFlight) return;
-        landed = true;
+        if (settled || flight !== inFlight) return;
+        settled = true;
         // Read the buffer HERE, not before the policy ran: everything typed
         // during the hydration wait belongs to this replay.
         const entries = inFlight.buffer;
         flight = null;
         stopCapturing();
         replayInto(handle, entries);
+      },
+      onLandingLost: () => {
+        if (settled || flight !== inFlight) return;
+        settled = true;
+        abort("landing-focus-lost");
       },
     });
   }

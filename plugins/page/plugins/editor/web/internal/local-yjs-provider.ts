@@ -1,7 +1,7 @@
 import { applyUpdate, type Doc } from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import type { ProviderAwareness } from "@lexical/yjs";
-import type { BlockDocProvider } from "./use-collab-block-doc";
+import type { BlockDocProvider } from "./collab-session";
 import { IDLE_SAVE_STATE, type CollabSaveState } from "./live-state-yjs-provider";
 
 /**
@@ -123,6 +123,21 @@ export class LocalYjsProvider implements BlockDocProvider {
   get hasLocalEdits(): boolean {
     return true;
   }
+
+  // Same reason, for the hydration state machine: the seed IS the authoritative
+  // answer and it lands synchronously in connect(), so there is never an
+  // outstanding read. A local session is locally authoritative for its whole
+  // life and never enters `hydrating`, which is what makes `stalled`
+  // structurally unreachable in memory mode (see `collab-session.ts`).
+  get isSynced(): boolean {
+    return true;
+  }
+
+  // …and therefore nothing ever holds this transport's flush. There is no
+  // transport: acquire/release exist only to satisfy the shared contract.
+  acquireFlushHold(): void {}
+
+  releaseFlushHold(): void {}
 
   // Save state is CONSTANT: with no transport there is never an outstanding
   // flush, so the state can never change and a subscriber can never fire. The

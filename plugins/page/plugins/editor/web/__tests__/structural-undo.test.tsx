@@ -44,10 +44,16 @@ import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   planForestInsert,
+  runsToXmlText,
   withMintedIds,
   type Block,
+  type RichText,
   type SerializedBlock,
 } from "../../core";
+import {
+  projectableRunsOf,
+  type DocSourcedRuns,
+} from "../internal/doc-sourced-runs";
 import { fromNodes } from "../internal/optimistic-block-ops";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 
@@ -91,6 +97,18 @@ function seed(): Block[] {
     forest: withMintedIds(forest),
   });
   return fromNodes(nodes, []);
+}
+
+/**
+ * `runs` as the projection would actually produce them: round-tripped THROUGH a
+ * content `Y.Doc`, since `projectText` only accepts doc-sourced runs (the
+ * `DocSourcedRuns` brand — see `internal/doc-sourced-runs.ts`). A cast here
+ * would defeat the very invariant the brand exists to state.
+ */
+function docRuns(runs: RichText): DocSourcedRuns {
+  const doc = runsToXmlText(runs).doc;
+  if (!doc) throw new Error("docRuns: seed XmlText is not attached to a doc");
+  return projectableRunsOf(doc);
 }
 
 /** The comparable projection of a row set — order-free (rows are keyed by id). */
@@ -292,7 +310,7 @@ describe("mutations that deliberately stay off the stack", () => {
   it("projectText changes the rows but records nothing (Yjs owns text history)", async () => {
     const h = mount();
     const before = snapshot(h.ctx().blocks);
-    await act(async () => h.ctx().projectText(h.id("B"), [{ text: "typed" }]));
+    await act(async () => h.ctx().projectText(h.id("B"), docRuns([{ text: "typed" }])));
     expect(snapshot(h.ctx().blocks)).not.toEqual(before);
     expect(h.ctx().canUndo).toBe(false);
   });

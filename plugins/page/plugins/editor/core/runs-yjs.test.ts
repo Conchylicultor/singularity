@@ -10,17 +10,15 @@
  *
  * Real decorator nodes (page-link / inline-date / inline-math) are gated in
  * their own plugins' `web/internal/collab-roundtrip.test.ts` — importing them
- * here would invert the plugin dependency graph. This file uses a synthetic
- * token decorator mirroring their exact shape.
+ * here would invert the plugin dependency graph. The corpus
+ * (`./runs-corpus.ts`) uses a synthetic token decorator mirroring their exact
+ * shape, and is shared with the Lexical-side basis property in
+ * `web/internal/block-text-extensions.test.ts` so both suites fuzz over the same
+ * inputs.
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-  createEditor,
-  DecoratorNode,
-  type NodeKey,
-  type SerializedLexicalNode,
-} from "lexical";
+import { createEditor } from "lexical";
 import { LinkNode } from "@lexical/link";
 import { Doc, applyUpdate, encodeStateAsUpdate } from "yjs";
 import {
@@ -33,83 +31,11 @@ import {
   MARK_ORDER,
   coalesce,
   mergeRuns,
-  type ColorToken,
-  type Mark,
   type RichText,
 } from "./rich-text";
-import {
-  $appendRuns,
-  runsToLexical,
-  serializeBlockRuns,
-  type RunsTokenExtension,
-} from "./runs-lexical";
+import { $appendRuns, runsToLexical, serializeBlockRuns } from "./runs-lexical";
 import { runsToXmlText, xmlTextToRuns, type RunsXmlTextOptions } from "./runs-yjs";
-
-// ---------------------------------------------------------------------------
-// Synthetic inline token decorator (mirrors page-link/inline-date/inline-math)
-// ---------------------------------------------------------------------------
-
-class TokenNode extends DecoratorNode<null> {
-  __tokenId: string;
-
-  static getType(): string {
-    return "test-token";
-  }
-
-  static clone(node: TokenNode): TokenNode {
-    return new TokenNode(node.__tokenId, node.__key);
-  }
-
-  static importJSON(json: SerializedLexicalNode & { tokenId?: string }): TokenNode {
-    return new TokenNode(json.tokenId ?? "");
-  }
-
-  constructor(tokenId = "", key?: NodeKey) {
-    super(key);
-    this.__tokenId = tokenId;
-  }
-
-  exportJSON(): SerializedLexicalNode & { tokenId: string } {
-    return { type: "test-token", version: 1, tokenId: this.__tokenId };
-  }
-
-  isInline(): true {
-    return true;
-  }
-
-  // Mirrors the real decorators: native text content stays empty; the token is
-  // written by `serializeNode` only.
-  getTextContent(): string {
-    return "";
-  }
-
-  createDOM(): HTMLElement {
-    throw new Error("createDOM must never be called headless");
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  decorate(): null {
-    return null;
-  }
-
-  getTokenId(): string {
-    return this.__tokenId;
-  }
-}
-
-const tokenExtension: RunsTokenExtension = {
-  deserializePattern: /\[\[(tok-[a-z0-9]+)\]\]/,
-  createNodeFromMatch: (m) => new TokenNode(m[1]!),
-  serializeNode: (n) => (n instanceof TokenNode ? `[[${n.getTokenId()}]]` : null),
-};
-
-const tokenOpts: RunsXmlTextOptions = {
-  extensions: [tokenExtension],
-  nodes: [TokenNode],
-};
+import { TokenNode, prng, randomRuns, tokenOpts } from "./runs-corpus";
 
 /**
  * The pure `runs → Lexical → runs` normal form (no Yjs hop) — the existing
@@ -285,37 +211,8 @@ describe("runs → xmlText → lexical → runs", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Generative cases (seeded — deterministic)
+// Generative cases (seeded — deterministic; generators in `./runs-corpus.ts`)
 // ---------------------------------------------------------------------------
-
-/** Tiny deterministic PRNG (mulberry32). */
-function prng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function randomRuns(rand: () => number): RichText {
-  const pieces = ["a", "bc", "hello", " ", "x y", "\n", "z\nw", "[[tok-gen]]", "é✨"];
-  const colors = COLOR_TOKENS.filter((c): c is Exclude<ColorToken, "default"> => c !== "default");
-  const n = 1 + Math.floor(rand() * 6);
-  const runs: RichText = [];
-  for (let i = 0; i < n; i++) {
-    const text = pieces[Math.floor(rand() * pieces.length)]!;
-    const run: { text: string; marks?: Mark[]; color?: ColorToken; link?: string } = { text };
-    const marks = MARK_ORDER.filter(() => rand() < 0.3);
-    if (marks.length > 0) run.marks = [...marks];
-    if (rand() < 0.25) run.color = colors[Math.floor(rand() * colors.length)]!;
-    if (rand() < 0.2) run.link = "https://example.com/p";
-    runs.push(run);
-  }
-  return runs;
-}
 
 describe("generative round-trips", () => {
   test("40 seeded random runs lists are identity after coalesce", () => {

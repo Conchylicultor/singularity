@@ -9,6 +9,7 @@ import {
   type LexicalEditor,
 } from "lexical";
 import { $appendRuns, type RichText } from "../../core";
+import type { CaretLandOptions } from "../caret-surface";
 import {
   $paragraphsPlainLength,
   $placeCaretAtLinearOffset,
@@ -214,13 +215,36 @@ function focusRestoringSelection(editor: LexicalEditor, scroll: boolean): void {
  * listener when it doesn't. That difference is the whole reason the caret
  * authority waits for caret-READY rather than for the mount: between the two, an
  * empty root has nothing to insert into, so anything typed must stay buffered.
- * Deliberately NOT fired on the "the user moved focus away meanwhile" bail — the
- * caret did not land, and the authority's own focus-left abort owns that case.
+ *
+ * **The hydrating branch RESOLVES either way, and that is load-bearing.** When
+ * the content arrives but DOM focus has moved off this root in the meantime, the
+ * landing is dead — this editor is not where the user's keystrokes belong — so
+ * the branch reports `onLandingLost` instead of `onLanded`. It used to report
+ * NEITHER, on the stated grounds that "the authority's own focus-left abort owns
+ * that case". That delegation is unsound in two ways, and both leave the caret
+ * authority holding the keyboard with no abort and no report while the user
+ * types into nothing:
+ *
+ *  - the authority aborts on `focusout` only when `relatedTarget` is an element
+ *    OUTSIDE the block list; a steal landing on ANOTHER BLOCK inside it, or one
+ *    that leaves `document.activeElement` on `<body>` (a `relatedTarget` of
+ *    `null`, which the authority deliberately treats as a window blur), is
+ *    invisible to it;
+ *  - its other bound, `reconcile()`, only counts commits that render no line for
+ *    the target — and the target IS rendered here, so `FLIGHT_MISS_LIMIT` can
+ *    never trip.
+ *
+ * Reporting the loss is preferred over the alternative fix (leave the listener
+ * armed and land on some later commit): the wait it would extend is unbounded by
+ * anything, whereas an abort is bounded, replays the buffered keystrokes into the
+ * block the user is ACTUALLY focused in, and files one caret-flight report. A
+ * landing that may or may not happen later is exactly the absorbable failure the
+ * `onLanded` contract exists to rule out.
  */
 export function focusHydratingAware(
   editor: LexicalEditor,
   scroll = false,
-  onLanded?: () => void,
+  land?: Pick<CaretLandOptions, "onLanded" | "onLandingLost">,
 ): void {
   const empty = editor.getEditorState().read(() => $getRoot().getChildrenSize() === 0);
   if (!empty) {
@@ -229,7 +253,7 @@ export function focusHydratingAware(
     // selection yet → content start) and for a re-focus of the block the user
     // is already editing (selection present → restored untouched).
     focusRestoringSelection(editor, scroll);
-    onLanded?.();
+    land?.onLanded?.();
     return;
   }
   editor.getRootElement()?.focus(scroll ? undefined : { preventScroll: true });
@@ -237,10 +261,13 @@ export function focusHydratingAware(
     const ready = editor.getEditorState().read(() => $getRoot().getChildrenSize() > 0);
     if (!ready) return;
     unregister();
-    if (document.activeElement !== editor.getRootElement()) return;
+    if (document.activeElement !== editor.getRootElement()) {
+      land?.onLandingLost?.();
+      return;
+    }
     const hasSelection = editor.getEditorState().read(() => $getSelection() !== null);
     if (!hasSelection) focusRestoringSelection(editor, scroll);
-    onLanded?.();
+    land?.onLanded?.();
   });
 }
 

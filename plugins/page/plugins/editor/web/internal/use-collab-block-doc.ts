@@ -6,7 +6,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Doc, encodeStateAsUpdate, UndoManager } from "yjs";
+import { Doc, encodeStateAsUpdate } from "yjs";
 import type { Provider } from "@lexical/yjs";
 import { LinkNode } from "@lexical/link";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -23,6 +23,7 @@ import {
 } from "@plugins/page/plugins/editor-collab/core";
 import {
   $appendRuns,
+  coalesce,
   runsOf,
   runsToXmlText,
   xmlTextContentLength,
@@ -31,70 +32,80 @@ import {
 import {
   $paragraphsPlainLength,
   blockTextNodes,
+  blockTextRunsOptions,
   getBlockTextExtensions,
 } from "./block-text-extensions";
+import { projectableRunsOf, type ProjectTextFn } from "./doc-sourced-runs";
 import { $truncateFromLinearOffset } from "./collab-text-surgery";
 import {
   base64ToBytes,
   IDLE_SAVE_STATE,
-  LiveStateYjsProvider,
   type CollabSaveState,
 } from "./live-state-yjs-provider";
-import { LocalYjsProvider } from "./local-yjs-provider";
-import { BindingReplica, CanonicalConnection } from "./binding-replica";
+import type { BindingReplica } from "./binding-replica";
+import {
+  ATTACHING_STATE,
+  CollabSession,
+  type CapturedBlockDocEdit,
+  type SessionState,
+} from "./collab-session";
 
 /**
- * Per-block `{ doc, provider, undoManager }` registry + the `useCollabBlockDoc`
- * hook — THE single seam between the editor and the content-doc transport
- * (per-block CRDT plan, Stage 2). Everything transport- and undo-manager-shaped
- * lives behind this hook: a future delta-WS provider swaps in here and nothing
- * else in the editor changes. That includes "is this block's prose saved yet" —
- * the hook surfaces the provider's derived {@link CollabSaveState} rather than
- * handing the provider itself out, so the consumer reports to the sync-status
- * cloud without ever touching the transport.
+ * The `useCollabBlockDoc` hook — THE single seam between the editor and the
+ * content-doc transport (per-block CRDT plan, Stage 2). Everything transport-
+ * and undo-manager-shaped lives behind this hook: a future delta-WS provider
+ * swaps in here and nothing else in the editor changes. That includes "is this
+ * block's prose saved yet" — the hook surfaces the provider's derived
+ * {@link CollabSaveState} rather than handing the provider itself out, so the
+ * consumer reports to the sync-status cloud without ever touching the
+ * transport.
  *
- * The registry is module-level and ref-counted per block id so React
- * strict-mode double-mounts and any second reader of the same block share ONE
- * `Y.Doc` (two docs for one block would fork the CRDT). Destruction is
- * deferred a macrotask: strict-mode releases and re-acquires synchronously
- * within one commit, and `CollaborationPlugin` does not re-call its
- * providerFactory on the simulated remount — an immediate destroy would pull
- * the doc out from under the binding it still holds.
+ * ## Who owns what
+ *
+ * Ownership and lifetime live next door in `collab-session.ts` — read its
+ * module comment first; this file is the React surface over it.
+ *
+ * - a **`BlockDocOwner`** per block id (module registry): the canonical
+ *   `Y.Doc`, the transport provider, the `Y.UndoManager`. Two docs for one
+ *   block would fork the CRDT, and four consumers need the union across every
+ *   mounted binding.
+ * - a **`CollabSession`** per (block, binding) — one per hook instance. It
+ *   holds the owner BY REFERENCE (never by id), mints the per-binding
+ *   {@link BindingReplica} `providerFactory` hands `CollaborationPlugin`, and
+ *   owns the ONE deferred retention that covers StrictMode remounts, a binding
+ *   that has not let go of its replica yet, and the provider's buffered-bytes
+ *   teardown retention.
+ *
+ * What stays HERE is everything that needs React or the block's row: the
+ * `data.text` seed builder, the render-accurate `rowConfirmed` value, the
+ * subscription/FK-gate effects, the save-state store, and the
+ * `content doc → data.text` projection (whose final flush must run inside this
+ * hook's teardown, before the session ends).
  *
  * ## Per-binding replicas
  *
- * The Lexical binding does NOT attach to the shared canonical doc: each hook
- * instance owns one {@link BindingReplica} — a fresh per-binding `Y.Doc` kept
- * in sync with the canonical by a bidirectional synchronous relay — and
+ * The Lexical binding does NOT attach to the shared canonical doc: each
+ * session owns one {@link BindingReplica} — a fresh per-binding `Y.Doc` kept in
+ * sync with the canonical by a bidirectional synchronous relay — and
  * `providerFactory` hands `CollaborationPlugin` THAT doc + provider. The
- * invariant (see `binding-replica.ts`): a binding always attaches to an
- * empty doc and receives ALL content as post-attach update events, so a
- * second simultaneous editor of the same block (inline nested-page expansion
- * + the page's detail pane) hydrates instead of rendering empty forever.
- * Everything else stays canonical-side, where all edits land synchronously
- * via the relay: the transport provider (and its save state), the
- * `Y.UndoManager`, `captureBlockDocEdit`, the doc observers below, and the
- * offscreen doc-level helpers. Since CollaborationPlugin now connects the
- * replica, the replica delegates connect/disconnect to the transport,
- * refcounted per entry (`replicaConnection`) — the transport HOLDS a
- * delivered server state until its connect(), so an unconnected transport
- * would leave every block empty. The replica rides the hold's lifecycle: created
- * lazily on the first providerFactory call, deferred-destroyed alongside the
- * entry release (same macrotask trick, same reason — the simulated remount
- * never re-calls providerFactory, so the binding still holds the replica).
+ * invariant (see `binding-replica.ts`): a binding always attaches to an empty
+ * doc and receives ALL content as post-attach update events, so a second
+ * simultaneous editor of the same block (inline nested-page expansion + the
+ * page's detail pane) hydrates instead of rendering empty forever. Everything
+ * else stays canonical-side, where all edits land synchronously via the relay:
+ * the transport provider (and its save state), the `Y.UndoManager`,
+ * `captureBlockDocEdit`, the doc observers below, and the offscreen doc-level
+ * helpers. Since CollaborationPlugin connects the replica, the replica
+ * delegates connect/disconnect to the transport, refcounted per owner
+ * (`replicaConnection`) — the transport HOLDS a delivered server state until
+ * its connect(), so an unconnected transport would leave every block empty.
  *
  * ## Undo (Stage 3b)
  *
- * Each entry owns a `Y.UndoManager` over the doc's content root, tracking ONLY
- * local-edit origins: origins are learned dynamically on `beforeTransaction` —
- * anything that is not the provider (server-applied states) and not an
- * `UndoManager` (undo/redo replays) is a local editing source (in practice
- * exactly the `@lexical/yjs` binding, which transacts with itself as origin).
- * Remote/echoed applies therefore never enter a block's undo history, and the
- * manager's own undo/redo transactions never re-capture.
- *
- * The manager does the COALESCING (its `captureTimeout` folds a typing run
- * into one stack item); every NEW item is surfaced to the mounted consumer via
+ * The owner owns a `Y.UndoManager` over the doc's content root, tracking ONLY
+ * local-edit origins (learned dynamically — see `collab-session.ts`). The
+ * manager does the COALESCING (its `captureTimeout` folds a typing run into
+ * one stack item); every NEW item is surfaced to the mounted consumer via
  * `onUndoableEdit` so it can be recorded 1:1 onto the app's single document-
  * level undo stack. That 1:1 correspondence is what makes the generic
  * `um.undo()` thunk correct: entries referencing one block's manager are
@@ -110,74 +121,12 @@ import { BindingReplica, CanonicalConnection } from "./binding-replica";
  */
 
 /**
- * `Y.UndoManager` captureTimeout — the text-coalescing window. Matches the
- * shared stack's intent (a typing run = one undo step) at the same 500ms the
- * app's coalescing uses; grouping happens HERE (one stack item per run), never
- * via the shared stack's `coalesceKey` (see `recordTextEdit`).
+ * Debounce for the `content doc → data.text` projection write. Heavy on
+ * purpose: rows only need to trail the doc closely enough for search /
+ * backlinks / history — sub-second staleness is fine, and a long window keeps
+ * `blocksChanged` fan-out bounded during a typing run.
  */
-const UNDO_CAPTURE_TIMEOUT_MS = 500;
-
-/**
- * One reversible content-doc edit, shaped like the app's `HistoryEntry`
- * thunks. Bound to the registry entry that captured it: if the block's doc was
- * destroyed (block deleted / editor released) — and possibly re-created — the
- * thunks no-op rather than popping a fresh manager's unrelated items.
- */
-export interface CapturedBlockDocEdit {
-  undo: () => void | Promise<void>;
-  redo: () => void | Promise<void>;
-}
-
-/**
- * The provider contract the registry + the two doc hooks depend on: the
- * `@lexical/yjs` {@link Provider} surface plus the seam-specific lifecycle
- * (`destroy`, teardown-readiness) and the server-sync entry points
- * (`markBlockRowConfirmed`, `onServerState`) and the derived save state the
- * consumer reports to the sync-status cloud (`onSaveState`/`getSaveState`/
- * `retryFlush`). Two implementations — {@link LiveStateYjsProvider}
- * (server-synced) and {@link LocalYjsProvider} (in-memory, no network) — satisfy
- * it, so the registry is transport-agnostic. The local provider's server-sync
- * methods are deliberate no-ops and its save state is permanently idle: with no
- * transport there is never anything outstanding to save.
- */
-export interface BlockDocProvider extends Provider {
-  markBlockRowConfirmed(): void;
-  onServerState(state: string | null): void;
-  /**
-   * Re-read the server's authoritative state into the doc (the READ-side
-   * counterpart to `retryFlush`). Driven by the consumer's hydration guard, the
-   * only thing positioned to notice that this doc is short of the server.
-   */
-  rehydrateFromServer(): void;
-  /** Has any local edit ever entered this doc? (starvation discriminator) */
-  readonly hasLocalEdits: boolean;
-  onSaveState(cb: () => void): () => void;
-  getSaveState(): CollabSaveState;
-  retryFlush(): void;
-  get readyForTeardown(): boolean;
-  setTeardownReadyListener(cb: (() => void) | null): void;
-  destroy(): void;
-}
-
-interface CollabDocEntry {
-  blockId: string;
-  doc: Doc;
-  provider: BlockDocProvider;
-  /**
-   * Refcounted connect/disconnect delegation shared by every replica over this
-   * entry: the transport connects with the first connected replica and
-   * disconnects (eager flush) with the last (see `binding-replica.ts`).
-   */
-  replicaConnection: CanonicalConnection;
-  um: UndoManager;
-  /** Raised by `captureBlockDocEdit` so folded edits skip `onUndoableEdit`. */
-  suppressUndoCapture: boolean;
-  undoCaptureListeners: Set<(edit: CapturedBlockDocEdit) => void>;
-  refs: number;
-  destroyTimer: ReturnType<typeof setTimeout> | null;
-}
-
-const registry = new Map<string, CollabDocEntry>();
+const PROJECT_DEBOUNCE_MS = 1000;
 
 /**
  * Deterministic Yjs clientID for a seed doc, keyed on BOTH the runs content
@@ -212,13 +161,15 @@ function seedClientID(runsJson: string, extIds: string): number {
 /** Build deterministic seed-state bytes for `dataText` (see {@link seedClientID}). */
 function buildSeedStateFor(dataText: unknown): Uint8Array {
   const runs = runsOf(dataText);
-  const extensions = getBlockTextExtensions();
+  // The SAME option set the doc-sourced projection reads back with — a seed
+  // written under one extension set and read under another loses its decorator
+  // tokens (see `blockTextRunsOptions`).
+  const opts = blockTextRunsOptions();
   // Canonical fingerprint of the active extension set: sorted ids, so the
   // clientID keys on the set's identity independent of registration order.
-  const extIds = [...extensions].map((e) => e.id).sort().join(",");
+  const extIds = [...opts.extensions].map((e) => e.id).sort().join(",");
   const xmlText = runsToXmlText(runs, {
-    extensions,
-    nodes: blockTextNodes(),
+    ...opts,
     clientID: seedClientID(JSON.stringify(runs), extIds),
   });
   const seedDoc = xmlText.doc;
@@ -226,180 +177,6 @@ function buildSeedStateFor(dataText: unknown): Uint8Array {
     throw new Error("buildSeedStateFor: seed XmlText is not attached to a doc");
   }
   return encodeStateAsUpdate(seedDoc);
-}
-
-/**
- * Thunks popping `count` items off `entry`'s undo manager (LIFO — see the
- * module comment for why "pop top" is the right item when the shared stack
- * reaches the corresponding entry). Generation-guarded: a destroyed (or
- * destroyed-and-recreated) entry makes them a deliberate no-op — the recreated
- * doc's manager is empty or holds OTHER edits, never this one.
- */
-function makeEntryDocEdit(entry: CollabDocEntry, count: number): CapturedBlockDocEdit {
-  const live = (): CollabDocEntry | null =>
-    registry.get(entry.blockId) === entry ? entry : null;
-  return {
-    undo: () => {
-      const e = live();
-      if (!e) return;
-      for (let i = 0; i < count; i++) e.um.undo();
-    },
-    redo: () => {
-      const e = live();
-      if (!e) return;
-      for (let i = 0; i < count; i++) e.um.redo();
-    },
-  };
-}
-
-/**
- * Take one ref-counted hold on the block's shared `{ doc, provider, um }`
- * entry, creating it on first acquire. Plugin-internal (exported for the
- * registry lifecycle tests and any non-hook consumer inside the editor);
- * every acquire must be paired with a {@link releaseCollabDoc}.
- */
-export function acquireCollabDoc(
-  blockId: string,
-  buildSeedState: () => Uint8Array,
-  rowConfirmed: boolean,
-  serverSync: boolean,
-): CollabDocEntry {
-  let entry = registry.get(blockId);
-  if (!entry) {
-    const doc = new Doc();
-    // Transport seam: a server-synced editor gets the live-state provider
-    // (blockContentResource in, doc-init/doc-update out); the in-memory editor
-    // (`persist={false}`) gets a purely local provider that seeds from
-    // `data.text` and never networks. `rowConfirmed` is the consumer's
-    // RENDER-TIME view (see useCollabBlockDoc) — construction-accurate, so the
-    // server provider's pre-seed discriminator never depends on the later
-    // `markBlockRowConfirmed` parent effect having run (irrelevant for local).
-    const provider: BlockDocProvider = serverSync
-      ? new LiveStateYjsProvider(doc, blockId, buildSeedState, rowConfirmed)
-      : new LocalYjsProvider(doc, buildSeedState);
-    const um = new UndoManager(yDocContent(doc), {
-      captureTimeout: UNDO_CAPTURE_TIMEOUT_MS,
-      // Local-edit origins are learned below; yjs adds the manager itself so
-      // its own replays capture onto the opposite stack (undo ⇄ redo).
-      trackedOrigins: new Set(),
-    });
-    // Learn local-edit origins dynamically (the `@lexical/yjs` binding is not
-    // reachable from here — CollaborationPlugin keeps it private). Everything
-    // that is not the transport (provider origin = server-applied state) and
-    // not an undo-manager replay is by construction a local editing source.
-    // `beforeTransaction` fires before the manager's afterTransaction capture,
-    // so even the first-ever local edit is tracked.
-    doc.on("beforeTransaction", (tr) => {
-      const origin: unknown = tr.origin;
-      if (origin != null && origin !== provider && !(origin instanceof UndoManager)) {
-        um.addTrackedOrigin(origin);
-      }
-    });
-    const created: CollabDocEntry = {
-      blockId,
-      doc,
-      provider,
-      replicaConnection: new CanonicalConnection(provider),
-      um,
-      suppressUndoCapture: false,
-      undoCaptureListeners: new Set(),
-      refs: 0,
-      destroyTimer: null,
-    };
-    // Mirror each NEW undo stack item (= one coalesced local editing run) to
-    // the mounted consumer. Filters: `type !== "undo"` is the manager pushing
-    // a redo item during its own undo(); `origin === um` is the manager
-    // re-pushing an undo item during its own redo() — neither is a fresh edit.
-    // Merges into an existing item (within captureTimeout) fire
-    // `stack-item-updated`, not this event, so a typing run surfaces once.
-    um.on("stack-item-added", (event) => {
-      if (event.type !== "undo" || event.origin === um) return;
-      if (created.suppressUndoCapture) return;
-      const edit = makeEntryDocEdit(created, 1);
-      for (const cb of [...created.undoCaptureListeners]) cb(edit);
-    });
-    registry.set(blockId, created);
-    entry = created;
-  }
-  entry.refs += 1;
-  if (entry.destroyTimer !== null) {
-    clearTimeout(entry.destroyTimer);
-    entry.destroyTimer = null;
-  }
-  return entry;
-}
-
-/**
- * Run `edit` (which must drive its Lexical/Yjs changes SYNCHRONOUSLY — the
- * live-editor surgery helpers pass `discrete: true` for exactly this) as an
- * explicit capture boundary on the block's undo manager, WITHOUT surfacing it
- * through `onUndoableEdit`. Returns thunks reversing/re-applying exactly the
- * captured item(s), or `null` when the edit changed nothing — the split/merge
- * building block that folds a content-doc edit into ONE combined stack entry
- * with its structural patch (Stage 3b).
- *
- * `stopCapturing` on both sides pins the boundary: the edit can't merge into a
- * preceding typing run's item, and subsequent typing can't merge into the
- * captured item (which the combined entry now owns).
- */
-export function captureBlockDocEdit(
-  blockId: string,
-  edit: () => void,
-): CapturedBlockDocEdit | null {
-  const entry = registry.get(blockId);
-  if (!entry) {
-    // No live doc (editor not mounted) — nothing to capture; the caller's
-    // structural entry stands alone.
-    edit();
-    return null;
-  }
-  entry.um.stopCapturing();
-  const before = entry.um.undoStack.length;
-  entry.suppressUndoCapture = true;
-  try {
-    edit();
-  } finally {
-    entry.suppressUndoCapture = false;
-    entry.um.stopCapturing();
-  }
-  const count = entry.um.undoStack.length - before;
-  return count > 0 ? makeEntryDocEdit(entry, count) : null;
-}
-
-/**
- * Destroy `entry` if it is still the registry's live entry, unreferenced, AND
- * its provider has nothing buffered that a reconnect could still save.
- * Otherwise the entry is RETAINED (teardown-flush safety): an ordinary
- * unmount coinciding with a transient outage leaves the eager disconnect
- * flush re-queued — destroying then would drop the user's last edits even
- * though the tab lives and will reconnect. The provider's ws-reopen/`online`
- * listeners stay subscribed until destroy, so the retained queue drains
- * push-based; the provider then invokes this again via its (single-slot)
- * teardown-ready listener. Truly destroyed once flushed or the block is
- * server-confirmed gone — never on a timer, never by dropping bytes.
- */
-function finalizeEntry(entry: CollabDocEntry): void {
-  if (entry.refs > 0) return;
-  if (registry.get(entry.blockId) !== entry) return; // already finalized/replaced
-  if (!entry.provider.readyForTeardown) {
-    entry.provider.setTeardownReadyListener(() => finalizeEntry(entry));
-    return;
-  }
-  registry.delete(entry.blockId);
-  entry.provider.destroy();
-  entry.doc.destroy();
-}
-
-export function releaseCollabDoc(blockId: string): void {
-  const entry = registry.get(blockId);
-  if (!entry) return;
-  entry.refs -= 1;
-  if (entry.refs > 0) return;
-  // Deferred destroy (see module comment): canceled if re-acquired first.
-  entry.destroyTimer = setTimeout(() => {
-    entry.destroyTimer = null;
-    finalizeEntry(entry); // flushes/retains pending local edits (see above)
-  }, 0);
 }
 
 export type CollabProviderFactory = (
@@ -427,12 +204,40 @@ export interface CollabBlockDoc {
   /** Whether any local edit ever entered this doc (starvation discriminator). */
   hasLocalEdits: () => boolean;
   /**
+   * Subscribe to every CANONICAL-doc update — local edits and applied server
+   * states alike, one call per integrating transaction. The push-based trigger
+   * for anything that must react to "this block's content moved" (today: the
+   * consumer's blind-binding check). The projection has its own arming inside
+   * the seam; this is the outward-facing seam of the same signal.
+   */
+  subscribeDocUpdates: (cb: () => void) => () => void;
+  /**
    * Recover a block whose rendered text no longer agrees with its doc or with
-   * the server: re-read the authoritative state AND re-attach the binding to a
-   * fresh, empty replica. Both halves are needed because either side can be the
-   * one that is behind (see `collab-text-plugin`'s guard).
+   * the server: END this block's content session and start a new one. A new
+   * session IS a fresh empty replica (the binding-behind-its-doc half) plus an
+   * authoritative re-read (the doc-behind-the-server half), so the caller never
+   * decides which side was short — see `collab-session.ts` and
+   * `collab-text-plugin`'s guard.
    */
   rehydrate: () => void;
+  /**
+   * This binding's hydration state (stage 4) — where the session is between
+   * "the replica exists" and "what the user sees provably equals what that
+   * replica holds". Reactive; see `collab-session.ts` for the machine.
+   *
+   * Consumers use it for the PLACEHOLDER and the stalled Retry only. The write
+   * gate it implies (the projection and the transport flush) is enforced inside
+   * the seam and the transport, not by whoever renders this.
+   */
+  hydration: SessionState;
+  /**
+   * Report what the binding renders, in the Yjs basis
+   * (`$xmlBasisContentLength`), at a `COLLABORATION_TAG` commit — the ONLY
+   * thing that can promote `hydrating` to `hydrated`. `promoteOnly` is for a
+   * listener that may have registered LATE (a commit already fired): it may
+   * confirm agreement, never conclude disagreement.
+   */
+  verifyRendered: (shownLength: number, promoteOnly?: boolean) => void;
   /**
    * The block's prose durability, straight off the provider (`useSyncExternalStore`).
    * Report it to the surface's sync-status cloud — the transport is the only
@@ -465,18 +270,21 @@ export interface CollabBlockDoc {
  * provider. Local edits made in the gap buffer in the doc and flush after the
  * seed completes.
  *
- * The RENDER-TIME value additionally seeds the provider's construction (via
- * `acquireCollabDoc`): connect()'s instant pre-seed discriminator must be
- * accurate at the first connect — which may run before any of this hook's
- * effects — so an existing block (confirmed from its very first render) can
- * never pre-apply a `data.text` seed over its stored doc (the reopen
- * text-duplication hazard), while a client-minted block still hydrates
+ * The RENDER-TIME value additionally seeds the provider's construction (the
+ * first session over a block mints its owner): connect()'s instant pre-seed
+ * discriminator must be accurate at the first connect — which may run before
+ * any of this hook's effects — so an existing block (confirmed from its very
+ * first render) can never pre-apply a `data.text` seed over its stored doc (the
+ * reopen text-duplication hazard), while a client-minted block still hydrates
  * instantly.
  *
- * `onContentChange` (optional) fires on EVERY doc update — local edits and
- * applied server states alike — so the caller can project the doc's content
- * back to `data.text` (Stage 3a). It is invoked raw (no debounce); pass a
- * stable callback (`useEventCallback`) and debounce in the consumer.
+ * `projectText` is the row writer the seam-owned `content doc → data.text`
+ * projection dispatches through. The projection itself lives HERE, not in the
+ * consumer: its value is read out of the canonical doc, so it needs no editor —
+ * and its final flush must run inside this hook's teardown, before the session
+ * ends. Its argument is branded `DocSourcedRuns`, which only
+ * `projectableRunsOf` can mint, so a future consumer cannot re-route a
+ * view-sourced value through it.
  *
  * `onUndoableEdit` (optional, Stage 3b) fires once per NEW coalesced local
  * editing run (a fresh `Y.UndoManager` stack item — remote applies, undo/redo
@@ -484,41 +292,62 @@ export interface CollabBlockDoc {
  * reverse/re-apply exactly that run, for recording onto the app's unified
  * undo stack. Pass a stable callback (`useEventCallback`).
  */
-/** A hook's ref-counted hold on a block's registry entry. */
+/** A hook instance's {@link CollabSession} handle (both doc hooks). */
 interface CollabDocHold {
-  /** Acquire (once) and return the entry for `id`. Safe to call from effects. */
-  ensure: (id: string) => CollabDocEntry;
-  /** The currently-held entry, WITHOUT acquiring one. Null before first `ensure`. */
-  peek: () => CollabDocEntry | null;
   /**
-   * Discard this hold's replica so the NEXT `providerFactory` call mints a
-   * fresh, EMPTY one — the other half of re-attaching a binding (see
-   * {@link CollabBlockDoc.rehydrate}). Without it, a rebuilt binding would
-   * attach to the retained replica, which by then holds content, and Lexical
-   * would render empty forever: the binding hydrates EXCLUSIVELY from
-   * post-attach events (see `binding-replica.ts`). Destroying eagerly is safe —
-   * the outgoing binding's own unmount calls `disconnect()`, which is guarded.
+   * The live session for `id`, starting one on first call and RETAINING it
+   * (cancelling a pending end) on every later one — the remount-in-place path.
+   * Safe to call from effects.
    */
-  resetReplica: () => void;
+  ensure: (id: string) => CollabSession;
+  /** The current live session, WITHOUT starting one. Null before first `ensure`. */
+  peek: () => CollabSession | null;
   /**
-   * The hold's per-binding {@link BindingReplica} over `id`'s entry, created
-   * lazily on first call (the providerFactory call). One replica per hook
-   * instance — its lifecycle rides the hold (see the module comment).
+   * End the current session and start its successor over the same owner: THE
+   * recovery verb (see {@link CollabBlockDoc.rehydrate} and
+   * `collab-session.ts`). Returns false when there is no live session to
+   * recover — nothing is mounted, so there is nothing that could be behind.
+   */
+  restartSession: () => boolean;
+  /**
+   * The session's per-binding {@link BindingReplica} over `id`'s owner, minted
+   * lazily on first call (the providerFactory call). One replica per session.
    */
   ensureReplica: (id: string) => BindingReplica;
+  /**
+   * Mark the block's row stale and arm ONE trailing projection window. Wired to
+   * the canonical doc's `update` event; see {@link useCollabDocHold}.
+   */
+  armProjection: () => void;
+  /** Subscribe to canonical-doc updates (see {@link CollabBlockDoc.subscribeDocUpdates}). */
+  subscribeDocUpdates: (cb: () => void) => () => void;
+  /**
+   * The live session's hydration state, or {@link ATTACHING_STATE} before one
+   * exists. A `useSyncExternalStore` pair whose subscription survives session
+   * churn: {@link CollabDocHold.ensure} / {@link CollabDocHold.restartSession}
+   * re-point ONE forwarding listener at the new session, so a consumer never
+   * re-subscribes and never misses a transition across a `rehydrate()`.
+   */
+  hydrationState: () => SessionState;
+  subscribeHydration: (cb: () => void) => () => void;
+  /** {@link CollabSession.verifyRendered} against the live session, if any. */
+  verifyRendered: (shownLength: number, promoteOnly?: boolean) => void;
 }
 
 /**
- * Shared per-hook hold on a block's registry entry (both doc hooks). Owns the
- * `data.text` seed builder, the render-accurate `rowConfirmed` construction
- * value, the single ref-counted hold, and its unmount release. `serverSync`
- * selects the provider transport in `acquireCollabDoc`.
+ * Shared per-hook session handle (both doc hooks). Owns the `data.text` seed
+ * builder, the render-accurate `rowConfirmed` construction value, the one
+ * session and its unmount end — and the `content doc → data.text` PROJECTION,
+ * which lives here because its final flush reads the canonical doc and must
+ * therefore run inside this hook's own teardown, BEFORE the session ends.
+ * `serverSync` selects the provider transport when the owner is created.
  */
 function useCollabDocHold(
   blockId: string,
   dataText: unknown,
   rowConfirmed: boolean,
   serverSync: boolean,
+  projectText: ProjectTextFn,
 ): CollabDocHold {
   const dataTextRef = useLatestRef(dataText);
   // Render-accurate row-confirmed view for provider CONSTRUCTION (the
@@ -535,108 +364,210 @@ function useCollabDocHold(
     buildSeedStateFor(dataTextRef.current),
   );
 
-  // One hold per hook instance. Acquired lazily from whichever consumer runs
+  // ONE session per hook instance, started lazily from whichever consumer runs
   // first (the providerFactory call or a subscription effect) — both run in
-  // effects, so a discarded render never leaks a ref-count.
+  // effects, so a discarded render never leaks a session.
   //
   // `id` is a PARAMETER, not a captured `blockId`: `ensure` is a stable
   // `useEventCallback`, so every caller's dependence on the block id would
   // otherwise be invisible — to a reader and to `exhaustive-deps` alike.
-  const heldRef = useRef<CollabDocEntry | null>(null);
-  // The hold's per-binding replica, tagged with the entry it relays to: a
-  // replica is only ever valid against the exact entry (canonical doc) it was
-  // built on, so a re-acquire that got a DIFFERENT entry (the old one
-  // finalized in between) must discard it rather than relay into a dead doc.
-  const replicaRef = useRef<{ entry: CollabDocEntry; replica: BindingReplica } | null>(
-    null,
-  );
-  const replicaDestroyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelReplicaDestroy = (): void => {
-    if (replicaDestroyTimerRef.current !== null) {
-      clearTimeout(replicaDestroyTimerRef.current);
-      replicaDestroyTimerRef.current = null;
-    }
-  };
-  const destroyReplicaNow = (): void => {
-    cancelReplicaDestroy();
-    replicaRef.current?.replica.destroy();
-    replicaRef.current = null;
-  };
+  const sessionRef = useRef<CollabSession | null>(null);
 
-  const ensure = useEventCallback((id: string): CollabDocEntry => {
-    if (heldRef.current && heldRef.current.blockId !== id) {
-      releaseCollabDoc(heldRef.current.blockId);
-      heldRef.current = null;
-      // A re-keyed hook binds a NEW CollaborationPlugin doc; the old block's
-      // replica can never be handed out again.
-      destroyReplicaNow();
+  // --- The `content doc → data.text` projection ------------------------------
+  //
+  // Trigger: every canonical-doc update (local AND server-applied — push-based,
+  // never a poll), debounced to one trailing write. VALUE: runs read back OUT of
+  // the canonical doc (`projectableRunsOf`), never a serialization of the bound
+  // editor — the editor is a VIEW that can silently fall behind its owner, and a
+  // view may not overwrite the source it disagrees with. The `DocSourcedRuns`
+  // brand on `projectText` is what keeps that true (see `doc-sourced-runs.ts`).
+  //
+  // The write goes through `projectText`: NOT recorded on the undo stack (Yjs
+  // owns text history) and never echoed into any editor (they are bound to the
+  // doc; `data.text` is only read once, as the doc-init seed). Skip-if-unchanged
+  // keeps no-op churn out of `blocksChanged`. Multiple connected clients each
+  // project the same runs — idempotent/convergent, accepted for the
+  // my-devices+agents concurrency target.
+  const projectTextRef = useLatestRef(projectText);
+  const projectionDirtyRef = useRef(false);
+  const projectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushProjection = useEventCallback((opts?: { final?: boolean }): void => {
+    if (projectionTimerRef.current !== null) {
+      clearTimeout(projectionTimerRef.current);
+      projectionTimerRef.current = null;
     }
-    heldRef.current ??= acquireCollabDoc(
-      id,
-      buildSeedState,
-      rowConfirmedRef.current,
-      serverSync,
-    );
-    // Reconcile the replica with the (possibly re-acquired) entry. Same-entry
-    // re-ensure cancels a pending deferred destroy — the StrictMode remount
-    // path, where CollaborationPlugin still holds this exact replica and never
-    // re-calls providerFactory. A different entry means the old canonical was
-    // finalized: the stale replica is discarded.
-    if (replicaRef.current) {
-      if (replicaRef.current.entry === heldRef.current) cancelReplicaDestroy();
-      else destroyReplicaNow();
+    // Only fires when a doc update marked us dirty — a doc nothing ever wrote
+    // to (subscription pending) must NOT project its emptiness.
+    if (!projectionDirtyRef.current) return;
+    const session = sessionRef.current;
+    if (session && !session.isEnded && !session.writeAllowed && !opts?.final) {
+      // THE WRITE GATE (stage 4): this binding cannot yet prove that what the
+      // user sees is what the doc holds, so nothing derived from that doc is
+      // persisted. Stay DIRTY with no timer armed — `onSessionState` re-runs
+      // this the moment the gate opens, push-based. The `final` teardown flush
+      // is exempt: the session is going away, so deferring would drop the row's
+      // last text rather than delay it.
+      return;
     }
-    return heldRef.current;
+    projectionDirtyRef.current = false;
+    if (!session || session.isEnded) {
+      // Unreachable by construction: the ONLY thing that marks the projection
+      // dirty is the doc-update observer, which holds the session, and the
+      // teardown below flushes BEFORE ending it. Loud rather than silent — a
+      // dropped flush is a row that silently lags its doc forever.
+      throw new Error(
+        `useCollabBlockDoc: pending projection for "${blockId}" with no live content-doc session`,
+      );
+    }
+    const owner = session.owner;
+    const runs = projectableRunsOf(owner.doc);
+    const current = coalesce(runsOf(dataTextRef.current));
+    // Runs are canonical (coalesced, sorted marks), so JSON equality is exact.
+    if (JSON.stringify(runs) === JSON.stringify(current)) return;
+    projectTextRef.current(owner.blockId, runs);
   });
 
-  const ensureReplica = useEventCallback((id: string): BindingReplica => {
-    const entry = ensure(id); // also reconciled/canceled any stale replica
-    replicaRef.current ??= {
-      entry,
-      replica: new BindingReplica(entry.doc, entry.provider, entry.replicaConnection),
+  // Event-driven debounce: each doc update marks dirty and arms ONE trailing
+  // timer (not reset per keystroke), so a continuous typing run projects at
+  // most once per PROJECT_DEBOUNCE_MS instead of starving until a pause.
+  const armProjection = useEventCallback((): void => {
+    projectionDirtyRef.current = true;
+    if (projectionTimerRef.current === null) {
+      projectionTimerRef.current = setTimeout(() => flushProjection(), PROJECT_DEBOUNCE_MS);
+    }
+  });
+
+  // --- Hydration state, forwarded across session churn -----------------------
+  //
+  // ONE subscription onto whichever session is live, so consumers (the
+  // placeholder's `useSyncExternalStore`) subscribe once and still see the
+  // successor's transitions after a `rehydrate()` swapped the session out.
+  const hydrationListenersRef = useRef(new Set<() => void>());
+  const sessionStateUnsubRef = useRef<(() => void) | null>(null);
+
+  const onSessionState = useEventCallback((): void => {
+    // The gate may have just opened. A projection window that fired while it
+    // was closed left the block dirty with NO timer armed — re-run it now,
+    // push-based, instead of waiting for the next keystroke to re-arm one.
+    if (projectionDirtyRef.current && projectionTimerRef.current === null) {
+      flushProjection();
+    }
+    for (const cb of [...hydrationListenersRef.current]) cb();
+  });
+
+  /** Re-point the forwarding subscription at `session` (a start or a restart). */
+  const bindSession = useEventCallback((session: CollabSession): CollabSession => {
+    sessionStateUnsubRef.current?.();
+    sessionStateUnsubRef.current = session.subscribeState(onSessionState);
+    onSessionState();
+    return session;
+  });
+
+  const hydrationState = useEventCallback(
+    (): SessionState => sessionRef.current?.state ?? ATTACHING_STATE,
+  );
+
+  const subscribeHydration = useEventCallback((cb: () => void): (() => void) => {
+    hydrationListenersRef.current.add(cb);
+    return () => {
+      hydrationListenersRef.current.delete(cb);
     };
-    return replicaRef.current.replica;
+  });
+
+  const verifyRendered = useEventCallback((shown: number, promoteOnly?: boolean): void => {
+    const session = sessionRef.current;
+    if (session && !session.isEnded) session.verifyRendered(shown, promoteOnly);
+  });
+
+  // ONE session per hook instance, started lazily from whichever consumer runs
+  // first (the providerFactory call or a subscription effect) — both run in
+  // effects, so a discarded render never leaks a session.
+  //
+  // `id` is a PARAMETER, not a captured `blockId`: `ensure` is a stable
+  // `useEventCallback`, so every caller's dependence on the block id would
+  // otherwise be invisible — to a reader and to `exhaustive-deps` alike.
+  const ensure = useEventCallback((id: string): CollabSession => {
+    const current = sessionRef.current;
+    if (current && !current.isEnded && current.blockId === id) {
+      // Same block, session still alive: RETAIN it — cancel any scheduled end.
+      // This is the StrictMode / remount-in-place path, and it is why the end
+      // is deferred at all: `CollaborationPlugin` does not re-call its
+      // `providerFactory` on a simulated remount, so the very replica and
+      // provider it already holds must survive (see `collab-session.ts`).
+      current.retain();
+      return current;
+    }
+    // A re-keyed hook, or a spent session (a genuine unmount → later remount of
+    // the same hook instance, e.g. under Activity). Either way this session can
+    // never be handed out again: end it and start a fresh one. `end()` is
+    // idempotent and no-ops on an already-ended session.
+    current?.end();
+    const next = CollabSession.start(id, buildSeedState, rowConfirmedRef.current, serverSync);
+    sessionRef.current = next;
+    return bindSession(next);
+  });
+
+  const ensureReplica = useEventCallback((id: string): BindingReplica =>
+    ensure(id).replicaForBinding(),
+  );
+
+  const subscribeDocUpdates = useEventCallback((cb: () => void): (() => void) => {
+    const doc = ensure(blockId).owner.doc;
+    const notify = (): void => cb();
+    doc.on("update", notify);
+    return () => doc.off("update", notify);
   });
 
   useEffect(() => {
     return () => {
-      if (heldRef.current) {
-        releaseCollabDoc(heldRef.current.blockId);
-        heldRef.current = null;
-      }
-      // Deferred replica destroy, mirroring the registry's deferred entry
-      // destroy and for the same reason: a StrictMode simulated remount
-      // releases and re-ensures synchronously within one commit while
-      // CollaborationPlugin keeps the SAME provider/doc (providerFactory is
-      // never re-called) — an immediate destroy would pull the replica out
-      // from under the binding it still holds. Canceled by the next ensure().
-      if (replicaRef.current !== null && replicaDestroyTimerRef.current === null) {
-        replicaDestroyTimerRef.current = setTimeout(() => {
-          replicaDestroyTimerRef.current = null;
-          replicaRef.current?.replica.destroy();
-          replicaRef.current = null;
-        }, 0);
-      }
+      // TEARDOWN ORDER IS EXPLICIT, and it is load-bearing: the final flush
+      // (navigation, block removal) READS the canonical doc, so it must run
+      // while this hook still holds its session. It used to survive only
+      // because the consumer happened to declare its projection hook before
+      // this one — a React hook-declaration-order coincidence that nothing
+      // stated and nothing checked. Both halves now live here, in one cleanup,
+      // in order. `projectText` no-ops when the row is already gone
+      // (merge / delete).
+      //
+      // `end()` is THE single deferred teardown — replica and owner hold alike
+      // (see `collab-session.ts`). The session reference is deliberately NOT
+      // cleared: the next `ensure()` within the retention window must find it
+      // to cancel the pending end, which is the whole StrictMode/remount
+      // survival mechanism.
+      flushProjection({ final: true });
+      sessionStateUnsubRef.current?.();
+      sessionStateUnsubRef.current = null;
+      sessionRef.current?.end();
     };
-  }, [blockId]);
+  }, [blockId, flushProjection]);
 
-  // `peek` is the non-acquiring read of the current hold: `getSaveState` must
-  // not mint a registry entry from a render-phase `useSyncExternalStore` probe.
-  const peek = useEventCallback((): CollabDocEntry | null => heldRef.current);
-
-  const resetReplica = useEventCallback((): void => {
-    // Drop the REFERENCE now (so the next providerFactory mints a fresh, empty
-    // replica) but destroy the old one a macrotask later: the outgoing binding
-    // is still mounted until React processes the remount this reset is paired
-    // with, and destroying its doc out from under it would leave a live binding
-    // syncing into a dead doc. Same deferral, same reason, as the entry's.
-    const old = replicaRef.current;
-    replicaRef.current = null;
-    cancelReplicaDestroy();
-    if (old) setTimeout(() => old.replica.destroy(), 0);
+  // `peek` is the non-starting read of the current session: `getSaveState`
+  // must not mint an owner from a render-phase `useSyncExternalStore` probe.
+  // A spent session reads as none — it owns nothing any more.
+  const peek = useEventCallback((): CollabSession | null => {
+    const session = sessionRef.current;
+    return session && !session.isEnded ? session : null;
   });
 
-  return { ensure, peek, ensureReplica, resetReplica };
+  const restartSession = useEventCallback((): boolean => {
+    const session = peek();
+    if (!session) return false;
+    sessionRef.current = bindSession(session.restart());
+    return true;
+  });
+
+  return {
+    ensure,
+    peek,
+    restartSession,
+    ensureReplica,
+    armProjection,
+    subscribeDocUpdates,
+    hydrationState,
+    subscribeHydration,
+    verifyRendered,
+  };
 }
 
 /**
@@ -644,7 +575,7 @@ function useCollabDocHold(
  * observer (`doc.on("update")`) and the undo-capture observer. Storage-
  * agnostic — a local doc's updates and undo items surface identically.
  *
- * Both observe the CANONICAL doc, deliberately — never the hold's binding
+ * Both observe the CANONICAL doc, deliberately — never the session's binding
  * replica. Every replica edit relays into the canonical synchronously, so the
  * canonical sees the union of all bindings' edits (a replica sees only its own
  * plus relays), and the projection/undo semantics are identical whether one
@@ -652,31 +583,27 @@ function useCollabDocHold(
  */
 function useDocObservers(
   blockId: string,
-  ensure: (id: string) => CollabDocEntry,
-  onContentChange?: () => void,
+  ensure: (id: string) => CollabSession,
+  armProjection: () => void,
   onUndoableEdit?: (edit: CapturedBlockDocEdit) => void,
 ): void {
-  // Doc-content observer for the projection consumer. `doc.on("update")` fires
-  // once per transaction for local AND server-applied changes; a plain notify
-  // (no payload) keeps this hook content-agnostic.
+  // Doc-content observer arming the projection. `doc.on("update")` fires once
+  // per transaction for local AND server-applied changes — and only when the
+  // transaction actually integrated something, so a redundant re-apply of state
+  // the doc already holds arms nothing.
   useEffect(() => {
-    if (!onContentChange) return;
-    const doc = ensure(blockId).doc;
-    const notify = () => onContentChange();
+    const doc = ensure(blockId).owner.doc;
+    const notify = () => armProjection();
     doc.on("update", notify);
     return () => doc.off("update", notify);
-  }, [blockId, onContentChange, ensure]);
+  }, [blockId, armProjection, ensure]);
 
   // Undo-capture observer (Stage 3b): surface each new coalesced local editing
   // run to the consumer so it can be recorded onto the unified undo stack.
-  useEffect(() => {
-    if (!onUndoableEdit) return;
-    const entry = ensure(blockId);
-    entry.undoCaptureListeners.add(onUndoableEdit);
-    return () => {
-      entry.undoCaptureListeners.delete(onUndoableEdit);
-    };
-  }, [blockId, onUndoableEdit, ensure]);
+  useEffect(
+    () => (onUndoableEdit ? ensure(blockId).owner.onUndoableEdit(onUndoableEdit) : undefined),
+    [blockId, onUndoableEdit, ensure],
+  );
 }
 
 /** The `providerFactory` `CollaborationPlugin` calls to fetch the block's doc + provider. */
@@ -690,7 +617,7 @@ function useProviderFactory(
         `useCollabBlockDoc: providerFactory id "${id}" != block id "${blockId}"`,
       );
     }
-    // The binding gets the hold's per-binding REPLICA, never the shared
+    // The binding gets the session's per-binding REPLICA, never the shared
     // canonical doc: a binding must attach to an empty doc and hydrate from
     // post-attach events (see `binding-replica.ts` and the module comment).
     const replica = ensureReplica(blockId);
@@ -704,7 +631,7 @@ function useProviderFactory(
  * OUT (observability), shared by both hooks: the provider's derived save state,
  * for the surface's sync-status cloud. Keyed on `blockId` so a re-keyed hook
  * resubscribes to the NEW provider's listener set instead of staying bound to
- * the old entry's. `getSnapshot` tolerates "no entry yet" (a first render,
+ * the old owner's. `getSnapshot` tolerates "no session yet" (a first render,
  * before any effect has called `ensure()`): nothing has been typed, so nothing
  * can be unsaved. The provider memoizes its snapshot, so this can't loop.
  *
@@ -716,16 +643,16 @@ function useSaveState(
   { ensure, peek }: CollabDocHold,
 ): Pick<CollabBlockDoc, "saveState" | "retrySave"> {
   const subscribeSaveState = useCallback(
-    (onStoreChange: () => void) => ensure(blockId).provider.onSaveState(onStoreChange),
+    (onStoreChange: () => void) => ensure(blockId).owner.provider.onSaveState(onStoreChange),
     [blockId, ensure],
   );
   const getSaveState = useCallback(
-    (): CollabSaveState => peek()?.provider.getSaveState() ?? IDLE_SAVE_STATE,
+    (): CollabSaveState => peek()?.owner.provider.getSaveState() ?? IDLE_SAVE_STATE,
     [peek],
   );
   const saveState = useSyncExternalStore(subscribeSaveState, getSaveState);
   const retrySave = useEventCallback((): void => {
-    peek()?.provider.retryFlush();
+    peek()?.owner.provider.retryFlush();
   });
   return { saveState, retrySave };
 }
@@ -739,47 +666,61 @@ function useRehydration(
   hold: CollabDocHold,
 ): Pick<CollabBlockDoc, "attachGeneration" | "docContentLength" | "hasLocalEdits" | "rehydrate"> {
   const [attachGeneration, setAttachGeneration] = useState(0);
-  const { peek, resetReplica } = hold;
+  const { peek, restartSession } = hold;
 
   const docContentLength = useEventCallback((): number => {
-    const entry = peek();
-    return entry ? xmlTextContentLength(yDocContent(entry.doc)) : 0;
+    const session = peek();
+    return session ? xmlTextContentLength(yDocContent(session.owner.doc)) : 0;
   });
 
-  const hasLocalEdits = useEventCallback((): boolean => peek()?.provider.hasLocalEdits ?? false);
+  const hasLocalEdits = useEventCallback(
+    (): boolean => peek()?.owner.provider.hasLocalEdits ?? false,
+  );
 
   const rehydrate = useEventCallback((): void => {
-    const entry = peek();
-    if (!entry) return;
-    // Order matters only in that both must happen: the re-read refills a doc
-    // that is behind the server, the re-attach refills an editor that is behind
-    // its doc, and the guard cannot tell which side was short without knowing
-    // the answer it is trying to recover from.
-    entry.provider.rehydrateFromServer();
-    resetReplica();
-    setAttachGeneration((g) => g + 1);
+    // ONE verb: a new session structurally IS a fresh empty replica plus an
+    // authoritative re-read, so recovery and a normal attach are the same code
+    // path and nothing here has to guess which side was short (see
+    // `collab-session.ts`). The only remaining half is the React key — Lexical
+    // builds its binding exactly once per mount behind a ref, so a changed key
+    // is the only thing that re-attaches a binding.
+    if (restartSession()) setAttachGeneration((g) => g + 1);
   });
 
   return { attachGeneration, docContentLength, hasLocalEdits, rehydrate };
+}
+
+/**
+ * OUT (observability), shared by both hooks: this binding's live hydration
+ * state, for the placeholder and the stalled Retry. Subscribed through the
+ * hold's ONE forwarding listener, so a `rehydrate()` that swaps the session
+ * underneath is invisible here — nothing re-subscribes and no transition is
+ * missed. `getSnapshot` is identity-stable (each state is a frozen object
+ * replaced only on a real transition; `ATTACHING_STATE` covers "no session
+ * yet"), so `useSyncExternalStore` cannot loop.
+ */
+function useHydrationState(hold: CollabDocHold): SessionState {
+  const { hydrationState, subscribeHydration } = hold;
+  return useSyncExternalStore(subscribeHydration, hydrationState);
 }
 
 export function useCollabBlockDoc(
   blockId: string,
   dataText: unknown,
   rowConfirmed: boolean,
-  onContentChange?: () => void,
+  projectText: ProjectTextFn,
   onUndoableEdit?: (edit: CapturedBlockDocEdit) => void,
 ): CollabBlockDoc {
-  const hold = useCollabDocHold(blockId, dataText, rowConfirmed, true);
-  const { ensure } = hold;
-  useDocObservers(blockId, ensure, onContentChange, onUndoableEdit);
+  const hold = useCollabDocHold(blockId, dataText, rowConfirmed, true, projectText);
+  const { ensure, armProjection, subscribeDocUpdates } = hold;
+  useDocObservers(blockId, ensure, armProjection, onUndoableEdit);
 
   // Doc-init FK gate (Stage 4a): unlatch the provider once the block's row is
   // server-confirmed. One-way — the provider ignores repeats — and push-based:
   // this effect re-fires on the authoritative blocks push that flips
   // `rowConfirmed` true.
   useEffect(() => {
-    if (rowConfirmed) ensure(blockId).provider.markBlockRowConfirmed();
+    if (rowConfirmed) ensure(blockId).owner.provider.markBlockRowConfirmed();
   }, [blockId, rowConfirmed, ensure]);
 
   // IN: the per-block live subscription. Subscribing only while a block editor
@@ -791,7 +732,7 @@ export function useCollabBlockDoc(
     // While loading we can't tell "absent" (→ seed) from "not arrived yet",
     // so nothing is delivered until the subscription settles.
     if (contentRes.pending) return;
-    ensure(blockId).provider.onServerState(contentRes.data[0]?.state ?? null);
+    ensure(blockId).owner.provider.onServerState(contentRes.data[0]?.state ?? null);
     // `contentRes` identity recomputes only on pending/data/error (structural
     // sharing in useResource), so this fires once per actual server change.
   }, [blockId, contentRes, ensure]);
@@ -799,7 +740,16 @@ export function useCollabBlockDoc(
   const { saveState, retrySave } = useSaveState(blockId, hold);
   const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
   const rehydration = useRehydration(hold);
-  return { providerFactory, saveState, retrySave, ...rehydration };
+  const hydration = useHydrationState(hold);
+  return {
+    providerFactory,
+    saveState,
+    retrySave,
+    subscribeDocUpdates,
+    hydration,
+    verifyRendered: hold.verifyRendered,
+    ...rehydration,
+  };
 }
 
 /**
@@ -817,19 +767,31 @@ export function useCollabBlockDoc(
 export function useLocalCollabBlockDoc(
   blockId: string,
   dataText: unknown,
-  onContentChange?: () => void,
+  projectText: ProjectTextFn,
   onUndoableEdit?: (edit: CapturedBlockDocEdit) => void,
 ): CollabBlockDoc {
   // `rowConfirmed` is irrelevant with no server (no stored doc, no FK gate);
   // pass true so nothing is ever gated.
-  const hold = useCollabDocHold(blockId, dataText, true, false);
-  const { ensure } = hold;
-  useDocObservers(blockId, ensure, onContentChange, onUndoableEdit);
+  const hold = useCollabDocHold(blockId, dataText, true, false, projectText);
+  const { ensure, armProjection, subscribeDocUpdates } = hold;
+  useDocObservers(blockId, ensure, armProjection, onUndoableEdit);
 
   const { saveState, retrySave } = useSaveState(blockId, hold);
   const providerFactory = useProviderFactory(blockId, hold.ensureReplica);
   const rehydration = useRehydration(hold);
-  return { providerFactory, saveState, retrySave, ...rehydration };
+  // The SAME machine as the server path — never a fork. `serverSync: false`
+  // makes every local session locally authoritative, so it reaches `hydrated`
+  // inside its first synchronous `connect()` and `stalled` is unreachable.
+  const hydration = useHydrationState(hold);
+  return {
+    providerFactory,
+    saveState,
+    retrySave,
+    subscribeDocUpdates,
+    hydration,
+    verifyRendered: hold.verifyRendered,
+    ...rehydration,
+  };
 }
 
 /**
@@ -846,7 +808,7 @@ export function useLocalCollabBlockDoc(
  *     walk the live editor uses (`editYDocState` + `$appendRuns` — marks +
  *     decorator tokens preserved), yielding an incremental update.
  *  3. `doc-update` merges it server-side; any live subscriber (including a
- *     registry entry that mounts meanwhile) converges via the resource push.
+ *     owner that mounts meanwhile) converges via the resource push.
  *
  * Returns the JOIN offset (the content's plain length before the append) so
  * the merge's undo entry can reverse the append via

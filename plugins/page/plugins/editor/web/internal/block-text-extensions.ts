@@ -104,6 +104,28 @@ export function blockTextNodes(): Klass<LexicalNode>[] {
     .filter((node): node is Klass<LexicalNode> => node !== undefined);
 }
 
+/**
+ * The registry-bound options for the runs ↔ `Y.XmlText` bridge
+ * (`core/runs-yjs.ts`): every registered token extension, plus the decorator
+ * node classes those extensions materialize.
+ *
+ * ONE construction site, deliberately. The doc-init SEED (`runsToXmlText`) and
+ * the doc-sourced PROJECTION (`xmlTextToRuns`) are inverses of each other over
+ * the same doc, so a block seeded with one option set and read back with another
+ * round-trips a decorator token into plain characters — silent data loss on a
+ * persisted value. Two literals that happen to match today are not that
+ * guarantee; sharing the construction is.
+ *
+ * Read at CALL time, never memoized: extensions register during plugin load
+ * (see {@link blockTextProtectedSpans} for the same rule).
+ */
+export function blockTextRunsOptions(): {
+  extensions: readonly BlockTextExtension[];
+  nodes: Klass<LexicalNode>[];
+} {
+  return { extensions: getBlockTextExtensions(), nodes: blockTextNodes() };
+}
+
 // ---------------------------------------------------------------------------
 // runs ↔ Lexical (bound to the registered extension set)
 // ---------------------------------------------------------------------------
@@ -216,6 +238,90 @@ export function $paragraphsPlainLength(): number {
     if (i > 0) total += 1; // paragraph join (\n)
     total += leavesLength(para);
   });
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// The Yjs BASIS length (the editor-side twin of `xmlTextContentLength`)
+// ---------------------------------------------------------------------------
+//
+// `$paragraphsPlainLength` above counts in the STORED-RUNS basis. `Y.XmlText`
+// counts in a different one, and the two are NOT interchangeable:
+//
+//                        | runs basis (`$paragraphsPlainLength`) | Yjs basis
+//   ---------------------|---------------------------------------|------------
+//   TextNode             | chars                                 | chars **+1**
+//   LineBreakNode        | 1                                     | 1
+//   decorator            | `tokenOf(node).length` (e.g. 11)      | **1**
+//   LinkNode / paragraph | recurse                               | recurse
+//   paragraph join       | **+1**                                | **0**
+//
+// So `runsLength(serializeBlockRuns(editor))` and `xmlTextContentLength(doc)`
+// disagree on any block holding an inline page-link / date chip / inline math,
+// on any multi-paragraph block, and in fact on any block with text at all. The
+// existing hydration guard survives only because it compares against ZERO.
+
+/**
+ * Inside a Lexical read/update: how much content the editor RENDERS, counted in
+ * the **Yjs basis** — the editor-side twin of `xmlTextContentLength`
+ * (`core/runs-yjs.ts`), which counts the same quantity over the `Y.XmlText`.
+ *
+ * It exists so "what the editor shows" and "what the content doc holds" become
+ * **comparable**: the invariant a hydration check wants to assert is
+ *
+ *   `$xmlBasisContentLength(editor) === xmlTextContentLength(yDocContent(doc))`
+ *
+ * for a bound editor that has ingested its replica. Stated against
+ * `$paragraphsPlainLength` instead, that equality is arithmetically FALSE for
+ * perfectly-hydrated blocks (see the table above) — which is exactly the trap
+ * this helper removes.
+ *
+ * **It must stay a structural mirror of `xmlTextContentLength`'s walk**, which
+ * means mirroring `@lexical/yjs`'s REPRESENTATION, not the reader's intuition
+ * about "content". Every branch below is that function's corresponding
+ * `toDelta()` case, over the Lexical tree instead of the CRDT:
+ *
+ *   - element node (paragraph, `LinkNode`) → 0 for itself + recurse
+ *     (`CollabElementNode` is an embedded `XmlText`, which the Yjs walk recurses
+ *     into and counts nothing for);
+ *   - `TextNode` → `getTextContentSize()` **+ 1**. A `CollabTextNode` is TWO
+ *     delta ops — an embedded `Y.Map` carrying the node's properties, then the
+ *     string — and the Yjs walk counts the map as one embed. Dropping the `+1`
+ *     makes `"hello"` 5 here and 6 there;
+ *   - `LineBreakNode` → 1 (`CollabLineBreakNode` is a single embedded `Y.Map`);
+ *   - decorator → 1, never its token length (`CollabDecoratorNode` is an
+ *     embedded `XmlElement` — one unit, whatever it renders as);
+ *   - **no** paragraph join: the Yjs shape has no such character.
+ *
+ * Consequence worth stating, so nobody reads this number as a character count:
+ * it is an AGREEMENT WITNESS, not a human-meaningful length — a per-text-node
+ * embed rides along in both halves. That is deliberate: the live consumer of
+ * `xmlTextContentLength` compares against zero, so re-basing it to count only
+ * content would be a behavior change to a shipped guard, and belongs with the
+ * stage that first renders these numbers to a human, not here.
+ *
+ * Root children go through the SAME per-node rule rather than being filtered to
+ * elements, because the Yjs walk applies its rule uniformly at every depth — a
+ * non-element sitting directly under the root would count 1 there, and must here.
+ *
+ * The agreement is pinned by the property test over the shared fuzz corpus in
+ * `block-text-extensions.test.ts`; a drift is a hydration check that reads a
+ * healthy block as starved (or a starved one as healthy).
+ */
+export function $xmlBasisContentLength(): number {
+  const count = (node: LexicalNode): number => {
+    if ($isLineBreakNode(node)) return 1;
+    // +1 for the CollabTextNode's embedded property `Y.Map` (see above).
+    if ($isTextNode(node)) return node.getTextContentSize() + 1;
+    if ($isElementNode(node)) {
+      let inner = 0;
+      for (const child of node.getChildren()) inner += count(child);
+      return inner;
+    }
+    return 1; // decorator — one embedded element, not its token text
+  };
+  let total = 0;
+  for (const child of $getRoot().getChildren()) total += count(child);
   return total;
 }
 

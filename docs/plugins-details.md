@@ -16527,6 +16527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/icon-button.IconButton`

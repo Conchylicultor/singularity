@@ -84,8 +84,8 @@ import {
  * doc state and resuming flushes, with a loud console.error — a 409 can
  * therefore never silently stop a live block from saving.
  *
- * Teardown safety: the registry's deferred destroy only finalizes when
- * {@link readyForTeardown}; while buffered edits remain flushable the entry
+ * Teardown safety: the session's deferred end only finalizes the block's owner
+ * when {@link readyForTeardown}; while buffered edits remain flushable the owner
  * is retained and the reconnect listeners (still subscribed until destroy)
  * drain the queue, then signal {@link setTeardownReadyListener} push-based.
  *
@@ -119,9 +119,9 @@ export interface CollabSaveState {
 
 /**
  * The snapshot a provider starts at, and the one the owning hook reports before
- * its first `acquireCollabDoc` (a render with no entry yet — nothing has been
- * typed, so nothing can be unsaved). A shared frozen constant so that pre-entry
- * render also has a stable `getSnapshot()` identity.
+ * its first session starts (a render with no owner yet — nothing has been
+ * typed, so nothing can be unsaved). A shared frozen constant so that
+ * pre-session render also has a stable `getSnapshot()` identity.
  */
 export const IDLE_SAVE_STATE: CollabSaveState = Object.freeze({
   phase: "idle" as const,
@@ -206,6 +206,15 @@ export class LiveStateYjsProvider implements Provider {
   private pendingUpdates: Uint8Array[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private flushInFlight = false;
+  /**
+   * How many sessions currently hold the OUTBOUND flush closed because their
+   * hydration is unproven (stage 4's write gate — see `collab-session.ts`).
+   * Refcounted because one block's owner is shared by every mounted binding of
+   * it. A held queue is DEFERRED, never dropped: bytes stay in
+   * {@link pendingUpdates}, the save state stays `syncing`, and the last
+   * release resumes the drain push-based.
+   */
+  private flushHolds = 0;
   /** One offline warning per outage episode (reset on the next success). */
   private offlineWarned = false;
   /**
@@ -228,9 +237,9 @@ export class LiveStateYjsProvider implements Provider {
   private saveState: CollabSaveState = IDLE_SAVE_STATE;
   private readonly unsubscribeWsStatus: () => void;
   /**
-   * Single-slot teardown notifier (registry-owned): invoked whenever the
-   * provider BECOMES ready-for-teardown, so a deferred destroy that found
-   * buffered edits can finalize push-based once they drain (see
+   * Single-slot teardown notifier (owner-owned): invoked whenever the
+   * provider BECOMES ready-for-teardown, so a deferred finalize that found
+   * buffered edits can complete push-based once they drain (see
    * {@link readyForTeardown}).
    */
   private teardownReadyListener: (() => void) | null = null;
@@ -531,10 +540,43 @@ export class LiveStateYjsProvider implements Provider {
     this.emitSaveState();
   };
 
+  // --- The hydration write gate (see `collab-session.ts`) --------------------
+
+  /** Has the server's authoritative answer landed? (the sessions' sync gate) */
+  get isSynced(): boolean {
+    return this.synced;
+  }
+
+  acquireFlushHold(): void {
+    this.flushHolds += 1;
+  }
+
+  releaseFlushHold(): void {
+    if (this.flushHolds <= 0) {
+      // More releases than holds — a session lifetime bug upstream. Loud rather
+      // than a negative refcount that would silently wedge the flush open.
+      throw new Error(
+        `LiveStateYjsProvider("${this.blockId}"): releaseFlushHold() without a matching acquire`,
+      );
+    }
+    this.flushHolds -= 1;
+    if (this.flushHolds > 0 || this.destroyed || !this.synced) return;
+    // Push-based resume: whatever the gate deferred drains now, no timer.
+    if (this.pendingUpdates.length > 0 && !this.flushInFlight) void this.flushLoop();
+  }
+
+  private get flushHeld(): boolean {
+    return this.flushHolds > 0;
+  }
+
   private scheduleFlush(): void {
     // Before sync/init completes, doc-update would 409 — the queue drains right
     // after markSynced instead.
     if (!this.synced || this.destroyed) return;
+    // A session cannot prove its binding renders what its replica holds, so
+    // nothing derived leaves this client yet. The bytes stay queued and
+    // `emitSaveState` (called by the caller) keeps the cloud honest.
+    if (this.flushHeld) return;
     if (this.flushTimer !== null) return;
     this.flushTimer = setTimeout(() => {
       this.flushTimer = null;
@@ -550,7 +592,7 @@ export class LiveStateYjsProvider implements Provider {
    * error is rethrown so it surfaces loudly.
    */
   private async flushLoop(): Promise<void> {
-    if (this.flushInFlight) return;
+    if (this.flushInFlight || this.flushHeld) return;
     this.flushInFlight = true;
     /** Did any doc-update POST land? Gates the `lastFlushedAt` stamp. */
     let posted = false;
@@ -795,8 +837,8 @@ export class LiveStateYjsProvider implements Provider {
   /**
    * True when destroying this provider cannot lose buffered local edits:
    * nothing is queued or in flight, or the block is server-confirmed gone
-   * (the bytes were deliberately dropped — see `blockGone`). The registry's
-   * deferred destroy checks this and, when false, RETAINS the entry (the
+   * (the bytes were deliberately dropped — see `blockGone`). The owner's
+   * deferred finalize checks this and, when false, RETAINS the owner (the
    * provider's reconnect listeners stay live until destroy) instead of
    * destroying bytes that a reconnect could still save.
    */
@@ -809,10 +851,10 @@ export class LiveStateYjsProvider implements Provider {
   }
 
   /**
-   * Register the (single) registry callback invoked whenever the provider
-   * BECOMES ready-for-teardown — the push-based finalize signal for a
-   * deferred destroy that found buffered edits. Overwrites any previous
-   * listener (one registry owner per provider); pass `null` to clear.
+   * Register the (single) owner callback invoked whenever the provider BECOMES
+   * ready-for-teardown — the push-based finalize signal for a deferred finalize
+   * that found buffered edits. Overwrites any previous listener (one
+   * `BlockDocOwner` per provider); pass `null` to clear.
    */
   setTeardownReadyListener(cb: (() => void) | null): void {
     this.teardownReadyListener = cb;
@@ -822,7 +864,7 @@ export class LiveStateYjsProvider implements Provider {
     if (this.readyForTeardown) this.teardownReadyListener?.();
   }
 
-  /** Full teardown (registry-owned): flush, detach doc listener, kill awareness. */
+  /** Full teardown (owner-driven): flush, detach doc listener, kill awareness. */
   destroy(): void {
     if (this.destroyed) return;
     this.disconnect();

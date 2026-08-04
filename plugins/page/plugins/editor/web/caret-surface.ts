@@ -27,6 +27,19 @@ export interface CaretLandOptions {
    * keyboard, so every landing path must call it.
    */
   onLanded?: () => void;
+  /**
+   * Fired when the surface has given up on landing the caret — the landing it
+   * accepted will NOT happen. The failure dual of {@link onLanded}, and the
+   * other half of the same obligation: a landing path must resolve one way or
+   * the other, because "neither" is indistinguishable from "still waiting" and
+   * leaves the caret authority holding the keyboard forever.
+   *
+   * Only an ASYNCHRONOUS landing can need it — a surface that places the caret
+   * before returning has already succeeded. Today that is exactly
+   * `focusHydratingAware`'s hydrating branch, which waits for content to arrive
+   * and must abandon the landing if DOM focus moved elsewhere in the meantime.
+   */
+  onLandingLost?: () => void;
 }
 
 /**

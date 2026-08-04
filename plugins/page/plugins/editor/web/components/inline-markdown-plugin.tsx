@@ -48,8 +48,8 @@ import {
  * capture window, and an update listener runs with `editor._updating === true`:
  * an `editor.update()` issued from inside one is *enqueued* and only begins at
  * `$triggerEnqueuedUpdates` — after `captureBlockDocEdit` has already closed its
- * window and cleared `suppressUndoCapture`, silently losing the boundary AND
- * double-recording the edit through the mirror. In the microtask `_updating` is
+ * capture scope, silently losing the boundary AND double-recording the edit
+ * through the mirror. In the microtask `_updating` is
  * false, so `discrete: true` commits synchronously and the binding's transaction
  * lands where it belongs. `editor/CLAUDE.md` records the same hazard for split
  * ("defers its capture one microtask because it runs from a Lexical command
