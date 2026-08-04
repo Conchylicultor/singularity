@@ -14066,6 +14066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/caret-trigger`
               - `release`
               - `reorder`
+              - `shell/toast`
               - `tasks/launch-options`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
@@ -21083,6 +21084,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot/draw-on-app`
               - `search/quick-find`
               - `shell/global-action-bar`
+              - `shell/toast`
               - `stats/commits`
               - `stats/cost`
               - `tasks/attempt-view`
@@ -22101,6 +22103,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `reorder`
           - `screenshot`
+          - `shell/toast`
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
@@ -25598,6 +25601,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `ToasterHost`
         - Uses:
           - `apps-core/theme-scope.useChromeThemeScope`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/element-size.useElementSize`
           - `primitives/select-scope.ContentScope`
           - `ui/theme-engine.useColorMode`
         - Exports (types):

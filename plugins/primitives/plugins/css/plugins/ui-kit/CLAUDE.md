@@ -510,6 +510,7 @@ structurally unrepresentable.
     - `screenshot/draw-on-app`
     - `search/quick-find`
     - `shell/global-action-bar`
+    - `shell/toast`
     - `stats/commits`
     - `stats/cost`
     - `tasks/attempt-view`
