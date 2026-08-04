@@ -66,6 +66,9 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps-core/layout`
     - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/servers`
+    - `apps/events/sources/source-detail/schedule`
+    - `apps/events/sources/source-detail/settings`
+    - `apps/events/sources/source-detail/status`
     - `apps/mail/mailbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

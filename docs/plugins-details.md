@@ -871,6 +871,446 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/deploy/ssh-setup.SshProvider`
                   - `primitives/css/text.Text`
                   - `primitives/setup-steps.StepNote`
+    - **`events`** — Events — track events from pluggable sources in one database.
+      - Plugins:
+        - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
+          - Web:
+            - Slots:
+              - `EventList.Fields` ← `apps.events.sources.source-field`
+              - `eventListPane.Actions`
+            - Contributes:
+              - `Pane.Register` "event-list"
+              - `Events.Sidebar` "Events" → `component`
+            - Uses:
+              - `apps/events/events-core.useEventsRevision`
+              - `apps/events/shell.Events`
+              - `infra/endpoints.fetchEndpoint`
+              - `primitives/app-shell.sidebarNavItem`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineFieldExtensions`
+              - `primitives/live-state.matchResource`
+              - `primitives/pane.openPane`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/relative-time.RelativeTime`
+            - Exports (values):
+              - `EventList`
+              - `eventListPane`
+          - Server:
+            - Uses:
+              - `apps/events/events-core.eventsTable`
+              - `database.db`
+              - `fields/server-capabilities-loader`
+              - `fields/server-capabilities.resolveFieldFilterSql`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `primitives/data-view/server-query.compileWhere`
+              - `primitives/data-view/server-query.OperatorSqlResolver`
+              - `primitives/keyset.buildSortKeys`
+              - `primitives/keyset.keyValuesOf`
+              - `primitives/keyset.orderByClauses`
+              - `primitives/keyset.seekPredicate`
+            - Exports (values): `handleQuery`
+            - Routes: `POST /api/events/query`
+          - Core:
+            - Uses:
+              - `apps/events/events-core.EVENT_CATEGORIES`
+              - `apps/events/events-core.EventSchema`
+              - `infra/endpoints.defineEndpoint`
+              - `primitives/data-view.FilterGroupSchema`
+            - Exports (types):
+              - `EventFieldSpec`
+              - `EventFieldType`
+              - `QueryEventsBody`
+            - Exports (values):
+              - `EVENT_CATEGORY_OPTIONS`
+              - `EVENT_LIST_FIELDS`
+              - `queryEvents`
+              - `QueryEventsBodySchema`
+              - `QueryEventsResponseSchema`
+              - `SortRuleSchema`
+          - Cross-plugin:
+            - Imported by: `apps/events/sources/source-field`
+        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
+          - Web:
+            - Slots: `EventSources.Type` ← `apps.events.sources.manual`, `apps.events.sources.url-extract`
+            - Uses:
+              - `infra/endpoints.useEndpoint`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useResource`
+              - `primitives/live-state.useWindowResource`
+            - Exports (values):
+              - `EventSources`
+              - `useCreateEventSource`
+              - `useDeleteEventSource`
+              - `useEventSourceRuns`
+              - `useEventSources`
+              - `useEventsRevision`
+              - `useRefreshEventSourceNow`
+              - `useUpdateEventSource`
+          - Server:
+            - Contributes:
+              - `resource.declare` "events.sources"
+              - `resource.declare` "events.revision"
+            - Uses:
+              - `database.db`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
+              - `infra/query-resource.windowQueryResource`
+            - DB schema: `plugins/apps/plugins/events/plugins/events-core/server/internal/tables.ts`
+            - Exports (types):
+              - `EventSourceType`
+              - `EventWriteInput`
+              - `ProbeContext`
+              - `ProbeResult`
+              - `RefreshRunner`
+              - `UpsertEventsResult`
+            - Exports (values):
+              - `_eventSourceRuns`
+              - `_eventSources`
+              - `createSource`
+              - `defineEventSourceType`
+              - `deleteSource`
+              - `eventSourcesServerResource`
+              - `eventsRevisionServerResource`
+              - `eventsTable`
+              - `getEventSourceType`
+              - `listEventSourceTypes`
+              - `listRuns`
+              - `listSources`
+              - `markEventsDisappeared`
+              - `registerRefreshRunner`
+              - `requireSource`
+              - `updateSource`
+              - `upsertEvents`
+            - Resources: `events.revision` (push)
+            - Routes:
+              - `GET /api/events/sources`
+              - `POST /api/events/sources`
+              - `GET /api/events/sources/:id`
+              - `PATCH /api/events/sources/:id`
+              - `DELETE /api/events/sources/:id`
+              - `POST /api/events/sources/:id/refresh`
+              - `GET /api/events/sources/:id/runs`
+          - Core:
+            - Uses:
+              - `fields.FieldsRecord`
+              - `fields.fieldsToZodObject`
+              - `fields.nullable`
+              - `fields/bool/config.boolField`
+              - `fields/date/config.dateField`
+              - `fields/int/config.intField`
+              - `fields/json/config.jsonField`
+              - `fields/text/config.enumTextField`
+              - `fields/text/config.textField`
+              - `infra/endpoints.defineEndpoint`
+              - `infra/query-resource.windowQueryResourceDescriptor`
+              - `primitives/live-state.resourceDescriptor`
+            - Exports (types):
+              - `CreateEventSourceBody`
+              - `EventCategory`
+              - `EventRecord`
+              - `EventSource`
+              - `EventSourceRun`
+              - `ExtractedEvent`
+              - `RefreshCadence`
+              - `RefreshSourceResult`
+              - `RunOutcome`
+              - `SourceStatus`
+              - `UpdateEventSourceBody`
+            - Exports (values):
+              - `createEventSource`
+              - `CreateEventSourceBodySchema`
+              - `deleteEventSource`
+              - `EVENT_CATEGORIES`
+              - `eventFields`
+              - `EventSchema`
+              - `eventSourceFields`
+              - `eventSourceRunFields`
+              - `EventSourceRunSchema`
+              - `EventSourceSchema`
+              - `eventSourcesResource`
+              - `eventsRevisionResource`
+              - `ExtractedEventSchema`
+              - `getEventSource`
+              - `listEventSourceRuns`
+              - `ListEventSourceRunsQuerySchema`
+              - `listEventSources`
+              - `REFRESH_CADENCES`
+              - `refreshEventSourceNow`
+              - `RefreshSourceResultSchema`
+              - `RUN_OUTCOMES`
+              - `SOURCE_STATUSES`
+              - `updateEventSource`
+              - `UpdateEventSourceBodySchema`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/events/event-list`
+              - `apps/events/refresh`
+              - `apps/events/sources`
+              - `apps/events/sources/manual`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/settings`
+              - `apps/events/sources/source-field`
+              - `apps/events/sources/url-extract`
+        - **`refresh`** — Events refresh engine: the main-only cadence tick and the per-source refresh job, the probe/extract runSource pipeline (fingerprint cache → upsert diff → soft disappearance), the run ledger, terminal/transient error classification onto the source row, and the retention sweeps for events + runs.
+          - Server:
+            - Uses:
+              - `apps/events/events-core._eventSourceRuns`
+              - `apps/events/events-core._eventSources`
+              - `apps/events/events-core.EventSourceType`
+              - `apps/events/events-core.eventsTable`
+              - `apps/events/events-core.getEventSourceType`
+              - `apps/events/events-core.markEventsDisappeared`
+              - `apps/events/events-core.ProbeContext`
+              - `apps/events/events-core.registerRefreshRunner`
+              - `apps/events/events-core.requireSource`
+              - `apps/events/events-core.upsertEvents`
+              - `database.db`
+              - `infra/jobs.defineJob`
+              - `infra/jobs.NonRetryableError`
+              - `infra/retention.defineRetention`
+              - `primitives/log-channels.defineLogSink`
+            - Exports (values):
+              - `requestRefresh`
+              - `runSource`
+            - Register:
+              - `defineJob('events.refresh-source')`
+              - `defineJob('events.refresh-tick')`
+              - `defineJob('retention.events')`
+              - `defineJob('retention.event_source_runs')`
+        - **`shell`** — App shell for Events. Registers the /events app entry, defines the Events.Sidebar slot, and renders the landing pane.
+          - Web:
+            - Slots: `Events.Sidebar` ← `apps.events.event-list`, `apps.events.sources`
+            - Contributes:
+              - `Apps.App` "Events" → `EventsLayout`
+              - `Pane.Register` "events-root"
+            - Uses:
+              - `apps-core.Apps`
+              - `apps-core/app-icon.mdAppIcon`
+              - `layouts/miller.MillerColumns`
+              - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/center.Center`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/slot-render.defineRenderSlot`
+            - Exports (values):
+              - `Events`
+              - `EVENTS_APP_PATH`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports (values): `eventsApp`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/events/event-list`
+              - `apps/events/sources`
+        - **`sources`** — The Events app's Sources surface: the sidebar entry, the sources DataView with a registry-driven `+` menu, and the per-source side-pane whose sections are contributions. Renders every source type's configuration form generically from its `configFields`, so a source type ships no form code.
+          - Web:
+            - Slots:
+              - `EventSourceActions.EventSourceActions` ← `apps.events.sources`
+              - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
+              - `eventSourceDetailPane.Actions`
+              - `eventSourcesPane.Actions`
+            - Contributes:
+              - `Pane.Register` "event-sources"
+              - `Pane.Register` "event-source-detail"
+              - `Events.Sidebar` "Sources" → `component`
+              - `EventSourceActions` "delete" → `SourceDeleteAction`
+            - Uses:
+              - `apps/events/events-core.EventSources`
+              - `apps/events/events-core.useCreateEventSource`
+              - `apps/events/events-core.useDeleteEventSource`
+              - `apps/events/events-core.useEventSources`
+              - `apps/events/shell.Events`
+              - `config_v2/fields.FieldRenderer`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `primitives/app-shell.sidebarNavItem`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/data-view.CreateOption`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.FieldDef`
+              - `primitives/detail-sections.defineDetailSections`
+              - `primitives/imperative-dialog.openDialog`
+              - `primitives/live-state.matchResource`
+              - `primitives/pane.openPane`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.useOpenPane`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/row-actions.RowActionButton`
+            - Exports (types):
+              - `ConfigValues`
+              - `EventSourceTypeContribution`
+              - `SourceConfigFormProps`
+              - `SourceLookup`
+              - `SourceTypeLookup`
+            - Exports (values):
+              - `CADENCE_LABEL`
+              - `CADENCE_OPTIONS`
+              - `describeRun`
+              - `EventSourceActions`
+              - `EventSourceDetail`
+              - `eventSourceDetailPane`
+              - `eventSourcesPane`
+              - `formatDuration`
+              - `initialConfigValues`
+              - `readConfigValues`
+              - `RUN_OUTCOME_LABEL`
+              - `RUN_OUTCOME_OPTIONS`
+              - `RUN_OUTCOME_VARIANT`
+              - `SOURCE_STATUS_LABEL`
+              - `SOURCE_STATUS_OPTIONS`
+              - `SOURCE_STATUS_VARIANT`
+              - `SourceConfigForm`
+              - `useEventSource`
+              - `useEventSourceType`
+              - `useEventSourceTypes`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/settings`
+              - `apps/events/sources/source-detail/status`
+          - Plugins:
+            - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
+              - Web:
+                - Contributes: `EventSources.Type` "Manual"
+                - Uses: `apps/events/events-core.EventSources`
+              - Server:
+                - Uses:
+                  - `apps/events/events-core.defineEventSourceType`
+                  - `apps/events/events-core.eventsTable`
+                  - `database.db`
+                - Register: `defineEventSourceType('manual')`
+              - Core:
+                - Exports (types): `ManualSourceConfig`
+                - Exports (values):
+                  - `MANUAL_SOURCE_TYPE_ID`
+                  - `manualSourceConfigFields`
+            - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
+              - Plugins:
+                - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable.
+                  - Web:
+                    - Contributes: `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
+                    - Uses:
+                      - `apps/events/events-core.useEventSourceRuns`
+                      - `apps/events/sources.describeRun`
+                      - `apps/events/sources.EventSourceDetail`
+                      - `apps/events/sources.formatDuration`
+                      - `apps/events/sources.RUN_OUTCOME_LABEL`
+                      - `apps/events/sources.RUN_OUTCOME_OPTIONS`
+                      - `apps/events/sources.RUN_OUTCOME_VARIANT`
+                      - `infra/endpoints.getEndpointErrorMessage`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/text.Text`
+                      - `primitives/data-view.DataView`
+                      - `primitives/data-view.defineDataView`
+                      - `primitives/data-view.FieldDef`
+                      - `primitives/relative-time.RelativeTime`
+                - **`schedule`** — Schedule section of the Events source side-pane: the refresh cadence picker, the scheduling on/off switch, and Refresh now — whose discriminated RefreshSourceResult (enqueued / already-running / skipped) is rendered arm by arm rather than collapsed into 'done'.
+                  - Web:
+                    - Contributes: `EventSourceDetail.Section` "Schedule" → `SourceScheduleSection`
+                    - Uses:
+                      - `apps/events/events-core.useRefreshEventSourceNow`
+                      - `apps/events/events-core.useUpdateEventSource`
+                      - `apps/events/sources.CADENCE_LABEL`
+                      - `apps/events/sources.EventSourceDetail`
+                      - `apps/events/sources.useEventSource`
+                      - `infra/endpoints.getEndpointErrorMessage`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/toggle-chip.SegmentedControl`
+                      - `primitives/css/ui-kit.Button`
+                      - `primitives/loading.Loading`
+                - **`settings`** — Settings section of the Events source side-pane: the source type's own configFields rendered generically through the fields FieldRenderer, with per-field autosave and the type's optional bespoke chrome. Names no source type.
+                  - Web:
+                    - Contributes: `EventSourceDetail.Section` "Settings" → `SourceSettingsSection`
+                    - Uses:
+                      - `apps/events/events-core.useUpdateEventSource`
+                      - `apps/events/sources.EventSourceDetail`
+                      - `apps/events/sources.readConfigValues`
+                      - `apps/events/sources.SourceConfigForm`
+                      - `apps/events/sources.useEventSource`
+                      - `apps/events/sources.useEventSourceType`
+                      - `infra/endpoints.getEndpointErrorMessage`
+                      - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/loading.Loading`
+                - **`status`** — Status section of the Events source side-pane: the source's current state (also shown as a collapsed-card chip), its run watermarks and probe fingerprint, and the classified terminal error verbatim when it is parked.
+                  - Web:
+                    - Contributes: `EventSourceDetail.Section` "Status" → `SourceStatusSection`
+                    - Uses:
+                      - `apps/events/sources.EventSourceDetail`
+                      - `apps/events/sources.SOURCE_STATUS_LABEL`
+                      - `apps/events/sources.SOURCE_STATUS_VARIANT`
+                      - `apps/events/sources.useEventSource`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/loading.Loading`
+                      - `primitives/relative-time.RelativeTime`
+            - **`source-field`** — Contributes the `source` dimension into the events DataView: a `sourceId` enum field whose options are the live configured sources, so events can be filtered, sorted and grouped by source with no edit to event-list.
+              - Web:
+                - Contributes: `EventList.Fields` "source" → `SourceField`
+                - Uses:
+                  - `apps/events/event-list.EventList`
+                  - `apps/events/events-core.useEventSources`
+            - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe fetches the URL (SSRF-guarded) and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.
+              - Web:
+                - Contributes: `EventSources.Type` "Web page"
+                - Uses: `apps/events/events-core.EventSources`
+              - Server:
+                - Uses:
+                  - `apps/events/events-core.defineEventSourceType`
+                  - `infra/claude-cli.runClaudePrint`
+                  - `infra/jobs.NonRetryableError`
+                  - `infra/safe-fetch.parsePublicUrl`
+                  - `infra/safe-fetch.safeFetch`
+                - Register: `defineEventSourceType('url')`
+              - Core:
+                - Uses:
+                  - `fields.nullable`
+                  - `fields/text/config.textField`
+                - Exports (types): `UrlSourceConfig`
+                - Exports (values):
+                  - `URL_SOURCE_TYPE_ID`
+                  - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
@@ -4918,7 +5358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
     - Slots:
-      - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`
+      - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
       - `Apps.TabBar` ← `apps-core.tab-bar`
@@ -4961,6 +5401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/browser/shell`
       - `apps/debug/shell`
       - `apps/deploy/shell`
+      - `apps/events/shell`
       - `apps/file-explorer/shell`
       - `apps/home/app-cards`
       - `apps/home/shell`
@@ -5012,6 +5453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/shell`
           - `apps/debug/shell`
           - `apps/deploy/shell`
+          - `apps/events/shell`
           - `apps/file-explorer/shell`
           - `apps/home/app-cards`
           - `apps/home/shell`
@@ -6628,6 +7070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useLocalValue`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/sources`
           - `apps/sonata/view-options`
           - `config_v2/settings`
           - `fields/avatar/config`
@@ -9642,6 +10085,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/deploy/deployments`
       - `apps/deploy/health`
       - `apps/deploy/servers`
+      - `apps/events/event-list`
+      - `apps/events/events-core`
+      - `apps/events/refresh`
+      - `apps/events/sources/manual`
       - `apps/mail/attachments`
       - `apps/mail/inbox`
       - `apps/mail/mail-core`
@@ -11840,6 +12287,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by:
       - `apps/browser/bookmarks`
+      - `apps/events/events-core`
+      - `apps/events/sources/url-extract`
       - `apps/mail/mail-core`
       - `apps/sonata/library`
       - `apps/sonata/track-mixer`
@@ -11987,6 +12436,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/events/events-core`
               - `apps/mail/mail-core`
               - `apps/sonata/track-mixer`
               - `apps/sonata/voicing`
@@ -12105,6 +12555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/browser/bookmarks`
+              - `apps/events/events-core`
               - `apps/mail/mail-core`
               - `apps/sonata/library`
               - `apps/sonata/track-mixer`
@@ -12438,6 +12889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
+              - `apps/events/events-core`
               - `apps/mail/mail-core`
               - `conversations`
               - `conversations/summary`
@@ -12496,6 +12948,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `jsonField`
           - Cross-plugin:
             - Imported by:
+              - `apps/events/events-core`
               - `apps/mail/mail-core`
               - `debug/boot-profile`
               - `debug/slow-ops`
@@ -12811,6 +13264,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
       - Cross-plugin:
         - Imported by:
+          - `apps/events/event-list`
           - `apps/mail/inbox`
           - `conversations/all-conversations`
           - `fields/bool/filter-sql`
@@ -12864,6 +13318,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/uuid/storage`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/event-list`
           - `apps/mail/inbox`
           - `conversations/all-conversations`
           - `infra/entities`
@@ -12987,6 +13442,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/bookmarks`
+              - `apps/events/events-core`
+              - `apps/events/sources/url-extract`
               - `apps/mail/mail-core`
               - `apps/sonata/library`
               - `apps/sonata/track-mixer`
@@ -13582,6 +14039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/layout`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
+              - `apps/events/sources`
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `code-explorer`
@@ -14063,6 +14521,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `claudeCliCallsResource`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/sources/url-extract`
           - `apps/story/generation`
           - `apps/workflows/steps/llm-prompt`
           - `conversations/conversation-category`
@@ -14187,6 +14646,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/health`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
+          - `apps/events/event-list`
+          - `apps/events/events-core`
+          - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/schedule`
+          - `apps/events/sources/source-detail/settings`
           - `apps/mail/attachments`
           - `apps/mail/inbox`
           - `apps/mail/reading-pane`
@@ -14399,6 +14864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/browser/bookmarks`
+          - `apps/events/events-core`
           - `apps/mail/mail-core`
           - `apps/sonata/library`
           - `apps/sonata/track-mixer`
@@ -14888,6 +15354,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `retryJob`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/refresh`
+          - `apps/events/sources/url-extract`
           - `apps/mail/sync`
           - `apps/pages/content-search`
           - `apps/pages/history`
@@ -15194,6 +15662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/browser/bookmarks`
           - `apps/deploy/health`
+          - `apps/events/events-core`
           - `apps/mail/reading-pane`
           - `apps/pages/agent-origin`
           - `apps/pages/starred`
@@ -15228,6 +15697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markCascadeBounded`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/refresh`
           - `apps/pages/agent-origin`
           - `debug/boot-profile`
           - `debug/slow-ops`
@@ -15290,6 +15760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper`
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/proxy`
+          - `apps/events/sources/url-extract`
           - `apps/mail/remote-images`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/workflows/steps/http-request`
@@ -15637,6 +16108,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
           - `apps/deploy/shell`
+          - `apps/events/shell`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/shell`
@@ -17974,6 +18446,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
           - `apps/deploy/shell`
+          - `apps/events/event-list`
+          - `apps/events/shell`
+          - `apps/events/sources`
           - `apps/file-explorer/shell`
           - `apps/mail/inbox`
           - `apps/mail/mailbox`
@@ -18315,6 +18790,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps/deploy/deployments`
               - `apps/deploy/ssh-setup`
+              - `apps/events/event-list`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
               - `apps/mail/mailbox`
               - `apps/mail/search`
@@ -18497,6 +18976,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps/agent-manager/welcome`
               - `apps/browser/webview`
+              - `apps/events/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/mail/thread-list`
@@ -18755,6 +19235,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/deployments`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
+              - `apps/events/event-list`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/status`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -18827,6 +19312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data`
               - `apps/deploy/ssh-setup`
+              - `apps/events/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
@@ -18939,6 +19425,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-bar`
+              - `apps/events/event-list`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/status`
               - `apps/mail/inbox`
               - `apps/mail/search`
               - `apps/mail/thread-list`
@@ -19092,6 +19583,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
+              - `apps/events/event-list`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/settings`
+              - `apps/events/sources/source-detail/status`
               - `apps/mail/mailbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -19366,6 +19863,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
+              - `apps/events/event-list`
+              - `apps/events/shell`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/settings`
+              - `apps/events/sources/source-detail/status`
               - `apps/home/shell`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
@@ -19831,6 +20334,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/deploy/ssh-setup/hetzner`
+              - `apps/events/event-list`
+              - `apps/events/shell`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/schedule`
+              - `apps/events/sources/source-detail/settings`
+              - `apps/events/sources/source-detail/status`
               - `apps/home/shell`
               - `apps/mail/inbox`
               - `apps/mail/reading-pane`
@@ -20138,6 +20648,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/schedule`
               - `apps/prototypes/gallery`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/pedal/indicator`
@@ -20325,6 +20837,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/schedule`
               - `apps/mail/reading-pane`
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
@@ -20757,6 +21271,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -20928,6 +21445,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "debug.trace.events"
           - `ConfigV2.Register` "deploy.deployments"
           - `ConfigV2.Register` "deploy.servers"
+          - `ConfigV2.Register` "events.list"
+          - `ConfigV2.Register` "events.source-runs"
+          - `ConfigV2.Register` "events.sources"
           - `ConfigV2.Register` "home.apps"
           - `ConfigV2.Register` "mail-inbox"
           - `ConfigV2.Register` "page.links.backlinks"
@@ -20955,6 +21475,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
+          - `apps/events/event-list`
+          - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
           - `apps/home/app-cards`
           - `apps/mail/inbox`
           - `apps/pages/page-tree`
@@ -21230,6 +21753,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DataViewServer`
           - Cross-plugin:
             - Imported by:
+              - `apps/events/event-list`
               - `apps/mail/inbox`
               - `conversations/all-conversations`
               - `primitives/data-view/custom-columns`
@@ -21474,6 +21998,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/servers`
+          - `apps/events/sources`
           - `apps/pages/page-tree`
           - `apps/sonata/shell`
           - `apps/studio/compositions`
@@ -21930,6 +22455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
+          - `apps/events/sources`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/studio/compositions/auto-serve`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
@@ -21952,6 +22478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`keyset`** — Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by:
+          - `apps/events/event-list`
           - `apps/mail/inbox`
           - `conversations/all-conversations`
           - `infra/query-resource`
@@ -22184,6 +22711,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/deployments`
           - `apps/deploy/health`
           - `apps/deploy/servers`
+          - `apps/events/event-list`
+          - `apps/events/events-core`
+          - `apps/events/sources`
           - `apps/mail/inbox`
           - `apps/mail/mail-core`
           - `apps/mail/mailbox`
@@ -22353,6 +22883,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/layout`
           - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/servers`
+          - `apps/events/sources/source-detail/schedule`
+          - `apps/events/sources/source-detail/settings`
+          - `apps/events/sources/source-detail/status`
           - `apps/mail/mailbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
@@ -22488,6 +23021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/events/refresh`
           - `apps/mail/sync`
           - `apps/sonata/piano-roll`
           - `build`
@@ -22679,7 +23213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.mail.inbox`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.thread-list`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.mail.inbox`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.thread-list`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
@@ -22798,6 +23332,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell`
           - `apps/deploy/servers`
           - `apps/deploy/shell`
+          - `apps/events/event-list`
+          - `apps/events/shell`
+          - `apps/events/sources`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/inbox`
@@ -23143,6 +23680,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/start-page`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
+          - `apps/events/event-list`
+          - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/status`
           - `apps/mail/inbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
@@ -23222,6 +23763,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
+          - `apps/events/sources`
           - `apps/studio/compositions`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
@@ -23424,6 +23966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-surface`
           - `apps/browser/shell`
           - `apps/debug/shell`
+          - `apps/events/shell`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/shell`
@@ -24102,6 +24645,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -24169,6 +24716,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "deploy.server-detail.section"
       - `ConfigV2.Register` "deploy.servers.fields"
       - `ConfigV2.Register` "deploy.servers.item-actions"
+      - `ConfigV2.Register` "event-source-detail.section"
+      - `ConfigV2.Register` "events.list.fields"
+      - `ConfigV2.Register` "events.sidebar"
+      - `ConfigV2.Register` "events.sources.item-actions"
       - `ConfigV2.Register` "file-explorer.sidebar"
       - `ConfigV2.Register` "file-explorer.toolbar"
       - `ConfigV2.Register` "home.section"

@@ -25,6 +25,7 @@
   - Exports (values): `jsonField`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/events-core`
     - `apps/mail/mail-core`
     - `debug/boot-profile`
     - `debug/slow-ops`

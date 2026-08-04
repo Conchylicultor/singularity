@@ -8,7 +8,7 @@
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`
+    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
     - `Apps.TabBar` ← `apps-core.tab-bar`
@@ -51,6 +51,7 @@
     - `apps/browser/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
+    - `apps/events/shell`
     - `apps/file-explorer/shell`
     - `apps/home/app-cards`
     - `apps/home/shell`

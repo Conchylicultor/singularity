@@ -111,6 +111,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/events/refresh`
     - `apps/mail/sync`
     - `apps/sonata/piano-roll`
     - `build`

@@ -46,6 +46,9 @@
     - `apps/agent-manager/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
+    - `apps/events/event-list`
+    - `apps/events/shell`
+    - `apps/events/sources`
     - `apps/file-explorer/shell`
     - `apps/mail/inbox`
     - `apps/mail/mailbox`

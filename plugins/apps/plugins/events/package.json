@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-events",
+  "description": "Events — track events from pluggable sources in one database.",
+  "private": true,
+  "version": "0.0.1"
+}

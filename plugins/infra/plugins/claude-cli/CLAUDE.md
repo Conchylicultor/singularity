@@ -67,6 +67,7 @@ Throws `ClaudeCliError` on non-zero exit or timeout. Callers that need graceful 
     - `claudeCliCallsResource`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/sources/url-extract`
     - `apps/story/generation`
     - `apps/workflows/steps/llm-prompt`
     - `conversations/conversation-category`

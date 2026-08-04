@@ -1,4 +1,4 @@
-// @hash 02bbb824bbdf
+// @hash 12ffe3521d67
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -8,6 +8,7 @@
     "apps.browser.shell:browser",
     "apps.debug.shell:debug",
     "apps.deploy.shell:deploy",
+    "apps.events.shell:events",
     "apps.file-explorer.shell:file-explorer",
     "apps.home.shell:home",
     "apps.mail.shell:mail",

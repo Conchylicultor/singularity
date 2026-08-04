@@ -100,6 +100,7 @@ double-gutter; keep it without the padding → they go flush to the card edge. S
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/servers`
+    - `apps/events/sources`
     - `apps/pages/page-tree`
     - `apps/sonata/shell`
     - `apps/studio/compositions`

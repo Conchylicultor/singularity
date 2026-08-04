@@ -17,6 +17,23 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [6 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`events`** — Events — track events from pluggable sources in one database.
+      - Plugins:
+        - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
+        - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
+        - **`refresh`** — Events refresh engine: the main-only cadence tick and the per-source refresh job, the probe/extract runSource pipeline (fingerprint cache → upsert diff → soft disappearance), the run ledger, terminal/transient error classification onto the source row, and the retention sweeps for events + runs.
+        - **`shell`** — App shell for Events. Registers the /events app entry, defines the Events.Sidebar slot, and renders the landing pane.
+        - **`sources`** — The Events app's Sources surface: the sidebar entry, the sources DataView with a registry-driven `+` menu, and the per-source side-pane whose sections are contributions. Renders every source type's configuration form generically from its `configFields`, so a source type ships no form code.
+          - Plugins:
+            - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
+            - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
+              - Plugins:
+                - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable.
+                - **`schedule`** — Schedule section of the Events source side-pane: the refresh cadence picker, the scheduling on/off switch, and Refresh now — whose discriminated RefreshSourceResult (enqueued / already-running / skipped) is rendered arm by arm rather than collapsed into 'done'.
+                - **`settings`** — Settings section of the Events source side-pane: the source type's own configFields rendered generically through the fields FieldRenderer, with per-field autosave and the type's optional bespoke chrome. Names no source type.
+                - **`status`** — Status section of the Events source side-pane: the source's current state (also shown as a collapsed-card chip), its run watermarks and probe fingerprint, and the classified terminal error verbatim when it is parked.
+            - **`source-field`** — Contributes the `source` dimension into the events DataView: a `sourceId` enum field whose options are the live configured sources, so events can be filtered, sorted and grouped by source with no edit to event-list.
+            - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe fetches the URL (SSRF-guarded) and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
     - **`home`** — Home — app launcher and entry point.
       - Plugins:

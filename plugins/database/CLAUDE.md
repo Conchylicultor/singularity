@@ -186,6 +186,10 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/servers`
+    - `apps/events/event-list`
+    - `apps/events/events-core`
+    - `apps/events/refresh`
+    - `apps/events/sources/manual`
     - `apps/mail/attachments`
     - `apps/mail/inbox`
     - `apps/mail/mail-core`

@@ -35,6 +35,7 @@ its table/filter capabilities from `number` via the identity `extends` chain.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
+    - `apps/events/events-core`
     - `apps/mail/mail-core`
     - `conversations`
     - `conversations/summary`

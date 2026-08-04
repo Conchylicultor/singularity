@@ -1,0 +1,12 @@
+// @hash 17540b957d8a
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.events.sources.source-detail.runs:runs",
+    "apps.events.sources.source-detail.schedule:schedule",
+    "apps.events.sources.source-detail.settings:settings",
+    "apps.events.sources.source-detail.status:status"
+  ]
+}

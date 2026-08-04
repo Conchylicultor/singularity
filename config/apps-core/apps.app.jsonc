@@ -1,11 +1,15 @@
-// @hash 02bbb824bbdf
+// @hash 12ffe3521d67
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  // The rail splits at the spacer: personal-content apps above, developer and
+  // system tooling below. Events is a content app fed by external sources —
+  // the same family as Mail — so it sits with them, directly after Mail.
   "items": [
     "apps.home.shell:home",
     "apps.agent-manager.shell:agent-manager",
     "apps.pages.shell:pages",
     "apps.mail.shell:mail",
+    "apps.events.shell:events",
     "apps.story.shell:story",
     "apps.workflows.shell:workflows",
     "apps.sonata.shell:sonata",

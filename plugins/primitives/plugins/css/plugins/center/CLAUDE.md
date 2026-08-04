@@ -49,6 +49,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps-core/surface/floating`
     - `apps/agent-manager/welcome`
     - `apps/browser/webview`
+    - `apps/events/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/mail/thread-list`

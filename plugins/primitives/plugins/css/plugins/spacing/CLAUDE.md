@@ -111,6 +111,12 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/events/event-list`
+    - `apps/events/shell`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/schedule`
+    - `apps/events/sources/source-detail/settings`
+    - `apps/events/sources/source-detail/status`
     - `apps/home/shell`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`

@@ -162,6 +162,7 @@ the outcome too, with no separate code path.
     - `apps-core/tab-surface`
     - `apps/browser/shell`
     - `apps/debug/shell`
+    - `apps/events/shell`
     - `apps/file-explorer/shell`
     - `apps/home/shell`
     - `apps/mail/shell`

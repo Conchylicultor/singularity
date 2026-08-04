@@ -1,0 +1,1 @@
+export { eventsApp } from "./app";

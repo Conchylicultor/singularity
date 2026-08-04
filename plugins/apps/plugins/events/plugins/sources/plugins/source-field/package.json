@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-events-sources-source-field",
+  "description": "Contributes the `source` dimension into the events DataView as a live-options enum field.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -1,0 +1,11 @@
+// @hash 9aa5a3d53e16
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Delete is the only row action today and sits last by convention, so a
+  // future non-destructive action (Refresh, Open page) lands ahead of it rather
+  // than under the user's muscle memory for the rightmost button.
+  "items": ["apps.events.sources:delete"]
+}

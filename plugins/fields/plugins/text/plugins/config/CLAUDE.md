@@ -38,6 +38,8 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/bookmarks`
+    - `apps/events/events-core`
+    - `apps/events/sources/url-extract`
     - `apps/mail/mail-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`

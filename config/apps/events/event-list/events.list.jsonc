@@ -1,0 +1,94 @@
+// @hash 6ec84829688d
+{
+  // Browse-first ordering: the first row is the landing view. An events list is
+  // read forward — "what is on soon" — so `Upcoming` leads, `All` is the
+  // unfiltered archive (newest first, tabular), and `By category` is the same
+  // forward window partitioned by kind. `Gallery` closes the list as the
+  // visual-browse variant of `Upcoming`.
+  "views": [
+    {
+      "id": "upcoming",
+      "name": "Upcoming",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startsAt", "direction": "asc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-upcoming",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-upcoming-from-today",
+              "fieldId": "startsAt",
+              "operatorId": "is-on-or-after",
+              // The relative "Today" anchor, resolved to start-of-day on every
+              // read — so this view never needs re-authoring. A fixed ISO date
+              // would silently rot into "everything".
+              "value": { "kind": "relative", "unit": "day", "amount": 0 }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "all",
+      "name": "All",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "startsAt", "direction": "desc" }]
+      }
+    },
+    {
+      "id": "by-category",
+      "name": "By category",
+      "view": {
+        "type": "list",
+        "groupBy": "category",
+        "sort": [{ "fieldId": "startsAt", "direction": "asc" }]
+      }
+    },
+    {
+      "id": "gallery",
+      "name": "Gallery",
+      // The card-grid reading of the SAME forward window `Upcoming` shows: the
+      // filter and sort are deliberately identical, so the two views are one
+      // question asked in two densities — scan-a-list vs. browse-by-eye — rather
+      // than two different result sets the user has to reconcile.
+      //
+      // `views={["list","table","gallery"]}` whitelisted this view type from the
+      // start but no instance existed, so it was unreachable; this row is what
+      // makes it selectable.
+      //
+      // NOTE — the cards currently paint NO cover image. Events carry
+      // `imageUrl`, but it is deliberately not a `FieldDef` (see
+      // `event-list/core/internal/fields.ts`: it is a display input, not a
+      // sort/filter dimension), and the gallery only resolves a cover from a
+      // `FieldDef` id (`coverField`) or a code-supplied `viewOptions.gallery.cover`
+      // producer — event-list passes neither. So this deliberately carries no
+      // `coverField`: pointing it at a non-field id would be an override that
+      // silently resolves to nothing. Wiring the cover is a one-line change in
+      // `event-list/web/panes.tsx`, not something this file can express.
+      "view": {
+        "type": "gallery",
+        "sort": [{ "fieldId": "startsAt", "direction": "asc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-gallery-upcoming",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-gallery-from-today",
+              "fieldId": "startsAt",
+              "operatorId": "is-on-or-after",
+              // Same relative "Today" anchor as `Upcoming`, for the same reason:
+              // a fixed ISO date would rot into "everything".
+              "value": { "kind": "relative", "unit": "day", "amount": 0 }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -285,6 +285,7 @@ importing `db` never touches a worktree — no test env shim needed.
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/deploy/health`
+    - `apps/events/events-core`
     - `apps/mail/reading-pane`
     - `apps/pages/agent-origin`
     - `apps/pages/starred`

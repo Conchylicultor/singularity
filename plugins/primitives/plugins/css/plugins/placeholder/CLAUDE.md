@@ -13,6 +13,12 @@
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`
+    - `apps/events/event-list`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/schedule`
+    - `apps/events/sources/source-detail/settings`
+    - `apps/events/sources/source-detail/status`
     - `apps/mail/mailbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

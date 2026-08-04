@@ -1,0 +1,38 @@
+// @hash 6ec84829688d
+{
+  // The first row is the landing view. A source list is read as "is everything
+  // working" before "what have I got", so `All` leads (every source, newest
+  // first is already the resource's own order) and `Needs attention` is the
+  // one-click answer to the only urgent question. `By type` is the same set
+  // partitioned by kind — useful once several source types are installed, and
+  // it names none of them: the sections come from the live registry.
+  "views": [
+    { "id": "all", "name": "All", "view": { "type": "list" } },
+    {
+      "id": "needs-attention",
+      "name": "Needs attention",
+      "view": {
+        "type": "list",
+        "filter": {
+          "kind": "group",
+          "id": "f-errored",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-status-error",
+              "fieldId": "status",
+              "operatorId": "is",
+              "value": "error"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "by-type",
+      "name": "By type",
+      "view": { "type": "list", "groupBy": "type" }
+    }
+  ]
+}

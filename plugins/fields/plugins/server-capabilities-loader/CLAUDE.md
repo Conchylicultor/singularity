@@ -44,6 +44,7 @@ drift. Fix by running `./singularity build`.
     - `fields/uuid/storage`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/event-list`
     - `apps/mail/inbox`
     - `conversations/all-conversations`
     - `infra/entities`

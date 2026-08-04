@@ -152,6 +152,7 @@ not yet supported — see the open question in
     - `apps/agent-manager/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
+    - `apps/events/shell`
     - `apps/file-explorer/shell`
     - `apps/home/shell`
     - `apps/mail/shell`

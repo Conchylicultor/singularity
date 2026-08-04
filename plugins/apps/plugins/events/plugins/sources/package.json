@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-events-sources",
+  "description": "The Events app's Sources surface plus the umbrella for its source types.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -71,6 +71,7 @@ app-level descriptor and the author-time helper on top.
     - `apps/browser/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
+    - `apps/events/shell`
     - `apps/file-explorer/shell`
     - `apps/home/app-cards`
     - `apps/home/shell`

@@ -167,6 +167,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/bookmarks`
+    - `apps/events/events-core`
     - `apps/mail/mail-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`

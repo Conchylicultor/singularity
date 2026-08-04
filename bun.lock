@@ -261,6 +261,62 @@
       "name": "@singularity/plugin-apps-deploy-ssh-setup-hetzner",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events": {
+      "name": "@singularity/plugin-apps-events",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/event-list": {
+      "name": "@singularity/plugin-apps-events-event-list",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/events-core": {
+      "name": "@singularity/plugin-apps-events-events-core",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/refresh": {
+      "name": "@singularity/plugin-apps-events-refresh",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/shell": {
+      "name": "@singularity/plugin-apps-events-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources": {
+      "name": "@singularity/plugin-apps-events-sources",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/manual": {
+      "name": "@singularity/plugin-apps-events-sources-manual",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-runs",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/schedule": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-schedule",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/settings": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-settings",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/status": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-status",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-field": {
+      "name": "@singularity/plugin-apps-events-sources-source-field",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/url-extract": {
+      "name": "@singularity/plugin-apps-events-sources-url-extract",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer": {
       "name": "@singularity/plugin-apps-file-explorer",
       "version": "0.0.1",
@@ -5262,6 +5318,34 @@
     "@singularity/plugin-apps-deploy-ssh-setup": ["@singularity/plugin-apps-deploy-ssh-setup@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup"],
 
     "@singularity/plugin-apps-deploy-ssh-setup-hetzner": ["@singularity/plugin-apps-deploy-ssh-setup-hetzner@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner"],
+
+    "@singularity/plugin-apps-events": ["@singularity/plugin-apps-events@workspace:plugins/apps/plugins/events"],
+
+    "@singularity/plugin-apps-events-event-list": ["@singularity/plugin-apps-events-event-list@workspace:plugins/apps/plugins/events/plugins/event-list"],
+
+    "@singularity/plugin-apps-events-events-core": ["@singularity/plugin-apps-events-events-core@workspace:plugins/apps/plugins/events/plugins/events-core"],
+
+    "@singularity/plugin-apps-events-refresh": ["@singularity/plugin-apps-events-refresh@workspace:plugins/apps/plugins/events/plugins/refresh"],
+
+    "@singularity/plugin-apps-events-shell": ["@singularity/plugin-apps-events-shell@workspace:plugins/apps/plugins/events/plugins/shell"],
+
+    "@singularity/plugin-apps-events-sources": ["@singularity/plugin-apps-events-sources@workspace:plugins/apps/plugins/events/plugins/sources"],
+
+    "@singularity/plugin-apps-events-sources-manual": ["@singularity/plugin-apps-events-sources-manual@workspace:plugins/apps/plugins/events/plugins/sources/plugins/manual"],
+
+    "@singularity/plugin-apps-events-sources-source-detail": ["@singularity/plugin-apps-events-sources-source-detail@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-runs": ["@singularity/plugin-apps-events-sources-source-detail-runs@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-schedule": ["@singularity/plugin-apps-events-sources-source-detail-schedule@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/schedule"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-settings": ["@singularity/plugin-apps-events-sources-source-detail-settings@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/settings"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-status": ["@singularity/plugin-apps-events-sources-source-detail-status@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/status"],
+
+    "@singularity/plugin-apps-events-sources-source-field": ["@singularity/plugin-apps-events-sources-source-field@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-field"],
+
+    "@singularity/plugin-apps-events-sources-url-extract": ["@singularity/plugin-apps-events-sources-url-extract@workspace:plugins/apps/plugins/events/plugins/sources/plugins/url-extract"],
 
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 

@@ -1,0 +1,12 @@
+// @hash bb17f187c7fb
+{
+  // Node forms: "pluginId:id" | { "item": "pluginId:id", "hidden": true } |
+  // { "type": "spacer", "id": "<unique-id>" }.
+  //
+  // The `source` dimension is owned by the sources plugin (only it holds the
+  // live `event_sources` rows its option list is built from). Contributed
+  // fields land after this plugin's own schema, so `source` reads as the last
+  // column — acceptable while it is the only extension; put a future
+  // provenance-adjacent field beside it rather than at the far right.
+  "items": ["apps.events.sources.source-field:source"]
+}

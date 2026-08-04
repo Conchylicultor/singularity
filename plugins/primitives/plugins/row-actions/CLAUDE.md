@@ -23,6 +23,7 @@
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
+    - `apps/events/sources`
     - `apps/studio/compositions`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`

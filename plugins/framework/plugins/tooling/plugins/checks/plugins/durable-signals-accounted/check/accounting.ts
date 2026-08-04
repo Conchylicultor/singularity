@@ -117,4 +117,8 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
     consumer: "internal",
     note: "Gmail sync engine ops log — bootstrap / backfill / delta / attachment-scan caps and recoveries (apps/mail/sync tick, backfill, attachment-scan jobs). Diagnostic prose; no durable failure funnel.",
   },
+  "events-refresh": {
+    consumer: "internal",
+    note: "Events refresh engine cadence-tick accounting plus the non-runs (source deleted or disabled between enqueue and dispatch). Diagnostic prose covering only what the ledger structurally cannot: every run that actually happened is a durable `event_source_runs` row, and a failed one also parks the classified error on the source row — both surfaced in the app, so this channel is not the failure funnel.",
+  },
 };

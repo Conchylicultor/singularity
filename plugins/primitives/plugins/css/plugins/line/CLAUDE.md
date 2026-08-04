@@ -27,6 +27,11 @@ case) and intentionally does not compose it.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/events/event-list`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/schedule`
+    - `apps/events/sources/source-detail/status`
     - `apps/mail/inbox`
     - `apps/mail/search`
     - `apps/mail/thread-list`

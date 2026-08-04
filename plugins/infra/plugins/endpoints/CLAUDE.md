@@ -205,6 +205,12 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/events/event-list`
+    - `apps/events/events-core`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/schedule`
+    - `apps/events/sources/source-detail/settings`
     - `apps/mail/attachments`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`

@@ -11,6 +11,10 @@
     - `apps/browser/start-page`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/events/event-list`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/status`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`

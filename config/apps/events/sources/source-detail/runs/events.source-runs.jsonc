@@ -1,0 +1,41 @@
+// @hash 6ec84829688d
+{
+  // The first row is the landing view. `All` leads and deliberately includes
+  // the cheap `unchanged` runs: they are the answer to "why did nothing
+  // happen" (the probe fingerprint did not move, so no model call was paid
+  // for), and a default view that hid them would make a working cache read as
+  // a broken source. `Failures` is the triage view, `Detail` the tabular
+  // account with the per-run counts and duration.
+  "views": [
+    { "id": "all", "name": "All", "view": { "type": "list" } },
+    {
+      "id": "failures",
+      "name": "Failures",
+      "view": {
+        "type": "list",
+        "filter": {
+          "kind": "group",
+          "id": "f-failed",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-outcome-failed",
+              "fieldId": "outcome",
+              "operatorId": "is",
+              "value": "failed"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "detail",
+      "name": "Detail",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }]
+      }
+    }
+  ]
+}

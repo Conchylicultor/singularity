@@ -155,6 +155,13 @@ fixed raw size escapes per-site via
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
+    - `apps/events/event-list`
+    - `apps/events/shell`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/schedule`
+    - `apps/events/sources/source-detail/settings`
+    - `apps/events/sources/source-detail/status`
     - `apps/home/shell`
     - `apps/mail/inbox`
     - `apps/mail/reading-pane`

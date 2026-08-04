@@ -22,6 +22,7 @@
     - `DataViewServer`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/event-list`
     - `apps/mail/inbox`
     - `conversations/all-conversations`
     - `primitives/data-view/custom-columns`

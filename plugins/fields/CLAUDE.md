@@ -89,6 +89,8 @@ tokens, so anything that imports the barrels back would cycle.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/bookmarks`
+    - `apps/events/events-core`
+    - `apps/events/sources/url-extract`
     - `apps/mail/mail-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`

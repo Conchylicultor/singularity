@@ -31,6 +31,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/events/events-core`
     - `apps/mail/mail-core`
     - `apps/sonata/track-mixer`
     - `apps/sonata/voicing`

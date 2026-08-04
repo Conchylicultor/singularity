@@ -34,6 +34,10 @@ same threshold and can't desync in a row.
     - `apps-core/surface/floating`
     - `apps/deploy/deployments`
     - `apps/deploy/ssh-setup`
+    - `apps/events/event-list`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/status`
     - `apps/mail/attachments`
     - `apps/mail/mailbox`
     - `apps/mail/search`

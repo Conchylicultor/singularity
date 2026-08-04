@@ -264,6 +264,8 @@ structurally unrepresentable.
     - `apps/deploy/health`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/schedule`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
     - `apps/pages/page-tree`

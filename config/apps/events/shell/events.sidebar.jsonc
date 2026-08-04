@@ -1,0 +1,8 @@
+// @hash 4bef2dbfd3f7
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  // A vertical rail reads top-to-bottom, so the order is browse-first: the
+  // events list is what the app is for, and Sources configures where those
+  // events come from — it belongs below, not above, the thing it feeds.
+  "items": ["apps.events.event-list:event-list", "apps.events.sources:sources"]
+}

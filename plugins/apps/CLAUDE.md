@@ -10,6 +10,7 @@
   - **`browser`** — Minimal iframe-based web browser app.
   - **`debug`** — Debug app.
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+  - **`events`** — Events — track events from pluggable sources in one database.
   - **`file-explorer`** — File explorer app.
   - **`home`** — Home — app launcher and entry point.
   - **`mail`** — Mail — a Gmail-class client.

@@ -846,6 +846,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses:
@@ -1017,6 +1020,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "debug.trace.events"
     - `ConfigV2.Register` "deploy.deployments"
     - `ConfigV2.Register` "deploy.servers"
+    - `ConfigV2.Register` "events.list"
+    - `ConfigV2.Register` "events.source-runs"
+    - `ConfigV2.Register` "events.sources"
     - `ConfigV2.Register` "home.apps"
     - `ConfigV2.Register` "mail-inbox"
     - `ConfigV2.Register` "page.links.backlinks"
@@ -1044,6 +1050,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
+    - `apps/events/event-list`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
     - `apps/home/app-cards`
     - `apps/mail/inbox`
     - `apps/pages/page-tree`

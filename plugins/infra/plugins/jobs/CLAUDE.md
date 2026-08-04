@@ -152,6 +152,8 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `retryJob`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/refresh`
+    - `apps/events/sources/url-extract`
     - `apps/mail/sync`
     - `apps/pages/content-search`
     - `apps/pages/history`

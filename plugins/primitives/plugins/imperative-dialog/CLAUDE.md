@@ -57,6 +57,7 @@ The dialog content `render` is responsible for its own panel chrome and a
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/events/sources`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/compositions/auto-serve`
 

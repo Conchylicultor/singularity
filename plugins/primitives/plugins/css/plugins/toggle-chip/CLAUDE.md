@@ -25,6 +25,8 @@
     - `apps-core/surface`
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/schedule`
     - `apps/prototypes/gallery`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/pedal/indicator`

@@ -36,6 +36,7 @@ rule keeps the broken shape from coming back.
     - `apps-core/layout`
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
+    - `apps/events/sources`
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `code-explorer`

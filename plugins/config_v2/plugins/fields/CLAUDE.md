@@ -61,6 +61,7 @@ the config-only templates to mirror.
     - `useLocalValue`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/sources`
     - `apps/sonata/view-options`
     - `config_v2/settings`
     - `fields/avatar/config`
