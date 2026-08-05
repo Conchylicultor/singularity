@@ -11,14 +11,17 @@
     - `apps/browser/start-page`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+<<<<<<< .merge_file_GjaIRC
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/status`
     - `apps/mail/inbox`
+=======
+>>>>>>> .merge_file_NLvu7i
     - `apps/mail/reading-pane`
     - `apps/mail/search`
-    - `apps/mail/thread-list`
+    - `apps/mail/threads`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`

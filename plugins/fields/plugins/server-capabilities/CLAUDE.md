@@ -52,8 +52,12 @@ call.
 - Description: Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
 - Cross-plugin:
   - Imported by:
+<<<<<<< .merge_file_p7Mlzs
     - `apps/events/event-list`
     - `apps/mail/inbox`
+=======
+    - `apps/mail/threads`
+>>>>>>> .merge_file_9SLRZ3
     - `conversations/all-conversations`
     - `fields/bool/filter-sql`
     - `fields/bool/storage`
@@ -68,6 +72,8 @@ call.
     - `fields/number/filter-sql`
     - `fields/number/text-cast`
     - `fields/rank/storage`
+    - `fields/tags/filter-sql`
+    - `fields/tags/storage`
     - `fields/text/filter-sql`
     - `fields/text/storage`
     - `fields/uuid/storage`

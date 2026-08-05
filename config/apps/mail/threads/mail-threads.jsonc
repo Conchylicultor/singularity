@@ -1,0 +1,206 @@
+// @hash 6ec84829688d
+{
+  // The mailbox axis IS the view axis: one DataView, one URL, eight tabs. Each
+  // row below is a mailbox, and its scope is an ORDINARY editable `filter` — the
+  // same tree the Filter pill edits and writes straight back here. "Inbox" is
+  // definitionally the view whose filter is `labels contains INBOX`; edit it and
+  // that is the answer. Nothing re-derives or enforces these server-side.
+  //
+  // The rules are written against `MAIL_THREAD_FIELDS`
+  // (plugins/apps/plugins/mail/plugins/threads/core/internal/fields.ts) and the
+  // REGISTERED operator ids of the `tags` and `bool` field types. A wrong
+  // fieldId or operatorId fails SOFT — the rule is dropped and the tab silently
+  // shows everything — so `threads/server/internal/where.test.ts` reads this very
+  // file, compiles every row to SQL, and asserts each rule survives.
+  //
+  // Every row carries an explicit bare-slug `id` (config-stable-list-ids: it keys
+  // the saved per-view manual row order) and the date-desc sort that keeps each
+  // mailbox in Gmail order.
+  "views": [
+    {
+      "id": "inbox",
+      "name": "Inbox",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "inbox",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "inbox-label",
+              "fieldId": "labels",
+              "operatorId": "contains",
+              "value": "INBOX"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "starred",
+      "name": "Starred",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "starred",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "starred-flag",
+              "fieldId": "starred",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "important",
+      "name": "Important",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "important",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "important-flag",
+              "fieldId": "important",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sent",
+      "name": "Sent",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "sent",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "sent-label",
+              "fieldId": "labels",
+              "operatorId": "contains",
+              "value": "SENT"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "drafts",
+      "name": "Drafts",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "drafts",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "drafts-label",
+              "fieldId": "labels",
+              "operatorId": "contains",
+              "value": "DRAFT"
+            }
+          ]
+        }
+      }
+    },
+    {
+      // Gmail's "All Mail" = everything except Spam and Trash. Two ANDed
+      // negations rather than a positive label, because there is no "all" label.
+      "id": "all",
+      "name": "All Mail",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "all",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "all-not-spam",
+              "fieldId": "labels",
+              "operatorId": "does-not-contain",
+              "value": "SPAM"
+            },
+            {
+              "kind": "rule",
+              "id": "all-not-trash",
+              "fieldId": "labels",
+              "operatorId": "does-not-contain",
+              "value": "TRASH"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "spam",
+      "name": "Spam",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "spam",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "spam-label",
+              "fieldId": "labels",
+              "operatorId": "contains",
+              "value": "SPAM"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trash",
+      "name": "Trash",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "trash",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "trash-label",
+              "fieldId": "labels",
+              "operatorId": "contains",
+              "value": "TRASH"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

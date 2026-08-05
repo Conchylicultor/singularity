@@ -47,9 +47,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/tab-bar`
     - `apps/deploy/deployments`
-    - `apps/mail/mailbox`
     - `apps/mail/reading-pane`
-    - `apps/mail/thread-list`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/sonata/library`

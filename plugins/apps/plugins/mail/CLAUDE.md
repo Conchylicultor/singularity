@@ -8,8 +8,12 @@ content lives in sub-plugins:
 - `shell` — the `/mail` app entry, rail icon, layout, and the capability-driven
   landing pane.
 - `mail-core` — the persisted mail data model (accounts, threads, messages,
-  labels, attachments, drafts, sync-state, outbox) plus the Gmail token-wiring
-  helper.
+  labels, attachments, drafts, sync-state, outbox), the shared user-labels
+  resource, and the Gmail token-wiring helper. Imports no other mail plugin.
+  There is deliberately **no** mailbox view vocabulary in code — see below.
+- `threads` — the ONE mail surface: a single DataView at `/mail/threads` whose
+  TABS are the mailboxes, each an authored view instance whose scope is an
+  ordinary, user-editable filter.
 - `gmail-api` — a stateless, typed Gmail REST v1 client (profile, messages,
   history, labels) with concurrency-bounded batched gets + exponential backoff.
   Takes an access token per call; reused by sync now and compose/send later.
@@ -24,8 +28,19 @@ content lives in sub-plugins:
 
 See `research/2026-06-29-apps-gmail-client.md` for the full plan; the sync
 engine's own design is `research/2026-06-30-apps-mail-gmail-sync-engine.md`.
-Phase 1 (app scaffold + data model + token wiring) and **phase 2 (sync engine)**
-are landed. The inbox list, compose, triage, and search land in later phases.
+Phase 1 (app scaffold + data model + token wiring), **phase 2 (sync engine)**,
+the mailbox surface (`threads`), the reading pane and search are landed. Compose
+and triage land in later phases.
+
+## Mailboxes are tabs, not routes
+
+One URL (`/mail/threads`), one DataView, eight view instances — Inbox, Starred,
+Important, Sent, Drafts, All Mail, Spam, Trash — authored in
+`config/apps/mail/threads/mail-threads.jsonc`. A mailbox's scope is that view's
+plain, **user-editable** `filter`, compiled through the standard
+`compileWhere` path; nothing re-derives or enforces it server-side. Labels are
+not mailboxes: they are a filterable `tags` field anyone can build their own view
+on. Design: `research/2026-08-03-global-mail-mailbox-as-dataview-views-v2.md`.
 
 ## Auth
 
@@ -42,16 +57,14 @@ directly — all Gmail auth flows through the integration's public API.
 - Sub-plugins:
   - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
   - **`gmail-api`** — Stateless typed Gmail REST API v1 client (profile, messages, history, labels) with concurrency-bounded batched gets and exponential backoff. Takes an access token per call; never touches auth or storage.
-  - **`inbox`** — Mail inbox as a standard DataView: a server-delegated keyset query over mail_threads scoped to the Gmail INBOX, rendered as a Gmail-style list; reachable from the Mail sidebar and the bare /mail landing. Inbox DataView server: the keyset INBOX-scoped thread query (POST /api/mail/inbox/query) over mail_threads + the scalar revision-tick live resource that keeps the inbox DataView window fresh.
-  - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).
+  - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.
   - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
-  - **`mailbox`** — Mailbox sidebar nav for the Mail app: the system-view list (Inbox, Starred, …) and the live user-label list, each row navigating the thread-list column with an unread-count badge and active highlight. Owns the labels + per-view unread-count live resources (server). Mailbox view model server: the user-labels live resource and the per-view unread-count live resource (system views + labels), both scoped to the mail tables and pushed via the DB change-feed.
   - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's messages oldest→newest, each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.
   - **`remote-images`** — SSRF-guarded, image-content-type-restricted proxy for remote email images (GET /api/mail/image?url=). Same-origin; fetches through safeFetch, refuses non-image responses (415), and only ever hit after the user opts into 'Display images' — so it is neither a tracking-pixel leak nor an open proxy.
   - **`search`** — Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
   - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
   - **`sync`** — Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
   - **`sync-status`** — Mail sync-status banner: a full-width strip above the mailbox surface that surfaces in-progress syncs and classified sync failures (warning/error) with remediation copy and actions (reconnect, enable API, retry). Silent when the mailbox is healthy.
-  - **`thread-list`** — Thread-list column for the Mail app: the mailboxViewPane (segment v/:view) rendering a live, windowed keyset-paginated list of Gmail-style thread rows with unread bolding, star/attachment/important markers, and infinite scroll. Thread-list server: the windowed keyset thread-query endpoint (POST /api/mail/threads) for a mailbox view and the coarse `mail_threads` revision tick that keeps the loaded pages live.
+  - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
 
 <!-- AUTOGENERATED:END -->

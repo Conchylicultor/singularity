@@ -18,7 +18,6 @@
     - `VirtualRows`
 - Cross-plugin:
   - Imported by:
-    - `apps/mail/thread-list`
     - `apps/sonata/notation`
     - `primitives/data-table`
     - `primitives/data-view/gallery`

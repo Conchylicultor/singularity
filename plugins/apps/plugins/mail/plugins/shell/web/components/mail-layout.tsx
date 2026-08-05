@@ -8,9 +8,9 @@ import { Mail } from "../slots";
 
 /**
  * Mail's main-area layout: the app shell wraps the `Mail.Sidebar` left rail
- * (the mailbox nav — system views + labels — from the `mailbox` plugin, plus the
- * Search entry from the search plugin) around the Miller body. The sidebar header
- * carries a small Mail brand.
+ * (today just the Search entry from the search plugin — the mailboxes are the
+ * threads DataView's own tabs, not a sidebar nav) around the Miller body. The
+ * sidebar header carries a small Mail brand.
  *
  * The `Mail.Banner` strip is a rigid header above the mailbox surface, so a
  * sync-status banner shows on every mail route while `MillerColumns` keeps

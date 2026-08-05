@@ -50,8 +50,6 @@
     - `apps/events/shell`
     - `apps/events/sources`
     - `apps/file-explorer/shell`
-    - `apps/mail/inbox`
-    - `apps/mail/mailbox`
     - `apps/mail/search`
     - `apps/mail/shell`
     - `apps/pages/shell`

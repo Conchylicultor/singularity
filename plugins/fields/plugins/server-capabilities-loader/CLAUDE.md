@@ -39,13 +39,19 @@ drift. Fix by running `./singularity build`.
     - `fields/json/storage`
     - `fields/number/filter-sql`
     - `fields/rank/storage`
+    - `fields/tags/filter-sql`
+    - `fields/tags/storage`
     - `fields/text/filter-sql`
     - `fields/text/storage`
     - `fields/uuid/storage`
 - Cross-plugin:
   - Imported by:
+<<<<<<< .merge_file_eN0ZPj
     - `apps/events/event-list`
     - `apps/mail/inbox`
+=======
+    - `apps/mail/threads`
+>>>>>>> .merge_file_Ul80ip
     - `conversations/all-conversations`
     - `infra/entities`
     - `release`

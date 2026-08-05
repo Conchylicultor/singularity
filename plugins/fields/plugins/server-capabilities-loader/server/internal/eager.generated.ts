@@ -20,6 +20,8 @@ import "@plugins/fields/plugins/int/plugins/storage/server";
 import "@plugins/fields/plugins/json/plugins/storage/server";
 import "@plugins/fields/plugins/number/plugins/filter-sql/server";
 import "@plugins/fields/plugins/rank/plugins/storage/server";
+import "@plugins/fields/plugins/tags/plugins/filter-sql/server";
+import "@plugins/fields/plugins/tags/plugins/storage/server";
 import "@plugins/fields/plugins/text/plugins/filter-sql/server";
 import "@plugins/fields/plugins/text/plugins/storage/server";
 import "@plugins/fields/plugins/uuid/plugins/storage/server";

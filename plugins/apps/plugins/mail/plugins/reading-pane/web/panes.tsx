@@ -9,7 +9,7 @@ import { MessageList } from "./components/message-list";
 
 // The reading pane: the second Miller column, opened by selecting a thread in the
 // list (`openPane(threadPane, { threadId }, { mode: "push" })`). Exported so the
-// thread-list plugin can reference it for selection + navigation. Registered via
+// threads plugin can reference it for selection + navigation. Registered via
 // `Pane.Register` in the default plugin definition (`index.ts`).
 export const threadPane = Pane.define({
   id: "mail-thread",

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "mail_threads_label_ids_idx" ON "mail_threads" USING gin ("label_ids" jsonb_path_ops);

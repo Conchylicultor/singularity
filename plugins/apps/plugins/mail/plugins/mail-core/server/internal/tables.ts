@@ -88,6 +88,17 @@ const mailThreads = defineEntity("mail_threads", mailThreadFields, {
   },
   indexes: (t) => [
     index("mail_threads_account_last_msg_idx").on(t.accountId, t.lastMessageAt),
+    // Every mailbox view is a `label_ids @> '["<id>"]'` containment scan, and all
+    // mailboxes now share ONE query path — so the containment must be an index
+    // scan. `jsonb_path_ops` (rather than the default `jsonb_ops`) indexes only
+    // the hashed paths, which is smaller and faster for exactly the `@>` operator
+    // this column is queried with — the only jsonb operator any mail predicate
+    // uses. Load-bearing: `tags`' containment builders deliberately use the BARE
+    // column so this index stays usable.
+    index("mail_threads_label_ids_idx").using(
+      "gin",
+      t.labelIds.op("jsonb_path_ops"),
+    ),
   ],
 });
 

@@ -14,23 +14,24 @@ import { MAIL_APP_PATH } from "../slots";
 /**
  * Mail's index surface (bare `/mail`). It reads the Gmail integration's
  * connection state (never `@plugins/auth` directly) and renders the appropriate
- * empty-state until the mailbox is ready; once ready it redirects to the default
- * mailbox view (`mailboxViewPane`), so the user lands straight in the inbox with
- * the sidebar and thread list rather than a static "connected" card.
+ * empty-state until the mailbox is ready; once ready it redirects to the threads
+ * surface, so the user lands straight in the mailbox rather than on a static
+ * "connected" card.
  */
 export function MailRoot(): ReactElement {
   const { blocker, loading, ready } = useGmailAccess();
 
-  // Fire the inbox redirect exactly once per mount, on the edge where the
-  // mailbox becomes ready. Navigate by URL (not the pane object) so this shell
-  // never imports the inbox plugin — `inbox → shell` stays one-way and acyclic.
-  // `/mail/mailbox` mounts `inboxPane` as the Miller root exactly like
-  // `openPane(inboxPane, {}, { mode: "root" })`.
+  // Fire the mailbox redirect exactly once per mount, on the edge where the
+  // mailbox becomes ready. Navigate by URL LITERAL (not the pane object) so this
+  // shell never imports the threads plugin — `threads → shell` stays one-way and
+  // acyclic. `/mail/threads` mounts `mailThreadsPane` as the Miller root exactly
+  // like `openPane(mailThreadsPane, {}, { mode: "root" })`; which mailbox opens
+  // there is the DataView's own tab selection, not part of the URL.
   const redirected = useRef(false);
   useEffect(() => {
     if (ready && !redirected.current) {
       redirected.current = true;
-      navigate(`${MAIL_APP_PATH}/mailbox`);
+      navigate(`${MAIL_APP_PATH}/threads`);
     }
   }, [ready]);
 
@@ -56,8 +57,8 @@ export function MailRoot(): ReactElement {
     );
   }
 
-  // ready — the effect above swaps the route to the inbox view; show a spinner
-  // for the frame before it lands.
+  // ready — the effect above swaps the route to the threads surface; show a
+  // spinner for the frame before it lands.
   return (
     <Center axis="both" className="min-h-full">
       <Loading variant="spinner" />

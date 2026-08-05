@@ -1,4 +1,8 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import {
+  Resource,
+  type ServerPluginDefinition,
+} from "@plugins/framework/plugins/server-core/core";
+import { mailLabelsServerResource } from "./internal/labels-resource";
 
 // Re-export the physical tables, the attachment-link handle, and the token
 // helper so phase-2 sync code can import them from this barrel. Re-exporting a
@@ -17,12 +21,12 @@ export {
 } from "./internal/tables";
 export { mailDraftAttachments } from "./internal/schema-attachments";
 export { resolveMailAccountId } from "./internal/account";
-export { mailViewFilterSql } from "./internal/view-sql";
 export { requireGmailToken } from "./internal/token";
 export type { GmailConnection } from "./internal/token";
+export { mailLabelsServerResource } from "./internal/labels-resource";
 
 export default {
   description:
-    "Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).",
-  contributions: [],
+    "Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.",
+  contributions: [Resource.Declare(mailLabelsServerResource)],
 } satisfies ServerPluginDefinition;

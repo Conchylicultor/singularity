@@ -349,10 +349,6 @@
       "name": "@singularity/plugin-apps-mail-gmail-api",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/mail/plugins/inbox": {
-      "name": "@singularity/plugin-apps-mail-inbox",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/mail/plugins/mail-core": {
       "name": "@singularity/plugin-apps-mail-mail-core",
       "version": "0.0.1",
@@ -363,10 +359,6 @@
       "dependencies": {
         "dompurify": "^3.2.0",
       },
-    },
-    "plugins/apps/plugins/mail/plugins/mailbox": {
-      "name": "@singularity/plugin-apps-mail-mailbox",
-      "version": "0.0.1",
     },
     "plugins/apps/plugins/mail/plugins/reading-pane": {
       "name": "@singularity/plugin-apps-mail-reading-pane",
@@ -396,8 +388,8 @@
       "name": "@singularity/plugin-apps-mail-sync-auto-resume",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/mail/plugins/thread-list": {
-      "name": "@singularity/plugin-apps-mail-thread-list",
+    "plugins/apps/plugins/mail/plugins/threads": {
+      "name": "@singularity/plugin-apps-mail-threads",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/pages": {
@@ -2221,8 +2213,16 @@
       "name": "@singularity/plugin-fields-tags-filter",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/tags/plugins/filter-sql": {
+      "name": "@singularity/plugin-fields-tags-filter-sql",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/tags/plugins/inline": {
       "name": "@singularity/plugin-fields-tags-inline",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/tags/plugins/storage": {
+      "name": "@singularity/plugin-fields-tags-storage",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/tags/plugins/table": {
@@ -5380,13 +5380,9 @@
 
     "@singularity/plugin-apps-mail-gmail-api": ["@singularity/plugin-apps-mail-gmail-api@workspace:plugins/apps/plugins/mail/plugins/gmail-api"],
 
-    "@singularity/plugin-apps-mail-inbox": ["@singularity/plugin-apps-mail-inbox@workspace:plugins/apps/plugins/mail/plugins/inbox"],
-
     "@singularity/plugin-apps-mail-mail-core": ["@singularity/plugin-apps-mail-mail-core@workspace:plugins/apps/plugins/mail/plugins/mail-core"],
 
     "@singularity/plugin-apps-mail-mail-html": ["@singularity/plugin-apps-mail-mail-html@workspace:plugins/apps/plugins/mail/plugins/mail-html"],
-
-    "@singularity/plugin-apps-mail-mailbox": ["@singularity/plugin-apps-mail-mailbox@workspace:plugins/apps/plugins/mail/plugins/mailbox"],
 
     "@singularity/plugin-apps-mail-reading-pane": ["@singularity/plugin-apps-mail-reading-pane@workspace:plugins/apps/plugins/mail/plugins/reading-pane"],
 
@@ -5402,7 +5398,7 @@
 
     "@singularity/plugin-apps-mail-sync-status": ["@singularity/plugin-apps-mail-sync-status@workspace:plugins/apps/plugins/mail/plugins/sync-status"],
 
-    "@singularity/plugin-apps-mail-thread-list": ["@singularity/plugin-apps-mail-thread-list@workspace:plugins/apps/plugins/mail/plugins/thread-list"],
+    "@singularity/plugin-apps-mail-threads": ["@singularity/plugin-apps-mail-threads@workspace:plugins/apps/plugins/mail/plugins/threads"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 
@@ -6290,7 +6286,11 @@
 
     "@singularity/plugin-fields-tags-filter": ["@singularity/plugin-fields-tags-filter@workspace:plugins/fields/plugins/tags/plugins/filter"],
 
+    "@singularity/plugin-fields-tags-filter-sql": ["@singularity/plugin-fields-tags-filter-sql@workspace:plugins/fields/plugins/tags/plugins/filter-sql"],
+
     "@singularity/plugin-fields-tags-inline": ["@singularity/plugin-fields-tags-inline@workspace:plugins/fields/plugins/tags/plugins/inline"],
+
+    "@singularity/plugin-fields-tags-storage": ["@singularity/plugin-fields-tags-storage@workspace:plugins/fields/plugins/tags/plugins/storage"],
 
     "@singularity/plugin-fields-tags-table": ["@singularity/plugin-fields-tags-table@workspace:plugins/fields/plugins/tags/plugins/table"],
 

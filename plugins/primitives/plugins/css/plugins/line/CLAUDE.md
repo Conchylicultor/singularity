@@ -27,14 +27,17 @@ case) and intentionally does not compose it.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+<<<<<<< .merge_file_7Eno2r
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/status`
     - `apps/mail/inbox`
+=======
+>>>>>>> .merge_file_X9LuKR
     - `apps/mail/search`
-    - `apps/mail/thread-list`
+    - `apps/mail/threads`
     - `apps/sonata/library`
     - `apps/studio/compositions/release/release-logs`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`

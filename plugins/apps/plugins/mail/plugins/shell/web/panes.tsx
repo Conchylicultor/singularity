@@ -7,9 +7,9 @@ export const mailRootPane = Pane.define({
   id: "mail-root",
   // Empty segment + `appPath` makes this the Mail app's index pane: bare
   // `/mail` (basePath-stripped to "/") resolves here instead of the global
-  // agent-manager welcome pane. The mailbox list lives in the sidebar slot, so
-  // this pane is the landing surface shown before a thread is opened — a
-  // capability-driven empty-state that explains how to connect Gmail.
+  // agent-manager welcome pane. It is a capability-driven empty-state that
+  // explains how to connect Gmail, and redirects to `/mail/threads` (the one
+  // mail surface) the moment the mailbox is ready.
   segment: "",
   appPath: MAIL_APP_PATH,
   component: MailRootPane,

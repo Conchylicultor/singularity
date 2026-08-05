@@ -188,7 +188,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
   - **`server-capabilities-loader`** — Eagerly evaluates every fields storage/filter-sql capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.
   - **`string-list`** [1 sub-plugin] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
-  - **`tags`** [3 sub-plugins] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
+  - **`tags`** [5 sub-plugins] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
   - **`text`** [6 sub-plugins] — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`uuid`** [2 sub-plugins] — UUID field type: identity only, extends text — a string value primarily used as a storage/PK type, reusing text's cell and filter via the extends chain.
   - **`variant`** [1 sub-plugin] — Variant field type: identity only. The config-render capability and the variantField factory live in the plugins/config sub-plugin.

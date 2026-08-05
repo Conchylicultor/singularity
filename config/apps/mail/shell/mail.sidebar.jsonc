@@ -1,8 +1,11 @@
-// @hash b6c5252e2ba7
+// @hash 0f83806eb4f5
 {
-  // Entries: the Inbox DataView (apps.mail.inbox), the mailbox nav (system views
-  // + labels, apps.mail.mailbox), and the Search entry (apps.mail.search).
-  // Reorder/hide here — empty `items` keeps the default order.
+  // One entry: Search (apps.mail.search). There is deliberately no mailbox nav —
+  // the mailboxes ARE the threads DataView's own tab strip, so a sidebar listing
+  // the same axis would be a second, weaker copy of it. Listed explicitly rather
+  // than left empty so a future contributor lands as a reviewable addition.
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
-  "items": []
+  "items": [
+    "apps.mail.search:search"
+  ]
 }

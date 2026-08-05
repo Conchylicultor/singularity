@@ -93,7 +93,7 @@ describe("DeferredRouteFallback", () => {
     store.seedPending("thing/123");
     markDeferredLoadComplete();
     // Failure under a DIFFERENT app ⇒ this app is healthy ⇒ still NotFound.
-    markDeferredPluginsFailed(["apps/plugins/mail/plugins/inbox"]);
+    markDeferredPluginsFailed(["apps/plugins/mail/plugins/threads"]);
     const { getByText, queryByText } = renderFallback(store, SCOPE);
     expect(getByText(/doesn't exist/i)).not.toBeNull();
     expect(queryByText(/couldn't load/i)).toBeNull();

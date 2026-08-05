@@ -1024,7 +1024,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "events.source-runs"
     - `ConfigV2.Register` "events.sources"
     - `ConfigV2.Register` "home.apps"
-    - `ConfigV2.Register` "mail-inbox"
+    - `ConfigV2.Register` "mail-threads"
     - `ConfigV2.Register` "page.links.backlinks"
     - `ConfigV2.Register` "pages-sidebar"
     - `ConfigV2.Register` "plugin-view.file-tree"
@@ -1054,7 +1054,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/home/app-cards`
-    - `apps/mail/inbox`
+    - `apps/mail/threads`
     - `apps/pages/page-tree`
     - `apps/prototypes/gallery`
     - `apps/sonata/library`

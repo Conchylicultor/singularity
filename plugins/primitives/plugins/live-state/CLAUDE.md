@@ -635,15 +635,17 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/deploy/deployments`
     - `apps/deploy/health`
     - `apps/deploy/servers`
+<<<<<<< .merge_file_A8SaEd
     - `apps/events/event-list`
     - `apps/events/events-core`
     - `apps/events/sources`
     - `apps/mail/inbox`
+=======
+>>>>>>> .merge_file_yed81M
     - `apps/mail/mail-core`
-    - `apps/mail/mailbox`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
-    - `apps/mail/thread-list`
+    - `apps/mail/threads`
     - `apps/pages/agent-origin`
     - `apps/pages/history`
     - `apps/pages/page-tree`

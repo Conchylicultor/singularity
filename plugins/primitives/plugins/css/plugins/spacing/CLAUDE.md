@@ -118,12 +118,11 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
     - `apps/home/shell`
-    - `apps/mail/inbox`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/shell`
     - `apps/mail/sync-status`
-    - `apps/mail/thread-list`
+    - `apps/mail/threads`
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/pages/trash`

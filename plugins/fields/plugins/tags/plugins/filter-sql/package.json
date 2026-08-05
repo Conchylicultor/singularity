@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-tags-filter-sql",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Tags field type: server filter-sql capability — operator→SQL fragments mirroring the data-view tags filter predicates.",
+  "singularity": {
+    "collapsed": true
+  }
+}

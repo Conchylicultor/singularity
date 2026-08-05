@@ -63,7 +63,6 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
 - Cross-plugin:
   - Imported by:
     - `apps/mail/search`
-    - `apps/mail/thread-list`
     - `primitives/data-view`
 - Core:
   - Exports (types): `CursorPage`

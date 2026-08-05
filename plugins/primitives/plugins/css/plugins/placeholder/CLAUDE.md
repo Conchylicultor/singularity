@@ -13,6 +13,7 @@
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`
+<<<<<<< .merge_file_pMjRDI
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
@@ -20,9 +21,10 @@
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
     - `apps/mail/mailbox`
+=======
+>>>>>>> .merge_file_YoehHh
     - `apps/mail/reading-pane`
     - `apps/mail/search`
-    - `apps/mail/thread-list`
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/pages/trash`

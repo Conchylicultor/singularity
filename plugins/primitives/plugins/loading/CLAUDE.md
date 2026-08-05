@@ -66,14 +66,16 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps-core/layout`
     - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/servers`
+<<<<<<< .merge_file_YtdG8r
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
     - `apps/mail/mailbox`
+=======
+>>>>>>> .merge_file_Fj0859
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/shell`
-    - `apps/mail/thread-list`
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/pages/trash`

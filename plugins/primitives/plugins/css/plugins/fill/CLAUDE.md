@@ -45,16 +45,19 @@ composes last.
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+<<<<<<< .merge_file_pcYyJ1
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/status`
     - `apps/mail/inbox`
+=======
+>>>>>>> .merge_file_CNeGjh
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/sync-status`
-    - `apps/mail/thread-list`
+    - `apps/mail/threads`
     - `apps/sonata/library`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/compositions/auto-serve`
