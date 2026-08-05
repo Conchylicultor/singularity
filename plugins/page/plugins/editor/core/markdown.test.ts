@@ -85,19 +85,23 @@ const toggle = defineBlock({
   collapsible: "always",
 });
 
-// `quote` declares NO `markdownPrefixes` — the canonical `> ` belongs to
-// `toggle` — so without a tag it serialized as a bare paragraph and came back as
-// `text`. `body: "text"` is the fix, and `prompt` (no prefix either) is the same
-// shape. Its `| ` is a `typingPrefixes` entry, which the clipboard pipeline
-// never reads: `| ` is a markdown TABLE ROW.
+// `quote` is a VOID CONTAINER (the real one goes through
+// `defineContainerBlock`): the quoted passage IS its children, so its tag
+// carries THEM. It declares no `markdownPrefixes` — the canonical `> ` belongs
+// to `toggle` — and its `| ` is a `typingPrefixes` entry, which the clipboard
+// pipeline never reads: `| ` is a markdown TABLE ROW.
 const quote = defineBlock({
   type: "quote",
-  schema: textDataSchema,
-  empty: () => ({ text: [] }),
+  schema: z.object({}),
+  empty: () => ({}),
+  anchor: true,
   typingPrefixes: ["| "],
-  markdown: { tag: { body: "text" } },
+  markdown: { tag: { body: "children" } },
 });
 
+// `prompt` is now the ONLY text-bearing type with no markdown prefix of its own,
+// so without a tag it serialized as a bare paragraph and came back as `text`.
+// `body: "text"` is the fix.
 const prompt = defineBlock({
   type: "prompt",
   schema: textDataSchema,
@@ -520,47 +524,62 @@ describe("nested indentation → tree", () => {
   });
 });
 
-describe("quote / prompt (text-bearing, no prefix of their own)", () => {
-  test("quote round-trips through its own tag instead of decaying to `text`", () => {
-    // WAS: `serialize` emitted the bare line "wisdom", which parsed back as a
+describe("prompt (text-bearing, no prefix of its own)", () => {
+  test("prompt round-trips through its own tag instead of decaying to `text`", () => {
+    // WAS: `serialize` emitted the bare line "ship it", which parsed back as a
     // `text` block — a silent type loss on every cycle.
-    const md = serialize([node("quote", { text: runs("wisdom") })]);
-    expect(md).toBe("<quote>wisdom</quote>");
-    expect(parse(md)).toEqual([node("quote", { text: runs("wisdom") })]);
-  });
-
-  test("prompt likewise", () => {
     const md = serialize([node("prompt", { text: runs("ship it") })]);
     expect(md).toBe("<prompt>ship it</prompt>");
-    expect(parse(md)[0]!.type).toBe("prompt");
+    expect(parse(md)).toEqual([node("prompt", { text: runs("ship it") })]);
   });
 
   test("a `text` body carries inline marks, and children still nest below it", () => {
     const forest: SerializedBlock[] = [
       {
-        type: "quote",
+        type: "prompt",
         data: { text: [{ text: "bold", marks: ["bold" as const] }] },
         expanded: true,
         children: [node("bulleted-list", { text: runs("under") })],
       },
     ];
     const md = serialize(forest);
-    expect(md).toBe(["<quote>**bold**</quote>", "  * under"].join("\n"));
+    expect(md).toBe(["<prompt>**bold**</prompt>", "  * under"].join("\n"));
     expect(parse(md)).toEqual(forest);
   });
 
   test("leading/trailing whitespace in the text survives the single-line form", () => {
     // The inner text is VERBATIM: dedenting it (as the multi-line body form
     // does) would eat a space the text genuinely carries.
-    const forest = [node("quote", { text: runs("  padded  ") })];
-    expect(serialize(forest)).toBe("<quote>  padded  </quote>");
+    const forest = [node("prompt", { text: runs("  padded  ") })];
+    expect(serialize(forest)).toBe("<prompt>  padded  </prompt>");
     expect(parse(serialize(forest))).toEqual(forest);
   });
 
   test("a soft line break inside the text uses the multi-line tag form", () => {
-    const forest = [node("quote", { text: runs("a\nb") })];
+    const forest = [node("prompt", { text: runs("a\nb") })];
     const md = serialize(forest);
-    expect(md).toBe(["<quote>", "  a", "  b", "</quote>"].join("\n"));
+    expect(md).toBe(["<prompt>", "  a", "  b", "</prompt>"].join("\n"));
+    expect(parse(md)).toEqual(forest);
+  });
+});
+
+describe("quote (a void container: its passage is its children)", () => {
+  test("a quote carries its children inside its tag, not one line of text", () => {
+    // The container model's whole point in markdown: a quoted LIST survives,
+    // where the text-bearing form had exactly one line to carry.
+    const forest: SerializedBlock[] = [
+      {
+        type: "quote",
+        data: {},
+        expanded: true,
+        children: [
+          node("text", { text: runs("wisdom") }),
+          node("bulleted-list", { text: runs("and more") }),
+        ],
+      },
+    ];
+    const md = serialize(forest);
+    expect(md).toBe(["<quote>", "  wisdom", "  * and more", "</quote>"].join("\n"));
     expect(parse(md)).toEqual(forest);
   });
 });
@@ -706,11 +725,12 @@ describe("annotation containers (a real syntax, not a one-way marker)", () => {
 
 describe("typingPrefixes never reach the markdown pipeline", () => {
   test("a markdown TABLE body does not become quote blocks", () => {
-    // `quote` converts on a typed `| `, which is exactly a table row's opening
-    // in markdown. Had `| ` been a `markdownPrefixes` entry, `derivedParsePrefixes`
-    // would claim both lines and the pasted table would arrive as two quotes with
-    // the pipes eaten. Tables have no block type yet, so the honest answer is
-    // prose — verbatim, so nothing is lost.
+    // `quote` WRAPS the line on a typed `| ` (a container's typed prefix is a
+    // wrap), and `| ` is exactly a table row's opening in markdown. Had it been a
+    // `markdownPrefixes` entry, `derivedParsePrefixes` would claim both lines and
+    // the pasted table would arrive as two quotes with the pipes eaten. Tables
+    // have no block type yet, so the honest answer is prose — verbatim, so
+    // nothing is lost.
     const forest = parse(["| a | b |", "| - | - |"].join("\n"));
     expect(forest.map((b) => b.type)).toEqual(["text", "text"]);
     expect(forest.map(dataText)).toEqual(["| a | b |", "| - | - |"]);
@@ -886,7 +906,7 @@ describe("round-trip property (fuzzed forest)", () => {
     { type: "heading-1", data: (r) => ({ text: pick(r) }), children: true },
     { type: "numbered-list", data: (r) => ({ text: pick(r) }), children: true },
     { type: "toggle", data: (r) => ({ text: pick(r) }), children: true },
-    { type: "quote", data: (r) => ({ text: pick(r) }), children: true },
+    { type: "quote", data: () => ({}), children: true },
     { type: "prompt", data: (r) => ({ text: pick(r) }), children: true },
     {
       type: "to-do",

@@ -14054,6 +14054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/markdown-apply`
               - `page/prompt/block`
+              - `page/quote`
               - `page/url-paste`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
@@ -16475,6 +16476,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/private-notes`
           - `page/annotations/todo`
           - `page/callout`
+          - `page/quote`
     - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
       - Server:
         - Contributes: `page.attachment-block.collector`
@@ -16506,7 +16508,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`
+          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses:
@@ -17492,19 +17494,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PromptTaskLinkSchema`
               - `PromptTaskOriginSchema`
               - `promptTaskOriginsResource`
-    - **`quote`** — Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
+    - **`quote`** — Quote block type: a void CONTAINER whose left bar spans blocks of any type nested inside it, so a quotation may be a passage — several paragraphs, a list, a heading — rather than one line. Quote block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
       - Web:
-        - Contributes: `Editor.Block` "quote" → `BlockTextRenderer`
-        - Uses: `page/editor.Editor`
+        - Contributes:
+          - `Editor.Block` "quote" → `ContainerNoRow`
+          - `Editor.BlockFrame` "quote" → `QuoteFrame`
+        - Uses:
+          - `page/container.ContainerAnchor`
+          - `page/container.ContainerBackdrop`
+          - `page/container.ContainerNoRow`
+          - `page/editor.Editor`
         - Exports (values): `quoteBlock`
       - Server:
         - Contributes: `page.block-data` "quote"
         - Uses: `page/editor.Editor`
       - Core:
-        - Uses:
-          - `page/editor.defineBlock`
-          - `page/editor.textDataSchema`
-        - Exports (values): `quoteBlock`
+        - Uses: `page/container.defineContainerBlock`
+        - Exports (values):
+          - `quoteBlock`
+          - `quoteDataSchema`
     - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
       - Web:
         - Uses:

@@ -1,44 +1,114 @@
 # quote
 
-Quote / blockquote block type for the page editor. It owns **no component at
-all** — just one line of `BlockChrome` on its `Editor.Block` registration
-(`boxClassName: "border-l-2 border-muted-foreground/30 italic"`), painted by the
-editor's shared `TextBlockLayout`. It used to wrap `BlockTextRenderer` in a
-styled `<div>`, which is precisely why converting into or out of a quote
-remounted the Lexical editor and dropped the caret; a quote is now a re-style of
-the same element tree. No `padding` / `inset`: the line supplies the page rail's
-left inset like every other text block.
+A quote is a **void container** ([`page/container`](../container/CLAUDE.md)): it
+owns no text and no appearance — its payload is `{}` and its content IS its
+children, ordinary blocks of any type that do not know they are inside it.
 
-Quotes store the shared `{ text }` payload and are reachable from the slash menu,
-the insert menu, "Turn into" — and by typing **`| ` at the start of a block**
-(`typingPrefixes: ["| "]`). `> ` is not available: the canonical Markdown quote
-prefix is already claimed by the `toggle` block.
+```
+Quote              ← the anchor: a fixed ❝ glyph, no line of its own
+├── Text     "The best way to predict the future"
+├── Text     "is to invent it."
+└── Bulleted list
+```
+
+Inserted with `/quote`, the insert menu, "Turn into", or by typing **`| ` at the
+start of a line** — each of which **wraps** the line rather than retyping it.
+
+## It shipped as a text block, and a quote is not a line
+
+A blockquote quotes a **passage**. As a text block wearing
+`boxClassName: "border-l-2 … italic"` it could hold exactly one paragraph, so
+everything a real quotation does was unexpressible:
+
+- Enter minted a **second quote** — two bars with a seam between them, where the
+  user meant one quotation with two paragraphs;
+- a quoted list or a quoted heading was impossible: Tab-ing a list under the
+  quote left it *outside* the border, because the border was one line's box.
+
+`core/quote-block.ts` therefore calls **`defineContainerBlock`**, which forces
+`anchor: true` and `wrapOnConvert: true` — the two facts that are only correct
+together. Neither symptom is expressible any more: the container has no line to
+type into, Enter in a child is a plain sibling split inside the bar, and the
+first visible line can be a heading, an image or a code block.
+
+The pre-container rows are migrated, not abandoned:
+`20260804_140946__quote_anchor_split.sql` splits each text-bearing quote into a
+fresh anchor plus the original row retyped to `text` beneath it — statement for
+statement the callout's own split, and for the same reason. **The original row
+keeps its id**, so its `page_block_docs` Yjs doc, its undo history and its
+formatting all survive.
+
+## The void payload is enforced, not aspirational
+
+`quoteDataSchema` is `z.object({})`. The write boundary parses through
+`handle.schema.strict()`, so a stray `text` key is a 400 rather than a quietly
+stored field — which is what makes the pre-migration rows unwritable rather than
+merely unused. `core/quote-block.test.ts` pins that, plus the forced container
+facts and the keystroke policies a void row cannot honour
+(`resetToOnBackspaceAtStart` / `breakOutOnEmptyEnter` are gone: no caret can
+originate in an anchor row, and Backspace at the start of the first child is the
+generic `unwrap` rung instead).
+
+There is no per-instance appearance either, so the anchor contributes no
+`sections` and no `BlockFrameMeta.menu` — a plain `MdFormatQuote` mark on both
+surfaces. Its structural actions (Collapse / Remove quote / Delete) come from the
+rail on the line it borrows, generically, like every other container's.
+
+## The bar is the frame, and that is the point
+
+`web/components/quote-frame.tsx` paints the left rule as a `ContainerBackdrop`
+spanning the quote's `start..end` grid lines — its own (zero-height) anchor row
+plus its whole visible subtree. A per-line border is one line tall, which is
+exactly why a two-paragraph quotation used to draw two bars; a frame spans the
+passage, so one unbroken rule runs its full height however many blocks it holds.
+
+It is also the lightest look in the container family on purpose: the callout is a
+solid tint, the annotation cards are dashed boxes, and a quote is a bare rule.
+Contributing that frame is what *makes* this a container — the framed-type set is
+derived from the slot's own registered matches (`useFramedBlockTypes()`) — and
+the anchor rides on the same registration, so `anchor: true` can never claim a
+decoration nothing supplies (`./singularity check page-editor:anchor-has-decoration`).
+
+**The italic went with the text block, deliberately.** A container's children are
+ordinary blocks of any type; italicising a nested code block or heading would be
+wrong, and there is no seam for it anyway (a frame is a `pointer-events-none`
+sibling backdrop, never an ancestor of the rows it covers).
+
+## Prefixes and markdown
 
 `| ` is a `typingPrefixes` entry, never `markdownPrefixes`: in markdown `| ` opens
 a **table row**, so the clipboard parser must not claim it (a pasted table would
-arrive as a wall of quotes). Quote thus declares no *markdown* line syntax at
-all — which is why it needs `markdown: { tag: { body: "text" } }`: with no prefix
-to emit it would serialize as a bare paragraph and parse back as `text`.
+arrive as a wall of quotes). A container could not declare it there in any case —
+a void type derives no line parser. `> ` is not available either: the canonical
+Markdown quote prefix is already claimed by the `toggle` block.
 
-Quotes nest with the editor's existing indent/outdent (Tab / Shift-Tab) and
-Enter splits into a sibling quote — no quote-specific nesting logic.
+So the quote declares no markdown line syntax at all, and maps to
+`markdown: { tag: { body: "children" } }` — `<quote>…</quote>` with the children
+inside it. That is a strict gain over the text-bearing `body: "text"` form, which
+had exactly one line to carry and no way to carry the rest.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
+- Description: Quote block type: a void CONTAINER whose left bar spans blocks of any type nested inside it, so a quotation may be a passage — several paragraphs, a list, a heading — rather than one line. Quote block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
-  - Contributes: `Editor.Block` "quote" → `BlockTextRenderer`
-  - Uses: `page/editor.Editor`
+  - Contributes:
+    - `Editor.Block` "quote" → `ContainerNoRow`
+    - `Editor.BlockFrame` "quote" → `QuoteFrame`
+  - Uses:
+    - `page/container.ContainerAnchor`
+    - `page/container.ContainerBackdrop`
+    - `page/container.ContainerNoRow`
+    - `page/editor.Editor`
   - Exports (values): `quoteBlock`
 - Server:
   - Contributes: `page.block-data` "quote"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses:
-    - `page/editor.defineBlock`
-    - `page/editor.textDataSchema`
-  - Exports (values): `quoteBlock`
+  - Uses: `page/container.defineContainerBlock`
+  - Exports (values):
+    - `quoteBlock`
+    - `quoteDataSchema`
 
 <!-- AUTOGENERATED:END -->

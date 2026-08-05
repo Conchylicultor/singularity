@@ -4,6 +4,6 @@ import { quoteBlock } from "../core";
 
 export default {
   description:
-    "Quote (blockquote) block type: registers its `data` schema at the server write boundary.",
+    "Quote block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.",
   contributions: [Editor.BlockData(quoteBlock)],
 } satisfies ServerPluginDefinition;

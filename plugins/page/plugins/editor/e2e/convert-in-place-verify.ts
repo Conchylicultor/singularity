@@ -126,13 +126,15 @@ const cases: Case[] = [
     marker: "/callout",
   },
   {
+    // Also a WRAP: `quote` is a void container too, so the origin stays a `text`
+    // block and gains a quote parent.
     label: "/quote",
     type: async (page) => {
       await page.keyboard.type("hello /quote", { delay: 25 });
       await page.waitForTimeout(600);
       await page.keyboard.press("Enter");
     },
-    wantType: "quote",
+    wantType: "text",
     wantText: "hello",
     marker: "/quote",
   },
@@ -175,15 +177,17 @@ const cases: Case[] = [
   },
   {
     // The other half of the prefix split: `| ` is a `typingPrefixes` entry, so
-    // it converts here exactly like a `markdownPrefixes` one — the shortcut
-    // plugin reads the UNION (`conversionPrefixesOf`). It is deliberately NOT
-    // markdown syntax (`| ` opens a table row), which `markdown.test.ts` pins on
-    // the clipboard side; this case pins the typing side.
+    // it fires here exactly like a `markdownPrefixes` one — the shortcut plugin
+    // reads the UNION (`conversionPrefixesOf`). It is deliberately NOT markdown
+    // syntax (`| ` opens a table row), which `markdown.test.ts` pins on the
+    // clipboard side; this case pins the typing side. Quote is a container, so
+    // the prefix WRAPS: the typed line stays `text` and becomes the quote's
+    // first child, prefix stripped.
     label: "typing '| '",
     type: async (page) => {
       await page.keyboard.type("| wisdom", { delay: 25 });
     },
-    wantType: "quote",
+    wantType: "text",
     wantText: "wisdom",
     marker: "|",
   },
@@ -251,7 +255,7 @@ await withBrowser(async (h) => {
     r.ok(`${c.label}: caret collapsed inside the block`, caretOk, JSON.stringify(caret));
   }
 
-  // --- DOM-node identity across a /quote and /prompt round trip ---------------
+  // --- DOM-node identity across a /quote wrap and a /prompt round trip --------
   //
   // The direct test for `TextBlockLayout`'s totality rules
   // (research/2026-07-29-page-text-block-presentation-api.md). Everything above
@@ -265,6 +269,12 @@ await withBrowser(async (h) => {
   // sneaking back in. Any of those changes the element type at a position, React
   // unmounts the subtree, and the user's caret, focus and Yjs↔Lexical binding go
   // with it — the reported `/quote` bug, and the never-reported `/prompt` one.
+  //
+  // `/quote` is a WRAP now (quote is a void container), so its leg asserts the
+  // same element survives being REPARENTED under a fresh anchor — a stronger
+  // version of the original claim, and the reason the following `/prompt` legs
+  // run on a block that is inside the quote: converting a container's child must
+  // not touch the container.
   //
   // The prompt's chips are NOT asserted here: they only exist once a real agent
   // has been launched, which is `prompt/plugins/block/e2e/prompt-launch.ts`'s
@@ -309,8 +319,8 @@ await withBrowser(async (h) => {
     const held = await grab();
 
     for (const step of [
-      { label: "→ quote", query: "/quote", wantType: "quote", wantLaunch: false },
-      { label: "quote → text", query: "/text", wantType: "text", wantLaunch: false },
+      // A WRAP: the row stays `text` and is reparented under a fresh quote anchor.
+      { label: "→ quote (wrap)", query: "/quote", wantType: "text", wantLaunch: false },
       { label: "→ prompt", query: "/prompt", wantType: "prompt", wantLaunch: true },
       { label: "prompt → text", query: "/text", wantType: "text", wantLaunch: false },
     ]) {

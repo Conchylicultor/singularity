@@ -81,11 +81,11 @@ Never splice a ramp step into a class name (`` `pl-${BLOCK_INSET}` ``): Tailwind
 an `@utility` only for literal tokens it can scan. Use `<Inset>`, or `insetClass()`
 from the spacing primitive when you only have a `className`.
 
-Two known deviations from the invariant: the code background sits at
+One known deviation from the invariant: the code background sits at
 `C + BLOCK_INSET` rather than bleeding to `C` (its `px` wrapper is outside the
-decoration), and the quote's 2px border pushes its text to `C + 2 + BLOCK_INSET`.
-(The callout tint was a third until it became a container frame — the frame gets
-`C` handed to it as `inset`, so it now bleeds correctly.)
+decoration). The callout tint and the quote's left rule were two more until each
+became a container frame — a frame gets `C` handed to it as `inset`, so both now
+bleed correctly.
 
 `blockContentLeft(depth)` is the one derivation of `C` in the editable surface's
 row coordinates. A container frame insets its decoration to it, and the editor
@@ -1701,9 +1701,10 @@ covered. Design:
   handle. `conversionPrefixesOf` (the union) has exactly one consumer, the
   shortcut plugin; `page.editor:block-prefixes-unique` keeps two types off one
   prefix.
-- **`quote` and `prompt` declare `body: "text"`** because they are the only
-  text-bearing types with no MARKDOWN prefix (`> ` belongs to `toggle`); without
-  it they serialized as bare paragraphs and came back as `text`.
+- **`prompt` declares `body: "text"`** because it is the only text-bearing type
+  with no MARKDOWN prefix; without it it serialized as a bare paragraph and came
+  back as `text`. (`quote` had the same problem — `> ` belongs to `toggle` — but
+  it is a void container now, so its tag carries `children`.)
 - **`page/text` emits `<text/>` for an EMPTY paragraph** only. Blank lines stay
   skipped on parse — correct CommonMark for foreign markdown. The asymmetry is
   the contract: what we emit round-trips, what a user pastes stays lenient.
@@ -1734,7 +1735,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
 - Web:
   - Slots:
     - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-    - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`
+    - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
   - Uses:

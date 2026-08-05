@@ -59,6 +59,7 @@ rule keeps the broken shape from coming back.
     - `page/inline-date`
     - `page/markdown-apply`
     - `page/prompt/block`
+    - `page/quote`
     - `page/url-paste`
     - `primitives/css/ui-kit`
     - `primitives/data-view`

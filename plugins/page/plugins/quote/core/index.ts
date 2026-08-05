@@ -1,1 +1,1 @@
-export { quoteBlock } from "./quote-block";
+export { quoteBlock, quoteDataSchema } from "./quote-block";
