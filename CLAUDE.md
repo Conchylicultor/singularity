@@ -152,6 +152,7 @@ This will:
 4. Pull main (`--ff-only`) to ensure it's up to date
 5. Merge the branch into main (from the main worktree)
 6. Push main to remote
+7. Main auto-builds and restarts — the `refs/heads/main` advance triggers it. You never build or redeploy main yourself, and it is not a caveat worth reporting.
 
 > **CRITICAL — NEVER push or commit on your own initiative.** Wait for the user to ask.
 > NEVER use raw git commands (`git commit`, `git push`). Always use `./singularity push -m "message"`.
