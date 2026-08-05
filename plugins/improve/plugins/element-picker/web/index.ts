@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData } from "@plugins/active-data/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { TaskDraftFormSlots } from "@plugins/tasks/plugins/task-draft-form/web";
-import { UI_CONTEXT_RE } from "../core";
+import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPickerButton } from "./components/element-picker-button";
 import { TaskDraftPickerButton } from "./components/task-draft-picker-button";
 import { UiContextTag } from "./components/ui-context-tag";

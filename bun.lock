@@ -3991,6 +3991,10 @@
       "name": "@singularity/plugin-primitives-tree",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/ui-context": {
+      "name": "@singularity/plugin-primitives-ui-context",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/undo-redo": {
       "name": "@singularity/plugin-primitives-undo-redo",
       "version": "0.0.1",
@@ -7139,6 +7143,8 @@
     "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
+
+    "@singularity/plugin-primitives-ui-context": ["@singularity/plugin-primitives-ui-context@workspace:plugins/primitives/plugins/ui-context"],
 
     "@singularity/plugin-primitives-undo-redo": ["@singularity/plugin-primitives-undo-redo@workspace:plugins/primitives/plugins/undo-redo"],
 

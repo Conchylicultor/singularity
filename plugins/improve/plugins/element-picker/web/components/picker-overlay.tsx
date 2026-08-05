@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
-import { collectMarkerLineage } from "../internal/marker-lineage";
+import { collectLineage } from "@plugins/primitives/plugins/ui-context/web";
 import { resolveTarget } from "../internal/resolve-target";
 
 interface Highlight {
@@ -27,10 +27,10 @@ export function PickerOverlay({
         setHighlight(null);
         return;
       }
-      const markers = collectMarkerLineage(el).markers;
+      const nodes = collectLineage(el);
       setHighlight({
         rect: el.getBoundingClientRect(),
-        pluginId: markers[markers.length - 1]?.pluginId,
+        pluginId: nodes[nodes.length - 1]?.pluginId,
         tag: el.tagName.toLowerCase(),
       });
     };

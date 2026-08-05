@@ -1,5 +1,8 @@
 import { MdAdsClick } from "react-icons/md";
-import { UI_CONTEXT_FIELDS, type UiContextMeta } from "../../core";
+import {
+  UI_CONTEXT_FIELDS,
+  type UiContextMeta,
+} from "@plugins/primitives/plugins/ui-context/core";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

@@ -46,8 +46,10 @@ declared on the pane.**
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.PaneLayoutContext`
+    - `primitives/pane.paneOwnerFor`
     - `primitives/pane.PaneResolveGuard`
     - `primitives/pane.usePaneMatch`
+    - `primitives/ui-context.UiRegion`
   - Exports (values): `FullPane`
 - Cross-plugin:
   - Imported by:

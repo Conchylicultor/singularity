@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { MdAdsClick } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import type { UiContextMeta } from "../../core";
-import { collectMeta } from "../internal/collect-meta";
+import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
+import { collectMeta } from "@plugins/primitives/plugins/ui-context/web";
 import { PickerOverlay } from "./picker-overlay";
 
 /**

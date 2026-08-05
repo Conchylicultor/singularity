@@ -1,5 +1,5 @@
-import type { UiContextMeta } from "../../core";
-import { collectMarkerLineage, type UiMarker } from "./marker-lineage";
+import { formatLineagePath, type UiContextMeta } from "../../core";
+import { collectLineage } from "./collect-lineage";
 
 const MAX_LABEL = 60;
 
@@ -35,10 +35,18 @@ function describeElement(el: Element): string {
   return trimmed ? `${head} — ${trimmed}` : head;
 }
 
-/** The `display:contents` spans the slot middleware injects are not real layout
- * elements — they only carry markers — so they're skipped in the selector path. */
+/** The `display:contents` spans the lineage producers inject (the slot-item
+ * marker middleware, `<UiRegion>`) are not real layout elements — they only
+ * carry markers — so they're skipped in the selector path.
+ *
+ * Keyed on `data-lineage`, the grammar's discriminator, so it covers BOTH
+ * producers. This is load-bearing, not cosmetic: each producer's span is JSX in
+ * its own source file, so it also carries a build-stamped `data-source` /
+ * `data-ui-owner`. Recognizing only one producer would make `nearestSource` /
+ * `nearestOwner` / `preciseSelector` report the *producer's* file for every pick
+ * beneath it. */
 function isMarkerSpan(el: Element): boolean {
-  return el instanceof HTMLElement && el.dataset.slotId !== undefined;
+  return el instanceof HTMLElement && el.dataset.lineage !== undefined;
 }
 
 /** The nearest build-stamped `data-source` (repo-relative `file:line`) above the
@@ -96,24 +104,24 @@ function preciseSelector(el: Element): string {
   return segments.join(">");
 }
 
-/** Render the outer→inner marker chain as "plugin@Slot > plugin@Slot". */
-function formatPath(markers: UiMarker[]): string {
-  return markers
-    .map((m) => (m.slotId ? `${m.pluginId}@${m.slotId}` : m.pluginId))
-    .join(" > ");
-}
-
 export function collectMeta(el: Element): UiContextMeta {
-  const { markers, paneId } = collectMarkerLineage(el);
-  const innermost = markers[markers.length - 1];
+  const nodes = collectLineage(el);
+  // `plugin` / `slot` / `contribution` always describe ONE node — the innermost,
+  // of whatever kind — never a `plugin=` from one node paired with a `slot=`
+  // inherited from another. A pick inside a pane's own markup therefore reports
+  // the pane's owning plugin and no slot, instead of climbing past the region to
+  // the app shell's Apps.App contribution. The full truth is always in `path`.
+  const innermost = nodes[nodes.length - 1];
+  const contribution = innermost?.kind === "contribution" ? innermost : undefined;
   return {
     url: window.location.href,
     pluginId: innermost?.pluginId,
-    slotId: innermost?.slotId,
-    contributionId: innermost?.contributionId,
-    paneId,
-    // Only emit the path when it adds something beyond plugin/slot (>1 marker).
-    path: markers.length > 1 ? formatPath(markers) : undefined,
+    slotId: contribution?.slotId,
+    contributionId: contribution?.contributionId,
+    // Unconditional: `path` is the sole carrier of region information (which
+    // pane / tab / window the element sits in), so gating it on "adds more than
+    // the innermost node" would drop that whenever the chain is one node long.
+    path: formatLineagePath(nodes) || undefined,
     element: describeElement(el),
     selector: preciseSelector(el),
     source: nearestSource(el),

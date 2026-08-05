@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { defineSlot, getDeferredLoadState, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -302,6 +303,31 @@ const registry = new Map<string, PaneInternal>();
 // PaneInternal (e.g. the resolve guard, which receives MatchEntry.pane) reach
 // the object's hooks (useClose/usePromote) to reuse the standard chrome.
 const paneObjectByInternal = new WeakMap<PaneInternal, AnyPane>();
+
+// The plugin that owns each registered pane. Kept BESIDE the pane record rather
+// than on it: `PaneInternal` is built by `Pane.define` (a pure factory that
+// cannot see who is registering it), and the owner is only knowable at
+// registry-sync, where the loader-stamped `_pluginId` rides the `Pane.Register`
+// *contribution*. Writing it onto the record there would mutate a value
+// returned from `useContributions()` — which `react-hooks/immutability`
+// correctly rejects. Ownership is a registration fact, so it lives in the
+// registry layer.
+//
+// Why it is threaded at all: a pane boundary carries no plugin marker of its
+// own, so an upward DOM walk for UI attribution (the `ui-context` composition
+// lineage) climbs straight past the pane to the app shell's `Apps.App`
+// contribution and mis-attributes every pick inside a pane to the shell.
+const paneOwnerByInternal = new WeakMap<PaneInternal, PluginId>();
+
+/**
+ * The plugin that registered a pane, or `undefined` before the pane has been
+ * through {@link useSyncPaneRegistry}. Optional rather than throwing: a missing
+ * owner degrades an attribution marker to "region with no owner", which is not
+ * worth taking a layout down for.
+ */
+export function paneOwnerFor(internal: PaneInternal): PluginId | undefined {
+  return paneOwnerByInternal.get(internal);
+}
 
 /** Resolve the public PaneObject for an internal pane record. */
 export function paneObjectFor(internal: PaneInternal): AnyPane {
@@ -1858,8 +1884,8 @@ export function useSyncPaneRegistry(): void {
     // Maps a normalized segment pattern → the paneId that first claimed it, so a
     // second pane whose segment matches the same URLs is caught immediately.
     const patternOwner = new Map<string, string>();
-    for (const { pane } of contributions) {
-      const internal = pane._internal;
+    for (const contribution of contributions) {
+      const internal = contribution.pane._internal;
       if (seen.has(internal.id)) {
         console.warn(`Pane "${internal.id}" registered twice.`);
         continue;
@@ -1879,6 +1905,14 @@ export function useSyncPaneRegistry(): void {
         patternOwner.set(pattern, internal.id);
       }
       seen.add(internal.id);
+      // The only place the pane's owning plugin is knowable: the loader stamps
+      // `_pluginId` on the CONTRIBUTION, and `Pane.define` (a pure factory) has
+      // no way to see it. See {@link paneOwnerFor}. A contribution built outside
+      // the loader (tests) carries no id — record nothing rather than an owner
+      // the caller would have to re-check.
+      if (contribution._pluginId) {
+        paneOwnerByInternal.set(internal, contribution._pluginId);
+      }
       registry.set(internal.id, internal);
     }
     // Re-sync the route from the current URL now that the registry is

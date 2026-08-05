@@ -18,6 +18,7 @@ export {
   useIndexMatch,
   usePathname,
   useSyncPaneRegistry,
+  paneOwnerFor,
   usePaneRoute,
   parseUrl,
   buildRouteUrl,

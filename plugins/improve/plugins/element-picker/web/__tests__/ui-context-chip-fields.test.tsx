@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render, fireEvent } from "@testing-library/react";
-import { UI_CONTEXT_FIELDS, type UiContextMeta } from "../../core";
+import { UI_CONTEXT_FIELDS, type UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 import { UiContextChip } from "../components/ui-context-chip";
 
 afterEach(cleanup);
@@ -11,8 +11,7 @@ const meta: UiContextMeta = {
   pluginId: "apps.sonata.piano-roll",
   slotId: "sonata.toolbar.end",
   contributionId: "apps.sonata.piano-roll:spread",
-  paneId: "sonata-player",
-  path: "apps.sonata.shell@apps.app > apps.sonata.piano-roll@sonata.toolbar.end",
+  path: "apps.sonata.shell@apps.app > apps.sonata.piano-roll#pane:sonata-player > apps.sonata.piano-roll@sonata.toolbar.end",
   element: "div — 1×",
   selector: "header>div>div",
   source: "plugins/foo/web/bar.tsx:42",

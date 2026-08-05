@@ -6,7 +6,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData, useActiveDataLinkify } from "@plugins/active-data/web";
 import { FileLinkText, linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
-import { UI_CONTEXT_RE } from "../../core";
+import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
 import { UiContextTag } from "../components/ui-context-tag";
 
 // The reported bug: a `<ui-context …>` token rendered as a chip while composing

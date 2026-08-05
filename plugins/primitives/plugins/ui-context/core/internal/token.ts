@@ -5,10 +5,12 @@ export interface UiContextMeta {
   // Author-supplied contribution id, keyed for cross-plugin uniqueness as
   // `pluginId:id` (e.g. "improve/element-picker:element-picker").
   contributionId?: string;
-  paneId?: string;
-  // Composition lineage outer→inner, e.g. "tasks/task-header@TaskDetail.Section >
-  // improve/element-picker@ActionBar.Item". Points at the contributing source far
-  // more precisely than pluginId alone; omitted when there's only one marker.
+  // Composition lineage outer→inner, e.g. "apps/deploy/deployments#pane:deploy-
+  // deployment-detail[column 3 of 3] > tasks/task-header@TaskDetail.Section".
+  // `@` means "contributes into", `#` means "occupies". Points at the
+  // contributing source far more precisely than pluginId alone, and is the SOLE
+  // carrier of region information (which pane / tab / window) — there is
+  // deliberately no separate `region`/`pane` field to drift from it.
   path?: string;
   element: string; // e.g. "button — Improve this app"
   selector?: string; // short CSS path for precision, e.g. "header>div>button"
@@ -56,12 +58,17 @@ const field = <K extends UiContextField["key"]>(
 // Ordered once; this order is the serialized attribute order AND the popover row
 // order. `url` leads (matching the historical wire format), the rest follow
 // outer→inner / coarse→fine.
+//
+// There is no `pane` field: the containing pane is a region node inside `path`,
+// which would make a scalar `pane=` redundant with it (and ambiguous — a pane id
+// names a definition, not a position). Tags serialized before that change carry
+// `pane="…"`; no legacy branch is needed, because parsing is driven by this list
+// and simply ignores unregistered attributes.
 export const UI_CONTEXT_FIELDS = [
   field("url", "url", "URL", true),
   field("pluginId", "plugin", "Plugin"),
   field("slotId", "slot", "Slot"),
   field("contributionId", "contribution", "Contribution"),
-  field("paneId", "pane", "Pane"),
   field("path", "path", "Path"),
   field("selector", "selector", "Selector"),
   field("source", "source", "Source"),

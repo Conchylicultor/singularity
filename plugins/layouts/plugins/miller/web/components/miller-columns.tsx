@@ -5,9 +5,11 @@ import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/
 import {
   PaneBasePathContext,
   PaneInstanceContext,
+  paneOwnerFor,
   usePaneMatch,
   usePaneStore,
 } from "@plugins/primitives/plugins/pane/web";
+import { UiRegion } from "@plugins/primitives/plugins/ui-context/web";
 import {
   SortableItem,
   SortableList,
@@ -91,21 +93,37 @@ export function MillerColumns() {
               >
                 {(state) => (
                   <PaneInstanceContext.Provider value={entry.instanceId}>
-                    {/* Per-column boundary: a crash inside one pane is
-                        contained to that column; sibling panes survive.
-                        The outer boundary remains as a backstop for the
-                        row scaffolding (SortableList, drag). */}
-                    <PluginErrorBoundary
-                      slot="layouts.miller"
-                      label={entry.pane.id}
+                    {/* The column as a named lineage region, so a picked element
+                        reports the pane that contains it AND the plugin that
+                        owns it. Wrapped HERE rather than inside `Column`: the
+                        region then covers the column body, its CollapsedBar and
+                        its ResizeHandle uniformly (Column has three early-return
+                        shapes), and Column needs no new props. `label` carries
+                        the position — miller panes are SIBLINGS, so an upward
+                        walk from column 3 can never infer "3 of 3"; only the map
+                        site knows it. */}
+                    <UiRegion
+                      kind="pane"
+                      id={entry.pane.id}
+                      label={`column ${i + 1} of ${match.panes.length}`}
+                      pluginId={paneOwnerFor(entry.pane)}
                     >
-                      <Column
-                        entry={entry}
-                        isFirst={i === 0}
-                        isLast={isLast}
-                        dragHandleProps={canReorder ? state.handleProps : undefined}
-                      />
-                    </PluginErrorBoundary>
+                      {/* Per-column boundary: a crash inside one pane is
+                          contained to that column; sibling panes survive.
+                          The outer boundary remains as a backstop for the
+                          row scaffolding (SortableList, drag). */}
+                      <PluginErrorBoundary
+                        slot="layouts.miller"
+                        label={entry.pane.id}
+                      >
+                        <Column
+                          entry={entry}
+                          isFirst={i === 0}
+                          isLast={isLast}
+                          dragHandleProps={canReorder ? state.handleProps : undefined}
+                        />
+                      </PluginErrorBoundary>
+                    </UiRegion>
                   </PaneInstanceContext.Provider>
                 )}
               </SortableItem>

@@ -14462,19 +14462,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/popover.InlinePopover`
           - `primitives/slot-render.registerSlotItemMiddleware`
+          - `primitives/ui-context.appendLineage`
+          - `primitives/ui-context.collectLineage`
+          - `primitives/ui-context.collectMeta`
+          - `primitives/ui-context.contributionNodeAttrs`
+          - `primitives/ui-context.LINEAGE_ATTR`
           - `shell/action-bar.ActionBar`
           - `tasks/task-draft-form.TaskDraftFormSlots`
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
-        - Exports (types):
-          - `UiContextField`
-          - `UiContextMeta`
-        - Exports (values):
-          - `parseUiContext`
-          - `serializeUiContext`
-          - `UI_CONTEXT_FIELDS`
-          - `UI_CONTEXT_RE`
-          - `viteCollectedDir`
+        - Exports (values): `viteCollectedDir`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -16172,8 +16169,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.PaneLayoutContext`
+          - `primitives/pane.paneOwnerFor`
           - `primitives/pane.PaneResolveGuard`
           - `primitives/pane.usePaneMatch`
+          - `primitives/ui-context.UiRegion`
         - Exports (values): `FullPane`
       - Cross-plugin:
         - Imported by:
@@ -16205,6 +16204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneBasePathContext`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.PaneLayoutContext`
+          - `primitives/pane.paneOwnerFor`
           - `primitives/pane.PaneResolveGuard`
           - `primitives/pane.PaneStore`
           - `primitives/pane.usePaneMatch`
@@ -16213,6 +16213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
           - `primitives/surface-id.useSurfaceTabId`
+          - `primitives/ui-context.UiRegion`
         - Exports (values):
           - `MillerColumns`
           - `PaneOverlayHost`
@@ -21407,6 +21408,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/paste-images`
               - `primitives/tooltip`
               - `primitives/tree`
+              - `primitives/ui-context`
               - `primitives/virtual-rows`
               - `reorder`
               - `reorder/editor`
@@ -23675,6 +23677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PaneLayoutContext`
           - `PaneLoadScopeContext`
           - `PaneMatchContext`
+          - `paneOwnerFor`
           - `PaneResolveGuard`
           - `PaneScroll`
           - `PaneStoreContext`
@@ -24786,6 +24789,44 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tree-disclosure/column`
           - `ui/tree-disclosure/dimmed-leaf`
           - `ui/tree-disclosure/merged`
+    - **`ui-context`** — The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse). A neutral leaf so both improve/element-picker and reports/render-loop can ask 'what composed this element?' without either depending on the other.
+      - Web:
+        - Uses:
+          - `primitives/css/ui-kit.PortalForwardProvider`
+          - `primitives/css/ui-kit.usePortalForwardedAttrs`
+        - Exports (types):
+          - `ContributionNodeAttrs`
+          - `RegionNodeAttrs`
+        - Exports (values):
+          - `appendLineage`
+          - `collectLineage`
+          - `collectMeta`
+          - `contributionNodeAttrs`
+          - `LINEAGE_ATTR`
+          - `NODE_ATTR`
+          - `parseLineage`
+          - `readLineageNode`
+          - `regionNodeAttrs`
+          - `UiRegion`
+      - Cross-plugin:
+        - Imported by:
+          - `improve/element-picker`
+          - `layouts/full-pane`
+          - `layouts/miller`
+      - Core:
+        - Exports (types):
+          - `ContributionNode`
+          - `LineageNode`
+          - `RegionNode`
+          - `UiContextField`
+          - `UiContextMeta`
+        - Exports (values):
+          - `formatLineageNode`
+          - `formatLineagePath`
+          - `parseUiContext`
+          - `serializeUiContext`
+          - `UI_CONTEXT_FIELDS`
+          - `UI_CONTEXT_RE`
     - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
       - Web:
         - Uses:

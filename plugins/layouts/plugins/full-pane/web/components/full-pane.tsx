@@ -5,8 +5,10 @@ import {
   PaneInstanceContext,
   PaneLayoutContext,
   PaneResolveGuard,
+  paneOwnerFor,
   usePaneMatch,
 } from "@plugins/primitives/plugins/pane/web";
+import { UiRegion } from "@plugins/primitives/plugins/ui-context/web";
 
 // A full-pane surface is the only column, so it IS both the surface start and
 // end edge — a full-surface pane's header hosts the sidebar toggle and reserves
@@ -40,15 +42,28 @@ export function FullPane() {
   return (
     <PaneInstanceContext.Provider value={active.instanceId}>
       <PaneLayoutContext.Provider value={FULL_PANE_LAYOUT_CTX}>
-        <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
-          <div className="h-full min-h-0" data-pane-id={active.pane.id}>
-            {/* Forward the pane id across portals so popovers/menus opened from
-                this pane still report their containing pane to the picker. */}
-            <PortalForwardProvider name="data-pane-id" value={active.pane.id}>
-              <PaneResolveGuard pane={active.pane} params={active.params} />
-            </PortalForwardProvider>
-          </div>
-        </PluginErrorBoundary>
+        {/* The active pane as a named lineage region, so a picked element
+            reports the pane that contains it AND the plugin that owns it. No
+            `label`: a full-pane surface paints exactly one pane, so there are no
+            siblings to disambiguate. */}
+        <UiRegion
+          kind="pane"
+          id={active.pane.id}
+          pluginId={paneOwnerFor(active.pane)}
+        >
+          <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
+            <div className="h-full min-h-0" data-pane-id={active.pane.id}>
+              {/* Forward the pane id across portals so popovers/menus opened from
+                  this pane still report their containing pane. `data-pane-id` is
+                  a separate, load-bearing DOM convention with its own readers
+                  (render-loop attribution, overscroll-hint, e2e) — the region
+                  marker above is additive alongside it, not a replacement. */}
+              <PortalForwardProvider name="data-pane-id" value={active.pane.id}>
+                <PaneResolveGuard pane={active.pane} params={active.params} />
+              </PortalForwardProvider>
+            </div>
+          </PluginErrorBoundary>
+        </UiRegion>
       </PaneLayoutContext.Provider>
     </PaneInstanceContext.Provider>
   );

@@ -492,6 +492,7 @@ See "Open questions" in the design doc.
     - `PaneLayoutContext`
     - `PaneLoadScopeContext`
     - `PaneMatchContext`
+    - `paneOwnerFor`
     - `PaneResolveGuard`
     - `PaneScroll`
     - `PaneStoreContext`

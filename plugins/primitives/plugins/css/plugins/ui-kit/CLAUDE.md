@@ -523,6 +523,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/text-editor/paste-images`
     - `primitives/tooltip`
     - `primitives/tree`
+    - `primitives/ui-context`
     - `primitives/virtual-rows`
     - `reorder`
     - `reorder/editor`

@@ -1,4 +1,4 @@
-import { parseUiContext } from "../../core";
+import { parseUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import { UiContextChip } from "./ui-context-chip";
 
 // active-data inline renderer for the `<ui-context …>` token. Receives the raw

@@ -136,6 +136,7 @@ not yet supported — see the open question in
     - `primitives/pane.PaneBasePathContext`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.PaneLayoutContext`
+    - `primitives/pane.paneOwnerFor`
     - `primitives/pane.PaneResolveGuard`
     - `primitives/pane.PaneStore`
     - `primitives/pane.usePaneMatch`
@@ -144,6 +145,7 @@ not yet supported — see the open question in
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `primitives/surface-id.useSurfaceTabId`
+    - `primitives/ui-context.UiRegion`
   - Exports (values):
     - `MillerColumns`
     - `PaneOverlayHost`

@@ -2,9 +2,13 @@ import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
+import {
+  appendLineage,
+  collectMeta,
+  parseLineage,
+  UiRegion,
+} from "@plugins/primitives/plugins/ui-context/web";
 import { PluginMarkerMiddleware } from "../internal/marker-middleware";
-import { collectMeta } from "../internal/collect-meta";
-import { appendLineage, parseLineage } from "../internal/marker-lineage";
 
 afterEach(cleanup);
 
@@ -67,18 +71,85 @@ describe("plugin lineage survives a portal", () => {
     expect(meta.pluginId).toBe("my.plugin");
     expect(meta.path).toBe("outer.plugin@outer.slot > my.plugin@inner.slot");
   });
+
+  it("mixes region and contribution nodes in one path across the portal", () => {
+    // The cutover shape: a layout renderer wraps the pane in a region, a slot
+    // contribution renders inside it, and the content portals out. The region
+    // must survive the portal and sit in the chain exactly where it composed.
+    render(
+      <UiRegion
+        kind="pane"
+        id="deploy-deployment-detail"
+        label="column 3 of 3"
+        pluginId="apps/deploy/deployments"
+      >
+        <PluginMarkerMiddleware slotId="inner.slot" contribution={portaledContribution()}>
+          <ViewportOverlay>
+            <button data-testid="mixed">Deep</button>
+          </ViewportOverlay>
+        </PluginMarkerMiddleware>
+      </UiRegion>,
+    );
+    const meta = collectMeta(
+      document.querySelector<HTMLElement>('[data-testid="mixed"]')!,
+    );
+    expect(meta.path).toBe(
+      "apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3] > my.plugin@inner.slot",
+    );
+    // The headline still describes ONE node — the innermost contribution.
+    expect(meta.pluginId).toBe("my.plugin");
+    expect(meta.slotId).toBe("inner.slot");
+  });
+
+  it("reports the region's owning plugin (and no slot) for a pick in the pane's own markup", () => {
+    // The (b) fix: without the region node the walk climbed past the pane to the
+    // app shell's Apps.App contribution and reported the shell as the owner.
+    render(
+      <PluginMarkerMiddleware
+        slotId="apps.app"
+        contribution={{ _pluginId: "apps.deploy.shell" } as unknown as Contribution}
+      >
+        <UiRegion
+          kind="pane"
+          id="deploy-deployment-detail"
+          label="column 3 of 3"
+          pluginId="apps/deploy/deployments"
+        >
+          <button data-testid="in-pane">Overview</button>
+        </UiRegion>
+      </PluginMarkerMiddleware>,
+    );
+    const meta = collectMeta(
+      document.querySelector<HTMLElement>('[data-testid="in-pane"]')!,
+    );
+    expect(meta.pluginId).toBe("apps/deploy/deployments");
+    expect(meta.slotId).toBeUndefined();
+    expect(meta.contributionId).toBeUndefined();
+    expect(meta.path).toBe(
+      "apps.deploy.shell@apps.app > apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3]",
+    );
+  });
 });
 
 describe("lineage serialization", () => {
-  it("round-trips markers and skips owner-less contributions", () => {
-    const a = appendLineage(undefined, { pluginId: "p1", slotId: "s1" });
-    const b = appendLineage(a, { pluginId: "p2", slotId: "s2", contributionId: "p2:c" });
+  it("round-trips nodes and skips owner-less contributions", () => {
+    const a = appendLineage(undefined, {
+      kind: "contribution",
+      pluginId: "p1",
+      slotId: "s1",
+    });
+    const b = appendLineage(a, {
+      kind: "contribution",
+      pluginId: "p2",
+      slotId: "s2",
+      contributionId: "p2:c",
+    });
     // A contribution with no plugin id leaves the chain untouched.
-    const c = appendLineage(b, { pluginId: "", slotId: "s3" });
+    const c = appendLineage(b, { kind: "contribution", pluginId: "", slotId: "s3" });
     expect(c).toBe(b);
     expect(parseLineage(c)).toEqual([
-      { pluginId: "p1", slotId: "s1" },
-      { pluginId: "p2", slotId: "s2", contributionId: "p2:c" },
+      { kind: "contribution", pluginId: "p1", slotId: "s1" },
+      { kind: "contribution", pluginId: "p2", slotId: "s2", contributionId: "p2:c" },
     ]);
   });
 

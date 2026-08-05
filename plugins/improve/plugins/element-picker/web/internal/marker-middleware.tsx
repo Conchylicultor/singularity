@@ -5,21 +5,31 @@ import {
   PortalForwardProvider,
   usePortalForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { appendLineage, LINEAGE_ATTR } from "./marker-lineage";
+import type { ContributionNode } from "@plugins/primitives/plugins/ui-context/core";
+import {
+  appendLineage,
+  contributionNodeAttrs,
+  LINEAGE_ATTR,
+} from "@plugins/primitives/plugins/ui-context/web";
 
 /**
- * Wraps every slot contribution in a layout-neutral marker carrying the owning
- * plugin id and slot id. `display:contents` generates no box (layout identical
- * to a Fragment), but the element stays in the DOM tree so
- * `Element.closest('[data-plugin-id]')` resolves the nearest (most specific)
- * plugin — the fine-grained attribution the element picker needs.
+ * Wraps every slot contribution in a layout-neutral `contribution` lineage node
+ * carrying the owning plugin id and slot id (attribute grammar owned by
+ * `primitives/ui-context`). `display:contents` generates no box (layout
+ * identical to a Fragment), but the element stays in the DOM tree so the
+ * `collectLineage` walk resolves the nearest (most specific) plugin — the
+ * fine-grained attribution the element picker needs.
  *
- * The same marker is *also* appended to the portal-forward lineage (React
+ * The same node is *also* appended to the portal-forward lineage (React
  * context, which crosses portals) so a contribution that portals its content out
  * to `document.body` — popovers, dialogs, menus — re-stamps the full lineage on
  * the portaled positioner, where the DOM-ancestry walk can no longer reach the
- * span. This is the second consumer of the generic portal-forward bridge, after
- * theme scope.
+ * span.
+ *
+ * This middleware stays **here**, opt-in, rather than in `ui-context`: it wraps
+ * *every* slot contribution repo-wide, so that cost is only paid when the
+ * element-picker is actually in the app composition. `<UiRegion>` — a handful of
+ * explicit call sites — has no such constraint and lives in the primitive.
  */
 export function PluginMarkerMiddleware({
   slotId,
@@ -36,20 +46,17 @@ export function PluginMarkerMiddleware({
       ? `${contribution._pluginId}:${contribution.id as string}`
       : String(contribution.id)
     : "";
-  const inheritedLineage = usePortalForwardedAttrs()[LINEAGE_ATTR];
-  const lineage = appendLineage(inheritedLineage, {
+  const node: ContributionNode = {
+    kind: "contribution",
     pluginId,
     slotId,
     contributionId,
-  });
+  };
+  const inheritedLineage = usePortalForwardedAttrs()[LINEAGE_ATTR];
+  const lineage = appendLineage(inheritedLineage, node);
   return (
     <PortalForwardProvider name={LINEAGE_ATTR} value={lineage}>
-      <span
-        style={{ display: "contents" }}
-        data-plugin-id={pluginId}
-        data-slot-id={slotId}
-        data-contribution-id={contributionId}
-      >
+      <span style={{ display: "contents" }} {...contributionNodeAttrs(node)}>
         {children}
       </span>
     </PortalForwardProvider>
