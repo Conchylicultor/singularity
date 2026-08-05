@@ -1394,11 +1394,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by: `apps/mail/reading-pane`
             - Endpoint callers:
-              - `inbox`
               - `remote-images`
               - `search`
               - `sync`
-              - `thread-list`
+              - `threads`
         - **`gmail-api`** — Stateless typed Gmail REST API v1 client (profile, messages, history, labels) with concurrency-bounded batched gets and exponential backoff. Takes an access token per call; never touches auth or storage.
           - Cross-plugin:
             - Imported by:
@@ -1432,72 +1431,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `GmailApiError`
               - `GmailHistoryExpiredError`
-        - **`inbox`** — Mail inbox as a standard DataView: a server-delegated keyset query over mail_threads scoped to the Gmail INBOX, rendered as a Gmail-style list; reachable from the Mail sidebar and the bare /mail landing. Inbox DataView server: the keyset INBOX-scoped thread query (POST /api/mail/inbox/query) over mail_threads + the scalar revision-tick live resource that keeps the inbox DataView window fresh.
-          - Web:
-            - Slots: `inboxPane.Actions`
-            - Contributes:
-              - `Pane.Register` "mail-inbox"
-              - `Mail.Sidebar` "Inbox" → `component`
-            - Uses:
-              - `apps/mail/reading-pane.threadPane`
-              - `apps/mail/shell.Mail`
-              - `infra/endpoints.fetchEndpoint`
-              - `primitives/app-shell.sidebarNavItem`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/data-view.DataView`
-              - `primitives/data-view.defineDataView`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.useResource`
-              - `primitives/pane.openPane`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/pane.useOpenPane`
-              - `primitives/relative-time.RelativeTime`
-            - Exports (values): `inboxPane`
+        - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.
           - Server:
-            - Contributes: `resource.declare` "mail-inbox-revision"
-            - Uses:
-              - `apps/mail/mail-core._mailThreads`
-              - `apps/mail/mail-core.mailViewFilterSql`
-              - `apps/mail/mail-core.resolveMailAccountId`
-              - `database.db`
-              - `fields/server-capabilities-loader`
-              - `fields/server-capabilities.resolveFieldFilterSql`
-              - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
-              - `primitives/data-view/server-query.compileWhere`
-              - `primitives/data-view/server-query.OperatorSqlResolver`
-              - `primitives/keyset.buildSortKeys`
-              - `primitives/keyset.keyValuesOf`
-              - `primitives/keyset.orderByClauses`
-              - `primitives/keyset.seekPredicate`
-            - Exports (values):
-              - `handleQuery`
-              - `inboxRevisionServerResource`
-            - Resources: `mail-inbox-revision` (push)
-            - Routes: `POST /api/mail/inbox/query`
-          - Core:
-            - Uses:
-              - `apps/mail/mail-core.MailThreadSchema`
-              - `infra/endpoints.defineEndpoint`
-              - `primitives/data-view.FilterGroupSchema`
-              - `primitives/live-state.resourceDescriptor`
-            - Exports (types):
-              - `MailThreadFieldSpec`
-              - `MailThreadFieldType`
-              - `QueryInboxBody`
-            - Exports (values):
-              - `inboxRevisionResource`
-              - `MAIL_INBOX_FIELDS`
-              - `queryInbox`
-              - `QueryInboxBodySchema`
-              - `QueryInboxResponseSchema`
-              - `SortRuleSchema`
-        - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).
-          - Server:
+            - Contributes: `resource.declare` "mail-labels"
             - Uses:
               - `database.db`
               - `infra/attachments.Attachments`
@@ -1519,9 +1455,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `_mailSyncState`
               - `_mailThreads`
               - `mailDraftAttachments`
-              - `mailViewFilterSql`
+              - `mailLabelsServerResource`
               - `requireGmailToken`
               - `resolveMailAccountId`
+            - Resources: `mail-labels` (push)
           - Core:
             - Uses:
               - `fields.FieldsRecord`
@@ -1552,20 +1489,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `MailSyncState`
               - `MailSyncStatus`
               - `MailSyncView`
-              - `MailSystemView`
               - `MailThread`
-              - `MailViewFilter`
             - Exports (values):
-              - `DEFAULT_MAIL_VIEW`
               - `deriveMailSyncView`
-              - `labelViewId`
               - `MAIL_LABEL_TYPES`
               - `MAIL_OUTBOX_OP_TYPES`
               - `MAIL_OUTBOX_STATUSES`
               - `MAIL_SYNC_ERROR_CODES`
               - `MAIL_SYNC_REMEDIATION`
               - `MAIL_SYNC_STATUSES`
-              - `MAIL_SYSTEM_VIEWS`
               - `mailAccountFields`
               - `MailAccountSchema`
               - `MailAddressSchema`
@@ -1576,6 +1508,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `mailLabelFields`
               - `MailLabelRefSchema`
               - `MailLabelSchema`
+              - `mailLabelsResource`
               - `mailMessageFields`
               - `mailMessageLabelFields`
               - `MailMessageLabelSchema`
@@ -1587,60 +1520,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `MailSyncStateSchema`
               - `mailThreadFields`
               - `MailThreadSchema`
-              - `mailViewLabelId`
               - `MAX_CONSECUTIVE_RESYNCS`
-              - `parseMailView`
           - Cross-plugin:
             - Imported by:
               - `apps/mail/attachments`
-              - `apps/mail/inbox`
-              - `apps/mail/mailbox`
               - `apps/mail/reading-pane`
               - `apps/mail/sync`
-              - `apps/mail/thread-list`
+              - `apps/mail/threads`
         - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
           - Cross-plugin:
             - Imported by: `apps/mail/reading-pane`
           - Web:
             - Exports (types): `MailHtmlProps`
             - Exports (values): `MailHtml`
-        - **`mailbox`** — Mailbox sidebar nav for the Mail app: the system-view list (Inbox, Starred, …) and the live user-label list, each row navigating the thread-list column with an unread-count badge and active highlight. Owns the labels + per-view unread-count live resources (server). Mailbox view model server: the user-labels live resource and the per-view unread-count live resource (system views + labels), both scoped to the mail tables and pushed via the DB change-feed.
-          - Web:
-            - Contributes: `Mail.Sidebar` "Mailboxes" → `MailboxNav`
-            - Uses:
-              - `apps/mail/shell.Mail`
-              - `apps/mail/thread-list.mailboxViewPane`
-              - `primitives/app-shell.SidebarPaneSection`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/row.Row`
-              - `primitives/css/scroll.Scroll`
-              - `primitives/live-state.useResource`
-              - `primitives/loading.Loading`
-              - `primitives/pane.useOpenPane`
-          - Server:
-            - Contributes:
-              - `resource.declare` "mail-labels"
-              - `resource.declare` "mail-view-counts"
-            - Uses:
-              - `apps/mail/mail-core._mailLabels`
-              - `apps/mail/mail-core._mailThreads`
-              - `apps/mail/mail-core.mailViewFilterSql`
-              - `apps/mail/mail-core.resolveMailAccountId`
-              - `database.db`
-            - Exports (values):
-              - `mailLabelsServerResource`
-              - `mailViewCountsServerResource`
-            - Resources:
-              - `mail-labels` (push)
-              - `mail-view-counts` (push)
-          - Core:
-            - Uses:
-              - `apps/mail/mail-core.MailLabelSchema`
-              - `primitives/live-state.resourceDescriptor`
-            - Exports (values):
-              - `mailLabelsResource`
-              - `mailViewCountsResource`
         - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's messages oldest→newest, each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.
           - Web:
             - Slots: `threadPane.Actions`
@@ -1686,9 +1578,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/query-resource.queryResourceDescriptor`
             - Exports (values): `threadMessagesResource`
           - Cross-plugin:
-            - Imported by:
-              - `apps/mail/inbox`
-              - `apps/mail/thread-list`
+            - Imported by: `apps/mail/threads`
         - **`remote-images`** — SSRF-guarded, image-content-type-restricted proxy for remote email images (GET /api/mail/image?url=). Same-origin; fetches through safeFetch, refuses non-image responses (415), and only ever hit after the user opts into 'Display images' — so it is neither a tracking-pixel leak nor an open proxy.
           - Server:
             - Uses:
@@ -1734,7 +1624,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
           - Web:
             - Slots:
-              - `Mail.Sidebar` ← `apps.mail.inbox`, `apps.mail.mailbox`, `apps.mail.search`
+              - `Mail.Sidebar` ← `apps.mail.search`
               - `Mail.Banner` ← `apps.mail.sync-status`
               - `Mail.RailBadge` ← `apps.mail.sync-status`
             - Contributes:
@@ -1766,8 +1656,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `mailApp`
           - Cross-plugin:
             - Imported by:
-              - `apps/mail/inbox`
-              - `apps/mail/mailbox`
               - `apps/mail/search`
               - `apps/mail/sync-status`
         - **`sync`** — Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
@@ -1845,55 +1733,65 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/live-state.useResource`
-        - **`thread-list`** — Thread-list column for the Mail app: the mailboxViewPane (segment v/:view) rendering a live, windowed keyset-paginated list of Gmail-style thread rows with unread bolding, star/attachment/important markers, and infinite scroll. Thread-list server: the windowed keyset thread-query endpoint (POST /api/mail/threads) for a mailbox view and the coarse `mail_threads` revision tick that keeps the loaded pages live.
+        - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
           - Web:
-            - Slots: `mailboxViewPane.Actions`
-            - Contributes: `Pane.Register` "mail-view"
+            - Slots: `mailThreadsPane.Actions`
+            - Contributes: `Pane.Register` "mail-threads"
             - Uses:
               - `apps/mail/reading-pane.threadPane`
               - `infra/endpoints.fetchEndpoint`
-              - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/row.Row`
-              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/cursor-pagination.InfiniteScrollFooter`
-              - `primitives/cursor-pagination.InfiniteScrollHandle`
-              - `primitives/cursor-pagination.useInfiniteScroll`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
-              - `primitives/loading.Loading`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
-              - `primitives/virtual-rows.VirtualRows`
-            - Exports (values): `mailboxViewPane`
+            - Exports (values): `mailThreadsPane`
           - Server:
             - Contributes: `resource.declare` "mail-threads-revision"
             - Uses:
               - `apps/mail/mail-core._mailThreads`
-              - `apps/mail/mail-core.mailViewFilterSql`
               - `apps/mail/mail-core.resolveMailAccountId`
               - `database.db`
+              - `fields/server-capabilities-loader`
+              - `fields/server-capabilities.resolveFieldFilterSql`
+              - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-            - Exports (values): `mailThreadsRevisionServerResource`
+              - `primitives/data-view/server-query.compileWhere`
+              - `primitives/data-view/server-query.OperatorSqlResolver`
+              - `primitives/keyset.buildSortKeys`
+              - `primitives/keyset.keyValuesOf`
+              - `primitives/keyset.orderByClauses`
+              - `primitives/keyset.seekPredicate`
+            - Exports (values):
+              - `buildThreadsWhere`
+              - `handleQuery`
+              - `mailThreadsRevisionServerResource`
             - Resources: `mail-threads-revision` (push)
-            - Routes: `POST /api/mail/threads`
+            - Routes: `POST /api/mail/threads/query`
           - Core:
             - Uses:
               - `apps/mail/mail-core.MailThreadSchema`
               - `infra/endpoints.defineEndpoint`
+              - `primitives/data-view.FilterGroupSchema`
               - `primitives/live-state.resourceDescriptor`
-            - Exports (types): `MailThreadPage`
+            - Exports (types):
+              - `MailThreadFieldSpec`
+              - `MailThreadFieldType`
+              - `QueryThreadsBody`
             - Exports (values):
-              - `MailThreadPageSchema`
+              - `MAIL_THREAD_FIELDS`
               - `mailThreadsRevisionResource`
-              - `queryThreadsEndpoint`
-          - Cross-plugin:
-            - Imported by: `apps/mail/mailbox`
+              - `queryThreads`
+              - `QueryThreadsBodySchema`
+              - `QueryThreadsResponseSchema`
+              - `SortRuleSchema`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: contributes an `origin` enum field (Mine / Agent) into the Pages sidebar DataView, so pages written by an automated session segregate into their own `[Agent]` section of the tree. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, a bounded live resource exposes the marker set to the Pages sidebar's `origin` field, and a 24h retention sweep trashes the marked pages.
@@ -10103,11 +10001,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/events/refresh`
       - `apps/events/sources/manual`
       - `apps/mail/attachments`
-      - `apps/mail/inbox`
       - `apps/mail/mail-core`
-      - `apps/mail/mailbox`
       - `apps/mail/sync`
-      - `apps/mail/thread-list`
+      - `apps/mail/threads`
       - `apps/pages/agent-origin`
       - `apps/pages/content-search`
       - `apps/sonata/library`
@@ -13279,7 +13175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/events/event-list`
-          - `apps/mail/inbox`
+          - `apps/mail/threads`
           - `conversations/all-conversations`
           - `fields/bool/filter-sql`
           - `fields/bool/storage`
@@ -13294,6 +13190,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/number/filter-sql`
           - `fields/number/text-cast`
           - `fields/rank/storage`
+          - `fields/tags/filter-sql`
+          - `fields/tags/storage`
           - `fields/text/filter-sql`
           - `fields/text/storage`
           - `fields/uuid/storage`
@@ -13327,13 +13225,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/json/storage`
           - `fields/number/filter-sql`
           - `fields/rank/storage`
+          - `fields/tags/filter-sql`
+          - `fields/tags/storage`
           - `fields/text/filter-sql`
           - `fields/text/storage`
           - `fields/uuid/storage`
       - Cross-plugin:
         - Imported by:
           - `apps/events/event-list`
-          - `apps/mail/inbox`
+          - `apps/mail/threads`
           - `conversations/all-conversations`
           - `infra/entities`
           - `release`
@@ -13393,6 +13293,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ChipSelectFilterInput`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.FilterValueInputProps`
+        - **`filter-sql`** — Tags field type: server filter-sql capability — operator→SQL fragments mirroring the data-view tags filter predicates.
+          - Server:
+            - Contributes: `fields.filter-sql` "tags"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "tags" → `TagsEditor`
@@ -13405,6 +13311,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
               - `primitives/data-view.DataViewSlots`
               - `primitives/popover.InlinePopover`
+        - **`storage`** — Tags field type: DB storage capability — maps to a Postgres jsonb column.
+          - Server:
+            - Contributes: `fields.storage` "tags"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`table`** — Tags (multi-value) field type: data-view table cell (read-only tag chips).
           - Web:
             - Contributes: `DataViewSlots.Cell` "tags" → `TagsCell`
@@ -14054,6 +13966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
               - `apps/events/sources`
+              - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `code-explorer`
@@ -14670,13 +14583,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
           - `apps/mail/attachments`
-          - `apps/mail/inbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
           - `apps/mail/sync`
           - `apps/mail/sync-status`
           - `apps/mail/sync/auto-resume`
-          - `apps/mail/thread-list`
+          - `apps/mail/threads`
           - `apps/pages/history`
           - `apps/pages/page-tree`
           - `apps/pages/starred`
@@ -18541,8 +18453,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/shell`
           - `apps/events/sources`
           - `apps/file-explorer/shell`
-          - `apps/mail/inbox`
-          - `apps/mail/mailbox`
           - `apps/mail/search`
           - `apps/mail/shell`
           - `apps/pages/shell`
@@ -18886,7 +18796,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
-              - `apps/mail/mailbox`
               - `apps/mail/search`
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
@@ -19070,7 +18979,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
-              - `apps/mail/thread-list`
               - `apps/pages/page-tree`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
@@ -19331,11 +19239,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/status`
-              - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/mail/sync-status`
-              - `apps/mail/thread-list`
+              - `apps/mail/threads`
               - `apps/sonata/library`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/compositions/auto-serve`
@@ -19521,9 +19428,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/status`
-              - `apps/mail/inbox`
               - `apps/mail/search`
-              - `apps/mail/thread-list`
+              - `apps/mail/threads`
               - `apps/sonata/library`
               - `apps/studio/compositions/release/release-logs`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
@@ -19680,10 +19586,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
-              - `apps/mail/mailbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
-              - `apps/mail/thread-list`
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -19763,10 +19667,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
-              - `apps/mail/mailbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
-              - `apps/mail/thread-list`
               - `apps/pages/content-search`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -19830,9 +19732,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/tab-bar`
               - `apps/deploy/deployments`
-              - `apps/mail/mailbox`
               - `apps/mail/reading-pane`
-              - `apps/mail/thread-list`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/sonata/library`
@@ -19961,12 +19861,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
               - `apps/home/shell`
-              - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
-              - `apps/mail/thread-list`
+              - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -20433,12 +20332,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
               - `apps/home/shell`
-              - `apps/mail/inbox`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/mail/shell`
               - `apps/mail/sync-status`
-              - `apps/mail/thread-list`
+              - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -21274,7 +21172,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/mail/search`
-          - `apps/mail/thread-list`
           - `primitives/data-view`
       - Core:
         - Exports (types): `CursorPage`
@@ -21541,7 +21438,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "events.source-runs"
           - `ConfigV2.Register` "events.sources"
           - `ConfigV2.Register` "home.apps"
-          - `ConfigV2.Register` "mail-inbox"
+          - `ConfigV2.Register` "mail-threads"
           - `ConfigV2.Register` "page.links.backlinks"
           - `ConfigV2.Register` "pages-sidebar"
           - `ConfigV2.Register` "plugin-view.file-tree"
@@ -21571,7 +21468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/home/app-cards`
-          - `apps/mail/inbox`
+          - `apps/mail/threads`
           - `apps/pages/page-tree`
           - `apps/prototypes/gallery`
           - `apps/sonata/library`
@@ -21846,7 +21743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/events/event-list`
-              - `apps/mail/inbox`
+              - `apps/mail/threads`
               - `conversations/all-conversations`
               - `primitives/data-view/custom-columns`
               - `release`
@@ -22572,7 +22469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/events/event-list`
-          - `apps/mail/inbox`
+          - `apps/mail/threads`
           - `conversations/all-conversations`
           - `infra/query-resource`
           - `release`
@@ -22807,12 +22704,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/event-list`
           - `apps/events/events-core`
           - `apps/events/sources`
-          - `apps/mail/inbox`
           - `apps/mail/mail-core`
-          - `apps/mail/mailbox`
           - `apps/mail/reading-pane`
           - `apps/mail/sync-status`
-          - `apps/mail/thread-list`
+          - `apps/mail/threads`
           - `apps/pages/agent-origin`
           - `apps/pages/history`
           - `apps/pages/page-tree`
@@ -22979,11 +22874,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
           - `apps/events/sources/source-detail/status`
-          - `apps/mail/mailbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
           - `apps/mail/shell`
-          - `apps/mail/thread-list`
           - `apps/pages/history`
           - `apps/pages/page-tree`
           - `apps/pages/trash`
@@ -23306,7 +23199,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.mail.inbox`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.thread-list`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
@@ -23430,12 +23323,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
-          - `apps/mail/inbox`
-          - `apps/mail/mailbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
           - `apps/mail/shell`
-          - `apps/mail/thread-list`
+          - `apps/mail/threads`
           - `apps/pages/content-search`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
@@ -23778,10 +23669,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/status`
-          - `apps/mail/inbox`
           - `apps/mail/reading-pane`
           - `apps/mail/search`
-          - `apps/mail/thread-list`
+          - `apps/mail/threads`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/sonata/library`
@@ -24535,7 +24425,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `VirtualRows`
       - Cross-plugin:
         - Imported by:
-          - `apps/mail/thread-list`
           - `apps/sonata/notation`
           - `primitives/data-table`
           - `primitives/data-view/gallery`

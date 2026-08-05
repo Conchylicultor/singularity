@@ -36,7 +36,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "events.source-runs", pluginId: "apps.events.sources.source-detail.runs" },
   { id: "events.sources", pluginId: "apps.events.sources" },
   { id: "home.apps", pluginId: "apps.home.app-cards" },
-  { id: "mail-inbox", pluginId: "apps.mail.inbox" },
+  { id: "mail-threads", pluginId: "apps.mail.threads" },
   { id: "page.links.backlinks", pluginId: "page.links" },
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
   { id: "plugin-view.file-tree", pluginId: "plugin-meta.plugin-view.file-tree" },
