@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import {
   existsSync,
   mkdirSync,
@@ -9,7 +9,7 @@ import {
   statSync,
   writeFileSync,
 } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import type { ReadSet } from "./read-set";
 
@@ -33,9 +33,50 @@ const TRIM_TO = 16000;
 // plenty, so the common path stops after the readdir. See `prune()`.
 const PRUNE_INTERVAL_MS = 60 * 60 * 1000;
 const MARKER_FILE = ".last-prune";
+// A temp file is live only for the microseconds between its write and its
+// rename, so anything past this window was orphaned by a hard kill. See
+// `sweepOrphanTemps`.
+const TEMP_ORPHAN_MS = 60 * 60 * 1000;
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
+}
+
+/**
+ * Publish `contents` at `file` atomically, safe against CONCURRENT publishers of
+ * the SAME destination.
+ *
+ * The temp name MUST be unique per writer. Deriving it from the destination (as
+ * this once did, via `sha256(file)`) makes every process pick the byte-identical
+ * temp path, which loses both ways: one writer truncates the other's
+ * half-written bytes, and whichever renames second dies on ENOENT because the
+ * first rename already consumed the temp. That ENOENT propagates out of
+ * `runChecks` and aborts the build.
+ *
+ * It is reachable, not theoretical: `CACHE_DIR` is global (see above), and the
+ * read-set slot is keyed on `(checkId, sig)` with NO treeHash — where `sig` is
+ * `""` for every input-keyed check that declares no `cacheSignature()`. Two
+ * worktrees building at once over a cache-cold check therefore publish to the
+ * same path routinely.
+ *
+ * The temp is placed in the DESTINATION's own directory so the rename is
+ * same-filesystem (hence atomic) by construction rather than by `CACHE_DIR`
+ * happening to be the parent.
+ */
+function publishAtomic(file: string, contents: string): void {
+  const tmp = join(dirname(file), `.${process.pid}-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(tmp, contents);
+    // Atomic: readers see either the previous file or this complete one, never a
+    // partial write. Concurrent publishers are last-writer-wins, and since both
+    // slot kinds are self-verifying (a legacy entry's content is never read, a
+    // read-set is validated by replay) either winner is correct.
+    renameSync(tmp, file);
+  } finally {
+    // No-op on the happy path — the rename consumed `tmp`. Reclaims it when the
+    // write or the rename threw; a hard kill is caught by `sweepOrphanTemps`.
+    rmSync(tmp, { force: true });
+  }
 }
 
 function entryFile(checkId: string, treeHash: string, sig: string): string {
@@ -57,7 +98,7 @@ function readSetFile(checkId: string, sig: string): string {
 export interface CheckCache {
   /** True iff a PASS was recorded for this (check, tree, sig). */
   has(checkId: string, treeHash: string, sig: string): boolean;
-  /** Record a PASS. Atomic (write-then-rename). */
+  /** Record a PASS. Atomic, and safe against concurrent publishers of the same slot. */
   record(checkId: string, treeHash: string, sig: string): void;
   /**
    * Load the latest recorded read-set for (check, sig), or null if none / on any
@@ -65,7 +106,11 @@ export interface CheckCache {
    * never a false HIT). Validated by `read-set.ts` `validate` before use.
    */
   loadReadSet(checkId: string, sig: string): ReadSet | null;
-  /** Record (overwrite) the read-set for a PASS. Atomic (write-then-rename). */
+  /**
+   * Record (overwrite) the read-set for a PASS. Atomic, and safe against
+   * concurrent publishers of the same slot — which is the common case, since
+   * this slot is NOT keyed on treeHash and `CACHE_DIR` is global.
+   */
   recordReadSet(checkId: string, sig: string, readSet: ReadSet): void;
 }
 
@@ -80,13 +125,10 @@ export function openCheckCache(): CheckCache {
       return existsSync(entryFile(checkId, treeHash, sig));
     },
     record(checkId, treeHash, sig) {
-      const file = entryFile(checkId, treeHash, sig);
-      const tmp = join(CACHE_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
-      writeFileSync(
-        tmp,
+      publishAtomic(
+        entryFile(checkId, treeHash, sig),
         JSON.stringify({ checkId, treeHash, recordedAt: Date.now() }),
       );
-      renameSync(tmp, file); // atomic on the same filesystem
     },
     loadReadSet(checkId, sig) {
       const file = readSetFile(checkId, sig);
@@ -99,10 +141,7 @@ export function openCheckCache(): CheckCache {
       }
     },
     recordReadSet(checkId, sig, readSet) {
-      const file = readSetFile(checkId, sig);
-      const tmp = join(CACHE_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
-      writeFileSync(tmp, JSON.stringify(readSet));
-      renameSync(tmp, file); // atomic on the same filesystem
+      publishAtomic(readSetFile(checkId, sig), JSON.stringify(readSet));
     },
   };
 }
@@ -119,6 +158,29 @@ function ageSweepDue(now: number): boolean {
   }
 }
 
+// Reclaim temp files orphaned by a HARD kill between write and rename — the
+// in-process failure paths already clean up in `publishAtomic`'s `finally`.
+// Necessary because the temp name is now unique per writer: the old
+// destination-derived name self-limited the leak to one file per destination,
+// whereas a unique name would accumulate one per killed build forever. Runs on
+// the same gated cadence as the age sweep (temps are `.tmp`, so they are neither
+// counted as entries nor swept by the `.json` pass below); orphans are rare
+// enough that hourly reclamation is ample, and this keeps the common path's work
+// to just the readdir.
+function sweepOrphanTemps(all: string[], now: number): void {
+  for (const name of all) {
+    if (!name.endsWith(".tmp")) continue;
+    const path = join(CACHE_DIR, name);
+    try {
+      if (now - statSync(path).mtimeMs <= TEMP_ORPHAN_MS) continue; // maybe in flight
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      continue; // vanished underneath us — its owner finished the publish
+    }
+    rmSync(path, { force: true });
+  }
+}
+
 // Opportunistic pruning: age-out stale entries, then cap total count. Cheap
 // stat-based pass; tolerates the readdir/stat race (a concurrent writer may
 // delete an entry between listing and stat). Both legacy `.json` slots and the
@@ -130,10 +192,12 @@ function ageSweepDue(now: number): boolean {
 // must) or the hourly age sweep is due. Both bounds are preserved exactly; only
 // the cadence of the age sweep changes.
 function prune(): void {
-  const names = readdirSync(CACHE_DIR).filter((n) => n.endsWith(".json"));
+  const all = readdirSync(CACHE_DIR);
+  const names = all.filter((n) => n.endsWith(".json"));
   const now = Date.now();
   if (names.length <= MAX_ENTRIES && !ageSweepDue(now)) return;
   writeFileSync(join(CACHE_DIR, MARKER_FILE), "");
+  sweepOrphanTemps(all, now);
   const live: { path: string; mtimeMs: number }[] = [];
   for (const name of names) {
     const path = join(CACHE_DIR, name);
