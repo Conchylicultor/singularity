@@ -34,6 +34,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/browser/plugins/webview",
   "apps/plugins/deploy/plugins/deployments",
   "apps/plugins/deploy/plugins/health",
+  "apps/plugins/deploy/plugins/release-pipeline",
   "apps/plugins/deploy/plugins/servers",
   "apps/plugins/deploy/plugins/ssh-setup",
   "apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner",

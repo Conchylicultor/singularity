@@ -14,7 +14,6 @@ import type { Deployment } from "../core";
  */
 export const DeploymentDetail = defineDetailSections<{ deploymentId: string }>(
   "deployment-detail",
-  { collapsible: true, defaultOpen: true },
 );
 
 export const Deployments = {

@@ -1,6 +1,6 @@
 {
-  "id": "7f85685a-055e-47ea-a2d9-591454bf30d4",
-  "prevId": "e4893d7d-0d11-41ae-a90a-2db0092d578a",
+  "id": "143cef8b-74aa-4338-a47a-46d4bc749e52",
+  "prevId": "2f01a4c7-389d-4186-b737-850c43eb19c4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1989,6 +1989,22 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
+          "with": {}
+        },
+        "mail_threads_label_ids_idx": {
+          "name": "mail_threads_label_ids_idx",
+          "columns": [
+            {
+              "expression": "label_ids",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "jsonb_path_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
           "with": {}
         }
       },

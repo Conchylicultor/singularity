@@ -519,32 +519,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
-        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, hostnames, loopback port, last run, plus the derived install names read-only), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the live deploy log panel. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment, streaming the CLI's output into the durable `deploy` log channel and its outcome into the in-memory `deploy.runs` resource. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, the live deploy log panel, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the release pipeline. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment, streaming the CLI's output into the durable `deploy` log channel and its outcome into the in-memory `deploy.runs` resource. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
-            - Slots: `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
+            - Slots:
+              - `DeploymentDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.release-pipeline`
+              - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
+              - `Deployments.Fields` ← `apps.deploy.release-pipeline`
+              - `deploymentDetailPane.Actions`
             - Contributes:
               - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
+              - `Pane.Register` "deploy-deployment-detail"
+              - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
               - `DeploymentItemActions` "converge" → `ConvergeAction`
               - `DeploymentItemActions` "ship" → `ShipAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
             - Uses:
               - `apps/deploy/health.useServerHealth`
               - `apps/deploy/servers.ServerDetail`
+              - `apps/deploy/servers.serverDetailPane`
               - `infra/endpoints.EndpointError`
+              - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
               - `plugin-meta/composition.useManifestItems`
-              - `primitives/auto-scroll.JumpToBottomButton`
-              - `primitives/auto-scroll.useStickyScroll`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/fill.Fill`
-              - `primitives/css/pin.Pin`
-              - `primitives/css/scroll.Scroll`
+              - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
               - `primitives/css/ui-kit.Input`
@@ -556,20 +560,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.ItemActionProps`
-              - `primitives/icon-button.IconButton`
+              - `primitives/detail-sections.defineDetailSections`
+              - `primitives/editable-field.useEditableField`
               - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
-              - `primitives/networking.useReconnectingWebSocket`
+              - `primitives/loading.Loading`
+              - `primitives/log-channels.LiveLogChannel`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `primitives/row-actions.RowActionButton`
               - `primitives/section-card.SectionCard`
               - `shell/notifications.toast`
-            - Exports (values): `DeploymentItemActions`
+            - Exports (values):
+              - `DeploymentDetail`
+              - `deploymentDetailPane`
+              - `DeploymentItemActions`
+              - `Deployments`
+              - `useBlockedReason`
           - Server:
             - Contributes:
               - `resource.declare` "deploy.deployments"
@@ -636,6 +651,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UNIT_TEMPLATE_PATH`
               - `updateDeployment`
               - `UpdateDeploymentBodySchema`
+          - Cross-plugin:
+            - Imported by: `apps/deploy/release-pipeline`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its keyed live resource, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -693,6 +710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
+              - `apps/deploy/release-pipeline`
               - `apps/deploy/ssh-setup`
           - Shared:
             - Exports (types):
@@ -704,6 +722,58 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `serverHealthResource`
               - `ServerHealthRowSchema`
               - `SshCheckResultSchema`
+        - **`release-pipeline`** — Build → Rehearse → Ship pipeline for one deployment: the four-step surface in the deployment pane (converge, build a platform-pinned candidate, the P3 rehearsal placeholder, ship the pinned run id behind a confirm), the deploy/build log output section, and the `Release` column contributed into the deployments list.
+          - Web:
+            - Contributes:
+              - `DeploymentDetail.Section` "Release pipeline" → `PipelineSection`
+              - `DeploymentDetail.Section` "Output" → `OutputSection`
+              - `Deployments.Fields` "release" → `ReleaseField`
+            - Uses:
+              - `apps/deploy/deployments.DeploymentDetail`
+              - `apps/deploy/deployments.Deployments`
+              - `apps/deploy/deployments.useBlockedReason`
+              - `apps/deploy/health.useServerHealth`
+              - `apps/deploy/health.useServerHealthMap`
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.useEndpoint`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/bouncing-dots.BouncingDots`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/imperative-dialog.openDialog`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useCombinedResources`
+              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
+              - `primitives/log-channels.LiveLogChannel`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
+              - `primitives/setup-steps.StepState`
+              - `primitives/view-switcher.useActiveViewId`
+              - `primitives/view-switcher.ViewSwitcher`
+          - Core:
+            - Exports (types):
+              - `ReleaseState`
+              - `ReleaseStateInput`
+            - Exports (values):
+              - `NEVER_REHEARSED_SENTENCE`
+              - `REHEARSAL_LIMIT_NOTE`
+              - `RELEASE_STATE_OPTIONS`
+              - `releaseStateLabel`
+              - `resolveReleaseState`
+              - `shortSha`
+              - `stalenessChipLabel`
+              - `stalenessSentence`
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
             - Slots:
@@ -4225,19 +4295,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
                       - `infra/endpoints.useEndpoint`
-                      - `primitives/auto-scroll.JumpToBottomButton`
-                      - `primitives/auto-scroll.useStickyScroll`
+                      - `primitives/copy-to-clipboard.CopyButton`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
-                      - `primitives/css/pin.Pin`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
-                      - `primitives/icon-button.IconButton`
                       - `primitives/live-state.useResource`
-                      - `primitives/networking.useReconnectingWebSocket`
+                      - `primitives/log-channels.LiveLogChannel`
                       - `shell/notifications.toast`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Web:
@@ -10863,12 +10930,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/auto-scroll.useStickyScroll`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
-          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
-          - `primitives/latest-ref.useLatestRef`
+          - `primitives/log-channels.LiveLogChannel`
+          - `primitives/log-channels.LogEntryList`
           - `primitives/networking.ReconnectingEventSource`
-          - `primitives/networking.useReconnectingWebSocket`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -13965,6 +14031,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/layout`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
+              - `apps/deploy/release-pipeline`
               - `apps/events/sources`
               - `apps/mail/threads`
               - `apps/pages/history`
@@ -14574,6 +14641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
+          - `apps/deploy/release-pipeline`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
           - `apps/events/event-list`
@@ -15471,6 +15539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/log-channels`
           - `primitives/terminal`
           - `release`
+          - `release/bundles`
           - `reports`
           - `review/plugin-changes`
           - `stats/commits`
@@ -18529,9 +18598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useStickyScroll`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deployments`
           - `apps/sonata/rich/chord-progression`
-          - `apps/studio/compositions/release/release-logs`
           - `build`
           - `build/build-logs`
           - `conversations/conversation-view/jsonl-viewer`
@@ -18539,6 +18606,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/logs`
           - `layouts/miller`
           - `page/editor`
+          - `primitives/log-channels`
           - `primitives/virtual-rows`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
@@ -18762,10 +18830,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
+          - `apps/studio/compositions/release/release-logs`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/code-block`
           - `primitives/filepath-breadcrumb`
+          - `primitives/log-channels`
           - `primitives/setup-steps`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
@@ -18790,6 +18860,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/layout`
               - `apps-core/surface/floating`
               - `apps/deploy/deployments`
+              - `apps/deploy/release-pipeline`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
               - `apps/events/sources`
@@ -18916,6 +18987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
+              - `apps/deploy/release-pipeline`
               - `apps/website/demos/agent-run`
               - `apps/website/demos/app-gallery`
               - `conversations/conversation-view/jsonl-viewer`
@@ -19121,6 +19193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/deploy/release-pipeline`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/prompt-origin`
@@ -19232,6 +19305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
+              - `apps/deploy/release-pipeline`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
@@ -19266,6 +19340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/log-channels`
               - `primitives/setup-steps`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
@@ -19441,6 +19516,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/row`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/log-channels`
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
               - `ui/tab-bar/underline`
@@ -19521,7 +19597,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/surface/solo`
               - `apps/browser/webview`
-              - `apps/deploy/deployments`
               - `apps/pages/page-tree`
               - `apps/sonata/library`
               - `apps/sonata/notation`
@@ -19530,7 +19605,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/songsheet`
-              - `apps/studio/compositions/release/release-logs`
               - `apps/website/demos/release-switcher`
               - `build`
               - `build/build-logs`
@@ -19558,6 +19632,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
+              - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/row-actions`
               - `primitives/search`
@@ -19580,6 +19655,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
+              - `apps/deploy/deployments`
+              - `apps/deploy/release-pipeline`
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
@@ -19731,7 +19808,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/tab-bar`
-              - `apps/deploy/deployments`
               - `apps/mail/reading-pane`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -19772,7 +19848,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/claude-cli-calls`
               - `debug/live-state-churn/emit`
               - `debug/live-state-health`
-              - `debug/logs`
               - `debug/memory`
               - `debug/queue`
               - `debug/read-set`
@@ -19794,6 +19869,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
+              - `primitives/log-channels`
               - `primitives/pane`
               - `primitives/syntax-highlight`
               - `review`
@@ -19852,6 +19928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/webview`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
+              - `apps/deploy/release-pipeline`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
@@ -20097,6 +20174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-picker`
               - `primitives/launch`
               - `primitives/loading`
+              - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/pane`
               - `primitives/prompt-editor`
@@ -20182,6 +20260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/agent-manager/worktree-switcher`
               - `apps/deploy/health`
+              - `apps/deploy/release-pipeline`
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
@@ -20321,6 +20400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/webview`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
+              - `apps/deploy/release-pipeline`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/deploy/ssh-setup/hetzner`
@@ -20569,6 +20649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
               - `primitives/launch`
+              - `primitives/log-channels`
               - `primitives/markdown`
               - `primitives/pane`
               - `primitives/rank-reorder`
@@ -20824,6 +20905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/webview`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
+              - `apps/deploy/release-pipeline`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/sources`
@@ -21046,6 +21128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/imperative-dialog`
               - `primitives/launch`
               - `primitives/loading`
+              - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/overflow-menu`
               - `primitives/pane`
@@ -21986,6 +22069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `defineDetailSections`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/events/sources`
           - `apps/pages/page-tree`
@@ -22050,6 +22134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `useEditableField`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/pages/page-tree`
           - `apps/sonata/library`
@@ -22321,7 +22406,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/proxy`
           - `apps/browser/tabs`
           - `apps/browser/webview`
-          - `apps/deploy/deployments`
           - `apps/mail/reading-pane`
           - `apps/pages/history`
           - `apps/pages/page-tree`
@@ -22340,7 +22424,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/renderers/slides`
           - `apps/story/shell`
           - `apps/studio/compositions/entry-points`
-          - `apps/studio/compositions/release/release-logs`
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
           - `apps/workflows/definitions`
@@ -22443,6 +22526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/deployments`
+          - `apps/deploy/release-pipeline`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
           - `apps/events/sources`
@@ -22512,7 +22596,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/editor`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
-          - `debug/logs`
           - `debug/slow-ops`
           - `layouts/miller`
           - `page/code-block`
@@ -22700,6 +22783,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/start-page`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
+          - `apps/deploy/release-pipeline`
           - `apps/deploy/servers`
           - `apps/events/event-list`
           - `apps/events/events-core`
@@ -22870,6 +22954,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/task`
           - `apps-core/layout`
           - `apps-core/surface/floating/wallpaper`
+          - `apps/deploy/deployments`
+          - `apps/deploy/release-pipeline`
           - `apps/deploy/servers`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
@@ -22968,8 +23054,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/auto-scroll.JumpToBottomButton`
+          - `primitives/auto-scroll.useStickyScroll`
+          - `primitives/copy-to-clipboard.CopyButton`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/networking.subscribeWsStatus`
-        - Exports (values): `clientLog`
+          - `primitives/networking.useReconnectingWebSocket`
+        - Exports (types):
+          - `LiveLogChannelProps`
+          - `LogEntryListProps`
+        - Exports (values):
+          - `clientLog`
+          - `LiveLogChannel`
+          - `LogEntryList`
       - Server:
         - Uses:
           - `infra/endpoints.implement`
@@ -23007,9 +23111,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/deploy/release-pipeline`
           - `apps/events/refresh`
           - `apps/mail/sync`
           - `apps/sonata/piano-roll`
+          - `apps/studio/compositions/release/release-logs`
           - `build`
           - `conversations/transcript-retention`
           - `database`
@@ -23021,6 +23127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/boot-events`
           - `debug/boot-watchdog`
           - `debug/health-monitor`
+          - `debug/logs`
           - `debug/op-rate`
           - `debug/paging-probe`
           - `debug/render-profiler`
@@ -23126,8 +23233,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useReconnectingWebSocket`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deployments`
-          - `apps/studio/compositions/release/release-logs`
           - `build`
           - `build/build-logs`
           - `debug/logs`
@@ -23199,7 +23304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
@@ -23316,6 +23421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/welcome`
           - `apps/browser/shell`
           - `apps/debug/shell`
+          - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/deploy/shell`
           - `apps/events/event-list`
@@ -23665,6 +23771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/start-page`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
+          - `apps/deploy/release-pipeline`
           - `apps/events/event-list`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
@@ -23876,6 +23983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/health`
+          - `apps/deploy/release-pipeline`
           - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
           - `auth/apple-signing/setup-wizard`
@@ -24409,6 +24517,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ViewSwitcher`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/release-pipeline`
           - `primitives/data-view/view-core`
           - `primitives/tabbed-view`
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
@@ -24449,7 +24558,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.currentWorktreeName`
       - `infra/paths.pruneWorktreeReleaseArtifacts`
       - `infra/paths.REPO_ROOT`
-      - `infra/paths.SINGULARITY_DIR`
       - `infra/paths.worktreeArtifacts`
       - `infra/paths.worktreeDataDir`
       - `primitives/data-view/server-query.augmentServerQuery`
@@ -24461,13 +24569,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/keyset.orderByClauses`
       - `primitives/keyset.seekPredicate`
       - `primitives/log-channels.defineLogSink`
+      - `release/bundles.compareToHead`
+      - `release/bundles.newReleaseRunId`
+      - `release/bundles.releaseOutDir`
+      - `release/bundles.resolveBundle`
     - DB schema: `plugins/release/server/internal/tables.ts`
     - Exports (values):
       - `_releaseRuns`
       - `collectReleaseEnv`
-      - `newReleaseRunId`
       - `Release`
-      - `releaseOutDir`
       - `triggerRelease`
     - Resources:
       - `release.history-revision` (push)
@@ -24475,6 +24585,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `release.run` (push)
     - Routes:
       - `POST /api/release`
+      - `GET /api/release/candidate`
+      - `GET /api/release/latest`
       - `POST /api/release/runs/:id/preview`
       - `POST /api/release/runs/:id/preview/stop`
       - `GET /api/release/runs/:id/logs`
@@ -24484,17 +24596,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.defineEndpoint`
       - `primitives/data-view.FilterGroupSchema`
       - `primitives/live-state.resourceDescriptor`
+      - `release/bundles.ReleaseManifestSchema`
     - Exports (types):
       - `PlatformTag`
       - `PlatformTagResult`
       - `Preview`
       - `QueryReleaseHistoryBody`
+      - `ReleaseCandidateResponse`
+      - `ReleaseIntent`
+      - `ReleaseLatestRunResponse`
       - `ReleaseLogLine`
       - `ReleaseLogsResponse`
       - `ReleaseRun`
       - `ReleaseTarget`
     - Exports (values):
       - `bunCompileTarget`
+      - `BundleResolutionSchema`
       - `goEnvFor`
       - `hostPlatformTag`
       - `isLinuxTag`
@@ -24502,6 +24619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `PLATFORM_TAGS`
       - `platformTagFor`
       - `platformTagFromUname`
+      - `PlatformTagSchema`
       - `previewEndpoint`
       - `PreviewSchema`
       - `previewStateResource`
@@ -24510,6 +24628,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `QueryReleaseHistoryResponseSchema`
       - `RELEASE_LOG_CHANNEL`
       - `RELEASE_TARGETS`
+      - `releaseCandidateEndpoint`
+      - `ReleaseCandidateResponseSchema`
+      - `ReleaseIntentSchema`
+      - `releaseLatestRunEndpoint`
+      - `ReleaseLatestRunResponseSchema`
       - `releaseLogsEndpoint`
       - `ReleaseLogsResponseSchema`
       - `releaseRunResource`
@@ -24517,16 +24640,56 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `releaseRunsRevisionResource`
       - `releaseTargetById`
       - `SortRuleSchema`
+      - `STAGED_INTENT`
+      - `StalenessSchema`
       - `stopPreviewEndpoint`
       - `triggerReleaseEndpoint`
   - Cross-plugin:
     - Imported by: `auth/apple-signing`
   - Shared:
     - Exports (types): `ReleaseStatus`
+  - Plugins:
+    - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
+      - Server:
+        - Uses:
+          - `infra/paths.currentWorktreeName`
+          - `infra/paths.GIT`
+          - `infra/paths.SINGULARITY_DIR`
+        - Exports (types):
+          - `GitProvenance`
+          - `PruneResult`
+        - Exports (values):
+          - `bundleRoot`
+          - `claimLatestPointer`
+          - `compareToHead`
+          - `compositionReleaseDir`
+          - `isPointerName`
+          - `latestPointerName`
+          - `latestPointerPath`
+          - `newReleaseRunId`
+          - `pruneReleaseRunDirs`
+          - `readGitProvenance`
+          - `releaseOutDir`
+          - `resolveBundle`
+      - Cross-plugin:
+        - Imported by: `release`
+      - Core:
+        - Exports (types):
+          - `BundleRefusal`
+          - `BundleResolution`
+          - `ReleaseManifest`
+          - `Staleness`
+        - Exports (values):
+          - `bundleRefusalMessage`
+          - `DIRTY_WORKTREE_REASON`
+          - `namespaceHint`
+          - `ReleaseManifestSchema`
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
     - Contributes:
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
@@ -24695,10 +24858,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "conversations-sidebar-sources"
       - `ConfigV2.Register` "debug-app.sidebar"
       - `ConfigV2.Register` "debug-app.toolbar"
+      - `ConfigV2.Register` "deploy.deployments.fields"
       - `ConfigV2.Register` "deploy.deployments.item-actions"
       - `ConfigV2.Register` "deploy.server-detail.section"
       - `ConfigV2.Register` "deploy.servers.fields"
       - `ConfigV2.Register` "deploy.servers.item-actions"
+      - `ConfigV2.Register` "deployment-detail.section"
       - `ConfigV2.Register` "event-source-detail.section"
       - `ConfigV2.Register` "events.list.fields"
       - `ConfigV2.Register` "events.sidebar"

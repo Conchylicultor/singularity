@@ -16,7 +16,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`deploy`** [6 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** [7 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`events`** — Events — track events from pluggable sources in one database.
       - Plugins:
         - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
@@ -524,7 +524,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
 
-- **`release`** — Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
+- **`release`** [1 sub-plugin] — Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 
 - **`reorder`** [load-bearing] — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Plugins:
