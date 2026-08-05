@@ -187,7 +187,9 @@ export.
 
 - Description: Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
 - Server:
-  - Uses: `infra/paths.SINGULARITY_DIR`
+  - Uses:
+    - `infra/paths.SINGULARITY_DIR`
+    - `packages/flock.flockTry`
   - Exports (types):
     - `AcquireHooks`
     - `HostSemaphore`

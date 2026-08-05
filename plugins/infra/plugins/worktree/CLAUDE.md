@@ -15,6 +15,7 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `infra/paths.SINGULARITY_DIR`
     - `infra/paths.worktreeDataDir`
     - `infra/paths.WORKTREES_DIR`
+    - `packages/flock.flockTry`
     - `packages/spawn-priority.backgroundArgv`
   - Exports (types):
     - `CompositionMarker`

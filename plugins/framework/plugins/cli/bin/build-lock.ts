@@ -1,143 +1,83 @@
-import { lstatSync, lutimesSync, renameSync, symlinkSync, unlinkSync } from "fs";
-import { readlink, symlink, unlink } from "fs/promises";
+import { closeSync, ftruncateSync, mkdirSync, openSync, readFileSync, writeSync } from "fs";
+import { dirname } from "path";
+import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { adaptiveTimeoutMs } from "./commands/adaptive-timeout";
 
-// Freshness lives in exactly ONE place. When Bun exposes `lutimesSync` we stamp
-// freshness onto the symlink's own mtime (a single syscall, target unchanged)
-// and the waiter reads it back via `lstatSync(...).mtimeMs`. If it is ever
-// unavailable we fall back to encoding freshness in the target's `<ts>`,
-// refreshing via an atomic temp-symlink + rename. Never both.
-const LUTIMES_AVAILABLE = typeof lutimesSync === "function";
-
 export interface AcquireBuildLockOptions {
-  /** How often the holder refreshes the lock's freshness stamp. */
-  heartbeatMs?: number;
   /** How often a waiter re-inspects the lock. */
   pollMs?: number;
-  /** A live holder whose stamp is older than this is treated as wedged. */
+  /** After this long waiting, the message starts naming what the holder is stuck in. */
   staleMs?: number;
-  /** Absolute wait ceiling (sanity bound), even against a fresh holder. */
+  /** Absolute wait ceiling (sanity bound). */
   capMs?: number;
 }
 
-interface HolderInfo {
-  pid: number | null;
-  ageMs: number;
-}
-
 /**
- * Read the current holder's pid and the age of its freshness stamp, or `null`
- * if the lock is absent. The pid always comes from the symlink target; the age
- * comes from the single freshness source (mtime, or the target `<ts>` fallback).
- */
-async function readHolder(lockPath: string): Promise<HolderInfo | null> {
-  let target: string;
-  try {
-    target = await readlink(lockPath);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-  const m = target.match(/^pid-(\d+)-(\d+)$/);
-  const pid = m ? parseInt(m[1]!, 10) : null;
-  if (LUTIMES_AVAILABLE) {
-    const st = lstatSync(lockPath, { throwIfNoEntry: false });
-    if (!st) return null; // vanished between readlink and lstat
-    return { pid, ageMs: Date.now() - st.mtimeMs };
-  }
-  const ts = m ? parseInt(m[2]!, 10) : 0;
-  return { pid, ageMs: Date.now() - ts };
-}
-
-/**
- * Atomically refresh the lock's freshness stamp. There is never a window where
- * the lock file is absent, so a waiter can never `symlink` into a gap.
- */
-function refreshLock(lockPath: string): void {
-  if (LUTIMES_AVAILABLE) {
-    const now = new Date();
-    lutimesSync(lockPath, now, now);
-    return;
-  }
-  const temp = `${lockPath}.hb.${process.pid}`;
-  symlinkSync(`pid-${process.pid}-${Date.now()}`, temp);
-  renameSync(temp, lockPath); // atomic replace — no absent window
-}
-
-function makeRelease(lockPath: string, heartbeatMs: number): () => void {
-  const timer = setInterval(() => refreshLock(lockPath), heartbeatMs);
-  timer.unref();
-  const release = () => {
-    clearInterval(timer);
-    try {
-      unlinkSync(lockPath);
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {}
-  };
-  process.on("exit", release);
-  return release;
-}
-
-/**
- * Cross-process build mutex via atomic symlink, with a heartbeat so a healthy
- * but slow holder is waited on patiently and a wedged holder is surfaced loudly.
+ * Cross-process build mutex, owned by the kernel.
  *
- * Invariant: a live process's lock is NEVER stolen — two concurrent builds
- * corrupt shared state (`node_modules`, migrations, `dist.*` swap). The lock is
- * only ever removed by its own holder's `release`, or by a waiter *after* the
- * holder is confirmed dead (the `kill(pid, 0)` → `ESRCH` steal).
+ * The lock is an exclusive `flock(2)` on a regular file. flock is owned by the
+ * open file description, so the kernel drops it when the fd closes OR when the
+ * holding process dies — SIGKILL, OOM and power loss included — and no pid is
+ * consulted, so PID reuse cannot confuse it. A build killed by a caller timeout
+ * therefore cannot leave a lock that outlives it: "a stale lock with no holder"
+ * is not a state this can reach.
+ *
+ * WHY THIS IS NOT A HEARTBEAT (do not put one back). This was a symlink whose
+ * target encoded `pid-<pid>-<ts>`, refreshed on a 5 s timer, with waiters probing
+ * `kill(pid, 0)` and stealing on ESRCH. That scheme had two holes the kernel
+ * closes for free:
+ *   - **PID reuse.** A recycled pid makes a dead holder look alive, so the waiter
+ *     refuses to steal and blocks until the cap.
+ *   - **Liveness is not progress.** The timer keeps stamping for as long as the
+ *     event loop turns, so a build wedged on a hung child looked perfectly
+ *     healthy — the freshness stamp proved only that the process existed.
+ * Every other cross-process mutex in the repo (push, cpu, db-fork,
+ * worktree-mutate) was already on flock; this was the last holdout.
+ *
+ * The lock file is NEVER unlinked — release is just `closeSync`. Unlinking is
+ * what let the old `release()` (which had no ownership check) remove a
+ * *successor's* lock; with the fd as the lock there is nothing to mis-delete.
+ * The lock file is gitignored, so leaving it behind is free.
+ *
+ * The holder's pid is written into the file for DIAGNOSTICS ONLY. Nothing about
+ * correctness reads it back, so a misleading pid can at worst produce a
+ * misleading message.
  */
 export async function acquireBuildLock(
   lockPath: string,
   opts: AcquireBuildLockOptions = {},
 ): Promise<() => void> {
-  const heartbeatMs = opts.heartbeatMs ?? 5_000;
   const pollMs = opts.pollMs ?? 500;
   // Adaptive defaults computed lazily so tests overriding via `opts` don't pay
   // the `os.loadavg()` / `os.cpus()` cost.
   const staleMs = opts.staleMs ?? adaptiveTimeoutMs(60_000, 180_000);
   const capMs = opts.capMs ?? adaptiveTimeoutMs(600_000, 1_800_000);
 
-  const holder = `pid-${process.pid}-${Date.now()}`;
   const startedAt = Date.now();
   let warned = false;
+  let diagnosed = false;
+
+  mkdirSync(dirname(lockPath), { recursive: true });
+  // "a" (append), never "w": truncating would clobber the pid a live holder
+  // wrote. The fd is ours alone; the flock below decides who owns the lock.
+  const fd = openSync(lockPath, "a");
 
   for (;;) {
-    try {
-      await symlink(holder, lockPath);
-      return makeRelease(lockPath, heartbeatMs);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-    }
-
-    const info = await readHolder(lockPath);
-    if (!info) continue; // lock vanished between symlink and readlink — retry acquire
-
-    if (info.pid !== null) {
-      try {
-        process.kill(info.pid, 0);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
-        // Dead holder — steal and retry acquire.
-        try {
-          await unlink(lockPath);
-          // eslint-disable-next-line promise-safety/no-bare-catch
-        } catch {}
-        continue;
-      }
-      // Holder is alive.
-      if (info.ageMs > staleMs) {
-        throw new Error(
-          `Build lock at ${lockPath} held by pid ${info.pid} which appears ` +
-            `wedged: no heartbeat for ${info.ageMs}ms (stale after ${staleMs}ms)`,
-        );
-      }
+    if (flockTry(fd)) {
+      // Safe to rewrite only now: we hold the lock, so no other holder's pid can
+      // be clobbered. Truncate first so the file stays one line forever instead
+      // of growing by a pid per build.
+      ftruncateSync(fd, 0);
+      writeSync(fd, `${process.pid}\n`);
+      return makeRelease(fd);
     }
 
     if (Date.now() - startedAt > capMs) {
+      closeSync(fd);
       throw new Error(
-        `Timed out after ${capMs}ms waiting for build lock at ${lockPath}` +
-          (info.pid !== null ? ` (held by pid ${info.pid})` : ""),
+        `Timed out after ${capMs}ms waiting for the build lock at ${lockPath}` +
+          `${describeHolder(lockPath)}. Another build in this checkout has held it ` +
+          `for the entire wait.`,
       );
     }
 
@@ -145,6 +85,74 @@ export async function acquireBuildLock(
       console.log("Another build is in progress; waiting...");
       warned = true;
     }
+    // Past the stale threshold the holder is alive (the kernel says so) but has
+    // been at it a long time — so say WHAT it is stuck in. The progress log is
+    // the authority on that, and is imported dynamically so the bootstrap's
+    // static closure (this module is reachable from bin/index.ts via
+    // ensure-deps.ts) stays as small as it is.
+    if (!diagnosed && Date.now() - startedAt > staleMs) {
+      diagnosed = true;
+      console.log(await describeStuckPhase(lockPath, Date.now() - startedAt));
+    }
     await Bun.sleep(pollMs);
   }
+}
+
+/**
+ * Release = close the fd; the kernel drops the lock. Idempotent, and registered
+ * as an exit hook too so a holder that never calls it still releases at exit —
+ * though for the crash case the kernel has already done it.
+ */
+function makeRelease(fd: number): () => void {
+  let released = false;
+  const release = (): void => {
+    if (released) return;
+    released = true;
+    closeSync(fd);
+  };
+  process.on("exit", release);
+  return release;
+}
+
+/** ` (held by pid N)`, or `` when the file has no readable pid. Diagnostics only. */
+function describeHolder(lockPath: string): string {
+  const pid = readHolderPid(lockPath);
+  return pid === null ? "" : ` (held by pid ${pid})`;
+}
+
+function readHolderPid(lockPath: string): number | null {
+  let raw: string;
+  try {
+    raw = readFileSync(lockPath, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  const pid = parseInt(raw.trim(), 10);
+  return Number.isInteger(pid) ? pid : null;
+}
+
+/**
+ * A human line naming the span the lock holder is currently inside, from the
+ * durable build-progress log. Falls back to the bare wait when the holder has no
+ * recorded run (e.g. the `.install.lock`, which no build progress covers).
+ */
+async function describeStuckPhase(lockPath: string, waitedMs: number): Promise<string> {
+  const waited = `${Math.round(waitedMs / 1000)}s`;
+  const pid = readHolderPid(lockPath);
+  const prefix = `Still waiting (${waited}) for the build lock`;
+  if (pid === null) return `${prefix}.`;
+
+  const { readBuildProgress, PROGRESS_FILE } = await import("./build-progress");
+  const run = readBuildProgress().find((r) => r.pid === pid && r.done === null);
+  const stuck = run?.outstanding.at(-1);
+  if (!stuck) return `${prefix}; held by pid ${pid}.`;
+  // Against the wall clock, not the run's last-activity stamp: a run that has
+  // gone silent is exactly the interesting case, and `outstanding[].elapsedMs`
+  // would understate it by however long the silence has lasted.
+  const inSpan = Math.round((Date.now() - Date.parse(stuck.startedAt)) / 1000);
+  return (
+    `${prefix}; pid ${pid} has been in "${stuck.label}" for ${inSpan}s. ` +
+    `Full history: ${PROGRESS_FILE}`
+  );
 }

@@ -1,6 +1,7 @@
 import { basename, join } from "path";
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
+import { reportInterruptedPredecessor } from "../build-receipt";
 import { withHostGrant, inheritedGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
@@ -129,6 +130,11 @@ export function registerCheck(program: Command) {
       // is truncated or piped through `tail`.
       const { slug, branch } = await getWorktreeIdentity();
       const logFile = join(worktreeDataDir(slug), "check.log");
+
+      // An interrupted build prints no verdict and sets no exit code its caller
+      // can see, so the next op is where it surfaces. Checks are very often run
+      // to validate what a build just deployed.
+      reportInterruptedPredecessor(slug);
 
       // Publish the lane: a direct check on the main worktree is human-blocking
       // (interactive), any other direct check is background. publishLane

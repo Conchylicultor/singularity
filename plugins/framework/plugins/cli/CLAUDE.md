@@ -94,6 +94,45 @@ Lock order is one-way: **`.build.lock` → `.install.lock`**, never the reverse
 The install lock is not `.build.lock` itself on purpose — sharing them would make
 a `./singularity check` block for an entire concurrent build.
 
+## Locks: the kernel owns them (`bin/build-lock.ts`)
+
+Both locks are an exclusive `flock(2)` on a regular file, via
+`packages/flock`. The kernel drops the lock when the fd closes **or the holder
+dies** — SIGKILL and OOM included — and no pid is consulted, so PID reuse cannot
+confuse it.
+
+Two rules that look wrong and are not:
+
+- **The lock file is never unlinked.** Release is `closeSync`. The fd *is* the
+  lock, so there is nothing to delete, and an unlink could only ever remove a
+  successor's lock.
+- **The pid written into the file is diagnostics only.** Nothing reads it back to
+  decide ownership. Do not reintroduce a `kill(pid, 0)` probe or a heartbeat: a
+  heartbeat proves the event loop turns, not that the build is progressing, so a
+  build wedged on a hung child looked healthy under the old scheme. "What is the
+  holder stuck in?" is answered instead from `~/.singularity/build-progress.jsonl`,
+  which records the actual span.
+
+## The deploy receipt (`bin/build-receipt.ts`)
+
+`~/.singularity/worktrees/<wt>/build-status.json` — `running` once the build lock
+is granted, rewritten `ok` / `failed` / `superseded` in `finalizeBuild`. **One
+fixed path, deliberately with no `<buildId>` variant**: every other build artifact
+is per-run, so "did my build land?" could only be asked of them through
+`ls -t build-*.log | head -1`, which answers with a *previous* run's `BUILD OK`
+whenever the current one was killed before writing its own.
+
+A SIGKILLed build runs no handler, so it leaves the receipt at `running` with a
+dead pid — which `resolveReceipt` reports as `interrupted`, and which `build`,
+`check` and `push` each announce at startup via `reportInterruptedPredecessor`.
+That is the only trace such a build leaves: it printed no verdict (the
+`installVerdictGuard` backstop cannot run) and its exit status is invisible behind
+a pipe.
+
+The receipt is opened **after** the lock, not before — the lock serializes builds
+in a checkout, so exactly one build owns the receipt at a time and a build that
+dies while still queuing cannot overwrite its predecessor's.
+
 ## The artifact / deploy seam
 
 `build` used to be the only way to produce a composition, via a `--composition`

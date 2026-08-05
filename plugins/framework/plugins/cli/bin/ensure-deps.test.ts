@@ -1,7 +1,9 @@
 import { afterEach, test, expect } from "bun:test";
 import {
+  closeSync,
   copyFileSync,
   lstatSync,
+  openSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -11,6 +13,7 @@ import {
 } from "fs";
 import os from "node:os";
 import { dirname, join } from "path";
+import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { acquireBuildLock } from "./build-lock";
 import { ensureDeps, type InstallOutcome } from "./ensure-deps";
 
@@ -102,7 +105,7 @@ async function expectInstalls(dir: string): Promise<void> {
   const result = await ensureDeps({ root: dir, log: silent, installer: rec.installer });
   expect(result.installed).toBe(true);
   expect(rec.calls()).toBe(1);
-  expect(lockPresent(dir)).toBe(false);
+  expect(lockHeld(dir)).toBe(false);
 }
 
 /**
@@ -134,10 +137,21 @@ async function messageOf(run: Promise<unknown>): Promise<string | undefined> {
   }
 }
 
-function lockPresent(root: string): boolean {
-  // The lock is a symlink to a `pid-...` target that never exists as a real
-  // file, so `existsSync` (which follows links) would report it as absent.
-  return !!lstatSync(join(root, ".install.lock"), { throwIfNoEntry: false });
+/**
+ * Is the install lock currently HELD? The lock is a kernel flock on a regular
+ * file that is deliberately never unlinked, so file presence says nothing —
+ * "released" means acquirable, which is what this probes (take it non-blocking,
+ * hand it straight back).
+ */
+function lockHeld(root: string): boolean {
+  const path = join(root, ".install.lock");
+  if (!lstatSync(path, { throwIfNoEntry: false })) return false;
+  const fd = openSync(path, "a");
+  try {
+    return !flockTry(fd);
+  } finally {
+    closeSync(fd); // releases it if this probe happened to acquire it
+  }
 }
 
 test("a matching stamp skips without ever touching the lock", async () => {
@@ -145,9 +159,9 @@ test("a matching stamp skips without ever touching the lock", async () => {
   // Someone else holds the install lock, with a live pid and a fresh heartbeat.
   // The fast path must not care: a version that took the lock before checking
   // freshness would block here until the wait cap, failing by test timeout.
-  // (Asserting the lock file is merely absent afterwards would not do — now that
-  // the lock is released before returning, absent cannot tell "never acquired"
-  // from "acquired and released".)
+  // (Asserting the lock is merely free afterwards would not do — the lock is
+  // released before returning, so "free" cannot tell "never acquired" from
+  // "acquired and released".)
   const release = await acquireBuildLock(join(dir, ".install.lock"), { pollMs: 20 });
   try {
     await expectSkips(dir);
@@ -248,7 +262,7 @@ test("a failed install throws, naming the dependency-install phase", async () =>
   // `node_modules` we know is wrong — and the lock came back even on the throw,
   // so a failed install never wedges the next process.
   expect(lstatSync(join(dir, STAMP_REL), { throwIfNoEntry: false })).toBeUndefined();
-  expect(lockPresent(dir)).toBe(false);
+  expect(lockHeld(dir)).toBe(false);
 });
 
 test("an install killed by a signal names the signal, not a bare exit code", async () => {
@@ -281,7 +295,7 @@ test("the under-lock re-check skips an install the lock holder already did", asy
   expect((await pending).installed).toBe(false);
   expect(rec.calls()).toBe(0);
   // The waiter took the lock to re-check, and handed it straight back.
-  expect(lockPresent(dir)).toBe(false);
+  expect(lockHeld(dir)).toBe(false);
 });
 
 test("two installs in one process both run — the lock does not outlive a call", async () => {

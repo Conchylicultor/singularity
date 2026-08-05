@@ -16024,6 +16024,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.SINGULARITY_DIR`
           - `infra/paths.worktreeDataDir`
           - `infra/paths.WORKTREES_DIR`
+          - `packages/flock.flockTry`
           - `packages/spawn-priority.backgroundArgv`
         - Exports (types):
           - `CompositionMarker`
@@ -16215,9 +16216,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
+    - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
+      - Cross-plugin:
+        - Imported by:
+          - `infra/worktree`
+          - `packages/host-semaphore`
+      - Server:
+        - Exports (values):
+          - `flockRelease`
+          - `flockTry`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
-        - Uses: `infra/paths.SINGULARITY_DIR`
+        - Uses:
+          - `infra/paths.SINGULARITY_DIR`
+          - `packages/flock.flockTry`
         - Exports (types):
           - `AcquireHooks`
           - `HostSemaphore`

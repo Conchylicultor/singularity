@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { type FileHandle, mkdir, open, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { dlopen } from "bun:ffi";
+import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 
 // A per-worktree, crash-safe marker for a long-running operation (build, push,
@@ -301,22 +301,6 @@ export interface PushHolder {
   acquiredAt: string;
 }
 
-// Lazily dlopen libc's flock so this module stays importable in non-FFI contexts
-// (it is only ever exercised under Bun on the server / CLI).
-let flockFn: ((fd: number, op: number) => number) | null = null;
-function flock(fd: number, op: number): number {
-  if (!flockFn) {
-    const { symbols } = dlopen(
-      process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
-      { flock: { args: ["i32", "i32"], returns: "i32" } },
-    );
-    flockFn = symbols.flock as (fd: number, op: number) => number;
-  }
-  return flockFn(fd, op);
-}
-const LOCK_EX = 2;
-const LOCK_NB = 4;
-
 // True iff some process currently holds the push flock. Crash-proof and
 // PID-reuse-proof: asks the kernel directly. Probes non-blocking and releases
 // immediately on success (open in append mode so we never truncate the lock
@@ -332,8 +316,8 @@ export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
     return false;
   }
   try {
-    // Non-zero return ⇒ EWOULDBLOCK ⇒ someone else holds it.
-    return flock(fd, LOCK_EX | LOCK_NB) !== 0;
+    // Failing to take it ⇒ EWOULDBLOCK ⇒ someone else holds it.
+    return !flockTry(fd);
   } finally {
     closeSync(fd); // releases the flock if we happened to acquire it
   }
@@ -343,7 +327,7 @@ export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
 // IO and runs on the libuv threadpool, but the flock() probe itself is a fast,
 // non-blocking syscall (LOCK_NB) — not IO wait — so it stays a synchronous FFI
 // call. Identical semantics to the sync version: ENOENT on open ⇒ false; a
-// non-zero flock return ⇒ held; always release/close.
+// failed take ⇒ held; always release/close.
 async function pushLockHeldAsync(lockPath: string = PUSH_LOCK_PATH): Promise<boolean> {
   await mkdir(SINGULARITY_DIR, { recursive: true });
   let handle: FileHandle;
@@ -354,8 +338,8 @@ async function pushLockHeldAsync(lockPath: string = PUSH_LOCK_PATH): Promise<boo
     return false;
   }
   try {
-    // Non-zero return ⇒ EWOULDBLOCK ⇒ someone else holds it.
-    return flock(handle.fd, LOCK_EX | LOCK_NB) !== 0;
+    // Failing to take it ⇒ EWOULDBLOCK ⇒ someone else holds it.
+    return !flockTry(handle.fd);
   } finally {
     await handle.close(); // releases the flock if we happened to acquire it
   }

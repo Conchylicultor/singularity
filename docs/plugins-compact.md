@@ -362,6 +362,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
+    - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
     - **`inflight`**
     - **`retry`**

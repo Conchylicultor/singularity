@@ -17,6 +17,9 @@ Agents work in isolated git worktrees automatically created before starting. The
 1. Solve the request
 2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
 3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
+
+   The build's authority on whether it deployed is the deploy receipt at `~/.singularity/worktrees/<worktree>/build-status.json` (`status: ok` ⇒ deployed). A build killed by a caller timeout prints no verdict and leaves `status: running` with a dead pid. **Never** infer a deploy from `ls -t ~/.singularity/worktrees/<wt>/build-*.log` — that file is written only at the END of a build, so it matches a PREVIOUS run's `BUILD OK`.
+
 4. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes). NEVER run `git commit`, always use the CLI. NEVER push unless the user explicitly said so.
 
 RULES:

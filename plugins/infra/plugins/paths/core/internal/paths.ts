@@ -150,6 +150,18 @@ export const worktreeArtifacts = {
   /** Human-readable build transcript. `build.log` or `build-<id>.log`. */
   buildLogText: (name: string, buildId?: string): string =>
     join(worktreeDataDir(name), buildId ? `build-${buildId}.log` : "build.log"),
+  /**
+   * The deploy receipt: this worktree's LAST build, whatever became of it.
+   *
+   * Deliberately the one artifact here with NO `<id>` variant. Every sibling is
+   * per-run, so "did my build land?" can only be asked of them through a glob
+   * (`ls -t build-*.log | head -1`) — and that answers with a *previous* run's
+   * `BUILD OK` whenever the current one was killed before writing its own. A
+   * fixed path cannot do that: a killed build leaves this file at
+   * `status: "running"` with a dead pid, and there is no older success for it to
+   * be confused with. Do not add a `buildId` parameter.
+   */
+  buildStatus: (name: string): string => join(worktreeDataDir(name), "build-status.json"),
   /** Per-release fallback log. Always keyed to a release run id. */
   releaseLogs: (name: string, releaseId: string): string =>
     join(worktreeDataDir(name), `release-logs-${releaseId}.json`),

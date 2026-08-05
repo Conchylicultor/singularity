@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { basename } from "path";
 import { checkBroadcasts } from "../broadcasts";
+import { reportInterruptedPredecessor } from "../build-receipt";
 import { normalizeGeneratedArtifacts, SKIP_POST_REWRITE_ENV } from "../git/normalize-generated";
 import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
@@ -210,6 +211,11 @@ export function registerPush(program: Command) {
       // basename(root0) is the op-marker slug (see markWorktreeOpStart below).
       // The profiler carries it so the orphan reconciler can check push liveness.
       const opSlug = basename(root0);
+
+      // An interrupted build prints no verdict and sets no exit code its caller
+      // can see, so the next op is where it surfaces — and pushing work that was
+      // never actually deployed is the expensive version of that mistake.
+      reportInterruptedPredecessor(opSlug);
       // A push is human-blocking, so every grant it takes is interactive — the
       // same fact `runRebasedChecks` passes to `withHostGrant`. Recorded on the
       // op because the lane is what explains WHY a wait was as long as it was.

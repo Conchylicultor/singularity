@@ -1,4 +1,3 @@
-import { dlopen } from "bun:ffi";
 import {
   closeSync,
   mkdirSync,
@@ -9,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 // Cross-process twin of `createSemaphore` (the in-process counter+queue gate in
@@ -53,12 +53,6 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 const FLOCK_WAIT_PATH = join(import.meta.dir, "..", "..", "scripts", "flock-wait.ts");
 
-const { symbols: ffi } = dlopen(
-  process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
-  { flock: { args: ["i32", "i32"], returns: "i32" } },
-);
-const LOCK_EX = 2;
-const LOCK_NB = 4;
 
 const GRANTED = "granted\n";
 
@@ -308,7 +302,7 @@ export function createHostSemaphore(opts: {
     // loop) and polling is banned; the child does the blocking wait off our loop.
     const guardFd = openSync(guardFile, "w");
     let guardChild: WaitChild | undefined;
-    if (ffi.flock(guardFd, LOCK_EX | LOCK_NB) !== 0) {
+    if (!flockTry(guardFd)) {
       closeSync(guardFd);
       guardChild = spawnWait(guardFile);
       await awaitGranted(guardChild.stdout, name);
@@ -342,7 +336,7 @@ export function createHostSemaphore(opts: {
         for (let i = 0; i < hi; i++) {
           const fd = openSync(slotFile(i), "w");
           probeFds.push(fd);
-          if (ffi.flock(fd, LOCK_EX | LOCK_NB) !== 0) {
+          if (!flockTry(fd)) {
             allFree = false;
             break;
           }
@@ -378,7 +372,7 @@ export function createHostSemaphore(opts: {
     const kept: number[] = [];
     for (const i of order) {
       const fd = openSync(slotFile(i), "w");
-      if (kept.length < limit && ffi.flock(fd, LOCK_EX | LOCK_NB) === 0) {
+      if (kept.length < limit && flockTry(fd)) {
         kept.push(fd);
       } else {
         closeSync(fd);
@@ -452,7 +446,7 @@ export function createHostSemaphore(opts: {
         // turnstile is one file, so an ordinary flock queue on it can't strand).
         let turnstileFd: number | undefined = openSync(turnstileFile, "w");
         let turnstileChild: WaitChild | undefined;
-        if (ffi.flock(turnstileFd, LOCK_EX | LOCK_NB) !== 0) {
+        if (!flockTry(turnstileFd)) {
           closeSync(turnstileFd);
           turnstileFd = undefined;
           turnstileChild = spawnWait(turnstileFile);

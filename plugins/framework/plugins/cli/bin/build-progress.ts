@@ -8,7 +8,7 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 // `runId` + `pid` + `worktree` on every line keep concurrent builds separable —
 // and this box routinely runs several builds at once, one of which can wedge and
 // pin the whole cpu-slot pool (see research/2026-07-21-global-cli-op-wedge-gc-sink.md).
-const PROGRESS_FILE = join(SINGULARITY_DIR, "build-progress.jsonl");
+export const PROGRESS_FILE = join(SINGULARITY_DIR, "build-progress.jsonl");
 
 // Same explicit 2 MB × keep 2 bound the check log chose (defineFileSink's 128 MB
 // default is a firehose budget for the live-state channel, absurd here): a full

@@ -2903,6 +2903,10 @@
       "name": "@singularity/plugin-packages",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/flock": {
+      "name": "@singularity/plugin-packages-flock",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/host-semaphore": {
       "name": "@singularity/plugin-packages-host-semaphore",
       "version": "0.0.1",
@@ -6617,6 +6621,8 @@
     "@singularity/plugin-layouts-route-fallback": ["@singularity/plugin-layouts-route-fallback@workspace:plugins/layouts/plugins/route-fallback"],
 
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
+
+    "@singularity/plugin-packages-flock": ["@singularity/plugin-packages-flock@workspace:plugins/packages/plugins/flock"],
 
     "@singularity/plugin-packages-host-semaphore": ["@singularity/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
 

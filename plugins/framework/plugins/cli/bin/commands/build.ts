@@ -39,6 +39,12 @@ import {
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile, createSpanCollector } from "../profiler";
 import { openBuildProgress, finishBuildProgress } from "../build-progress";
+import {
+  writeBuildReceipt,
+  reportInterruptedPredecessor,
+  type BuildReceipt,
+  type BuildReceiptStatus,
+} from "../build-receipt";
 import { type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { createValveDeps, valveGates, type ValveDeps } from "../admission-valve";
 import { laneFor, publishLane } from "../lane";
@@ -601,6 +607,12 @@ export function registerBuild(program: Command) {
       // heap trend even after SIGKILL. See research/2026-07-21-global-cli-op-wedge-gc-sink.md.
       openBuildProgress(name, process.env.SINGULARITY_BUILD_ID ?? null);
 
+      // Report a predecessor that never completed, BEFORE this build overwrites
+      // its receipt. Self-healing on purpose: the previous build was SIGKILLed, so
+      // it printed no verdict and set no exit code — this line is the only place
+      // that fact ever surfaces without someone thinking to go looking for it.
+      reportInterruptedPredecessor(name);
+
       // --serve-composition preflight. The compose-serve stage composes over
       // main's artifact fleet (vendor set + store), so it needs the MAIN
       // checkout in artifact mode — fail before any work, not after the build.
@@ -697,11 +709,32 @@ export function registerBuild(program: Command) {
       // which can't run handlers — legitimately leaves a record open; those are
       // the orphans `finalizeOrphanedOps` closes as "interrupted".
       // Mirrors the on-exit lock release in acquireBuildLock above.
+      // The deploy receipt for THIS build, populated once the build lock is
+      // granted (below) and rewritten with its terminal status here. Null until
+      // then, and deliberately so: a build that dies before it owns the lock
+      // published nothing and was never the build this worktree was running, so
+      // it must not overwrite the previous build's receipt.
+      let receipt: BuildReceipt | null = null;
       let buildFinalized = false;
-      const finalizeBuild = async (success: boolean): Promise<void> => {
+      const finalizeBuild = async (
+        success: boolean,
+        terminal?: { status: BuildReceiptStatus; exitCode: number },
+      ): Promise<void> => {
         if (buildFinalized) return;
         buildFinalized = true;
         clearWorktreeOp(name, "build");
+        // Stamp the receipt's terminal status. Synchronous, so the exit-hook
+        // backstop lands it too — and a SIGKILL, which runs no hook at all, is
+        // exactly what leaves the receipt at `running` with a dead pid. That
+        // absence IS the "did not complete" signal; nothing else has to detect it.
+        if (receipt !== null) {
+          writeBuildReceipt(name, {
+            ...receipt,
+            status: terminal?.status ?? (success ? "ok" : "failed"),
+            finishedAt: new Date().toISOString(),
+            exitCode: terminal?.exitCode ?? (success ? 0 : null),
+          });
+        }
         // Close the durable build-progress run. A wedge is exactly the build that
         // never reaches this hook, so no `done` line + a live pid = wedged mid-phase
         // (outstanding span names it); a `done` line + a live pid = the
@@ -726,8 +759,12 @@ export function registerBuild(program: Command) {
       // banner is written last. Earlier exits (getWorktreeRoot, name/branch
       // guards, parseMigrationAnswers) fire before this point and before any
       // artifact is touched, so there is no deploy ambiguity for them to resolve.
+      // Declared here rather than beside its first heavy use: the verdict guard,
+      // the deploy receipt and the verdicts must all name the same URL.
+      const buildUrl = `http://${name}.localhost:9000`;
+
       installVerdictGuard({
-        url: `http://${name}.localhost:9000`,
+        url: buildUrl,
         buildLogPath: worktreeArtifacts.buildLogText(name, buildId),
       });
 
@@ -770,6 +807,23 @@ export function registerBuild(program: Command) {
       // and the build's verdict is about no coherent tree at all. See
       // `supersededBy` at the verdict funnels below.
       const headAtStart = await readHead(root);
+
+      // Open the deploy receipt. AFTER the lock, not before: the lock serializes
+      // builds in this checkout, so exactly one build owns the receipt at a time
+      // and a queued build cannot overwrite a live one's. `headAtStart` is the
+      // commit it answers for, which is why this sits just below it.
+      receipt = {
+        status: "running",
+        buildId,
+        commit: headAtStart,
+        pid: process.pid,
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        exitCode: null,
+        url: buildUrl,
+        logPath: worktreeArtifacts.buildLogText(name, buildId),
+      };
+      writeBuildReceipt(name, receipt);
 
       endSpan = buildProfilerStart("sweepStaging", "build:setup", "sweep staging leftovers");
       await sweepDistLeftovers(resolve(webDir, "dist"));
@@ -1070,8 +1124,6 @@ export function registerBuild(program: Command) {
         hooks,
       });
 
-      const buildUrl = `http://${name}.localhost:9000`;
-
       const stepRoster = (): Verdict["steps"] =>
         stepResults.map((r) => ({ label: r.label, success: r.success }));
 
@@ -1096,7 +1148,10 @@ export function registerBuild(program: Command) {
       const failBuild = async (reason: string[], failedLabels: string[]): Promise<never> => {
         flushFootprint();
         const buildLogPath = worktreeArtifacts.buildLogText(name, buildId);
-        const pointers = [`Full output: ${buildLogPath}`];
+        const pointers = [
+          `Full output: ${buildLogPath}`,
+          `Deploy receipt: ${worktreeArtifacts.buildStatus(name)}`,
+        ];
         if (stepResults.some((r) => r.id === "checks" && !r.success)) {
           pointers.push(`Check logs:  ${join(worktreeDataDir(name), "check.log")}`);
         }
@@ -1134,7 +1189,13 @@ export function registerBuild(program: Command) {
         // successful main deploy (decision 1).
         const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
         if (isMainBuild) await recorder.closeRun(buildId, exitCode);
-        await finalizeBuild(false);
+        // `superseded` is its own receipt status, not a flavour of `failed`:
+        // the tree moved mid-build, so this build answers for no coherent tree —
+        // reporting it as a failure would blame the check that straddled the swap.
+        await finalizeBuild(false, {
+          status: newHead !== null ? "superseded" : "failed",
+          exitCode,
+        });
         emitVerdict(v);
         process.exit(exitCode);
       };
@@ -1143,7 +1204,7 @@ export function registerBuild(program: Command) {
         ok: true,
         headline: softNotes.length > 0 ? `BUILD OK — deployed (${softNotes.join("; ")})` : "BUILD OK — deployed",
         notes: [buildUrl],
-        pointers: [],
+        pointers: [`Deploy receipt: ${worktreeArtifacts.buildStatus(name)}`],
         steps: stepRoster(),
       });
 
