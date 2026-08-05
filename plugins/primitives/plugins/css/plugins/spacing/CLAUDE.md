@@ -304,6 +304,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `infra/events-test`
     - `layouts/miller`
     - `layouts/route-fallback`
+    - `page/annotations/agent-notes/authorship`
     - `page/attachment-block`
     - `page/bookmark`
     - `page/callout`

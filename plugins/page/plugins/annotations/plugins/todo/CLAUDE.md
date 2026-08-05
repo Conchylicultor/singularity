@@ -48,7 +48,7 @@ reachable.
   - Contributes: `page.block-data` "todo"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/container.defineContainerBlock`
+  - Uses: `page/annotations.defineAnnotationBlock`
   - Exports (values):
     - `todoBlock`
     - `todoDataSchema`

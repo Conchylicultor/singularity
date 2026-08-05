@@ -7449,6 +7449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/runtime-tmux`
       - `conversations/summary`
       - `improve`
+      - `page/annotations/agent-notes/authorship`
       - `review`
       - `review/code-review`
       - `review/plugin-changes/file-changes`
@@ -7921,6 +7922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
+              - `page/annotations/agent-notes/authorship`
               - `page/prompt/block`
               - `tasks/attempt-view`
               - `tasks/task-events`
@@ -8015,6 +8017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view`
           - `conversations/summary`
           - `debug/profiling/ops`
+          - `page/annotations/agent-notes/authorship`
           - `page/prompt/block`
           - `primitives/launch`
           - `review`
@@ -10215,6 +10218,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/query-resource`
       - `infra/retention`
       - `infra/trash`
+      - `page/annotations/agent-notes/authorship`
       - `page/attachment-block`
       - `page/editor`
       - `page/editor-collab`
@@ -14143,6 +14147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve/element-picker`
               - `infra/events-test`
               - `page/annotations`
+              - `page/annotations/agent-access`
               - `page/annotations/context`
               - `page/callout`
               - `page/container`
@@ -14150,7 +14155,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor-collab`
               - `page/image`
               - `page/inline-date`
-              - `page/markdown-apply`
               - `page/prompt/block`
               - `page/quote`
               - `page/url-paste`
@@ -14870,6 +14874,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/ndjson-stream`
           - `infra/secrets`
           - `infra/trash`
+          - `page/annotations/agent-access`
           - `page/bookmark`
           - `page/editor`
           - `page/editor-collab`
@@ -15548,7 +15553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/runtime`
           - `debug/queue-health`
           - `debug/timeline`
-          - `page/markdown-apply`
+          - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
           - `tasks`
       - Server:
@@ -15804,6 +15809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/trace/engine`
           - `history/engine`
           - `infra/trash`
+          - `page/annotations/agent-notes/authorship`
           - `reports`
     - **`runtime-profiler`**
       - Cross-plugin:
@@ -16304,13 +16310,50 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`page`** — Block-based page editor.
   - Plugins:
     - **`annotations`** — Umbrella for the page editor's annotation containers — the audience-scoped boxes that carry the human↔agent side-channel of a page: context, agent notes, private notes, TODO.
+      - Core:
+        - Uses:
+          - `page/container.ContainerBlockOptions`
+          - `page/container.defineContainerBlock`
+          - `page/container.RejectTextBearing`
+        - Exports (types):
+          - `AnnotationBlockHandle`
+          - `AnnotationBlockOptions`
+        - Exports (values): `defineAnnotationBlock`
+      - Cross-plugin:
+        - Imported by:
+          - `page/annotations/agent-notes`
+          - `page/annotations/context`
+          - `page/annotations/private-notes`
+          - `page/annotations/todo`
       - Plugins:
+        - **`agent-access`** — The agent-facing tool surface over a page: read_page (human-audience subtrees pruned) plus append/write/edit_agent_notes, which can address nothing but an <agent-notes> card. The policy over page/markdown-apply's audience-agnostic engine.
+          - Server:
+            - Uses:
+              - `infra/endpoints.HttpError`
+              - `infra/mcp.Mcp`
+              - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
+              - `page/editor.applyPageBlockPatch`
+              - `page/editor.Editor`
+              - `page/editor.StoredBlock`
+              - `page/markdown-apply.applyMarkdownToBlock`
+              - `page/markdown-apply.ApplyReport`
+              - `page/markdown-apply.BlockScope`
+              - `page/markdown-apply.loadBlockScope`
+              - `page/markdown-apply.readBlockAsMarkdown`
+              - `page/markdown-apply.serverMarkdownContext`
+            - Register:
+              - `mcpTool('read_page')`
+              - `mcpTool('append_agent_notes')`
+              - `mcpTool('write_agent_notes')`
+              - `mcpTool('edit_agent_notes')`
         - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "agent-notes" → `ContainerNoRow`
               - `Editor.BlockFrame` "agent-notes" → `AgentNotesFrame`
             - Uses:
+              - `page/annotations/agent-notes/authorship.AgentNotesAuthors`
+              - `page/annotations/agent-notes/authorship.useAgentNotesAuthors`
               - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
               - `page/container.ContainerNoRow`
@@ -16320,10 +16363,49 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "agent-notes"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/container.defineContainerBlock`
+            - Uses: `page/annotations.defineAnnotationBlock`
             - Exports (values):
               - `agentNotesBlock`
               - `agentNotesDataSchema`
+          - Plugins:
+            - **`authorship`** — Reads an agent-notes card's authorship (useAgentNotesAuthors) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
+              - Server:
+                - Contributes: `resource.declare` "agent-notes-authors"
+                - Uses:
+                  - `database.db`
+                  - `infra/retention.markCascadeBounded`
+                  - `page/editor._blocks`
+                - DB schema: `plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server/internal/tables.ts`
+                - Exports (values):
+                  - `_pageBlocksAgentAuthors`
+                  - `agentNotesAuthorsServerResource`
+                  - `recordAgentNotesAuthor`
+                - Resources: `agent-notes-authors` (keyed)
+              - Web:
+                - Uses:
+                  - `conversations.useConversationById`
+                  - `conversations/conversation-ui/item.ConversationItem`
+                  - `conversations/conversation-view.conversationPane`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/row.Row`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/live-state.useResource`
+                  - `primitives/pane.useOpenPane`
+                  - `primitives/relative-time.RelativeTime`
+                - Exports (types): `AgentNotesAuthor`
+                - Exports (values):
+                  - `AgentNotesAuthors`
+                  - `useAgentNotesAuthors`
+              - Cross-plugin:
+                - Imported by:
+                  - `page/annotations/agent-access`
+                  - `page/annotations/agent-notes`
+              - Shared:
+                - Exports (types): `AgentNotesAuthor`
+                - Exports (values):
+                  - `AgentNotesAuthorSchema`
+                  - `agentNotesAuthorsResource`
         - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -16339,7 +16421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "context"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/container.defineContainerBlock`
+            - Uses: `page/annotations.defineAnnotationBlock`
             - Exports (values):
               - `contextBlock`
               - `contextDataSchema`
@@ -16358,7 +16440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "private-notes"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/container.defineContainerBlock`
+            - Uses: `page/annotations.defineAnnotationBlock`
             - Exports (values):
               - `privateNotesBlock`
               - `privateNotesDataSchema`
@@ -16377,7 +16459,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `page.block-data` "todo"
             - Uses: `page/editor.Editor`
           - Core:
-            - Uses: `page/container.defineContainerBlock`
+            - Uses: `page/annotations.defineAnnotationBlock`
             - Exports (values):
               - `todoBlock`
               - `todoDataSchema`
@@ -16583,6 +16665,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `defineContainerBlock`
       - Cross-plugin:
         - Imported by:
+          - `page/annotations`
           - `page/annotations/agent-notes`
           - `page/annotations/context`
           - `page/annotations/private-notes`
@@ -16816,6 +16899,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/tree.subtreeIds`
         - Exports (types):
           - `Block`
+          - `BlockAudience`
           - `BlockData`
           - `BlockDiff`
           - `BlockFieldChanges`
@@ -16958,7 +17042,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/story-core`
           - `apps/website/demos/editor-toy`
           - `page/annotations`
+          - `page/annotations/agent-access`
           - `page/annotations/agent-notes`
+          - `page/annotations/agent-notes/authorship`
           - `page/annotations/context`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
@@ -17042,6 +17128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/pages/history`
+          - `page/annotations/agent-access`
           - `page/markdown-apply`
     - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
       - Web:
@@ -17364,27 +17451,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `page/inline-page-link`
           - `page/page-link`
-    - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the read_page / write_page / edit_page MCP tools, the structural patch, and the per-block content-doc splice.
+    - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block content-doc splice. Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
       - Server:
         - Uses:
           - `database.db`
           - `infra/endpoints.HttpError`
-          - `infra/mcp.Mcp`
           - `page/editor-collab.initBlockDoc`
           - `page/editor-collab.loadBlockDoc`
           - `page/editor-collab.mergeBlockDocUpdate`
+          - `page/editor._blocks`
           - `page/editor.applyPageBlockPatch`
           - `page/editor.blockTextProtectedSpans`
           - `page/editor.Editor`
+          - `page/editor.PAGE_BLOCK_TYPE`
           - `page/editor.serializePageContent`
-        - Exports (types): `ApplyReport`
+          - `page/editor.StoredBlock`
+        - Exports (types):
+          - `ApplyReport`
+          - `BlockScope`
+          - `ReadBlockOptions`
         - Exports (values):
+          - `applyMarkdownToBlock`
           - `applyMarkdownToPage`
+          - `loadBlockScope`
+          - `readBlockAsMarkdown`
           - `readPageAsMarkdown`
-        - Register:
-          - `mcpTool('read_page')`
-          - `mcpTool('write_page')`
-          - `mcpTool('edit_page')`
+          - `serverMarkdownContext`
       - Core:
         - Uses:
           - `page/editor.Block`
@@ -17417,6 +17509,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `documentOrderRows`
           - `markdownNodesOfRows`
           - `planMarkdownApply`
+      - Cross-plugin:
+        - Imported by: `page/annotations/agent-access`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
       - Plugins:
         - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
@@ -19461,6 +19555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/pane`
               - `debug/trace/spans`
               - `debug/trace/stall`
+              - `page/annotations/agent-notes/authorship`
               - `page/inline-date`
               - `page/prompt/block`
               - `primitives/data-view`
@@ -19896,6 +19991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/zero-test`
               - `fields/date/filter`
               - `history/dialog`
+              - `page/annotations/agent-notes/authorship`
               - `page/callout`
               - `page/editor`
               - `page/inline-date`
@@ -20254,6 +20350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `layouts/miller`
               - `layouts/route-fallback`
+              - `page/annotations/agent-notes/authorship`
               - `page/attachment-block`
               - `page/bookmark`
               - `page/callout`
@@ -20740,6 +20837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve/element-picker`
               - `infra/events-test`
               - `layouts/route-fallback`
+              - `page/annotations/agent-notes/authorship`
               - `page/bookmark`
               - `page/callout`
               - `page/editor`
@@ -23045,6 +23143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs`
           - `infra/query-resource`
           - `infra/trash`
+          - `page/annotations/agent-notes/authorship`
           - `page/editor`
           - `page/editor-collab`
           - `page/inline-page-link`
@@ -23697,6 +23796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/host`
           - `layouts/miller`
           - `layouts/route-fallback`
+          - `page/annotations/agent-notes/authorship`
           - `page/prompt/block`
           - `plugin-meta/contributions-table`
           - `plugin-meta/plugin-view`
@@ -23976,6 +24076,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/trace/pane`
           - `fields/date/table`
           - `history/dialog`
+          - `page/annotations/agent-notes/authorship`
           - `plugin-meta/plugin-health`
           - `primitives/sync-status`
           - `shell/notifications`

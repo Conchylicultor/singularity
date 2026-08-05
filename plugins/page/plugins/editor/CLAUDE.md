@@ -1931,6 +1931,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `primitives/tree.subtreeIds`
   - Exports (types):
     - `Block`
+    - `BlockAudience`
     - `BlockData`
     - `BlockDiff`
     - `BlockFieldChanges`
@@ -2073,7 +2074,9 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `apps/story/story-core`
     - `apps/website/demos/editor-toy`
     - `page/annotations`
+    - `page/annotations/agent-access`
     - `page/annotations/agent-notes`
+    - `page/annotations/agent-notes/authorship`
     - `page/annotations/context`
     - `page/annotations/private-notes`
     - `page/annotations/todo`

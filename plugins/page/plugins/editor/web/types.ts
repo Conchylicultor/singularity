@@ -287,6 +287,17 @@ export interface BlockAnchorProps {
   type: string;
   /** The container block's `data`; the anchor reads its own appearance off it. */
   data: unknown;
+  /**
+   * The container block's row id, for an anchor whose appearance depends on
+   * something stored BESIDE the row — a side table keyed by block id, say
+   * provenance — rather than on `data`.
+   *
+   * OPTIONAL, and it degrades exactly like `editor` does: the read-only surface
+   * renders `ReadOnlyNode`s, which may legitimately carry no id at all (see
+   * `read-only-view`'s renderer), so an anchor that needs one must fall back to
+   * the static glyph rather than assume the editable surface.
+   */
+  blockId?: string;
   /** The block API, on editable surfaces only. Absent ⇒ render a static glyph. */
   editor?: BlockEditorAPI;
 }

@@ -2939,8 +2939,16 @@
       "name": "@singularity/plugin-page-annotations",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/annotations/plugins/agent-access": {
+      "name": "@singularity/plugin-page-annotations-agent-access",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/annotations/plugins/agent-notes": {
       "name": "@singularity/plugin-page-annotations-agent-notes",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship": {
+      "name": "@singularity/plugin-page-annotations-agent-notes-authorship",
       "version": "0.0.1",
     },
     "plugins/page/plugins/annotations/plugins/context": {
@@ -6648,7 +6656,11 @@
 
     "@singularity/plugin-page-annotations": ["@singularity/plugin-page-annotations@workspace:plugins/page/plugins/annotations"],
 
+    "@singularity/plugin-page-annotations-agent-access": ["@singularity/plugin-page-annotations-agent-access@workspace:plugins/page/plugins/annotations/plugins/agent-access"],
+
     "@singularity/plugin-page-annotations-agent-notes": ["@singularity/plugin-page-annotations-agent-notes@workspace:plugins/page/plugins/annotations/plugins/agent-notes"],
+
+    "@singularity/plugin-page-annotations-agent-notes-authorship": ["@singularity/plugin-page-annotations-agent-notes-authorship@workspace:plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship"],
 
     "@singularity/plugin-page-annotations-context": ["@singularity/plugin-page-annotations-context@workspace:plugins/page/plugins/annotations/plugins/context"],
 

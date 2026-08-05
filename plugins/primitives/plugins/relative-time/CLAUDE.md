@@ -47,6 +47,7 @@
     - `debug/trace/pane`
     - `fields/date/table`
     - `history/dialog`
+    - `page/annotations/agent-notes/authorship`
     - `plugin-meta/plugin-health`
     - `primitives/sync-status`
     - `shell/notifications`

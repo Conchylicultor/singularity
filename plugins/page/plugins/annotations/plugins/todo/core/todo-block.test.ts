@@ -30,6 +30,13 @@ describe("todoBlock (derived + forced facts)", () => {
     expect(todoBlock.text).toBeUndefined();
   });
 
+  it("declares the agent audience — outstanding work is FOR an agent", () => {
+    // Required by `defineAnnotationBlock`, so an annotation can never be
+    // unmarked; a consumer filters the family on this field and never on a type
+    // name.
+    expect(todoBlock.audience).toBe("agent");
+  });
+
   it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(todoBlock.anchor).toBe(true);
     expect(todoBlock.wrapOnConvert).toBe(true);

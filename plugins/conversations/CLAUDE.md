@@ -220,6 +220,7 @@
     - `conversations/runtime-tmux`
     - `conversations/summary`
     - `improve`
+    - `page/annotations/agent-notes/authorship`
     - `review`
     - `review/code-review`
     - `review/plugin-changes/file-changes`

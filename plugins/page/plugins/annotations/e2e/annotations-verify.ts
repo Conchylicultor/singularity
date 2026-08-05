@@ -5,7 +5,7 @@
 // Per-container behaviour (wrap, unwrap, Enter-in-a-child, nesting, the void
 // write boundary) is already pinned by
 // `plugins/context/e2e/context-container-verify.ts`, and every member is built by
-// the SAME `defineContainerBlock` call, so this file deliberately does NOT re-run
+// the SAME `defineAnnotationBlock` call, so this file deliberately does NOT re-run
 // that suite four times. It checks only what is true of the family and of nothing
 // else:
 //

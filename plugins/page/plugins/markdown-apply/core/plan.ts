@@ -27,6 +27,22 @@
 // `plan.test.ts` asserts them directly over fuzzed edits.
 //
 // ---------------------------------------------------------------------------
+// Scope: the root bounds every authority the plan claims
+// ---------------------------------------------------------------------------
+//
+// `rootId` is where the walk starts, and it is the ONLY thing bounding what this
+// plan may touch. `existing` is deliberately the page's whole `page_id`
+// partition (a rank floor and a sub-page pin both need rows the walk may not
+// reach), but `oldRows` — the walk's output — is what survivors, updates and
+// `deleteIds` are all derived from, so a row outside the root's subtree can
+// never be updated, moved or deleted however the document was edited.
+//
+// `pageId` is a SECOND, independent fact: which partition created rows join, and
+// whether the root is the page itself. It is required rather than inferred
+// because a nested root cannot tell you its page — and because the two differing
+// is exactly what turns an absent sub-page shell from a re-home into a refusal.
+//
+// ---------------------------------------------------------------------------
 // Idempotence is the recovery story
 // ---------------------------------------------------------------------------
 //
@@ -85,9 +101,26 @@ export interface MarkdownApplyPlan {
  */
 export type MarkdownApplyResult =
   | { ok: true; plan: MarkdownApplyPlan }
-  | { ok: false; reason: "unknown-page-ref" | "subpage-reparented"; detail: string };
+  | {
+      ok: false;
+      reason: "unknown-page-ref" | "subpage-reparented" | "subpage-removed";
+      detail: string;
+    };
 
 export interface MarkdownApplyArgs {
+  /**
+   * The root of the SCOPE. The walk starts at its CHILDREN, so the root row
+   * itself is never touched and nothing outside its subtree is ever updated,
+   * moved or deleted. The page row for a whole-page apply; any block within the
+   * page for a scoped one.
+   */
+  rootId: string;
+  /**
+   * The page `existing` was read from — the partition every created row joins.
+   * Separate from {@link rootId} rather than inferred from it: a nested root
+   * cannot name its own page, and `rootId !== pageId` is what makes an absent
+   * sub-page shell a refusal rather than a re-home to the top level.
+   */
   pageId: string;
   /** Every LIVE row of the page's own `page_id` partition (sub-page shells included). */
   existing: readonly StoredRow[];
@@ -150,7 +183,7 @@ function survivorData(
 }
 
 export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult {
-  const { pageId, existing, incoming, handles } = args;
+  const { rootId, pageId, existing, incoming, handles } = args;
   const byType = new Map(handles.map((h) => [h.type, h] as const));
 
   // The only markdown this module emits is a single `<page …/>` POINTER tag,
@@ -159,7 +192,8 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
   // and an empty list is the honest answer rather than a forgotten parameter.
   const ctx: MarkdownContext = { handles: [...handles], protectedSpans: [] };
 
-  const oldRows = documentOrderRows(existing, pageId);
+  // Everything below reads `oldRows`, never `existing`: the walk is the scope.
+  const oldRows = documentOrderRows(existing, rootId);
 
   // --- Sub-page identity ----------------------------------------------------
   // A shell's identity is its ROW ID, which `<page id="…"/>` carries and no
@@ -246,7 +280,7 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
           ok: false,
           reason: "unknown-page-ref",
           detail:
-            `The document references a page that is neither a sub-page of ${pageId} ` +
+            `The document references a page that is neither a sub-page inside ${rootId} ` +
             "nor a page this document already links to. A markdown apply cannot mint " +
             "a reference to a page it has no way to verify exists.",
         };
@@ -271,9 +305,11 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     const oldIndex = pairs.get(j);
     return oldIndex === undefined ? entry.node.id : oldRows[oldIndex]!.id;
   });
+  // A top-level node of the incoming document is a child of the SCOPE's root —
+  // the page row for a whole-page apply, the addressed block for a scoped one.
   const parentIdOf = (j: number): string => {
     const parentIndex = incomingNodes[j]!.parentIndex;
-    return parentIndex === null ? pageId : finalId[parentIndex]!;
+    return parentIndex === null ? rootId : finalId[parentIndex]!;
   };
 
   // --- Ranks: one sibling list at a time ------------------------------------
@@ -347,7 +383,8 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     const entry = incomingNodes[j]!;
     creates.push({
       id: finalId[j]!,
-      // Every created row belongs to THIS page: the only node that could open a
+      // Every created row belongs to the page — NOT to `rootId`, which is a
+      // position in the forest, not a partition. The only node that could open a
       // new `page_id` partition is a `page` row, which is refused above.
       pageId,
       parentId: parentIdOf(j),
@@ -370,7 +407,28 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
   const preservedShells = oldRows.filter(
     (row, i) => row.type === PAGE_BLOCK_TYPE && !usedOld.has(i),
   );
-  let floor = maxRank((groups.get(pageId) ?? []).map((j) => finalRank[j]!));
+
+  // That re-home is only correct when the root IS the page: "the top level" is
+  // where a shell the document dropped legitimately belongs. Under a NESTED root
+  // the same move would drag a whole page tree INTO the addressed block —
+  // inventing a placement the document never asked for, from an omission. So it
+  // is a refusal instead. In practice unreachable, because a scoped read emits
+  // every shell in scope and a faithfully-edited document still names them,
+  // which is exactly why it must be loud rather than quietly tolerated.
+  if (rootId !== pageId && preservedShells.length > 0) {
+    return {
+      ok: false,
+      reason: "subpage-removed",
+      detail:
+        `The document dropped sub-page ${preservedShells.map((s) => s.id).join(", ")} ` +
+        `from inside block ${rootId}. A sub-page owns its own page and can never be ` +
+        "deleted by a markdown apply; nor can it be lifted out of the block this " +
+        "apply is scoped to, which is where preserving it would have to put it. " +
+        "Re-read the block and keep every `<page id=\"…\"/>` pointer the document holds.",
+    };
+  }
+
+  let floor = maxRank((groups.get(rootId) ?? []).map((j) => finalRank[j]!));
   const appended: StoredRow[] = [];
   for (const shell of preservedShells) {
     const rank = Rank.from(shell.rank);
@@ -378,7 +436,7 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     // where it is, and let it bound whatever is appended behind it. A shell
     // ANYWHERE else moves — its own sibling list was re-ranked without it, so
     // the only interval provably free of a collision is above the floor.
-    if (shell.parentId === pageId && (floor === null || Rank.compare(rank, floor) > 0)) {
+    if (shell.parentId === rootId && (floor === null || Rank.compare(rank, floor) > 0)) {
       floor = rank;
       continue;
     }
@@ -388,12 +446,17 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     const ranks = Rank.nBetween(floor, null, appended.length);
     appended.forEach((shell, k) => {
       const changes: BlockFieldChanges = { rank: ranks[k]! };
-      if (shell.parentId !== pageId) changes.parentId = pageId;
+      if (shell.parentId !== rootId) changes.parentId = rootId;
       updates.push({ id: shell.id, changes });
       moved += 1;
     });
   }
 
+  // Delete authority is bounded by the WALK, never by `existing`: `oldRows` is
+  // the subtree rooted at `rootId`, so a row the walk did not reach is not a
+  // candidate here no matter what the incoming document says. That one line is
+  // the whole of what root-scoping buys — there is no second filter to keep in
+  // sync with it.
   const deleteIds = oldRows
     .filter((row, i) => !usedOld.has(i) && row.type !== PAGE_BLOCK_TYPE)
     .map((row) => row.id);

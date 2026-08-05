@@ -150,7 +150,7 @@ than an invisible ghost.
   - Contributes: `page.block-data` "context"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/container.defineContainerBlock`
+  - Uses: `page/annotations.defineAnnotationBlock`
   - Exports (values):
     - `contextBlock`
     - `contextDataSchema`

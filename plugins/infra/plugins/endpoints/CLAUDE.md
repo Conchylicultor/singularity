@@ -334,6 +334,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/ndjson-stream`
     - `infra/secrets`
     - `infra/trash`
+    - `page/annotations/agent-access`
     - `page/bookmark`
     - `page/editor`
     - `page/editor-collab`

@@ -27,6 +27,13 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     expect(agentNotesBlock.text).toBeUndefined();
   });
 
+  it("declares the agent audience — an agent may re-read what it wrote", () => {
+    // `audience` answers "may an agent receive this", not "who is the reader":
+    // this card is addressed TO the human and is still `"agent"`, because it is
+    // the one card an agent WRITES and must be able to see again.
+    expect(agentNotesBlock.audience).toBe("agent");
+  });
+
   it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(agentNotesBlock.anchor).toBe(true);
     expect(agentNotesBlock.wrapOnConvert).toBe(true);

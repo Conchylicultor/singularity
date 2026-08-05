@@ -27,6 +27,13 @@ describe("contextBlock (derived + forced facts)", () => {
     expect(contextBlock.text).toBeUndefined();
   });
 
+  it("declares the agent audience — standing instructions are FOR an agent", () => {
+    // Required by `defineAnnotationBlock`, so an annotation can never be
+    // unmarked; a consumer filters the family on this field and never on a type
+    // name.
+    expect(contextBlock.audience).toBe("agent");
+  });
+
   it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(contextBlock.anchor).toBe(true);
     expect(contextBlock.wrapOnConvert).toBe(true);

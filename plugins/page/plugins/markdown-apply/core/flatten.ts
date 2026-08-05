@@ -1,5 +1,5 @@
-// Document-order traversal of a page's stored rows, and the identity KEY each
-// node aligns by.
+// Document-order traversal of a stored subtree, and the identity KEY each node
+// aligns by.
 //
 // One traversal, two consumers. `markdownNodesOfRows` is what a caller hands to
 // `serializeForestToMarkdown` to produce the markdown an agent edits;
@@ -20,10 +20,10 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { StoredRow } from "./stored-row";
 
 /**
- * Children of each parent, rank-ascending. Rows that do not connect to the page
- * root are simply never reached — the same call `rowsToForest` makes for the
- * same reason: an unreachable row cannot be placed, and a planner that cannot
- * place a row must not claim authority to delete it either.
+ * Children of each parent, rank-ascending. Rows that do not connect to the
+ * walk's root are simply never reached — the same call `rowsToForest` makes for
+ * the same reason: an unreachable row cannot be placed, and a planner that
+ * cannot place a row must not claim authority to delete it either.
  */
 function childrenByParent(rows: readonly StoredRow[]): Map<string | null, StoredRow[]> {
   const byParent = new Map<string | null, StoredRow[]>();
@@ -51,12 +51,20 @@ function isShell(row: StoredRow): boolean {
 }
 
 /**
- * The page's content rows in document order (rank-ordered DFS rooted at the
- * blocks whose `parentId` is the page row itself).
+ * The content rows of the subtree ROOTED at `rootId`, in document order
+ * (rank-ordered DFS over its descendants).
+ *
+ * `rootId` is the SCOPE, not content: the walk starts at its children, so the
+ * root row itself is never in the output — which is what bounds every authority
+ * downstream of this walk (the planner derives `deleteIds` from it) to the
+ * subtree, and leaves the root itself untouchable. The page row is one root
+ * among others; a whole-page walk and a walk from any block within the page are
+ * the same walk at different depths, which is why this takes a `rootId` rather
+ * than a page id.
  */
 export function documentOrderRows(
   rows: readonly StoredRow[],
-  pageId: string,
+  rootId: string,
 ): StoredRow[] {
   const byParent = childrenByParent(rows);
   const out: StoredRow[] = [];
@@ -66,7 +74,7 @@ export function documentOrderRows(
       if (!isShell(row)) walk(row.id);
     }
   };
-  walk(pageId);
+  walk(rootId);
   return out;
 }
 
@@ -75,10 +83,13 @@ export function documentOrderRows(
  * stamped from the row id — required, not decorative: a sub-page's identity IS
  * its row id, and `<page id="…"/>` is the only thing that lets a later apply
  * reconcile the tag against the existing row rather than re-minting it.
+ *
+ * Same `rootId` contract as {@link documentOrderRows}: the emitted document is
+ * the root's CONTENT, and the root itself has no line in it.
  */
 export function markdownNodesOfRows(
   rows: readonly StoredRow[],
-  pageId: string,
+  rootId: string,
 ): MarkdownNode[] {
   const byParent = childrenByParent(rows);
   const build = (parentId: string | null): MarkdownNode[] =>
@@ -89,7 +100,7 @@ export function markdownNodesOfRows(
       expanded: row.expanded,
       children: isShell(row) ? [] : build(row.id),
     }));
-  return build(pageId);
+  return build(rootId);
 }
 
 // ---------------------------------------------------------------------------

@@ -224,16 +224,26 @@ function rowsOf(forest: RawNode[], pageId = PAGE_ID): StoredRow[] {
   return rows;
 }
 
-const markdownOf = (rows: StoredRow[], pageId = PAGE_ID): string =>
-  serializeForestToMarkdown(markdownNodesOfRows(rows, pageId), ctx);
+/**
+ * The document a ROOT projects. `rootId` defaults to the page, so every
+ * page-scoped test below reads exactly as it did before roots existed; a
+ * subtree-rooted test passes a block id and gets that block's CONTENT.
+ */
+const markdownOf = (rows: StoredRow[], rootId = PAGE_ID): string =>
+  serializeForestToMarkdown(markdownNodesOfRows(rows, rootId), ctx);
 
-function planOf(rows: StoredRow[], md: string, pageId = PAGE_ID): MarkdownApplyPlan {
-  const result = planMarkdownApply({
-    pageId,
+/** `pageId` stays `PAGE_ID` throughout: these fixtures are all one page. */
+const planResult = (rows: StoredRow[], md: string, rootId = PAGE_ID) =>
+  planMarkdownApply({
+    rootId,
+    pageId: PAGE_ID,
     existing: rows,
     incoming: parseMarkdownToForest(md, ctx),
     handles,
   });
+
+function planOf(rows: StoredRow[], md: string, rootId = PAGE_ID): MarkdownApplyPlan {
+  const result = planResult(rows, md, rootId);
   if (!result.ok) throw new Error(`refused: ${result.reason} — ${result.detail}`);
   return result.plan;
 }
@@ -294,10 +304,15 @@ function applyPlan(rows: StoredRow[], plan: MarkdownApplyPlan): StoredRow[] {
  * is about MINIMALITY; this one is about correctness, and it is what makes the
  * minimality assertions safe to relax where two answers are equally minimal.
  */
-function expectConverges(rows: StoredRow[], target: StoredRow[], label: unknown): void {
-  const md = markdownOf(target);
-  const plan = planOf(rows, md);
-  expect({ label, md: markdownOf(applyPlan(rows, plan)) }).toEqual({ label, md });
+function expectConverges(
+  rows: StoredRow[],
+  target: StoredRow[],
+  label: unknown,
+  rootId = PAGE_ID,
+): void {
+  const md = markdownOf(target, rootId);
+  const plan = planOf(rows, md, rootId);
+  expect({ label, md: markdownOf(applyPlan(rows, plan), rootId) }).toEqual({ label, md });
 }
 
 // ---------------------------------------------------------------------------
@@ -439,12 +454,7 @@ describe("sub-pages", () => {
   test("an INVENTED page reference is refused, loudly", () => {
     const rows = withShell();
     const md = ["before", `<page id="ghost"/>`, "after", `<page id="b2"/>`].join("\n");
-    const result = planMarkdownApply({
-      pageId: PAGE_ID,
-      existing: rows,
-      incoming: parseMarkdownToForest(md, ctx),
-      handles,
-    });
+    const result = planResult(rows, md);
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("unknown-page-ref");
   });
@@ -464,12 +474,7 @@ describe("sub-pages", () => {
   test("referencing one shell TWICE is refused rather than duplicated", () => {
     const rows = withShell();
     const md = ["before", `<page id="b2"/>`, "after", `<page id="b2"/>`].join("\n");
-    const result = planMarkdownApply({
-      pageId: PAGE_ID,
-      existing: rows,
-      incoming: parseMarkdownToForest(md, ctx),
-      handles,
-    });
+    const result = planResult(rows, md);
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("subpage-reparented");
   });
@@ -968,5 +973,198 @@ describe("survivor invariants", () => {
         }).toEqual({ seed, id: update.id, text: plainOf(runsOf((before.data as { text?: unknown }).text)) });
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A NON-PAGE root
+// ---------------------------------------------------------------------------
+//
+// `existing` still carries the whole page partition (the rank floor and the
+// sub-page pin both need rows the walk may not reach), so what bounds the plan
+// is the WALK, not the input. These tests are the executable statement of that:
+// whatever the incoming document says, a row the walk did not reach is neither
+// updated nor deleted, and the root itself is scope rather than content.
+
+describe("a non-page root bounds every authority", () => {
+  // b1 "before" | b2 callout > (b3 "inside one", b4 "inside two") | b5 "after"
+  const nested = (): StoredRow[] =>
+    rowsOf([
+      raw("text", { text: runs("before") }),
+      raw("callout", { icon: null, color: "default" }, [
+        raw("text", { text: runs("inside one") }),
+        raw("bulleted-list", { text: runs("inside two") }),
+      ]),
+      raw("text", { text: runs("after") }),
+    ]);
+  const OUTSIDE = ["b1", "b2", "b5"];
+  const outsideRows = (rows: StoredRow[]): StoredRow[] =>
+    rows.filter((row) => OUTSIDE.includes(row.id));
+
+  test("the root's document is its CONTENT — the root has no line in it", () => {
+    const md = markdownOf(nested(), "b2");
+    expect(md).toContain("inside one");
+    expect(md).toContain("inside two");
+    expect(md).not.toContain("before");
+    expect(md).not.toContain("after");
+    expect(md).not.toContain("callout");
+  });
+
+  test("re-applying the root's OWN document emits nothing", () => {
+    const rows = nested();
+    const plan = planOf(rows, markdownOf(rows, "b2"), "b2");
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+    expect(plan.textEdits).toEqual([]);
+  });
+
+  test("emptying the subtree deletes ITS rows and no others", () => {
+    // The whole document is gone, which at the page root would empty the page.
+    // Here it is a two-row delete, because `deleteIds` derives from the WALK.
+    const plan = planOf(nested(), "", "b2");
+    expect([...plan.patch.deleteIds].sort()).toEqual(["b3", "b4"]);
+    expect(plan.patch.creates).toEqual([]);
+    expect(plan.patch.updates).toEqual([]);
+  });
+
+  test("replacing the subtree wholesale names nothing outside it, nor the root", () => {
+    const rows = nested();
+    const md = ["fresh alpha", "fresh bravo", "fresh charlie"].join("\n");
+    const plan = planOf(rows, md, "b2");
+    const named = new Set<string>([
+      ...plan.patch.deleteIds,
+      ...plan.patch.updates.map((u) => u.id),
+      ...plan.textEdits.map((e) => e.blockId),
+    ]);
+    for (const id of named) expect(["b3", "b4"]).toContain(id);
+    // A created row joins the PAGE's partition (`pageId` is a partition, not a
+    // position) and hangs off the ROOT (the parent of a top-level node).
+    for (const created of plan.patch.creates) {
+      expect(created.pageId).toBe(PAGE_ID);
+      expect(created.parentId).toBe("b2");
+    }
+    const after = applyPlan(rows, plan);
+    expect(markdownOf(after, "b2")).toBe(md);
+    expect(outsideRows(after)).toEqual(outsideRows(rows));
+  });
+
+  // b1 "before" | b2 callout > (b3 "inside one", b4 SHELL) | b5 "after"
+  const withNestedShell = (): StoredRow[] =>
+    rowsOf([
+      raw("text", { text: runs("before") }),
+      raw("callout", { icon: null, color: "default" }, [
+        raw("text", { text: runs("inside one") }),
+        raw("page", { title: "Sub", icon: null }),
+      ]),
+      raw("text", { text: runs("after") }),
+    ]);
+
+  test("a shell INSIDE the root round-trips through the scoped document", () => {
+    const rows = withNestedShell();
+    const plan = planOf(rows, markdownOf(rows, "b2"), "b2");
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+  });
+
+  test("a shell the scoped document DROPPED is refused, never re-homed", () => {
+    // Re-homing preserves a dropped shell by lifting it to the root, which is
+    // right when the root IS the page and would drag a whole page tree INTO the
+    // addressed block when it is not.
+    const result = planResult(withNestedShell(), "inside one", "b2");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe("subpage-removed");
+  });
+
+  test("the SAME omission at the page root is still a re-home", () => {
+    // The two roots differ here and nowhere else; pinning both sides is what
+    // keeps the refusal from quietly becoming the general answer.
+    const rows = withNestedShell();
+    const plan = planOf(rows, markdownOf(rows.filter((row) => row.id !== "b4")));
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(plan.patch.updates.find((u) => u.id === "b4")?.changes.parentId).toBe(PAGE_ID);
+  });
+});
+
+describe("fuzz: a non-page root, over the same edits", () => {
+  /** A root with content of its own and no sub-page shell anywhere below it. */
+  function pickRoot(r: () => number, rows: StoredRow[]): StoredRow | undefined {
+    const byId = new Map(rows.map((row) => [row.id, row] as const));
+    return pickFrom(
+      r,
+      rows.filter((row) => {
+        const ids = subtreeIds(rows, row.id);
+        // A dropped shell under a non-page root is a REFUSAL, tested above; the
+        // fuzz is about plans, so it works over shell-free subtrees.
+        return ids.size > 1 && ![...ids].some((id) => isShellRow(byId.get(id)!));
+      }),
+    );
+  }
+
+  test("nothing outside the root moves, and the survivor invariants still hold", () => {
+    let exercised = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const r = rng(seed * 217645199);
+      const rows = fuzzRows(seed);
+      const root = pickRoot(r, rows);
+      if (!root) continue;
+      const inside = subtreeIds(rows, root.id);
+      const reachable = (id: string): boolean => inside.has(id) && id !== root.id;
+
+      // A worst case rather than a single edit — rewrite one text row inside the
+      // subtree AND drop a whole subtree inside it — so the plan has real churn
+      // to be minimal about.
+      const edited = clone(rows);
+      const textRow = pickFrom(r, edited.filter((row) => isTextRow(row) && reachable(row.id)));
+      if (textRow) {
+        textRow.data = { ...(textRow.data as object), text: runs(`rewritten ${seed}`) };
+      }
+      const doomed = pickFrom(r, edited.filter((row) => reachable(row.id)));
+      const survivors = doomed
+        ? edited.filter((row) => !subtreeIds(edited, doomed.id).has(row.id))
+        : edited;
+      exercised += 1;
+      const plan = planOf(rows, markdownOf(survivors, root.id), root.id);
+
+      for (const id of [
+        ...plan.patch.deleteIds,
+        ...plan.patch.updates.map((u) => u.id),
+        ...plan.textEdits.map((e) => e.blockId),
+      ]) {
+        expect({ seed, root: root.id, id, reachable: reachable(id) }).toEqual({
+          seed,
+          root: root.id,
+          id,
+          reachable: true,
+        });
+      }
+      for (const update of plan.patch.updates) {
+        expect({ seed, id: update.id, expanded: namesField(update.changes, "expanded") }).toEqual(
+          { seed, id: update.id, expanded: false },
+        );
+        if (!namesField(update.changes, "data")) continue;
+        const before = rows.find((row) => row.id === update.id)!;
+        expect({
+          seed,
+          id: update.id,
+          text: plainOf(runsOf((update.changes.data as { text?: unknown }).text)),
+        }).toEqual({
+          seed,
+          id: update.id,
+          text: plainOf(runsOf((before.data as { text?: unknown }).text)),
+        });
+      }
+      for (const created of plan.patch.creates) {
+        expect({ seed, pageId: created.pageId }).toEqual({ seed, pageId: PAGE_ID });
+      }
+
+      // The complement, stated positively: every row the walk could not reach is
+      // byte-identical after the plan is applied.
+      const outside = (list: StoredRow[]): StoredRow[] =>
+        list.filter((row) => !reachable(row.id));
+      expect({ seed, outside: outside(applyPlan(rows, plan)) }).toEqual({
+        seed,
+        outside: outside(rows),
+      });
+      expectConverges(rows, survivors, seed, root.id);
+    }
+    expect(exercised).toBeGreaterThan(100);
   });
 });

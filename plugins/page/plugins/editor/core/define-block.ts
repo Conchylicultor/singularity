@@ -19,6 +19,14 @@ export type BlockTextVariant =
   | "label"
   | "caption";
 
+/**
+ * Who a block's content is FOR — see {@link BlockHandle.audience}. Two values,
+ * and deliberately no third: an annotation card is either something an agent may
+ * receive or something withheld from it, and a middle value would have to mean
+ * something to every consumer that filters on it.
+ */
+export type BlockAudience = "agent" | "human";
+
 export interface BlockHandle<T> {
   type: string;
   schema: AnyZodObject;
@@ -246,6 +254,33 @@ export interface BlockHandle<T> {
    * every caller (`/` menu, gutter-`+` draft, Turn-into, url-paste) is unchanged.
    */
   wrapOnConvert?: true;
+  /**
+   * Who this block's content is FOR. Declared ONLY by annotation containers
+   * (`page/annotations`' `defineAnnotationBlock`, which requires it); **absent
+   * means ordinary page content, visible to everyone** — a paragraph is not
+   * withheld from anybody, so an unmarked block is not a hole in a policy, it is
+   * the common case.
+   *
+   * It rides the HANDLE deliberately. The handle is already what
+   * `Editor.BlockData.getContributions()` hands the server, so a consumer that
+   * must withhold human-only content (the agent-facing markdown read path)
+   * resolves the audience from the registry it already reads — there is no
+   * second registry that could drift from the first, and no way for a block type
+   * to exist in one and not the other.
+   *
+   * Consumers enumerate GENERICALLY (`handles.filter(h => h.audience ===
+   * "human")`) and never name a block type. That is what makes a fifth
+   * annotation zero edits in the delivery path, and what stops a redaction from
+   * silently missing the one type it forgot to list.
+   *
+   * `defineBlock` does NOT accept it, and that is the fail-safe half: only
+   * `defineAnnotationBlock` sets it, so its presence on a handle *is* the proof
+   * that the type went through the factory that makes it mandatory. The
+   * `annotations:audience-declared` check keys on exactly that, which is what
+   * stops a future annotation from quietly being an ordinary container and
+   * defaulting into visibility.
+   */
+  audience?: BlockAudience;
   /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST

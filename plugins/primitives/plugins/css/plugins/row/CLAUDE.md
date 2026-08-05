@@ -96,6 +96,7 @@ genuine transient-chrome list escapes with
     - `debug/zero-test`
     - `fields/date/filter`
     - `history/dialog`
+    - `page/annotations/agent-notes/authorship`
     - `page/callout`
     - `page/editor`
     - `page/inline-date`

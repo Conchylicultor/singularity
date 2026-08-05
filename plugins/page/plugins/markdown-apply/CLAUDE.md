@@ -1,12 +1,41 @@
 # markdown-apply
 
-Applying an edited markdown document onto an existing page **without re-minting
-block ids**. `replacePageContent` is the other whole-page write and it is
+Applying an edited markdown document onto an existing block forest **without
+re-minting block ids**. `replacePageContent` is the other whole-page write and it is
 correct for its one caller (history restore, where fresh ids are load-bearing);
 as an *editing* path it detaches every block's content `Y.Doc`, its
 `Y.UndoManager` history, its `page_links` edges, its `tasks_ext_prompt_block`
 link and every entity-extension row keyed on block id. Design:
 [`research/2026-08-03-page-markdown-apply-to-existing-forest.md`](../../../../research/2026-08-03-page-markdown-apply-to-existing-forest.md).
+
+## The root is the scope; the page is the transaction
+
+`readBlockAsMarkdown(blockId, {redact})` / `applyMarkdownToBlock(blockId, md)`
+take **any block**, not a page. A page id is simply the root at depth 0, so
+`readPageAsMarkdown` / `applyMarkdownToPage` are the same call — they exist
+separately only to *assert* their id is a page (the snapshot coming back is that
+proof), so "this page" cannot silently mean "the page around this block".
+
+> `rootId` bounds everything. `existing` is still the whole `page_id`
+> partition — the rank floor and the sub-page pin need rows the walk may not
+> reach — but survivors, updates and **`deleteIds` all derive from `oldRows`,
+> the walk's output**. One line, no second filter to keep in sync.
+
+The root itself is scope, not content: the walk starts at its CHILDREN, so it
+has no line in the document and no write can name it.
+
+- **`pageId` is a second required arg, never inferred from `rootId`.** A nested
+  root cannot name its own page; created rows join a *partition*, not a position.
+- **`subpage-removed`** — an absent shell is re-homed to `rootId` above the rank
+  floor, which is right when the root IS the page and would drag a whole page
+  tree INTO the addressed block when it is not. So under a nested root it
+  refuses. Unreachable in practice (a scoped read emits every shell in scope),
+  which is why it is loud.
+- **`redact` is a row filter applied BEFORE the walk**, so pruning a row prunes
+  its subtree for free. The engine never learns what a redaction *is* —
+  audience/policy lives with the caller.
+- The WRITE is still whole-page: `applyPageBlockPatch` locks the entire forest
+  either way, because `(parent_id, rank)` is one ordering space.
 
 ## Two channels, because they have two owners
 
@@ -69,7 +98,8 @@ serializer is the only thing that knows how a type encodes its identity into one
   rank-floor idiom). It stays exactly put only when it already sits above that
   floor. Anywhere else it moves, because its own sibling list was re-ranked
   without it and the only interval provably free of a `(parent_id, rank)`
-  collision is above the floor.
+  collision is above the floor. Under a **nested root** this is
+  `subpage-removed` instead — see *The root is the scope* above.
 - **`unknown-page-ref`** — a `<page id="…"/>` that is neither a live sub-page of
   this page nor a reference this document ALREADY holds. The second half of that
   rule is not a softening: `<page id="…"/>` is also how an ordinary
@@ -157,10 +187,18 @@ would silently delete it. Closing it properly needs the server twin of
 `registerBlockTextExtension`'s NODE half. Bounded: `read_page` is unaffected, and
 only an EDIT to a block containing a token is refused.
 
-## MCP tools
+## No MCP tools here: this plugin is the ENGINE
 
-`read_page` / `write_page` / `edit_page`; `edit_page` mirrors the Edit file
-tool's contract (zero matches and non-unique-without-`replaceAll` are both loud).
+`read_page` moved to
+[`page/annotations/agent-access`](../annotations/plugins/agent-access/CLAUDE.md)
+with the notes-only writers; `write_page` / `edit_page` are **gone** — no agent
+reaches a page's prose any more. The split is not filing: `append_agent_notes`
+names a concrete block type, which a generic engine must not, and the redaction
+predicate is POLICY, not projection. What is left takes a root and a row filter
+and never learns what an audience is, so a second policy (export, share link)
+reuses it without adding a branch here.
+
+The end-to-end spec moved too — `agent-access/e2e/agent-access-verify.ts`.
 
 **Agent-origin provenance does not apply, on purpose.** That hook reads
 `x-singularity-origin` off an HTTP `Request` and marks whole PAGES an agent
@@ -173,33 +211,39 @@ The caller serializes with `markdownNodesOfRows` and diffs with the same
 `core/flatten.ts` walk. If the two disagreed, the plan would be a diff against a
 document nobody ever saw — which is why both live in one module over one
 `childrenByParent` index, rather than each re-deriving "rank-ordered DFS from the
-page row".
+root". Both take `rootId`; a redaction must therefore be applied to the ROWS
+handed to the walk, never to the emitted markdown.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the read_page / write_page / edit_page MCP tools, the structural patch, and the per-block content-doc splice.
+- Description: Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block content-doc splice. Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
 - Server:
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
-    - `infra/mcp.Mcp`
     - `page/editor-collab.initBlockDoc`
     - `page/editor-collab.loadBlockDoc`
     - `page/editor-collab.mergeBlockDocUpdate`
+    - `page/editor._blocks`
     - `page/editor.applyPageBlockPatch`
     - `page/editor.blockTextProtectedSpans`
     - `page/editor.Editor`
+    - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.serializePageContent`
-  - Exports (types): `ApplyReport`
+    - `page/editor.StoredBlock`
+  - Exports (types):
+    - `ApplyReport`
+    - `BlockScope`
+    - `ReadBlockOptions`
   - Exports (values):
+    - `applyMarkdownToBlock`
     - `applyMarkdownToPage`
+    - `loadBlockScope`
+    - `readBlockAsMarkdown`
     - `readPageAsMarkdown`
-  - Register:
-    - `mcpTool('read_page')`
-    - `mcpTool('write_page')`
-    - `mcpTool('edit_page')`
+    - `serverMarkdownContext`
 - Core:
   - Uses:
     - `page/editor.Block`
@@ -232,5 +276,7 @@ page row".
     - `documentOrderRows`
     - `markdownNodesOfRows`
     - `planMarkdownApply`
+- Cross-plugin:
+  - Imported by: `page/annotations/agent-access`
 
 <!-- AUTOGENERATED:END -->

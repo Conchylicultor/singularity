@@ -19,48 +19,62 @@ They are siblings under one umbrella rather than four entries in the flat
 delivery step below has to ask "which annotations does this page carry, and who
 is each one for?", never "is there a context card?".
 
-## Today they are appearance only, and that is a deliberate half
+## The audience is declared, and one consumer reads it
 
-**Nothing feeds page content to an agent yet.** A `/prompt` launch sends only that
-block's own text (`page/prompt/block`), and `serializeForestToMarkdown` has only
-clipboard callers. So all four blocks currently do exactly one thing: mark a run
-of blocks visually, and round-trip through the markdown projection as their own
-`<context>` / `<todo>` / `<agent-notes>` / `<private-notes>` tag.
+**Declared.** `core/define-annotation-block.ts` — `defineAnnotationBlock` is
+`defineContainerBlock` plus one REQUIRED field, `audience`, landing on
+`BlockHandle.audience`: `human` for `/private`, `agent` for the other three
+(including `/agent` — the field answers *may an agent receive this*, not *who is
+the reader*, and an agent must be able to re-read what it wrote).
 
-The consequence to be honest about: **`/private` does not yet hide anything**,
-because nothing yet reads any of these. It is a promise about a channel that does
-not exist. Its contents are still in the page's markdown when a human copies the
-page, which is correct (the human owns their clipboard) and would NOT be correct
-for an agent hand-off.
+- **It rides the handle**, already what `Editor.BlockData.getContributions()`
+  gives the server — so the redaction consumer reads the registry it already
+  reads, with no second registry to drift. Consumers filter generically
+  (`audience === "human"`), never by type name, so a fifth annotation costs the
+  delivery path zero edits.
+- **Unmarked is unrepresentable here, not defaulted.** The old
+  withheld-by-default rule is now a required field at the one site that knows the
+  answer. Outside this family absent `audience` means ordinary content, visible
+  to everyone — correct: a paragraph is withheld from nobody.
+- **`./singularity check annotations:audience-declared`** fails a block type under
+  this umbrella that reached for `defineContainerBlock` directly, which would make
+  it an ordinary agent-visible container. Presence of `audience` is the
+  discriminator; nothing else can set it.
 
-When the delivery step lands it must therefore be built as a **filter over this
-family**, not as a reader of `/context`:
+**Read** by exactly one consumer:
+[`plugins/agent-access`](plugins/agent-access/CLAUDE.md), which prunes `human`
+subtrees out of the agent-facing `read_page` and refuses to write anywhere but an
+`<agent-notes>` card. `/private` is a real channel there and nowhere else — a
+`/prompt` launch still sends only that block's own text, and no other surface
+filters.
 
-- each annotation type declares its audience (`agent` / `human`), so the delivery
-  code enumerates the family through a slot and never names a block type — the
-  usual collection-consumer separation. A fifth annotation then needs zero edits
-  in the delivery path, and cannot default into being sent.
-- the default for an unknown/unmarked type must be **withheld**, so the failure
-  mode of a future annotation is "the agent didn't see it", never "the private
-  card leaked".
-
-Recorded design for the delivery half: Stage 2 of
-[`research/2026-07-29-page-context-block.md`](../../../../../research/2026-07-29-page-context-block.md).
+**The markdown serializer keeps emitting private children**, deliberately: it
+runs for the CLIPBOARD, and a human copying their own page must get their own
+notes. Redaction is the agent-facing consumer's job, never a serializer's, which
+would silently eat text on Cmd+C.
 
 ## What every annotation shares, and what stays per-block
 
 Shared, and NOT re-derived per plugin: the whole void-container shape —
-`defineContainerBlock` forcing `anchor` / `wrapOnConvert`, plus `ContainerNoRow`,
-`ContainerBackdrop` and `ContainerAnchor`. All of it lives in
-[`page/container`](../container/CLAUDE.md); an annotation plugin adds no
-mechanism of its own.
+`anchor` / `wrapOnConvert` forced, plus `ContainerNoRow`, `ContainerBackdrop` and
+`ContainerAnchor`. The mechanism lives in
+[`page/container`](../container/CLAUDE.md); an annotation plugin adds none of its
+own. It reaches it through this umbrella's `defineAnnotationBlock`, never
+`defineContainerBlock` directly — that is the audience declaration above, and the
+check enforces it.
 
 **None of the four has per-instance appearance** (every payload is `z.object({})`),
-so each passes `ContainerAnchor` a bare `glyph` — no `sections`, no
-`BlockFrameMeta.menu`, hence a plain non-interactive mark on both surfaces. They
-lose nothing by it: Collapse / Remove `<label>` / Delete come from the rail on the
-line the card BORROWS, whose menu arm keys on the core `BlockHandle.anchor` fact
-rather than on a contributed menu.
+so none contributes a `BlockFrameMeta.menu`: Collapse / Remove `<label>` / Delete
+come from the rail on the line the card BORROWS, whose menu arm keys on the core
+`BlockHandle.anchor` fact rather than on a contributed menu.
+
+Three pass `ContainerAnchor` a bare `glyph` — a plain, non-interactive mark on both
+surfaces. **`agent-notes` also passes `sections`**, and that does not break the rule
+above: its `data` is still `z.object({})`. What the popover shows is PROVENANCE
+(which conversations wrote the card), held in a side-table keyed on the block id —
+per-instance state that is not per-instance *data*. See
+[`agent-notes/plugins/authorship`](plugins/agent-notes/plugins/authorship/CLAUDE.md).
+With no authors the card renders the plain inert mark.
 
 Per-block, and deliberately: its identity (`type`, label, aliases, glyph), its
 tint, and its markdown marker. Those are four separate `Editor.Block` /
@@ -87,7 +101,23 @@ Within the family the hue carries the direction, over the shared semantic tokens
 ## Plugin reference
 
 - Description: Umbrella for the page editor's annotation containers — the audience-scoped boxes that carry the human↔agent side-channel of a page: context, agent notes, private notes, TODO.
+- Core:
+  - Uses:
+    - `page/container.ContainerBlockOptions`
+    - `page/container.defineContainerBlock`
+    - `page/container.RejectTextBearing`
+  - Exports (types):
+    - `AnnotationBlockHandle`
+    - `AnnotationBlockOptions`
+  - Exports (values): `defineAnnotationBlock`
+- Cross-plugin:
+  - Imported by:
+    - `page/annotations/agent-notes`
+    - `page/annotations/context`
+    - `page/annotations/private-notes`
+    - `page/annotations/todo`
 - Sub-plugins:
+  - **`agent-access`** — The agent-facing tool surface over a page: read_page (human-audience subtrees pruned) plus append/write/edit_agent_notes, which can address nothing but an <agent-notes> card. The policy over page/markdown-apply's audience-agnostic engine.
   - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
   - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
   - **`private-notes`** — Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.

@@ -132,7 +132,7 @@ export function BlockRow({
         >
           {Anchor ? (
             // eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Anchor` is a registry LOOKUP into the memoized `useBlockAnchors()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset.
-            <Anchor type={block.type} data={block.data} editor={api} />
+            <Anchor type={block.type} data={block.data} blockId={block.id} editor={api} />
           ) : null}
         </div>
         {/* Childless fallback: one empty body line so the frame has a real box

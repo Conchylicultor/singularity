@@ -643,6 +643,7 @@ See "Open questions" in the design doc.
     - `layouts/host`
     - `layouts/miller`
     - `layouts/route-fallback`
+    - `page/annotations/agent-notes/authorship`
     - `page/prompt/block`
     - `plugin-meta/contributions-table`
     - `plugin-meta/plugin-view`

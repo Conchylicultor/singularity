@@ -33,6 +33,18 @@ describe("privateNotesBlock (derived + forced facts)", () => {
     expect(privateNotesBlock.text).toBeUndefined();
   });
 
+  it("declares the human audience — the fact that withholds it from agents", () => {
+    // The `audience` is what a delivery/read path filters on, GENERICALLY. It
+    // must stay on the handle, because the handle is what the server resolves
+    // from `Editor.BlockData`; a consumer that had to name "private-notes" is
+    // one that a fifth annotation would silently slip past.
+    expect(privateNotesBlock.audience).toBe("human");
+    // And it is the TYPE's, not the instance's: an empty payload has nowhere to
+    // put a per-card override, so there is no state in which a card labelled
+    // private is nonetheless shared.
+    expect(privateNotesBlock.empty?.()).toEqual({});
+  });
+
   it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(privateNotesBlock.anchor).toBe(true);
     expect(privateNotesBlock.wrapOnConvert).toBe(true);

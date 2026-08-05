@@ -11,17 +11,17 @@ A void container (`z.object({})`, content IS its children), built on
 
 ## It does not hide anything yet — say so before relying on it
 
-Nothing feeds page content to an agent today (see the family doc), so this block
-currently *marks* privacy rather than enforcing it. The enforcement belongs to
-the future delivery filter, which must **withhold by default** and read the
-family's declared audience — never special-case this type, or a fifth annotation
-would leak by omission.
+The block now DECLARES `audience: "human"` (`defineAnnotationBlock`), but nothing
+reads it yet — no path feeds page content to an agent (see the family doc), so
+this block still *marks* privacy rather than enforcing it. The enforcement is the
+agent-facing read path, which must filter the family on that field — never
+special-case this type, or a fifth annotation would leak by omission.
 
 Two invariants for whoever builds that:
 
 - **Privacy is a fact of the TYPE, not a payload field.** No `visibleTo` /
   `hidden` key, so there is no state in which a card labelled private is
-  nonetheless shared.
+  nonetheless shared — and the type's `audience` is what a consumer reads it by.
 - **The markdown serializer still emits the children, deliberately.** It runs for
   the CLIPBOARD, and a human copying their own page must get their own notes.
   Redaction that lived here would silently eat text on Cmd+C while still not
@@ -46,7 +46,7 @@ Two invariants for whoever builds that:
   - Contributes: `page.block-data` "private-notes"
   - Uses: `page/editor.Editor`
 - Core:
-  - Uses: `page/container.defineContainerBlock`
+  - Uses: `page/annotations.defineAnnotationBlock`
   - Exports (values):
     - `privateNotesBlock`
     - `privateNotesDataSchema`

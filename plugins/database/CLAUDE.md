@@ -242,6 +242,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `infra/query-resource`
     - `infra/retention`
     - `infra/trash`
+    - `page/annotations/agent-notes/authorship`
     - `page/attachment-block`
     - `page/editor`
     - `page/editor-collab`

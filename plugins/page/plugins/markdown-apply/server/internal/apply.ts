@@ -2,19 +2,32 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   applyPageBlockPatch,
   serializePageContent,
+  type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
 import {
   parseMarkdownToForest,
   type Block,
   type BlockUpdate,
 } from "@plugins/page/plugins/editor/core";
-import { planMarkdownApply } from "../../core";
+import { documentOrderRows, planMarkdownApply } from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
+import { loadBlockScope } from "./read";
 import { writeBlockText } from "./block-doc-text";
 
 /**
- * Apply an edited markdown document onto an existing page — the write half of
- * `read_page` → edit → `write_page`.
+ * Apply an edited markdown document onto an existing block's subtree — the write
+ * half of read → edit → write.
+ *
+ * ---------------------------------------------------------------------------
+ * The root is the scope; the page is the transaction
+ * ---------------------------------------------------------------------------
+ *
+ * The plan is bounded by its ROOT (see `core/plan.ts`), so a scoped apply can
+ * only rewrite the addressed block's subtree. The WRITE is still a whole-page
+ * one: `applyPageBlockPatch` locks the page's entire forest either way, because
+ * `(parent_id, rank)` is one ordering space and a partial lock would not make a
+ * partial write safe. Narrowing the lock to the subtree would buy concurrency
+ * this has no need for and lose the atomicity it depends on.
  *
  * ---------------------------------------------------------------------------
  * Two channels, in this order, because they have two owners
@@ -72,9 +85,17 @@ import { writeBlockText } from "./block-doc-text";
  */
 
 export interface ApplyReport {
+  /** The block this apply was rooted at — the page row for a whole-page apply. */
+  rootId: string;
+  /** The page whose forest was locked and written. */
   pageId: string;
   stats: { survived: number; created: number; deleted: number; moved: number };
-  /** Block ids that kept their identity (and therefore their doc, star, links…). */
+  /**
+   * Block ids that kept their identity (and therefore their doc, star, links…).
+   * Scoped to the root's subtree, like every other authority in this apply: a
+   * row outside it was never a candidate for anything, and reporting it as a
+   * "survivor" would claim the apply had considered it.
+   */
   survivingIds: string[];
   createdIds: string[];
   /** Survivors whose content doc this apply spliced. */
@@ -89,20 +110,20 @@ function projectedData(row: Block, text: unknown): unknown {
     : { text };
 }
 
-export async function applyMarkdownToPage(
-  pageId: string,
-  markdown: string,
-): Promise<ApplyReport> {
-  const snapshot = await serializePageContent(pageId);
-  if (!snapshot) {
-    throw new HttpError(404, `page ${pageId} does not exist`);
-  }
-
+/** One scoped apply: the two channels, over rows a caller has already read. */
+async function applyToScope(scope: {
+  rootId: string;
+  pageId: string;
+  rows: readonly StoredBlock[];
+  markdown: string;
+}): Promise<ApplyReport> {
+  const { rootId, pageId, rows, markdown } = scope;
   const ctx = serverMarkdownContext();
   const incoming = parseMarkdownToForest(markdown, ctx);
   const result = planMarkdownApply({
+    rootId,
     pageId,
-    existing: snapshot.blocks,
+    existing: rows,
     incoming,
     handles: ctx.handles,
   });
@@ -111,7 +132,8 @@ export async function applyMarkdownToPage(
   if (!result.ok) {
     throw new HttpError(
       409,
-      `markdown apply refused for page ${pageId} (${result.reason}): ${result.detail}`,
+      `markdown apply refused for block ${rootId} on page ${pageId} ` +
+        `(${result.reason}): ${result.detail}`,
     );
   }
   const { patch, textEdits, stats } = result.plan;
@@ -152,11 +174,61 @@ export async function applyMarkdownToPage(
 
   const createdIds = patch.creates.map((b) => b.id);
   const createdSet = new Set(createdIds);
+  // The SAME walk the plan was built over, re-run on the post-patch rows — so
+  // "survived" means "still in the scope this apply had authority over", and a
+  // preserved sub-page shell re-homed above the rank floor is counted where it
+  // now sits rather than where it used to. `Block.rank` is a `Rank` value object
+  // where the engine reads the RAW stored string, which is the one projection
+  // `serializePageContent` also makes on the way in.
+  const inScope = documentOrderRows(
+    blocks.map((b) => ({
+      id: b.id,
+      parentId: b.parentId,
+      type: b.type,
+      data: b.data,
+      rank: b.rank.toJSON(),
+      expanded: b.expanded,
+    })),
+    rootId,
+  );
   return {
+    rootId,
     pageId,
     stats,
-    survivingIds: blocks.filter((b) => !createdSet.has(b.id)).map((b) => b.id),
+    survivingIds: inScope.filter((b) => !createdSet.has(b.id)).map((b) => b.id),
     createdIds,
     textEditedIds: textEdits.map((e) => e.blockId),
   };
+}
+
+/**
+ * Apply an edited markdown document onto one block's subtree. Nothing outside
+ * that subtree — and not the block itself — can be written, whatever the
+ * document says.
+ */
+export async function applyMarkdownToBlock(
+  blockId: string,
+  markdown: string,
+): Promise<ApplyReport> {
+  const { pageId, rows } = await loadBlockScope(blockId);
+  return applyToScope({ rootId: blockId, pageId, rows, markdown });
+}
+
+/**
+ * Apply an edited markdown document onto a whole page — {@link
+ * applyMarkdownToBlock} rooted at the page row.
+ *
+ * Its own entry point for the same reason `readPageAsMarkdown` is: the snapshot
+ * coming back IS the proof that `pageId` names a live PAGE row, so a caller that
+ * means "this page" cannot silently rewrite the page around a content block.
+ */
+export async function applyMarkdownToPage(
+  pageId: string,
+  markdown: string,
+): Promise<ApplyReport> {
+  const snapshot = await serializePageContent(pageId);
+  if (!snapshot) {
+    throw new HttpError(404, `page ${pageId} does not exist`);
+  }
+  return applyToScope({ rootId: pageId, pageId, rows: snapshot.blocks, markdown });
 }

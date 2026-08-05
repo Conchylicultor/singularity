@@ -51,6 +51,7 @@ rule keeps the broken shape from coming back.
     - `improve/element-picker`
     - `infra/events-test`
     - `page/annotations`
+    - `page/annotations/agent-access`
     - `page/annotations/context`
     - `page/callout`
     - `page/container`
@@ -58,7 +59,6 @@ rule keeps the broken shape from coming back.
     - `page/editor-collab`
     - `page/image`
     - `page/inline-date`
-    - `page/markdown-apply`
     - `page/prompt/block`
     - `page/quote`
     - `page/url-paste`

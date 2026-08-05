@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MdAutoAwesome } from "react-icons/md";
-import { defineContainerBlock } from "@plugins/page/plugins/container/core";
+import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 
 /**
  * An agent-notes card is a VOID container: it owns NOTHING but its type.
@@ -11,24 +11,30 @@ import { defineContainerBlock } from "@plugins/page/plugins/container/core";
  * rather than a quietly-stored field.
  *
  * Deliberately NOT a payload field: *which* agent / run wrote the card. That is
- * provenance, it has to survive edits and be queryable, and `page/agent-origin`
- * already owns exactly that shape (an entity-extension side-table keyed by
- * block). Storing an author string in the block's `data` would be a second,
- * unjoinable copy.
+ * provenance — it has to survive edits, be queryable, and accumulate SEVERAL
+ * authors — so it lives in the `authorship` sub-plugin's block-keyed link table.
+ * A name in this block's `data` would be a single-valued, unjoinable copy of it.
  */
 export const agentNotesDataSchema = z.object({});
 
 /**
- * `defineContainerBlock` forces `anchor: true` and `wrapOnConvert: true` — see
+ * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`,
+ * so this card cannot exist without saying who it is for. The container half
+ * forces `anchor: true` and `wrapOnConvert: true` — see
  * `@plugins/page/plugins/container/core` for why the two are only correct
  * together. It declares no `collapsible`: a container folds to its BORROWED line
  * (its first child's), so its stored `expanded` is live. This file declares nothing but identity.
  */
-export const agentNotesBlock = defineContainerBlock({
+export const agentNotesBlock = defineAnnotationBlock({
   type: "agent-notes",
   schema: agentNotesDataSchema,
   label: "Agent notes",
   icon: MdAutoAwesome,
+  // `"agent"` even though the card is addressed TO the human: `audience` answers
+  // "may an agent receive this", not "who is the reader". An agent must be able
+  // to re-read what it wrote last time — and it is the one card an agent may
+  // WRITE, which would be incoherent if it could not also see it.
+  audience: "agent",
   aliases: ["agent", "agents", "ai", "notes", "findings", "report"],
   empty: () => ({}),
   // `<agent-notes>…</agent-notes>` — a real round-tripping syntax, replacing the

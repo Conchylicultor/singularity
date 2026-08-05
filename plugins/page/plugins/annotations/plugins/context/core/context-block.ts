@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MdRule } from "react-icons/md";
-import { defineContainerBlock } from "@plugins/page/plugins/container/core";
+import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 
 /**
  * A context card is a VOID container: it owns NOTHING but its type.
@@ -16,7 +16,10 @@ import { defineContainerBlock } from "@plugins/page/plugins/container/core";
 export const contextDataSchema = z.object({});
 
 /**
- * `defineContainerBlock` forces `anchor: true` and `wrapOnConvert: true` — the
+ * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`,
+ * so this card cannot exist without saying who it is for.
+ *
+ * It forces `anchor: true` and `wrapOnConvert: true` — the
  * two facts that are only correct together. The
  * consequences, all of which the previous text-bearing model got wrong:
  *
@@ -33,11 +36,16 @@ export const contextDataSchema = z.object({});
  * to seat its glyph), so the chevron rides on that line's row. Which is why this
  * declares no `collapsible`: its stored `expanded` is live.
  */
-export const contextBlock = defineContainerBlock({
+export const contextBlock = defineAnnotationBlock({
   type: "context",
   schema: contextDataSchema,
   label: "Context",
   icon: MdRule,
+  // Standing instructions the human writes FOR an agent — the direction this
+  // card exists for. Withholding it would defeat the block: an agent that never
+  // receives the page's conventions is exactly the state `/context` was added to
+  // fix.
+  audience: "agent",
   // NOT "agent" / "agents" / "ai": those belong to the sibling `/agent` block
   // (notes an agent wrote back). This card is what a human tells an agent, so its
   // aliases are the instruction words — otherwise `/agent` would surface two

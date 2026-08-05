@@ -360,6 +360,7 @@ fixed raw size escapes per-site via
     - `improve/element-picker`
     - `infra/events-test`
     - `layouts/route-fallback`
+    - `page/annotations/agent-notes/authorship`
     - `page/bookmark`
     - `page/callout`
     - `page/editor`

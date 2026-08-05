@@ -95,6 +95,7 @@
     - `conversations/conversations-view`
     - `conversations/summary`
     - `debug/profiling/ops`
+    - `page/annotations/agent-notes/authorship`
     - `page/prompt/block`
     - `primitives/launch`
     - `review`

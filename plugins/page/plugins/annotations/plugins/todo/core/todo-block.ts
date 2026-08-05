@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MdPendingActions } from "react-icons/md";
-import { defineContainerBlock } from "@plugins/page/plugins/container/core";
+import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 
 /**
  * A TODO card is a VOID container: it owns NOTHING but its type.
@@ -15,16 +15,22 @@ import { defineContainerBlock } from "@plugins/page/plugins/container/core";
 export const todoDataSchema = z.object({});
 
 /**
- * `defineContainerBlock` forces `anchor: true` and `wrapOnConvert: true` — see
+ * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`,
+ * so this card cannot exist without saying who it is for. The container half
+ * forces `anchor: true` and `wrapOnConvert: true` — see
  * `@plugins/page/plugins/container/core` for why the two are only correct
  * together. It declares no `collapsible`: a container folds to its BORROWED line
  * (its first child's), so its stored `expanded` is live.
  */
-export const todoBlock = defineContainerBlock({
+export const todoBlock = defineAnnotationBlock({
   type: "todo",
   schema: todoDataSchema,
   label: "TODO",
   icon: MdPendingActions,
+  // Work an agent still has to do — a card whose entire purpose is to be READ by
+  // one. Same direction as `/context`; only the tense differs (standing
+  // instructions vs outstanding work).
+  audience: "agent",
   // NOT "task" / "checklist" / "checkbox": those are `page/to-do`'s, and the two
   // are genuinely different things (a region of work vs one checkable line).
   aliases: ["todo", "agent todo", "work", "backlog", "fixme"],

@@ -224,6 +224,7 @@ they describe.
   - Exports (values): `defineContainerBlock`
 - Cross-plugin:
   - Imported by:
+    - `page/annotations`
     - `page/annotations/agent-notes`
     - `page/annotations/context`
     - `page/annotations/private-notes`
