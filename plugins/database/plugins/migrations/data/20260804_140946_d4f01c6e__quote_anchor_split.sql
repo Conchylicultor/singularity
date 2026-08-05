@@ -38,6 +38,12 @@
 -- The `qu-` id prefix mirrors the callout migration's `ca-`, and cannot collide
 -- with it: the two runs key off different source rows, and a `qu-`-prefixed id
 -- can only be minted once per quote thanks to the `data ? 'text'` guard.
+--
+-- The anchor lands on `{}` — statement 1 seeds it with the scratch rank key and
+-- statement 3 removes that key — which is EXACTLY what `quoteDataSchema`
+-- (`z.object({})`, parsed `.strict()` at the write boundary) accepts. A migrated
+-- quote is therefore writable by the live editor on the next keystroke, rather
+-- than being a row only the migration could have produced.
 
 -- 1. Mint the anchor beside each quote, parked one character past its rank.
 --    deleted_at / trash_entry_id are copied so a trashed quote's anchor is not
