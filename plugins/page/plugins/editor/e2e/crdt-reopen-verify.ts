@@ -87,7 +87,9 @@ async function fetchBlockText(pageId: string, blockId: string): Promise<string> 
 async function fetchDocText(blockId: string): Promise<string> {
   // doc-init with an EMPTY update is a read: the row exists (we flushed), so
   // ON CONFLICT DO NOTHING no-ops and the response is the stored state.
-  const emptyUpdate = Y.encodeStateAsUpdate(new Y.Doc());
+  // Copy into an ArrayBuffer-backed view: yjs types its output as
+  // Uint8Array<ArrayBufferLike>, which BodyInit rejects (it could be shared).
+  const emptyUpdate = new Uint8Array(Y.encodeStateAsUpdate(new Y.Doc()));
   const res = await fetch(`${base}/api/blocks/${blockId}/doc-init`, {
     method: "POST",
     headers: { "content-type": "application/octet-stream" },

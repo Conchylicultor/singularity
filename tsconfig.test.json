@@ -13,6 +13,12 @@
     "plugins/**/__tests__/**/*",
     "plugins/**/e2e/**/*.ts",
     "plugins/**/shared/*.d.ts",
+    // Ambient `*.css` (and import.meta.env) declarations for the component tests
+    // under __tests__, which mount components that side-effect-import CSS. It is
+    // this file rather than a `"vite/client"` entry in `types` because vite lives
+    // in web-core's own node_modules, not the hoisted root — the triple-slash
+    // reference resolves from its own directory, a root `types` entry would not.
+    "plugins/framework/plugins/web-core/web/vite-env.d.ts",
     "test/**/*"
   ]
 }

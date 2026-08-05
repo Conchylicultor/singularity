@@ -58,7 +58,7 @@ export async function handleImageContent(
   if (!mime) return new Response("Unsupported media type", { status: 415 });
 
   const absRoot = resolve(wtPath);
-  let bytes: Uint8Array;
+  let bytes: Uint8Array<ArrayBuffer>;
 
   if (ref) {
     const absTarget = resolve(absRoot, path);

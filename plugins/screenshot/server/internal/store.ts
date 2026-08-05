@@ -1,7 +1,7 @@
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 interface Entry {
-  png: Uint8Array;
+  png: Uint8Array<ArrayBuffer>;
   createdAt: number;
 }
 
@@ -13,12 +13,12 @@ function gc(now: number) {
   }
 }
 
-export function put(id: string, png: Uint8Array): void {
+export function put(id: string, png: Uint8Array<ArrayBuffer>): void {
   const now = Date.now();
   gc(now);
   store.set(id, { png, createdAt: now });
 }
 
-export function get(id: string): Uint8Array | null {
+export function get(id: string): Uint8Array<ArrayBuffer> | null {
   return store.get(id)?.png ?? null;
 }

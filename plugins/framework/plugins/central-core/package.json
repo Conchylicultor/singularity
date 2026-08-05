@@ -4,6 +4,6 @@
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "~5.8.3"
+    "typescript": "~6.0.3"
   }
 }

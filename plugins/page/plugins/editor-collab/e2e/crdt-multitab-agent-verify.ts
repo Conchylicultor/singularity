@@ -145,7 +145,9 @@ await withBrowser(async (h) => {
       .find((insert): insert is Y.XmlText => insert instanceof Y.XmlText);
     if (!firstPara) throw new Error("no paragraph in block doc");
     doc.transact(() => firstPara.insert(0, marker));
-    const update = Y.encodeStateAsUpdate(doc, before);
+    // Copy into an ArrayBuffer-backed view: yjs types its output as
+    // Uint8Array<ArrayBufferLike>, which BodyInit rejects (it could be shared).
+    const update = new Uint8Array(Y.encodeStateAsUpdate(doc, before));
     const post = await fetch(`${base}/api/blocks/${block1Id}/doc-update`, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },

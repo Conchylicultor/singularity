@@ -37,7 +37,7 @@ export interface UrlPagePayload {
 export async function readCappedBody(
   body: ReadableStream<Uint8Array>,
   max: number,
-): Promise<Uint8Array> {
+): Promise<Uint8Array<ArrayBuffer>> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let seen = 0;
