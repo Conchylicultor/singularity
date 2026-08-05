@@ -28,7 +28,7 @@
     - `infra/paths.GIT`
     - `infra/query-resource.queryResource`
     - `infra/worktree.ensureMainWorktreeRoot`
-    - `tasks/task-preprompt.inheritTaskPreprompt`
+    - `tasks/launch-options.inheritLaunchOptions`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.getConversation`

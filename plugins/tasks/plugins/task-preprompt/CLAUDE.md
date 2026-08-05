@@ -17,18 +17,17 @@
 - Server:
   - Contributes:
     - `resource.declare` "task-preprompts"
-    - `taskLaunchApply` "preprompt"
+    - `taskLaunchServer` "preprompt"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
-    - `tasks/launch-options.TaskLaunchApply`
+    - `tasks/launch-options.TaskLaunchServer`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
   - Exports (values):
     - `getTaskPreprompt`
-    - `inheritTaskPreprompt`
     - `setTaskPreprompt`
     - `taskPrepromptsResource`
     - `tasksPreprompt`
@@ -43,8 +42,6 @@
   - Imported by:
     - `conversations`
     - `conversations/conversation-preprompt`
-    - `plugin-meta/plugin-health`
-    - `tasks`
 - Shared:
   - Exports (types):
     - `TaskPreprompt`

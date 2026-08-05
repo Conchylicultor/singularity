@@ -12,27 +12,46 @@ export interface TaskLaunchContext {
   cause: string;
 }
 
-export interface TaskLaunchApplyEntry<V> {
-  /** The same core token the web control declares — the apply's id and schema. */
+/**
+ * The server half of ONE launch option — every way this option is written onto
+ * a task. Both verbs live on a single entry so an option stays one registration
+ * in one plugin folder, and so a verb added later has an obvious home.
+ */
+export interface TaskLaunchServerEntry<V> {
+  /** The same core token the web control declares — the entry's id and schema. */
   def: LaunchOptionDef<V>;
-  /** Writes one already-parsed value onto a freshly created task. */
+  /** Writes one already-parsed drafted value onto a freshly created task. */
   apply: (ctx: TaskLaunchContext, value: V) => Promise<void>;
+  /**
+   * Copies this option from a spawning task onto a task it spawned (the
+   * task-filing MCP tools). Positional `(from, to)` so a plugin's own
+   * `inherit<Option>` mutation registers as a direct function reference.
+   *
+   * OMITTING THIS IS THE DECLARATION that the option is not inherited — the
+   * absence is the opt-out, exactly as an absent `useTaskBinding` marks a web
+   * control draft-only. See auto-start, whose apply *arms* a launch: inheriting
+   * it would start an agent for every task an agent files.
+   *
+   * Takes no {@link TaskLaunchContext}: `cause` exists to thread provenance
+   * into what an apply enqueues, and an inheritable option enqueues nothing.
+   */
+  inherit?: (fromTaskId: string, toTaskId: string) => Promise<void>;
 }
 
-const ApplyToken = defineServerContribution<TaskLaunchApplyEntry<unknown>>(
-  "taskLaunchApply",
+const ServerToken = defineServerContribution<TaskLaunchServerEntry<unknown>>(
+  "taskLaunchServer",
   { docLabel: (c) => c.def.id },
 );
 
 /** Erases `V` for storage; see the web slot's `contributeOption` for the why. */
-function contributeApply<V>(entry: TaskLaunchApplyEntry<V>) {
-  return ApplyToken(entry as unknown as TaskLaunchApplyEntry<unknown>);
+function contributeServer<V>(entry: TaskLaunchServerEntry<V>) {
+  return ServerToken(entry as unknown as TaskLaunchServerEntry<unknown>);
 }
 
 /**
- * Server half of the launch-option registry: how a drafted value is written
- * onto the task the chain endpoint just created. Consumers read only the
- * aggregate — a value whose id has no registered apply is a 400, never a
- * silently dropped setting.
+ * Server half of the launch-option registry: how an option is written onto a
+ * task, both when drafted and when inherited. Consumers read only the aggregate
+ * — a drafted value whose id has no registered entry is a 400, never a silently
+ * dropped setting.
  */
-export const TaskLaunchApply = Object.assign(contributeApply, ApplyToken);
+export const TaskLaunchServer = Object.assign(contributeServer, ServerToken);

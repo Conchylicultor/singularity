@@ -23,11 +23,10 @@
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
     - `tasks/auto-start.setTaskAutoStart`
-    - `tasks/launch-options.TaskLaunchApply`
-    - `tasks/launch-options.TaskLaunchApplyEntry`
+    - `tasks/launch-options.inheritLaunchOptions`
+    - `tasks/launch-options.TaskLaunchServer`
+    - `tasks/launch-options.TaskLaunchServerEntry`
     - `tasks/task-category.setTaskCategory`
-    - `tasks/task-effort.inheritTaskEffort`
-    - `tasks/task-preprompt.inheritTaskPreprompt`
     - `tasks/task-title.scheduleTaskTitleUpdate`
     - `tasks/task-title.synthesiseTitleFallback`
     - `tasks/tasks-core._tasks`
@@ -142,7 +141,7 @@
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
   - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
-  - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its drafted value is applied to a newly created task, so the chain endpoint applies them generically.
+  - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
   - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports task category and registers the task-creating handler into reports' investigation sink.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its keyed live resource, and the category-list endpoint.

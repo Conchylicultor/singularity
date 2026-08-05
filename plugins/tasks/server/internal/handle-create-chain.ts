@@ -18,8 +18,8 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTaskChain } from "../../core/endpoints";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import {
-  TaskLaunchApply,
-  type TaskLaunchApplyEntry,
+  TaskLaunchServer,
+  type TaskLaunchServerEntry,
 } from "@plugins/tasks/plugins/launch-options/server";
 import { rewireDependencies } from "./rewire-dependencies";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
@@ -85,14 +85,14 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
   // value can't leave half a chain behind. An id no plugin claims is a 400 —
   // a client sending it is a real bug, not a setting to drop silently.
   const applies = new Map(
-    TaskLaunchApply.getContributions().map((c) => [c.def.id, c]),
+    TaskLaunchServer.getContributions().map((c) => [c.def.id, c]),
   );
   const cardLaunchValues: {
-    entry: TaskLaunchApplyEntry<unknown>;
+    entry: TaskLaunchServerEntry<unknown>;
     value: unknown;
   }[][] = [];
   for (let i = 0; i < body.cards.length; i++) {
-    const resolved: { entry: TaskLaunchApplyEntry<unknown>; value: unknown }[] = [];
+    const resolved: { entry: TaskLaunchServerEntry<unknown>; value: unknown }[] = [];
     for (const [id, raw] of Object.entries(body.cards[i]!.options ?? {})) {
       const entry = applies.get(id);
       if (!entry) {

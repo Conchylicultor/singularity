@@ -2,7 +2,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { createTask, getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
+import { inheritLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { _pluginHealthReviews, healthReviewExt } from "./tables";
 
 export const proposeTaskTool = Mcp.tool({
@@ -76,9 +76,12 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
 
     await healthReviewExt.upsert(task.id, { reviewId: review!.id });
 
-    // Inherit the spawning agent's system prompt onto the proposed task, so it
-    // launches under the same instructions once accepted.
-    if (currentTaskId) await inheritTaskPreprompt(currentTaskId, task.id);
+    // Inherit the spawning agent's launch options (system prompt, thinking
+    // mode, …) onto the proposed task, so it launches configured like the agent
+    // that proposed it once accepted. Auto-start is not inheritable, so a
+    // proposed task still waits for the user rather than launching itself.
+    // Guarded because a conversation need not have a task to propose from.
+    if (currentTaskId) await inheritLaunchOptions(currentTaskId, task.id);
 
     return {
       content: [

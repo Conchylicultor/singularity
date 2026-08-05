@@ -13,16 +13,23 @@ detail's Prompt card and the task-draft popover) with no host edit:
   supplies storage, which is why the same control works before the task exists.
   Omit `useTaskBinding` and the option is draft-only — that absence IS the
   declaration, so there is no `hosts:` knob to keep in sync.
-- `server/` — `TaskLaunchApply({ def, apply })`: write one already-parsed value
-  onto the just-created task. Registering the web half without this is a runtime
-  400, not a build error.
+- `server/` — `TaskLaunchServer({ def, apply, inherit? })`: every way the option
+  is written onto a task. `apply` writes one already-parsed drafted value onto
+  the just-created task; registering the web half without it is a runtime 400,
+  not a build error.
+
+`inherit(from, to)` copies the option onto a task an agent spawns; **omitting it
+declares the option not inherited**, same self-describing absence as
+`useTaskBinding`. Auto-start omits it deliberately — its `apply` *arms* a launch,
+so inheriting would start an agent for every task an agent files. Consumers call
+`inheritLaunchOptions(from, to)`, never an option's own inherit.
 
 The field must stay named `component`: `SealContributions` seals that exact name
 and nothing else, which is what forces rendering through `.Render` and its
 error-boundary middleware.
 
 `V` is erased to `unknown` inside the slot (a render slot stores ONE type) and
-re-introduced by the generic `TaskLaunch.Option` / `TaskLaunchApply` factories —
+re-introduced by the generic `TaskLaunch.Option` / `TaskLaunchServer` factories —
 that single cast is why contributions stay internally type-checked.
 
 Ordering for both surfaces lives in
@@ -32,7 +39,7 @@ Ordering for both surfaces lives in
 
 ## Plugin reference
 
-- Description: Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its drafted value is applied to a newly created task, so the chain endpoint applies them generically.
+- Description: Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
 - Web:
   - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
   - Uses: `primitives/slot-render.defineRenderSlot`
@@ -50,6 +57,7 @@ Ordering for both surfaces lives in
     - `useLaunchOptionDefaults`
 - Cross-plugin:
   - Imported by:
+    - `plugin-meta/plugin-health`
     - `tasks`
     - `tasks/auto-start/launch-option`
     - `tasks/task-description`
@@ -58,9 +66,11 @@ Ordering for both surfaces lives in
     - `tasks/task-preprompt`
 - Server:
   - Exports (types):
-    - `TaskLaunchApplyEntry`
     - `TaskLaunchContext`
-  - Exports (values): `TaskLaunchApply`
+    - `TaskLaunchServerEntry`
+  - Exports (values):
+    - `inheritLaunchOptions`
+    - `TaskLaunchServer`
 - Core:
   - Exports (types): `LaunchOptionDef`
   - Exports (values): `defineLaunchOption`

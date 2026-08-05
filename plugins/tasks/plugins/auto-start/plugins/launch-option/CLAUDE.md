@@ -17,11 +17,11 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
     - `tasks/auto-start.useTaskAutoStart`
     - `tasks/launch-options.TaskLaunch`
 - Server:
-  - Contributes: `taskLaunchApply` "auto-start"
+  - Contributes: `taskLaunchServer` "auto-start"
   - Uses:
     - `tasks.armTaskAutoStart`
     - `tasks/auto-start.setTaskAutoStart`
-    - `tasks/launch-options.TaskLaunchApply`
+    - `tasks/launch-options.TaskLaunchServer`
 - Core:
   - Uses:
     - `conversations/model-provider.ConversationModel`

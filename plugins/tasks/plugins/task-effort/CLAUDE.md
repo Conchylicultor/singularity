@@ -17,18 +17,17 @@
 - Server:
   - Contributes:
     - `resource.declare` "task-efforts"
-    - `taskLaunchApply` "effort"
+    - `taskLaunchServer` "effort"
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
-    - `tasks/launch-options.TaskLaunchApply`
+    - `tasks/launch-options.TaskLaunchServer`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
   - Exports (values):
     - `getTaskEffort`
-    - `inheritTaskEffort`
     - `setTaskEffort`
     - `taskEffortsResource`
     - `tasksEffort`
@@ -43,9 +42,7 @@
     - `tasks/launch-options.defineLaunchOption`
   - Exports (values): `effortLaunchOption`
 - Cross-plugin:
-  - Imported by:
-    - `conversations`
-    - `tasks`
+  - Imported by: `conversations`
 - Shared:
   - Exports (types):
     - `TaskEffort`

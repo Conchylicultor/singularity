@@ -7,8 +7,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { DEFAULT_MODEL, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
-import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
-import { inheritTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
+import { inheritLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 
@@ -128,11 +127,12 @@ first or to disable autostart to avoid launching agents prematurely.`,
       author: conversationId,
     });
 
-    // Inherit the spawning agent's system prompt: snapshot the calling task's
-    // preprompt onto the subtask so it launches under the same instructions.
-    await inheritTaskPreprompt(currentTaskId, task.id);
-    // Likewise inherit the calling task's thinking mode (effort) onto the subtask.
-    await inheritTaskEffort(currentTaskId, task.id);
+    // Snapshot the calling task's inheritable launch options (system prompt,
+    // thinking mode, …) onto the subtask so it launches configured like the
+    // agent that filed it. Names no option — an option added later is inherited
+    // here with no edit. Auto-start is deliberately not among them; this tool
+    // arms it explicitly below.
+    await inheritLaunchOptions(currentTaskId, task.id);
 
     await withNotifyBatch(() =>
       rewireDependencies({ newTaskId: task.id, targetId, relation }),

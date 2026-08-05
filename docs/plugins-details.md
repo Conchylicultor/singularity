@@ -18325,7 +18325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.GIT`
           - `infra/query-resource.queryResource`
           - `infra/worktree.ensureMainWorktreeRoot`
-          - `tasks/task-preprompt.inheritTaskPreprompt`
+          - `tasks/launch-options.inheritLaunchOptions`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.getConversation`
@@ -26141,11 +26141,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/rank.rankAdjacentTo`
       - `primitives/rank.rankAfterSibling`
       - `tasks/auto-start.setTaskAutoStart`
-      - `tasks/launch-options.TaskLaunchApply`
-      - `tasks/launch-options.TaskLaunchApplyEntry`
+      - `tasks/launch-options.inheritLaunchOptions`
+      - `tasks/launch-options.TaskLaunchServer`
+      - `tasks/launch-options.TaskLaunchServerEntry`
       - `tasks/task-category.setTaskCategory`
-      - `tasks/task-effort.inheritTaskEffort`
-      - `tasks/task-preprompt.inheritTaskPreprompt`
       - `tasks/task-title.scheduleTaskTitleUpdate`
       - `tasks/task-title.synthesiseTitleFallback`
       - `tasks/tasks-core._tasks`
@@ -26344,11 +26343,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/auto-start.useTaskAutoStart`
               - `tasks/launch-options.TaskLaunch`
           - Server:
-            - Contributes: `taskLaunchApply` "auto-start"
+            - Contributes: `taskLaunchServer` "auto-start"
             - Uses:
               - `tasks.armTaskAutoStart`
               - `tasks/auto-start.setTaskAutoStart`
-              - `tasks/launch-options.TaskLaunchApply`
+              - `tasks/launch-options.TaskLaunchServer`
           - Core:
             - Uses:
               - `conversations/model-provider.ConversationModel`
@@ -26356,7 +26355,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/model-provider.DEFAULT_MODEL`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-    - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its drafted value is applied to a newly created task, so the chain endpoint applies them generically.
+    - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option` ← `tasks.auto-start.launch-option`, `tasks.task-effort`, `tasks.task-preprompt`
         - Uses: `primitives/slot-render.defineRenderSlot`
@@ -26374,6 +26373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useLaunchOptionDefaults`
       - Cross-plugin:
         - Imported by:
+          - `plugin-meta/plugin-health`
           - `tasks`
           - `tasks/auto-start/launch-option`
           - `tasks/task-description`
@@ -26382,9 +26382,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt`
       - Server:
         - Exports (types):
-          - `TaskLaunchApplyEntry`
           - `TaskLaunchContext`
-        - Exports (values): `TaskLaunchApply`
+          - `TaskLaunchServerEntry`
+        - Exports (values):
+          - `inheritLaunchOptions`
+          - `TaskLaunchServer`
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
@@ -26662,18 +26664,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes:
           - `resource.declare` "task-efforts"
-          - `taskLaunchApply` "effort"
+          - `taskLaunchServer` "effort"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
-          - `tasks/launch-options.TaskLaunchApply`
+          - `tasks/launch-options.TaskLaunchServer`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
         - Exports (values):
           - `getTaskEffort`
-          - `inheritTaskEffort`
           - `setTaskEffort`
           - `taskEffortsResource`
           - `tasksEffort`
@@ -26688,9 +26689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/launch-options.defineLaunchOption`
         - Exports (values): `effortLaunchOption`
       - Cross-plugin:
-        - Imported by:
-          - `conversations`
-          - `tasks`
+        - Imported by: `conversations`
       - Shared:
         - Exports (types):
           - `TaskEffort`
@@ -26818,18 +26817,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes:
           - `resource.declare` "task-preprompts"
-          - `taskLaunchApply` "preprompt"
+          - `taskLaunchServer` "preprompt"
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
-          - `tasks/launch-options.TaskLaunchApply`
+          - `tasks/launch-options.TaskLaunchServer`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
         - Exports (values):
           - `getTaskPreprompt`
-          - `inheritTaskPreprompt`
           - `setTaskPreprompt`
           - `taskPrepromptsResource`
           - `tasksPreprompt`
@@ -26844,8 +26842,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `conversations`
           - `conversations/conversation-preprompt`
-          - `plugin-meta/plugin-health`
-          - `tasks`
       - Shared:
         - Exports (types):
           - `TaskPreprompt`
