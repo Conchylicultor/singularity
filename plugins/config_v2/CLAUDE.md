@@ -191,6 +191,8 @@ Design:
 
   These events are a **push-latency** mechanism, not a correctness one — an event can be missed (an out-of-band writer parcel doesn't observe, a dropped fsevent, a path no `CacheEntry` registered). **Never treat "no event" as "no change"**: derived state must be founded on the disk, per the fingerprint memo below.
 
+- **`refreshEntry` (`registry.ts`) — the single "this entry's files changed" path** (re-read from disk → replace `CacheEntry.values` → notify subscribers + values/conflicts/tiers). Called from **both** the watcher (out-of-band writes) **and every in-process writer right after its own write** (`setConfig`, `acknowledgeConflictByPath`, `mergeConflictByPath`, `deleteOverrideByPath`). The second is NOT redundant: on a missed watcher event a writer that waited for its own event would leave `entry.values` stale indefinitely, so `getConfig` — and with it the `config-v2.values` push and the `/api/config-v2/snapshot` boot hydration — would keep serving the pre-write document while the correct value sits on disk. Any new file-mutating path must call it (scoped fork/unfork instead rebuilds via `ensureScopeEntry`/`disposeScopeEntry`). It carries provider-backed (secret) field values forward — they live outside the JSONC document.
+
 ### Derived aggregates (conflict-paths / scopes / modified-counts)
 
 Three aggregate live resources summarize all ~180 descriptors at once. They are cheap because none of them re-reads every config file per load — but they arrive at that in two *different* ways, and the difference is load-bearing.

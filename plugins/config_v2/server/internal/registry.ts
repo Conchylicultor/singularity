@@ -97,8 +97,80 @@ export function normalizeCollectionItems(
   return result;
 }
 
+// Resolve one entry's values straight off disk (origin ⊕ override, schema-typed,
+// collections normalized). Provider-backed fields are layered on by the caller —
+// they live outside the JSONC document.
+function readEntryValues(
+  descriptor: ConfigDescriptor,
+  userOriginPath: string,
+  userOverwritesPath: string,
+): ConfigValues<FieldsRecord> {
+  const raw = readTypedConfig(
+    descriptor,
+    jsoncConfigProxy(userOriginPath),
+    jsoncConfigProxy(userOverwritesPath),
+  );
+  return normalizeCollectionItems(
+    raw as Record<string, unknown>,
+    descriptor.fields,
+  ) as ConfigValues<FieldsRecord>;
+}
+
+/**
+ * THE single "this entry's files changed" path: re-read from disk, replace the
+ * cached values, and fan out every derived notification.
+ *
+ * Called from BOTH ends, and that pairing is the invariant:
+ *   - the file watcher, for out-of-band writes (build propagation, hand edits);
+ *   - every in-process writer, immediately after its own write.
+ *
+ * The second is not redundant. The watcher is a **push-latency** mechanism, not a
+ * correctness one — its own contract (config-watcher.ts) says an event can be
+ * missed (a dropped fsevent, an unobserved writer, a coalesced rename) and that
+ * nothing downstream may treat "no event" as "no change". A writer that relied on
+ * its own event coming back would, on a missed event, leave `entry.values` stale
+ * forever: the write is correctly on disk, but `getConfig` — and with it the
+ * config-v2.values push AND the boot snapshot every page load hydrates from —
+ * keeps serving the pre-write document, so the edit silently "reverts" on refresh.
+ * Refreshing in-process makes a write observable by construction; a duplicate
+ * watcher event afterwards is a cheap idempotent re-read.
+ */
+function refreshEntry(descriptor: ConfigDescriptor, entry: CacheEntry): void {
+  const freshValues = readEntryValues(
+    descriptor,
+    entry.userOriginPath,
+    entry.userOverwritesPath,
+  );
+
+  // Provider-backed (e.g. secret) fields are stored outside the JSONC document,
+  // so a disk re-read has nothing to say about them — carry the loaded value
+  // forward rather than resetting it to the field default.
+  for (const [key, field] of Object.entries(descriptor.fields)) {
+    if (!getFieldStorageProvider(field.type.id)) continue;
+    (freshValues as Record<string, unknown>)[key] = (
+      entry.values as Record<string, unknown>
+    )[key];
+  }
+
+  entry.values = freshValues;
+
+  const subs = subscribersByDescriptor.get(descriptor)?.get(entry.scopeId);
+  if (subs) {
+    for (const cb of subs) cb(freshValues);
+  }
+
+  // A scoped origin/override file appearing or disappearing changes the
+  // descriptor's customized-scope set, which the config-v2.scopes resource
+  // publishes.
+  if (entry.scopeId) refreshScopeMembers(entry.storePath);
+
+  notifyValues(entry.storePath, entry.scopeId);
+  notifyConflicts(entry.storePath, entry.scopeId);
+  notifyTiers(entry.storePath, entry.scopeId);
+}
+
 // Build a fully-wired cache entry for (descriptor, scopeId): scoped paths,
-// reloadValues, field-storage-provider load loop, and file watchers. Mirrors the
+// initial values, field-storage-provider load loop, and file watchers. Mirrors the
 // base-entry construction in initRegistry — the only difference is the scope path
 // segment threaded through userScopedDir. Returns the entry (also stored in cache).
 async function buildEntry(
@@ -112,17 +184,7 @@ async function buildEntry(
   const userOverwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
   const userAncestorPath = join(scopedDir, `${descriptor.name}.ancestor.jsonc`);
 
-  const reloadValues = (): ConfigValues<FieldsRecord> => {
-    const freshUserOrigin = jsoncConfigProxy(userOriginPath);
-    const freshUserOverwrites = jsoncConfigProxy(userOverwritesPath);
-    const raw = readTypedConfig(descriptor, freshUserOrigin, freshUserOverwrites);
-    return normalizeCollectionItems(
-      raw as Record<string, unknown>,
-      descriptor.fields,
-    ) as ConfigValues<FieldsRecord>;
-  };
-
-  const values = reloadValues();
+  const values = readEntryValues(descriptor, userOriginPath, userOverwritesPath);
 
   for (const [key, field] of Object.entries(descriptor.fields)) {
     const provider = getFieldStorageProvider(field.type.id);
@@ -140,31 +202,7 @@ async function buildEntry(
     }
   }
 
-  const onFileChange = () => {
-    const freshValues = reloadValues();
-    const entry = getEntry(descriptor, scopeId);
-    if (entry) {
-      entry.values = freshValues;
-    }
-
-    const subs = subscribersByDescriptor.get(descriptor)?.get(scopeId);
-    if (subs) {
-      for (const cb of subs) cb(freshValues);
-    }
-
-    // A scoped origin/override file appearing or disappearing changes the
-    // descriptor's customized-scope set, which the config-v2.scopes resource
-    // publishes.
-    if (scopeId) refreshScopeMembers(storePath);
-
-    notifyValues(storePath, scopeId);
-    notifyConflicts(storePath, scopeId);
-    notifyTiers(storePath, scopeId);
-  };
-
   const disposables: Disposable[] = [];
-  disposables.push(watchFileChange(userOverwritesPath, onFileChange));
-  disposables.push(watchFileChange(userOriginPath, onFileChange));
 
   const entry: CacheEntry = {
     scopeId,
@@ -175,6 +213,12 @@ async function buildEntry(
     userAncestorPath,
     disposables,
   };
+
+  // Watch both files for OUT-OF-BAND writes. In-process writers refresh this same
+  // entry themselves (see refreshEntry) rather than waiting on these events.
+  const onFileChange = () => refreshEntry(descriptor, entry);
+  disposables.push(watchFileChange(userOverwritesPath, onFileChange));
+  disposables.push(watchFileChange(userOriginPath, onFileChange));
 
   let scopeMap = cacheByDescriptor.get(descriptor);
   if (!scopeMap) {
@@ -492,6 +536,7 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
   base[key] = value;
   const normalized = normalizeCollectionItems(base, descriptor.fields);
   userOverwrites.write(normalized as JsonValue, hash);
+  refreshEntry(descriptor, entry);
 }
 
 export async function setConfigByPath(storePath: string, key: string, value: unknown, scopeId?: string): Promise<void> {
@@ -585,6 +630,9 @@ export function acknowledgeConflictByPath(storePath: string, scopeId?: string): 
   // the merge base is no longer needed. A stale ancestor would seed a wrong
   // three-way merge on the next conflict.
   if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
+  // The override just flipped from ignored (stale) to winning — the resolved
+  // value changed even though no file content did.
+  refreshEntry(descriptor, entry);
 }
 
 // Three-way merge resolution: reconcile a stale override against its origin
@@ -630,6 +678,7 @@ export function mergeConflictByPath(
   const hash = resolved ? computeHash(originData.content) : ow.hash;
   userOverwrites.write(normalized as JsonValue, hash);
   if (resolved && existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
+  refreshEntry(descriptor, entry);
 
   return { resolved, conflictKeys: conflicts };
 }
@@ -702,4 +751,5 @@ export function deleteOverrideByPath(storePath: string, scopeId?: string): void 
   if (existsSync(entry.userOverwritesPath)) unlinkSync(entry.userOverwritesPath);
   // The override is gone, so any captured merge base is moot — drop it.
   if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
+  refreshEntry(descriptor, entry);
 }
