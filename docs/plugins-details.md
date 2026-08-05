@@ -10161,6 +10161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `page/editor-collab`
       - `page/inline-date`
       - `page/links`
+      - `page/markdown-apply`
       - `page/prompt/link`
       - `plugin-meta/plugin-health`
       - `primitives/data-view/custom-columns`
@@ -14071,6 +14072,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor-collab`
               - `page/image`
               - `page/inline-date`
+              - `page/markdown-apply`
               - `page/prompt/block`
               - `page/url-paste`
               - `primitives/css/ui-kit`
@@ -14793,6 +14795,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/editor-collab`
           - `page/inline-page-link`
+          - `page/markdown-apply`
           - `page/prompt/link`
           - `page/turn-into-page`
           - `plugin-meta/composition`
@@ -15465,6 +15468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/runtime`
           - `debug/queue-health`
           - `debug/timeline`
+          - `page/markdown-apply`
           - `plugin-meta/plugin-health`
           - `tasks`
       - Server:
@@ -16672,10 +16676,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `StoredBlock`
         - Exports (values):
           - `_blocks`
+          - `applyPageBlockPatch`
           - `BlockLifecycle`
           - `blocksChanged`
           - `BlockSchema`
           - `blocksLiveResource`
+          - `blockTextProtectedSpans`
           - `deleteBlocksSubtree`
           - `Editor`
           - `PAGE_BLOCK_TYPE`
@@ -16884,6 +16890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/inline-date`
           - `page/inline-page-link`
           - `page/links`
+          - `page/markdown-apply`
           - `page/math/equation`
           - `page/math/inline`
           - `page/numbered-list`
@@ -16917,6 +16924,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `_pageBlockDocs`
           - `blockContentServerResource`
+          - `initBlockDoc`
+          - `loadBlockDoc`
+          - `mergeBlockDocUpdate`
         - Resources: `page-block-doc` (keyed)
         - Routes:
           - `POST /api/blocks/:id/doc-init`
@@ -16933,7 +16943,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockDocRowSchema`
           - `blockDocUpdate`
       - Cross-plugin:
-        - Imported by: `apps/pages/history`
+        - Imported by:
+          - `apps/pages/history`
+          - `page/markdown-apply`
     - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "embed" → `EmbedBlock`
@@ -17124,13 +17136,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `imageBlock`
     - **`inline-date`** — Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
       - Server:
-        - Contributes: `trigger` "page.reminders.reconcile"
+        - Contributes:
+          - `trigger` "page.reminders.reconcile"
+          - `page.inline-token` "\[\[(?:date:([0-9TZ:.+-]+)|reminder:([a-f0-9-]+):([0-9TZ:.+-]+))\]\]"
         - Uses:
           - `database.db`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `page/editor._blocks`
           - `page/editor.blocksChanged`
+          - `page/editor.Editor`
           - `shell/notifications.recordNotification`
         - DB schema: `plugins/page/plugins/inline-date/server/internal/tables.ts`
         - Register:
@@ -17168,8 +17183,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stripInlineTokens`
     - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
       - Server:
-        - Contributes: `page.links.extractor` "* (all blocks)"
-        - Uses: `page/links.PageLinks`
+        - Contributes:
+          - `page.links.extractor` "* (all blocks)"
+          - `page.inline-token` "\[\[(block-\d+-[a-z0-9]+)\]\]"
+        - Uses:
+          - `page/editor.Editor`
+          - `page/links.PageLinks`
       - Web:
         - Uses:
           - `infra/endpoints.fetchEndpoint`
@@ -17248,6 +17267,59 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `page/inline-page-link`
           - `page/page-link`
+    - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the read_page / write_page / edit_page MCP tools, the structural patch, and the per-block content-doc splice.
+      - Server:
+        - Uses:
+          - `database.db`
+          - `infra/endpoints.HttpError`
+          - `infra/mcp.Mcp`
+          - `page/editor-collab.initBlockDoc`
+          - `page/editor-collab.loadBlockDoc`
+          - `page/editor-collab.mergeBlockDocUpdate`
+          - `page/editor.applyPageBlockPatch`
+          - `page/editor.blockTextProtectedSpans`
+          - `page/editor.Editor`
+          - `page/editor.serializePageContent`
+        - Exports (types): `ApplyReport`
+        - Exports (values):
+          - `applyMarkdownToPage`
+          - `readPageAsMarkdown`
+        - Register:
+          - `mcpTool('read_page')`
+          - `mcpTool('write_page')`
+          - `mcpTool('edit_page')`
+      - Core:
+        - Uses:
+          - `page/editor.Block`
+          - `page/editor.BlockFieldChanges`
+          - `page/editor.BlockHandle`
+          - `page/editor.BlockPatch`
+          - `page/editor.BlockUpdate`
+          - `page/editor.coalesce`
+          - `page/editor.dataEqual`
+          - `page/editor.IdentifiedBlock`
+          - `page/editor.MarkdownContext`
+          - `page/editor.MarkdownNode`
+          - `page/editor.markdownParseTagName`
+          - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.pageBlockMarkdown`
+          - `page/editor.plainOf`
+          - `page/editor.RichText`
+          - `page/editor.runsOf`
+          - `page/editor.SerializedBlock`
+          - `page/editor.serializeForestToMarkdown`
+          - `page/editor.withMintedIds`
+          - `primitives/rank.Rank`
+        - Exports (types):
+          - `MarkdownApplyArgs`
+          - `MarkdownApplyPlan`
+          - `MarkdownApplyResult`
+          - `MarkdownTextEdit`
+          - `StoredRow`
+        - Exports (values):
+          - `documentOrderRows`
+          - `markdownNodesOfRows`
+          - `planMarkdownApply`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
       - Plugins:
         - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
@@ -17274,7 +17346,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `EQUATION_TYPE`
               - `equationBlock`
-        - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit.
+        - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit. Inline math token pattern at the server markdown boundary: protects `\(<latex>\)` spans from the marks-aware inline scan.
+          - Server:
+            - Contributes: `page.inline-token` "\\\(([^\n]*?)\\\)"
+            - Uses: `page/editor.Editor`
           - Web:
             - Uses:
               - `page/editor.BlockTextPluginProps`
@@ -23659,6 +23734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/grouped`
           - `conversations/conversations-view/queue`
           - `page/editor`
+          - `page/markdown-apply`
           - `primitives/data-view/view-order`
           - `primitives/tree`
           - `tasks`
