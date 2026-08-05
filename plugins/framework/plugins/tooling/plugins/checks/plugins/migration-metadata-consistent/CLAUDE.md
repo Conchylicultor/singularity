@@ -12,9 +12,13 @@ Invariants:
 
 - **`J === S`** — every journal entry has a backing `.sql`, and every `.sql` has
   a journal entry. Reported as two diffs: `orphanSql` (`S \ J`) and
-  `orphanJournal` (`J \ S`). Catches a journal entry left behind after its `.sql`
-  was deleted (a normal `build` does not regenerate the journal — only
-  `--reset-migration`/rename does), and an orphan `.sql` with no journal row.
+  `orphanJournal` (`J \ S`).
+
+  `J === S` is a **post-condition of `generateMigration`** (it regenerates the
+  journal from the `.sql` filenames unconditionally), so on any built tree this
+  holds by construction and the check is a **backstop** — for trees nobody built,
+  and for the window between a rebase and the normalize pass. Remedy is therefore
+  a plain `./singularity build`, never `--reset-migration`.
 - **`N ⊆ J`** — every `meta/<tag>_snapshot.json` maps to a real migration.
   Reported as `orphanSnapshot` (`N \ J`; equivalently `N \ S` since `J === S`).
   Catches a ghost snapshot that still sits as a reachable link in the snapshot

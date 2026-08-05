@@ -52,6 +52,18 @@ regenerating everything and clearing the markers itself. `core/` holds the marke
 names + conflict scan so the `generated-artifacts-normalized` check reads the
 same facts.
 
+**`data/meta/_journal.json` is derived but stays TRACKED, on purpose.** A merge
+driver only runs when a path is modified on both sides. Every other artifact
+under the `regen-migrations` patterns is named `<ts>_<sha8>__<slug>`, so two
+branches never touch the same one — the journal is the only file every migration
+appends to, and therefore the only thing that fires the `migrations` marker.
+"Both sides added a migration" ⇔ "journal both-modified" ⇔ "a snapshot-chain
+Y-fork is possible", which is exactly the predicate the `--reset-migration`
+repair needs. Gitignore it and the entire migration normalization pass stops
+running (and drizzle-kit silently recreates an empty one). It does NOT cover
+schema drift — main changing `schema.ts` without a migration is one-sided;
+`migrations-in-sync` is what fails there.
+
 ## Dependencies: `bin/ensure-deps.ts` is the only install
 
 `ensureDeps()` owns "this checkout's `node_modules` is correct for its inputs":

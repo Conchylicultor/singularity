@@ -202,7 +202,21 @@ export interface GenerateMigrationResult {
 /**
  * Run `drizzle-kit generate`; detect whether it produced a new migration;
  * require --migration-name when it did; rename new files to the hash-based
- * format and regenerate the journal. Exits the process on error.
+ * format. Exits the process on error.
+ *
+ * POST-CONDITION: `meta/_journal.json` describes the `.sql` files on disk. It is
+ * regenerated unconditionally — on entry, on every discard, and at the exit —
+ * never as a side effect of having renamed or deleted something. The journal is
+ * a pure re-encoding of the filenames, so a redundant regen writes identical
+ * bytes; a MISSING one is how a branch-local data migration ends up orphaned
+ * after the `regen-migrations` merge driver resolves the journal in main's
+ * favour during a rebase. This function is the single funnel every caller
+ * (`build`, `build-composition`, `regen-migrations`) reaches that repair
+ * through.
+ *
+ * Regeneration is placed at explicit call sites rather than a `try/finally`:
+ * `process.exit()` does not unwind the stack, and this function has six terminal
+ * exits downstream of its first mutation.
  *
  * When drizzle-kit shows interactive rename/create prompts:
  * - Without migrationAnswers: discovers all prompts (auto-advancing with
@@ -252,6 +266,16 @@ export async function generateMigration(opts: {
   // hashes are locked into every deployed DB.
   await rehashBranchLocalDataMigrations(root, migrationsDir);
 
+  // Re-establish journal↔filename consistency before anything else runs. Two
+  // paths get NO other regen: every abort between here and `renameMigrations`
+  // exits the process, and a branch carrying only a data migration skips all
+  // three downstream regens (reset preserves it, rehash finds its hash already
+  // correct, drizzle emits no schema delta) — which is exactly the branch whose
+  // journal entry the `regen-migrations` merge driver just resolved away in
+  // main's favour. NOT about drizzle-kit's inputs: it picks the prior snapshot
+  // off a sorted `readdir(meta)`, and reads the journal only for `idx`.
+  regenerateJournal(migrationsDir);
+
   const before = new Set(readdirSync(migrationsDir));
 
   // `bunx` falls back to Node when the binary's shebang is `#!/usr/bin/env node`
@@ -294,6 +318,26 @@ export async function generateMigration(opts: {
   }
 
   const combined = `${result.stdoutBuf}\n${result.stderrBuf}`;
+
+  // drizzle-kit's `prepareOutFolder` runs the pg-schema validator over EVERY
+  // `meta/*.json` whose name doesn't start with `_` — which sweeps in our
+  // `*_answers.json` sidecars, which are not snapshots and never parse. On a
+  // failure it prints "<file> data is malformed" to STDOUT (hence `combined`,
+  // not stderrBuf) and calls process.exit(0). Paired with the `added.length ===
+  // 0` early return below, that would silently stop migration generation
+  // repo-wide from the first answers sidecar that lands on main. Fail loud.
+  if (/\bdata is malformed\b/i.test(combined)) {
+    console.error(
+      "\nError: drizzle-kit rejected a file in meta/ as malformed and exited 0 —\n" +
+        "no migration was generated, silently. Its snapshot validator scans every\n" +
+        "meta/*.json not starting with '_', including our *_answers.json sidecars.\n" +
+        "The offending file is named in the output above.\n\n" +
+        "AGENT: Stop here and report this to the user. Do NOT delete the file to make\n" +
+        "the message go away — a malformed snapshot breaks the chain for everyone.",
+    );
+    process.exit(1);
+  }
+
   if (
     /require\(\) async module|async module.*unsupported|\bTypeError\b|Cannot find module|Cannot use import statement/i.test(
       combined,
@@ -317,7 +361,7 @@ export async function generateMigration(opts: {
     const added = readdirSync(migrationsDir).filter(
       (f: string) => f.endsWith(".sql") && !before.has(f),
     );
-    removeGeneratedFiles(migrationsDir, added);
+    discardGenerated(migrationsDir, added);
     console.log("\nMIGRATION_PROMPTS_DETECTED");
     console.log(JSON.stringify(result.detectedPrompts, null, 2));
     console.error(
@@ -339,7 +383,7 @@ export async function generateMigration(opts: {
     const added = readdirSync(migrationsDir).filter(
       (f: string) => f.endsWith(".sql") && !before.has(f),
     );
-    removeGeneratedFiles(migrationsDir, added);
+    discardGenerated(migrationsDir, added);
     console.error(
       "\ndrizzle-kit showed an ambiguous create-vs-rename prompt with no persisted answer:\n" +
         result.unanswered.map((k) => `  ${k}`).join("\n") +
@@ -367,7 +411,7 @@ export async function generateMigration(opts: {
   }
 
   if (!migrationName) {
-    removeGeneratedFiles(migrationsDir, added);
+    discardGenerated(migrationsDir, added);
     console.error(
       "\nError: DB schema change detected — a new migration is required, but --migration-name was not provided.\n" +
         "\n" +
@@ -439,6 +483,11 @@ export async function generateMigration(opts: {
     }
   }
 
+  // The post-condition, stated at the exit rather than left to be inferred from
+  // `renameMigrations`' own call: whatever this function did, the journal it
+  // leaves behind describes the `.sql` files on disk.
+  regenerateJournal(migrationsDir);
+
   return { maxRssBytes: result.maxRssBytes };
 }
 
@@ -451,6 +500,11 @@ export async function generateMigration(opts: {
  * changes. Schema migrations keep their snapshot and are left untouched — their
  * SQL must match the snapshot's DDL and must never be silently re-hashed. Files
  * already on origin/main are immutable (their hash is recorded in deployed DBs).
+ *
+ * Does NOT touch the journal: its caller regenerates unconditionally right
+ * after. Regenerating here only when a rename happened is how a branch-local
+ * data migration whose hash was already correct could end up with no journal
+ * entry at all.
  */
 async function rehashBranchLocalDataMigrations(
   root: string,
@@ -461,7 +515,6 @@ async function rehashBranchLocalDataMigrations(
   const tracked = await listTrackedMigrationBasenames(root, ref);
   const metaDir = join(migrationsDir, "meta");
 
-  let renamed = false;
   for (const f of readdirSync(migrationsDir)) {
     const m = NEW_FORMAT.exec(f);
     if (!m) continue;
@@ -475,9 +528,7 @@ async function rehashBranchLocalDataMigrations(
     const newName = `${date}_${time}_${newHash}__${name}.sql`;
     renameSync(join(migrationsDir, f), join(migrationsDir, newName));
     console.log(`  rehashed data migration ${f} → ${newName}`);
-    renamed = true;
   }
-  if (renamed) regenerateJournal(migrationsDir);
 }
 
 /**
@@ -488,8 +539,12 @@ async function rehashBranchLocalDataMigrations(
  * against the rebased tip.
  *
  * Only ever touches files absent from the chosen ref, so a shared migration
- * cannot be removed by accident. After deletion, regenerates the journal so
- * drizzle-kit's "latest snapshot" lookup matches what's left on disk.
+ * cannot be removed by accident.
+ *
+ * Does NOT touch the journal: its caller regenerates unconditionally right
+ * after. Regenerating here only when something was actually removed is how a
+ * branch carrying only a (deliberately preserved) data migration took the
+ * early return below and left a stale journal behind.
  */
 async function resetBranchLocalMigrations(
   root: string,
@@ -536,11 +591,6 @@ async function resetBranchLocalMigrations(
   }
 
   for (const f of removed) console.log(`  removed ${f}`);
-  // Rewrite _journal.json so it matches the (now reduced) set of .sql files
-  // on disk. Drizzle reads journal entries to pick the "latest snapshot"
-  // when generating; a stale entry pointing at a just-deleted file would
-  // make it skip our reset.
-  regenerateJournal(migrationsDir);
 }
 
 async function resolveRef(root: string): Promise<string | null> {
@@ -676,29 +726,45 @@ function topoSort(nodes: string[], deps: Map<string, Set<string>>): string[] {
 
 /**
  * Read the prior snapshot's `views` map (keyed `"public.<name>"`, each value
- * `{ name, definition, … }`). The prior snapshot is the latest one already in
- * the journal — drizzle has written the NEW snapshot as `meta/NNNN_snapshot.json`
- * but has NOT yet appended it to `_journal.json` (we regenerate the journal later
- * in renameMigrations), so the journal's last entry is the prior one.
+ * `{ name, definition, … }`), used to derive dependencies for views this
+ * migration DROPs without recreating (their body isn't in the SQL).
+ *
+ * "Prior" is resolved the same way drizzle-kit resolves it in
+ * `preparePrevSnapshot` — the lexicographically last `meta/*_snapshot.json` —
+ * NOT via the journal. drizzle names the snapshot it just emitted by its numeric
+ * prefix (`0NaN_snapshot.json`), which sorts before every `<YYYYMMDD>_…` name,
+ * so it excludes itself and the last real snapshot wins.
+ *
+ * This used to read the journal's last entry and look for `<tag>_snapshot.json`.
+ * That never resolved: drizzle's `writeResult` appends to the journal BEFORE
+ * writing the `.sql`, so the last tag is `0NaN_<name>` while the file on disk is
+ * `0NaN_snapshot.json` — the lookup always missed and this function always
+ * returned an empty map, silently degrading pure-DROP view ordering. Resolving
+ * off the snapshot listing also leaves the journal a pure post-condition of the
+ * pipeline, never an input to it.
  */
 function readPriorSnapshotViewDefs(
   migrationsDir: string,
 ): Map<string, string> {
   const defs = new Map<string, string>();
   const metaDir = join(migrationsDir, "meta");
-  const journalPath = join(metaDir, "_journal.json");
-  if (!existsSync(journalPath)) return defs;
+  if (!existsSync(metaDir)) return defs;
 
-  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
-    entries?: Array<{ tag: string }>;
-  };
-  const lastTag = journal.entries?.at(-1)?.tag;
-  if (!lastTag) return defs;
+  const SNAPSHOT_SUFFIX = "_snapshot.json";
+  const priorSnapshot = readdirSync(metaDir)
+    .filter(
+      (f) =>
+        f.endsWith(SNAPSHOT_SUFFIX) &&
+        // Excludes the `0NaN_snapshot.json` drizzle just emitted, and any
+        // *_answers.json sidecar (whose tail would otherwise slice into a
+        // NEW_FORMAT-shaped name).
+        NEW_FORMAT.test(`${f.slice(0, -SNAPSHOT_SUFFIX.length)}.sql`),
+    )
+    .sort()
+    .at(-1);
+  if (!priorSnapshot) return defs;
 
-  const snapPath = join(metaDir, `${lastTag}_snapshot.json`);
-  if (!existsSync(snapPath)) return defs;
-
-  const snap = JSON.parse(readFileSync(snapPath, "utf8")) as {
+  const snap = JSON.parse(readFileSync(join(metaDir, priorSnapshot), "utf8")) as {
     views?: Record<string, { name?: string; definition?: string }>;
   };
   for (const v of Object.values(snap.views ?? {})) {
@@ -882,6 +948,27 @@ export function removeGeneratedFiles(
   }
 }
 
+/**
+ * Discard a rejected drizzle-kit generation: remove the emitted files AND
+ * restore the journal.
+ *
+ * The second half is not optional. drizzle-kit's `writeResult` appends to
+ * `meta/_journal.json` and writes it BEFORE the `.sql`, so by the time we decide
+ * to reject a generation the journal already carries a `0NaN_<name>` row.
+ * `removeGeneratedFiles` deletes the `.sql`, the snapshot and the answers
+ * sidecar — it has no way to know about that row, and left behind it fails
+ * `migration-metadata-consistent` as an orphanJournal entry. Every caller below
+ * then exits the process, so this is their only chance to leave a consistent
+ * tree.
+ *
+ * Kept separate from `removeGeneratedFiles` rather than folded into it: that
+ * function is exported and its name promises removal, nothing more.
+ */
+function discardGenerated(migrationsDir: string, files: string[]): void {
+  removeGeneratedFiles(migrationsDir, files);
+  regenerateJournal(migrationsDir);
+}
+
 function timestampNow(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -891,35 +978,68 @@ function timestampNow(): string {
   );
 }
 
-function regenerateJournal(migrationsDir: string): void {
-  const metaDir = join(migrationsDir, "meta");
-  const files = readdirSync(migrationsDir)
-    .filter((f: string) => NEW_FORMAT.test(f))
-    .sort();
+/** One `meta/_journal.json` entry. Deliberately carries no `idx` — see below. */
+export interface JournalEntry {
+  version: "7";
+  when: number;
+  tag: string;
+  hash: string;
+  breakpoints: true;
+}
 
-  const entries = files.map((f: string) => {
-    const m = NEW_FORMAT.exec(f);
-    if (!m) throw new Error(`unreachable: ${f}`);
-    const [, date, time, hash] = m;
-    const when = Date.UTC(
-      +date!.slice(0, 4),
-      +date!.slice(4, 6) - 1,
-      +date!.slice(6, 8),
-      +time!.slice(0, 2),
-      +time!.slice(2, 4),
-      +time!.slice(4, 6),
-    );
-    return {
-      version: "7",
-      when,
-      tag: f.slice(0, -4),
-      hash,
-      breakpoints: true,
-    };
-  });
+/**
+ * Derive the journal entries for a set of migration filenames. PURE — the
+ * journal is nothing but a re-encoding of the `.sql` names on disk, which is
+ * exactly what makes rewriting it a safe post-condition rather than a mutation.
+ *
+ * Names that don't match NEW_FORMAT are ignored, agreeing with the runtime
+ * runner's own MIGRATION_RE filter: a name neither can parse is inert in both,
+ * and `migration-metadata-consistent`'s orphanSql is what surfaces it.
+ *
+ * Emits NO `idx` field, on purpose. drizzle-kit computes `idx = lastEntry.idx +
+ * 1`, which against our journal is `NaN`, so it prefixes freshly generated files
+ * `0NaN_` — which is precisely why DRIZZLE_FORMAT accepts `0NaN`. "Helpfully"
+ * adding `idx` here would silently switch drizzle back to numbered prefixes.
+ */
+export function journalEntriesForSqlFiles(files: string[]): JournalEntry[] {
+  return [...files]
+    .filter((f) => NEW_FORMAT.test(f))
+    .sort()
+    .map((f) => {
+      const m = NEW_FORMAT.exec(f);
+      if (!m) throw new Error(`unreachable: ${f}`);
+      const [, date, time, hash] = m;
+      const when = Date.UTC(
+        +date!.slice(0, 4),
+        +date!.slice(4, 6) - 1,
+        +date!.slice(6, 8),
+        +time!.slice(0, 2),
+        +time!.slice(2, 4),
+        +time!.slice(4, 6),
+      );
+      return {
+        version: "7" as const,
+        when,
+        tag: f.slice(0, -4),
+        hash: hash!,
+        breakpoints: true as const,
+      };
+    });
+}
 
+/**
+ * Rewrite `meta/_journal.json` so it matches the `.sql` files on disk.
+ *
+ * A POST-CONDITION of the migration pipeline, never a side effect of having
+ * changed something — `generateMigration` calls it unconditionally, and on an
+ * already-consistent tree it rewrites byte-identical content. That is what
+ * repairs a journal the `regen-migrations` merge driver resolved in main's
+ * favour during a rebase; see the docblock on `generateMigration`.
+ */
+export function regenerateJournal(migrationsDir: string): void {
+  const entries = journalEntriesForSqlFiles(readdirSync(migrationsDir));
   writeFileSync(
-    join(metaDir, "_journal.json"),
+    join(migrationsDir, "meta", "_journal.json"),
     JSON.stringify(
       { version: "7", dialect: "postgresql", entries },
       null,

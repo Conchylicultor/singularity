@@ -98,9 +98,11 @@ const check: Check = {
         sections.join("\n\n"),
       hint:
         "Migration metadata must stay mutually consistent. For an orphan .sql or " +
-        "journal entry, regenerate with `./singularity build --migration-name <slug>` " +
-        "(or `./singularity build --reset-migration --migration-name <slug>` to rebuild " +
-        "a branch-local migration with a fresh hash). For an orphan snapshot, delete the " +
+        "journal entry, run `./singularity build` (or `./singularity normalize-generated`): " +
+        "the journal is derived from the .sql filenames and is regenerated unconditionally " +
+        "on every run, so a plain build repairs both. Do NOT reach for " +
+        "`--reset-migration` — it drops branch-local SCHEMA migrations and does not " +
+        "repair an orphan .sql. For an orphan snapshot, delete the " +
         "meta/<tag>_snapshot.json and relink the next snapshot's prevId to the deleted " +
         "snapshot's prevId so the chain stays linear (see snapshot-chain-intact).",
     };

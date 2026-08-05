@@ -54,6 +54,38 @@ async function assertNoHandEditedBranchLocalMigrations(root: string): Promise<vo
   process.exit(1);
 }
 
+// Migrations on main are immutable by contract — their hashes are recorded in
+// every deployed DB's `__singularity_migrations`. So a tracked `.sql` missing
+// from the working tree is always an error, never a legitimate state.
+//
+// This is also the guard that keeps the unconditional journal regeneration
+// honest: the journal is derived from the `.sql` files on disk, so a deleted
+// migration would previously have surfaced as a loud `orphanJournal` entry from
+// `migration-metadata-consistent` and now just quietly loses its row. Asserting
+// presence here restores the loud failure at the point the deletion matters.
+async function assertTrackedMigrationsPresent(root: string): Promise<void> {
+  const migrationsDir = resolve(root, "plugins/database/plugins/migrations/data");
+  const ref = await resolveMainRef(root);
+  if (!ref) return; // already reported by the hand-edit assertion above
+  const tracked = await listTrackedMigrationBasenames(root, ref);
+  const missing = [...tracked]
+    .filter((f) => f.endsWith(".sql") && !existsSync(join(migrationsDir, f)))
+    .sort();
+  if (missing.length === 0) return;
+  console.error(
+    `Migration file(s) present on ${ref} are missing from the working tree:\n`,
+  );
+  for (const f of missing) console.error(`  ${f}`);
+  console.error(
+    "\nMigrations that have landed on main are immutable — deployed databases record " +
+      "their hashes, so removing one desynchronizes every DB that already applied it.\n" +
+      "Restore them (`git checkout " +
+      ref +
+      " -- plugins/database/plugins/migrations/data`) before re-running.",
+  );
+  process.exit(1);
+}
+
 function deriveMigrationName(): string {
   const d = new Date();
   const yyyy = d.getUTCFullYear();
@@ -75,6 +107,7 @@ export function registerRegenMigrations(program: Command) {
     .action(async (opts: { name?: string }) => {
       const root = await getWorktreeRoot();
       await assertNoHandEditedBranchLocalMigrations(root);
+      await assertTrackedMigrationsPresent(root);
       await generateMigration({
         root,
         worktreeName: basename(root),
