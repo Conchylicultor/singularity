@@ -8,7 +8,13 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
-import { TreeRowSlot, useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
+import {
+  RowControlsProvider,
+  TreeRowSlot,
+  useTreeListContext,
+  useTreeRow,
+  type RowControls,
+} from "./use-tree-row";
 import { TreeRowChrome } from "./tree-row-chrome";
 
 export type RowMenuItem = {
@@ -46,6 +52,7 @@ export type RowChromeProps<T extends TreeItem> = {
 export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   const { node, depth, children, actions, icon, menu, accent, className } =
     props;
+  const controls = useTreeRow(node);
   const {
     addBelow,
     addChild: addChildAction,
@@ -62,7 +69,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     afterRef,
     isOverBefore,
     isOverAfter,
-  } = useTreeRow(node);
+  } = controls;
   const { ref: dragRef, attributes: dragAttributes, listeners: dragListeners } =
     dragSource;
   const ctx = useTreeListContext<T>();
@@ -92,7 +99,9 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="More actions"
-          className="size-5 rounded-md text-muted-foreground hover:bg-background/60 data-[state=open]:bg-background/60"
+          // `data-popup-open` is base-ui's open-state attribute; `data-state`
+          // is Radix's and matches nothing here.
+          className="size-5 rounded-md text-muted-foreground hover:bg-background/60 data-popup-open:bg-background/60"
         >
           <Center axis="both" className="size-full">
             <MdMoreHoriz className="size-4" />
@@ -135,59 +144,64 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
 
   return (
     <div>
-      <div className="relative">
-        <TreeRowChrome
-          depth={depth}
-          hasChildren={hasChildren}
-          isOpen={isOpen}
-          selected={isSelected}
-          onToggle={toggleExpanded}
-          onSelect={select}
-          rowRef={rowRef}
-          dragAttributes={canReorder ? dragAttributes : undefined}
-          dragListeners={canReorder ? dragListeners : undefined}
-          className={cn(
-            isDragging && "opacity-40",
-            isOverChild && "bg-accent ring-primary/40 ring-1",
-            className,
+      {/* Scoped to THIS row's own chrome — the child recursion below stays
+          outside, so a descendant row never reads its parent's controls before
+          mounting its own provider. */}
+      <RowControlsProvider value={controls}>
+        <div className="relative">
+          <TreeRowChrome
+            depth={depth}
+            hasChildren={hasChildren}
+            isOpen={isOpen}
+            selected={isSelected}
+            onToggle={toggleExpanded}
+            onSelect={select}
+            rowRef={rowRef}
+            dragAttributes={canReorder ? dragAttributes : undefined}
+            dragListeners={canReorder ? dragListeners : undefined}
+            className={cn(
+              isDragging && "opacity-40",
+              isOverChild && "bg-accent ring-primary/40 ring-1",
+              className,
+            )}
+            actions={trailing}
+            icon={icon}
+            leading={
+              ctx.multiSelect ? (
+                // The checkbox self-hides when inactive via a BARE
+                // `group-hover:opacity-100`, which never fires under the row's
+                // NAMED `group/tree-row`. Pass the named-group reveal variant so
+                // it shows on row hover (and stays visible while selection is
+                // active, where the checkbox carries no opacity-0).
+                <SelectionCheckbox
+                  id={node.id}
+                  className="group-hover/tree-row:opacity-100"
+                />
+              ) : undefined
+            }
+          >
+            {children}
+          </TreeRowChrome>
+          {accent != null && (
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed accent wash painted over the row; a standalone sibling layer (Overlay wraps content, not applicable here)
+            <div aria-hidden className="pointer-events-none absolute inset-0">
+              {accent}
+            </div>
           )}
-          actions={trailing}
-          icon={icon}
-          leading={
-            ctx.multiSelect ? (
-              // The checkbox self-hides when inactive via a BARE
-              // `group-hover:opacity-100`, which never fires under the row's
-              // NAMED `group/tree-row`. Pass the named-group reveal variant so
-              // it shows on row hover (and stays visible while selection is
-              // active, where the checkbox carries no opacity-0).
-              <SelectionCheckbox
-                id={node.id}
-                className="group-hover/tree-row:opacity-100"
-              />
-            ) : undefined
-          }
-        >
-          {children}
-        </TreeRowChrome>
-        {accent != null && (
-          // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed accent wash painted over the row; a standalone sibling layer (Overlay wraps content, not applicable here)
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            {accent}
-          </div>
-        )}
-        <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
-          {isOverBefore && (
-            // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
-            <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
-          )}
-        </Pin>
-        <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
-          {isOverAfter && (
-            // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
-            <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
-          )}
-        </Pin>
-      </div>
+          <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
+            {isOverBefore && (
+              // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
+              <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
+            )}
+          </Pin>
+          <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
+            {isOverAfter && (
+              // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
+              <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
+            )}
+          </Pin>
+        </div>
+      </RowControlsProvider>
       {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}
       {!ctx.windowed && isOpen && (
         <div>

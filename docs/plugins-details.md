@@ -2060,6 +2060,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pages.Sidebar` "Pages" → `PagesSidebar`
               - `PageDetail.Section` "Linked from" → `BacklinksSection`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
+              - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
             - Uses:
               - `apps/pages/shell.Pages`
               - `infra/attachments.uploadAttachment`
@@ -2109,6 +2110,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.usePaneStore`
               - `primitives/slot-render.defineRenderSlot`
               - `primitives/text-editor/paste-images.attachmentUrl`
+              - `primitives/tree.useOptionalRowControls`
               - `primitives/undo-redo.useUndoRedo`
               - `shell/toast.showToast`
             - Exports (types): `PageSeedBlock`
@@ -4012,11 +4014,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/render.RendererPicker`
               - `apps/story/render.Story`
               - `apps/story/render.StoryRender`
-              - `primitives/css/center.Center`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Button`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/icon-button.IconButton`
         - **`render`** — Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
           - Web:
             - Slots:
@@ -13250,10 +13251,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReorderNode`
           - `ReorderTree`
         - Exports (values):
+          - `REORDER_NODE_LEGEND`
           - `reorderTreeFieldType`
           - `reorderTreeIdentity`
       - Cross-plugin:
-        - Imported by: `fields/reorder-tree/config`
+        - Imported by:
+          - `fields/reorder-tree/config`
+          - `framework/tooling/codegen`
       - Plugins:
         - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
           - Web:
@@ -13983,6 +13987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.readTypedConfig`
               - `config_v2.REVIEW_MARKER`
               - `config_v2.stringifyConfigValue`
+              - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/plugin-id.asPath`
               - `framework/plugin-id.asPluginId`
               - `framework/plugin-id.PluginId`
@@ -14166,6 +14171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/caret-trigger`
               - `release`
               - `reorder`
+              - `reorder/node-types`
               - `shell/toast`
               - `tasks/launch-options`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -18676,6 +18682,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
+    - **`action-presentation`** — Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline or menu via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site.
+      - Web:
+        - Uses:
+          - `primitives/css/ui-kit.DropdownMenuItem`
+          - `primitives/css/ui-kit.DropdownMenuShortcut`
+          - `primitives/shortcuts.formatShortcutLabel`
+        - Exports (types):
+          - `ActionPresentationMode`
+          - `MenuActionItemProps`
+        - Exports (values):
+          - `ActionPresentation`
+          - `MenuActionItem`
+          - `useActionPresentation`
+      - Cross-plugin:
+        - Imported by:
+          - `primitives/icon-button`
+          - `reorder/node-types/overflow`
     - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
       - Web:
         - Uses: `primitives/tab-id.getTabId`
@@ -19281,7 +19304,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell`
               - `apps/sonata/songsheet`
               - `apps/sonata/transport-bar`
-              - `apps/story/pages-integration`
               - `apps/story/render`
               - `apps/story/renderers/slides`
               - `apps/studio/contributions`
@@ -19739,6 +19761,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/log-channels`
+              - `reorder/node-types/overflow`
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
               - `ui/tab-bar/underline`
@@ -20415,6 +20438,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tabbed-view`
               - `primitives/tree`
               - `reorder/node-types/header`
+              - `reorder/node-types/overflow`
               - `reports/launch-fix`
               - `review`
               - `review/code-review`
@@ -20890,6 +20914,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps`
               - `reorder/editor`
               - `reorder/node-types/header`
+              - `reorder/node-types/overflow`
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
@@ -21307,6 +21332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-contributions`
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/plugin-view/inclusion`
+              - `primitives/action-presentation`
               - `primitives/app-shell`
               - `primitives/auto-scroll`
               - `primitives/avatar`
@@ -21385,6 +21411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder`
               - `reorder/editor`
               - `reorder/node-types/header`
+              - `reorder/node-types/overflow`
               - `review`
               - `screenshot`
               - `screenshot/draw-on-app`
@@ -22628,6 +22655,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Uses:
+          - `primitives/action-presentation.MenuActionItem`
+          - `primitives/action-presentation.useActionPresentation`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/shortcuts.formatShortcutLabel`
@@ -22660,6 +22689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/track-mixer`
           - `apps/sonata/transport-bar`
           - `apps/sonata/transpose`
+          - `apps/story/pages-integration`
           - `apps/story/renderers/slides`
           - `apps/story/shell`
           - `apps/studio/compositions/entry-points`
@@ -24284,6 +24314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs`
           - `apps/sonata/controls`
           - `apps/sonata/progress/loop`
+          - `primitives/action-presentation`
           - `primitives/icon-button`
           - `primitives/launch`
           - `primitives/undo-redo`
@@ -24649,7 +24680,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-bar`
           - `apps/agent-manager/worktree-switcher`
           - `apps/sonata/primitives/toolbar-control`
-          - `apps/story/pages-integration`
           - `apps/workflows/editor`
           - `build`
           - `conversations/conversation-preprompt`
@@ -24722,6 +24752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TreeDisclosureToggle`
           - `TreeList`
           - `TreeRowChrome`
+          - `useOptionalRowControls`
           - `useOptionalTreeListContext`
           - `useSubtreeExpandAll`
           - `useTreeListContext`
@@ -24744,6 +24775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `subtreeIds`
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/page-tree`
           - `apps/story/story-core`
           - `apps/studio/explorer/expand-collapse`
           - `conversations/agents`
@@ -25271,7 +25303,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder/node-types/spacer`
     - **`node-types`** — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
       - Web:
-        - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.header`, `reorder.node-types.spacer`
+        - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.header`, `reorder.node-types.overflow`, `reorder.node-types.spacer`
         - Exports (values):
           - `ReorderNodes`
           - `useReorderNodeTypes`
@@ -25280,6 +25312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/reorder-tree/config`
           - `reorder`
           - `reorder/node-types/header`
+          - `reorder/node-types/overflow`
           - `reorder/node-types/spacer`
       - Core:
         - Exports (types):
@@ -25294,6 +25327,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `reorder/node-types.ReorderNodes`
+        - **`overflow`** — Overflow reorder node type: a container whose members collapse behind one ⋯ dropdown and render as labelled menu rows (via action-presentation). In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
+          - Web:
+            - Contributes: `ReorderNodes.NodeType` "overflow"
+            - Uses:
+              - `primitives/action-presentation.ActionPresentation`
+              - `primitives/css/line.Line`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.DropdownMenu`
+              - `primitives/css/ui-kit.DropdownMenuContent`
+              - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `reorder/node-types.ReorderNodes`
         - **`spacer`** — Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.
           - Web:

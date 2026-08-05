@@ -46,6 +46,7 @@ case) and intentionally does not compose it.
     - `primitives/date-picker`
     - `primitives/error-boundary`
     - `primitives/log-channels`
+    - `reorder/node-types/overflow`
     - `ui/tab-bar/chip`
     - `ui/tab-bar/connected`
     - `ui/tab-bar/underline`

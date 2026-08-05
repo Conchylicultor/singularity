@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   type ReactNode,
 } from "react";
 import {
@@ -140,6 +141,37 @@ export type RowControls = {
   childRef: (el: HTMLElement | null) => void;
 };
 
+// Published by `RowChrome` around the row it paints, so anything rendered INTO
+// that row (a per-item action, say) can reach the row's own controls without
+// being handed the node. Not generic in `T`: `RowControls` carries no row data,
+// only the node's own affordances, so no consumer needs the row type.
+const RowControlsContext = createContext<RowControls | null>(null);
+
+export function RowControlsProvider({
+  value,
+  children,
+}: {
+  value: RowControls;
+  children: ReactNode;
+}) {
+  return (
+    <RowControlsContext.Provider value={value}>
+      {children}
+    </RowControlsContext.Provider>
+  );
+}
+
+/**
+ * Non-throwing read of the enclosing tree row's controls: `null` outside a tree
+ * row. Same rule as `useOptionalTreeListContext` — a per-item action contributed
+ * to a DataView renders in EVERY view (list / table / gallery / tree), so a
+ * row-control consumer can only ask "am I inside a tree row?" if asking is legal
+ * outside one. Such an action should `return null` when the controls are absent.
+ */
+export function useOptionalRowControls(): RowControls | null {
+  return useContext(RowControlsContext);
+}
+
 export function useTreeRow<T extends TreeItem>(
   node: TreeNode<T>,
 ): RowControls {
@@ -231,23 +263,50 @@ export function useTreeRow<T extends TreeItem>(
     ctx.onSelect(id);
   }, [ctx, node.id, node.parentId]);
 
-  return {
-    isSelected,
-    isDragging,
-    isOpen,
-    hasChildren,
-    isOverChild,
-    isOverBefore,
-    isOverAfter,
-    shouldAutoFocus,
-    consumeAutoFocus,
-    select,
-    toggleExpanded,
-    addChild,
-    addBelow,
-    dragSource,
-    beforeRef: setBeforeRef,
-    afterRef: setAfterRef,
-    childRef: wrappedChildRef,
-  };
+  // Memoized, not a fresh literal per render: `RowChrome` publishes this object
+  // as the `RowControlsContext` value, and a context value that churns every
+  // render re-renders every consumer inside the row on unrelated tree churn.
+  // Every member below is already stable on its own (primitives, `useCallback`
+  // handlers, dnd-kit's memoized refs), so the identity now changes only when
+  // the row genuinely changes.
+  return useMemo(
+    () => ({
+      isSelected,
+      isDragging,
+      isOpen,
+      hasChildren,
+      isOverChild,
+      isOverBefore,
+      isOverAfter,
+      shouldAutoFocus,
+      consumeAutoFocus,
+      select,
+      toggleExpanded,
+      addChild,
+      addBelow,
+      dragSource,
+      beforeRef: setBeforeRef,
+      afterRef: setAfterRef,
+      childRef: wrappedChildRef,
+    }),
+    [
+      isSelected,
+      isDragging,
+      isOpen,
+      hasChildren,
+      isOverChild,
+      isOverBefore,
+      isOverAfter,
+      shouldAutoFocus,
+      consumeAutoFocus,
+      select,
+      toggleExpanded,
+      addChild,
+      addBelow,
+      dragSource,
+      setBeforeRef,
+      setAfterRef,
+      wrappedChildRef,
+    ],
+  );
 }

@@ -448,6 +448,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `plugin-meta/facets/routes/render-contributions`
     - `plugin-meta/facets/routes/render-detail`
     - `plugin-meta/plugin-view/inclusion`
+    - `primitives/action-presentation`
     - `primitives/app-shell`
     - `primitives/auto-scroll`
     - `primitives/avatar`
@@ -526,6 +527,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `reorder`
     - `reorder/editor`
     - `reorder/node-types/header`
+    - `reorder/node-types/overflow`
     - `review`
     - `screenshot`
     - `screenshot/draw-on-app`

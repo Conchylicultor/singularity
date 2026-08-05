@@ -369,6 +369,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/tabbed-view`
     - `primitives/tree`
     - `reorder/node-types/header`
+    - `reorder/node-types/overflow`
     - `reports/launch-fix`
     - `review`
     - `review/code-review`

@@ -9,10 +9,6 @@ import {
   defineDataView,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  RowChromeMenuHelpers,
-  RowMenuItem,
-} from "@plugins/primitives/plugins/tree/web";
 import {
   pagesResource,
   updateBlock,
@@ -74,21 +70,18 @@ export function PagesSidebar() {
 
   // Plain literals (not the view children's options helpers) to respect
   // data-view's collection-consumer separation — consumers never import a view
-  // child. The tree row-menu callback is typed via the tree *primitive's* helper
-  // types.
+  // child.
   const viewOptions = useMemo(
     () => ({
       tree: {
         leadingIcon: (b: PageRow) => (
           <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
         ),
-        rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
-          {
-            icon: MdAdd,
-            label: "Add page below",
-            onClick: () => void addBelow(),
-          },
-        ],
+        // No `rowMenu`: "Add page below" is an ordinary item action
+        // (`AddPageBelowAction`) contributed to `PageTree.RowActions`, so the row
+        // carries ONE action registry with one authored overflow bucket instead
+        // of the tree's "⋯" growing a second, parallel menu beside it.
+        //
         // Root creation lives on the DataView `creators` "+" (Notion-style), and
         // per-row sub-page creation on each row's hover "+", so the persistent
         // footer "New Page" line is dropped for a more compact tree.

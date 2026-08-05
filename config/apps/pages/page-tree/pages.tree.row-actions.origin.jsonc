@@ -1,10 +1,13 @@
-// @hash 30cba52256cf
+// @hash 18e1a4a043e3
 {
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.pages.page-tree:delete",
+    "apps.pages.page-tree:add-below",
     "apps.pages.starred:star",
     "apps.story.pages-integration:story"
   ]

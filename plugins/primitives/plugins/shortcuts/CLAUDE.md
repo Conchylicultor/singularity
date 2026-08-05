@@ -30,6 +30,7 @@
     - `apps-core/tabs`
     - `apps/sonata/controls`
     - `apps/sonata/progress/loop`
+    - `primitives/action-presentation`
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/undo-redo`

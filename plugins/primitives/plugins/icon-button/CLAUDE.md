@@ -5,6 +5,16 @@
 rendering a bare `<Icon/>`. Its height is ambient (set by the region's
 `ControlSizeProvider` / slot `controlSize`) — it never sizes itself.
 
+## Presentation
+
+Because `IconButton` *is* the generic `{ icon, label, onClick }` action, it is the
+one place the ambient presentation is honored: under an `<ActionPresentation
+mode="menu">` region (`@plugins/primitives/plugins/action-presentation`) it
+returns a `MenuActionItem` — a labelled dropdown row — instead of the ghost icon
+box. Every action built on it (incl. `RowActionButton`) inherits that for free;
+no call site changes, since the default mode is `inline`. `variant`, `className`,
+`tooltip` and `side` are inert in menu form.
+
 ## Enforcement
 
 `lint/prefer-icon-button.ts` (contributed by this plugin, registered repo-wide)
@@ -26,6 +36,8 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
 - Description: Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
 - Web:
   - Uses:
+    - `primitives/action-presentation.MenuActionItem`
+    - `primitives/action-presentation.useActionPresentation`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/shortcuts.formatShortcutLabel`
@@ -58,6 +70,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`
     - `apps/sonata/transpose`
+    - `apps/story/pages-integration`
     - `apps/story/renderers/slides`
     - `apps/story/shell`
     - `apps/studio/compositions/entry-points`

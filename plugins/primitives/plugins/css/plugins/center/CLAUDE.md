@@ -61,7 +61,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/sonata/shell`
     - `apps/sonata/songsheet`
     - `apps/sonata/transport-bar`
-    - `apps/story/pages-integration`
     - `apps/story/render`
     - `apps/story/renderers/slides`
     - `apps/studio/contributions`

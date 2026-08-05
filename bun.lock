@@ -3415,6 +3415,10 @@
       "name": "@singularity/plugin-primitives",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/action-presentation": {
+      "name": "@singularity/plugin-primitives-action-presentation",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/app-instance": {
       "name": "@singularity/plugin-primitives-app-instance",
       "version": "0.0.1",
@@ -4028,6 +4032,10 @@
     },
     "plugins/reorder/plugins/node-types/plugins/header": {
       "name": "@singularity/plugin-reorder-node-types-header",
+      "version": "0.0.1",
+    },
+    "plugins/reorder/plugins/node-types/plugins/overflow": {
+      "name": "@singularity/plugin-reorder-node-types-overflow",
       "version": "0.0.1",
     },
     "plugins/reorder/plugins/node-types/plugins/spacer": {
@@ -6870,6 +6878,8 @@
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 
+    "@singularity/plugin-primitives-action-presentation": ["@singularity/plugin-primitives-action-presentation@workspace:plugins/primitives/plugins/action-presentation"],
+
     "@singularity/plugin-primitives-app-instance": ["@singularity/plugin-primitives-app-instance@workspace:plugins/primitives/plugins/app-instance"],
 
     "@singularity/plugin-primitives-app-shell": ["@singularity/plugin-primitives-app-shell@workspace:plugins/primitives/plugins/app-shell"],
@@ -7149,6 +7159,8 @@
     "@singularity/plugin-reorder-node-types": ["@singularity/plugin-reorder-node-types@workspace:plugins/reorder/plugins/node-types"],
 
     "@singularity/plugin-reorder-node-types-header": ["@singularity/plugin-reorder-node-types-header@workspace:plugins/reorder/plugins/node-types/plugins/header"],
+
+    "@singularity/plugin-reorder-node-types-overflow": ["@singularity/plugin-reorder-node-types-overflow@workspace:plugins/reorder/plugins/node-types/plugins/overflow"],
 
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
 

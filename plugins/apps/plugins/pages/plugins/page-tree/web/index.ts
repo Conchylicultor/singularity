@@ -6,6 +6,7 @@ import { pageDetailPane, pagesTreePane } from "./panes";
 import { PagesSidebar } from "./components/pages-sidebar";
 import { BacklinksSection, useHasBacklinks } from "./components/backlinks-section";
 import { DeletePageAction } from "./components/delete-page-action";
+import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
 
 export { PageDetail, PageTree } from "./slots";
@@ -31,5 +32,6 @@ export default {
       useAvailable: useHasBacklinks,
     }),
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
+    PageTree.RowActions({ id: "add-below", component: AddPageBelowAction }),
   ],
 } satisfies PluginDefinition;

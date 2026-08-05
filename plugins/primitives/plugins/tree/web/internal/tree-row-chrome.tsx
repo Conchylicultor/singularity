@@ -231,15 +231,22 @@ export function TreeRowChrome({
           // the cluster in layout, prematurely truncating labels behind invisible
           // buttons.) We collapse width rather than `display:none` so the action
           // buttons stay in the tab order and focus-within can reveal them for
-          // keyboard users. Stays expanded while an open dropdown (e.g. the row
-          // "more" menu) keeps a descendant in the `data-state=open` state, even
-          // after the pointer leaves the row.
+          // keyboard users. Stays expanded while a descendant popup is open
+          // (e.g. a row action's "more" menu), even after the pointer leaves.
+          //
+          // That last rule is load-bearing, not cosmetic: the cluster is the
+          // ANCHOR of any menu launched from inside it, so letting it collapse
+          // to `w-0` while the menu is open shoves the still-mounted trigger to
+          // the collapsed edge and the open menu jumps sideways to follow it.
+          // `data-popup-open` is base-ui's attribute — this used to read
+          // `data-[state=open]` (Radix's), which matches nothing here, so the
+          // rule silently never fired. Keep it in sync with the popup library.
           className={cn(
             "whitespace-nowrap",
             "w-0 opacity-0 pointer-events-none",
             "group-hover/tree-row:w-auto group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto",
             "group-focus-within/tree-row:w-auto group-focus-within/tree-row:opacity-100 group-focus-within/tree-row:pointer-events-auto",
-            "has-data-[state=open]:w-auto has-data-[state=open]:opacity-100 has-data-[state=open]:pointer-events-auto",
+            "has-[[data-popup-open]]:w-auto has-[[data-popup-open]]:opacity-100 has-[[data-popup-open]]:pointer-events-auto",
           )}
         >
           <Stack direction="row" align="center" gap="2xs">

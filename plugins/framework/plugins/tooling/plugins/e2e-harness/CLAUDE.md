@@ -70,6 +70,7 @@ rule keeps the broken shape from coming back.
     - `primitives/text-editor/caret-trigger`
     - `release`
     - `reorder`
+    - `reorder/node-types`
     - `shell/toast`
     - `tasks/launch-options`
 

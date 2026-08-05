@@ -4,6 +4,7 @@ import {
   reorderTreeField,
   type ReorderTreeFieldDef,
 } from "@plugins/fields/plugins/reorder-tree/plugins/config/core";
+import { REORDER_NODE_LEGEND } from "@plugins/fields/plugins/reorder-tree/core";
 
 /**
  * A reorder layout governs the top-level order and visibility of a single render
@@ -14,9 +15,9 @@ import {
  * - A node names a contribution by `entryKey` (bare string → `{ item }`).
  * - `{ item, hidden: true }` removes that contribution from the slot (never hides
  *   `excludeFromReorder` items).
- * - `{ spacer: <id> }` materializes a blank draggable gap at its position.
- * - `{ group, items }` is reserved for a future groups migration — the editor
- *   never emits/parses it yet and `applyTree` ignores it (groups stay DB-backed).
+ * - `{ type, id?, items? }` is any registered node type — see
+ *   `REORDER_NODE_LEGEND` for the authoring forms, and `reorder/node-types` for
+ *   the registry. An unknown `type` is skipped at render (fail-soft).
  * - Any live, visible contribution NOT named in the tree is appended in natural
  *   order (fail-loud — a contribution is never silently dropped).
  *
@@ -58,9 +59,11 @@ export function reorderDirectiveDescriptor(
         'Arrange "items" for how this slot ACTUALLY renders — a sidebar is a',
         "vertical list, a toolbar a horizontal bar, a pane a stack of blocks.",
         "Look at the surface, then order for that reading direction.",
-        'Node forms: "pluginId:id" (an item, terse) |',
-        '{ "item": "pluginId:id", "hidden": true } (drop it from the slot) |',
-        '{ "type": "spacer", "id": "<unique-id>" } (a blank gap).',
+        "Node forms:",
+        // ONE legend, shared with the generated origin comments — a hand-copied
+        // second list is how this one silently went stale (it never learned
+        // about the `header` container).
+        ...REORDER_NODE_LEGEND,
         "At most one spacer per slot.",
       ],
     },

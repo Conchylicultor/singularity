@@ -1,6 +1,5 @@
 import { MdAutoStories } from "react-icons/md";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import {
@@ -15,8 +14,11 @@ import {
  * side-table row is added/removed), so unlike the sibling delete action this
  * needs no confirm dialog: a single tap flips it.
  *
- * Mirrors the button chrome of `DeletePageAction` (same hover/size classes,
- * `stopPropagation` so the row doesn't select).
+ * Renders the shared `IconButton` like its sibling row actions (delete, star) —
+ * so it inherits the row's ambient control density and, being the generic
+ * `{icon,label,onClick}` action component, follows its region's presentation
+ * rather than hand-rolling its own chrome. `stopPropagation` keeps the row from
+ * selecting.
  */
 export function UpgradeAction({ row }: ItemActionProps<Block>) {
   const pageId = row.id;
@@ -27,21 +29,11 @@ export function UpgradeAction({ row }: ItemActionProps<Block>) {
     void (isStory ? unmarkStory(pageId) : markStory(pageId));
   };
 
-  const label = isStory ? "Remove story" : "Upgrade to story";
-
   return (
-    <WithTooltip content={label}>
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={label}
-        // eslint-disable-next-line layout/no-adhoc-layout -- rigid edge button in the data-view row-actions flex cluster (externally owned)
-        className="hover:bg-background/60 size-6 shrink-0 rounded-md"
-      >
-        <Center className="size-full">
-          <MdAutoStories className="size-4" />
-        </Center>
-      </button>
-    </WithTooltip>
+    <IconButton
+      icon={MdAutoStories}
+      label={isStory ? "Remove story" : "Upgrade to story"}
+      onClick={onClick}
+    />
   );
 }

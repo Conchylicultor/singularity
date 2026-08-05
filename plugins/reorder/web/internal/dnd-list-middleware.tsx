@@ -468,7 +468,8 @@ function ReorderInner({
               const memberId = m.id ?? fallbackNodeId(m);
               memberIds.push(memberId);
               return (
-                <span key={memberId}>
+                // `contents` — see the sibling item member below.
+                <span key={memberId} className="contents">
                   {memberType.render({
                     payload: memberParsed.success ? memberParsed.data : {},
                     id: m.id,
@@ -485,7 +486,14 @@ function ReorderInner({
             // id is registered in the shared SortableContext via `memberIds`),
             // so it gets a claim exactly like a top-level item.
             return (
-              <span key={entryKey(m)}>
+              // `contents`: this span exists only to carry the React key, so it
+              // must not become a layout box. Outside edit mode every wrapper
+              // below it is already `display:contents` (SortableReorderItem's
+              // itemClassName and its content div), so without this the span
+              // would be the ONE opaque element between a container's box and
+              // its member — enough to stop e.g. an overflow container's menu
+              // rows from being real children of DropdownMenuContent.
+              <span key={entryKey(m)} className="contents">
                 <ReorderItemClaimContext.Provider value={true}>
                   {renderItem(m)}
                 </ReorderItemClaimContext.Provider>

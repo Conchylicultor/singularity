@@ -20,6 +20,7 @@ export {
   useTreeRow,
   useTreeListContext,
   useOptionalTreeListContext,
+  useOptionalRowControls,
 } from "./internal/use-tree-row";
 export type {
   RowControls,

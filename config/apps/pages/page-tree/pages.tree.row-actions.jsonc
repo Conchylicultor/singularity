@@ -1,9 +1,28 @@
-// @hash 30cba52256cf
+// @hash 18e1a4a043e3
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// At most one spacer per slot.
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  // The sidebar is the narrowest column in the app, so only the highest-frequency
+  // action stays inline; the rest collapse behind the row's single `⋯`. This split
+  // is a judgement about THIS surface's width — it is authored, never inferred.
   "items": [
     "apps.pages.starred:star",
-    "apps.pages.page-tree:delete",
-    "apps.story.pages-integration:story"
+    {
+      "type": "overflow",
+      "id": "row-overflow",
+      "items": [
+        "apps.pages.page-tree:delete",
+        "apps.story.pages-integration:story",
+        "apps.pages.page-tree:add-below"
+      ]
+    }
   ]
 }

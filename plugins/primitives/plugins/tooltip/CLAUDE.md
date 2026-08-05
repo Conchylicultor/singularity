@@ -25,7 +25,6 @@
     - `apps-core/tab-bar`
     - `apps/agent-manager/worktree-switcher`
     - `apps/sonata/primitives/toolbar-control`
-    - `apps/story/pages-integration`
     - `apps/workflows/editor`
     - `build`
     - `conversations/conversation-preprompt`
