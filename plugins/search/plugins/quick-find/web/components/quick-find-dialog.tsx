@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -55,7 +53,7 @@ export function QuickFindDialog({
 }: QuickFindDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent size="md" padded={false}>
         {/* Self-key the body on `open` so query + activeIdx re-initialize on every
             open via a fresh mount — no props-to-state reset effect. */}
         <QuickFindDialogBody
@@ -126,8 +124,7 @@ function QuickFindDialogBody({
   const hasQuery = query.trim().length > 0;
 
   return (
-    <Clip className="w-full max-w-lg rounded-xl">
-    <Surface level="overlay" className="w-full rounded-xl shadow-2xl">
+    <>
       <div className="border-b p-sm">
         <SearchInput
           autoFocus
@@ -175,7 +172,6 @@ function QuickFindDialogBody({
           )}
         </div>
       </ScrollArea>
-    </Surface>
-    </Clip>
+    </>
   );
 }

@@ -209,7 +209,6 @@ surfacing as crash tasks, not just toasts.
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
-    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`

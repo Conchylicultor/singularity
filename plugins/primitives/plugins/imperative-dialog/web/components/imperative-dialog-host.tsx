@@ -28,7 +28,7 @@ export function ImperativeDialogHost() {
             if (!open) closeDialog(d.id);
           }}
         >
-          <DialogContent>{d.node}</DialogContent>
+          <DialogContent {...d.options}>{d.node}</DialogContent>
         </Dialog>
       ))}
     </>

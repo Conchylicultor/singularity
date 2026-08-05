@@ -68,7 +68,7 @@ export function PagesTrash() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent size="md">
           <DialogTitle>Trash</DialogTitle>
           <DialogDescription>
             Deleted pages are kept for 30 days before being permanently removed.
@@ -122,7 +122,7 @@ export function PagesTrash() {
           if (!o) setConfirmEntry(null);
         }}
       >
-        <DialogContent>
+        <DialogContent size="sm">
           <DialogTitle>Delete permanently</DialogTitle>
           <DialogDescription>
             Permanently delete{" "}

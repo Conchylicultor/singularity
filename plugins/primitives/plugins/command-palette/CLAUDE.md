@@ -9,9 +9,7 @@
   - Slots: `CommandPalette.Item`
   - Contributes: `Core.Root` → `CommandPaletteRoot`
   - Uses:
-    - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Dialog`

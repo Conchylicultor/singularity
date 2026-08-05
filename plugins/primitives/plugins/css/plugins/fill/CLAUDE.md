@@ -64,7 +64,6 @@ composes last.
     - `apps/website/shell`
     - `apps/workflows/editor`
     - `auth/apple-signing/setup-wizard`
-    - `build/serve-composition`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversations-view`
@@ -78,6 +77,7 @@ composes last.
     - `primitives/data-view`
     - `primitives/date-picker`
     - `primitives/error-boundary`
+    - `primitives/imperative-dialog/confirm`
     - `primitives/log-channels`
     - `primitives/setup-steps`
 

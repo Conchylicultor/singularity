@@ -355,6 +355,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/icon-picker`
+    - `primitives/imperative-dialog/confirm`
     - `primitives/launch`
     - `primitives/loading`
     - `primitives/log-channels`

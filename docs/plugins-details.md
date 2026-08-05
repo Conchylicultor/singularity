@@ -3626,7 +3626,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/row.Row`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/spinner.Spinner`
-                  - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/ui-kit.Button`
@@ -5032,6 +5031,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
+              - `primitives/imperative-dialog/confirm.confirmDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
@@ -5073,6 +5073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/graph-canvas.GraphCanvas`
               - `primitives/icon-button.IconButton`
+              - `primitives/imperative-dialog/confirm.confirmDialog`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/tooltip.WithTooltip`
@@ -5215,6 +5216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
               - `primitives/error-boundary.PluginErrorBoundary`
+              - `primitives/imperative-dialog/confirm.confirmDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
@@ -6674,20 +6676,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook, and the served-liveness read (the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition namespace (is it actually served, and can this backend start one) plus the reset-to-first-launch endpoint: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
       - Web:
         - Uses:
-          - `infra/endpoints.EndpointError`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `plugin-meta/composition.useManifestActions`
           - `primitives/css/badge.Badge`
-          - `primitives/css/fill.Fill`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.DialogDescription`
-          - `primitives/css/ui-kit.DialogTitle`
-          - `primitives/imperative-dialog.openDialog`
+          - `primitives/imperative-dialog/confirm.confirmDialog`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
           - `primitives/relative-time.RelativeTime`
@@ -14330,7 +14328,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/surface.Surface`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
@@ -14865,6 +14862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-order`
           - `primitives/diff-view`
           - `primitives/folder-picker`
+          - `primitives/imperative-dialog/confirm`
           - `primitives/launch`
           - `primitives/live-state`
           - `primitives/log-channels`
@@ -18872,9 +18870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `CommandPalette.Item`
         - Contributes: `Core.Root` → `CommandPaletteRoot`
         - Uses:
-          - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Dialog`
@@ -19275,13 +19271,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/code-block`
               - `page/math/equation`
               - `primitives/app-shell`
-              - `primitives/command-palette`
               - `primitives/data-view/gallery`
               - `primitives/diff-view`
               - `primitives/tree`
               - `review/plugin-changes/file-changes`
               - `screenshot`
-              - `search/quick-find`
               - `tasks/task-graph`
         - **`cluster`** — Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
           - Web:
@@ -19429,7 +19423,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/shell`
               - `apps/workflows/editor`
               - `auth/apple-signing/setup-wizard`
-              - `build/serve-composition`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversations-view`
@@ -19443,6 +19436,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/imperative-dialog/confirm`
               - `primitives/log-channels`
               - `primitives/setup-steps`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -20279,6 +20273,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
+              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/loading`
               - `primitives/log-channels`
@@ -20453,7 +20448,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
               - `apps/mail/reading-pane`
-              - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/graph`
               - `apps/website/demos/app-gallery`
               - `apps/website/demos/editor-toy`
@@ -20463,16 +20457,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/engine`
               - `conversations/agents`
               - `fields/json/config`
-              - `history/dialog`
               - `infra/events-test`
               - `page/editor`
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
-              - `primitives/command-palette`
               - `primitives/css/card`
               - `primitives/data-view`
               - `primitives/floating-surface`
-              - `search/quick-find`
               - `stats`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
@@ -20758,6 +20749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
+              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/markdown`
@@ -21236,6 +21228,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button`
               - `primitives/icon-picker`
               - `primitives/imperative-dialog`
+              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/loading`
               - `primitives/log-channels`
@@ -22635,6 +22628,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/ui-kit.Dialog`
           - `primitives/css/ui-kit.DialogContent`
+        - Exports (types): `DialogOptions`
         - Exports (values): `openDialog`
       - Cross-plugin:
         - Imported by:
@@ -22644,7 +22638,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/events/sources`
           - `apps/sonata/sources/ultimate-guitar`
-          - `build/serve-composition`
+          - `primitives/imperative-dialog/confirm`
+      - Plugins:
+        - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
+          - Web:
+            - Uses:
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/imperative-dialog.openDialog`
+            - Exports (types): `ConfirmDialogOptions`
+            - Exports (values): `confirmDialog`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/workflows/definitions`
+              - `apps/workflows/editor`
+              - `apps/workflows/executions`
+              - `build/serve-composition`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot.InlineTextWalkerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -25684,11 +25699,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `infra/endpoints.useEndpoint`
-          - `primitives/css/clip.Clip`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Dialog`
           - `primitives/css/ui-kit.DialogContent`

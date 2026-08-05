@@ -6,14 +6,13 @@ import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
-import { useEndpointMutation, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "../internal/use-serve-composition";
 import type { ServeStatus } from "../internal/use-serve-status";
 import { resetCompositionData } from "../../shared/endpoints";
-import { ConfirmResetDialog } from "./confirm-reset-dialog";
 
 /**
  * The **Serve live** target panel — the one control for a composition's local
@@ -99,32 +98,28 @@ export function ServeTargetPanel({
               loading={reset.isPending}
               title={`Wipe ${host}'s database and config back to first-launch (main is untouched)`}
               onClick={() => {
-                // Fire-and-forget: don't return the openDialog promise, or the
-                // button would auto-pend for the dialog's whole open lifetime.
-                // `loading={reset.isPending}` reflects the actual reset instead.
-                void openDialog((close) => (
-                  <ConfirmResetDialog
-                    host={host}
-                    onCancel={close}
-                    onConfirm={() =>
-                      reset
-                        .mutateAsync({ body: { id: item.id } })
-                        .then(() => {
-                          close();
-                          showToast({
-                            description: `Reset ${host} to first-launch.`,
-                            variant: "success",
-                          });
-                        })
-                        .catch((err: unknown) => {
-                          // Expected reset failure — onError already toasted it;
-                          // keep the dialog open so the user can retry or cancel.
-                          if (err instanceof EndpointError) return;
-                          throw err;
-                        })
-                    }
-                  />
-                ));
+                // Fire-and-forget: confirmDialog owns the dialog lifetime and the
+                // keep-open-on-failure retry. `loading={reset.isPending}` reflects
+                // the actual reset instead of the dialog's open lifetime.
+                void confirmDialog({
+                  title: `Reset ${host} to first-launch?`,
+                  description: (
+                    <>
+                      This wipes this composition&apos;s database and config so you
+                      see exactly what a new user gets. The main app&apos;s data
+                      (the <code>singularity</code> database and its config) is not
+                      touched.
+                    </>
+                  ),
+                  confirmLabel: "Reset to first-launch",
+                  onConfirm: async () => {
+                    await reset.mutateAsync({ body: { id: item.id } });
+                    showToast({
+                      description: `Reset ${host} to first-launch.`,
+                      variant: "success",
+                    });
+                  },
+                });
               }}
             >
               Reset

@@ -8,7 +8,6 @@ import {
   DialogTitle,
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -136,14 +135,7 @@ export function VersionHistoryDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <Surface
-            level="overlay"
-            // The card clips (overflow-hidden) to keep its rounded corners over
-            // the scrolling panes — Surface owns the chrome, Column the layout.
-            // eslint-disable-next-line layout/no-adhoc-layout -- card clips its rounded corners over the scrolling panes
-            className="h-[32rem] w-full max-w-4xl overflow-hidden rounded-xl shadow-2xl"
-          >
+        <DialogContent size="lg" padded={false} className="h-[32rem]">
           <Column
             className="h-full"
             header={
@@ -219,7 +211,6 @@ export function VersionHistoryDialog({
               </Stack>
             }
           />
-          </Surface>
         </DialogContent>
       </Dialog>
 
@@ -230,7 +221,7 @@ export function VersionHistoryDialog({
           if (!o) setPendingRestore(null);
         }}
       >
-        <DialogContent>
+        <DialogContent size="sm">
           <DialogTitle>Restore this version?</DialogTitle>
           <DialogDescription>
             Your current page is saved as a version before restoring, so you can

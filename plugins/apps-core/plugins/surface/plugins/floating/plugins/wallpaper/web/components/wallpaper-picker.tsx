@@ -18,7 +18,7 @@ import { saveCandidate } from "../internal/save";
  * then closes.
  */
 export function openWallpaperPicker(): void {
-  void openDialog((close) => <WallpaperPickerDialog onClose={close} />);
+  void openDialog((close) => <WallpaperPickerDialog onClose={close} />, { size: "md" });
 }
 
 function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
@@ -49,7 +49,7 @@ function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Stack gap="md" className="w-[32rem] max-w-full">
+    <Stack gap="md">
       <DialogTitle>Change wallpaper</DialogTitle>
       {providers.length === 0 ? (
         <Placeholder>No wallpaper sources are installed.</Placeholder>

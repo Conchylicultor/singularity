@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 
+/** Presentation options forwarded to the host's `DialogContent`. */
+export interface DialogOptions {
+  size?: "sm" | "md" | "lg";
+  padded?: boolean;
+  className?: string;
+}
+
 /**
  * One open imperative dialog: its stable id, the already-rendered content node,
  * and the resolver that settles the `openDialog()` promise when it closes.
@@ -8,6 +15,7 @@ interface DialogEntry {
   id: number;
   node: ReactNode;
   resolve: () => void;
+  options?: DialogOptions;
 }
 
 let nextId = 1;
@@ -49,11 +57,12 @@ export function closeDialog(id: number): void {
  */
 export function openDialog(
   render: (close: () => void) => ReactNode,
+  options?: DialogOptions,
 ): Promise<void> {
   const id = nextId++;
   return new Promise<void>((resolve) => {
     const node = render(() => closeDialog(id));
-    entries = [...entries, { id, node, resolve }];
+    entries = [...entries, { id, node, resolve, options }];
     emit();
   });
 }

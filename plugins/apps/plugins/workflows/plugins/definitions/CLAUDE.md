@@ -30,6 +30,7 @@
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
+    - `primitives/imperative-dialog/confirm.confirmDialog`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

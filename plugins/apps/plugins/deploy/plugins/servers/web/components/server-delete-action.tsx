@@ -36,7 +36,7 @@ export function ServerDeleteAction({ server }: { server: Server }) {
             })
         }
       />
-    ));
+    ), { size: "sm" });
   }
 
   return (

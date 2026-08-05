@@ -70,7 +70,7 @@ export function GenerateKeyStep({ server }: { server: Server }) {
             })
         }
       />
-    ));
+    ), { size: "sm" });
   }
 
   return (

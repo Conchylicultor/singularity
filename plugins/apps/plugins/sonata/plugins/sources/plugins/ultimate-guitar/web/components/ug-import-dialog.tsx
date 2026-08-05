@@ -12,7 +12,6 @@ import {
   DialogDescription,
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -234,113 +233,107 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
   const listDisabled = importingId !== null;
 
   return (
-    <Surface
-      level="overlay"
-      // eslint-disable-next-line layout/no-adhoc-layout -- centered dialog panel width clamp; mirrors the version-history dialog convention
-      className="w-full max-w-lg rounded-xl shadow-2xl"
-    >
-      <Stack gap="md" className="p-lg">
-        <Stack gap="2xs">
-          <DialogTitle>Import from Ultimate Guitar</DialogTitle>
-          <DialogDescription>
-            Search for a song or paste a tab URL to import chords, sections, and
-            lyrics.
-          </DialogDescription>
-        </Stack>
-
-        <SearchInput
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          placeholder="Search songs or paste a tab URL…"
-          spellCheck={false}
-        />
-
-        {isSearch ? (
-          <SegmentedControl
-            variant="ghost"
-            options={TYPE_OPTIONS}
-            value={typeFilter}
-            onChange={(v) => {
-              setTypeFilter(v);
-              setActiveIdx(0);
-            }}
-          />
-        ) : null}
-
-        {error ? (
-          <Text variant="caption" tone="destructive" role="alert">
-            {error}
-          </Text>
-        ) : null}
-
-        {isUrl ? (
-          <Stack direction="row" gap="sm" justify="end">
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={() => importByUrl(trimmed)}>Import this tab</Button>
-          </Stack>
-        ) : isSearch ? (
-          <ScrollArea className="max-h-80">
-            {searching && filtered.length === 0 ? (
-              <Loading variant="rows" />
-            ) : filtered.length === 0 ? (
-              <Placeholder>No results.</Placeholder>
-            ) : (
-              <Stack gap="2xs">
-                {/* eslint-disable-next-line data-view/no-adhoc-row-list -- import search-result picker (dialog chrome) */}
-                {filtered.map((result, idx) => {
-                  const importing = importingId === result.tabId;
-                  return (
-                    <Row
-                      key={result.tabId}
-                      ref={idx === activeIdx ? activeRef : undefined}
-                      selected={idx === activeIdx}
-                      disabled={listDisabled}
-                      hover="muted"
-                      icon={
-                        importing ? (
-                          <Spinner className="size-4" />
-                        ) : (
-                          <MdMusicNote />
-                        )
-                      }
-                      onMouseEnter={() => setActiveIdx(idx)}
-                      onClick={() => importResult(result)}
-                    >
-                      <Fill>
-                        <Stack gap="2xs" align="start">
-                          <Inline gap="xs" wrap>
-                            <Text variant="body" className="font-semibold">
-                              {result.songName || "Untitled"}
-                            </Text>
-                            <Text variant="caption" tone="muted">
-                              {result.artistName}
-                            </Text>
-                          </Inline>
-                          <Inline gap="xs" wrap>
-                            <Badge>{result.type}</Badge>
-                            <Text variant="caption" tone="muted">
-                              {`★${result.rating.toFixed(1)} · ${result.votes}`}
-                              {result.version !== null
-                                ? ` · v${result.version}`
-                                : ""}
-                            </Text>
-                          </Inline>
-                        </Stack>
-                      </Fill>
-                    </Row>
-                  );
-                })}
-              </Stack>
-            )}
-          </ScrollArea>
-        ) : (
-          <Placeholder>Type a song name to search.</Placeholder>
-        )}
+    <Stack gap="md">
+      <Stack gap="2xs">
+        <DialogTitle>Import from Ultimate Guitar</DialogTitle>
+        <DialogDescription>
+          Search for a song or paste a tab URL to import chords, sections, and
+          lyrics.
+        </DialogDescription>
       </Stack>
-    </Surface>
+
+      <SearchInput
+        autoFocus
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        placeholder="Search songs or paste a tab URL…"
+        spellCheck={false}
+      />
+
+      {isSearch ? (
+        <SegmentedControl
+          variant="ghost"
+          options={TYPE_OPTIONS}
+          value={typeFilter}
+          onChange={(v) => {
+            setTypeFilter(v);
+            setActiveIdx(0);
+          }}
+        />
+      ) : null}
+
+      {error ? (
+        <Text variant="caption" tone="destructive" role="alert">
+          {error}
+        </Text>
+      ) : null}
+
+      {isUrl ? (
+        <Stack direction="row" gap="sm" justify="end">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => importByUrl(trimmed)}>Import this tab</Button>
+        </Stack>
+      ) : isSearch ? (
+        <ScrollArea className="max-h-80">
+          {searching && filtered.length === 0 ? (
+            <Loading variant="rows" />
+          ) : filtered.length === 0 ? (
+            <Placeholder>No results.</Placeholder>
+          ) : (
+            <Stack gap="2xs">
+              {/* eslint-disable-next-line data-view/no-adhoc-row-list -- import search-result picker (dialog chrome) */}
+              {filtered.map((result, idx) => {
+                const importing = importingId === result.tabId;
+                return (
+                  <Row
+                    key={result.tabId}
+                    ref={idx === activeIdx ? activeRef : undefined}
+                    selected={idx === activeIdx}
+                    disabled={listDisabled}
+                    hover="muted"
+                    icon={
+                      importing ? (
+                        <Spinner className="size-4" />
+                      ) : (
+                        <MdMusicNote />
+                      )
+                    }
+                    onMouseEnter={() => setActiveIdx(idx)}
+                    onClick={() => importResult(result)}
+                  >
+                    <Fill>
+                      <Stack gap="2xs" align="start">
+                        <Inline gap="xs" wrap>
+                          <Text variant="body" className="font-semibold">
+                            {result.songName || "Untitled"}
+                          </Text>
+                          <Text variant="caption" tone="muted">
+                            {result.artistName}
+                          </Text>
+                        </Inline>
+                        <Inline gap="xs" wrap>
+                          <Badge>{result.type}</Badge>
+                          <Text variant="caption" tone="muted">
+                            {`★${result.rating.toFixed(1)} · ${result.votes}`}
+                            {result.version !== null
+                              ? ` · v${result.version}`
+                              : ""}
+                          </Text>
+                        </Inline>
+                      </Stack>
+                    </Fill>
+                  </Row>
+                );
+              })}
+            </Stack>
+          )}
+        </ScrollArea>
+      ) : (
+        <Placeholder>Type a song name to search.</Placeholder>
+      )}
+    </Stack>
   );
 }

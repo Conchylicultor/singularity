@@ -1,7 +1,7 @@
 import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ImperativeDialogHost } from "./components/imperative-dialog-host";
 
-export { openDialog } from "./internal/store";
+export { openDialog, type DialogOptions } from "./internal/store";
 
 export default {
   description:

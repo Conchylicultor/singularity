@@ -18,6 +18,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   updateDefinition,
@@ -140,10 +141,16 @@ export function StepInspector({
     };
   }, [flushConfig]);
 
-  async function handleDelete() {
-    if (!confirm(`Delete step "${stepLabel(step, stepTypes)}"?`)) return;
-    await persist(deleteStep(def, step.id));
-    onClose();
+  function handleDelete() {
+    void confirmDialog({
+      title: `Delete step "${stepLabel(step, stepTypes)}"?`,
+      description: "Transitions pointing at this step are cleared.",
+      confirmLabel: "Delete step",
+      onConfirm: async () => {
+        await persist(deleteStep(def, step.id));
+        onClose();
+      },
+    });
   }
 
   const others = otherStepItems(def, step.id, stepTypes);
@@ -175,7 +182,7 @@ export function StepInspector({
                 <Button
                   variant="link"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => void handleDelete()}
+                  onClick={handleDelete}
                 >
                   Delete
                 </Button>

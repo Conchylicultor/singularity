@@ -349,6 +349,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/data-view/view-order`
     - `primitives/diff-view`
     - `primitives/folder-picker`
+    - `primitives/imperative-dialog/confirm`
     - `primitives/launch`
     - `primitives/live-state`
     - `primitives/log-channels`

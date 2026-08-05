@@ -32,6 +32,7 @@
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/graph-canvas.GraphCanvas`
     - `primitives/icon-button.IconButton`
+    - `primitives/imperative-dialog/confirm.confirmDialog`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/tooltip.WithTooltip`

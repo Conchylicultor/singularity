@@ -14,7 +14,6 @@
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/surface.Surface`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

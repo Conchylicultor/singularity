@@ -402,6 +402,7 @@ fixed raw size escapes per-site via
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/icon-picker`
+    - `primitives/imperative-dialog/confirm`
     - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/markdown`

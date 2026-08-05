@@ -1,4 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -22,9 +23,14 @@ export function ExecutionDetail({ execution }: { execution: WorkflowExecution })
   const stepTypes = useStepTypeIndex();
   const steps = [...execution.steps].sort((a, b) => a.executionOrder - b.executionOrder);
 
-  async function handleCancel() {
-    if (!confirm("Cancel this execution?")) return;
-    await fetchEndpoint(deleteExecution, { id: execution.id });
+  function handleCancel() {
+    void confirmDialog({
+      title: "Cancel this run?",
+      description: "The run stops; its trace is kept.",
+      confirmLabel: "Cancel run",
+      cancelLabel: "Keep running",
+      onConfirm: () => fetchEndpoint(deleteExecution, { id: execution.id }),
+    });
   }
 
   return (

@@ -17,5 +17,5 @@ export const ultimateGuitarCreateOption: CreateOption = {
   label: "Import from Ultimate Guitar",
   description: "Paste a tab URL to import chords, sections, and lyrics.",
   icon: <MdMusicNote className="size-4" />,
-  onSelect: () => openDialog((close) => <UgImportDialog onClose={close} />),
+  onSelect: () => openDialog((close) => <UgImportDialog onClose={close} />, { size: "md" }),
 };

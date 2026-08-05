@@ -1,12 +1,10 @@
 import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { useState, useMemo, useCallback } from "react";
 import { MdSearch } from "react-icons/md";
 import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
 
@@ -84,7 +82,7 @@ export function CommandPaletteDialog({
   // shell stays mounted so its close animation is preserved.
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent>
+      <DialogContent size="md" padded={false}>
         {open && <CommandPaletteBody onClose={onClose} items={items} />}
       </DialogContent>
     </Dialog>
@@ -147,8 +145,7 @@ function CommandPaletteBody({
   let flatIdx = 0;
 
   return (
-    <Surface level="overlay" className="w-full max-w-lg shadow-2xl">
-        <Clip className="rounded-xl">
+    <>
           <div className="flex items-center gap-sm border-b px-md py-sm">
             <MdSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
@@ -243,8 +240,7 @@ function CommandPaletteBody({
               </span>
             </Stack>
           </Text>
-        </Clip>
-    </Surface>
+    </>
   );
 }
 

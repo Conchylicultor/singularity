@@ -147,7 +147,7 @@ function DeploymentsBody({
         // flag for the dialog's whole open lifetime.
         void openDialog((close) => (
           <AddDeploymentDialog serverId={serverId} existing={rows} close={close} />
-        ));
+        ), { size: "md" });
       },
     },
   ];
