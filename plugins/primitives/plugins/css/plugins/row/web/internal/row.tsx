@@ -116,8 +116,24 @@ export function Row({
     "disabled:pointer-events-none disabled:opacity-50",
     size === "sm" && "gap-xs text-caption",
     size === "md" && "gap-sm text-body",
-    hover === "accent" && (selected ? "bg-accent" : "hover:bg-accent"),
-    hover === "muted" && (selected ? "bg-muted" : "hover:bg-muted/50"),
+    // Each tint co-publishes itself as `--scrim` — the color a `<Pin mask>`
+    // overlay inside the row paints so it hides the row instead of letting the
+    // label show through the action icons. Same contract as a Surface publishing
+    // `--chrome-mask`, one level down: the surface says what is behind the row,
+    // the row says what is *painted* on it right now. A translucent tint
+    // publishes its composite over the ambient mask, which is why this is a
+    // second property and not a `--chrome-mask` re-declaration — a custom
+    // property whose value reads itself is a cycle, and CSS drops it.
+    hover === "accent" &&
+      (selected
+        ? "bg-accent [--scrim:var(--accent)]"
+        : "hover:bg-accent hover:[--scrim:var(--accent)]"),
+    hover === "muted" &&
+      (selected
+        ? "bg-muted [--scrim:var(--muted)]"
+        : // `in srgb`, not oklab: this must reproduce what ALPHA COMPOSITING of
+          // `bg-muted/50` over the backdrop paints, and that happens in sRGB.
+          "hover:bg-muted/50 hover:[--scrim:color-mix(in_srgb,var(--muted)_50%,var(--chrome-mask))]"),
     bordered && "border",
     className,
   );
@@ -128,7 +144,12 @@ export function Row({
   // row's 4 icon buttons) permanently steals ~100px from the row body via
   // `shrink-0`, collapsing the flex-1 title cell and truncating the title even
   // when nothing is shown. Mirrors the row-actions primitive's Pin approach; on
-  // reveal the cluster overlays the row's right edge. `actionsAlwaysVisible`
+  // reveal the cluster overlays the row's right edge — `mask` therefore is NOT
+  // optional here: it paints the row's own `--scrim` under the buttons with a
+  // gradient ramp on its inner edge, so what the cluster covers (a trailing
+  // status badge, a long title) dissolves under it rather than interleaving its
+  // glyphs with the icons. Reserving the width instead would cure the overlap
+  // too, at the cost the paragraph above rejects. `actionsAlwaysVisible`
   // actions instead stay in flow: they are part of the row layout and
   // legitimately reserve their space. Either way they paint above the split
   // path's `z-under` hit-area, so their buttons stay clickable.
@@ -147,6 +168,7 @@ export function Row({
       <Pin
         to="right"
         offset="xs"
+        mask
         onClick={(e) => e.stopPropagation()}
         className={cn("flex items-center gap-2xs", hoverRevealClass(revealed))}
       >

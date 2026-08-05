@@ -113,10 +113,15 @@ export function RowActions({
       <ControlSizeProvider size="xs">{children}</ControlSizeProvider>
     </Stack>
   );
+  // `mask` paints the row's own `--scrim` under the cluster with a gradient ramp
+  // on its inner edge: a pinned cluster overlays whatever the row already renders
+  // there (a trailing badge, a long label), and without the scrim the two sets of
+  // glyphs interleave. An `alwaysVisible` cluster is still pinned by the caller's
+  // choice of `pin`, so it needs the scrim just as much.
   return pin === null ? (
     cluster
   ) : (
-    <Pin to={pin} offset="xs">
+    <Pin to={pin} offset="xs" mask>
       {cluster}
     </Pin>
   );

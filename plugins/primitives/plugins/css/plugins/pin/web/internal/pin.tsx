@@ -34,6 +34,77 @@ function edgeLength(step: SpaceStep, outset: boolean): string {
 }
 
 /**
+ * The gradient ramp a masked pin dissolves the content it covers over. One fixed
+ * distance, not a prop: the ramp is a legibility constant (long enough to read as
+ * a fade rather than a cut, short enough not to eat the row), and a per-call-site
+ * knob would only let sites drift.
+ */
+const SCRIM_FADE = "1.5rem";
+
+/**
+ * The paint of a masked pin: an opaque scrim in the covered surface's own color,
+ * dissolved along whichever edges face INWARD (away from the ones it is anchored
+ * to), so the content underneath fades out instead of being cut mid-glyph.
+ *
+ * The color is `var(--scrim, var(--chrome-mask))` — the surface's published
+ * background by default, with `--scrim` the override a surface that paints a
+ * TRANSIENT tint over that background (a hovered/selected row, an interactive
+ * card) republishes so the scrim matches what is actually on screen at reveal
+ * time. It is deliberately a second property rather than a `--chrome-mask`
+ * re-declaration: a row's tint is a composite *over* the ambient mask
+ * (`color-mix(… , var(--chrome-mask))`), and a property whose value reads itself
+ * is a cycle CSS resolves to nothing. The `var(…, …)` fallback — never a `:root`
+ * default — is also what keeps it correct inside a forked theme scope, for the
+ * reason app.css documents for `--chrome-mask` itself.
+ *
+ * The offset is re-expressed as PADDING (the caller's `to`/`offset` still read as
+ * "inset from that edge") because a scrim inset from the edge it hides against
+ * leaves a sliver of live content showing in the gap. `borderRadius: inherit`
+ * keeps it inside a rounded row/card's corners.
+ */
+function scrimDecor(to: PinAnchor, len: string): React.CSSProperties {
+  const style: React.CSSProperties = {
+    background: "var(--scrim, var(--chrome-mask))",
+    borderRadius: "inherit",
+  };
+  const gradients: string[] = [];
+  if (to.includes("right")) {
+    gradients.push(`linear-gradient(to right, transparent, black ${SCRIM_FADE})`);
+    style.paddingRight = len;
+    style.paddingLeft = `calc(${len} + ${SCRIM_FADE})`;
+  }
+  if (to.includes("left")) {
+    gradients.push(
+      `linear-gradient(to left, transparent, black ${SCRIM_FADE})`,
+    );
+    style.paddingLeft = len;
+    style.paddingRight = `calc(${len} + ${SCRIM_FADE})`;
+  }
+  if (to.includes("top")) {
+    gradients.push(`linear-gradient(to top, transparent, black ${SCRIM_FADE})`);
+    style.paddingTop = len;
+    style.paddingBottom = `calc(${len} + ${SCRIM_FADE})`;
+  }
+  if (to.includes("bottom")) {
+    gradients.push(
+      `linear-gradient(to bottom, transparent, black ${SCRIM_FADE})`,
+    );
+    style.paddingBottom = len;
+    style.paddingTop = `calc(${len} + ${SCRIM_FADE})`;
+  }
+  if (gradients.length > 0) {
+    const image = gradients.join(", ");
+    style.maskImage = image;
+    style.WebkitMaskImage = image;
+    // Two ramps (a corner anchor) must BOTH hold — the scrim is opaque only where
+    // neither edge is fading. Single-ramp masks composite identically either way.
+    style.maskComposite = "intersect";
+    style.WebkitMaskComposite = "source-in";
+  }
+  return style;
+}
+
+/**
  * Pure class + style map for a pinned child — single source of truth, exported
  * so the component and the pure test share one definition.
  *
@@ -46,6 +117,13 @@ function edgeLength(step: SpaceStep, outset: boolean): string {
  *
  * The translate/`1/2` centering mechanics are pure Tailwind classes that live
  * inside this exempt primitive so callers never write them.
+ *
+ * `mask` layers the scrim on top (see {@link scrimDecor}) and changes two of the
+ * mechanics, because a scrim that does not reach the edges it hides against is
+ * not a scrim: the anchor insets collapse to `0` (the offset becomes padding),
+ * and an edge-center anchor spans its perpendicular axis — a hovered row's actions
+ * must cover the row's whole height, not just the button cluster's box — with its
+ * content centered on that axis exactly as the non-stretch anchor would place it.
  */
 export function pinClasses(opts: {
   to: PinAnchor;
@@ -54,11 +132,18 @@ export function pinClasses(opts: {
   layer: InTreeLayer;
   decorative: boolean;
   stretch: boolean;
+  mask: boolean;
 }): { className: string; style: React.CSSProperties } {
   const classes = ["absolute", zLayerClass(opts.layer)];
   if (opts.decorative) classes.push("pointer-events-none");
   const style: React.CSSProperties = {};
-  const len = edgeLength(opts.offset, opts.outset);
+  const offsetLen = edgeLength(opts.offset, opts.outset);
+  // A masked pin sits FLUSH against the edges it is anchored to and re-expresses
+  // the offset as padding; an unmasked one keeps the offset as the inset it has
+  // always been.
+  const len = opts.mask ? "0" : offsetLen;
+  const stretch = opts.stretch || opts.mask;
+  if (opts.mask) classes.push("flex items-center justify-center");
 
   switch (opts.to) {
     case "top-left":
@@ -79,26 +164,29 @@ export function pinClasses(opts: {
       break;
     case "top":
       style.top = len;
-      classes.push(opts.stretch ? "inset-x-0" : "left-1/2 -translate-x-1/2");
+      classes.push(stretch ? "inset-x-0" : "left-1/2 -translate-x-1/2");
       break;
     case "bottom":
       style.bottom = len;
-      classes.push(opts.stretch ? "inset-x-0" : "left-1/2 -translate-x-1/2");
+      classes.push(stretch ? "inset-x-0" : "left-1/2 -translate-x-1/2");
       break;
     case "left":
       style.left = len;
-      classes.push(opts.stretch ? "inset-y-0" : "top-1/2 -translate-y-1/2");
+      classes.push(stretch ? "inset-y-0" : "top-1/2 -translate-y-1/2");
       break;
     case "right":
       style.right = len;
-      classes.push(opts.stretch ? "inset-y-0" : "top-1/2 -translate-y-1/2");
+      classes.push(stretch ? "inset-y-0" : "top-1/2 -translate-y-1/2");
       break;
     case "center":
       classes.push("top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2");
       break;
   }
 
-  return { className: classes.join(" "), style };
+  return {
+    className: classes.join(" "),
+    style: opts.mask ? { ...style, ...scrimDecor(opts.to, offsetLen) } : style,
+  };
 }
 
 export interface PinProps extends React.HTMLAttributes<HTMLElement> {
@@ -117,8 +205,26 @@ export interface PinProps extends React.HTMLAttributes<HTMLElement> {
   decorative?: boolean;
   /** For an edge-center anchor, span the perpendicular axis full-length
    *  (`inset-y-0` for left/right, `inset-x-0` for top/bottom) instead of centering
-   *  it. Default false. No effect on corners or center. */
+   *  it. Default false. No effect on corners or center. Implied by `mask`. */
   stretch?: boolean;
+  /**
+   * Paint the scrim — an opaque backdrop in the covered surface's own color
+   * (`--scrim`, falling back to the surface's `--chrome-mask`), dissolved along
+   * the pin's inward-facing edges so the content it covers fades out instead of
+   * showing through the child. Default false.
+   *
+   * This is the point-anchored twin of `<Sticky mask>`: an overlay that hides
+   * content must paint what is behind it. **Any pin that overlays live content —
+   * a row's hover-revealed actions, a card's corner affordances — needs it**; a
+   * transparent one puts icons on top of legible text (glyphs interleaving with
+   * glyphs), which is a defect, not a style. Pins over inert space (a status dot
+   * on an avatar, a drag indicator, a badge on an icon) do not.
+   *
+   * A masked pin sits flush against its anchored edges — the `offset` becomes the
+   * child's padding, so the scrim leaves no live sliver at the edge — and an
+   * edge-center anchor spans its perpendicular axis (implies `stretch`).
+   */
+  mask?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
@@ -148,6 +254,7 @@ export function Pin({
   layer = "raised",
   decorative = false,
   stretch = false,
+  mask = false,
   as: As = "div",
   ref,
   className,
@@ -155,7 +262,15 @@ export function Pin({
   children,
   ...rest
 }: PinProps) {
-  const pin = pinClasses({ to, offset, outset, layer, decorative, stretch });
+  const pin = pinClasses({
+    to,
+    offset,
+    outset,
+    layer,
+    decorative,
+    stretch,
+    mask,
+  });
   return (
     <As
       ref={ref}

@@ -18,7 +18,17 @@ import type React from "react";
 // it scales with the active density preset (Comfortable / Cozy / Compact) like
 // every other padded chrome surface. `p-card` is word-valued, so `no-adhoc-spacing`
 // allows it inline; consumers override via `className`.
-const HOVER = "cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40";
+// The hover tint co-publishes itself as `--scrim` — the color a `<Pin mask>`
+// overlay inside the card paints so the body it covers (a gallery card's
+// hover-revealed corner actions over a wrapped title) dissolves under it instead
+// of showing through. Surface already publishes the resting `--chrome-mask`
+// (`var(--card)`); this is the transient tint on top of it, composited, since a
+// property that reads itself is a cycle CSS drops. Same contract as Row's.
+const HOVER =
+  "cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40 " +
+  // `in srgb` reproduces what alpha-compositing `bg-muted/40` over the card
+  // actually paints; oklab would drift.
+  "hover:[--scrim:color-mix(in_srgb,var(--muted)_40%,var(--card))]";
 const SEL = "border-primary";
 
 export interface CardProps {

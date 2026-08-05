@@ -62,6 +62,10 @@ export function DataCard(props: DataCardProps) {
         <Pin
           to="top-right"
           offset="sm"
+          // The cluster overlays the card's own body (a long title wraps under
+          // it), so it paints the card's scrim, dissolved along its inner left
+          // and bottom edges. Card publishes `--scrim` for its hover tint.
+          mask
           className={hoverRevealTarget}
           // Action clicks must not bubble up to onActivate.
           onClick={(e) => e.stopPropagation()}

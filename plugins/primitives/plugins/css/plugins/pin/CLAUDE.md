@@ -23,6 +23,27 @@ corner). The translate/`1/2` mechanics are pure Tailwind classes living inside
 this exempt primitive; the edge offset distances are inline styles reading the
 density `--space-*` var (the semantic ramp has no inset utilities).
 
+## `mask` — the scrim
+
+The point-anchored twin of `<Sticky mask>`: paints an opaque scrim in the covered
+surface's color, dissolved along the pin's **inward-facing** edges. **Required on
+any pin over live content** (a row's hover actions, a card's corner affordances)
+— without it the icons interleave with the text underneath. Pins over inert space
+(status dot, badge, drag indicator) don't need it.
+
+Under `mask`, insets collapse to `0` and `offset` becomes the child's padding (a
+scrim inset from its edge leaves a live sliver), and an edge-center anchor spans
+its perpendicular axis (implies `stretch`) so a row cluster covers the row's full
+height. Ramp distance is a constant, not a prop.
+
+Color is `var(--scrim, var(--chrome-mask))`. A surface painting a transient tint
+(hovered/selected `<Row>`, interactive `<Card>`) republishes `--scrim` next to
+each tint class. It is a **separate property, not a `--chrome-mask`
+re-declaration**: a translucent tint's scrim is `color-mix(…, var(--chrome-mask))`,
+and a property reading itself is a cycle CSS drops. No `:root` default either —
+the `var(…, fallback)` form re-resolves per element, which is what keeps it right
+inside a forked theme scope.
+
 ## Not for
 
 JS/pixel/fractional coordinates (drag handles, canvas overlays, floating-UI
@@ -37,6 +58,7 @@ offsets expressible on the semantic ramp.
 - **`layer`** — `InTreeLayer` stacking level (from `z-layers/web`). Default `raised`.
 - **`decorative`** — `pointer-events-none`. Default false.
 - **`stretch`** — span the perpendicular axis (edge-centers only). Default false.
+- **`mask`** — paint the scrim (above). Default false.
 - **`as`** — host element. Default `div`. **`className`** composes last; caller
   **`style`** overrides the anchor insets.
 
