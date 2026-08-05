@@ -65,6 +65,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `active-data/task`
     - `apps-core/layout`
     - `apps-core/surface/floating/wallpaper`
+    - `apps/deploy/composition`
     - `apps/deploy/deployments`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`

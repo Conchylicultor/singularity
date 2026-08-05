@@ -137,6 +137,11 @@ are no per-interaction round-trips.
     - `CompositionDetail`
     - `compositionDetailPane`
     - `compositionsPane`
+- Core:
+  - Uses: `primitives/pane.defineRoute`
+  - Exports (values):
+    - `compositionDetailRoute`
+    - `compositionsRoute`
 - Cross-plugin:
   - Imported by:
     - `apps/studio/compositions/closure-tree`

@@ -223,7 +223,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 - Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
-    - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
+    - `DeploymentDetail.Section` ← `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
     - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
     - `Deployments.Fields` ← `apps.deploy.remote-deploy`
     - `deploymentDetailPane.Actions`
@@ -381,6 +381,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `UpdateDeploymentBodySchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`

@@ -179,6 +179,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `useInclusion`
     - `useIsCompareMode`
     - `useManifestActions`
+    - `useManifestItemByName`
     - `useManifestItems`
 - Server:
   - Contributes: `ConfigV2.Register` "compositions"
@@ -206,6 +207,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `manifestItemToManifest`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/composition`
     - `apps/deploy/deployments`
     - `apps/deploy/local-serve`
     - `apps/studio/compositions`

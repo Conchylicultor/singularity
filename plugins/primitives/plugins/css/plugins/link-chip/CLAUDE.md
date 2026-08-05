@@ -17,6 +17,7 @@
     - `active-data/plugin-link`
     - `active-data/task`
     - `active-data/task-link`
+    - `apps/deploy/composition`
     - `apps/deploy/remote-deploy`
     - `apps/pages/prompt-origin`
     - `apps/studio/compositions`

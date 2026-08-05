@@ -1,9 +1,10 @@
-// @hash e0a21a46a5ff
+// @hash bb52ac58dff9
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
+    "apps.deploy.composition:composition",
     "apps.deploy.deploy-history:history",
     "apps.deploy.deployments:overview",
     "apps.deploy.local-serve:serve",

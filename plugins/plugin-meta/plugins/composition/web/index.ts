@@ -10,7 +10,11 @@ export {
   useImpact,
 } from "./internal/hooks";
 export type { CompositionDataResult, ImpactResult } from "./internal/hooks";
-export { useManifestItems, useManifestActions } from "./internal/manifests";
+export {
+  useManifestItems,
+  useManifestItemByName,
+  useManifestActions,
+} from "./internal/manifests";
 export type { ManifestActions } from "./internal/manifests";
 export {
   useActiveComposition,

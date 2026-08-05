@@ -16,7 +16,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`deploy`** [9 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** [10 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`events`** — Events — track events from pluggable sources in one database.
       - Plugins:
         - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.

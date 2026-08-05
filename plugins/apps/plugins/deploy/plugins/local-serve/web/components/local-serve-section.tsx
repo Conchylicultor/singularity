@@ -4,7 +4,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
+import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import {
   ServeTargetPanel,
@@ -40,10 +40,9 @@ export function LocalServeSection({ deploymentId }: { deploymentId: string }): R
 function LocalServe({ composition }: { composition: string }): ReactNode {
   // Deploy is composition-NAME-keyed end to end (the row, the install dir, the
   // unit, `release --composition`), while the serve namespace is the manifest
-  // item's `id`. The two are the same string for config-authored compositions
-  // and diverge for UI-created ones, so the lookup is by name and everything
-  // downstream takes the item.
-  const item = useManifestItems().find((i) => i.name === composition);
+  // item's `id` — so the lookup is by name and everything downstream takes the
+  // item.
+  const item = useManifestItemByName(composition);
 
   if (!item) {
     return (

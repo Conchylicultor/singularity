@@ -13,6 +13,7 @@
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `apps/browser/webview`
+    - `apps/deploy/composition`
     - `apps/deploy/deployments`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`

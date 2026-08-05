@@ -17,6 +17,27 @@ export function useManifestItems(): CompositionManifestItem[] {
   return useConfig(compositionsConfig).manifests;
 }
 
+/**
+ * The stored composition item called `name`, or `undefined` when no live
+ * composition carries that name.
+ *
+ * A composition has two identities and consumers straddle both: the manifest
+ * item's `id` (a uuid — what `comp/:id` and the serve namespace key on) and its
+ * `name` (what `release --composition` takes, what `RELEASE.json` carries, and
+ * therefore what every deploy row stores). The two are the same string for
+ * config-authored compositions and diverge for UI-created ones, so a
+ * name-keyed consumer must resolve through the list rather than assume.
+ *
+ * `undefined` is a real, expected answer, not an error: a deploy row's
+ * composition name is validated when it is written and nothing stops a later
+ * rename or delete, so callers render the dangling name honestly.
+ */
+export function useManifestItemByName(
+  name: string,
+): CompositionManifestItem | undefined {
+  return useManifestItems().find((item) => item.name === name);
+}
+
 export interface ManifestActions {
   /**
    * Upsert a manifest. With `editingId` set, replaces that item's `name` /

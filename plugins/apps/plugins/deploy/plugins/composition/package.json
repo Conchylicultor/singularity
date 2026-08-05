@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-deploy-composition",
+  "description": "Composition section of the deployment pane: what this deployment builds, and the link to it in Studio.",
+  "private": true,
+  "version": "0.0.1"
+}

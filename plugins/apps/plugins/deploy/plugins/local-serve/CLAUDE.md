@@ -64,7 +64,7 @@ host surface's call.
     - `build/serve-composition.ServeTargetPanel`
     - `build/serve-composition.useServeComposition`
     - `build/serve-composition.useServeStatus`
-    - `plugin-meta/composition.useManifestItems`
+    - `plugin-meta/composition.useManifestItemByName`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

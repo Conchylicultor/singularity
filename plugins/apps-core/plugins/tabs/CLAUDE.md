@@ -175,6 +175,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
     - `apps/agent-manager/shell`
+    - `apps/deploy/composition`
     - `apps/home/app-cards`
     - `apps/mail/shell`
     - `apps/story/pages-integration`

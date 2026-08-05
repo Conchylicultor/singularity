@@ -237,6 +237,10 @@
       "name": "@singularity/plugin-apps-deploy",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/composition": {
+      "name": "@singularity/plugin-apps-deploy-composition",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/deploy-history": {
       "name": "@singularity/plugin-apps-deploy-deploy-history",
       "version": "0.0.1",
@@ -5347,6 +5351,8 @@
     "@singularity/plugin-apps-debug-shell": ["@singularity/plugin-apps-debug-shell@workspace:plugins/apps/plugins/debug/plugins/shell"],
 
     "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
+
+    "@singularity/plugin-apps-deploy-composition": ["@singularity/plugin-apps-deploy-composition@workspace:plugins/apps/plugins/deploy/plugins/composition"],
 
     "@singularity/plugin-apps-deploy-deploy-history": ["@singularity/plugin-apps-deploy-deploy-history@workspace:plugins/apps/plugins/deploy/plugins/deploy-history"],
 

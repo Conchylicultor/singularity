@@ -6,6 +6,10 @@ import {
   setActiveComposition,
   setCompareComposition,
 } from "@plugins/plugin-meta/plugins/composition/web";
+import {
+  compositionsRoute,
+  compositionDetailRoute,
+} from "@plugins/apps/plugins/studio/plugins/compositions/core";
 import { CompositionsList } from "./components/compositions-list";
 import { CompareView, DEFAULT_A, DEFAULT_B } from "./components/compare-view";
 import { useSeedActiveComposition } from "./internal/use-seed-active-composition";
@@ -16,8 +20,7 @@ import { CompositionDetail } from "./slots";
 // (hoisted), so the forward reference is safe at runtime.
 
 export const compositionsPane = Pane.define({
-  id: "compositions",
-  segment: "compositions",
+  route: compositionsRoute,
   component: CompositionsBody,
   width: 380,
 });
@@ -35,12 +38,9 @@ function useCompositionTitle({ id }: { id: string }): string | undefined {
 }
 
 export const compositionDetailPane = Pane.define({
-  id: "composition-detail",
-  defaultAncestors: [compositionsPane],
-  // Segments are GLOBALLY unique across all panes: `c/:id` is conversations'
-  // (param names are erased when matching), so the composition detail uses
-  // `comp/…`.
-  segment: "comp/:id",
+  // Identity (id / `comp/:id` segment / the compositions ancestor) comes from
+  // the route in `core/`, so the cross-app links built from it land here.
+  route: compositionDetailRoute,
   component: CompositionDetailBody,
   // Wider than release-detail's 480: it hosts the closure plugin tree.
   width: 560,

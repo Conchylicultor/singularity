@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { MdBolt, MdOpenInNew } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
-import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
+import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import {
   useServeComposition,
@@ -24,7 +24,7 @@ import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployment
 export function ServeAction({ row }: ItemActionProps<Deployment>): ReactElement {
   // Name → item, because deploy is name-keyed and the serve namespace is the
   // item's id (they diverge for UI-created compositions).
-  const item = useManifestItems().find((i) => i.name === row.compositionId);
+  const item = useManifestItemByName(row.compositionId);
 
   if (!item) {
     return (

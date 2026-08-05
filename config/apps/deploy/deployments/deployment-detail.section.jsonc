@@ -1,13 +1,19 @@
-// @hash e0a21a46a5ff
+// @hash bb52ac58dff9
 {
-  // Reading order is the working order: what this deployment IS, then the
-  // rehearsal you can run on this machine, then the button that puts it on the
-  // box, then the output of whichever just ran, then everything that ever ran.
+  // Reading order is the working order: WHAT this deployment is (the
+  // composition), then where it is served, then the rehearsal you can run on
+  // this machine, then the button that puts it on the box, then the output of
+  // whichever just ran, then everything that ever ran.
+  //
+  // Composition leads because every section under it is downstream of it: the
+  // install paths are derived from its name, the bundle is built for it, the
+  // runs are runs of it.
   //
   // History sits after Output rather than between it and the Deploy button: the
   // output IS the running deploy's own tail, and splitting the two would put a
   // ledger between an action and its result.
   "items": [
+    "apps.deploy.composition:composition",
     "apps.deploy.deployments:overview",
     "apps.deploy.local-serve:serve",
     "apps.deploy.remote-deploy:deploy",

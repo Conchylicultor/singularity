@@ -519,6 +519,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
+        - **`composition`** — Composition section of the deployment pane: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
+          - Web:
+            - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
+            - Uses:
+              - `apps-core/tabs.navigate`
+              - `apps/deploy/deployments.DeploymentDetail`
+              - `plugin-meta/composition.useManifestItemByName`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/link-chip.LinkChip`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
         - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart.
           - Web:
             - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
@@ -540,7 +556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
-              - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
+              - `DeploymentDetail.Section` ← `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
               - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
               - `Deployments.Fields` ← `apps.deploy.remote-deploy`
               - `deploymentDetailPane.Actions`
@@ -698,6 +714,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UpdateDeploymentBodySchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -781,7 +798,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/serve-composition.ServeTargetPanel`
               - `build/serve-composition.useServeComposition`
               - `build/serve-composition.useServeStatus`
-              - `plugin-meta/composition.useManifestItems`
+              - `plugin-meta/composition.useManifestItemByName`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -4165,6 +4182,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `CompositionDetail`
               - `compositionDetailPane`
               - `compositionsPane`
+          - Core:
+            - Uses: `primitives/pane.defineRoute`
+            - Exports (values):
+              - `compositionDetailRoute`
+              - `compositionsRoute`
           - Cross-plugin:
             - Imported by:
               - `apps/studio/compositions/closure-tree`
@@ -5897,6 +5919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-surface`
           - `apps-core/theme-scope`
           - `apps/agent-manager/shell`
+          - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
           - `apps/story/pages-integration`
@@ -17834,6 +17857,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useInclusion`
           - `useIsCompareMode`
           - `useManifestActions`
+          - `useManifestItemByName`
           - `useManifestItems`
       - Server:
         - Contributes: `ConfigV2.Register` "compositions"
@@ -17861,6 +17885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `manifestItemToManifest`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/composition`
           - `apps/deploy/deployments`
           - `apps/deploy/local-serve`
           - `apps/studio/compositions`
@@ -18955,6 +18980,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/layout`
               - `apps-core/surface/floating`
+              - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/remote-deploy`
@@ -19289,6 +19315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/remote-deploy`
               - `apps/mail/reading-pane`
@@ -19630,6 +19657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/plugin-link`
               - `active-data/task`
               - `active-data/task-link`
+              - `apps/deploy/composition`
               - `apps/deploy/remote-deploy`
               - `apps/pages/prompt-origin`
               - `apps/studio/compositions`
@@ -19753,6 +19781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
+              - `apps/deploy/composition`
               - `apps/deploy/deployments`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -20025,6 +20054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
@@ -20497,6 +20527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
@@ -22910,6 +22941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/deploy/composition`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
@@ -23086,6 +23118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/task`
           - `apps-core/layout`
           - `apps-core/surface/floating/wallpaper`
+          - `apps/deploy/composition`
           - `apps/deploy/deployments`
           - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`

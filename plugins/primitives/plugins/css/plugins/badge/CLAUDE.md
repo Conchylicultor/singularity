@@ -32,6 +32,7 @@ same threshold and can't desync in a row.
   - Imported by:
     - `apps-core/layout`
     - `apps-core/surface/floating`
+    - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`

@@ -41,6 +41,7 @@ defined in exactly one place. The distinct export buys two things:
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/remote-deploy`
     - `apps/mail/reading-pane`

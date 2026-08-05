@@ -150,6 +150,7 @@ fixed raw size escapes per-site via
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
