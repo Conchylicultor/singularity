@@ -3,7 +3,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import { moveBlock } from "../../core/endpoints";
-import { BlockSchema } from "../../core/schemas";
+import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksChanged } from "./tables-events";
 import { loadLiveSiblings } from "./forest";
@@ -38,16 +38,21 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
   // this handler used to hand-roll: every read here is already under it.
   const { value } = await withPageForest([source.pageId, destPageId], async (ctx) => {
     const [before] = await ctx.tx
-      .select({ id: _blocks.id, pageId: _blocks.pageId, type: _blocks.type })
+      .select({
+        id: _blocks.id,
+        pageId: _blocks.pageId,
+        parentId: _blocks.parentId,
+        type: _blocks.type,
+      })
       .from(_blocks)
       .where(eq(_blocks.id, params.id))
       .limit(1);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!before) throw new HttpError(404, "Not found");
 
-    // Guards that the destination parent is LIVE (404 otherwise) and returns its
-    // complete live sibling set for the rank math — see `loadLiveSiblings`.
-    const siblings = await loadLiveSiblings(ctx.tx, body.parentId);
+    // Guards that the destination parent is LIVE (404 otherwise) and returns it
+    // alongside its complete live sibling set — see `loadLiveSiblings`.
+    const { parent: destParent, siblings } = await loadLiveSiblings(ctx.tx, body.parentId);
     if (body.targetId !== null && !siblings.some((s) => s.id === body.targetId)) {
       throw new HttpError(
         400,
@@ -62,15 +67,32 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
       new Set([params.id]),
     );
 
+    // A `page` row's `expanded` is not a container fold — it EMBEDS a whole
+    // child document inline in its parent's body (`collapsible: "always"`, the
+    // chevron being the way in). So a page that ARRIVES under a new parent
+    // arrives folded, the same deterministic fold `handle-turn-into-page` mints
+    // when it promotes a block into a sub-page: a sub-page reads as ONE row in
+    // its parent's flow. Gated on the parent actually changing, so reordering a
+    // page among its existing siblings writes no document state; and on the
+    // moved row being a page, since an ordinary container's `expanded` is
+    // legitimate state that travels with it.
+    const arrivesFolded =
+      before.type === PAGE_BLOCK_TYPE && before.parentId !== body.parentId;
     await updateBlockFields(ctx.tx, params.id, {
       parentId: body.parentId,
       rank: rank.toJSON(),
+      ...(arrivesFolded ? { expanded: false } : {}),
       updatedAt: new Date(),
     });
     // Reparenting may move the block (and its subtree) into a different page.
     await recomputePageIdSubtree(ctx.tx, params.id);
-    if (body.parentId) {
-      await updateBlockFields(ctx.tx, body.parentId, {
+    // Open the destination so it reveals the freshly-attached child — but NEVER
+    // a page destination, by the same rule: opening it would spill THAT page's
+    // whole content into ITS parent's body. Both halves are the nav gesture
+    // embedding a page in a body that `page-tree`'s "two arrows" note forbids;
+    // a sidebar drop is not a request to unfold anything in the document.
+    if (destParent && destParent.type !== PAGE_BLOCK_TYPE) {
+      await updateBlockFields(ctx.tx, destParent.id, {
         expanded: true,
         updatedAt: new Date(),
       });

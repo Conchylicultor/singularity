@@ -2,9 +2,17 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { _blocks } from "./tables";
-import { requireLiveParent, type BlockReadExecutor } from "./page-id";
+import { requireLiveParent, type BlockReadExecutor, type LiveParent } from "./page-id";
 
 export type BlockRow = typeof _blocks.$inferSelect;
+
+/** What a reparent's mandatory destination read yields. */
+export interface LiveDestination {
+  /** The resolved destination row; `null` iff `parentId` was null (the root). */
+  parent: LiveParent | null;
+  /** Every live row already under `parentId`. */
+  siblings: BlockRow[];
+}
 
 /**
  * The destination sibling set of a REPARENT, plus the liveness guard on the
@@ -13,7 +21,12 @@ export type BlockRow = typeof _blocks.$inferSelect;
  * chokepoint for the guard (see `requireLiveParent`): a future move-shaped
  * handler cannot position a block without going through it.
  *
- * Returns EVERY LIVE row under `parentId` — not scoped by `page_id`, not
+ * The resolved `parent` comes back with the siblings because this read is the
+ * ONE place a reparent learns anything about its destination — a caller that
+ * needs a fact about the row it is moving under (its `type`, say) must not
+ * re-query it outside the lock, where a concurrent writer can change the answer.
+ *
+ * `siblings` is EVERY LIVE row under `parentId` — not scoped by `page_id`, not
  * filtered by `type`, but excluding trashed rows. `(parent_id, rank)` is ONE
  * ordering space shared by sub-page rows and content rows, and several live
  * resources project it disjointly, so arithmetic over a filtered projection
@@ -29,9 +42,9 @@ export type BlockRow = typeof _blocks.$inferSelect;
 export async function loadLiveSiblings(
   executor: BlockReadExecutor,
   parentId: string | null,
-): Promise<BlockRow[]> {
-  await requireLiveParent(parentId, executor);
-  return executor
+): Promise<LiveDestination> {
+  const parent = await requireLiveParent(parentId, executor);
+  const siblings = await executor
     .select()
     .from(_blocks)
     .where(
@@ -39,6 +52,7 @@ export async function loadLiveSiblings(
         ? and(isNull(_blocks.parentId), isNull(_blocks.deletedAt))
         : and(eq(_blocks.parentId, parentId), isNull(_blocks.deletedAt)),
     );
+  return { parent, siblings };
 }
 
 /**

@@ -202,7 +202,7 @@ describe("loadLiveSiblings — the move paths' guard", () => {
     await seedBlock({ id: "L1", parentId: "L", pageId: "L", type: "text", rank: "a0" });
     await seedBlock({ id: "L2", parentId: "L", pageId: "L", type: "page", rank: "a1" });
 
-    const siblings = await loadLiveSiblings(t.db, "L");
+    const { siblings } = await loadLiveSiblings(t.db, "L");
     // Unfiltered by `type` and by `page_id` — one ordering space.
     expect(siblings.map((s) => s.id).sort()).toEqual(["L1", "L2"]);
   });
@@ -212,15 +212,28 @@ describe("loadLiveSiblings — the move paths' guard", () => {
     await seedBlock({ id: "R", parentId: null, pageId: null, type: "page", rank: "a1" });
     await deleteBlocksSubtree(["R"], t.db);
 
-    const roots = await loadLiveSiblings(t.db, null);
+    const { siblings: roots } = await loadLiveSiblings(t.db, null);
     expect(roots.map((s) => s.id)).toEqual(["W"]); // R is trashed, W is not
+  });
+
+  test("hands back the RESOLVED destination row, so a caller never re-queries it", async () => {
+    // `handle-move-block` reads `parent.type` off this to decide whether the
+    // destination is a page row (which a move must never open). Re-reading it
+    // outside the lock would let a concurrent writer change the answer.
+    await seedTrashedParent();
+
+    const under = await loadLiveSiblings(t.db, "L");
+    expect(under.parent).toEqual({ id: "L", type: "page", pageId: "W" });
+
+    const atRoot = await loadLiveSiblings(t.db, null);
+    expect(atRoot.parent).toBeNull(); // the workspace root is not a row
   });
 
   test("a trashed sibling is excluded from the rank window", async () => {
     // The partial unique index lets a trashed row share a live row's rank;
     // including it would abort the rank math with `Rank.between(r, r)`.
     await seedTrashedParent();
-    const underW = await loadLiveSiblings(t.db, "W");
+    const { siblings: underW } = await loadLiveSiblings(t.db, "W");
     expect(underW.map((s) => s.id)).toEqual(["L"]); // A is trashed
   });
 });
