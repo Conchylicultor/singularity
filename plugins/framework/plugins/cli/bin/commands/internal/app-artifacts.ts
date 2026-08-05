@@ -30,6 +30,7 @@ import { acquireBuildLock } from "../../build-lock";
 import { ensureDeps } from "../../ensure-deps";
 import { generateMigration, type MigrationAnswer } from "../../migrations";
 import { distStagingPath, publishDistAtomic } from "./dist-publish";
+import { stampExperimentalMarker } from "./experimental-marker";
 
 /**
  * Single source of truth for the ordered **app-artifact** pipeline: the part of
@@ -567,6 +568,12 @@ export interface BuildWebDistOptions {
   composition: string | null;
   artifactsMode: boolean;
   minify: boolean;
+  /**
+   * Stamp the served `index.html` as an experimental (agent-worktree) deploy —
+   * the red frame. Only `./singularity build` from a non-main worktree says
+   * true; every other producer of a dist is clean. See ./experimental-marker.ts.
+   */
+  experimental: boolean;
   lane: Lane;
   /** Demote heavy children (tsc, vite) to the background scheduling class. */
   background: boolean;
@@ -771,6 +778,12 @@ export async function buildAndPublishWebDist(
 
   // The build id baked into the bundle, so the server can detect stale tabs.
   writeFileSync(resolve(stagingPath, ".build-id"), buildId + "\n");
+
+  // The experimental frame, stamped into the staged index.html by the producer
+  // that knows this is an agent-worktree deploy — not guessed from the hostname
+  // by the browser, which cannot tell a worktree namespace from a composition
+  // or a release preview.
+  if (opts.experimental) stampExperimentalMarker(stagingPath);
 
   // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap — see
   // ./dist-publish.ts for the mechanics (this supersedes the earlier

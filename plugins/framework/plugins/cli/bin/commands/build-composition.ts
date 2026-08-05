@@ -211,6 +211,8 @@ export function registerBuildComposition(program: Command) {
           composition: opts.composition,
           artifactsMode,
           minify: opts.minify,
+          // A release artifact is never experimental — it is the shipped app.
+          experimental: false,
           lane: "interactive",
           background: false,
           companions,

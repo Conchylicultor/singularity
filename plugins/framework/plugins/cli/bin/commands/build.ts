@@ -36,6 +36,7 @@ import {
   worktreeArtifacts,
   PG_LOG_FILE,
   SINGULARITY_DIR,
+  MAIN_WORKTREE_NAME,
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile, createSpanCollector } from "../profiler";
 import { openBuildProgress, finishBuildProgress } from "../build-progress";
@@ -1110,6 +1111,10 @@ export function registerBuild(program: Command) {
         composition: null,
         artifactsMode,
         minify: opts.minify,
+        // Every dev deploy that isn't main is an agent worktree — the one
+        // producer of an experimental app. Composition namespaces are published
+        // by the compose-serve stage, which never stamps.
+        experimental: name !== MAIN_WORKTREE_NAME,
         lane,
         background: backgroundBuild,
         companions,

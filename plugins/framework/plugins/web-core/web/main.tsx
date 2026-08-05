@@ -6,11 +6,10 @@ import App from "./App";
 
 markBootInstant("module-eval", "scripts", "main.tsx eval");
 
-const host = window.location.hostname;
-const sub = host.endsWith(".localhost") ? host.replace(/\.localhost$/, "") : null;
-if (sub && sub !== "singularity") {
-  document.documentElement.classList.add("experimental");
-}
+// NOTE: the `.experimental` frame is NOT decided here. The browser cannot tell a
+// git-worktree namespace from a composition namespace or a release preview —
+// they all live at `<name>.localhost` — so the class is stamped into the served
+// index.html by whoever built the dist. See the CLI's experimental-marker.ts.
 
 markBootInstant("create-root", "scripts", "createRoot");
 
