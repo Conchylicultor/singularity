@@ -9,7 +9,6 @@
     - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/deployments`
     - `apps/prototypes/files`
-    - `apps/studio/compositions/auto-serve`
     - `backup`
     - `backup/sources/attachments`
     - `backup/sources/claude-settings`
@@ -22,6 +21,7 @@
     - `build/build-commits`
     - `build/build-logs`
     - `build/build-profiling`
+    - `build/serve-composition`
     - `build/server-build-id`
     - `code-explorer`
     - `code-explorer/file-resolve`

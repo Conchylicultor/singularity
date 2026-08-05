@@ -21,7 +21,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/pages/page-tree`
-    - `apps/studio/compositions/auto-serve`
+    - `build/serve-composition`
     - `config_v2/settings`
     - `debug/profiling/ops`
     - `infra/health`

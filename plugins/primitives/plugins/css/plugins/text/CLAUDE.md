@@ -150,9 +150,11 @@ fixed raw size escapes per-site via
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
@@ -200,7 +202,6 @@ fixed raw size escapes per-site via
     - `apps/story/renderers/blog`
     - `apps/story/renderers/slides`
     - `apps/studio/compositions`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/entry-points`
@@ -246,6 +247,7 @@ fixed raw size escapes per-site via
     - `build`
     - `build/build-info`
     - `build/build-logs`
+    - `build/serve-composition`
     - `code-explorer`
     - `code-explorer/file-resolve`
     - `config_v2/config-link`

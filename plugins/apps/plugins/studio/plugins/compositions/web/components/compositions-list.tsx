@@ -14,7 +14,7 @@ import {
   useManifestActions,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
-import { useServeComposition } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve/web";
+import { useServeComposition } from "@plugins/build/plugins/serve-composition/web";
 import { compositionDetailPane, comparePane } from "../panes";
 import { CompositionItemActions } from "./composition-item-actions";
 

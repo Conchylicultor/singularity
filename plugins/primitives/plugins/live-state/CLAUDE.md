@@ -632,9 +632,11 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/browser/start-page`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/events/event-list`
     - `apps/events/events-core`
@@ -678,6 +680,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `build/build-commits`
     - `build/build-fix`
     - `build/build-info`
+    - `build/serve-composition`
     - `config_v2`
     - `config_v2/settings`
     - `conversations`

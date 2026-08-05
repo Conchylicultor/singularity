@@ -29,8 +29,9 @@ no-provider default is `md`.
     - `active-data/task-link`
     - `apps/agent-manager/welcome`
     - `apps/agent-manager/worktree-switcher`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/remote-deploy`
     - `apps/mail/search`
     - `apps/mail/sync-status`
     - `apps/studio/compositions/release`

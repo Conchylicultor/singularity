@@ -10,7 +10,7 @@ import type { DeployRun } from "../../core";
  * A deployment's last run as the row's trailing chip — deliberately one line,
  * because it sits in the list row's rigid trailing region. The full failure text
  * is the `title`, and it also appears in full in {@link RunFailureNotice} above
- * the list; the whole transcript is in the log panel below it.
+ * the list; the whole transcript is in the row's pane, under Output.
  */
 export function RunCell({ run }: { run: DeployRun | undefined }): ReactElement | null {
   if (!run) return null;
@@ -59,7 +59,15 @@ export function RunFailureNotice({
     <Stack gap="2xs">
       <Text as="p" variant="label" tone="destructive">
         {last.verb} of {last.compositionId} failed
-        {last.exitCode === null ? " before it started" : ` (exit ${last.exitCode})`}
+        {/* A null exit code means no CLI process reported one. For a multi-leg
+            `update` that is a step which is not a spawn (the release engine, the
+            bundle resolution), so the PHASE is what happened — only a phase-less
+            run can honestly be called "never started". */}
+        {last.exitCode !== null
+          ? ` (exit ${last.exitCode})`
+          : last.phase
+            ? ` during ${last.phase}`
+            : " before it started"}
         {last.finishedAt && (
           <>
             {" — "}

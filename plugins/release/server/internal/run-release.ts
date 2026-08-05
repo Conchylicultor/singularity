@@ -138,14 +138,43 @@ export interface TriggerReleaseOptions {
   intent: ReleaseIntent;
 }
 
+/**
+ * What one release attempt did.
+ *
+ * A discriminated result rather than a thrown error, because the interesting
+ * non-success — *another release of this composition is already running* — is a
+ * legitimate outcome a caller branches on, not a fault. A caller that sequences
+ * a release into a larger flow (the Deploy app's `update`) needs to tell "the
+ * build refused to start" from "the build ran and failed", and both from an
+ * actual bug; a thrown `Error` collapses the first two.
+ *
+ * `runId` is null exactly when no `release_runs` row was ever claimed.
+ */
+export type ReleaseOutcome =
+  | { ok: true; runId: string; artifactPath: string }
+  | {
+      ok: false;
+      reason: "already-running" | "unimplemented-target" | "failed";
+      runId: string | null;
+      message: string;
+    };
+
+/**
+ * Fire-and-forget wrapper around {@link runRelease} for the Studio button: the
+ * caller gets nothing back and the outcome is observed through the log channel
+ * and `release_runs`.
+ *
+ * Keeps the in-process `inflight` re-entry guard. `runRelease` itself is NOT
+ * guarded by it — the authoritative lock is the DB one (`isAnyReleaseAlive` plus
+ * the partial unique index), and a second caller that legitimately awaits a
+ * release must not be silently dropped by a module-level boolean.
+ */
 export function triggerRelease(opts: TriggerReleaseOptions): void {
-  const { composition } = opts;
   if (inflight) return;
   inflight = true;
   void runTracked("release:run", async () => {
     try {
-      if (await isAnyReleaseAlive(composition)) return;
-      await doRunRelease(opts);
+      await runRelease(opts);
     } catch (err) {
       releaseLog.publish(
         `Release error: ${err instanceof Error ? err.message : String(err)}`,
@@ -168,19 +197,44 @@ interface ReleaseManifest {
   commitDirty?: boolean;
 }
 
-async function doRunRelease(opts: TriggerReleaseOptions): Promise<void> {
+/**
+ * Cut one release and wait for it, start to finish.
+ *
+ * The single implementation: `triggerRelease` is `void runRelease(...)`, and the
+ * Deploy app's `update` sequence awaits it between `converge` and `ship` — which
+ * is the reason it is awaitable at all. Every non-success is a value here, so a
+ * sequencing caller can stop with the engine's own words instead of guessing
+ * from a log line.
+ */
+export async function runRelease(opts: TriggerReleaseOptions): Promise<ReleaseOutcome> {
   const { composition, target, intent } = opts;
   const targetDef = releaseTargetById(target);
   // The endpoint validates the target before calling, but guard here too so a
-  // direct call can't spawn the CLI with no args.
+  // direct call can't spawn the CLI with no args. Published as well as returned:
+  // the log channel is where `triggerRelease`'s fire-and-forget caller — which
+  // discards this value — can still see it.
   if (!targetDef?.implemented) {
-    throw new Error(`Unknown or unimplemented release target: ${target}`);
+    const message = `Unknown or unimplemented release target: ${target}`;
+    releaseLog.publish(`Release error: ${message}`, "stderr");
+    return { ok: false, reason: "unimplemented-target", runId: null, message };
   }
 
   // A crashed prior owner can leave an unfinished row that the partial unique
   // index treats as a live claim and that would block every future release of
   // this composition. Close those dead-owner rows before claiming.
   await reconcileOrphanReleases();
+
+  // The durable, cross-restart lock. Checked before the claim so the common case
+  // gets the readable answer; the unique index below is what actually holds
+  // under a race.
+  if (await isAnyReleaseAlive(composition)) {
+    return {
+      ok: false,
+      reason: "already-running",
+      runId: null,
+      message: `A release of "${composition}" is already running.`,
+    };
+  }
 
   const startMs = Date.now();
   const releaseId = newReleaseRunId();
@@ -204,7 +258,17 @@ async function doRunRelease(opts: TriggerReleaseOptions): Promise<void> {
       namespace: currentWorktreeName(),
     });
   } catch (err) {
-    if (isUniqueViolation(err)) return;
+    if (isUniqueViolation(err)) {
+      // Lost the claim race — the same outcome as the check above, reached the
+      // only way that is safe under concurrency. No row of ours exists, hence a
+      // null runId.
+      return {
+        ok: false,
+        reason: "already-running",
+        runId: null,
+        message: `A release of "${composition}" was claimed by another caller.`,
+      };
+    }
     throw err;
   }
 
@@ -310,6 +374,14 @@ async function doRunRelease(opts: TriggerReleaseOptions): Promise<void> {
     }
   }
 
+  // Computed unconditionally so the row's `error` column and this function's
+  // returned `message` are literally the same string: a caller that reports the
+  // failure and a user who later opens the run detail must read one sentence,
+  // not two wordings of it.
+  const failureMessage = `Release exited with code ${exitCode} after ${Math.round(
+    (Date.now() - startMs) / 1000,
+  )}s`;
+
   await db
     .update(_releaseRuns)
     .set({
@@ -324,9 +396,11 @@ async function doRunRelease(opts: TriggerReleaseOptions): Promise<void> {
       // reads the row long after that tree has moved on.
       commitSha: manifest?.commitSha ?? null,
       commitDirty: manifest?.commitDirty ?? null,
-      error: succeeded
-        ? null
-        : `Release exited with code ${exitCode} after ${Math.round((Date.now() - startMs) / 1000)}s`,
+      error: succeeded ? null : failureMessage,
     })
     .where(eq(_releaseRuns.id, releaseId));
+
+  return succeeded
+    ? { ok: true, runId: releaseId, artifactPath: out }
+    : { ok: false, reason: "failed", runId: releaseId, message: failureMessage };
 }

@@ -1,0 +1,102 @@
+/**
+ * Drives the deployment pane's Test-locally section and the deployments row's
+ * serve shortcut against the deployed app.
+ *
+ * Manual only (nothing runs this automatically):
+ *
+ *   bun plugins/apps/plugins/deploy/plugins/local-serve/e2e/local-serve-verify.ts [--headed]
+ *
+ * It reads the first deployment out of the running app rather than seeding one,
+ * for the same reason the remote-deploy script does: a deployment names a real
+ * remote host.
+ *
+ * It never presses **Serve**. That kicks a full main build; only a human decides
+ * to spend one.
+ */
+import {
+  pathUrl,
+  report,
+  withBrowser,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+
+const r = report("deploy local-serve section");
+
+await withBrowser(async (h) => {
+  const { page } = await h.session();
+
+  const deployments = (await (
+    await fetch(pathUrl("/api/deploy/deployments"))
+  ).json()) as { id: string; serverId: string; compositionId: string }[];
+
+  const deployment = deployments[0];
+  if (!deployment) {
+    r.fail("a deployment exists", "no deployment rows — add one in the Deploy app first");
+    r.finish();
+    return;
+  }
+
+  // 1. The status endpoint answers about the namespace, in the shape the UI
+  //    branches on. Asked directly because the served arm is the one a laptop
+  //    with nothing served cannot show on screen.
+  const status = (await (
+    await fetch(
+      pathUrl(`/api/build/serve/status?composition=${encodeURIComponent(deployment.compositionId)}`),
+    )
+  ).json()) as { canServe: boolean; liveness: { served: boolean } };
+  r.ok(
+    "serve status answers canServe + a discriminated liveness",
+    typeof status.canServe === "boolean" && typeof status.liveness.served === "boolean",
+    JSON.stringify(status),
+  );
+
+  // 2. The section is in the pane, ahead of the remote one — rehearse, then ship.
+  await page.goto(pathUrl(`/deploy/server/${deployment.serverId}/dep/${deployment.id}`));
+  await page.waitForTimeout(3000);
+  const order = await page.evaluate(() => document.body.innerText);
+  r.ok(
+    "Test locally renders before Deploy to server",
+    order.includes("Test locally") &&
+      order.indexOf("Test locally") < order.indexOf("Deploy to server"),
+  );
+
+  await page.getByText("Test locally", { exact: true }).first().click();
+  await page.waitForTimeout(1000);
+
+  // 3. What it proves is stated, not implied.
+  r.ok(
+    "the section states what the local serve does NOT prove",
+    (await page.getByText(/does not exercise packaging/i).count()) > 0,
+  );
+
+  // 4. Off main, the refusal is up front rather than after a refused POST.
+  const refusal = await page.getByText(/Serve builds run on the main instance only/).count();
+  r.ok(
+    "the main-only refusal matches the backend's own answer",
+    status.canServe ? refusal === 0 : refusal > 0,
+    `canServe=${status.canServe} refusalCount=${refusal}`,
+  );
+
+  // 5. The live-only affordances (the URL chip's neighbours — Reset is the
+  //    unambiguous one) appear if and ONLY if the marker says served. This is
+  //    the regression the honest-liveness read exists to prevent: `autoBuild`
+  //    alone used to be enough to paint them.
+  const resetButtons = await page.getByRole("button", { name: "Reset" }).count();
+  r.ok(
+    "live-only affordances track the marker, not the autoBuild intent",
+    status.liveness.served ? resetButtons > 0 : resetButtons === 0,
+    `served=${status.liveness.served} resetButtons=${resetButtons}`,
+  );
+
+  // 6. The row shortcut exists on the list (hover-revealed, so it is queried by
+  //    its accessible name rather than looked for in a screenshot).
+  await page.goto(pathUrl(`/deploy/server/${deployment.serverId}`));
+  await page.waitForTimeout(2500);
+  await page.getByText("Deployments", { exact: true }).first().click();
+  await page.waitForTimeout(1500);
+  const serveAction = page.getByRole("button", {
+    name: /Serve locally|Open the local serve/,
+  });
+  r.ok("the row carries a serve shortcut", (await serveAction.count()) > 0);
+
+  r.finish();
+});

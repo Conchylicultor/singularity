@@ -201,9 +201,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps-core/surface/floating/wallpaper/openverse`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
@@ -236,7 +237,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/story/generation`
     - `apps/story/marker`
     - `apps/story/shell`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/release`
     - `apps/studio/compositions/release/release-artifact`
@@ -263,6 +263,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `build/build-fix`
     - `build/build-logs`
     - `build/build-profiling`
+    - `build/serve-composition`
     - `code-explorer`
     - `code-explorer/code-api`
     - `code-explorer/file-resolve`

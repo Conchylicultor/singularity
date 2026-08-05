@@ -32,8 +32,9 @@ same threshold and can't desync in a row.
   - Imported by:
     - `apps-core/layout`
     - `apps-core/surface/floating`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
     - `apps/events/sources`
@@ -63,6 +64,7 @@ same threshold and can't desync in a row.
     - `auth/apple-signing/setup-wizard`
     - `build`
     - `build/build-info`
+    - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`

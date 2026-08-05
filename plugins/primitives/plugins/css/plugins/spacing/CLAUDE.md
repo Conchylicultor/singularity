@@ -107,9 +107,11 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
@@ -156,7 +158,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/story/renderers/slides`
     - `apps/story/shell`
     - `apps/studio/compositions`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/draft-actions`
@@ -202,6 +203,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `build`
     - `build/build-info`
     - `build/build-logs`
+    - `build/serve-composition`
     - `code-explorer/file-resolve`
     - `config_v2/fields`
     - `config_v2/settings`

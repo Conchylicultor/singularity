@@ -22,6 +22,7 @@
     - `DataViewServer`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deployments`
     - `apps/events/event-list`
     - `apps/mail/threads`
     - `conversations/all-conversations`

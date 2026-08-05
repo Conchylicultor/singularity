@@ -28,9 +28,9 @@
     - `openShortLivedClient`
 - Cross-plugin:
   - Imported by:
-    - `apps/studio/compositions/auto-serve`
     - `backup/sources/databases`
     - `build/run-ledger`
+    - `build/serve-composition`
     - `database/change-feed`
     - `database/db-test-fixture`
     - `database/fork`

@@ -1,15 +1,17 @@
-// @hash 955582601718
+// @hash 76d44d2d6f8f
 {
   // Row actions on a deployment, ordered as the operations actually sequence:
   //
+  //   serve    — look at the composition locally; costs nothing on the host
   //   converge — shape the host (run user, dirs, unit, Caddy site, firewall)
   //   ship     — upload a bundle and activate it; needs a converged host
   //   delete   — forget the deployment RECORD; the converged host is untouched
   //
   // So the reading order is also the order they become usable, with the
-  // destructive one last. No spacer: three actions is short enough that a gap
+  // destructive one last. No spacer: four actions is short enough that a gap
   // would be decoration rather than a grouping the user can act on.
   "items": [
+    "apps.deploy.local-serve:serve",
     "apps.deploy.deployments:converge",
     "apps.deploy.deployments:ship",
     "apps.deploy.deployments:delete"

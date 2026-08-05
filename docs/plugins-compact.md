@@ -16,7 +16,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`deploy`** [7 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** [9 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`events`** — Events — track events from pluggable sources in one database.
       - Plugins:
         - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
@@ -81,7 +81,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
           - Plugins:
-            - **`auto-serve`** — Serve capability for compositions: the live-serve toggle panel + the enable→build hook, consumed by the unified Build & serve section and the compositions list. Reset-to-first-launch endpoint for a served composition: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
             - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
             - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
             - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
@@ -166,7 +165,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`backup`** [12 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 
-- **`build`** [7 sub-plugins] — Trigger `./singularity build` from the toolbar.
+- **`build`** [8 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Plugins:

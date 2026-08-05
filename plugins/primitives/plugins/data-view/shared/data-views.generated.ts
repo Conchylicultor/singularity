@@ -30,6 +30,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.slow-ops.cluster-timeline", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.local", pluginId: "debug.slow-ops.pane" },
   { id: "debug.trace.events", pluginId: "debug.trace.pane" },
+  { id: "deploy.deployment.history", pluginId: "apps.deploy.deploy-history" },
   { id: "deploy.deployments", pluginId: "apps.deploy.deployments" },
   { id: "deploy.servers", pluginId: "apps.deploy.servers" },
   { id: "events.list", pluginId: "apps.events.event-list" },

@@ -169,6 +169,39 @@ export function currentAppPath(compositionId: string): string {
 }
 
 /**
+ * Where a deployment is reachable from outside its host, one URL per hostname.
+ *
+ * `https://` and nothing else: converge writes a Caddy site block per hostname
+ * and Caddy terminates TLS in front of the loopback gateway, so a deployed
+ * hostname is an HTTPS origin by construction — there is no plaintext port to
+ * offer as an alternative. This mirrors what `./singularity deploy ship` prints
+ * at the end of a successful run, and belongs here for the same reason every
+ * other remote-host fact does: a URL spelled in two places eventually disagrees
+ * with itself.
+ *
+ * A wildcard hostname (`*.example.com`, which the endpoint's `HostnameSchema`
+ * allows because Caddy serves wildcard sites natively) is passed through
+ * verbatim, exactly as the CLI prints it. It names a *family* of origins rather
+ * than one, so there is no honest concrete URL to substitute, and inventing one
+ * would be worse than showing what was configured.
+ */
+export function publicUrls(hostnames: readonly string[]): string[] {
+  return hostnames.map((hostname) => `https://${hostname}`);
+}
+
+/**
+ * What to say when a deployment has no hostname at all — the CLI's own sentence
+ * for the same state, so the pane and the terminal agree. Not an empty render:
+ * "no public URL" is an answer about the deployment, and a surface that just
+ * shows nothing answers it by implication.
+ */
+export function loopbackOnlySentence(loopbackPort: number): string {
+  return `No hostname on this deployment — reachable only at ${listenAddress(
+    loopbackPort,
+  )} on the host.`;
+}
+
+/**
  * The `SINGULARITY_LISTEN` value for a deployment — the single runtime override
  * of the gateway's bind address, rendered into the `env` file by converge. The
  * loopback host is baked in here rather than passed, so a converge run cannot

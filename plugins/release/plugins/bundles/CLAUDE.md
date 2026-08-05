@@ -119,7 +119,9 @@ process can import it.
     - `releaseOutDir`
     - `resolveBundle`
 - Cross-plugin:
-  - Imported by: `release`
+  - Imported by:
+    - `apps/deploy/deployments`
+    - `release`
 - Core:
   - Exports (types):
     - `BundleRefusal`

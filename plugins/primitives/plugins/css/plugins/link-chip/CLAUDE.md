@@ -17,10 +17,11 @@
     - `active-data/plugin-link`
     - `active-data/task`
     - `active-data/task-link`
+    - `apps/deploy/remote-deploy`
     - `apps/pages/prompt-origin`
     - `apps/studio/compositions`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/release/release-artifact`
+    - `build/serve-composition`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
     - `conversations/conversation-view/markdown-extensions`

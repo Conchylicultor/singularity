@@ -1,0 +1,46 @@
+// @hash 6ec84829688d
+{
+  // Two views over one deployment's run ledger, both newest-first — the order in
+  // which anyone asks "what happened here".
+  //
+  // "Recent" is the list: outcome, verb, commit and a failed run's message in
+  // full. "Failures" is the same list pre-scoped to what went wrong, which is the
+  // one thing worth its own tab. "All" is the table, for scanning columns.
+  "views": [
+    {
+      "id": "recent",
+      "name": "Recent",
+      "view": { "type": "list", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
+    },
+    {
+      "id": "failures",
+      "name": "Failures",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-failed",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-failed",
+              "fieldId": "status",
+              "operatorId": "is",
+              "value": "failed"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "all",
+      "name": "All",
+      "view": { "type": "table", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

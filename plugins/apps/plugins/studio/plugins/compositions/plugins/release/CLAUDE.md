@@ -53,7 +53,8 @@ top-level and untouched by this; only the Studio UI lives here.
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/compositions.compositionDetailPane`
-    - `apps/studio/compositions/auto-serve.ServeTargetPanel`
+    - `build/serve-composition.ServeTargetPanel`
+    - `build/serve-composition.useServeStatus`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `plugin-meta/composition.useManifestItems`

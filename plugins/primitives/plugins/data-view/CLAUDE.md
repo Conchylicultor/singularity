@@ -849,6 +849,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses:
@@ -1018,6 +1019,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.Register` "debug.slow-ops.cluster-timeline"
     - `ConfigV2.Register` "debug.slow-ops.local"
     - `ConfigV2.Register` "debug.trace.events"
+    - `ConfigV2.Register` "deploy.deployment.history"
     - `ConfigV2.Register` "deploy.deployments"
     - `ConfigV2.Register` "deploy.servers"
     - `ConfigV2.Register` "events.list"
@@ -1048,6 +1050,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - Exports (values): `readDataViewConfigDoc`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/events/event-list`

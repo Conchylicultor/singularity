@@ -237,6 +237,10 @@
       "name": "@singularity/plugin-apps-deploy",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/deploy-history": {
+      "name": "@singularity/plugin-apps-deploy-deploy-history",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/deployments": {
       "name": "@singularity/plugin-apps-deploy-deployments",
       "version": "0.0.1",
@@ -245,8 +249,12 @@
       "name": "@singularity/plugin-apps-deploy-health",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/deploy/plugins/release-pipeline": {
-      "name": "@singularity/plugin-apps-deploy-release-pipeline",
+    "plugins/apps/plugins/deploy/plugins/local-serve": {
+      "name": "@singularity/plugin-apps-deploy-local-serve",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/remote-deploy": {
+      "name": "@singularity/plugin-apps-deploy-remote-deploy",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/deploy/plugins/servers": {
@@ -803,10 +811,6 @@
       "name": "@singularity/plugin-apps-studio-compositions",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve": {
-      "name": "@singularity/plugin-apps-studio-compositions-auto-serve",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree": {
       "name": "@singularity/plugin-apps-studio-compositions-closure-tree",
       "version": "0.0.1",
@@ -1145,6 +1149,10 @@
     },
     "plugins/build/plugins/run-ledger": {
       "name": "@singularity/plugin-build-run-ledger",
+      "version": "0.0.1",
+    },
+    "plugins/build/plugins/serve-composition": {
+      "name": "@singularity/plugin-build-serve-composition",
       "version": "0.0.1",
     },
     "plugins/build/plugins/server-build-id": {
@@ -5332,11 +5340,15 @@
 
     "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
 
+    "@singularity/plugin-apps-deploy-deploy-history": ["@singularity/plugin-apps-deploy-deploy-history@workspace:plugins/apps/plugins/deploy/plugins/deploy-history"],
+
     "@singularity/plugin-apps-deploy-deployments": ["@singularity/plugin-apps-deploy-deployments@workspace:plugins/apps/plugins/deploy/plugins/deployments"],
 
     "@singularity/plugin-apps-deploy-health": ["@singularity/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
 
-    "@singularity/plugin-apps-deploy-release-pipeline": ["@singularity/plugin-apps-deploy-release-pipeline@workspace:plugins/apps/plugins/deploy/plugins/release-pipeline"],
+    "@singularity/plugin-apps-deploy-local-serve": ["@singularity/plugin-apps-deploy-local-serve@workspace:plugins/apps/plugins/deploy/plugins/local-serve"],
+
+    "@singularity/plugin-apps-deploy-remote-deploy": ["@singularity/plugin-apps-deploy-remote-deploy@workspace:plugins/apps/plugins/deploy/plugins/remote-deploy"],
 
     "@singularity/plugin-apps-deploy-servers": ["@singularity/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
 
@@ -5600,8 +5612,6 @@
 
     "@singularity/plugin-apps-studio-compositions": ["@singularity/plugin-apps-studio-compositions@workspace:plugins/apps/plugins/studio/plugins/compositions"],
 
-    "@singularity/plugin-apps-studio-compositions-auto-serve": ["@singularity/plugin-apps-studio-compositions-auto-serve@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve"],
-
     "@singularity/plugin-apps-studio-compositions-closure-tree": ["@singularity/plugin-apps-studio-compositions-closure-tree@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/closure-tree"],
 
     "@singularity/plugin-apps-studio-compositions-contributors": ["@singularity/plugin-apps-studio-compositions-contributors@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/contributors"],
@@ -5771,6 +5781,8 @@
     "@singularity/plugin-build-build-profiling": ["@singularity/plugin-build-build-profiling@workspace:plugins/build/plugins/build-profiling"],
 
     "@singularity/plugin-build-run-ledger": ["@singularity/plugin-build-run-ledger@workspace:plugins/build/plugins/run-ledger"],
+
+    "@singularity/plugin-build-serve-composition": ["@singularity/plugin-build-serve-composition@workspace:plugins/build/plugins/serve-composition"],
 
     "@singularity/plugin-build-server-build-id": ["@singularity/plugin-build-server-build-id@workspace:plugins/build/plugins/server-build-id"],
 

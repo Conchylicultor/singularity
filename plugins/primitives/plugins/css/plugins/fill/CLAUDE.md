@@ -42,8 +42,8 @@ composes last.
     - `fillClasses`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
-    - `apps/deploy/release-pipeline`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
@@ -57,7 +57,6 @@ composes last.
     - `apps/mail/threads`
     - `apps/sonata/library`
     - `apps/sonata/sources/ultimate-guitar`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/release/release-logs`
     - `apps/website/demos/release-switcher`
@@ -65,6 +64,7 @@ composes last.
     - `apps/website/shell`
     - `apps/workflows/editor`
     - `auth/apple-signing/setup-wizard`
+    - `build/serve-composition`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversations-view`

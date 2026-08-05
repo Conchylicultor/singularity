@@ -1,11 +1,13 @@
-// @hash 88bebca7f847
+// @hash e0a21a46a5ff
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
+    "apps.deploy.deploy-history:history",
     "apps.deploy.deployments:overview",
-    "apps.deploy.release-pipeline:pipeline",
-    "apps.deploy.release-pipeline:output"
+    "apps.deploy.local-serve:serve",
+    "apps.deploy.remote-deploy:deploy",
+    "apps.deploy.remote-deploy:output"
   ]
 }

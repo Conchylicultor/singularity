@@ -21,7 +21,7 @@ export { deploymentDetailPane } from "./panes";
 
 export default {
   description:
-    "Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, the live deploy log panel, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the release pipeline.",
+    "Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface.",
   contributions: [
     ServerDetail.Section({
       id: "deployments",

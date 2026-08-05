@@ -28,7 +28,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`
     - `apps/deploy/ssh-setup/hetzner`
     - `auth/apple-signing/setup-wizard`

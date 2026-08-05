@@ -519,12 +519,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
-        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, the live deploy log panel, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the release pipeline. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment, streaming the CLI's output into the durable `deploy` log channel and its outcome into the in-memory `deploy.runs` resource. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+        - **`deploy-history`** — History section of the deployment pane: this deployment's durable run ledger (`deploy_runs`) as a server-delegated, keyset-paginated DataView — outcome and the leg a failure died on, verb, short commit, pinned release run, duration and relative time, with a failed run's CLI message verbatim. The record beside the in-memory live view, so what happened here survives a backend restart.
+          - Web:
+            - Contributes: `DeploymentDetail.Section` "History" → `DeployHistorySection`
+            - Uses:
+              - `apps/deploy/deployments.DeploymentDetail`
+              - `infra/endpoints.fetchEndpoint`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useResource`
+              - `primitives/relative-time.RelativeTime`
+        - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
-              - `DeploymentDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.release-pipeline`
-              - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
-              - `Deployments.Fields` ← `apps.deploy.release-pipeline`
+              - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
+              - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
+              - `Deployments.Fields` ← `apps.deploy.remote-deploy`
               - `deploymentDetailPane.Actions`
             - Contributes:
               - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
@@ -571,14 +589,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
-              - `primitives/log-channels.LiveLogChannel`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `primitives/row-actions.RowActionButton`
-              - `primitives/section-card.SectionCard`
-              - `shell/notifications.toast`
             - Exports (values):
               - `DeploymentDetail`
               - `deploymentDetailPane`
@@ -589,21 +604,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `resource.declare` "deploy.deployments"
               - `resource.declare` "deploy.runs"
+              - `resource.declare` "deploy.runs-revision"
             - Uses:
+              - `apps/deploy/health.serverHealth`
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
               - `database.db`
+              - `fields/server-capabilities.resolveFieldFilterSql`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/paths.REPO_ROOT`
+              - `infra/retention.defineRetention`
+              - `primitives/data-view/server-query.augmentServerQuery`
+              - `primitives/data-view/server-query.compileWhere`
+              - `primitives/data-view/server-query.FieldColumnMap`
+              - `primitives/data-view/server-query.OperatorSqlResolver`
+              - `primitives/keyset.buildSortKeys`
+              - `primitives/keyset.keyValuesOf`
+              - `primitives/keyset.orderByClauses`
+              - `primitives/keyset.seekPredicate`
               - `primitives/log-channels.defineLogSink`
+              - `release.runRelease`
+              - `release/bundles.compareToHead`
+              - `release/bundles.resolveBundle`
             - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
             - Exports (values):
               - `_deployDeployments`
               - `deploymentsServerResource`
+            - Register: `defineJob('retention.deploy_runs')`
             - Resources:
               - `deploy.deployments` (push)
               - `deploy.runs` (push)
+              - `deploy.runs-revision` (push)
             - Routes:
               - `GET /api/deploy/deployments`
               - `POST /api/deploy/deployments`
@@ -611,16 +643,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PATCH /api/deploy/deployments/:id`
               - `DELETE /api/deploy/deployments/:id`
               - `POST /api/deploy/deployments/:id/run`
+              - `POST /api/deploy/deployments/:id/runs/query`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
+              - `primitives/data-view.FilterGroupSchema`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `CreateDeploymentBody`
               - `Deployment`
+              - `DeployPhase`
               - `DeployRun`
+              - `DeployRunRecord`
               - `DeployVerb`
               - `InstallLayout`
+              - `QueryDeployRunsBody`
               - `RunDeploymentBody`
               - `UpdateDeploymentBody`
             - Exports (values):
@@ -633,8 +670,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DEPLOY_LOG_CHANNEL`
               - `DeploymentSchema`
               - `deploymentsResource`
+              - `DeployPhaseSchema`
+              - `DeployRunRecordSchema`
               - `DeployRunSchema`
               - `deployRunsResource`
+              - `deployRunsRevisionResource`
               - `DeployVerbSchema`
               - `deriveInstall`
               - `getDeployment`
@@ -642,6 +682,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listDeployments`
               - `listenAddress`
               - `LOOPBACK_HOST`
+              - `loopbackOnlySentence`
+              - `publicUrls`
+              - `queryDeployRuns`
+              - `QueryDeployRunsBodySchema`
+              - `QueryDeployRunsResponseSchema`
               - `releaseAppPath`
               - `releaseDir`
               - `REMOTE_SCRIPT_SHEBANG`
@@ -652,7 +697,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `updateDeployment`
               - `UpdateDeploymentBodySchema`
           - Cross-plugin:
-            - Imported by: `apps/deploy/release-pipeline`
+            - Imported by:
+              - `apps/deploy/deploy-history`
+              - `apps/deploy/local-serve`
+              - `apps/deploy/remote-deploy`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its keyed live resource, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -710,7 +758,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
           - Shared:
             - Exports (types):
@@ -722,10 +770,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `serverHealthResource`
               - `ServerHealthRowSchema`
               - `SshCheckResultSchema`
-        - **`release-pipeline`** — Build → Rehearse → Ship pipeline for one deployment: the four-step surface in the deployment pane (converge, build a platform-pinned candidate, the P3 rehearsal placeholder, ship the pinned run id behind a confirm), the deploy/build log output section, and the `Release` column contributed into the deployments list.
+        - **`local-serve`** — Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL, what it does and does not prove, and the main-only refusal off main), plus the one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
-              - `DeploymentDetail.Section` "Release pipeline" → `PipelineSection`
+              - `DeploymentDetail.Section` "Test locally" → `LocalServeSection`
+              - `DeploymentItemActions` "serve" → `ServeAction`
+            - Uses:
+              - `apps/deploy/deployments.DeploymentDetail`
+              - `apps/deploy/deployments.DeploymentItemActions`
+              - `build/serve-composition.ServeTargetPanel`
+              - `build/serve-composition.useServeComposition`
+              - `build/serve-composition.useServeStatus`
+              - `plugin-meta/composition.useManifestItems`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
+              - `primitives/row-actions.RowActionButton`
+        - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` column contributed into the deployments list.
+          - Web:
+            - Contributes:
+              - `DeploymentDetail.Section` "Deploy to server" → `RemoteDeploySection`
               - `DeploymentDetail.Section` "Output" → `OutputSection`
               - `Deployments.Fields` "release" → `ReleaseField`
             - Uses:
@@ -734,22 +801,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/deployments.useBlockedReason`
               - `apps/deploy/health.useServerHealth`
               - `apps/deploy/health.useServerHealthMap`
-              - `infra/endpoints.EndpointError`
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/cluster.Cluster`
-              - `primitives/css/fill.Fill`
+              - `primitives/css/link-chip.LinkChip`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.DialogDescription`
-              - `primitives/css/ui-kit.DialogTitle`
-              - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
@@ -766,8 +830,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ReleaseState`
               - `ReleaseStateInput`
             - Exports (values):
-              - `NEVER_REHEARSED_SENTENCE`
-              - `REHEARSAL_LIMIT_NOTE`
               - `RELEASE_STATE_OPTIONS`
               - `releaseStateLabel`
               - `resolveReleaseState`
@@ -4066,9 +4128,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `studio.compositions.item-actions` "delete" → `DeleteAction`
               - `Studio.Sidebar` "Compositions" → `component`
             - Uses:
-              - `apps/studio/compositions/auto-serve.useServeComposition`
               - `apps/studio/explorer/membership.DIFF_LEGEND`
               - `apps/studio/shell.Studio`
+              - `build/serve-composition.useServeComposition`
               - `plugin-meta/composition.setActiveComposition`
               - `plugin-meta/composition.setCompareComposition`
               - `plugin-meta/composition.useActiveComposition`
@@ -4113,43 +4175,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/membership-summary`
               - `apps/studio/compositions/release`
           - Plugins:
-            - **`auto-serve`** — Serve capability for compositions: the live-serve toggle panel + the enable→build hook, consumed by the unified Build & serve section and the compositions list. Reset-to-first-launch endpoint for a served composition: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
-              - Web:
-                - Uses:
-                  - `infra/endpoints.EndpointError`
-                  - `infra/endpoints.useEndpointMutation`
-                  - `plugin-meta/composition.useManifestActions`
-                  - `primitives/css/fill.Fill`
-                  - `primitives/css/link-chip.LinkChip`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.DialogDescription`
-                  - `primitives/css/ui-kit.DialogTitle`
-                  - `primitives/imperative-dialog.openDialog`
-                  - `shell/toast.showToast`
-                - Exports (values):
-                  - `ServeTargetPanel`
-                  - `useServeComposition`
-              - Server:
-                - Uses:
-                  - `database/admin.databaseExists`
-                  - `database/admin.dropDatabase`
-                  - `database/admin.ensureDatabase`
-                  - `database/zero/cache-service.dropZeroReplicationArtifacts`
-                  - `infra/endpoints.implement`
-                  - `infra/paths.MAIN_WORKTREE_NAME`
-                  - `infra/paths.SINGULARITY_DIR`
-                  - `infra/worktree.ensureMainWorktreeRoot`
-                  - `infra/worktree.hasCompositionMarker`
-                  - `infra/worktree.namespaceCollision`
-                  - `infra/worktree.probeNamespace`
-                - Routes: `POST /api/studio/compositions/auto-serve/reset`
-              - Cross-plugin:
-                - Imported by:
-                  - `apps/studio/compositions`
-                  - `apps/studio/compositions/release`
             - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
               - Web:
                 - Contributes: `CompositionDetail.Section` "Closure" → `ClosureTreeSection`
@@ -4236,7 +4261,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/compositions.compositionDetailPane`
-                  - `apps/studio/compositions/auto-serve.ServeTargetPanel`
+                  - `build/serve-composition.ServeTargetPanel`
+                  - `build/serve-composition.useServeStatus`
                   - `infra/endpoints.fetchEndpoint`
                   - `infra/endpoints.useEndpointMutation`
                   - `plugin-meta/composition.useManifestItems`
@@ -6645,6 +6671,55 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `build`
           - `build/build-commits`
+    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook, and the served-liveness read (the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition namespace (is it actually served, and can this backend start one) plus the reset-to-first-launch endpoint: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
+      - Web:
+        - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.useEndpoint`
+          - `infra/endpoints.useEndpointMutation`
+          - `plugin-meta/composition.useManifestActions`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/link-chip.LinkChip`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.DialogDescription`
+          - `primitives/css/ui-kit.DialogTitle`
+          - `primitives/imperative-dialog.openDialog`
+          - `primitives/live-state.ResourceResult`
+          - `primitives/live-state.useResource`
+          - `primitives/relative-time.RelativeTime`
+          - `shell/toast.showToast`
+        - Exports (types): `ServeStatus`
+        - Exports (values):
+          - `ServeTargetPanel`
+          - `useServeComposition`
+          - `useServeStatus`
+      - Server:
+        - Uses:
+          - `database/admin.databaseExists`
+          - `database/admin.dropDatabase`
+          - `database/admin.ensureDatabase`
+          - `database/zero/cache-service.dropZeroReplicationArtifacts`
+          - `infra/endpoints.implement`
+          - `infra/paths.isMain`
+          - `infra/paths.MAIN_WORKTREE_NAME`
+          - `infra/paths.SINGULARITY_DIR`
+          - `infra/worktree.ensureMainWorktreeRoot`
+          - `infra/worktree.hasCompositionMarker`
+          - `infra/worktree.namespaceCollision`
+          - `infra/worktree.probeNamespace`
+          - `infra/worktree.readCompositionMarker`
+        - Routes:
+          - `POST /api/build/serve/reset`
+          - `GET /api/build/serve/status`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/deploy/local-serve`
+          - `apps/studio/compositions`
+          - `apps/studio/compositions/release`
     - **`server-build-id`** — Server build-id leaf: reads the .build-id baked into the served bundle. A leaf so stale-tab detection reads it without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.WEB_DIST_DIR`
@@ -10168,9 +10243,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `openShortLivedClient`
       - Cross-plugin:
         - Imported by:
-          - `apps/studio/compositions/auto-serve`
           - `backup/sources/databases`
           - `build/run-ledger`
+          - `build/serve-composition`
           - `database/change-feed`
           - `database/db-test-fixture`
           - `database/fork`
@@ -10391,7 +10466,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Register: `defineJob('database.zero-slot-sweep')`
           - Cross-plugin:
             - Imported by:
-              - `apps/studio/compositions/auto-serve`
+              - `build/serve-composition`
               - `debug/worktree-cleanup`
           - Shared:
             - Exports (values):
@@ -13240,6 +13315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/events/event-list`
           - `apps/mail/threads`
           - `conversations/all-conversations`
@@ -14031,7 +14107,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/layout`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/local-serve`
+              - `apps/deploy/remote-deploy`
               - `apps/events/sources`
               - `apps/mail/threads`
               - `apps/pages/history`
@@ -14640,9 +14717,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
+          - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
           - `apps/events/event-list`
@@ -14675,7 +14753,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/generation`
           - `apps/story/marker`
           - `apps/story/shell`
-          - `apps/studio/compositions/auto-serve`
           - `apps/studio/compositions/closure-tree`
           - `apps/studio/compositions/release`
           - `apps/studio/compositions/release/release-artifact`
@@ -14702,6 +14779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-fix`
           - `build/build-logs`
           - `build/build-profiling`
+          - `build/serve-composition`
           - `code-explorer`
           - `code-explorer/code-api`
           - `code-explorer/file-resolve`
@@ -15480,7 +15558,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/deployments`
           - `apps/prototypes/files`
-          - `apps/studio/compositions/auto-serve`
           - `backup`
           - `backup/sources/attachments`
           - `backup/sources/claude-settings`
@@ -15493,6 +15570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/build-logs`
           - `build/build-profiling`
+          - `build/serve-composition`
           - `build/server-build-id`
           - `code-explorer`
           - `code-explorer/file-resolve`
@@ -15697,6 +15775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markCascadeBounded`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/events/refresh`
           - `apps/pages/agent-origin`
           - `debug/boot-profile`
@@ -15986,7 +16065,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by:
-          - `apps/studio/compositions/auto-serve`
+          - `build/serve-composition`
           - `code-explorer`
           - `conversations`
           - `conversations/conversation-view/op-status`
@@ -17773,8 +17852,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/deploy/local-serve`
           - `apps/studio/compositions`
-          - `apps/studio/compositions/auto-serve`
           - `apps/studio/compositions/contributors`
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/entry-points`
@@ -17783,6 +17862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer/disabled`
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
+          - `build/serve-composition`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/inclusion`
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
@@ -18867,8 +18947,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/layout`
               - `apps-core/surface/floating`
+              - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
               - `apps/events/sources`
@@ -18898,6 +18979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth/apple-signing/setup-wizard`
               - `build`
               - `build/build-info`
+              - `build/serve-composition`
               - `config_v2/settings`
               - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
@@ -18995,7 +19077,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/remote-deploy`
               - `apps/website/demos/agent-run`
               - `apps/website/demos/app-gallery`
               - `conversations/conversation-view/jsonl-viewer`
@@ -19201,7 +19283,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/deploy-history`
+              - `apps/deploy/remote-deploy`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/prompt-origin`
@@ -19312,8 +19395,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
-              - `apps/deploy/release-pipeline`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
@@ -19327,7 +19410,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `apps/sonata/library`
               - `apps/sonata/sources/ultimate-guitar`
-              - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
               - `apps/website/demos/release-switcher`
@@ -19335,6 +19417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/shell`
               - `apps/workflows/editor`
               - `auth/apple-signing/setup-wizard`
+              - `build/serve-composition`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversations-view`
@@ -19541,10 +19624,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/plugin-link`
               - `active-data/task`
               - `active-data/task-link`
+              - `apps/deploy/remote-deploy`
               - `apps/pages/prompt-origin`
               - `apps/studio/compositions`
-              - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/release/release-artifact`
+              - `build/serve-composition`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/markdown-extensions`
@@ -19664,7 +19748,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
               - `apps/deploy/deployments`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/local-serve`
+              - `apps/deploy/remote-deploy`
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
@@ -19934,9 +20019,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/local-serve`
+              - `apps/deploy/remote-deploy`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
@@ -19983,7 +20070,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/renderers/slides`
               - `apps/story/shell`
               - `apps/studio/compositions`
-              - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/closure-tree`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/draft-actions`
@@ -20029,6 +20115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-info`
               - `build/build-logs`
+              - `build/serve-composition`
               - `code-explorer/file-resolve`
               - `config_v2/fields`
               - `config_v2/settings`
@@ -20267,8 +20354,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/task-link`
               - `apps/agent-manager/welcome`
               - `apps/agent-manager/worktree-switcher`
+              - `apps/deploy/deploy-history`
               - `apps/deploy/health`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/remote-deploy`
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
@@ -20406,9 +20494,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
+              - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/local-serve`
+              - `apps/deploy/remote-deploy`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/deploy/ssh-setup/hetzner`
@@ -20456,7 +20546,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/renderers/blog`
               - `apps/story/renderers/slides`
               - `apps/studio/compositions`
-              - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/closure-tree`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/entry-points`
@@ -20502,6 +20591,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-info`
               - `build/build-logs`
+              - `build/serve-composition`
               - `code-explorer`
               - `code-explorer/file-resolve`
               - `config_v2/config-link`
@@ -20742,7 +20832,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/render`
               - `apps/story/shell`
               - `apps/studio/compositions`
-              - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release`
               - `apps/studio/graph`
@@ -20754,6 +20843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/llm-prompt`
               - `apps/workflows/steps/set-value`
               - `apps/workflows/steps/template`
+              - `build/serve-composition`
               - `config_v2/settings`
               - `conversations/conversation-view/code/file-pane`
               - `debug/broadcasts`
@@ -20913,7 +21003,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/webview`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
-              - `apps/deploy/release-pipeline`
+              - `apps/deploy/remote-deploy`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/sources`
@@ -20945,7 +21035,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/renderers/blog`
               - `apps/story/shell`
               - `apps/studio/compositions`
-              - `apps/studio/compositions/auto-serve`
               - `apps/studio/compositions/draft-actions`
               - `apps/studio/compositions/entry-points`
               - `apps/studio/compositions/release`
@@ -20979,6 +21068,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-fix`
               - `build/build-logs`
+              - `build/serve-composition`
               - `code-explorer`
               - `config_v2/config-link`
               - `config_v2/settings`
@@ -21354,6 +21444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -21523,6 +21614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "debug.slow-ops.cluster-timeline"
           - `ConfigV2.Register` "debug.slow-ops.local"
           - `ConfigV2.Register` "debug.trace.events"
+          - `ConfigV2.Register` "deploy.deployment.history"
           - `ConfigV2.Register` "deploy.deployments"
           - `ConfigV2.Register` "deploy.servers"
           - `ConfigV2.Register` "events.list"
@@ -21553,6 +21645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `readDataViewConfigDoc`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/events/event-list`
@@ -21833,6 +21926,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DataViewServer`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/deployments`
               - `apps/events/event-list`
               - `apps/mail/threads`
               - `conversations/all-conversations`
@@ -22534,12 +22628,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/deployments`
-          - `apps/deploy/release-pipeline`
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
           - `apps/events/sources`
           - `apps/sonata/sources/ultimate-guitar`
-          - `apps/studio/compositions/auto-serve`
+          - `build/serve-composition`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot.InlineTextWalkerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -22560,6 +22653,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`keyset`** — Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/deployments`
           - `apps/events/event-list`
           - `apps/mail/threads`
           - `conversations/all-conversations`
@@ -22789,9 +22883,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/local-serve`
+          - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/events/event-list`
           - `apps/events/events-core`
@@ -22835,6 +22931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/build-fix`
           - `build/build-info`
+          - `build/serve-composition`
           - `config_v2`
           - `config_v2/settings`
           - `conversations`
@@ -22963,7 +23060,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/layout`
           - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/deployments`
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/local-serve`
+          - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
@@ -23119,7 +23217,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/remote-deploy`
           - `apps/events/refresh`
           - `apps/mail/sync`
           - `apps/sonata/piano-roll`
@@ -23777,9 +23875,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/agent-manager/welcome`
           - `apps/browser/start-page`
+          - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
           - `apps/deploy/health`
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/remote-deploy`
           - `apps/events/event-list`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
@@ -23799,6 +23898,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/executions`
           - `build`
           - `build/build-info`
+          - `build/serve-composition`
           - `conversations/all-conversations`
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/jsonl-viewer`
@@ -23861,6 +23961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/deploy/local-serve`
           - `apps/deploy/servers`
           - `apps/events/sources`
           - `apps/studio/compositions`
@@ -23946,9 +24047,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types): `SectionCardProps`
         - Exports (values): `SectionCard`
       - Cross-plugin:
-        - Imported by:
-          - `apps/deploy/deployments`
-          - `primitives/detail-sections`
+        - Imported by: `primitives/detail-sections`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
       - Cross-plugin:
         - Imported by:
@@ -23991,7 +24090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/health`
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/remote-deploy`
           - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
           - `auth/apple-signing/setup-wizard`
@@ -24525,7 +24624,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ViewSwitcher`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/release-pipeline`
+          - `apps/deploy/remote-deploy`
           - `primitives/data-view/view-core`
           - `primitives/tabbed-view`
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
@@ -24582,10 +24681,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `release/bundles.releaseOutDir`
       - `release/bundles.resolveBundle`
     - DB schema: `plugins/release/server/internal/tables.ts`
+    - Exports (types):
+      - `ReleaseOutcome`
+      - `TriggerReleaseOptions`
     - Exports (values):
       - `_releaseRuns`
       - `collectReleaseEnv`
       - `Release`
+      - `runRelease`
       - `triggerRelease`
     - Resources:
       - `release.history-revision` (push)
@@ -24653,7 +24756,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stopPreviewEndpoint`
       - `triggerReleaseEndpoint`
   - Cross-plugin:
-    - Imported by: `auth/apple-signing`
+    - Imported by:
+      - `apps/deploy/deployments`
+      - `auth/apple-signing`
   - Shared:
     - Exports (types): `ReleaseStatus`
   - Plugins:
@@ -24680,7 +24785,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `releaseOutDir`
           - `resolveBundle`
       - Cross-plugin:
-        - Imported by: `release`
+        - Imported by:
+          - `apps/deploy/deployments`
+          - `release`
       - Core:
         - Exports (types):
           - `BundleRefusal`
@@ -25704,7 +25811,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/notifications/:id/dismiss`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deployments`
           - `apps/prototypes/gallery`
           - `apps/studio/compositions/release/release-logs`
           - `auth`
@@ -25765,7 +25871,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
-          - `apps/studio/compositions/auto-serve`
+          - `build/serve-composition`
           - `config_v2/settings`
           - `debug/profiling/ops`
           - `infra/health`

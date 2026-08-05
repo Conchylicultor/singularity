@@ -26,7 +26,8 @@ import { releaseRunResource } from "./internal/release-run-resource";
 import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
 import { previewStateResource } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
-export { triggerRelease } from "./internal/run-release";
+export { triggerRelease, runRelease } from "./internal/run-release";
+export type { ReleaseOutcome, TriggerReleaseOptions } from "./internal/run-release";
 // `releaseOutDir` / `newReleaseRunId` are NOT re-exported here: they now live in
 // `@plugins/release/plugins/bundles/server`, which is DB-free and therefore
 // importable by a CLI process — import them from there.

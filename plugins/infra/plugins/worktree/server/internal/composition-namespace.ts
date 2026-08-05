@@ -16,6 +16,12 @@ export interface CompositionMarker {
   composition: string;
   builtAt: string;
   buildId: string;
+  /**
+   * The commit the composing build ran from. Optional because markers written
+   * before this field existed (and builds whose HEAD did not resolve) carry
+   * none — a reader reports that as unknown rather than guessing.
+   */
+  commit?: string | null;
 }
 
 export interface NamespaceProbe {

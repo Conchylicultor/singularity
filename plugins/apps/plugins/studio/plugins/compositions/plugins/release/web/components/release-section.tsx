@@ -9,7 +9,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useManifestItems } from "@plugins/plugin-meta/plugins/composition/web";
 import { RELEASE_TARGETS, triggerReleaseEndpoint } from "@plugins/release/core";
-import { ServeTargetPanel } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/auto-serve/web";
+import {
+  ServeTargetPanel,
+  useServeStatus,
+} from "@plugins/build/plugins/serve-composition/web";
+import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 
 // The "Serve live" pseudo-target. Deliberately NOT in RELEASE_TARGETS — that core
 // list drives real release build-args + the server validator; "serve" is a
@@ -72,7 +76,7 @@ export function ReleaseSection({ id }: { id: string }): ReactElement {
 
       {target === "serve" ? (
         item ? (
-          <ServeTargetPanel item={item} />
+          <ServeTarget item={item} />
         ) : null
       ) : (
         <>
@@ -98,4 +102,14 @@ export function ReleaseSection({ id }: { id: string }): ReactElement {
       )}
     </Stack>
   );
+}
+
+/**
+ * The Serve live target. A component of its own so the liveness read is asked
+ * for a composition that exists — the panel is only ever rendered with a real
+ * manifest item, and a hook cannot be called conditionally.
+ */
+function ServeTarget({ item }: { item: CompositionManifestItem }): ReactElement {
+  const status = useServeStatus(item.id);
+  return <ServeTargetPanel item={item} status={status} />;
 }

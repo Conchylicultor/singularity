@@ -2,7 +2,7 @@
 {
   "views": [
     // What a person scans down the list: which composition, what its release
-    // candidate is in (contributed by `release-pipeline`), and how its last
+    // candidate is in (contributed by `remote-deploy`), and how its last
     // converge/ship went. Everything else — the hostnames, the loopback port,
     // the DERIVED install names (run user, install dir, systemd unit, Caddy
     // site) — lives in the row's own pane (`dep/:deploymentId`), which is where

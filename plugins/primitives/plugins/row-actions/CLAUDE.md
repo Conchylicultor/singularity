@@ -22,6 +22,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/local-serve`
     - `apps/deploy/servers`
     - `apps/events/sources`
     - `apps/studio/compositions`

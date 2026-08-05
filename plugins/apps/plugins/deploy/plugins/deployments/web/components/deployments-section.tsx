@@ -1,5 +1,5 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
-import { MdAdd, MdTerminal } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import {
   DataView,
   defineDataView,
@@ -13,7 +13,6 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
@@ -29,7 +28,6 @@ import { deploymentDetailPane } from "../panes";
 import { Deployments } from "../slots";
 import { DeploymentItemActions } from "./deployment-item-actions";
 import { AddDeploymentDialog } from "./add-deployment-dialog";
-import { DeployLogPanel } from "./deploy-log-panel";
 import { RunCell, RunFailureNotice } from "./run-cell";
 
 const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
@@ -50,8 +48,15 @@ const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
  * the wrong-state-while-loading bug.
  *
  * Contributed as a `ServerDetail` section, so the card, its "Deployments" title
- * and its collapse state all belong to the host. The `SectionCard` below is NOT
- * that card: "Deploy output" is a sub-panel *inside* this section.
+ * and its collapse state all belong to the host.
+ *
+ * There is deliberately no log panel here any more. The deployment pane's Output
+ * section subscribes to the same `deploy` channel, and a second live
+ * subscription to one channel — under a heading, on a page that no longer hosts
+ * the actions — was duplication rather than a view. Nothing is lost: the channel
+ * replays its ring buffer on subscribe, so the pane shows the last run's tail on
+ * open, and `RunFailureNotice` still surfaces a failed run here with the CLI's
+ * own words.
  */
 export function DeploymentsSection({ server }: { server: Server }): ReactElement {
   const serverId = server.id;
@@ -86,9 +91,6 @@ export function DeploymentsSection({ server }: { server: Server }): ReactElement
           />
         ),
       })}
-      <SectionCard title="Deploy output" icon={<MdTerminal />}>
-        <DeployLogPanel />
-      </SectionCard>
     </Stack>
   );
 }

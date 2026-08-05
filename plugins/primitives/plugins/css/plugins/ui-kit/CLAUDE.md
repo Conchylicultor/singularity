@@ -262,7 +262,7 @@ structurally unrepresentable.
     - `apps/browser/webview`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`
@@ -294,7 +294,6 @@ structurally unrepresentable.
     - `apps/story/renderers/blog`
     - `apps/story/shell`
     - `apps/studio/compositions`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/entry-points`
     - `apps/studio/compositions/release`
@@ -328,6 +327,7 @@ structurally unrepresentable.
     - `build`
     - `build/build-fix`
     - `build/build-logs`
+    - `build/serve-composition`
     - `code-explorer`
     - `config_v2/config-link`
     - `config_v2/settings`

@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 // The specific module, not the `core` barrel: drizzle-kit loads this file to
 // build the schema, and `core/derive.ts` is plain strings with no imports at all.
@@ -47,5 +47,55 @@ export const _deployDeployments = pgTable(
     ),
     // The port is the only resource two installs on one box contend for.
     uniqueIndex("deploy_deployments_server_port_uq").on(t.serverId, t.loopbackPort),
+  ],
+);
+
+// The deploy ledger: one row per launched run — *what was put on this box, when,
+// from which commit, and what happened*. It exists because `deploy.runs` is an
+// in-memory Map that a backend restart empties, which left that question
+// unanswerable after a reboot; the two are not redundant (see `../../core/runs.ts`:
+// the Map is the live view, this is the record).
+//
+// Written only by `run-state.ts` — `startRun` opens a row, `finishRun` stamps its
+// outcome — so there is exactly one writer and the live view and the record can
+// never disagree about a run they both name by the same `id`.
+export const _deployRuns = pgTable(
+  "deploy_runs",
+  {
+    id: text("id").primaryKey(),
+    deploymentId: text("deployment_id")
+      .notNull()
+      .references(() => _deployDeployments.id, { onDelete: "cascade" }),
+    // Copied off the deployment at launch, not joined. Both are create-only on
+    // the deployment, so this cannot drift — it is here so a row states which box
+    // and which software without a join, and keeps saying so while the query
+    // filters by deployment.
+    serverId: text("server_id").notNull(),
+    compositionId: text("composition_id").notNull(),
+    verb: text("verb").notNull(), // converge|ship|update
+    // The pinned release run id (`ship --release <id>`). Null where there is
+    // genuinely none: a converge, or a bare ship that let the CLI follow
+    // `latest-<platform>` inside its own process.
+    releaseRunId: text("release_run_id"),
+    // The commit the shipped bundle was built from, read off the resolved
+    // bundle's manifest. Null where unknown — never HEAD, which is a fact about
+    // this checkout rather than about the bytes that went out.
+    commitSha: text("commit_sha"),
+    status: text("status").notNull().default("running"), // running|succeeded|failed
+    // The leg an `update` died on. Null unless the run failed on one — a
+    // succeeded run has no failing phase, and a single-verb run has no phases.
+    phaseFailed: text("phase_failed"),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    // Null while running — including forever, on a run whose backend died before
+    // it could stamp an outcome. That is the honest record of what was observed.
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    exitCode: integer("exit_code"),
+    // The CLI's own words on a failure, stored verbatim.
+    message: text("message"),
+  },
+  (t) => [
+    // Covers the history query's `WHERE deployment_id = ? ORDER BY started_at DESC`
+    // keyset seek + tiebreak — the only way this table is ever read.
+    index("deploy_runs_deployment_started_idx").on(t.deploymentId, t.startedAt.desc()),
   ],
 );

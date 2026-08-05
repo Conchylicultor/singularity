@@ -207,8 +207,8 @@ difference (via `flattenManifest`) is exactly that pack. Run with
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/local-serve`
     - `apps/studio/compositions`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/entry-points`
@@ -217,6 +217,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `apps/studio/explorer/disabled`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
+    - `build/serve-composition`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/inclusion`
 

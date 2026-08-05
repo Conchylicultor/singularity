@@ -66,7 +66,8 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps-core/layout`
     - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/deployments`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/remote-deploy`
     - `apps/deploy/servers`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`

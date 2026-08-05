@@ -84,7 +84,8 @@ converged and running an install no row describes any more.
 `POST /api/deploy/deployments/:id/run` spawns exactly
 `./singularity deploy converge|ship <composition> --server <serverId>` and streams
 its stdout/stderr into the durable **`deploy`** log channel — the split `release`
-(CLI) / Studio (UI) already uses. The endpoint owns two verdicts and no others:
+(CLI) / Studio (UI) already uses. (`update` is a *sequence* of those two spawns —
+see below — not a third command.) The endpoint owns two verdicts and no others:
 
 - **404** — no such deployment.
 - **409** — a run is already in flight **on this server**. Scoped to the server,
@@ -103,6 +104,41 @@ right. The one exception is a *pre*-check the UI can make about its own state: t
 row actions disable, with the reason in the tooltip, when the server has no
 successful probe — the platform a deploy needs is discovered by that probe, so the
 button would certainly be refused.
+
+### `update` — the one verb that is not a CLI subcommand
+
+`{ verb: "update" }` is the app's one primary action, and it is a **sequence of
+the two real verbs with an engine release between them**:
+
+```
+update := converge → [build a candidate, unless the bundle is already current] → ship --release <runId>
+```
+
+It re-implements no refusal, no host mutation and no health gate: both legs are
+the same `./singularity deploy` commands the row actions launch, and the
+build/no-build decision is `resolveBundle` + `compareToHead` — the same authority
+`ship` itself consults, asked one step earlier so nobody has to ask the user. So
+"the CLI is the engine" still holds; what lives here is the *ordering*.
+
+Three things are load-bearing about how it is built:
+
+- **The body carries no fields.** The platform is read server-side off
+  `deploy_servers_ext_health` and the release run id comes from `resolveBundle`
+  after the build, so there is no way to ask for a deploy of the wrong bundle to
+  the wrong host. That platform read happens *before* the converge: an update
+  that cannot resolve a bundle is going to fail anyway, and failing first means
+  the user reads the real reason instead of a converge log to scroll past.
+- **The bundle is re-resolved after the build**, never reused from before it — a
+  build that just ran moved the `latest-<platform>` pointer, and the whole point
+  of pinning by run id is that what was resolved is what goes out.
+- **The exclusivity guard holds the server for the whole sequence.** That is
+  correct rather than coarse: converge and ship both mutate host-wide state.
+
+`DeployRun.phase` reports which leg is live, as a field rather than something a
+UI parses out of the log. It stays pointing at the leg a failed run died on.
+The build leg awaits `runRelease` from `@plugins/release/server` — the reason
+that engine became awaitable at all — because the build must be recorded in
+`release_runs`, which only the engine can do.
 
 ### Converge's idempotence contract
 
@@ -124,20 +160,40 @@ same namespace as the app you clicked in: it reads the deployment record over HT
 from `<worktree>.localhost:9000` and the server row from that worktree's DB fork,
 both keyed on `currentWorktreeName()`.
 
-### There is no run table, on purpose
+### A run is recorded twice, and the two are not redundant
 
-D4 adds no run ledger (see `plugins/release/CLAUDE.md`'s deploy handoff note), and
-neither does the UI. A run's live state is an in-memory `Map` projected into the
-**`deploy.runs`** push resource — the `release.previews` shape, not the
-`release_runs` one — bounded at one entry per deployment row. Two consequences,
-both accepted:
+- **`deploy.runs`** — the **live view**: an in-memory `Map` projected into a push
+  resource (the `release.previews` shape), bounded at one entry per deployment
+  row, carrying `phase` so a running `update` reports which leg it is on. It is
+  empty after a restart, and that is honest rather than lossy: the spawned CLI is
+  **not detached**, so the restart took the run with it and nothing is running.
+  (A child that outlived the map would be an invisible orphan nothing could
+  report on, which is worse. Long unattended deploys belong on the CLI.)
+- **`deploy_runs`** — the **record**: one row per launched run, so *what is live
+  on this box, and what happened before* survives that restart. Queried back by
+  `POST /api/deploy/deployments/:id/runs/query` (keyset, `deploy-history`'s
+  section renders it), swept at 90 days.
 
-- the spawned CLI is **not detached**, so a backend restart takes the run with it
-  and the map is empty afterwards. A child that outlived the map would be an
-  invisible orphan nothing could report on, which is worse. Long unattended
-  deploys belong on the CLI.
-- the durable record is the channel's `logs/deploy.jsonl`, which survives that
-  restart.
+Both are written by `internal/run-state.ts` and only there, and they share the
+run's `id` so the two name one run. Two rules in that file look like fussiness
+and are correctness:
+
+- **`startRun` is synchronous and writes no row.** Its claim must sit in the same
+  turn as `startDeployRun`'s exclusivity check — an `await` between them is a
+  TOCTOU window two clicks walk through — and an INSERT cannot join that turn. So
+  `recordRunStarted` opens the row as the first thing the async run body does. A
+  ledger write that fails ends the run instead of deploying unrecorded.
+- **`finishRun` pushes the live view before writing the row.** Progress must not
+  wait on durability, and the history DataView refreshes off the
+  `deploy.runs-revision` tick, which fires from the change feed after the row
+  commits.
+
+`commit_sha` comes from the pinned bundle's own manifest at the instant it
+resolves, and is null wherever it genuinely is not (a converge; a bare `ship`,
+whose bundle the CLI picks inside its own process). HEAD is never substituted.
+
+The `deploy` log channel's `logs/deploy.jsonl` is still the deeper archive — the
+full transcript, where the ledger holds the one-line outcome.
 
 ### The row is a list row; the record lives in the pane
 
@@ -146,9 +202,15 @@ contributed `Release` state. The record's editable fields (hostnames, loopback
 port) and the derived install names (`runUser` / `installDir` / `unit` /
 `caddySite`, each a pure function of the composition name and therefore never
 editable) live in the `overview` section of the row's own pane
-(`dep/:deploymentId`), which is also where the release pipeline acts. A 4-verb
-pipeline does not fit a row's rigid trailing region, so the row navigates instead
-of growing.
+(`dep/:deploymentId`), which is also where the `remote-deploy` section acts. The
+pane is where a deploy is read and launched; the row's rigid trailing region only
+holds the single-verb shortcuts, so the row navigates instead of growing.
+
+There is deliberately **no log panel on the server page**: the pane's Output
+section subscribes to the same `deploy` channel, and a second live subscription
+to one channel — under a heading, on a page that no longer hosts the actions —
+was duplication rather than a view. The channel replays its ring buffer on
+subscribe, so the pane shows the last run's tail on open.
 
 `DeploymentDetail` (sections) and `Deployments.Fields` (extra columns) are the
 two slots that make that pane and that row extensible without this plugin naming
@@ -158,12 +220,12 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 
 ## Plugin reference
 
-- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, the live deploy log panel, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the release pipeline. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment, streaming the CLI's output into the durable `deploy` log channel and its outcome into the in-memory `deploy.runs` resource. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
+- Description: Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its push live resource, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a keyset history — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
 - Web:
   - Slots:
-    - `DeploymentDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.release-pipeline`
-    - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`
-    - `Deployments.Fields` ← `apps.deploy.release-pipeline`
+    - `DeploymentDetail.Section` ← `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
+    - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
+    - `Deployments.Fields` ← `apps.deploy.remote-deploy`
     - `deploymentDetailPane.Actions`
   - Contributes:
     - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
@@ -210,14 +272,11 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/log-channels.LiveLogChannel`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/row-actions.RowActionButton`
-    - `primitives/section-card.SectionCard`
-    - `shell/notifications.toast`
   - Exports (values):
     - `DeploymentDetail`
     - `deploymentDetailPane`
@@ -228,21 +287,38 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
   - Contributes:
     - `resource.declare` "deploy.deployments"
     - `resource.declare` "deploy.runs"
+    - `resource.declare` "deploy.runs-revision"
   - Uses:
+    - `apps/deploy/health.serverHealth`
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
     - `database.db`
+    - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/paths.REPO_ROOT`
+    - `infra/retention.defineRetention`
+    - `primitives/data-view/server-query.augmentServerQuery`
+    - `primitives/data-view/server-query.compileWhere`
+    - `primitives/data-view/server-query.FieldColumnMap`
+    - `primitives/data-view/server-query.OperatorSqlResolver`
+    - `primitives/keyset.buildSortKeys`
+    - `primitives/keyset.keyValuesOf`
+    - `primitives/keyset.orderByClauses`
+    - `primitives/keyset.seekPredicate`
     - `primitives/log-channels.defineLogSink`
+    - `release.runRelease`
+    - `release/bundles.compareToHead`
+    - `release/bundles.resolveBundle`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
   - Exports (values):
     - `_deployDeployments`
     - `deploymentsServerResource`
+  - Register: `defineJob('retention.deploy_runs')`
   - Resources:
     - `deploy.deployments` (push)
     - `deploy.runs` (push)
+    - `deploy.runs-revision` (push)
   - Routes:
     - `GET /api/deploy/deployments`
     - `POST /api/deploy/deployments`
@@ -250,16 +326,21 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `PATCH /api/deploy/deployments/:id`
     - `DELETE /api/deploy/deployments/:id`
     - `POST /api/deploy/deployments/:id/run`
+    - `POST /api/deploy/deployments/:id/runs/query`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
+    - `primitives/data-view.FilterGroupSchema`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `CreateDeploymentBody`
     - `Deployment`
+    - `DeployPhase`
     - `DeployRun`
+    - `DeployRunRecord`
     - `DeployVerb`
     - `InstallLayout`
+    - `QueryDeployRunsBody`
     - `RunDeploymentBody`
     - `UpdateDeploymentBody`
   - Exports (values):
@@ -272,8 +353,11 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DEPLOY_LOG_CHANNEL`
     - `DeploymentSchema`
     - `deploymentsResource`
+    - `DeployPhaseSchema`
+    - `DeployRunRecordSchema`
     - `DeployRunSchema`
     - `deployRunsResource`
+    - `deployRunsRevisionResource`
     - `DeployVerbSchema`
     - `deriveInstall`
     - `getDeployment`
@@ -281,6 +365,11 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `listDeployments`
     - `listenAddress`
     - `LOOPBACK_HOST`
+    - `loopbackOnlySentence`
+    - `publicUrls`
+    - `queryDeployRuns`
+    - `QueryDeployRunsBodySchema`
+    - `QueryDeployRunsResponseSchema`
     - `releaseAppPath`
     - `releaseDir`
     - `REMOTE_SCRIPT_SHEBANG`
@@ -291,6 +380,9 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `updateDeployment`
     - `UpdateDeploymentBodySchema`
 - Cross-plugin:
-  - Imported by: `apps/deploy/release-pipeline`
+  - Imported by:
+    - `apps/deploy/deploy-history`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/remote-deploy`
 
 <!-- AUTOGENERATED:END -->

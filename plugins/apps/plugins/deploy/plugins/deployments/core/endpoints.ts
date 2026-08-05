@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { FilterGroupSchema } from "@plugins/primitives/plugins/data-view/core";
 import { DeploymentSchema } from "./schemas";
-import { DeployRunSchema } from "./runs";
+import { DeployRunRecordSchema, DeployRunSchema } from "./runs";
 
 /**
  * A hostname converge will render into a Caddy site block, so it is validated at
@@ -117,6 +118,16 @@ export const RunDeploymentBodySchema = z.discriminatedUnion("verb", [
     /** Omitted → the `latest` symlink for `<composition>-web`. */
     release: ReleaseRunIdSchema.optional(),
   }),
+  /**
+   * The one-button verb: converge, build a candidate if the existing bundle is
+   * not already current, then ship the run id that build produced.
+   *
+   * It takes NO fields, and that is the point. Every input it would otherwise
+   * need is discovered rather than typed: the platform from the server's health
+   * probe, and the release run id from `resolveBundle` after the build — so
+   * there is no way to ask for a deploy of the wrong bundle to the wrong host.
+   */
+  z.object({ verb: z.literal("update") }),
 ]);
 export type RunDeploymentBody = z.infer<typeof RunDeploymentBodySchema>;
 
@@ -141,4 +152,53 @@ export const runDeployment = defineEndpoint({
   route: "POST /api/deploy/deployments/:id/run",
   body: RunDeploymentBodySchema,
   response: DeployRunSchema,
+});
+
+// Wire mirror of the data-view `SortRule`. data-view/core exports the TYPE but no
+// zod schema for it, so every server-delegated query body declares its own — the
+// `queryReleaseHistory` precedent does the same. (Hoisting one schema into
+// data-view/core would remove both copies; that is a change to the primitive,
+// not to this surface.)
+const SortRuleSchema = z.object({
+  fieldId: z.string(),
+  direction: z.enum(["asc", "desc"]),
+});
+
+/**
+ * The history query body. The deployment is the route param, not a field here —
+ * a ledger window is always *of* one deployment, so there is no way to ask for
+ * an unscoped one.
+ */
+export const QueryDeployRunsBodySchema = z.object({
+  sort: z.array(SortRuleSchema),
+  filter: FilterGroupSchema.nullable(),
+  query: z.string(),
+  cursor: z.string().nullable(),
+  limit: z.number().int().positive().max(200),
+  // The DataView surface id (its `storageKey`), injected by `useServerDataSource`
+  // and handed to `augmentServerQuery` so per-surface augmentations (custom
+  // columns) can bind their values into the query.
+  dataViewId: z.string(),
+});
+export type QueryDeployRunsBody = z.infer<typeof QueryDeployRunsBodySchema>;
+
+export const QueryDeployRunsResponseSchema = z.object({
+  items: z.array(DeployRunRecordSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+
+/**
+ * This deployment's run ledger, newest first — *what has been put on this box,
+ * and what happened*, across backend restarts.
+ *
+ * POST so the structured `FilterGroup` tree rides in the body. Filter / sort /
+ * search compile to SQL server-side and pagination is keyset (cursor), never
+ * OFFSET, so the full history is browsable by infinite scroll with no cap — the
+ * `queryReleaseHistory` shape, for the same reason: a deploy ledger only grows.
+ */
+export const queryDeployRuns = defineEndpoint({
+  route: "POST /api/deploy/deployments/:id/runs/query",
+  body: QueryDeployRunsBodySchema,
+  response: QueryDeployRunsResponseSchema,
 });

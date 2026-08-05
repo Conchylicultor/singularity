@@ -37,10 +37,9 @@ export const DeploymentItemActions = defineItemActions<Deployment>(
  * would certainly be refused says so before it is pressed. Every other refusal
  * stays the CLI's, reported after the fact on the row.
  *
- * Exported because the deployment pane's pipeline gates the same verbs on the
- * same facts. Sharing the hook rather than the sentences is the point: a row
- * tooltip and a pipeline step must never disagree about why something is
- * blocked.
+ * Exported because the deployment pane's Deploy button gates on the same facts.
+ * Sharing the hook rather than the sentences is the point: a row tooltip and the
+ * pane's primary action must never disagree about why something is blocked.
  */
 export function useBlockedReason(deployment: Deployment): string | null {
   const runsResult = useResource(deployRunsResource);
@@ -53,9 +52,12 @@ export function useBlockedReason(deployment: Deployment): string | null {
 
   const busy = runningOnServer(runsResult.data, deployment.serverId);
   if (busy) {
+    // "The <verb>", never "A <verb>": the verb set now includes `update`, and an
+    // indefinite article picked by hand is a sentence that reads wrong the first
+    // time someone adds a vowel.
     return busy.deploymentId === deployment.id
-      ? `A ${busy.verb} is already running.`
-      : `A ${busy.verb} of "${busy.compositionId}" is running on this server.`;
+      ? `The ${busy.verb} of this deployment is still running.`
+      : `The ${busy.verb} of "${busy.compositionId}" is running on this server.`;
   }
   if (!health) {
     return "This server has never been verified — run Verify connection first.";

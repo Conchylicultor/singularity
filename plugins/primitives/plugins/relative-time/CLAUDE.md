@@ -9,9 +9,10 @@
   - Imported by:
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
+    - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
-    - `apps/deploy/release-pipeline`
+    - `apps/deploy/remote-deploy`
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
@@ -31,6 +32,7 @@
     - `apps/workflows/executions`
     - `build`
     - `build/build-info`
+    - `build/serve-composition`
     - `conversations/all-conversations`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/jsonl-viewer`

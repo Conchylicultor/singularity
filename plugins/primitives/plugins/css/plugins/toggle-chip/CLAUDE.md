@@ -41,7 +41,6 @@
     - `apps/story/render`
     - `apps/story/shell`
     - `apps/studio/compositions`
-    - `apps/studio/compositions/auto-serve`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/release`
     - `apps/studio/graph`
@@ -53,6 +52,7 @@
     - `apps/workflows/steps/llm-prompt`
     - `apps/workflows/steps/set-value`
     - `apps/workflows/steps/template`
+    - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-view/code/file-pane`
     - `debug/broadcasts`

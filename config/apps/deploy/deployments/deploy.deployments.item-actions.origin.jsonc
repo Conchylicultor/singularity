@@ -1,4 +1,4 @@
-// @hash 955582601718
+// @hash 76d44d2d6f8f
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,6 +6,7 @@
   "items": [
     "apps.deploy.deployments:converge",
     "apps.deploy.deployments:ship",
-    "apps.deploy.deployments:delete"
+    "apps.deploy.deployments:delete",
+    "apps.deploy.local-serve:serve"
   ]
 }

@@ -214,7 +214,14 @@ async function serveOne(opts: {
     // Marker FIRST (right after the guard): from the moment we start writing into
     // the namespace dir it must read as compose-serve-owned, or a crash mid-build
     // would leave a marker-less dir the guard then refuses forever.
-    writeMarker(specDir, { composition: id, builtAt: new Date().toISOString(), buildId: stage.buildId });
+    // `buildCommit` is "" when HEAD did not resolve — recorded as null, so a
+    // reader can tell "unknown commit" from a commit it could name.
+    writeMarker(specDir, {
+      composition: id,
+      builtAt: new Date().toISOString(),
+      buildId: stage.buildId,
+      commit: stage.buildCommit || null,
+    });
 
     const flat = flattenManifest(manifestItemToManifest(item), opts.allManifests);
     const bundle = resolveComposition(opts.graph, flat).bundle;

@@ -24,7 +24,7 @@
   - Register: `defineJob('database.zero-slot-sweep')`
 - Cross-plugin:
   - Imported by:
-    - `apps/studio/compositions/auto-serve`
+    - `build/serve-composition`
     - `debug/worktree-cleanup`
 - Shared:
   - Exports (values):

@@ -53,7 +53,6 @@
     - `POST /api/notifications/:id/dismiss`
 - Cross-plugin:
   - Imported by:
-    - `apps/deploy/deployments`
     - `apps/prototypes/gallery`
     - `apps/studio/compositions/release/release-logs`
     - `auth`
