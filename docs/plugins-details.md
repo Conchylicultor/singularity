@@ -16627,6 +16627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/auto-scroll.useEdgeAutoScroll`
+          - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
@@ -16677,6 +16678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder.isNodeData`
           - `reorder.TopLevelEntry`
           - `reorder.useReorderedEntries`
+          - `shell/toast.showToast`
         - Exports (types):
           - `BlockAnchorProps`
           - `BlockChrome`
@@ -18955,6 +18957,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/code-block`
+          - `page/editor`
           - `primitives/filepath-breadcrumb`
           - `primitives/log-channels`
           - `primitives/setup-steps`
@@ -25933,6 +25936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `debug/profiling/ops`
           - `infra/health`
+          - `page/editor`
           - `shell/notifications`
       - Core:
         - Exports (types):

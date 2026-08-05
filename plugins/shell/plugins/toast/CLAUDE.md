@@ -25,6 +25,7 @@
     - `config_v2/settings`
     - `debug/profiling/ops`
     - `infra/health`
+    - `page/editor`
     - `shell/notifications`
 - Core:
   - Exports (types):

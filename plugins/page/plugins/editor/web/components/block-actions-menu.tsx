@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactElement } from "react";
 import {
+  MdContentCopy,
   MdDelete,
   MdRemoveCircleOutline,
   MdUnfoldLess,
@@ -8,6 +9,8 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import { PAGE_BLOCK_TYPE, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
@@ -89,6 +92,11 @@ export function BlockActionsMenu({
   // not offered in the palette either, so it has no user-facing name to use;
   // "container" is the honest generic, not a swallowed miss.
   const containerName = handle?.label?.toLowerCase() ?? "container";
+
+  // Copying the id is the one action that applies to EVERY seat owner — an
+  // ordinary block, a void container, and the page row alike — so it sits
+  // outside both arms, beside Delete.
+  const { copy: copyBlockId } = useCopyToClipboard(block.id);
 
   const close = () => setOpen(false);
   // Every commit fires on `onMouseDown` after a `preventDefault`: the handle sits
@@ -195,6 +203,17 @@ export function BlockActionsMenu({
             <Separator />
           </>
         ) : null}
+        {/* The popover closes on commit, so the hook's own `copied` flash is
+            never seen — the toast is the feedback. */}
+        <Row
+          icon={<MdContentCopy />}
+          onMouseDown={commit(() => {
+            copyBlockId();
+            showToast({ description: "Block ID copied" });
+          })}
+        >
+          Copy block ID
+        </Row>
         <Row
           className="text-destructive"
           icon={<MdDelete />}

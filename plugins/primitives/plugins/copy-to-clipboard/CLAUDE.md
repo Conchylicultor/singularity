@@ -19,6 +19,7 @@
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/code-block`
+    - `page/editor`
     - `primitives/filepath-breadcrumb`
     - `primitives/log-channels`
     - `primitives/setup-steps`

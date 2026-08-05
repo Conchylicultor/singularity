@@ -1742,6 +1742,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/auto-scroll.useEdgeAutoScroll`
+    - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
@@ -1792,6 +1793,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `reorder.isNodeData`
     - `reorder.TopLevelEntry`
     - `reorder.useReorderedEntries`
+    - `shell/toast.showToast`
   - Exports (types):
     - `BlockAnchorProps`
     - `BlockChrome`
