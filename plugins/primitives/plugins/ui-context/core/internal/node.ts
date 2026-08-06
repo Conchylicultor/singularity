@@ -55,7 +55,58 @@ export function formatLineageNode(n: LineageNode): string {
   return `${n.pluginId ?? ""}#${n.regionKind}:${n.id}${label}`;
 }
 
+/** The separator between nodes — written by the formatter, read by the parser,
+ *  spelled once so the two cannot drift. */
+const PATH_SEP = " > ";
+
 /** Outer→inner chain. */
 export function formatLineagePath(nodes: LineageNode[]): string {
-  return nodes.map(formatLineageNode).join(" > ");
+  return nodes.map(formatLineageNode).join(PATH_SEP);
+}
+
+/** `pluginId?#regionKind:id[label]?` — the region spelling of
+ *  `formatLineageNode`, read back. The id is lazy so the optional `[label]`
+ *  suffix wins the tail when present. */
+const REGION_RE = /^([^#]*)#([^:]+):(.+?)(?:\[(.*)\])?$/;
+
+/**
+ * One formatted segment, read back into a node — the exact inverse of
+ * `formatLineageNode`, and here beside it for the same reason the formatter is
+ * beside the model: a display that re-derived its own spelling of the grammar
+ * would drift from the one that wrote it.
+ *
+ * TOTAL, with no failure arm: `pluginId` alone is a legal contribution segment,
+ * so any string that matches neither the region nor the `@` shape simply *is*
+ * that plugin id. There is nothing to absorb — a malformed segment round-trips
+ * back to itself and displays verbatim.
+ */
+export function parseLineageNode(segment: string): LineageNode {
+  const region = REGION_RE.exec(segment);
+  if (region) {
+    const [, pluginId, regionKind, id, label] = region;
+    return {
+      kind: "region",
+      regionKind: regionKind!,
+      id: id!,
+      ...(label ? { label } : {}),
+      ...(pluginId ? { pluginId } : {}),
+    };
+  }
+  const at = segment.indexOf("@");
+  return at === -1
+    ? { kind: "contribution", pluginId: segment }
+    : {
+        kind: "contribution",
+        pluginId: segment.slice(0, at),
+        slotId: segment.slice(at + 1),
+      };
+}
+
+/** Outer→inner chain, read back. Inverse of `formatLineagePath`. */
+export function parseLineagePath(path: string): LineageNode[] {
+  return path
+    .split(PATH_SEP)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(parseLineageNode);
 }

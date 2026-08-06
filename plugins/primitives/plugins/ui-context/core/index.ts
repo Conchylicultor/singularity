@@ -3,7 +3,12 @@ export type {
   RegionNode,
   LineageNode,
 } from "./internal/node";
-export { formatLineageNode, formatLineagePath } from "./internal/node";
+export {
+  formatLineageNode,
+  formatLineagePath,
+  parseLineageNode,
+  parseLineagePath,
+} from "./internal/node";
 export type {
   UiContextMeta,
   UiContextField,

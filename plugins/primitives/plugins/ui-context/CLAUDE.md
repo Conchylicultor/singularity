@@ -73,7 +73,12 @@ only**. A region with no owning plugin is still collected — its identity is th
 whole point, and the plugin is the optional part.
 
 Formatting is `formatLineageNode` / `formatLineagePath` in `core/`: `@` means
-"contributes into", `#` means "occupies".
+"contributes into", `#` means "occupies". `parseLineageNode` /
+`parseLineagePath` are their **inverses**, beside them so a consumer wanting the
+chain as structure (the chip popover gives each node its own line) can't spell
+the grammar differently from the writer. The parse is **total** — a bare
+`pluginId` is a legal segment, so an unrecognized one *is* that plugin id and
+round-trips back to itself; no failure arm to absorb. `node.test.ts` pins it.
 
 ```
 apps.deploy.shell@apps.app > apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3] > tasks/task-header@PaneToolbar.Item
@@ -224,6 +229,8 @@ marker is *additive* alongside it; nothing here reads or writes it.
   - Exports (values):
     - `formatLineageNode`
     - `formatLineagePath`
+    - `parseLineageNode`
+    - `parseLineagePath`
     - `parseUiContext`
     - `serializeUiContext`
     - `UI_CONTEXT_FIELDS`

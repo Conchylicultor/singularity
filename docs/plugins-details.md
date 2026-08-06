@@ -24931,6 +24931,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `formatLineageNode`
           - `formatLineagePath`
+          - `parseLineageNode`
+          - `parseLineagePath`
           - `parseUiContext`
           - `serializeUiContext`
           - `UI_CONTEXT_FIELDS`

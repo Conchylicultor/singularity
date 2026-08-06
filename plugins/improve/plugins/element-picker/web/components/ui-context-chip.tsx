@@ -1,28 +1,46 @@
+import type { ReactNode } from "react";
 import { MdAdsClick } from "react-icons/md";
 import {
   UI_CONTEXT_FIELDS,
+  type UiContextField,
   type UiContextMeta,
 } from "@plugins/primitives/plugins/ui-context/core";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { LineagePath } from "./lineage-path";
 
-/** A single detail row in the popover: label + value, value omitted when absent. */
-function DetailRow({ label, value }: { label: string; value?: string }) {
-  if (!value) return null;
+/**
+ * Fields whose value is structured enough that a flat string misrepresents it.
+ * The popover's row loop still iterates UI_CONTEXT_FIELDS — this only swaps how
+ * ONE field's value is drawn, so a field can still never be silently dropped,
+ * and a field with no entry here falls back to plain text.
+ */
+const FIELD_BODY: Partial<Record<UiContextField["key"], (v: string) => ReactNode>> =
+  {
+    path: (v) => <LineagePath path={v} />,
+  };
+
+/**
+ * A single detail row: right-aligned label, value cell. EVERY field uses it,
+ * including the structured ones — the shared label column is what makes the
+ * popover scannable, so a field that opts out of the grid to claim full width
+ * reads as messier than the flat string it replaced.
+ */
+function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Stack as="div" direction="row" gap="sm" align="baseline">
       <Text
         as="span"
         variant="caption"
         tone="muted"
-        className="w-14 shrink-0 text-right"
+        // Wide enough for the longest registered label ("Contribution"), which
+        // otherwise overflows its column and runs into the value.
+        className="w-20 shrink-0 text-right"
       >
         {label}
       </Text>
-      <Text as="span" variant="caption" className="min-w-0 break-all">
-        {value}
-      </Text>
+      <div className="min-w-0 flex-1">{children}</div>
     </Stack>
   );
 }
@@ -48,7 +66,7 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
   );
 
   return (
-    <InlinePopover trigger={trigger} width="xl" tooltip="UI element context">
+    <InlinePopover trigger={trigger} width="2xl" tooltip="UI element context">
       <Inset pad="sm">
         <Stack gap="sm">
           <Stack direction="row" gap="2xs" align="center" className="min-w-0">
@@ -61,9 +79,22 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
             {/* Every field is rendered straight from the shared registry, so the
                 popover can never silently drop a field the tag carries — adding a
                 field to UI_CONTEXT_FIELDS surfaces it here automatically. */}
-            {UI_CONTEXT_FIELDS.map((f) => (
-              <DetailRow key={f.key} label={f.label} value={meta[f.key]} />
-            ))}
+            {UI_CONTEXT_FIELDS.map((f) => {
+              const value = meta[f.key];
+              if (!value) return null;
+              const body = FIELD_BODY[f.key];
+              return (
+                <DetailRow key={f.key} label={f.label}>
+                  {body ? (
+                    body(value)
+                  ) : (
+                    <Text as="span" variant="caption" className="break-all">
+                      {value}
+                    </Text>
+                  )}
+                </DetailRow>
+              );
+            })}
           </Stack>
         </Stack>
       </Inset>
