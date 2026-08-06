@@ -1,15 +1,32 @@
 # url-extract
 
 The `url` source type: paste a venue URL, get structured events. No per-site
-scraper — a one-shot Sonnet call reads the page's visible text.
+scraper — a one-shot Sonnet call reads the page.
 
 `probe` fetch → strip → normalize → `sha256`; `extract` prompt → parse. The
 engine (`events/refresh`) owns the phase order and the fingerprint cache; this
 plugin owns only the HTTP and the LLM.
 
+## Two renderings of the same bytes — do not merge them
+
+`probe` produces both, for two different jobs (`UrlPagePayload`):
+
+- **`text`** (`page-text.ts`) — the cheapest stable reading, and the ONLY thing
+  the fingerprint is taken over.
+- **`html`** (`page-html.ts`) — simplified markup, and what the model reads.
+  Grouping is the whole point: an `<li>` boundary says which title, date and
+  venue are ONE event, where flat text answers that with adjacency alone and a
+  table row becomes an ambiguous run of lines. Also keeps `<time datetime>`
+  (an exact instant where the prose omits the year), `href`, and `img src/alt`.
+
+parse5, not `HTMLRewriter`: collapsing a single-child wrapper needs to know how
+many children it has, and real pages omit `</li>`/`</p>` — only a spec tree
+builder puts them back. The output tree and serializer are ours, so `<img>` stays
+`<img>`.
+
 ## Why it is shaped this way
 
-- **The fingerprint is over the normalized visible TEXT, never the raw HTML.**
+- **The fingerprint is over the normalized visible TEXT, never the markup.**
   Markup carries a CSRF nonce, ad-slot cache-busters, and asset build hashes that
   move on every request, so hashing it reports "changed" every tick and pays for
   an extraction each time — defeating the entire probe/extract split.
@@ -27,8 +44,16 @@ plugin owns only the HTTP and the LLM.
 - **The prompt materializes recurrence**: one row per concrete occurrence within
   60 days, sharing a `seriesKey`. No RRULE engine, and idempotent because the
   engine's derived identity ends in the occurrence's date.
-- `safeFetch` is mandatory (SSRF + DNS-rebinding); the body is read to a 256 KB
-  cap and the reader cancelled (NOT a piped `TransformStream` — Bun's
+- **The bound is on visible TEXT (200k chars), not markup bytes.** A byte offset
+  says nothing about where content is — Wix pages hide `<body>` behind ~700 KB of
+  inline `<style>`. `MAX_HTML_BYTES` (8 MB) is only a DoS backstop; do not shrink
+  it back into a content bound.
+- **A page not read whole THROWS, never becomes a shorter page.** Truncated
+  markup parses fine, so a partial read is silent — the model extracts what
+  little it saw, and `runSource` reads an empty extraction as "the listing
+  emptied" and stamps `disappearedAt` on every event the source ever found.
+- `safeFetch` is mandatory (SSRF + DNS-rebinding); the body is read into bytes
+  and the reader cancelled (NOT a piped `TransformStream` — Bun's
   `HTMLRewriter.transform()` refuses one with `ERR_STREAM_CANNOT_PIPE`); a 4xx is
   terminal while 408/429/5xx retry.
 

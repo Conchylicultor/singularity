@@ -9,9 +9,18 @@ import {
 // tick pays for a model call. These assert the two properties it rests on —
 // invisible markup churn does NOT move it, a change in what the page SAYS does.
 
-function page(html: string): Promise<string> {
+async function page(html: string, maxChars = 1_000_000): Promise<string> {
+  const { text } = await extractVisibleText(
+    new Response(html, { headers: { "content-type": "text/html" } }),
+    maxChars,
+  );
+  return text;
+}
+
+function readPage(html: string, maxChars: number) {
   return extractVisibleText(
     new Response(html, { headers: { "content-type": "text/html" } }),
+    maxChars,
   );
 }
 
@@ -65,6 +74,38 @@ describe("extractVisibleText", () => {
     // here, which is why the strip is a separate rewriter pass.
     const text = await page(`<p>Before</p><svg/><p>After</p>`);
     expect(text).toBe("Before\nAfter");
+  });
+});
+
+describe("extractVisibleText — the text bound", () => {
+  // The bound is on TEXT, not markup, because text is what the model is billed
+  // to read — and because markup length says nothing about where the content is.
+
+  test("markup far past the bound costs nothing when its text is small", async () => {
+    // The shape that broke fitzroy-paris.com under a byte cap: ~700 KB of inline
+    // <style> ahead of one line of readable content. Bounding text sees it whole.
+    const html =
+      `<html><head><style>${"a{color:#fff}".repeat(60_000)}</style></head>` +
+      `<body><p>Techno Night — 25 August</p></body></html>`;
+    const { text, truncated } = await readPage(html, 200_000);
+
+    expect(truncated).toBe(false);
+    expect(text).toContain("Techno Night — 25 August");
+  });
+
+  test("reports truncation when readable content is dropped", async () => {
+    const html = `<p>${"Techno Night. ".repeat(200)}</p><p>Jazz Brunch</p>`;
+    const { text, truncated } = await readPage(html, 100);
+
+    expect(truncated).toBe(true);
+    expect(text).not.toContain("Jazz Brunch");
+  });
+
+  test("does not report truncation for trailing markup that carries no reading", async () => {
+    // A false positive here parks a healthy source, so separators and the empty
+    // chunk Bun emits at a text node's end must not count as dropped content.
+    const { truncated } = await readPage(`<p>${"x".repeat(100)}</p><div></div>\n  `, 100);
+    expect(truncated).toBe(false);
   });
 });
 

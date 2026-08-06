@@ -23,6 +23,23 @@ const BLOCK_SELECTOR =
   "p, div, br, li, tr, td, th, dt, dd, section, article, header, aside, main, form, ul, ol, dl, table, blockquote, pre, figcaption, h1, h2, h3, h4, h5, h6";
 
 /**
+ * A page's visible text, and whether it is the WHOLE of it.
+ *
+ * `truncated` exists because a partial read is indistinguishable from a short
+ * page downstream: both are well-formed text a model reads happily. Silently
+ * handing the model half a listing yields a plausible extraction over material
+ * we never saw — and an extraction that comes back empty makes the engine stamp
+ * `disappearedAt` on every event the source ever found. So the fact travels with
+ * the text and the caller must decide, rather than a `string` that absorbs it.
+ */
+export interface PageText {
+  /** The normalized visible text, bounded by the caller's `maxChars`. */
+  text: string;
+  /** True when readable content was dropped at the bound — the tail is missing. */
+  truncated: boolean;
+}
+
+/**
  * Two chained rewriter passes rather than one with a skip flag.
  *
  * A single pass would need `el.onEndTag()` to know when a stripped subtree ends
@@ -34,9 +51,29 @@ const BLOCK_SELECTOR =
  *
  * Both passes stream — pass 2 transforms pass 1's `Response`, nothing is
  * buffered as HTML.
+ *
+ * `maxChars` bounds the TEXT rather than the markup, because text is what the
+ * model is billed to read; markup length says nothing about it (this page's
+ * events sat past 700 KB of inline CMS `<style>`). It is required, not
+ * defaulted: an unbounded read is never the right call here, so the bound is not
+ * something a caller can forget to think about.
  */
-export async function extractVisibleText(res: Response): Promise<string> {
+export async function extractVisibleText(
+  res: Response,
+  maxChars: number,
+): Promise<PageText> {
   let raw = "";
+  let truncated = false;
+  const appendText = (chunk: string): void => {
+    if (raw.length < maxChars) {
+      raw += chunk;
+      return;
+    }
+    // At the bound. A chunk with a reading in it is content the model will not
+    // see; pure whitespace (and the empty chunk Bun emits at a text node's end)
+    // normalizes away regardless, so it is not a loss worth parking a source for.
+    if (/\S/.test(chunk)) truncated = true;
+  };
   const strip = new HTMLRewriter().on(STRIPPED_SELECTOR, {
     element(el) {
       el.remove();
@@ -45,12 +82,14 @@ export async function extractVisibleText(res: Response): Promise<string> {
   const read = new HTMLRewriter()
     .on(BLOCK_SELECTOR, {
       element() {
-        raw += "\n";
+        // A separator, not content: dropping one past the bound loses nothing,
+        // so it must not raise `truncated` on a page that ends exactly here.
+        if (raw.length < maxChars) raw += "\n";
       },
     })
     .on("*", {
       text(chunk) {
-        raw += chunk.text;
+        appendText(chunk.text);
       },
     });
 
@@ -58,7 +97,7 @@ export async function extractVisibleText(res: Response): Promise<string> {
   // itself is discarded — the handlers above are the only output.
   await read.transform(strip.transform(res)).text();
 
-  return normalizeVisibleText(raw);
+  return { text: normalizeVisibleText(raw), truncated };
 }
 
 /**

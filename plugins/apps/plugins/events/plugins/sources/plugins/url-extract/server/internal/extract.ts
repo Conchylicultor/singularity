@@ -36,7 +36,7 @@ export async function extractUrlEvents(
     prompt: buildExtractionPrompt({
       url: payload.url,
       hint: config.hint,
-      text: payload.text,
+      html: payload.html,
     }),
     timeoutMs: EXTRACTION_TIMEOUT_MS,
     source: {

@@ -21,14 +21,25 @@ function stream(text: string, chunkSize = 16): ReadableStream<Uint8Array> {
 }
 
 describe("readCappedBody", () => {
-  test("stops at the cap, mid-chunk", async () => {
+  test("stops at the cap, mid-chunk, and says so", async () => {
     const body = await readCappedBody(stream("x".repeat(10_000)), 200);
-    expect(body.byteLength).toBe(200);
+    expect(body.bytes.byteLength).toBe(200);
+    expect(body.truncated).toBe(true);
   });
 
   test("returns the whole body when it fits", async () => {
     const body = await readCappedBody(stream("hello"), 200);
-    expect(new TextDecoder().decode(body)).toBe("hello");
+    expect(new TextDecoder().decode(body.bytes)).toBe("hello");
+    expect(body.truncated).toBe(false);
+  });
+
+  test("a body of exactly the cap is whole, not truncated", async () => {
+    // The off-by-one that makes `truncated` worth trusting: without reading one
+    // byte past the cap, this case is indistinguishable from a cut body and
+    // would park a healthy source.
+    const body = await readCappedBody(stream("x".repeat(200), 64), 200);
+    expect(body.bytes.byteLength).toBe(200);
+    expect(body.truncated).toBe(false);
   });
 
   test("its output feeds the rewriter", async () => {
@@ -37,10 +48,30 @@ describe("readCappedBody", () => {
     // truncated document must also parse rather than throw.
     const html = `<html><body><nav>Menu</nav>${"<p>Techno Night</p>".repeat(500)}`;
     const body = await readCappedBody(stream(html, 64), 256);
-    const text = await extractVisibleText(
-      new Response(body, { headers: { "content-type": "text/html" } }),
+    const page = await extractVisibleText(
+      new Response(body.bytes, { headers: { "content-type": "text/html" } }),
+      1_000_000,
     );
-    expect(text).toContain("Techno Night");
-    expect(text).not.toContain("Menu");
+    expect(page.text).toContain("Techno Night");
+    expect(page.text).not.toContain("Menu");
+  });
+
+  test("a byte cap landing in <head> reports truncation rather than a title-only page", async () => {
+    // The fitzroy-paris.com regression, in miniature: the readable content sits
+    // behind a wall of inline CMS <style>, so a markup-offset cap cuts the
+    // document before <body>. What must NOT happen is a clean, plausible,
+    // event-free page — that is what makes the engine delete the user's events.
+    const html =
+      `<html><head><title>Soirées</title><style>${"a{color:#fff}".repeat(400)}</style></head>` +
+      `<body><p>Techno Night — 25 August</p></body></html>`;
+    const body = await readCappedBody(stream(html, 64), 1024);
+
+    expect(body.truncated).toBe(true);
+    const page = await extractVisibleText(
+      new Response(body.bytes, { headers: { "content-type": "text/html" } }),
+      1_000_000,
+    );
+    expect(page.text).not.toContain("Techno Night");
+    expect(page.text).toBe("Soirées");
   });
 });
