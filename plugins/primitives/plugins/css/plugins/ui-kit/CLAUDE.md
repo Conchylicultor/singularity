@@ -145,6 +145,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Web:
   - Uses:
     - `primitives/overlay-boundary.OverlayBoundary`
+    - `primitives/popup-open.useReportPopupOpen`
     - `primitives/select-scope.ContentScope`
   - Exports (types):
     - `ButtonIconSize`

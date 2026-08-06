@@ -4,9 +4,30 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
+import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md"
 
-const Select = SelectPrimitive.Root
+// Kept generic over base-ui's own `<Value, Multiple>` params: this was a bare
+// `const Select = SelectPrimitive.Root` alias, and a non-generic wrapper would
+// silently erase value inference for every consumer selecting object values.
+function Select<Value, Multiple extends boolean | undefined = false>({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  // See `usePopupOpenMirror`: the enclosing PopupOpenScope reads this instead of
+  // a CSS selector over base-ui's own open-state attribute.
+  const handleOpenChange = usePopupOpenMirror({ open, defaultOpen, onOpenChange })
+  return (
+    <SelectPrimitive.Root<Value, Multiple>
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

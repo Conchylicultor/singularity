@@ -8,7 +8,10 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import {
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { TreeDisclosureProps } from "../../core";
 import { Tree } from "../slots";
@@ -161,11 +164,20 @@ export function TreeRowChrome({
       {...dragListeners}
       // Bespoke named-group (group/tree-row) hover scoping: Row's bare-group
       // slots would leak the reveal under ancestor groups, so this row composes
-      // Stack directly rather than the Row primitive.
+      // Stack directly rather than the Row primitive. `rowActionsAnchor` adds a
+      // SECOND, separate group (`group/row-actions`) plus the positioning
+      // context the pinned action cluster anchors to — the chevron/disclosure
+      // reveal keeps reading `group/tree-row`.
       className={cn(
         "group/tree-row min-h-7 rounded-md px-xs py-xs text-body",
-        "hover:bg-accent",
-        selected && "bg-accent",
+        rowActionsAnchor,
+        // Each tint co-publishes itself as `--scrim` — the colour the pinned
+        // cluster's mask paints so the label it covers dissolves instead of
+        // showing through the icons. Without it the mask paints the surface's
+        // ambient `--chrome-mask`, i.e. the untinted background, and a hovered
+        // row reads as a hole. Same contract as the `Row` primitive.
+        "hover:bg-accent hover:[--scrim:var(--accent)]",
+        selected && "bg-accent [--scrim:var(--accent)]",
         className,
       )}
       style={{ paddingLeft: depth * indentStep + 4 }}
@@ -220,40 +232,13 @@ export function TreeRowChrome({
         </Center>
       )}
       {children}
-      {actions && (
-        <Clip
-          onClick={(e) => e.stopPropagation()}
-          // Pressing a trailing control must not arm a row drag.
-          onPointerDown={(e) => e.stopPropagation()}
-          // Reserve NO width at rest: `w-0` + Clip's `overflow-hidden` collapses
-          // the cluster so the label gets the full row width and only truncates
-          // once the actions actually appear on hover. (Plain `opacity-0` keeps
-          // the cluster in layout, prematurely truncating labels behind invisible
-          // buttons.) We collapse width rather than `display:none` so the action
-          // buttons stay in the tab order and focus-within can reveal them for
-          // keyboard users. Stays expanded while a descendant popup is open
-          // (e.g. a row action's "more" menu), even after the pointer leaves.
-          //
-          // That last rule is load-bearing, not cosmetic: the cluster is the
-          // ANCHOR of any menu launched from inside it, so letting it collapse
-          // to `w-0` while the menu is open shoves the still-mounted trigger to
-          // the collapsed edge and the open menu jumps sideways to follow it.
-          // `data-popup-open` is base-ui's attribute — this used to read
-          // `data-[state=open]` (Radix's), which matches nothing here, so the
-          // rule silently never fired. Keep it in sync with the popup library.
-          className={cn(
-            "whitespace-nowrap",
-            "w-0 opacity-0 pointer-events-none",
-            "group-hover/tree-row:w-auto group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto",
-            "group-focus-within/tree-row:w-auto group-focus-within/tree-row:opacity-100 group-focus-within/tree-row:pointer-events-auto",
-            "has-[[data-popup-open]]:w-auto has-[[data-popup-open]]:opacity-100 has-[[data-popup-open]]:pointer-events-auto",
-          )}
-        >
-          <Stack direction="row" align="center" gap="2xs">
-            {actions}
-          </Stack>
-        </Clip>
-      )}
+      {/* The shared cluster, not a second hand-rolled one: it reveals with
+          opacity behind a right-edge `Pin mask`, so it reserves no flow width
+          and its geometry — hence the anchor of any menu launched from it — is
+          identical hovered or not. The bespoke reveal this replaced changed
+          LAYOUT (`w-0` → `w-auto`), which slid an open menu sideways whenever
+          the row lost hover. */}
+      {actions && <RowActions>{actions}</RowActions>}
     </Stack>
   );
 }

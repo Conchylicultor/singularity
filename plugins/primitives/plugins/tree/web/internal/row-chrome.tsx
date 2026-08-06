@@ -1,4 +1,4 @@
-import { cn, ControlSizeProvider, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, type ReactNode } from "react";
 import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
@@ -120,17 +120,16 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
 
   // Notion-style per-row "+" — hover-revealed add-child affordance that replaces
   // the old persistent "Add" line under expanded nodes (more compact tree). The
-  // surrounding actions cluster already stops row-click/drag propagation and
-  // owns the hover-reveal, so this button only handles the create.
+  // surrounding actions cluster already stops row-click/drag propagation, owns
+  // the hover-reveal AND declares the `xs` control size, so this button only
+  // handles the create.
   const addChild = ctx.canCreate ? (
-    <ControlSizeProvider size="xs">
-      <IconButton
-        icon={MdAdd}
-        label="Add child"
-        variant="ghost"
-        onClick={() => addChildAction()}
-      />
-    </ControlSizeProvider>
+    <IconButton
+      icon={MdAdd}
+      label="Add child"
+      variant="ghost"
+      onClick={() => addChildAction()}
+    />
   ) : null;
 
   const trailing =
@@ -161,7 +160,11 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             dragListeners={canReorder ? dragListeners : undefined}
             className={cn(
               isDragging && "opacity-40",
-              isOverChild && "bg-accent ring-primary/40 ring-1",
+              // The drop tint co-publishes `--scrim` for the same reason the
+              // row's hover/selected tints do: it is what the pinned action
+              // cluster's mask paints, so it must be the colour actually on
+              // screen while a drag hovers this row.
+              isOverChild && "bg-accent ring-primary/40 ring-1 [--scrim:var(--accent)]",
               className,
             )}
             actions={trailing}

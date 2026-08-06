@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-popup-open",
+  "description": "Typed \"is a popup open inside me\" signal: PopupOpenScope + useReportPopupOpen.",
+  "private": true,
+  "version": "0.0.1"
+}

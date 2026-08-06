@@ -19419,7 +19419,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
               - `primitives/diff-view`
-              - `primitives/tree`
               - `review/plugin-changes/file-changes`
               - `screenshot`
               - `tasks/task-graph`
@@ -21030,6 +21029,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `primitives/overlay-boundary.OverlayBoundary`
+              - `primitives/popup-open.useReportPopupOpen`
               - `primitives/select-scope.ContentScope`
             - Exports (types):
               - `ButtonIconSize`
@@ -23986,6 +23986,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks/task-draft-form`
           - `ui/theme-engine/quick-theme`
+    - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
+      - Cross-plugin:
+        - Imported by:
+          - `primitives/css/ui-kit`
+          - `primitives/row-actions`
+      - Web:
+        - Exports (values):
+          - `PopupOpenScope`
+          - `useReportPopupOpen`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
@@ -24147,8 +24156,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/pin.Pin`
           - `primitives/css/pin.PinAnchor`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
+          - `primitives/popup-open.PopupOpenScope`
         - Exports (types):
           - `RowActionButtonProps`
           - `RowActionsProps`
@@ -24165,6 +24176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
+          - `primitives/tree`
     - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
       - Web:
         - Uses: `primitives/latest-ref.useLatestRef`
@@ -24713,13 +24725,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.ExpandAllButton`
           - `primitives/css/center.Center`
-          - `primitives/css/clip.Clip`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.DropdownMenu`
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.DropdownMenuItem`
@@ -24730,6 +24740,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/multi-select.SelectionCheckbox`
           - `primitives/rank-reorder.RankReorderDndContext`
           - `primitives/rank-reorder.useRankReorderItem`
+          - `primitives/row-actions.RowActions`
+          - `primitives/row-actions.rowActionsAnchor`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/search.filterTree`
           - `primitives/search.SearchInput`

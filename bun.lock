@@ -3853,6 +3853,10 @@
       "name": "@singularity/plugin-primitives-popover",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/popup-open": {
+      "name": "@singularity/plugin-primitives-popup-open",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/prompt-editor": {
       "name": "@singularity/plugin-primitives-prompt-editor",
       "version": "0.0.1",
@@ -7085,6 +7089,8 @@
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 
     "@singularity/plugin-primitives-popover": ["@singularity/plugin-primitives-popover@workspace:plugins/primitives/plugins/popover"],
+
+    "@singularity/plugin-primitives-popup-open": ["@singularity/plugin-primitives-popup-open@workspace:plugins/primitives/plugins/popup-open"],
 
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 

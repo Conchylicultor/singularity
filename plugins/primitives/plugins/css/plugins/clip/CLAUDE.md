@@ -66,7 +66,6 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `primitives/app-shell`
     - `primitives/data-view/gallery`
     - `primitives/diff-view`
-    - `primitives/tree`
     - `review/plugin-changes/file-changes`
     - `screenshot`
     - `tasks/task-graph`

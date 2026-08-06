@@ -1,7 +1,8 @@
 import type { ComponentType, ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin, type PinAnchor } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /**
@@ -30,8 +31,10 @@ export const rowActionsAnchor = "group/row-actions relative";
  * row beneath it. `select-none` is unconditional: action buttons are chrome, never
  * selectable content, so the cluster stays out of any text-selection range (Ctrl+A
  * or drag) over the row. Revealed on row hover and while focus is anywhere inside
- * the row (keyboard reachability). Group names must be literal for Tailwind's JIT,
- * so this lives as a static string rather than an interpolated group.
+ * the row (keyboard reachability), plus — via `PopupOpenScope` below — while a
+ * popup launched from inside the cluster is open, so an open menu never hangs off
+ * an invisible trigger. Group names must be literal for Tailwind's JIT, so this
+ * lives as a static string rather than an interpolated group.
  */
 const revealClasses =
   "opacity-0 pointer-events-none select-none transition-opacity " +
@@ -97,18 +100,32 @@ export interface RowActionsProps {
  * {@link rowActionsAnchor}; the actions fade in on row hover/focus, with the
  * opacity↔pointer-events coupling owned here so a hidden action is never a live
  * click-target.
+ *
+ * The reveal is **opacity only** — the cluster is pinned, so it occupies no flow
+ * width and its geometry is identical hovered or not. That is load-bearing, not
+ * an optimization: a menu launched from inside the cluster anchors to it, so a
+ * reveal that changed layout would slide the open menu sideways the moment the
+ * pointer left the row.
  */
 export function RowActions({
   children,
   pin = "right",
   alwaysVisible = false,
 }: RowActionsProps) {
-  const cluster = (
+  const cluster = (className?: string) => (
     <Stack
       direction="row"
       gap="none"
       align="center"
-      className={alwaysVisible ? undefined : revealClasses}
+      // Pressing an action must not reach the row: a click would fire the row's
+      // own onSelect (navigating away from whatever the action just did), and a
+      // pointerdown would arm a whole-row drag source (tree rows are dragged by
+      // their body, with no grip handle). It sits on the BUTTON cluster, not on
+      // the pin, so a click on the scrim's fade margin still falls through to
+      // the row — that margin is row, not affordance.
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={className}
     >
       <ControlSizeProvider size="xs">{children}</ControlSizeProvider>
     </Stack>
@@ -118,11 +135,27 @@ export function RowActions({
   // there (a trailing badge, a long label), and without the scrim the two sets of
   // glyphs interleave. An `alwaysVisible` cluster is still pinned by the caller's
   // choice of `pin`, so it needs the scrim just as much.
-  return pin === null ? (
-    cluster
-  ) : (
-    <Pin to={pin} offset="xs" mask>
-      {cluster}
-    </Pin>
+  //
+  // The reveal therefore rides the OUTERMOST node — the pin, when there is one.
+  // The scrim is opaque, so a cluster that faded while its own backdrop stayed
+  // painted would hide the row's trailing content at rest instead of only while
+  // revealed, and the backdrop would sit over the row as a live click-target.
+  return (
+    <PopupOpenScope>
+      {(popupOpen) => {
+        const reveal = alwaysVisible
+          ? undefined
+          : // `cn` (tailwind-merge), not concatenation: the held state must WIN
+            // over `opacity-0`, and merge order is what decides that.
+            cn(revealClasses, popupOpen && "opacity-100 pointer-events-auto");
+        return pin === null ? (
+          cluster(reveal)
+        ) : (
+          <Pin to={pin} offset="xs" mask className={reveal}>
+            {cluster()}
+          </Pin>
+        );
+      }}
+    </PopupOpenScope>
   );
 }

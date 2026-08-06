@@ -50,6 +50,19 @@ tempted to persist an `expanded` flag server-side just to force a parent open):
   no-op until the newly created row arrives via live-state — a race, not a
   guarantee.
 
+## Row actions come from `primitives/row-actions`
+
+`TreeRowChrome` renders its `actions` through the shared `<RowActions>` cluster
+and carries `rowActionsAnchor` on the row. It does **not** hand-roll a reveal:
+the old one collapsed the cluster to `w-0` off-hover, which moved the anchor of
+any menu open inside it. Consequences to keep in mind:
+
+- The cluster is pinned, so it no longer pushes the label — a long label (and
+  `options.trailing` chips) now **dissolves under the cluster's scrim** on hover
+  instead of re-truncating.
+- Every row tint must co-publish `--scrim` (hover, `selected`, `RowChrome`'s
+  `isOverChild`), or that scrim paints the untinted background.
+
 ## Context access
 
 `useTreeListContext()` **throws** outside a `TreeList`. Use
@@ -79,13 +92,11 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
-    - `primitives/css/clip.Clip`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
@@ -96,6 +107,8 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/multi-select.SelectionCheckbox`
     - `primitives/rank-reorder.RankReorderDndContext`
     - `primitives/rank-reorder.useRankReorderItem`
+    - `primitives/row-actions.RowActions`
+    - `primitives/row-actions.rowActionsAnchor`
     - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/search.filterTree`
     - `primitives/search.SearchInput`

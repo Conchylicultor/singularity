@@ -3,13 +3,31 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
+import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
 import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { MdChevronRight, MdCheck } from "react-icons/md"
 
-function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
-  return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+function DropdownMenu({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: MenuPrimitive.Root.Props) {
+  // Publish open state to the enclosing PopupOpenScope, so chrome that must
+  // hold itself visible while its menu is open (a hover-revealed row-action
+  // cluster — the menu's own anchor) reads a typed boolean.
+  const handleOpenChange = usePopupOpenMirror({ open, defaultOpen, onOpenChange })
+  return (
+    <MenuPrimitive.Root
+      data-slot="dropdown-menu"
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  )
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {

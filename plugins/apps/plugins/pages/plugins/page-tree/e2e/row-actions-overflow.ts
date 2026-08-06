@@ -3,9 +3,9 @@
  * overflow bucket, not a cluster of icons and not two competing menus.
  *
  * A blind `screenshot.ts --click "More"` cannot do this: the action cluster is
- * `w-0 opacity-0` until the row is hovered, so the click lands on the row
- * beneath and navigates instead. The hover IS the flow under test, so it has to
- * be a script.
+ * `opacity-0 pointer-events-none` until the row is hovered, so the click lands
+ * on the row beneath and navigates instead. The hover IS the flow under test, so
+ * it has to be a script.
  *
  *   bun plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts --headed
  */
@@ -57,7 +57,20 @@ await withBrowser(async (h) => {
     `inline: ${labels.join(", ")}`,
   );
 
-  await row.getByRole("button", { name: "More", exact: true }).click();
+  const more = row.getByRole("button", { name: "More", exact: true });
+
+  // The `⋯` IS the anchor every menu launched from this row positions against,
+  // so its own x is the invariant — the menu box below is downstream of it.
+  // Captured here, while the row is hovered and the menu is still CLOSED: that
+  // is the geometry the open menu must preserve.
+  const triggerX = async () => {
+    const b = await more.boundingBox();
+    return b ? Math.round(b.x) : null;
+  };
+  const anchorClosed = await triggerX();
+  r.ok("the ⋯ trigger is laid out while hovered", anchorClosed !== null);
+
+  await more.click();
 
   const menu = page.getByRole("menu");
   await menu.waitFor({ state: "visible", timeout: 10_000 });
@@ -73,13 +86,15 @@ await withBrowser(async (h) => {
   r.eq("menu holds exactly the bucketed actions", items.length, BUCKETED.length);
 
   // --- The open menu must not move when the pointer leaves the row -----------
-  // The cluster is the menu's ANCHOR. It collapses to `w-0` off-hover, which
-  // shoves the still-mounted trigger to the collapsed edge and drags the open
-  // menu sideways with it. `tree-row-chrome` holds the cluster open on
-  // `has-[[data-popup-open]]` — base-ui's attribute. It previously named
-  // Radix's `data-[state=open]`, which matches nothing here, so the rule never
-  // fired and the menu jumped ~52px right. A selector against another library's
-  // attribute contract cannot be type-checked, so it is asserted here instead.
+  // The row's action cluster is the menu's ANCHOR, so anything that changes its
+  // geometry off-hover drags the open menu sideways with it. The cluster used to
+  // reveal by changing LAYOUT (`w-0` → `w-auto`), held open only by a CSS rule
+  // naming base-ui's `data-popup-open` attribute — unverifiable by any type
+  // system, and it had already rotted once (it named Radix's `data-[state=open]`,
+  // which matches nothing here, and the menu jumped ~52px right). The cluster now
+  // reveals with OPACITY behind a pinned mask, so it reserves no flow width and
+  // its geometry cannot depend on hover at all. These assertions are what proves
+  // that; they are the mechanism's only runtime guard.
   const boxOf = async () => {
     const b = await menu.boundingBox();
     return b ? { x: Math.round(b.x), y: Math.round(b.y) } : null;
@@ -89,6 +104,21 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(400);
   const atRest = await boxOf();
   r.eq("open menu does not move when the row loses hover", atRest, atOpen);
+  r.eq("⋯ anchor is where it was before its menu opened", await triggerX(), anchorClosed);
+
+  // The typed popup-open signal is what keeps the cluster VISIBLE here — the row
+  // lost hover, so without it the still-open menu would hang off an invisible
+  // trigger. Position is now stable by construction; visibility is not, so it
+  // needs its own assertion. Read as the first non-1 opacity up the ancestor
+  // chain, since the fade lives on the cluster, not the button.
+  const effectiveOpacity = await more.evaluate((el) => {
+    for (let n: HTMLElement | null = el as HTMLElement; n; n = n.parentElement) {
+      const o = getComputedStyle(n).opacity;
+      if (o !== "1") return Number(o);
+    }
+    return 1;
+  });
+  r.eq("⋯ stays visible while its own menu is open", effectiveOpacity, 1);
 
   await page.keyboard.press("Escape");
 

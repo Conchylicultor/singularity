@@ -2,6 +2,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
+import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
 import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
 import {
   POPOVER_WIDTH,
@@ -13,8 +14,23 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
 
-function Popover({ ...props }: PopoverPrimitive.Root.Props) {
-  return <PopoverPrimitive.Root {...props} />
+function Popover({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: PopoverPrimitive.Root.Props) {
+  // See `usePopupOpenMirror`: the enclosing PopupOpenScope reads this instead of
+  // a CSS selector over base-ui's own open-state attribute.
+  const handleOpenChange = usePopupOpenMirror({ open, defaultOpen, onOpenChange })
+  return (
+    <PopoverPrimitive.Root
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  )
 }
 
 function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
