@@ -2,9 +2,10 @@ import { useEffect, useRef } from "react";
 import { toast as sonnerToast } from "sonner";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import type { ToastArgs } from "../../core";
+import { trackToast, untrackToast, type ToastId } from "./live-toasts";
 
 /** Mutable holder so the click handler can read the toast id assigned after `toast()` returns. */
-type ToastIdHolder = { id?: number | string };
+type ToastIdHolder = { id?: ToastId };
 
 /**
  * Makes the whole enclosing sonner toast dismiss on click, while still allowing the
@@ -50,8 +51,24 @@ export function showToast({ title, description, variant, action }: ToastArgs): v
     {
       description: rawDescription ? <ContentScope fill={false}>{rawDescription}</ContentScope> : undefined,
       // sonner renders + dismisses the action button itself; the caller only
-      // supplies the intent (e.g. Undo).
-      action: action ? { label: action.label, onClick: () => action.onClick() } : undefined,
+      // supplies the intent (e.g. Undo). Clicking it is the one exit sonner
+      // reports through neither `onDismiss` nor `onAutoClose`, so the ledger
+      // entry retires here — this handler *is* the notification.
+      action: action
+        ? {
+            label: action.label,
+            onClick: () => {
+              if (holder.id != null) untrackToast(holder.id);
+              action.onClick();
+            },
+          }
+        : undefined,
+      // Every other exit — the 4s timer, the close button, a swipe, a
+      // programmatic `toast.dismiss(id)` — lands on one of these two.
+      onAutoClose: (t) => untrackToast(t.id),
+      onDismiss: (t) => untrackToast(t.id),
     },
   );
+
+  trackToast(holder.id);
 }

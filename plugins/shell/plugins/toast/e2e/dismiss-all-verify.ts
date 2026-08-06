@@ -89,6 +89,20 @@ await withBrowser(async (h) => {
   r.ok("button retires with the stack", true);
   await snap(page, OUT, "after");
 
+  // The count must not survive the toasts it counts. A burst that expires on
+  // its own, followed by a single fresh toast, is the shape that exposes a
+  // stale count: one toast on screen must never raise a "Dismiss all (n)".
+  await seed(6);
+  await page.waitForFunction(
+    ({ sel, n }) => document.querySelectorAll(sel).length >= n,
+    { sel: LIVE, n: 6 },
+    { timeout: 10_000 },
+  );
+  await emptyStack(30_000);
+  await seed(1);
+  await toasts.first().waitFor({ state: "visible", timeout: 10_000 });
+  await assertVisibleIffPlural("after a drained burst, with one toast up");
+
   // Clean up exactly what we created — by id, never the bulk endpoint.
   await page.evaluate(async (ids) => {
     for (const id of ids) {
