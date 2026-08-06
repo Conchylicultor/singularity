@@ -1,10 +1,25 @@
+import {
+  isMarkerSpan,
+  nearestOwner,
+  nearestSource,
+} from "@plugins/primitives/plugins/ui-context/web";
+
 import { RENDER_LOOP } from "../../core";
 
 /**
  * The stable build/composition markers that survive a React teardown→rebuild
  * because they're keyed by plugin/slot/source identity, not React instance.
- * Re-implemented locally (not cross-plugin-imported from the element-picker's
- * private internals) per the boundary rules — it's a small, self-contained walk.
+ *
+ * Reading the lineage grammar is `primitives/ui-context`'s job, so the three
+ * walks it owns (`isMarkerSpan`, `nearestSource`, `nearestOwner`) are imported
+ * from its web barrel — it is the neutral leaf built for exactly this consumer.
+ * The local copies that used to live here had drifted: their `isMarkerSpan` keyed
+ * on `data-slot-id`, which does not recognize `<UiRegion>`, so every culprit
+ * inside a miller column or a full-pane resolved to `ui-region.tsx`.
+ *
+ * What stays local below is genuinely this detector's own: a churn-robust
+ * bounded path, the signature `Map` key, the aggregate rollup root, and the
+ * `data-pane-id` read (a separate DOM convention `ui-context` does not own).
  */
 export interface CulpritMeta {
   /** `pluginId@slotId | data-source | data-ui-owner | pane:<id> | boundedPath`. */
@@ -26,16 +41,6 @@ export interface CulpritMeta {
   aggregateRoot?: string;
 }
 
-/**
- * The `display:contents` spans the slot middleware injects are not real layout
- * elements — they only carry markers (`data-slot-id`) — so they're skipped both
- * in the marker walks (to avoid mis-attributing to the middleware's own JSX) and
- * in the selector path (they add no box).
- */
-function isMarkerSpan(el: Element): boolean {
-  return el instanceof HTMLElement && el.dataset.slotId !== undefined;
-}
-
 /** The nearest `[data-plugin-id]` marker span above the element (skipping ""). */
 function nearestMarker(
   el: Element,
@@ -55,30 +60,6 @@ function nearestMarker(
     cur = m.parentElement;
   }
   return {};
-}
-
-/** The nearest build-stamped `data-source` (`file:line`), skipping marker spans. */
-function nearestSource(el: Element): string | undefined {
-  let cur: Element | null = el;
-  while (cur) {
-    const m: HTMLElement | null = cur.closest<HTMLElement>("[data-source]");
-    if (!m) return undefined;
-    if (!isMarkerSpan(m)) return m.dataset.source;
-    cur = m.parentElement;
-  }
-  return undefined;
-}
-
-/** The nearest `data-ui-owner` (`Name@file:line`), skipping marker spans. */
-function nearestOwner(el: Element): string | undefined {
-  let cur: Element | null = el;
-  while (cur) {
-    const m: HTMLElement | null = cur.closest<HTMLElement>("[data-ui-owner]");
-    if (!m) return undefined;
-    if (!isMarkerSpan(m)) return m.dataset.uiOwner;
-    cur = m.parentElement;
-  }
-  return undefined;
 }
 
 /** This element's `nth-of-type` index among same-tag siblings (1-based). */

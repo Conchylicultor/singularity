@@ -1,5 +1,6 @@
 import { MdAutoFixHigh } from "react-icons/md";
 import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
+import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportContext } from "@plugins/reports/web";
 import { investigate } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
@@ -66,6 +67,12 @@ export function LaunchFixButton({
           parts.push(
             `**Location:** ${[report.slot, report.label].filter(Boolean).join(" / ")}`,
           );
+        }
+        // The prompt is built here from the LIVE report — it never reads back the
+        // persisted row — so the lineage token has to be emitted a second time,
+        // beside the crash task's own copy.
+        if (report.uiContext) {
+          parts.push(serializeUiContext(report.uiContext, "crash"));
         }
         parts.push(`**Error:** ${report.error.message}`);
         if (report.error.stack) {

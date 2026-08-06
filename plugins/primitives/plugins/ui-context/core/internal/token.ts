@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export interface UiContextMeta {
   url: string;
   pluginId?: string;
@@ -85,6 +87,59 @@ const _allFieldsRegistered: UnregisteredKey extends never ? true : UnregisteredK
   true;
 void _allFieldsRegistered;
 
+// The wire schema, for producers that cross a trust boundary (a crash payload
+// POSTed from the browser and persisted as jsonb). Only `url` and `element` are
+// required, matching the interface — and `element` must stay required here, or
+// the mutual-assignability check below stops compiling.
+export const UiContextMetaSchema = z.object({
+  url: z.string(),
+  pluginId: z.string().optional(),
+  slotId: z.string().optional(),
+  contributionId: z.string().optional(),
+  path: z.string().optional(),
+  element: z.string(),
+  selector: z.string().optional(),
+  source: z.string().optional(),
+  owner: z.string().optional(),
+});
+
+// Compile-time binding of the schema to the interface, the same trick
+// `_allFieldsRegistered` uses above — in two parts, because neither half alone
+// is sufficient.
+//
+// KEY SETS first. Mutual assignability is blind to an OMITTED OPTIONAL field:
+// drop `owner` from the schema and `{…no owner}` is still assignable to
+// UiContextMeta (`owner?` may be absent) *and* UiContextMeta is still assignable
+// back (an extra optional property is fine) — the check passes while the wire
+// schema silently strips the field on ingest. Comparing `keyof` both ways closes
+// that, and names the offending key in the error.
+type _UnschemaedKey = Exclude<
+  keyof UiContextMeta,
+  keyof z.infer<typeof UiContextMetaSchema>
+>;
+type _UnknownSchemaKey = Exclude<
+  keyof z.infer<typeof UiContextMetaSchema>,
+  keyof UiContextMeta
+>;
+const _everyFieldInSchema: _UnschemaedKey extends never ? true : _UnschemaedKey =
+  true;
+const _noExtraSchemaField: _UnknownSchemaKey extends never
+  ? true
+  : _UnknownSchemaKey = true;
+void _everyFieldInSchema;
+void _noExtraSchemaField;
+
+// THEN the shapes, for the drift key sets can't see: a field whose optionality
+// or type diverges (schema makes `url` optional, or types `path` as a number).
+type _SchemaMatches =
+  z.infer<typeof UiContextMetaSchema> extends UiContextMeta
+    ? UiContextMeta extends z.infer<typeof UiContextMetaSchema>
+      ? true
+      : never
+    : never;
+const _schemaMatchesType: _SchemaMatches = true;
+void _schemaMatchesType;
+
 // Attribute values are quote-delimited, so only `"` would break them (a `>`
 // inside quotes — e.g. a CSS selector "div>div" — is fine). Collapse whitespace
 // so the tag stays single-line for the editor's line-based markdown sync.
@@ -104,39 +159,83 @@ const sanitizeBody = (v: string) =>
 const HINT =
   "The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to.";
 
+/** Why this token is being emitted — the one thing that differs between
+ *  producers. The eight attributes are already fully generic; only the body's
+ *  framing is producer-specific, and it would actively lie if reused (a crash
+ *  report is not something "the user pointed at"). */
+export type UiContextProvenance = "picked" | "crash";
+
+// Closed set: both runtimes need it and it is enumerable today, so it is plain
+// data in core/ rather than a slot (per the collection-vs-closed-list rule).
+// Deliberately NOT a UI_CONTEXT_FIELDS attribute: provenance says why we are
+// emitting, not where the element is — and a non-`string` union in UiContextMeta
+// would break both the `Exclude<keyof UiContextMeta, "element">` exhaustiveness
+// check and `parseUiContext`'s `meta[f.key] = v` string assignment.
+const PROVENANCE = {
+  picked: {
+    bodyTag: "picked-content",
+    hint: HINT,
+  },
+  crash: {
+    bodyTag: "crash-site",
+    hint: "A React error boundary caught a crash here. The path names the plugin, slot and screen region the throwing subtree occupied; the throwing component itself is named by the component stack.",
+  },
+} as const satisfies Record<
+  UiContextProvenance,
+  { bodyTag: string; hint: string }
+>;
+
 // Legacy flat-body preamble (hint + label concatenated). Retained only so the
 // parser still reads tags serialized before the <hint>/<picked-content> split.
 const LEGACY_BODY_PREAMBLE = `${HINT} Picked element: `;
 
 // Structured machine coordinates live in attributes; the constant hint and the
-// per-pick label live in the body as two sibling tags — the standard XML split,
-// which reads far more naturally to a model than cramming prose into an
+// per-emission label live in the body as two sibling tags — the standard XML
+// split, which reads far more naturally to a model than cramming prose into an
 // attribute, and keeps the fixed framing cleanly separated from the content.
-export function serializeUiContext(m: UiContextMeta): string {
+//
+// `provenance` is REQUIRED, not defaulted: a default would let a future producer
+// silently ship the picker's hint on a token that has nothing to do with a pick.
+export function serializeUiContext(
+  m: UiContextMeta,
+  provenance: UiContextProvenance,
+): string {
+  const { bodyTag, hint } = PROVENANCE[provenance];
   const attrs = UI_CONTEXT_FIELDS.map((f) => {
     const v = m[f.key] ?? "";
     return f.required || v ? ` ${f.attr}="${sanitizeAttr(v)}"` : "";
   }).join("");
-  return `<ui-context${attrs}><hint>${HINT}</hint><picked-content>${sanitizeBody(m.element)}</picked-content></ui-context>`;
+  return `<ui-context${attrs}><hint>${hint}</hint><${bodyTag}>${sanitizeBody(m.element)}</${bodyTag}></ui-context>`;
 }
 
 // Match the paired tag. Attribute values are quoted so they may safely contain
-// `>` (e.g. a CSS-path selector "div>div>div"); the body now nests <hint> and
-// <picked-content> tags, so it's matched non-greedily up to the closing tag.
-// Those nested tags are the only `<` the body holds — the picked label is
-// `<`-sanitized at serialize time. Stays single-line so it survives the
-// editor's line-based scan.
+// `>` (e.g. a CSS-path selector "div>div>div"); the body nests a <hint> and one
+// provenance body tag, so it's matched non-greedily up to the closing tag —
+// which is why a new provenance needs no change here. Those nested tags are the
+// only `<` the body holds — the label is `<`-sanitized at serialize time. Stays
+// single-line so it survives the editor's line-based scan.
 export const UI_CONTEXT_RE =
   /<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>/g;
+
+// Built from PROVENANCE so registering a provenance teaches the parser its body
+// tag — the alternation is never spelled out a second time. The backreference
+// (`</\1>`) means an open tag can only close with its own name, so a malformed
+// `<picked-content>…</crash-site>` is not silently accepted.
+const BODY_RE = new RegExp(
+  `<(${Object.values(PROVENANCE)
+    .map((p) => p.bodyTag)
+    .join("|")})>([\\s\\S]*?)</\\1>`,
+);
 
 // Accepts the raw matched `<ui-context …>` substring (e.g. an active-data inline
 // contribution's `content`, or a `UI_CONTEXT_RE` match's [0]).
 export function parseUiContext(tag: string): UiContextMeta | null {
   const get = (k: string) => new RegExp(`${k}="([^"]*)"`).exec(tag)?.[1];
   const url = get("url");
-  // New tags carry the label in <picked-content>; fall back to the legacy flat
-  // body (hint + label concatenated) so tags from before the split still parse.
-  let element = /<picked-content>([\s\S]*?)<\/picked-content>/.exec(tag)?.[1]?.trim();
+  // New tags carry the label in their provenance's body tag; fall back to the
+  // legacy flat body (hint + label concatenated) so tags from before the
+  // <hint>/<picked-content> split still parse.
+  let element = BODY_RE.exec(tag)?.[2]?.trim();
   if (element === undefined) {
     const body = tag
       .replace(/^<ui-context[^>]*>/, "")

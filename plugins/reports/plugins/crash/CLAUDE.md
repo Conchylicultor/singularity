@@ -20,6 +20,7 @@
     - `build/server-build-id.getServerBuildId`
     - `reports.ReportKind`
 - Core:
+  - Uses: `primitives/ui-context.UiContextMetaSchema`
   - Exports (types): `CrashPayload`
   - Exports (values):
     - `crashFingerprint`

@@ -14,7 +14,13 @@ export {
   regionNodeAttrs,
 } from "./internal/lineage-attrs";
 export { collectLineage } from "./internal/collect-lineage";
+export { collectLineageMeta } from "./internal/collect-lineage-meta";
 export { collectMeta } from "./internal/collect-meta";
+export {
+  isMarkerSpan,
+  nearestOwner,
+  nearestSource,
+} from "./internal/marker-walk";
 export { UiRegion } from "./internal/ui-region";
 
 export default {

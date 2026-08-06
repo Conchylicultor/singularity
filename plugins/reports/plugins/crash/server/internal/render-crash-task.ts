@@ -1,4 +1,5 @@
 import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
+import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportRow } from "@plugins/reports/server";
 import { CrashPayloadSchema } from "../../core";
 import type { CrashPayload } from "../../core";
@@ -84,6 +85,13 @@ function renderDescription(row: ReportRow): string {
   if (data.slot) {
     const suffix = data.label ? ` (label: ${data.label})` : "";
     lines.push(`**Slot:** ${data.slot}${suffix}`);
+  }
+  // The composition lineage of the crashed subtree, as the same `<ui-context …>`
+  // token the element-picker emits — so it renders as the existing inline chip
+  // and reads to an agent as a shape it already knows. Conditional: only the
+  // react-boundary source has a DOM position to walk from.
+  if (data.uiContext) {
+    lines.push(serializeUiContext(data.uiContext, "crash"));
   }
   if (row.url) lines.push(`**URL:** ${row.url}`);
   if (row.userAgent) lines.push(`**User-Agent:** ${row.userAgent}`);

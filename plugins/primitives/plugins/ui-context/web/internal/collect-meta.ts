@@ -1,5 +1,6 @@
 import { formatLineagePath, type UiContextMeta } from "../../core";
 import { collectLineage } from "./collect-lineage";
+import { isMarkerSpan, nearestOwner, nearestSource } from "./marker-walk";
 
 const MAX_LABEL = 60;
 
@@ -33,53 +34,6 @@ function describeElement(el: Element): string {
     "";
   const trimmed = truncate(label);
   return trimmed ? `${head} — ${trimmed}` : head;
-}
-
-/** The `display:contents` spans the lineage producers inject (the slot-item
- * marker middleware, `<UiRegion>`) are not real layout elements — they only
- * carry markers — so they're skipped in the selector path.
- *
- * Keyed on `data-lineage`, the grammar's discriminator, so it covers BOTH
- * producers. This is load-bearing, not cosmetic: each producer's span is JSX in
- * its own source file, so it also carries a build-stamped `data-source` /
- * `data-ui-owner`. Recognizing only one producer would make `nearestSource` /
- * `nearestOwner` / `preciseSelector` report the *producer's* file for every pick
- * beneath it. */
-function isMarkerSpan(el: Element): boolean {
-  return el instanceof HTMLElement && el.dataset.lineage !== undefined;
-}
-
-/** The nearest build-stamped `data-source` (repo-relative `file:line`) above the
- * element, skipping the marker middleware's own `display:contents` span — that span
- * is JSX in marker-middleware.tsx so it ALSO carries a `data-source` pointing at the
- * middleware, which would mis-attribute every pick. */
-function nearestSource(el: Element): string | undefined {
-  let cur: Element | null = el;
-  while (cur) {
-    const m: HTMLElement | null = cur.closest<HTMLElement>("[data-source]");
-    if (!m) return undefined;
-    if (!isMarkerSpan(m)) return m.dataset.source;
-    cur = m.parentElement;
-  }
-  return undefined;
-}
-
-/** The nearest `data-ui-owner` (`Name@file:line`) above the element — the
- * composing component that owns the picked element. A component callsite stamp
- * rides the composed primitive's `{...props}` spread onto the host, so this
- * resolves e.g. `LaunchControl` even though it authors no host element of its own
- * (the leaf primitive's file is reported separately by `nearestSource`). Skips the
- * marker middleware's `display:contents` span the same way (it carries no owner,
- * but may sit between the picked element and the owner-bearing host). */
-function nearestOwner(el: Element): string | undefined {
-  let cur: Element | null = el;
-  while (cur) {
-    const m: HTMLElement | null = cur.closest<HTMLElement>("[data-ui-owner]");
-    if (!m) return undefined;
-    if (!isMarkerSpan(m)) return m.dataset.uiOwner;
-    cur = m.parentElement;
-  }
-  return undefined;
 }
 
 /** One selector segment: prefer a stable, unique anchor (id, then test id) and

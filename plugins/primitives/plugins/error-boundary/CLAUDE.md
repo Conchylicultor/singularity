@@ -14,6 +14,22 @@ Domain plugins (e.g. `reports.crash`) opt in by calling
 opaque `context` — passed through to action contributions. The boundary itself
 never inspects that context.
 
+## Where the crash happened
+
+`report.slot` / `.label` are the boundary's own view (for `OverlayBoundary`, just
+the overlay `kind`). `report.uiContext` is the composition lineage of the crashed
+subtree, collected **only in `CrashFallback`** — the single point both boundary
+classes funnel into, rendering in the crashed subtree's exact position, so its
+DOM ancestors are the crash site. Hence the field is optional: both boundaries
+build their report before anything is mounted. The fallback threads the enriched
+report to both the sink and the `ErrorBoundary.Action` contributions.
+
+Ancestors-only (`collectLineageMeta`, not `collectMeta`) — the fallback's own
+`<Line>` would otherwise report `crash-fallback.tsx` as the source; what threw is
+already in `componentStack`. A partial/empty `path` is legitimate: contribution
+nodes come from an opt-in middleware in `improve/element-picker`, which this
+plugin must not import.
+
 ## Actions
 
 `ErrorBoundary.Action` is the slot for buttons rendered next to the
@@ -46,6 +62,7 @@ barrel.
     - `primitives/css/text.Text`
     - `primitives/overlay-boundary.registerOverlayFallback`
     - `primitives/slot-render.registerSlotItemMiddleware`
+    - `primitives/ui-context.collectLineageMeta`
   - Exports (types): `BoundaryErrorReport`
   - Exports (values):
     - `boundaryReportSink`

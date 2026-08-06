@@ -4,10 +4,15 @@ export type {
   LineageNode,
 } from "./internal/node";
 export { formatLineageNode, formatLineagePath } from "./internal/node";
-export type { UiContextMeta, UiContextField } from "./internal/token";
+export type {
+  UiContextMeta,
+  UiContextField,
+  UiContextProvenance,
+} from "./internal/token";
 export {
   serializeUiContext,
   UI_CONTEXT_RE,
   UI_CONTEXT_FIELDS,
+  UiContextMetaSchema,
   parseUiContext,
 } from "./internal/token";

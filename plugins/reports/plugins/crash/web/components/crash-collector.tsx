@@ -50,6 +50,7 @@ export function CrashCollector() {
           componentStack: r.componentStack,
           slot: r.slot,
           label: r.label,
+          uiContext: r.uiContext ?? null,
         },
       });
       return promise.then((result) => ({

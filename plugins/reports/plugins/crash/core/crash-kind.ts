@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UiContextMetaSchema } from "@plugins/primitives/plugins/ui-context/core";
 
 // The crash report payload, stored in the generic `data` jsonb column and
 // validated on ingest by the crash ReportKind. Mirrors the crash fields that
@@ -12,6 +13,12 @@ export const CrashPayloadSchema = z.object({
   // human label). Omitted for window-level errors — we don't know then.
   slot: z.string().nullable().optional(),
   label: z.string().nullable().optional(),
+  // The composition lineage of the crashed subtree, collected by the boundary's
+  // fallback from its own mount point. Kept ALONGSIDE slot/label rather than
+  // replacing them: those are the boundary's own view, available with no DOM
+  // walk and no opt-in middleware installed. Absent for the window-level and
+  // wedge sources, which have no DOM position to walk from.
+  uiContext: UiContextMetaSchema.nullable().optional(),
 });
 export type CrashPayload = z.infer<typeof CrashPayloadSchema>;
 

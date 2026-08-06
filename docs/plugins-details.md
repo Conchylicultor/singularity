@@ -22453,6 +22453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/overlay-boundary.registerOverlayFallback`
           - `primitives/slot-render.registerSlotItemMiddleware`
+          - `primitives/ui-context.collectLineageMeta`
         - Exports (types): `BoundaryErrorReport`
         - Exports (values):
           - `boundaryReportSink`
@@ -24800,9 +24801,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `appendLineage`
           - `collectLineage`
+          - `collectLineageMeta`
           - `collectMeta`
           - `contributionNodeAttrs`
+          - `isMarkerSpan`
           - `LINEAGE_ATTR`
+          - `nearestOwner`
+          - `nearestSource`
           - `NODE_ATTR`
           - `parseLineage`
           - `readLineageNode`
@@ -24813,6 +24818,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve/element-picker`
           - `layouts/full-pane`
           - `layouts/miller`
+          - `primitives/error-boundary`
+          - `reports/crash`
+          - `reports/render-loop`
       - Core:
         - Exports (types):
           - `ContributionNode`
@@ -24820,6 +24828,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RegionNode`
           - `UiContextField`
           - `UiContextMeta`
+          - `UiContextProvenance`
         - Exports (values):
           - `formatLineageNode`
           - `formatLineagePath`
@@ -24827,6 +24836,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serializeUiContext`
           - `UI_CONTEXT_FIELDS`
           - `UI_CONTEXT_RE`
+          - `UiContextMetaSchema`
     - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
       - Web:
         - Uses:
@@ -25543,6 +25553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/server-build-id.getServerBuildId`
           - `reports.ReportKind`
       - Core:
+        - Uses: `primitives/ui-context.UiContextMetaSchema`
         - Exports (types): `CrashPayload`
         - Exports (values):
           - `crashFingerprint`
@@ -25629,6 +25640,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/log-channels.clientLog`
+          - `primitives/ui-context.isMarkerSpan`
+          - `primitives/ui-context.nearestOwner`
+          - `primitives/ui-context.nearestSource`
           - `reports.report`
           - `reports.Reports`
       - Server:

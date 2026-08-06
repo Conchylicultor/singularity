@@ -12,7 +12,7 @@ export function TaskDraftPickerButton({ insertText }: TaskDraftActionProps) {
   return (
     <PickerButton
       label="Attach UI element"
-      onPick={(meta) => insertText(serializeUiContext(meta))}
+      onPick={(meta) => insertText(serializeUiContext(meta, "picked"))}
     />
   );
 }

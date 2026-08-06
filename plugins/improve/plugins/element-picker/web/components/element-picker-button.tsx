@@ -11,7 +11,9 @@ import { PickerButton } from "./picker-button";
 export function ElementPickerButton() {
   return (
     <PickerButton
-      onPick={(meta) => insertIntoImproveDraft(serializeUiContext(meta))}
+      onPick={(meta) =>
+        insertIntoImproveDraft(serializeUiContext(meta, "picked"))
+      }
     />
   );
 }

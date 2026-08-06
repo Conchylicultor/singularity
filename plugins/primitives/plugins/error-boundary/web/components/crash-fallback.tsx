@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/core";
+import { collectLineageMeta } from "@plugins/primitives/plugins/ui-context/web";
+import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -15,13 +17,27 @@ export function CrashFallback({
 }) {
   const actions = ErrorBoundary.Action.useContributions();
   const [context, setContext] = useState<unknown>(null);
+  const [uiContext, setUiContext] = useState<UiContextMeta | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
+
+  const tag = [report.slot, report.label].filter(Boolean).join(" / ");
 
   useEffect(() => {
     let cancelled = false;
     // Defer one tick so plugin-side effects (e.g. boundaryReportSink.register)
     // have run if this boundary fired during the very first commit.
     const timer = setTimeout(() => {
-      const result = boundaryReportSink.emit(report);
+      // This is the single collection point for BOTH boundary classes, and the
+      // fallback renders in the crashed subtree's exact position — so its own
+      // ancestors ARE the crash site. Ancestors-only on purpose: the fallback's
+      // `<Line>` below would otherwise name crash-fallback.tsx as the source.
+      // A null ref means the fallback isn't mounted, which can't be recovered
+      // from here — omit the field rather than throw on the error path.
+      const lineage = rootRef.current
+        ? collectLineageMeta(rootRef.current, tag || "Plugin")
+        : null;
+      if (!cancelled) setUiContext(lineage);
+      const result = boundaryReportSink.emit({ ...report, uiContext: lineage });
       if (result && typeof (result as Promise<unknown>).then === "function") {
         // eslint-disable-next-line promise-safety/no-bare-catch
         (result as Promise<unknown>)
@@ -40,9 +56,11 @@ export function CrashFallback({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [report]);
+  }, [report, tag]);
 
-  const tag = [report.slot, report.label].filter(Boolean).join(" / ");
+  // Actions get the same enriched report the sink did, so a fix-agent prompt
+  // built client-side carries the lineage without reading back the persisted row.
+  const enriched: BoundaryErrorReport = { ...report, uiContext };
   return (
     // Single-line row: rigid identity → the ONE flexible <Fill> holding the
     // truncating message → rigid trailing actions. <Fill> absorbs the slack
@@ -50,7 +68,10 @@ export function CrashFallback({
     // <Text> ellipsize under pressure — so a long message can never push the
     // Fix/Retry recovery actions off the clickable area. The full message
     // stays available via the native title tooltip.
-    <Line className="gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive">
+    <Line
+      ref={rootRef}
+      className="gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive"
+    >
       <Text variant="caption" className="font-medium">
         {tag || "Plugin"} crashed
       </Text>
@@ -66,7 +87,7 @@ export function CrashFallback({
       {actions.map((action, i) => {
         // UNSAFE: rendered inside the boundary's own fallback — wrapping again is circular.
         const Component = UNSAFE_unsealSlotComponent(action.component);
-        return <Component key={i} report={report} context={context} />;
+        return <Component key={i} report={enriched} context={context} />;
       })}
       <Text
         as="button"

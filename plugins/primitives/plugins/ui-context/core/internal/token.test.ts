@@ -4,10 +4,14 @@ import {
   serializeUiContext,
   UI_CONTEXT_RE,
   type UiContextMeta,
+  type UiContextProvenance,
 } from "./token";
 
-function roundTrip(meta: UiContextMeta): UiContextMeta | null {
-  const tag = serializeUiContext(meta);
+function roundTrip(
+  meta: UiContextMeta,
+  provenance: UiContextProvenance = "picked",
+): UiContextMeta | null {
+  const tag = serializeUiContext(meta, provenance);
   const re = new RegExp(UI_CONTEXT_RE.source, UI_CONTEXT_RE.flags);
   const match = re.exec(tag);
   expect(match).not.toBeNull();
@@ -39,13 +43,43 @@ test("owner (`Name@file:line`, with @ : /) survives serialize/parse", () => {
   expect(roundTrip(meta)?.owner).toBe(meta.owner);
 });
 
+test("round-trips a crash-provenance tag through its own body tag", () => {
+  const meta: UiContextMeta = {
+    url: "https://x.localhost:9000/agents",
+    pluginId: "tasks/task-header",
+    path: "apps/agent-manager/shell@Apps.App > tasks/tasks-core#pane:tasks-root[column 1 of 2] > tasks/task-header@TaskDetail.Section",
+    element: "TaskDetail.Section",
+  };
+  const parsed = roundTrip(meta, "crash");
+  expect(parsed?.path).toBe(meta.path);
+  expect(parsed?.element).toBe(meta.element);
+  expect(parsed).toEqual(meta);
+});
+
+test("crash and picked provenances emit distinct hints and body tags", () => {
+  const meta: UiContextMeta = { url: "u", element: "div — X" };
+  const crash = serializeUiContext(meta, "crash");
+  const picked = serializeUiContext(meta, "picked");
+  expect(crash).toContain("<crash-site>div — X</crash-site>");
+  expect(crash).toContain("A React error boundary caught a crash here.");
+  expect(picked).toContain("<picked-content>div — X</picked-content>");
+  expect(picked).toContain("The user pointed at this element");
+  // Each provenance's body parses back to the same element — the parser matches
+  // across every registered body tag, not just the picker's.
+  expect(parseUiContext(crash)?.element).toBe("div — X");
+  expect(parseUiContext(picked)?.element).toBe("div — X");
+});
+
 test("path containing `>` does not break the tag regex", () => {
-  const tag = serializeUiContext({
-    url: "u",
-    path: "a@S1 > b@S2",
-    element: "button",
-    selector: "div>div>div",
-  });
+  const tag = serializeUiContext(
+    {
+      url: "u",
+      path: "a@S1 > b@S2",
+      element: "button",
+      selector: "div>div>div",
+    },
+    "picked",
+  );
   // A single tag is matched whole despite the inner `>` chars in attributes and
   // the `<` chars from the nested <hint>/<picked-content> body tags.
   const matches = tag.match(UI_CONTEXT_RE);
@@ -53,7 +87,7 @@ test("path containing `>` does not break the tag regex", () => {
 });
 
 test("splits the constant hint from the per-pick content in the body", () => {
-  const tag = serializeUiContext({ url: "u", element: "div — My label" });
+  const tag = serializeUiContext({ url: "u", element: "div — My label" }, "picked");
   expect(tag).toBe(
     `<ui-context url="u">` +
       `<hint>The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to.</hint>` +
