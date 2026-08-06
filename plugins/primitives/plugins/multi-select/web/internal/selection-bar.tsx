@@ -59,6 +59,7 @@ export function SelectionBar({
             <>
               <div className="bg-border h-4 w-px" />
               <Stack direction="row" align="center" gap="xs">
+                {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- bulk-selection bar actions, one per surface, not a per-row cluster */}
                 {actions}
               </Stack>
             </>

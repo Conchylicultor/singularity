@@ -9,7 +9,7 @@ import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 /**
  * Wrapper that makes header content interactive inside the card's click-through
@@ -185,7 +185,7 @@ export function CollapsibleCard({
             <CardHeaderAction className="shrink-0">{trailing}</CardHeaderAction>
           )}
           <CardHeaderAction className="shrink-0">
-            <RowActions />
+            <EventRowActions />
           </CardHeaderAction>
         </Line>
       </Overlay>

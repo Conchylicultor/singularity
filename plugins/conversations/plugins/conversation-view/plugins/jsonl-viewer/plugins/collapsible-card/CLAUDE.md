@@ -7,7 +7,7 @@
 - Description: Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
 - Web:
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/card.Card`

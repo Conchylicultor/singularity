@@ -2,7 +2,7 @@ import { useState } from "react";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { useRowMarkdown, useSectionExpand } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -69,7 +69,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
     <ContentScope>
       <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
         <Pin to="top-right" offset="sm">
-          <RowActions floating />
+          <EventRowActions floating />
         </Pin>
         <Expandable expanded={expanded} onToggle={setExpanded}>
           {body}

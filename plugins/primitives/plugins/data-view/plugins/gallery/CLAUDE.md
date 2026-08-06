@@ -56,7 +56,8 @@ into its measured `scrollMargin`, so the two compose with no wiring.
 ## Exports
 
 - `DataCard` — composable card chrome with `media` / body / `actions` /
-  `footer` regions, `group`-driven hover reveal, focus, and click→`onActivate`.
+  `footer` regions, focus, and click→`onActivate`. `actions` renders through the
+  shared `primitives/row-actions` cluster (reveal, pin + scrim, press guards).
 - `GalleryViewOptions` — the typed options interface. Consumers pass a plain
   `viewOptions={{ gallery: { … } }}` literal (never import this view child),
   mirroring the tree view child, which likewise ships only its options type.
@@ -94,8 +95,8 @@ into its measured `scrollMargin`, so the two compose with no wiring.
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/element-size.useResizeObserver`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/row-actions.RowActions`
+    - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types):
     - `CoverContent`

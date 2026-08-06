@@ -154,6 +154,7 @@ export function DataViewShellFrame(props: {
               {title}
             </Text>
           ) : null}
+          {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
           {actions ? <div className="ml-auto">{actions}</div> : null}
           <div className={actions ? undefined : "ml-auto"}>
             <CreatorsControl creators={creators} />

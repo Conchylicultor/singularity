@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 
 export interface BreadcrumbSegment {
   key: string;
@@ -54,7 +55,20 @@ export function Breadcrumb({
         </span>
       )}
       <span className="shrink-0 truncate font-medium">{active.label}</span>
-      {actions}
+      {actions && (
+        // A trailing action cluster on a row-shaped strip is the `row-actions`
+        // primitive, never raw JSX — one implementation owns the sizing, the
+        // click/pointerdown guards and the popup-hold. `pin={null}` + always
+        // visible is what a breadcrumb's trailing slot is: it sits in flow right
+        // after the active segment (there is no `ml-auto` here — the trail is
+        // left-packed and the actions belong to its leaf, not to the far edge),
+        // and it is never hover-revealed because the trail is chrome, not a row
+        // in a list. `shrink-0` keeps it out of the truncation the prefix and
+        // the active label absorb.
+        <RowActions pin={null} alwaysVisible className="shrink-0">
+          {actions}
+        </RowActions>
+      )}
     </span>
   );
 }

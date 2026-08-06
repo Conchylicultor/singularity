@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 /**
  * The shared one-line grammar for ambient / lifecycle rows in the transcript —
@@ -36,7 +36,7 @@ export function EventLine({
       {children != null && (
         <span className="flex min-w-0 items-center gap-xs">{children}</span>
       )}
-      <RowActions className="ml-auto" />
+      <EventRowActions className="ml-auto" />
     </Text>
   );
 }

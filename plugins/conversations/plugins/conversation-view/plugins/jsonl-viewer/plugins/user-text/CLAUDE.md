@@ -13,9 +13,9 @@
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
     - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
     - `primitives/css/pin.Pin`
     - `primitives/css/text.Text`
     - `primitives/expandable.Expandable`

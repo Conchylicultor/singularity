@@ -8529,9 +8529,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
               - `conversations/conversation-view/jsonl-viewer/row-actions.EventActionProvider`
+              - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
               - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
               - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
-              - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
               - `conversations/conversation-view/pending-turn.PendingTurnCard`
               - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
               - `conversations/conversation-view/pending-turn.usePendingTurns`
@@ -8544,12 +8544,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
-              - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/popover.InlinePopover`
               - `primitives/relative-time.RelativeTime`
+              - `primitives/row-actions.rowActionsAnchor`
               - `primitives/scroll-reveal.revealElement`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -8625,9 +8625,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/text.Text`
                   - `primitives/markdown.Markdown`
@@ -8784,7 +8784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
               - Web:
                 - Uses:
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `primitives/collapsible.CollapsibleChevron`
                   - `primitives/collapsible.useCollapsible`
                   - `primitives/css/card.Card`
@@ -8919,24 +8919,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
                   - `conversations/conversation-view/jsonl-viewer/queue-operation`
-            - **`row-actions`** — Owns the JSONL transcript's hover-revealed row-action strip: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. Sits below collapsible-card so card chrome can host the strip without a cycle.
+            - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
               - Web:
                 - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`
                 - Uses:
                   - `primitives/copy-to-clipboard.useCopyToClipboard`
-                  - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.cn`
-                  - `primitives/hover-reveal.hoverRevealTarget`
+                  - `primitives/row-actions.RowActions`
                   - `primitives/slot-render.defineRenderSlot`
                 - Exports (types): `RowActionContribution`
                 - Exports (values):
                   - `CopyTextAction`
                   - `EventActionProvider`
+                  - `EventRowActions`
                   - `JsonlRowActions`
                   - `RowActionButton`
                   - `rowActionClass`
-                  - `RowActions`
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/fork-session`
@@ -9220,7 +9219,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
@@ -9233,9 +9232,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
                   - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+                  - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/text.Text`
                   - `primitives/expandable.Expandable`
@@ -18981,16 +18980,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-shell`
           - `primitives/pane`
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
+      - Web:
+        - Uses: `primitives/row-actions.RowActions`
+        - Exports (types):
+          - `BreadcrumbProps`
+          - `BreadcrumbSegment`
+        - Exports (values): `Breadcrumb`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
           - `plugin-meta/plugin-view`
           - `primitives/filepath-breadcrumb`
-      - Web:
-        - Exports (types):
-          - `BreadcrumbProps`
-          - `BreadcrumbSegment`
-        - Exports (values): `Breadcrumb`
     - **`collab-doc`** — Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state, on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.
       - Cross-plugin:
         - Imported by:
@@ -19946,7 +19946,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/image`
               - `page/read-only-view`
               - `page/video`
-              - `primitives/css/row`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
@@ -20049,10 +20048,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.useCollapsibleContext`
               - `primitives/css/line.Line`
-              - `primitives/css/pin.Pin`
               - `primitives/css/ui-kit.cn`
-              - `primitives/hover-reveal.hoverRevealClass`
-              - `primitives/hover-reveal.useHoverReveal`
+              - `primitives/row-actions.RowActions`
+              - `primitives/row-actions.rowActionsAnchor`
             - Exports (types):
               - `RowHover`
               - `RowProps`
@@ -20376,7 +20374,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
-              - `conversations/conversation-view/jsonl-viewer/row-actions`
               - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -20489,7 +20486,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/inline`
               - `primitives/css/layout-harness`
               - `primitives/cursor-pagination`
-              - `primitives/data-table`
               - `primitives/data-view`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/gallery`
@@ -20697,6 +20693,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/card`
               - `primitives/data-view`
               - `primitives/floating-surface`
+              - `primitives/row-actions`
               - `stats`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
@@ -21607,7 +21604,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/center.Center`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/sticky/stack.StickyStack`
           - `primitives/css/sticky/stack.StickyStackItem`
@@ -21616,8 +21612,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/element-size.useElementSize`
-          - `primitives/hover-reveal.hoverRevealGroup`
-          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/row-actions.RowActions`
+          - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
         - Exports (types):
           - `ColumnDef`
@@ -22110,8 +22106,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/element-size.useResizeObserver`
-              - `primitives/hover-reveal.hoverRevealGroup`
-              - `primitives/hover-reveal.hoverRevealTarget`
+              - `primitives/row-actions.RowActions`
+              - `primitives/row-actions.rowActionsAnchor`
               - `primitives/virtual-rows.VirtualRows`
             - Exports (types):
               - `CoverContent`
@@ -22714,8 +22710,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
           - `config_v2/settings`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `layouts/miller`
           - `page/audio`
           - `page/bookmark`
@@ -22724,10 +22718,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/file`
           - `page/image`
           - `page/video`
-          - `primitives/css/row`
-          - `primitives/data-table`
           - `primitives/data-view`
-          - `primitives/data-view/gallery`
           - `primitives/data-view/view-core`
           - `primitives/text-editor/paste-images`
           - `tasks/task-description`
@@ -24241,7 +24232,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/pin.Pin`
           - `primitives/css/pin.PinAnchor`
+          - `primitives/css/spacing.insetClass`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
@@ -24261,8 +24254,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/studio/compositions`
+          - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
+          - `primitives/breadcrumb`
+          - `primitives/css/row`
+          - `primitives/data-table`
+          - `primitives/data-view/gallery`
           - `primitives/tree`
     - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
       - Web:

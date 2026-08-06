@@ -186,6 +186,7 @@ function BannerShell({
             ) : null}
           </Stack>
         </Fill>
+        {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- banner remediation buttons, one per mailbox, not a per-row cluster */}
         {actions != null ? <Inline gap="xs">{actions}</Inline> : null}
       </Stack>
     </div>

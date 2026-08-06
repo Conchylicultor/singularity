@@ -56,10 +56,9 @@ genuine transient-chrome list escapes with
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsibleContext`
     - `primitives/css/line.Line`
-    - `primitives/css/pin.Pin`
     - `primitives/css/ui-kit.cn`
-    - `primitives/hover-reveal.hoverRevealClass`
-    - `primitives/hover-reveal.useHoverReveal`
+    - `primitives/row-actions.RowActions`
+    - `primitives/row-actions.rowActionsAnchor`
   - Exports (types):
     - `RowHover`
     - `RowProps`

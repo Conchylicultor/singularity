@@ -279,7 +279,7 @@
           - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
           - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
           - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
-          - **`row-actions`** — Owns the JSONL transcript's hover-revealed row-action strip: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. Sits below collapsible-card so card chrome can host the strip without a cycle.
+          - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
           - **`summary`** — Renders summary separator events in the JSONL viewer.
           - **`system`** — Renders system events in the JSONL viewer.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.

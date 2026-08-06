@@ -1,10 +1,9 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
-  useHoverReveal,
-  hoverRevealClass,
-} from "@plugins/primitives/plugins/hover-reveal/web";
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import type React from "react";
 
 export type RowSize = "sm" | "md";
@@ -23,7 +22,7 @@ export interface RowProps {
   indent?: number;
   /** Leading slot (icon / StatusDot / chevron), rendered before children. */
   icon?: React.ReactNode;
-  /** Trailing slot; ml-auto, hover-revealed by default. */
+  /** Trailing slot, rendered through the `row-actions` primitive; hover-revealed by default. */
   actions?: React.ReactNode;
   actionsAlwaysVisible?: boolean;
   /**
@@ -71,54 +70,24 @@ export function Row({
   const isButton = Tag === "button";
   const interactive = Tag !== "div";
 
-  // Hover/focus reveal for the trailing actions. Only rows that actually hide
-  // their actions need the JS state, so plain/always-visible rows keep their
-  // zero-cost CSS-only hover. Consumer-supplied pointer/focus handlers compose.
-  const needsReveal = !!actions && !actionsAlwaysVisible;
-  const { revealed, groupProps } = useHoverReveal();
-  const {
-    onPointerEnter,
-    onPointerLeave,
-    onFocus,
-    onBlur,
-    ...restProps
-  } = rest as {
-    onPointerEnter?: React.PointerEventHandler;
-    onPointerLeave?: React.PointerEventHandler;
-    onFocus?: React.FocusEventHandler;
-    onBlur?: React.FocusEventHandler;
-    [key: string]: unknown;
-  };
-
-  const revealHandlers = {
-    onPointerEnter: (e: React.PointerEvent) => {
-      if (needsReveal) groupProps.onPointerEnter();
-      onPointerEnter?.(e);
-    },
-    onPointerLeave: (e: React.PointerEvent) => {
-      if (needsReveal) groupProps.onPointerLeave();
-      onPointerLeave?.(e);
-    },
-    onFocus: (e: React.FocusEvent) => {
-      if (needsReveal) groupProps.onFocus();
-      onFocus?.(e);
-    },
-    onBlur: (e: React.FocusEvent) => {
-      if (needsReveal) groupProps.onBlur(e);
-      onBlur?.(e);
-    },
-  };
-
   // The single-line contract (region-line + SingleLineProvider) comes from
   // <Line>; Row layers its interactive row chrome (width, padding, hover) on top.
+  //
+  // `rowActionsAnchor` is unconditional: it establishes the `group/row-actions`
+  // hover group the actions cluster reveals off (a CSS group, so a hovered row
+  // costs zero re-renders — the list and table views window 100+ rows), plus the
+  // `relative` a pinned cluster anchors to. Both are inert on a row with no
+  // actions, and pinning them to `actions ? …` would only make the row's
+  // positioning context depend on which slots the caller filled.
   const chromeClass = cn(
     "group w-full rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+    rowActionsAnchor,
     "disabled:pointer-events-none disabled:opacity-50",
     size === "sm" && "gap-xs text-caption",
     size === "md" && "gap-sm text-body",
-    // Each tint co-publishes itself as `--scrim` — the color a `<Pin mask>`
-    // overlay inside the row paints so it hides the row instead of letting the
-    // label show through the action icons. Same contract as a Surface publishing
+    // Each tint co-publishes itself as `--scrim` — the color the pinned action
+    // cluster's mask paints so it hides the row instead of letting the label
+    // show through the action icons. Same contract as a Surface publishing
     // `--chrome-mask`, one level down: the surface says what is behind the row,
     // the row says what is *painted* on it right now. A translucent tint
     // publishes its composite over the ambient mask, which is why this is a
@@ -139,42 +108,38 @@ export function Row({
   );
   const style = indent !== undefined ? { paddingLeft: indent } : undefined;
 
-  // Hover-revealed actions are PINNED to the right edge, so a hidden cluster
-  // reserves ZERO flow width — otherwise a multi-button cluster (e.g. a queue
-  // row's 4 icon buttons) permanently steals ~100px from the row body via
-  // `shrink-0`, collapsing the flex-1 title cell and truncating the title even
-  // when nothing is shown. Mirrors the row-actions primitive's Pin approach; on
-  // reveal the cluster overlays the row's right edge — `mask` therefore is NOT
-  // optional here: it paints the row's own `--scrim` under the buttons with a
-  // gradient ramp on its inner edge, so what the cluster covers (a trailing
-  // status badge, a long title) dissolves under it rather than interleaving its
-  // glyphs with the icons. Reserving the width instead would cure the overlap
-  // too, at the cost the paragraph above rejects. `actionsAlwaysVisible`
-  // actions instead stay in flow: they are part of the row layout and
-  // legitimately reserve their space. Either way they paint above the split
-  // path's `z-under` hit-area, so their buttons stay clickable.
-  const actionsSpan = actions ? (
-    actionsAlwaysVisible ? (
-      <span
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "ml-auto flex shrink-0 items-center gap-2xs",
-          hoverRevealClass(revealed, { alwaysVisible: true }),
-        )}
-      >
-        {actions}
-      </span>
-    ) : (
-      <Pin
-        to="right"
-        offset="xs"
-        mask
-        onClick={(e) => e.stopPropagation()}
-        className={cn("flex items-center gap-2xs", hoverRevealClass(revealed))}
-      >
-        {actions}
-      </Pin>
-    )
+  // The trailing cluster is the `row-actions` primitive — the ONE implementation
+  // of a row-action cluster, owning the reveal, the popup-hold, the click +
+  // pointerdown guards (a press on an action must not fire the row's onClick nor
+  // arm its drag source) and the control size. `Row` keeps only the PLACEMENT
+  // decision, which is the one thing that genuinely differs per host:
+  //
+  // - Hover-revealed actions are PINNED to the right edge, so a hidden cluster
+  //   reserves ZERO flow width — otherwise a multi-button cluster (e.g. a queue
+  //   row's 4 icon buttons) permanently steals ~100px from the row body via
+  //   `shrink-0`, collapsing the flex-1 title cell and truncating the title even
+  //   when nothing is shown. On reveal the cluster overlays the row's right edge,
+  //   which is why the pin's `mask` (owned by the primitive) is not optional: it
+  //   paints the row's own `--scrim` under the buttons with a gradient ramp on
+  //   its inner edge, so what the cluster covers (a trailing status badge, a long
+  //   title) dissolves under it rather than interleaving its glyphs with the
+  //   icons. Reserving the width instead would cure the overlap too, at the cost
+  //   the paragraph above rejects.
+  // - `actionsAlwaysVisible` actions instead stay in flow (`pin={null}`): they
+  //   are part of the row layout and legitimately reserve their space, so the
+  //   placement `Row` hands down is `ml-auto shrink-0` — flush right, never
+  //   crushed.
+  //
+  // Either way they paint above the split path's `z-under` hit-area, so their
+  // buttons stay clickable.
+  const actionsCluster = actions ? (
+    <RowActions
+      pin={actionsAlwaysVisible ? null : "right"}
+      alwaysVisible={actionsAlwaysVisible}
+      className={actionsAlwaysVisible ? "ml-auto shrink-0" : undefined}
+    >
+      {actions}
+    </RowActions>
   ) : null;
 
   // SPLIT PATH — an interactive row that also carries actions. The interactive
@@ -202,9 +167,8 @@ export function Row({
       <Line
         as="div"
         ref={ref}
-        className={cn(chromeClass, "relative isolate")}
+        className={cn(chromeClass, "isolate")}
         style={style}
-        {...revealHandlers}
       >
         <Tag
           type={isButton ? "button" : undefined}
@@ -215,21 +179,21 @@ export function Row({
             size === "sm" ? "gap-xs" : "gap-sm",
             "disabled:pointer-events-none disabled:opacity-50",
           )}
-          {...restProps}
+          {...rest}
         >
           {icon}
           {children}
           <span aria-hidden className="absolute inset-0 z-under rounded-md" />
         </Tag>
-        {actionsSpan}
+        {actionsCluster}
       </Line>
     );
   }
 
   // SINGLE-ELEMENT PATH — no actions (any element), or a non-interactive
   // container row with actions (a <div> may legally nest the action buttons).
-  // When the actions are hover-revealed they render as a right-edge Pin, so the
-  // row must establish the positioning context (`relative`) for it to anchor to.
+  // The positioning context a hover-revealed cluster pins against already comes
+  // from `rowActionsAnchor` in `chromeClass`.
   return (
     <Line
       as={Tag}
@@ -237,14 +201,13 @@ export function Row({
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}
-      {...revealHandlers}
-      className={cn(chromeClass, needsReveal && "relative")}
+      className={chromeClass}
       style={style}
-      {...restProps}
+      {...rest}
     >
       {icon}
       {children}
-      {actionsSpan}
+      {actionsCluster}
     </Line>
   );
 }

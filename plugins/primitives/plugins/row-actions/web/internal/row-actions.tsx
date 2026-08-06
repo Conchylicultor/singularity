@@ -3,7 +3,11 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin, type PinAnchor } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  insetClass,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 
 /**
  * Apply to the row element that should reveal its {@link RowActions} on hover or
@@ -82,17 +86,45 @@ export function RowActionButton({
   );
 }
 
-export interface RowActionsProps {
+interface RowActionsCommonProps {
   children: ReactNode;
-  /**
-   * Where to pin the cluster relative to its `rowActionsAnchor` row. Defaults to
-   * the right edge (`"right"`). Pass `null` to render the cluster inline instead
-   * of absolutely positioning it (e.g. inside an existing trailing flex slot).
-   */
-  pin?: PinAnchor | null;
   /** Keep the cluster always visible instead of revealing on row hover/focus. */
   alwaysVisible?: boolean;
+  /**
+   * Placement classes for the host's OWN layout — `ml-auto`, `shrink-0`,
+   * `justify-end`. The host owns WHERE the cluster sits in its row; the
+   * primitive owns everything else about it. Merged (tailwind-merge) onto the
+   * outermost node, which is also the node the reveal rides.
+   */
+  className?: string;
 }
+
+/**
+ * `pin` and `surface` are a discriminated pair, not two free booleans: a pinned
+ * cluster already paints the row's own `--scrim` through `Pin mask`, so stacking
+ * an overlay surface on top of it would double-paint. Only an UNPINNED cluster
+ * (one floating over prose rather than over a row's trailing edge) can ask for
+ * its own chrome, and the type is what says so.
+ */
+export type RowActionsProps = RowActionsCommonProps &
+  (
+    | {
+        /** Where to pin the cluster relative to its `rowActionsAnchor` row.
+         *  Defaults to the right edge (`"right"`). */
+        pin?: PinAnchor;
+        surface?: never;
+      }
+    | {
+        /** Render the cluster inline instead of absolutely positioning it —
+         *  inside an existing trailing flex slot, or a reserved grid track. */
+        pin: null;
+        /** Paint the cluster on its own `overlay` surface. For a cluster that
+         *  floats over CONTENT (a headerless transcript turn) rather than over a
+         *  row's trailing edge, where there is no row tint for a mask to pick up
+         *  and the buttons would otherwise sit unreadable on top of prose. */
+        surface?: boolean;
+      }
+  );
 
 /**
  * The hover-revealed action cluster for a list/tree/sidebar row. Holds one or
@@ -111,7 +143,9 @@ export function RowActions({
   children,
   pin = "right",
   alwaysVisible = false,
-}: RowActionsProps) {
+  surface = false,
+  className: placement,
+}: RowActionsProps & { surface?: boolean }) {
   const cluster = (className?: string) => (
     <Stack
       direction="row"
@@ -148,12 +182,30 @@ export function RowActions({
           : // `cn` (tailwind-merge), not concatenation: the held state must WIN
             // over `opacity-0`, and merge order is what decides that.
             cn(revealClasses, popupOpen && "opacity-100 pointer-events-auto");
-        return pin === null ? (
-          cluster(reveal)
-        ) : (
-          <Pin to={pin} offset="xs" mask className={reveal}>
+        // The outermost node carries both the reveal and the host's placement
+        // classes, for the same reason: it is the one node that exists in every
+        // configuration, so neither can end up on an inner node that fades or
+        // moves independently of the box the user actually sees.
+        const outer = cn(reveal, placement);
+        if (pin !== null) {
+          return (
+            <Pin to={pin} offset="xs" mask className={outer}>
+              {cluster()}
+            </Pin>
+          );
+        }
+        // Unpinned + own chrome: the Surface IS the outermost node, so it fades
+        // with its buttons — a pill that stayed painted while its contents faded
+        // would read as an empty floating box.
+        return surface ? (
+          <Surface
+            level="overlay"
+            className={cn(insetClass({ x: "xs", y: "2xs" }), outer)}
+          >
             {cluster()}
-          </Pin>
+          </Surface>
+        ) : (
+          cluster(outer)
         );
       }}
     </PopupOpenScope>

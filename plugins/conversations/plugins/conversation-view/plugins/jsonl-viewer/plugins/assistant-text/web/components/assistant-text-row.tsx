@@ -5,7 +5,7 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { useRowMarkdown } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -23,7 +23,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
     <ContentScope>
       <div className="relative px-md py-sm">
         <Pin to="top-right" offset="sm">
-          <RowActions floating />
+          <EventRowActions floating />
         </Pin>
         {markdownMode ? (
           <Text as="div" variant="body">

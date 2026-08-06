@@ -4,7 +4,7 @@
  * `kind: "unknown"`, the parser's own fallback, which used to be a separate
  * contributed renderer saying the same thing one layer down.
  *
- * No `trailing` affordance: `CollapsibleCard` hosts `<RowActions/>`, and the
+ * No `trailing` affordance: `CollapsibleCard` hosts `<EventRowActions/>`, and the
  * investigate action contributes itself to every row whose nearest dispatch fell
  * back. Hand-placing one here would double-render it.
  *

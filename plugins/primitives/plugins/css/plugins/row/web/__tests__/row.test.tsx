@@ -61,6 +61,49 @@ describe("Row — no nested interactive elements", () => {
   });
 });
 
+// Pins the convergence: `Row` owns the trailing slot's PLACEMENT and nothing
+// else — the reveal itself belongs to the `row-actions` primitive, so a row's
+// cluster cannot drift from a tree's or a table's. Asserting the rendered
+// mechanism (the anchor group on the row, the coupled hidden state on the
+// cluster) is what catches `Row` quietly re-acquiring a reveal of its own.
+describe("Row — the trailing cluster is the row-actions primitive", () => {
+  it("anchors the reveal on the row and hides the cluster inertly at rest", () => {
+    const { container } = render(
+      <Row onClick={() => {}} actions={<button data-testid="act">x</button>}>
+        label
+      </Row>,
+    );
+    // The reveal group + the positioning context the cluster pins against ride
+    // the row box itself.
+    expect(container.firstElementChild!.className).toContain(
+      "group/row-actions",
+    );
+    // At rest the cluster is invisible AND inert — never one without the other,
+    // or the hidden cluster parks a live click-target over the row's trailing
+    // edge.
+    const cluster = screen.getByTestId("act").closest(".opacity-0");
+    expect(cluster).not.toBeNull();
+    expect(cluster!.className).toContain("pointer-events-none");
+  });
+
+  it("keeps an actionsAlwaysVisible cluster visible and in flow", () => {
+    render(
+      <Row
+        onClick={() => {}}
+        actionsAlwaysVisible
+        actions={<button data-testid="act">x</button>}
+      >
+        label
+      </Row>,
+    );
+    const action = screen.getByTestId("act");
+    expect(action.closest(".opacity-0")).toBeNull();
+    // In flow at the row's trailing edge, not pinned over it.
+    expect(action.closest(".ml-auto")).not.toBeNull();
+    expect(action.closest(".absolute")).toBeNull();
+  });
+});
+
 describe("Row — element inference (no `as` prop)", () => {
   it("href → <a>", () => {
     const { container } = render(<Row href="/x">link</Row>);

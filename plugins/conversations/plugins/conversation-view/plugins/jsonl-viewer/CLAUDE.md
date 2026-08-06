@@ -57,7 +57,7 @@ one row family that most needs it.
 
 ## The row-action strip lives in `plugins/row-actions`
 
-`RowActions`, `EventActionProvider`, `RowActionButton`, `rowActionClass`,
+`EventRowActions`, `EventActionProvider`, `RowActionButton`, `rowActionClass`,
 `CopyTextAction` and the action slot itself are **not** exported from
 `jsonl-viewer/web` — they belong to the `row-actions` sub-plugin, which sits below
 `collapsible-card` so card chrome can host the strip without an import cycle.
@@ -85,9 +85,9 @@ back.
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventActionProvider`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.rowActionClass`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActions`
     - `conversations/conversation-view/pending-turn.PendingTurnCard`
     - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
     - `conversations/conversation-view/pending-turn.usePendingTurns`
@@ -100,12 +100,12 @@ back.
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
-    - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/row-actions.rowActionsAnchor`
     - `primitives/scroll-reveal.revealElement`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineRenderSlot`
@@ -181,7 +181,7 @@ back.
   - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
   - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
   - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
-  - **`row-actions`** — Owns the JSONL transcript's hover-revealed row-action strip: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. Sits below collapsible-card so card chrome can host the strip without a cycle.
+  - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
   - **`system`** — Renders system events in the JSONL viewer.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.

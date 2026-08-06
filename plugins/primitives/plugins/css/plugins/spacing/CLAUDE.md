@@ -231,7 +231,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
-    - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `conversations/conversation-view/jsonl-viewer/summary`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -344,7 +343,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/css/inline`
     - `primitives/css/layout-harness`
     - `primitives/cursor-pagination`
-    - `primitives/data-table`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/gallery`

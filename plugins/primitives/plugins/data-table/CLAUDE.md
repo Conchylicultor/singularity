@@ -17,13 +17,18 @@ because every subgrid row gets the identical horizontal padding. Default off mea
 
 ## Per-row actions
 
-`DataTableProps.rowActions?(row, index)` renders trailing per-row actions in
-their own hover-revealed column. When set, the grid template gains a trailing
-`auto` track (with an empty header span), and every row `div` carries the
-`group/dt-row` named group so the actions cell reveals on row hover
-(`opacity-0 → group-hover/dt-row:opacity-100`, plus `focus-within`). The cell
-stops click propagation, so an action click never fires `onRowClick`. Additive
-and inert for consumers that don't pass `rowActions`.
+`DataTableProps.rowActions?(row, index)` renders trailing per-row actions. The
+grid template gains a trailing `auto` track (with an empty header span) and the
+cluster renders into it through **`primitives/row-actions`**, which owns the
+reveal, the guards and the sizing — each row carries `rowActionsAnchor`, the
+cluster is `<RowActions pin={null} className="justify-end">`. Additive and inert
+for consumers that don't pass `rowActions`.
+
+`pin={null}` (in flow, not overlaid) is deliberate: a table column is genuine
+flow, an overlaying cluster would cover the last column's data, and a
+content-sized track is already a stable menu anchor. `rowActionsAnchor` bundles
+`relative` — that is what the decoration overlay pins against, and it is inert on
+undecorated rows (`z-index` stays `auto`).
 
 ## Windowing
 
@@ -61,7 +66,6 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
 - Web:
   - Uses:
     - `primitives/css/center.Center`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/sticky/stack.StickyStack`
     - `primitives/css/sticky/stack.StickyStackItem`
@@ -70,8 +74,8 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/element-size.useElementSize`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/row-actions.RowActions`
+    - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.useVirtualRows`
   - Exports (types):
     - `ColumnDef`

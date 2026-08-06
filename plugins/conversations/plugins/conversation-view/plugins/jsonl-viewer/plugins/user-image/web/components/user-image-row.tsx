@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -14,7 +14,7 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
   return (
     <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
       <Pin to="top-right" offset="sm">
-        <RowActions floating />
+        <EventRowActions floating />
       </Pin>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1 spaces the label from the image below it */}
       <SectionLabel className="mb-1 text-3xs">

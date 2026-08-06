@@ -1,19 +1,19 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import { type ReactNode } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 export interface DataCardProps {
   /** Card click + Enter/Space (role=button, tabIndex=0). */
   onActivate?: () => void;
   /** Top region: cover image / icon block. */
   media?: ReactNode;
-  /** Hover-revealed top-right region (stops propagation so it never activates the card). */
+  /** Trailing action cluster, rendered through `RowActions` — revealed on card
+   *  hover/focus, and never activating the card (the primitive stops the press). */
   actions?: ReactNode;
   /** Bottom row: badges / affordances. */
   footer?: ReactNode;
@@ -26,8 +26,10 @@ export interface DataCardProps {
 
 /**
  * Composable card chrome mirroring the tree's RowChrome region model: media /
- * body / actions / footer regions, with `group`-driven hover reveal, focus, and
- * click→`onActivate` behavior baked in so consumers don't re-implement it.
+ * body / actions / footer regions, with focus and click→`onActivate` behavior
+ * baked in so consumers don't re-implement it. The actions region is the shared
+ * `RowActions` primitive, which owns the reveal, the pin + scrim, the popup-hold
+ * and the press guards — this card only says WHERE it sits.
  */
 export function DataCard(props: DataCardProps) {
   const { onActivate, media, actions, footer, children, selected, className } =
@@ -45,9 +47,11 @@ export function DataCard(props: DataCardProps) {
           onActivate?.();
         }
       }}
+      // `rowActionsAnchor` carries `relative` too, which is what the pinned
+      // cluster anchors to — the card needs no `relative` of its own.
       className={cn(
-        hoverRevealGroup,
-        "relative rounded-lg p-lg",
+        rowActionsAnchor,
+        "rounded-lg p-lg",
         selected && "ring-2 ring-primary",
         className,
       )}
@@ -58,23 +62,11 @@ export function DataCard(props: DataCardProps) {
         <div className="min-w-0 flex-1">{children}</div>
         {footer}
       </Stack>
-      {actions ? (
-        <Pin
-          to="top-right"
-          offset="sm"
-          // The cluster overlays the card's own body (a long title wraps under
-          // it), so it paints the card's scrim, dissolved along its inner left
-          // and bottom edges. Card publishes `--scrim` for its hover tint.
-          mask
-          className={hoverRevealTarget}
-          // Action clicks must not bubble up to onActivate.
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Stack direction="row" gap="xs" align="center">
-            {actions}
-          </Stack>
-        </Pin>
-      ) : null}
+      {/* The cluster overlays the card's own body (a long title wraps under it),
+          so the primitive's pin paints the card's scrim, dissolved along its
+          inner left and bottom edges. Card publishes `--scrim` for its hover
+          tint; `selected` here is a ring, not a tint, so it needs none. */}
+      {actions ? <RowActions pin="top-right">{actions}</RowActions> : null}
     </Card>
   );
 }

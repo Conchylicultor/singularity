@@ -5,9 +5,9 @@ import {
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import {
@@ -22,7 +22,6 @@ import {
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type {
   ColumnDef,
   DataTableGroup,
@@ -259,14 +258,16 @@ function DataTableRow<TRow>({
     <div
       ref={rowRef}
       data-index={measure?.index}
-      // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid); `relative` hosts the decoration overlay
+      // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
       className={cn(
-        "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
+        "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
         gutter ? "py-control px-pane-gutter" : "p-control",
-        hoverRevealGroup,
+        // Reveals the trailing RowActions cluster; its bundled `relative` also
+        // hosts the decoration overlay (a positioned row with `z-index: auto`
+        // lays out and stacks identically, so it is inert on plain rows).
+        rowActionsAnchor,
         key === selectedRowId && "bg-accent",
         onRowClick && "cursor-pointer",
-        decoration && "relative",
         decorationClassName,
       )}
       onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -305,16 +306,15 @@ function DataTableRow<TRow>({
         ))}
       </SingleLineProvider>
       {rowActions && (
-        <Stack
-          direction="row"
-          align="center"
-          justify="end"
-          gap="xs"
-          className={hoverRevealTarget}
-          onClick={(e) => e.stopPropagation()}
-        >
+        // `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
+        // `auto` track. A table column is genuine flow — an overlaying cluster
+        // would cover the last column's data — and the track is content-sized,
+        // so the anchor is stable without pinning. The track is as wide as the
+        // widest row's action set, hence the right-alignment.
+        // eslint-disable-next-line layout/no-adhoc-layout -- placement class for the reserved actions track; RowActions owns everything else about the cluster
+        <RowActions pin={null} className="justify-end">
           {rowActions(row, index)}
-        </Stack>
+        </RowActions>
       )}
       {decorationOverlay}
     </div>

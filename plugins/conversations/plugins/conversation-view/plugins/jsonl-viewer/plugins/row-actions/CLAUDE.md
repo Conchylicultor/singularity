@@ -2,29 +2,33 @@
 
 ## What this plugin owns
 
-The whole hover-revealed action strip on a JSONL transcript row, in one place:
+**Which** actions a JSONL transcript row carries — never how they look or reveal:
 
 - **`JsonlRowActions.Item`** — the slot every row action contributes to (timestamp,
   raw-json, copy, markdown/raw toggles, fork-session, …). Its id string is
   `"conversation.jsonl-viewer.row-action"` and must stay byte-for-byte stable:
   persisted reorder directives are keyed on it, so renaming the slot silently drops
   every user's saved action order.
-- **`EventActionProvider` / `RowActions`** — the per-event context published once by
-  `EventRow`, and the strip that reads it and renders the contributions. Actions take
-  no props beyond `event`; they read whatever else they need from their own context.
+- **`EventActionProvider` / `EventRowActions`** — the per-event context published once
+  by `EventRow`, and the strip that reads it and renders the contributions. Actions
+  take no props beyond `event`; they read whatever else they need from their own
+  context.
 - **`RowActionButton` / `rowActionClass`** — the shared action-glyph styling. Use the
   component for a normal button; use the class helper when the element is owned by
   something else (a base-ui trigger rendering its own native `<button>`).
 
-The reveal itself is not ours: `RowActions` applies `hoverRevealTarget` from the
-`hover-reveal` primitive, keyed on the `hoverRevealGroup` that `EventRow` puts on the
-row. Individual buttons therefore stay dumb — never re-apply a reveal on an action.
+The cluster itself is not ours: `EventRowActions` is a thin wrapper over
+`primitives/row-actions` — the one row-action implementation in the app, which owns
+the reveal, the click/pointerdown guards, the popup-hold and the control size, and
+which `EventRow` anchors with its `rowActionsAnchor`. Buttons stay dumb: never
+re-apply a reveal on an action. The domain name is deliberate — that primitive
+exports a `RowActions` too, so don't rename this one back.
 
 ## Why it is a separate plugin
 
 It sits **below `collapsible-card`** in the import graph, on purpose.
 
-`collapsible-card` hosts `<RowActions/>` in its header. When the strip lived in
+`collapsible-card` hosts `<EventRowActions/>` in its header. When the strip lived in
 `jsonl-viewer/web`, that made `jsonl-viewer/web ⇄ collapsible-card/web` a cycle — and
 the practical cost was that jsonl-viewer's own fallback row could not use
 `CollapsibleCard` at all, so it stayed a dead one-liner. Extracting the strip breaks
@@ -37,7 +41,8 @@ jsonl-viewer/web ──► collapsible-card/web ──► row-actions/web
 
 **This plugin must never import `jsonl-viewer/web`.** That single edge recreates the
 cycle. Its dependencies are deliberately minimal — `transcript-watcher/core` for the
-`JsonlEvent` type, `slot-render/web`, `hover-reveal/web`, `copy-to-clipboard/web`, and
+`JsonlEvent` type, `slot-render/web`, `primitives/row-actions/web`,
+`copy-to-clipboard/web`, and
 the `css/` primitives — and there is no reason for that set to grow: an action that
 needs jsonl-viewer state reads it from its own contributing plugin, not from here.
 
@@ -56,24 +61,23 @@ event kind — that is the standard gate, not a filter on the slot.
 
 ## Plugin reference
 
-- Description: Owns the JSONL transcript's hover-revealed row-action strip: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. Sits below collapsible-card so card chrome can host the strip without a cycle.
+- Description: Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
 - Web:
   - Slots: `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`, `conversations.conversation-view.jsonl-viewer`, `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.investigate-event`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-text`
   - Uses:
     - `primitives/copy-to-clipboard.useCopyToClipboard`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/row-actions.RowActions`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types): `RowActionContribution`
   - Exports (values):
     - `CopyTextAction`
     - `EventActionProvider`
+    - `EventRowActions`
     - `JsonlRowActions`
     - `RowActionButton`
     - `rowActionClass`
-    - `RowActions`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/fork-session`

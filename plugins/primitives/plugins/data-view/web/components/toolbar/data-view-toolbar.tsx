@@ -123,6 +123,7 @@ export function DataViewToolbar({
                 {switcherCount > 1 ? switcher : null}
               </Stack>
             </Scroll>
+            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
             {actions}
             {creatorsControl}
             {/* Search folds in here with sort/filter/fields — a non-empty query
@@ -153,6 +154,7 @@ export function DataViewToolbar({
             {searchInput}
             {filterControl}
             {sortControl}
+            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
             {actions}
             {fieldsControl}
             {creatorsControl}

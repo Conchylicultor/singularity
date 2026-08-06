@@ -1,5 +1,5 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import { rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { JsonlViewer } from "../slots";
 import { EventActionProvider } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -16,7 +16,7 @@ export function EventRow({ event, index }: { event: JsonlEvent; index: number })
     <EventActionProvider event={event}>
       <RowMarkdownProvider>
         <div
-          className={hoverRevealGroup}
+          className={rowActionsAnchor}
           data-event-index={index}
           data-event-key={eventKey(event)}
         >
