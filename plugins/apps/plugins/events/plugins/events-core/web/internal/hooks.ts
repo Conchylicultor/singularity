@@ -12,6 +12,7 @@ import {
   deleteEventSource,
   eventSourcesResource,
   eventsRevisionResource,
+  getEventSourceRun,
   listEventSourceRuns,
   refreshEventSourceNow,
   updateEventSource,
@@ -44,6 +45,16 @@ export function useEventSourceRuns(sourceId: string, limit?: number) {
     { id: sourceId },
     limit === undefined ? undefined : { query: { limit } },
   );
+}
+
+/**
+ * One run, by its own id. The run pane and its sections both read it through
+ * this hook, so the shared query key means one fetch rather than one per
+ * consumer — and a section reaching for the run's `startedAt` never has to know
+ * which source it belongs to.
+ */
+export function useEventSourceRun(runId: string) {
+  return useEndpoint(getEventSourceRun, { runId });
 }
 
 /** Create a source. Failures surface through the global mutation toast. */

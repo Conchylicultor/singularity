@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import { manualSourceType } from "./source-type";
 
-const ctx = { sourceId: "evs-manual", config: {} };
+// `runId` is required by `ProbeContext` but nothing this type does reads it —
+// the fingerprint keys upstream material, and this type has none.
+const ctx = { sourceId: "evs-manual", config: {}, runId: "run-1" };
 
 test("probe reports a stable, non-null fingerprint", async () => {
   const first = await manualSourceType.probe(ctx);
@@ -19,7 +21,7 @@ test("probe reports a stable, non-null fingerprint", async () => {
 test("probe is stable across sources — the material is never a source's own", async () => {
   // Nothing in the fingerprint depends on the row, because nothing a manual
   // source could import depends on the row either.
-  const a = await manualSourceType.probe({ sourceId: "a", config: {} });
-  const b = await manualSourceType.probe({ sourceId: "b", config: {} });
+  const a = await manualSourceType.probe({ sourceId: "a", config: {}, runId: "run-a" });
+  const b = await manualSourceType.probe({ sourceId: "b", config: {}, runId: "run-b" });
   expect(a).toEqual(b);
 });

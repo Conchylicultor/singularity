@@ -6,6 +6,17 @@ import type { ExtractedEvent } from "../../core";
 export interface ProbeContext<TConfig> {
   sourceId: string;
   config: TConfig;
+  /**
+   * The run this phase belongs to. Stamp any durable side effect (a model call,
+   * a fetched artifact) with it, so the run's ledger row can find that side
+   * effect afterwards — the run is the only thing both halves share, and without
+   * the id the artifact and the outcome that explains it are two records with no
+   * way back to each other.
+   *
+   * Available DURING the run: the engine mints the id before the first phase,
+   * which is what lets in-flight work name a row that is written at the end.
+   */
+  runId: string;
 }
 
 /** What `probe` reports back to the engine. */

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
@@ -64,8 +65,11 @@ function requireSourceType(source: EventSource): EventSourceType {
   return sourceType;
 }
 
-function probeContext(source: EventSource): ProbeContext<unknown> {
-  return { sourceId: source.id, config: source.config };
+function probeContext(
+  source: EventSource,
+  runId: string,
+): ProbeContext<unknown> {
+  return { sourceId: source.id, config: source.config, runId };
 }
 
 /**
@@ -97,6 +101,12 @@ export async function runSource(sourceId: string): Promise<void> {
     return;
   }
 
+  // The run's identity, minted BEFORE the first phase even though its ledger row
+  // is written at the end. Work in flight (a model call, a fetched artifact) can
+  // then stamp itself with the run it belongs to, which is the only way that
+  // artifact is reachable from the outcome that explains it. The ledger's
+  // invariant is untouched: the row still appears exactly once, complete.
+  const runId = randomUUID();
   const startedAt = new Date();
   await markSourceRunning(source.id);
 
@@ -106,7 +116,7 @@ export async function runSource(sourceId: string): Promise<void> {
     // row's classified error like any other terminal failure — not vanish as a
     // bare throw with nothing on screen to explain it.
     const sourceType = requireSourceType(source);
-    const probed = await sourceType.probe(probeContext(source));
+    const probed = await sourceType.probe(probeContext(source, runId));
     const fingerprint = probed.fingerprint;
     // The cache hit — the ONLY path that skips extraction. A `null` fingerprint
     // is never a hit however often it repeats: the source type is declaring it
@@ -114,13 +124,13 @@ export async function runSource(sourceId: string): Promise<void> {
     // this to a bare `===`, which would turn that declaration into a permanent
     // skip the moment two consecutive probes both report `null`.
     if (fingerprint !== null && fingerprint === source.lastFingerprint) {
-      await finishUnchanged(source, { startedAt, fingerprint });
+      await finishUnchanged(source, { runId, startedAt, fingerprint });
       return;
     }
 
     const extracted = await sourceType.extract(
       probed.payload,
-      probeContext(source),
+      probeContext(source, runId),
     );
     const plan = planEventWrites(source.id, extracted);
     const { created, updated } = await upsertEvents(plan.inputs);
@@ -130,6 +140,7 @@ export async function runSource(sourceId: string): Promise<void> {
     );
 
     await finishExtracted(source, {
+      runId,
       startedAt,
       fingerprint,
       counts: {
@@ -141,7 +152,7 @@ export async function runSource(sourceId: string): Promise<void> {
     });
   } catch (err) {
     const failure = classifyRefreshError(err);
-    await finishFailed(source, { startedAt, failure });
+    await finishFailed(source, { runId, startedAt, failure });
     // Record first, then rethrow: the job must still FAIL (loudly, into the
     // queue's dead-letter accounting) — recording it on the row is reporting,
     // not handling. A terminal failure is rethrown as `NonRetryableError` so

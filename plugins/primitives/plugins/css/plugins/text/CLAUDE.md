@@ -358,6 +358,7 @@ fixed raw size escapes per-site via
     - `framework/web-core`
     - `history/dialog`
     - `improve/element-picker`
+    - `infra/claude-cli`
     - `infra/events-test`
     - `layouts/route-fallback`
     - `page/annotations/agent-notes/authorship`

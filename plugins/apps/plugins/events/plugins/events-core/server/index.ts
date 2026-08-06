@@ -6,6 +6,7 @@ import {
   createEventSource,
   deleteEventSource,
   getEventSource,
+  getEventSourceRun,
   listEventSourceRuns,
   listEventSources,
   refreshEventSourceNow,
@@ -14,6 +15,7 @@ import {
 import {
   handleCreateSource,
   handleDeleteSource,
+  handleGetRun,
   handleGetSource,
   handleListRuns,
   handleListSources,
@@ -57,6 +59,7 @@ export {
   updateSource,
   deleteSource,
   listRuns,
+  requireRun,
 } from "./internal/sources-repo";
 export { registerRefreshRunner } from "./internal/refresh-runner";
 export type { RefreshRunner } from "./internal/refresh-runner";
@@ -76,6 +79,7 @@ export default {
     [deleteEventSource.route]: handleDeleteSource,
     [refreshEventSourceNow.route]: handleRefreshSource,
     [listEventSourceRuns.route]: handleListRuns,
+    [getEventSourceRun.route]: handleGetRun,
   },
   contributions: [
     Resource.Declare(eventSourcesServerResource),

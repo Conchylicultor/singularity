@@ -1,0 +1,11 @@
+// @hash b190f1aee1ed
+{
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "apps.events.sources.source-detail.runs.model-call:model-call"
+  ]
+}

@@ -1100,6 +1100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSources`
               - `useCreateEventSource`
               - `useDeleteEventSource`
+              - `useEventSourceRun`
               - `useEventSourceRuns`
               - `useEventSources`
               - `useEventsRevision`
@@ -1139,6 +1140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listSources`
               - `markEventsDisappeared`
               - `registerRefreshRunner`
+              - `requireRun`
               - `requireSource`
               - `updateSource`
               - `upsertEvents`
@@ -1151,6 +1153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DELETE /api/events/sources/:id`
               - `POST /api/events/sources/:id/refresh`
               - `GET /api/events/sources/:id/runs`
+              - `GET /api/events/runs/:runId`
           - Core:
             - Uses:
               - `fields.FieldsRecord`
@@ -1192,6 +1195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `eventsRevisionResource`
               - `ExtractedEventSchema`
               - `getEventSource`
+              - `getEventSourceRun`
               - `listEventSourceRuns`
               - `ListEventSourceRunsQuerySchema`
               - `listEventSources`
@@ -1209,6 +1213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/manual`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-field`
@@ -1364,27 +1369,67 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `manualSourceConfigFields`
             - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
               - Plugins:
-                - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable.
+                - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
                   - Web:
-                    - Contributes: `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
+                    - Slots:
+                      - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.model-call`
+                      - `RunActions.RunActions` ← `apps.events.sources.source-detail.runs`
+                      - `eventSourceRunPane.Actions`
+                    - Contributes:
+                      - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
+                      - `Pane.Register` "event-source-run"
+                      - `RunActions` "open" → `OpenRunAction`
                     - Uses:
+                      - `apps/events/events-core.useEventSourceRun`
                       - `apps/events/events-core.useEventSourceRuns`
                       - `apps/events/sources.describeRun`
                       - `apps/events/sources.EventSourceDetail`
+                      - `apps/events/sources.eventSourceDetailPane`
                       - `apps/events/sources.formatDuration`
                       - `apps/events/sources.RUN_OUTCOME_LABEL`
                       - `apps/events/sources.RUN_OUTCOME_OPTIONS`
                       - `apps/events/sources.RUN_OUTCOME_VARIANT`
+                      - `infra/endpoints.EndpointError`
                       - `infra/endpoints.getEndpointErrorMessage`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
                       - `primitives/css/placeholder.Placeholder`
+                      - `primitives/css/spacing.Inset`
+                      - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/data-view.DataView`
                       - `primitives/data-view.defineDataView`
+                      - `primitives/data-view.defineItemActions`
                       - `primitives/data-view.FieldDef`
+                      - `primitives/detail-sections.defineDetailSections`
+                      - `primitives/loading.Loading`
+                      - `primitives/pane.Pane`
+                      - `primitives/pane.PaneChrome`
+                      - `primitives/pane.useOpenPane`
                       - `primitives/relative-time.RelativeTime`
+                      - `primitives/row-actions.RowActionButton`
+                    - Exports (values):
+                      - `EventSourceRunDetail`
+                      - `eventSourceRunPane`
+                      - `RunActions`
+                  - Cross-plugin:
+                    - Imported by: `apps/events/sources/source-detail/runs/model-call`
+                  - Plugins:
+                    - **`model-call`** — Model call section of the Events run pane: the prompt and output behind one run, reached through claude-cli's generic correlation API. Renders all three arms — the calls, 'never called' (the right answer for a cheap unchanged run), and 'the log no longer retains it'.
+                      - Web:
+                        - Contributes: `EventSourceRunDetail.Section` "Model call" → `ModelCallSection`
+                        - Uses:
+                          - `apps/events/events-core.useEventSourceRun`
+                          - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
+                          - `infra/claude-cli.ClaudeCliCallDetail`
+                          - `infra/claude-cli.useClaudeCliCalls`
+                          - `infra/endpoints.getEndpointErrorMessage`
+                          - `primitives/css/placeholder.Placeholder`
+                          - `primitives/css/spacing.Inset`
+                          - `primitives/css/spacing.Stack`
+                          - `primitives/css/surface.Surface`
+                          - `primitives/loading.Loading`
                 - **`schedule`** — Schedule section of the Events source side-pane: the refresh cadence picker, the scheduling on/off switch, and Refresh now — whose discriminated RefreshSourceResult (enqueued / already-running / skipped) is rendered arm by arm rather than collapsed into 'done'.
                   - Web:
                     - Contributes: `EventSourceDetail.Section` "Schedule" → `SourceScheduleSection`
@@ -10745,6 +10790,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
+          - `infra/claude-cli.ClaudeCliCallDetail`
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/collapsible.useCollapsible`
           - `primitives/css/badge.Badge`
@@ -14140,6 +14186,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
               - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
@@ -14585,11 +14632,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `emit`
           - `live-state`
           - `live-state-stale-drop`
-    - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
+    - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, and <ClaudeCliCallDetail> is the one rendering of a recorded call (system, prompt, output or error, meta). One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Server:
         - Contributes: `resource.declare` "claude-cli-calls"
         - Uses:
           - `database.db`
+          - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
@@ -14600,8 +14648,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `_claudeCliCalls`
           - `claudeCliCallsResource`
           - `ClaudeCliError`
+          - `listCallsFor`
           - `runClaudePrint`
         - Resources: `claude-cli-calls` (push)
+        - Routes: `GET /api/claude-cli/calls`
+      - Web:
+        - Uses:
+          - `infra/endpoints.useEndpoint`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/text.Text`
+        - Exports (values):
+          - `ClaudeCliCallDetail`
+          - `useClaudeCliCalls`
       - Core:
         - Uses:
           - `conversations/model-provider.ConversationModelSchema`
@@ -14615,19 +14673,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
+          - `infra/endpoints.defineEndpoint`
           - `primitives/live-state.resourceDescriptor`
-        - Exports (types): `ClaudeCliCall`
+        - Exports (types):
+          - `ClaudeCliCall`
+          - `ClaudeCliCallsResult`
         - Exports (values):
           - `claudeCliCallFields`
           - `ClaudeCliCallSchema`
           - `claudeCliCallsResource`
+          - `ClaudeCliCallsResultSchema`
+          - `listClaudeCliCallsFor`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/url-extract`
           - `apps/story/generation`
           - `apps/workflows/steps/llm-prompt`
           - `conversations/conversation-category`
           - `conversations/conversation-view/turn-summary`
+          - `debug/claude-cli-calls`
           - `tasks/task-title`
     - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
       - Server:
@@ -14754,6 +14819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/events-core`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
           - `apps/mail/attachments`
@@ -14870,6 +14936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `history/engine`
           - `infra/attachments`
           - `infra/boot-snapshot`
+          - `infra/claude-cli`
           - `infra/events`
           - `infra/events-test`
           - `infra/health`
@@ -19909,6 +19976,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
@@ -20108,6 +20176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/worktree-cleanup`
               - `debug/zero-test`
               - `fields/json/config`
+              - `infra/claude-cli`
               - `infra/events-test`
               - `page/page-link`
               - `plugin-meta/plugin-health`
@@ -20187,6 +20256,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/shell`
               - `apps/events/sources`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
@@ -20601,6 +20672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
+              - `apps/events/sources/source-detail/runs/model-call`
               - `apps/mail/reading-pane`
               - `apps/studio/graph`
               - `apps/website/demos/app-gallery`
@@ -20859,6 +20931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/web-core`
               - `history/dialog`
               - `improve/element-picker`
+              - `infra/claude-cli`
               - `infra/events-test`
               - `layouts/route-fallback`
               - `page/annotations/agent-notes/authorship`
@@ -22340,6 +22413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
           - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
           - `apps/pages/page-tree`
           - `apps/sonata/shell`
           - `apps/studio/compositions`
@@ -23258,6 +23332,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/local-serve`
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
+          - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
           - `apps/events/sources/source-detail/status`
@@ -23605,7 +23681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
@@ -23729,6 +23805,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/event-list`
           - `apps/events/shell`
           - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/mail/reading-pane`
@@ -24173,6 +24250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/local-serve`
           - `apps/deploy/servers`
           - `apps/events/sources`
+          - `apps/events/sources/source-detail/runs`
           - `apps/studio/compositions`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
@@ -25169,6 +25247,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -25239,8 +25319,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "deploy.servers.item-actions"
       - `ConfigV2.Register` "deployment-detail.section"
       - `ConfigV2.Register` "event-source-detail.section"
+      - `ConfigV2.Register` "event-source-run-detail.section"
       - `ConfigV2.Register` "events.list.fields"
       - `ConfigV2.Register` "events.sidebar"
+      - `ConfigV2.Register` "events.source-runs.item-actions"
       - `ConfigV2.Register` "events.sources.item-actions"
       - `ConfigV2.Register` "file-explorer.sidebar"
       - `ConfigV2.Register` "file-explorer.toolbar"

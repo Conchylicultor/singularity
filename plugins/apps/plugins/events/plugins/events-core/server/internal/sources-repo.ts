@@ -134,6 +134,17 @@ export async function deleteSource(id: string): Promise<void> {
   if (!row) throw new HttpError(404, `Unknown event source: ${id}`);
 }
 
+/** Read one run. Throws 404 rather than returning null. */
+export async function requireRun(runId: string): Promise<EventSourceRun> {
+  const [row] = await db
+    .select()
+    .from(_eventSourceRuns)
+    .where(eq(_eventSourceRuns.id, runId))
+    .limit(1);
+  if (!row) throw new HttpError(404, `Unknown event source run: ${runId}`);
+  return row;
+}
+
 export async function listRuns(
   sourceId: string,
   limit: number,

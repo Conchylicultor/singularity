@@ -313,6 +313,10 @@
       "name": "@singularity/plugin-apps-events-sources-source-detail-runs",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-runs-model-call",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/schedule": {
       "name": "@singularity/plugin-apps-events-sources-source-detail-schedule",
       "version": "0.0.1",
@@ -5416,6 +5420,8 @@
     "@singularity/plugin-apps-events-sources-source-detail": ["@singularity/plugin-apps-events-sources-source-detail@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail"],
 
     "@singularity/plugin-apps-events-sources-source-detail-runs": ["@singularity/plugin-apps-events-sources-source-detail-runs@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-runs-model-call": ["@singularity/plugin-apps-events-sources-source-detail-runs-model-call@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call"],
 
     "@singularity/plugin-apps-events-sources-source-detail-schedule": ["@singularity/plugin-apps-events-sources-source-detail-schedule@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/schedule"],
 

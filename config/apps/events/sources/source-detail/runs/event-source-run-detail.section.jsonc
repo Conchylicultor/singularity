@@ -1,0 +1,15 @@
+// @hash b190f1aee1ed
+// The run pane's regions, below the run summary the pane renders itself.
+//
+//   model-call — the prompt the run sent and what came back. The only region
+//                today, and the reason the pane exists: the summary answers
+//                "what happened", this answers "why".
+//
+// A source type that records something else about its runs contributes a peer
+// section and lands here; only then does the order become a real decision.
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": ["apps.events.sources.source-detail.runs.model-call:model-call"]
+}

@@ -25,7 +25,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 
 - Description: Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
 - Sub-plugins:
-  - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable.
+  - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
   - **`schedule`** — Schedule section of the Events source side-pane: the refresh cadence picker, the scheduling on/off switch, and Refresh now — whose discriminated RefreshSourceResult (enqueued / already-running / skipped) is rendered arm by arm rather than collapsed into 'done'.
   - **`settings`** — Settings section of the Events source side-pane: the source type's own configFields rendered generically through the fields FieldRenderer, with per-field autosave and the type's optional bespoke chrome. Names no source type.
   - **`status`** — Status section of the Events source side-pane: the source's current state (also shown as a collapsed-card chip), its run watermarks and probe fingerprint, and the classified terminal error verbatim when it is parked.

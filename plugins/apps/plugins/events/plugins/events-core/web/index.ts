@@ -5,6 +5,7 @@ export {
   useEventSources,
   useEventsRevision,
   useEventSourceRuns,
+  useEventSourceRun,
   useCreateEventSource,
   useUpdateEventSource,
   useDeleteEventSource,

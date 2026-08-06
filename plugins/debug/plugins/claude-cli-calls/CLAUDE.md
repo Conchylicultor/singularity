@@ -13,6 +13,7 @@
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `conversations/model-provider.familyClass`
+    - `infra/claude-cli.ClaudeCliCallDetail`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`

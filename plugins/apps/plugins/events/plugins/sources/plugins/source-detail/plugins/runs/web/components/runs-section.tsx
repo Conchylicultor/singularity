@@ -12,6 +12,7 @@ import {
   RUN_OUTCOME_OPTIONS,
   formatDuration,
 } from "@plugins/apps/plugins/events/plugins/sources/web";
+import { RunActions } from "../slots";
 import { RunRow } from "./run-row";
 
 /**
@@ -112,6 +113,7 @@ export function SourceRunsSection({
       rows={runs ?? EMPTY_RUNS}
       fields={fields}
       rowKey={(r) => r.id}
+      itemActions={RunActions}
       views={["list", "table"]}
       loading={runs === undefined}
       viewOptions={{

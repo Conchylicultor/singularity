@@ -3,6 +3,7 @@ import {
   createEventSource,
   deleteEventSource,
   getEventSource,
+  getEventSourceRun,
   listEventSourceRuns,
   listEventSources,
   refreshEventSourceNow,
@@ -13,6 +14,7 @@ import {
   deleteSource,
   listRuns,
   listSources,
+  requireRun,
   requireSource,
   updateSource,
 } from "./sources-repo";
@@ -58,4 +60,10 @@ export const handleListRuns = implement(
     await requireSource(params.id);
     return listRuns(params.id, query.limit ?? 50);
   },
+);
+
+// Keyed by the run id alone — no source id to check it against, and none needed:
+// the run row carries its own `sourceId`.
+export const handleGetRun = implement(getEventSourceRun, async ({ params }) =>
+  requireRun(params.runId),
 );

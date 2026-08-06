@@ -41,6 +41,10 @@ export async function extractUrlEvents(
     timeoutMs: EXTRACTION_TIMEOUT_MS,
     source: {
       name: "events.url-extract",
+      // The run this call was made for, so the run's own pane can show the
+      // prompt and the output that produced its outcome. `context` stays: it is
+      // what makes the Debug → Claude CLI calls row readable on its own.
+      correlationId: ctx.runId,
       context: { sourceId: ctx.sourceId, url: payload.url },
     },
   });

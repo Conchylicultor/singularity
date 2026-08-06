@@ -102,6 +102,7 @@ double-gutter; keep it without the padding → they go flush to the card edge. S
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/events/sources`
+    - `apps/events/sources/source-detail/runs`
     - `apps/pages/page-tree`
     - `apps/sonata/shell`
     - `apps/studio/compositions`

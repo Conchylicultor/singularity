@@ -16,7 +16,13 @@ const claudeCliCalls = defineEntity("claude_cli_calls", claudeCliCallFields, {
     id: { default: defaultRandom() },
     createdAt: { default: defaultNow() },
   },
-  indexes: (t) => [index("claude_cli_calls_created_at_idx").on(t.createdAt)],
+  indexes: (t) => [
+    index("claude_cli_calls_created_at_idx").on(t.createdAt),
+    // The correlation read ("which model calls produced THIS record?") is a
+    // point lookup on a table the trim keeps at N rows but never shrinks below
+    // it — without the index every such read is a 1000-row scan.
+    index("claude_cli_calls_correlation_id_idx").on(t.correlationId),
+  ],
 });
 
 // drizzle-kit schema-glob discovery. Name kept so consumers don't churn.

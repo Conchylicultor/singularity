@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type {
@@ -24,6 +23,15 @@ import { computeNextRunAt } from "./schedule";
 // already visible as `status: "running"` on the live-pushed source row, so a
 // second "started" write would only buy the ability to leave a half-row behind
 // on a crash. Every ledger row is therefore complete by construction.
+//
+// The run's *id* is nevertheless minted by `runSource` before the first phase
+// and passed in here. That is a nuance of the above, not a reversal of it — do
+// not "fix" it back to a `randomUUID()` at insert time. Nothing is written
+// earlier; only the identity exists earlier, which is what lets work in flight
+// (a model call, a fetched artifact) stamp itself with the run it belongs to and
+// be reachable afterwards from the row that explains the outcome. A run that
+// dies before finishing still writes no row — its id simply names nothing, which
+// is exactly what "the run never completed" should look like.
 
 type SourceStatePatch = Partial<typeof _eventSources.$inferInsert>;
 
@@ -61,6 +69,8 @@ export async function markSourceRunning(sourceId: string): Promise<void> {
 async function completeRun(
   source: EventSource,
   run: {
+    /** Minted by `runSource` at the start; see the header note. */
+    runId: string;
     finishedAt: Date;
     startedAt: Date;
     outcome: RunOutcome;
@@ -72,7 +82,7 @@ async function completeRun(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.insert(_eventSourceRuns).values({
-      id: randomUUID(),
+      id: run.runId,
       sourceId: source.id,
       startedAt: run.startedAt,
       finishedAt: run.finishedAt,
@@ -106,11 +116,12 @@ async function completeRun(
  */
 export async function finishUnchanged(
   source: EventSource,
-  args: { startedAt: Date; fingerprint: string },
+  args: { runId: string; startedAt: Date; fingerprint: string },
 ): Promise<void> {
   await completeRun(
     source,
     {
+      runId: args.runId,
       finishedAt: new Date(),
       startedAt: args.startedAt,
       outcome: "unchanged",
@@ -127,11 +138,17 @@ export async function finishUnchanged(
 /** The full path: extraction ran, the diff landed, the fingerprint advances. */
 export async function finishExtracted(
   source: EventSource,
-  args: { startedAt: Date; fingerprint: string | null; counts: RunCounts },
+  args: {
+    runId: string;
+    startedAt: Date;
+    fingerprint: string | null;
+    counts: RunCounts;
+  },
 ): Promise<void> {
   await completeRun(
     source,
     {
+      runId: args.runId,
       finishedAt: new Date(),
       startedAt: args.startedAt,
       outcome: "extracted",
@@ -163,12 +180,17 @@ export async function finishExtracted(
  */
 export async function finishFailed(
   source: EventSource,
-  args: { startedAt: Date; failure: RefreshErrorClassification },
+  args: {
+    runId: string;
+    startedAt: Date;
+    failure: RefreshErrorClassification;
+  },
 ): Promise<void> {
   const { failure } = args;
   await completeRun(
     source,
     {
+      runId: args.runId,
       finishedAt: new Date(),
       startedAt: args.startedAt,
       outcome: "failed",

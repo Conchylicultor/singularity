@@ -257,6 +257,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -327,8 +329,10 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "deploy.servers.item-actions"
     - `ConfigV2.Register` "deployment-detail.section"
     - `ConfigV2.Register` "event-source-detail.section"
+    - `ConfigV2.Register` "event-source-run-detail.section"
     - `ConfigV2.Register` "events.list.fields"
     - `ConfigV2.Register` "events.sidebar"
+    - `ConfigV2.Register` "events.source-runs.item-actions"
     - `ConfigV2.Register` "events.sources.item-actions"
     - `ConfigV2.Register` "file-explorer.sidebar"
     - `ConfigV2.Register` "file-explorer.toolbar"

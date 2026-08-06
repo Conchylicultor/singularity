@@ -99,3 +99,15 @@ export const listEventSourceRuns = defineEndpoint({
   query: ListEventSourceRunsQuerySchema,
   response: z.array(EventSourceRunSchema),
 });
+
+/**
+ * One run, by its own id. Deliberately NOT nested under `/sources/:id`: the run
+ * id identifies the row on its own, and a surface that has only the run id (a
+ * deep-linked run pane, whose params are own-only) must be able to resolve it
+ * without first knowing which source it belongs to — or it would depend on
+ * whatever window the runs list happened to have loaded.
+ */
+export const getEventSourceRun = defineEndpoint({
+  route: "GET /api/events/runs/:runId",
+  response: EventSourceRunSchema,
+});

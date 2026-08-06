@@ -25,6 +25,16 @@ export interface RunClaudePrintInput {
   source: {
     name: string;
     context?: Record<string, unknown>;
+    /**
+     * The domain record this call is being made FOR, so a feature plugin can
+     * later ask "which model calls produced this record?" (`listClaudeCliCallsFor`).
+     *
+     * MUST be a globally unique row id — a UUID / DB row id. The column is NOT
+     * namespaced by `source.name`, so a per-caller ordinal ("run-3") would collide
+     * across callers and serve one plugin another's prompts. Put human-readable
+     * ids in `context` instead; that is the label, this is the key.
+     */
+    correlationId?: string;
   };
 }
 
@@ -109,6 +119,7 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
       output: output ?? null,
       error: caughtError ? caughtError.message : null,
       durationMs,
+      correlationId: input.source.correlationId ?? null,
     });
   }
 }

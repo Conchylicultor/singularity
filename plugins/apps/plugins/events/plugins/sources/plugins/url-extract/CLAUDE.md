@@ -41,6 +41,9 @@ builder puts them back. The output tree and serializer are ours, so `<img>` stay
   excerpt of the raw output** (`parse-response.ts`). Returning `[]` would read to
   the engine as "the page genuinely lists nothing" and stamp `disappearedAt` on
   every event this source ever found.
+- **The call is stamped with `ctx.runId`** (`correlationId`), which is what lets
+  a run's own pane show the prompt and output that produced it — the call log
+  stays the single copy of that text, never duplicated into the events schema.
 - **The prompt materializes recurrence**: one row per concrete occurrence within
   60 days, sharing a `seriesKey`. No RRULE engine, and idempotent because the
   engine's derived identity ends in the occurrence's date.

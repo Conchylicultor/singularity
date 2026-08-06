@@ -39,6 +39,12 @@ export const claudeCliCallFields = {
   output: nullable(textField()),
   error: nullable(textField()),
   durationMs: intField(),
+  // The domain record this call was made FOR — a run id, a task id, whatever row
+  // the caller is explaining. Free-form and NOT namespaced by `sourceName`, so it
+  // must be a globally unique row id (a UUID); a per-caller counter would collide
+  // across callers and hand one plugin another's calls. Appended last so the
+  // record still reads in physical column order.
+  correlationId: nullable(textField()),
 } satisfies FieldsRecord;
 
 export const ClaudeCliCallSchema = fieldsToZodObject(claudeCliCallFields).extend({

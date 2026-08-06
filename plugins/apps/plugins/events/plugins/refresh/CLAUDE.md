@@ -87,6 +87,13 @@ runtime state, and writes both **in one transaction** — a source that says
 every ledger row is complete by construction; an in-flight run is already visible
 as `status: "running"` on the live-pushed source row.
 
+The run's **id** is the exception, minted by `runSource` before the first phase
+and handed to the phases (`ProbeContext.runId`) and to every `finish*`. A nuance,
+not a reversal — nothing is *written* earlier, so rows stay complete by
+construction; only the identity exists earlier, which is what lets work in flight
+(a model call, a fetched artifact) stamp itself with the run it belongs to. Don't
+"fix" it back to minting the id at insert time.
+
 A backend killed mid-run leaves `running` set. That is cured, not swept:
 `runSource` re-marks the row every run, and "Refresh now" **enqueues even when the
 row says running** (reporting `already-running` only as a hint), because gating on

@@ -33,6 +33,7 @@ export {
   deleteEventSource,
   refreshEventSourceNow,
   listEventSourceRuns,
+  getEventSourceRun,
   CreateEventSourceBodySchema,
   type CreateEventSourceBody,
   UpdateEventSourceBodySchema,

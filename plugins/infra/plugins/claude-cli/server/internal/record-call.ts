@@ -13,6 +13,7 @@ export interface RecordCallInput {
   output: string | null;
   error: string | null;
   durationMs: number;
+  correlationId: string | null;
 }
 
 // Records a single claude-cli call. Swallows its own errors — recording must
@@ -29,6 +30,7 @@ export async function recordClaudeCliCall(input: RecordCallInput): Promise<void>
       output: input.output,
       error: input.error,
       durationMs: input.durationMs,
+      correlationId: input.correlationId,
     });
     await db.execute(sql`
       DELETE FROM claude_cli_calls

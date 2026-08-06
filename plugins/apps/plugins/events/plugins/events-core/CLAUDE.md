@@ -23,6 +23,11 @@ the source row. Returning `[]` means the page genuinely lists no events — neve
 use it to signal a failure, or the engine will stamp `disappearedAt` on
 everything it previously found.
 
+`ProbeContext` carries `runId` — the run the phase belongs to, minted by the
+engine before the first phase. Stamp any durable side effect (a model call, a
+fetched artifact) with it so the run's ledger row can find it afterwards. Generic
+by construction: it names no LLM.
+
 ## Per-type config
 
 A source type declares its user input as a `FieldsRecord` in its own `core/`.
@@ -46,7 +51,10 @@ Three `defineEntity` tables, field records in `core/internal/fields.ts`:
   pairs: `created_at`/`updated_at` are row lifecycle, `first_seen_at`/
   `last_seen_at`/`disappeared_at` are extraction sighting.
 - `event_source_runs` — the run ledger, including the cheap `unchanged` runs.
-  This is what makes "why did nothing happen" answerable.
+  This is what makes "why did nothing happen" answerable. Readable one at a time
+  (`GET /api/events/runs/:runId` → `requireRun`, 404 on absent) — deliberately
+  NOT nested under the source, so a deep-linked run pane resolves from its own id
+  instead of whatever window the runs list happens to have loaded.
 
 **All `events` writes go through the repo funnel**, `upsertEvents()` /
 `markEventsDisappeared()` in `server/internal/events-repo.ts`. The
@@ -85,6 +93,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSources`
     - `useCreateEventSource`
     - `useDeleteEventSource`
+    - `useEventSourceRun`
     - `useEventSourceRuns`
     - `useEventSources`
     - `useEventsRevision`
@@ -124,6 +133,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `listSources`
     - `markEventsDisappeared`
     - `registerRefreshRunner`
+    - `requireRun`
     - `requireSource`
     - `updateSource`
     - `upsertEvents`
@@ -136,6 +146,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `DELETE /api/events/sources/:id`
     - `POST /api/events/sources/:id/refresh`
     - `GET /api/events/sources/:id/runs`
+    - `GET /api/events/runs/:runId`
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -177,6 +188,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventsRevisionResource`
     - `ExtractedEventSchema`
     - `getEventSource`
+    - `getEventSourceRun`
     - `listEventSourceRuns`
     - `ListEventSourceRunsQuerySchema`
     - `listEventSources`
@@ -194,6 +206,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources`
     - `apps/events/sources/manual`
     - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-field`

@@ -1,0 +1,2 @@
+ALTER TABLE "claude_cli_calls" ADD COLUMN "correlation_id" text;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "claude_cli_calls_correlation_id_idx" ON "claude_cli_calls" USING btree ("correlation_id");

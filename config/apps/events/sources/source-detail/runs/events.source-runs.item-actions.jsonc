@@ -1,0 +1,12 @@
+// @hash 140288a00f96
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Open is the only run action today. A run is a ledger row — nothing about it
+  // is editable or destructive — so unlike the sources list this slot has no
+  // trailing destructive action to keep last; a future action (re-run, copy id)
+  // simply appends.
+  "items": ["apps.events.sources.source-detail.runs:open"]
+}
