@@ -7,25 +7,32 @@ import {
 /**
  * no-provider-trigger-render
  *
- * A base-ui `*Trigger` component (`DropdownMenuTrigger`, `PopoverTrigger`,
- * `Menu.Trigger`, `Select.Trigger`, …) merges its trigger wiring
- * (`aria-haspopup`, `aria-expanded`, `onClick`, `ref`) onto the ROOT element of
- * its `render` prop. If that root is a context-provider component that renders
- * NO DOM node (e.g. `ControlSizeProvider`, `SingleLineProvider`,
- * `PortalForwardProvider`, `PortalThemeScopeProvider`), the props are silently
- * dropped — the button renders but its menu/popover never opens. No error, no
- * warning.
+ * `render` is base-ui's composition seam: the host component
+ * `cloneElement`s the element you hand it with its own merged props (`ref`,
+ * handlers, aria wiring, `data-*` state). Every one of those lands on that
+ * element's ROOT — so if the root is a context-provider component that renders
+ * NO DOM node (`ControlSizeProvider`, `SingleLineProvider`,
+ * `PortalForwardProvider`, `PortalThemeScopeProvider`, …), the whole merged bag
+ * is silently dropped. No error, no warning.
  *
- * This already shipped one live bug (the data-view view-switcher "+" add-view
- * dropdown), fixed by hoisting the provider OUTSIDE the trigger and using a
- * DOM-rooted `IconButton` as the render target.
+ * It bites on both sides of the seam:
  *
- * This rule flags any `render` slot of a `*Trigger` (or a known render-forwarding
- * wrapper like `InlinePopover`'s `trigger`) whose ROOT JSX element is named
- * `*Provider`. Detection is purely structural (AST + name-based), like the
- * sibling rules — no type services. The check is ROOT-ONLY: base-ui merges only
- * onto the render element's root, so a provider nested deeper is harmless and is
- * NOT flagged.
+ *  - a `*Trigger` — the button renders but its menu/popover never opens (a live
+ *    bug once: the data-view view-switcher "+" add-view dropdown, fixed by
+ *    hoisting the provider OUTSIDE the trigger over a DOM-rooted `IconButton`);
+ *  - a `*Popup` — the panel renders but loses its positioning ref, dismiss
+ *    handlers and `data-open`/`data-side` state. `OverlayPanel` (the one panel
+ *    behind every floating surface) is composed exactly this way, which is why
+ *    "a real host element at the root, spreading `{...rest}`" is its stated
+ *    invariant rather than a convention.
+ *
+ * So the rule flags a `*Provider` root under ANY `render` prop (plus the known
+ * render-forwarding wrappers like `InlinePopover`'s `trigger`) — the failure is
+ * a property of `render` itself, not of what sits on the other end of it.
+ * Detection is purely structural (AST + name-based), like the sibling rules — no
+ * type services. The check is ROOT-ONLY: cloneElement merges only onto the
+ * render element's root, so a provider nested deeper is harmless and is NOT
+ * flagged.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -94,20 +101,21 @@ export default createRule({
     docs: {
       description:
         "Disallow a context-provider component (renders no DOM node) as the root " +
-        "of a base-ui *Trigger render prop — the trigger wiring (aria-haspopup, " +
-        "onClick, ref) is silently dropped and the control never opens. Hoist the " +
-        "provider to wrap the Trigger and use a DOM-rooted element (e.g. " +
-        "IconButton) as the render target.",
+        "of a base-ui `render` prop — the merged props (ref, handlers, aria and " +
+        "data-* state) are silently dropped, so a trigger never opens and a popup " +
+        "loses its positioning and dismiss wiring. Hoist the provider OUTSIDE the " +
+        "render element and use a DOM-rooted element (e.g. IconButton, " +
+        "OverlayPanel) as the render target.",
     },
     schema: [],
     messages: {
       providerAsTriggerRender:
-        "`{{provider}}` is a context provider that renders no DOM node, so the " +
-        "base-ui `{{trigger}}` silently drops its trigger wiring (aria-haspopup, " +
-        "onClick, ref) onto it — the control renders but never opens. Hoist the " +
-        "provider to wrap the Trigger (or its DropdownMenu/Popover/Tooltip " +
-        "ancestor) and use a DOM-rooted element (e.g. IconButton) as the render " +
-        "target.",
+        "`{{provider}}` is a context provider that renders no DOM node, so " +
+        "`{{trigger}}` silently drops the props it merges onto its `render` root " +
+        "(ref, handlers, aria and data-* state) — a trigger renders but never " +
+        "opens; a popup renders unpositioned and undismissable. Hoist the " +
+        "provider OUTSIDE the render element and give `render` a DOM-rooted one " +
+        "(e.g. IconButton, OverlayPanel).",
     },
   },
   defaultOptions: [],
@@ -121,13 +129,13 @@ export default createRule({
         if (parent.type !== "JSXOpeningElement") return;
         const elementName = stringifyJSXName(parent.name);
 
-        // (a) `render` on a `*Trigger`, OR
+        // (a) ANY `render` prop — the drop is a property of the composition
+        //     seam itself, not of the host on the other end of it, OR
         // (b) a known render-forwarding wrapper's forwarding prop.
-        const isTriggerRender =
-          attrName === "render" && lastSegment(elementName).endsWith("Trigger");
+        const isRender = attrName === "render";
         const isForwardingWrapper =
           RENDER_FORWARDING_WRAPPERS[elementName] === attrName;
-        if (!isTriggerRender && !isForwardingWrapper) return;
+        if (!isRender && !isForwardingWrapper) return;
 
         const value = node.value;
         if (!value || value.type !== "JSXExpressionContainer") return;

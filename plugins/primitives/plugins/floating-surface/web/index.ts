@@ -7,6 +7,6 @@ export {
 
 export default {
   description:
-    "Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), reusing ViewportOverlay + Surface, without ever taking focus. A sibling to InlinePopover for transient caret menus.",
+    "Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.",
   contributions: [],
 } satisfies PluginDefinition;

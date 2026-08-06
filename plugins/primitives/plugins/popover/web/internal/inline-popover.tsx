@@ -1,5 +1,9 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { PopoverWidth, PopoverPadding } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type {
+  PopoverWidth,
+  PopoverPadding,
+  PopoverMaxHeight,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps } from "react";
 
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -21,8 +25,15 @@ export interface InlinePopoverProps extends ContentPositionerProps {
   /** Padding role forwarded to PopoverContent; default `md`. */
   padding?: PopoverPadding;
   /**
-   * Extra classes forwarded to PopoverContent. Must NOT carry width or padding —
-   * use the `width` / `padding` props instead.
+   * Max-height COMFORT CAP forwarded to PopoverContent; default `viewport`.
+   * The panel already fits the viewport and scrolls unconditionally — this only
+   * makes a long list SHORTER than the space it has, so it opens as a menu-sized
+   * box instead of a viewport-tall wall.
+   */
+  maxHeight?: PopoverMaxHeight;
+  /**
+   * Extra classes forwarded to PopoverContent. Must NOT carry width, padding or
+   * max-height — use the `width` / `padding` / `maxHeight` props instead.
    */
   contentClassName?: string;
   /** Controlled open state — omit for uncontrolled. */
@@ -38,6 +49,7 @@ export function InlinePopover({
   side = "bottom",
   width,
   padding,
+  maxHeight,
   contentClassName,
   open,
   onOpenChange,
@@ -47,7 +59,14 @@ export function InlinePopover({
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       {tooltip ? <WithTooltip content={tooltip}>{triggerNode}</WithTooltip> : triggerNode}
-      <PopoverContent align={align} side={side} width={width} padding={padding} className={contentClassName}>
+      <PopoverContent
+        align={align}
+        side={side}
+        width={width}
+        padding={padding}
+        maxHeight={maxHeight}
+        className={contentClassName}
+      >
         {children}
       </PopoverContent>
     </Popover>

@@ -2,16 +2,17 @@
  * Tests for the `no-provider-trigger-render` lint rule. Run with `bun test`
  * from the repo root (or this file's directory).
  *
- * The rule flags a base-ui `*Trigger` (or a known render-forwarding wrapper like
- * `InlinePopover`) whose `render`/`trigger` prop's ROOT JSX element is a
- * `*Provider` — a context provider renders no DOM node, so the trigger wiring is
- * silently dropped onto it and the control never opens.
+ * The rule flags ANY base-ui `render` prop (or a known render-forwarding
+ * wrapper like `InlinePopover`'s `trigger`) whose ROOT JSX element is a
+ * `*Provider` — a context provider renders no DOM node, so everything the host
+ * merges onto that root is silently dropped.
  *
- * It must fire on a provider root (any *Trigger flavour, Menu.Trigger member
- * form, the InlinePopover wrapper) but never on:
- *   - a DOM-rooted render target (IconButton, raw <button>, Button),
- *   - a provider nested DEEPER than the root (base-ui merges only onto the root),
- *   - a `render` prop on a non-Trigger component.
+ * It must fire on a provider root wherever `render` appears — a `*Trigger`, a
+ * `*Popup` (the `OverlayPanel` composition), the `Menu.Trigger` member form, the
+ * InlinePopover wrapper — but never on:
+ *   - a DOM-rooted render target (IconButton, raw <button>, Button, OverlayPanel),
+ *   - a provider nested DEEPER than the root (cloneElement merges only onto the root),
+ *   - a non-`render` prop.
  */
 
 import { RuleTester } from "eslint";
@@ -61,9 +62,14 @@ ruleTester.run(
       {
         code: `const x = <DropdownMenuTrigger render={<button><ControlSizeProvider>x</ControlSizeProvider></button>} />;`,
       },
-      // A `render` prop on a NON-Trigger component with a provider value.
+      // A DOM-rooted popup panel — the OverlayPanel composition, the shape the
+      // widened rule exists to protect.
       {
-        code: `const x = <SomeView render={<ControlSizeProvider>x</ControlSizeProvider>} />;`,
+        code: `const x = <PopoverPrimitive.Popup {...props} render={<OverlayPanel width="sm">{children}</OverlayPanel>} />;`,
+      },
+      // A provider passed on some OTHER prop is not a render slot.
+      {
+        code: `const x = <SomeView header={<ControlSizeProvider>x</ControlSizeProvider>} />;`,
       },
     ],
     invalid: [
@@ -80,6 +86,17 @@ ruleTester.run(
       // The InlinePopover render-forwarding wrapper.
       {
         code: `const x = <InlinePopover trigger={<ControlSizeProvider><Button /></ControlSizeProvider>} />;`,
+        errors: [{ messageId: "providerAsTriggerRender" }],
+      },
+      // The widened case: a POPUP's render root. The panel would render with no
+      // positioning ref, no dismiss handlers and no data-open state.
+      {
+        code: `const x = <PopoverPrimitive.Popup render={<SingleLineProvider><div /></SingleLineProvider>} />;`,
+        errors: [{ messageId: "providerAsTriggerRender" }],
+      },
+      // Any other host's render slot — the seam, not the host, is the hazard.
+      {
+        code: `const x = <SomeView render={<ControlSizeProvider>x</ControlSizeProvider>} />;`,
         errors: [{ messageId: "providerAsTriggerRender" }],
       },
     ],

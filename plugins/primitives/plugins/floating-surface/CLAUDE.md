@@ -7,22 +7,32 @@ focus**.
 
 ## Why this exists (a sibling to `InlinePopover`, not an extension)
 
-The visual surface (portal, z-layer, theme-scope, `Surface` chrome, the
-`POPOVER_WIDTH` / `POPOVER_PADDING` / `POPOVER_MAX_HEIGHT` roles) is already factored
-one layer below base-ui's Popover — in `ViewportOverlay`, `Surface`, and the role
-maps in `ui-kit`. What genuinely differs between a trigger popover and a caret menu
-is **focus policy**: a trigger popover *should* move focus into its panel; a caret
-menu must **never** take focus — the caret stays live in the host contenteditable,
-navigation is driven by the host (e.g. Lexical commands), and rows `preventDefault`
-on mousedown to keep focus. base-ui's `Popover.Root` exists to manage focus, so
-bending it off for caret menus fights its abstraction.
+The visual surface is already factored one layer below base-ui's Popover — the
+portal / z-layer / theme-scope in `ViewportOverlay`, and **the panel itself** in
+`ui-kit`'s `<OverlayPanel>` (overlay paint, the `POPOVER_WIDTH` /
+`POPOVER_PADDING` / `POPOVER_MAX_HEIGHT` roles, the unconditional viewport fit +
+scroller, the single-line reset, the crash boundary, the Ctrl+A scope). What
+genuinely differs between a trigger popover and a caret menu is **focus policy**: a
+trigger popover *should* move focus into its panel; a caret menu must **never** take
+focus — the caret stays live in the host contenteditable, navigation is driven by
+the host (e.g. Lexical commands), and rows `preventDefault` on mousedown to keep
+focus. base-ui's `Popover.Root` exists to manage focus, so bending it off for caret
+menus fights its abstraction.
 
-So this is a **sibling** primitive: it composes the same visual primitives but binds
-the anchor through **Floating UI** (`@floating-ui/react-dom`, the same engine base-ui's
-Positioner uses internally) and runs no focus calls. It adds **flip** + **scroll-follow**
-for free — behaviors the hand-rolled caret menus lacked. Positioning is returned as an
-inline `style` object, so it is the only `fixed` in the tree and is invisible to
-`layout/no-adhoc-layout` (which scans only `className`) — no eslint-disable anywhere.
+So this is a **sibling** primitive: it renders the same panel but binds the anchor
+through **Floating UI** (`@floating-ui/react-dom`, the same engine base-ui's
+Positioner uses internally) and runs no focus calls. It adds **flip** +
+**scroll-follow** for free — behaviors the hand-rolled caret menus lacked.
+Positioning is returned as an inline `style` object, so it is the only `fixed` in
+the tree and is invisible to `layout/no-adhoc-layout` (which scans only
+`className`) — no eslint-disable anywhere.
+
+`<OverlayPanel>` is rendered **standalone** here (the other four surfaces hand it to
+a base-ui state machine via `render`), so two of its features are inert by design,
+not broken: the Ctrl+A scope handler (this surface never takes focus, so no keydown
+originates inside it) and the `data-open:` / `data-closed:` animation variants
+(attributes only base-ui popups set). The `primitives/css/surface` edge is gone —
+`ui-kit` + `viewport-overlay` are the only visual dependencies.
 
 ## API
 
@@ -34,7 +44,8 @@ inline `style` object, so it is the only `fixed` in the tree and is invisible to
 
 - **`open`** / **`anchor`** — returns `null` when `open` is false or `anchor` is null.
 - **`width`** / **`padding`** / **`maxHeight`** — the shared `ui-kit` role maps
-  (defaults `content` / `xs` / `none`).
+  (defaults `content` / `xs` / `viewport`). The surface always fits the viewport
+  and scrolls internally; `maxHeight` is only a comfort cap on top of that.
 - **`side`** / **`align`** / **`sideOffset`** — preferred placement (defaults
   `bottom` / `start` / `4`); flips on collision.
 - **`onDismiss`** — opt-in focus-safe outside-press close (never preventDefaults or
@@ -50,19 +61,14 @@ needs the surface element.
 
 ## Plugin reference
 
-- Description: Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), reusing ViewportOverlay + Surface, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+- Description: Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
 - Web:
   - Uses:
-    - `primitives/css/surface.Surface`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.POPOVER_MAX_HEIGHT`
-    - `primitives/css/ui-kit.POPOVER_PADDING`
-    - `primitives/css/ui-kit.POPOVER_WIDTH`
+    - `primitives/css/ui-kit.OverlayPanel`
     - `primitives/css/ui-kit.PopoverMaxHeight`
     - `primitives/css/ui-kit.PopoverPadding`
     - `primitives/css/ui-kit.PopoverWidth`
     - `primitives/css/viewport-overlay.ViewportOverlay`
-    - `primitives/overlay-boundary.OverlayBoundary`
   - Exports (types): `FloatingSurfaceProps`
   - Exports (values): `FloatingSurface`
 - Cross-plugin:

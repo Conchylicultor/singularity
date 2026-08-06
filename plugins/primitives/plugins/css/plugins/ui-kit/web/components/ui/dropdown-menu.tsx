@@ -4,9 +4,12 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
-import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
-import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel"
+import type {
+  PopoverWidth,
+  PopoverPadding,
+  PopoverMaxHeight,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
 import { MdChevronRight, MdCheck } from "react-icons/md"
 
 function DropdownMenu({
@@ -43,15 +46,35 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  width = "anchor-min",
+  padding = "xs",
+  maxHeight = "viewport",
   className,
   header,
   children,
   ...props
-}: MenuPrimitive.Popup.Props &
+}: Omit<MenuPrimitive.Popup.Props, "render" | "className"> &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   > & {
+    /**
+     * Plain override class landing LAST on the panel. Narrower than base-ui's
+     * `className`, which also accepts a `(state) => string` form: the panel is
+     * composed by `OverlayPanel`, which has no access to the popup's state, and
+     * the state-driven variants are already expressed as `data-*` selectors in
+     * the panel's own class bundle.
+     */
+    className?: string
+    /** Closed width role; default "at least the trigger, growing past it". */
+    width?: PopoverWidth
+    /** Padding role; default `xs` (the previously baked-in menu padding). */
+    padding?: PopoverPadding
+    /**
+     * Max-height COMFORT CAP on top of the unconditional viewport fit; default
+     * `viewport` (fit the space Floating UI measured, and nothing tighter).
+     */
+    maxHeight?: PopoverMaxHeight
     /** Optional sticky header rendered above the items (skipped by keyboard nav — not an Item). */
     header?: React.ReactNode
   }) {
@@ -66,28 +89,27 @@ function DropdownMenuContent({
         side={side}
         sideOffset={sideOffset}
       >
+        {/* The popup IS the shared panel: base-ui owns the state machine, and
+            `render` hands it `OverlayPanel` as the element to clone its merged
+            props onto (`{...props}` stays BEFORE `render`, and `render` is
+            `Omit`ed from the public prop type, so a caller can never replace the
+            panel). Chrome, geometry, viewport fit and the content-context resets
+            all live in one place — see `overlay-panel.tsx`. */}
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
-          className={cn(SURFACE_LEVELS.overlay, "z-popover max-h-(--available-height) w-max min-w-[max(8rem,var(--anchor-width))] max-w-(--available-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto p-xs duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
-        >
-          {/* Floating panel = fresh flow root: reset the ambient single-line
-              contract so a menu opened from a line container (Bar/Row) doesn't
-              inherit its trigger's single-line row context. Item rows re-assert
-              their own single-line layout locally. */}
-          <SingleLineProvider value={false}>
-            <OverlayBoundary kind="dropdown">
-              {header != null && (
-                // -mx-1 / -mt-1 full-bleed the header through the Popup's p-xs padding.
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- negative-margin bleed past the menu's own p-xs has no named utility
-                <div className="sticky top-0 z-raised -mx-1 -mt-1 mb-xs border-b bg-popover px-xs py-xs">
-                  {header}
-                </div>
-              )}
+          render={
+            <OverlayPanel
+              width={width}
+              padding={padding}
+              maxHeight={maxHeight}
+              header={header}
+              className={className}
+            >
               {children}
-            </OverlayBoundary>
-          </SingleLineProvider>
-        </MenuPrimitive.Popup>
+            </OverlayPanel>
+          }
+        />
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
   )
@@ -203,13 +225,21 @@ function DropdownMenuSubContent({
   alignOffset = -3,
   side = "right",
   sideOffset = 0,
+  // A submenu's "anchor" is one row of its parent menu, so anchor-relative width
+  // is meaningless here: size to content over a small floor instead.
+  width = "snug",
   className,
   ...props
 }: React.ComponentProps<typeof DropdownMenuContent>) {
   return (
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
-      className={cn(SURFACE_LEVELS.overlay, "w-auto min-w-[96px] p-xs shadow-lg duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+      width={width}
+      // Only the shadow step differs from the shared panel — a submenu floats one
+      // level above the menu it opened from. Everything else (surface bundle,
+      // animation, padding) comes from `OverlayPanel`; re-declaring it here was a
+      // second copy of the same bundle layered on the first.
+      className={cn("shadow-lg", className)}
       align={align}
       alignOffset={alignOffset}
       side={side}

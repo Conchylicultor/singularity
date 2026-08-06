@@ -22,13 +22,45 @@
 // Use it instead of a fixed `w-*` whenever a rigid child (a Button/Select trigger
 // that can't shrink) would otherwise be clipped when it doesn't fit the fixed box —
 // a fixed width can never hold a row of unbounded natural width without overflow.
+//
+// Three roles size a panel RELATIVE TO ITS TRIGGER rather than to a tier:
+//
+//   - `anchor` — exactly the trigger's width (a listbox: the closed control and the
+//     open list are the same box, so the selected row lands where the value was).
+//   - `anchor-min` — at least the trigger's width, growing past it for longer item
+//     labels (a menu: the trigger is a floor, not a cap).
+//   - `snug` — no meaningful anchor at all (a submenu, whose "trigger" is one row of
+//     its parent menu): size to content over a small floor.
+//
+// Both anchor roles read `--anchor-width` WITH AN IN-VAR FALLBACK, for the same
+// reason `--available-height` carries one below: the var only exists once a
+// positioner's `size.apply` has run, and an undefined var invalidates the whole
+// `max()` at computed-value time — which would silently drop the 8rem floor, not
+// just the anchor term. Surfaces that publish no anchor at all (a dialog) then
+// degrade to the floor rather than to nothing.
 
-export type PopoverWidth = "content" | "fit" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+export type PopoverWidth =
+  | "content"
+  | "fit"
+  | "snug"
+  | "anchor"
+  | "anchor-min"
+  | "xs"
+  | "sm"
+  | "md"
+  | "lg"
+  | "xl"
+  | "2xl"
+  | "3xl"
+  | "4xl";
 export type PopoverPadding = "none" | "2xs" | "xs" | "sm" | "md" | "lg";
 
 export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   content: "",
   fit: "w-max min-w-64 max-w-(--available-width)",
+  snug: "w-max min-w-24 max-w-(--available-width)",
+  anchor: "w-[var(--anchor-width,0px)] min-w-36",
+  "anchor-min": "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",
@@ -39,28 +71,62 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   "4xl": "w-[40rem] max-w-(--available-width)",
 };
 
+// Each role ALSO co-publishes its own value as `--scroll-pad` (the arbitrary
+// `[--scroll-pad:…]` property), the same contract `SURFACE_LEVELS` uses to
+// co-publish `--chrome-mask` / `--hover-fill`: a role that is only a class name
+// is unreadable to CSS, so anything that must reason about the padding would
+// need per-role wiring of its own.
+//
+// The one consumer today is the `scroll-fade` utility (app.css). Its sticky edge
+// strips resolve their insets against the panel's CONTENT box, so without the
+// value they park `padding-block` short of the panel's inner edges — and scrolled
+// content, which does pass through that padding strip, re-emerges UNFADED there.
+// Publishing the value lets the fade offset itself by the real padding for any
+// role, present or future, with zero edits on either side.
+//
+// Every role publishes, `none` included: custom properties INHERIT, so a `none`
+// panel that omitted it would pick up an enclosing panel's padding and offset its
+// fade past its own edge.
 export const POPOVER_PADDING: Record<PopoverPadding, string> = {
-  none: "p-none",
-  "2xs": "p-2xs",
-  xs: "p-xs",
-  sm: "p-sm",
-  md: "p-md",
-  lg: "p-lg",
+  none: "p-none [--scroll-pad:0px]",
+  "2xs": "p-2xs [--scroll-pad:var(--space-2xs)]",
+  xs: "p-xs [--scroll-pad:var(--space-xs)]",
+  sm: "p-sm [--scroll-pad:var(--space-sm)]",
+  md: "p-md [--scroll-pad:var(--space-md)]",
+  lg: "p-lg [--scroll-pad:var(--space-lg)]",
 };
 
-// Max-height is its own axis (co-located with width/padding so `PopoverContent`
-// can later adopt the same role; consumed now by `FloatingSurface`). Each token
-// bundles a `max-h-*` cap with `overflow-y-auto` so a tall menu scrolls inside the
-// surface instead of overflowing the viewport. `none` opts out (size to content).
-// `overflow-y-auto` is invisible to `no-adhoc-layout`: the rule scans `className`
-// attrs and `cn()` args, and this value is only reached as a dynamic member
-// expression `POPOVER_MAX_HEIGHT[maxHeight]` inside `cn()`.
+// Max-height is its own axis, co-located with width/padding. The contract in one
+// line: THE PANEL ALWAYS FITS THE VIEWPORT, AND THE ROLE IS A COMFORT CAP ON TOP
+// OF THAT. `--available-height` — the space Floating UI measured between the
+// anchor and the collision boundary (published by base-ui's Positioner, and by
+// `FloatingSurface`'s own `size` middleware) — is the floor every role shares;
+// `viewport` is that floor alone, and a named role only ever makes the panel
+// SHORTER than the space it has, never taller. There is no opt-out: a panel that
+// outgrows the viewport with no clamp puts its tail permanently out of reach,
+// which is the entire bug class this axis exists to prevent.
+//
+// Three details that are load-bearing, not cosmetic:
+//
+//   - ONE `max-h` class per role — a clamp, never a clamp PLUS a cap. Two classes
+//     in the same tailwind-merge group only compose correctly while nobody
+//     touches their order; `min(cap, var(--available-height))` folds both into a
+//     single class, so a caller's `className` override still resolves cleanly.
+//   - The `100vh` IN-VAR fallback is required, not defensive. `--available-height`
+//     does not exist until Floating UI's `size.apply` has run once, and an
+//     undefined var invalidates the WHOLE `min()` at computed-value time →
+//     `max-height: none` → one full-height frame on first paint.
+//   - `overflow-y-auto` deliberately does NOT live here. Scrolling is an
+//     unconditional invariant of the panel — owned by `OverlayPanel` (and the
+//     `PopoverContent` / `FloatingSurface` roots it backs) — not something a role
+//     can switch off. A clamp without a scroller is exactly the unreachable tail
+//     again, so the two must never be separable at a call site.
 
-export type PopoverMaxHeight = "none" | "sm" | "md" | "lg" | "xl";
+export type PopoverMaxHeight = "viewport" | "sm" | "md" | "lg" | "xl";
 export const POPOVER_MAX_HEIGHT: Record<PopoverMaxHeight, string> = {
-  none: "",
-  sm: "max-h-48 overflow-y-auto",
-  md: "max-h-64 overflow-y-auto",
-  lg: "max-h-80 overflow-y-auto",
-  xl: "max-h-96 overflow-y-auto",
+  viewport: "max-h-[var(--available-height,100vh)]",
+  sm: "max-h-[min(12rem,var(--available-height,100vh))]",
+  md: "max-h-[min(16rem,var(--available-height,100vh))]",
+  lg: "max-h-[min(20rem,var(--available-height,100vh))]",
+  xl: "max-h-[min(24rem,var(--available-height,100vh))]",
 };

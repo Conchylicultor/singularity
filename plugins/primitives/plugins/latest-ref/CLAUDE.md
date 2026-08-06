@@ -45,6 +45,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `page/editor`
     - `primitives/auto-scroll`
     - `primitives/css/color-picker`
+    - `primitives/css/ui-kit`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/tree`

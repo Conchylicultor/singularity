@@ -25,9 +25,16 @@ export default {
         // ErrorBoundary.Action infrastructure. The leaf sits below ui-kit, so
         // ui-kit can wrap every *Content without closing the cycle. Uses
         // createElement (not JSX) so the barrel stays a `.ts` folder barrel.
-        registerOverlayFallback(({ error, componentStack, retry, kind }) =>
+        //
+        // `slot` is the constant "overlay": it feeds nothing but the chip's tag
+        // ("overlay crashed"). It is NOT part of the crash fingerprint (that is
+        // errorType + the top stack frames), and the `componentStack` captured
+        // beside it already names the real consumer chain — so a per-surface
+        // kind threaded down from every *Content bought a word the stack
+        // already spells out.
+        registerOverlayFallback(({ error, componentStack, retry }) =>
           createElement(CrashFallback, {
-            report: { error, componentStack, slot: kind, label: null },
+            report: { error, componentStack, slot: "overlay", label: null },
             retry,
           }),
         );

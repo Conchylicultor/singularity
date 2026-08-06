@@ -119,18 +119,109 @@ with no `DropdownMenuGroup`/`DropdownMenuSection` ancestor — including a label
 rendered in a different component from any group — so the crash class is
 structurally unrepresentable.
 
-## Dialog owns the panel — pass content, never chrome
+## OverlayPanel owns the panel — one box behind every floating surface
 
-`DialogContent` **is the panel**: it paints the `SURFACE_LEVELS.overlay` bundle
-directly (not via `Surface`, which imports *from* ui-kit → cycle), a width tier,
-and padding. Pass content only — `<DialogContent size="md" padded={false}>…`.
+`web/components/overlay-panel.tsx` is **the** floating panel: the
+`SURFACE_LEVELS.overlay` paint (not via `Surface`, which imports *from* ui-kit →
+cycle), the animation blob, the width/padding/max-height roles, the sticky
+`header`, and the content-context resets (`SingleLineProvider value={false}` +
+`OverlayBoundary`). `PopoverContent`, `DropdownMenuContent`, `SelectContent`,
+`DialogContent` and `primitives/floating-surface` all *contain* it — they stay
+separate only because they are different state machines (base-ui listbox / menu /
+dialog, plus one focus-less Floating-UI surface). `TooltipContent` deliberately
+does not: a one-line label with its own chrome, where a height clamp is
+meaningless. It is hand-authored, hence outside `components/ui/` (shadcn-owned).
+
+Four props, all optional, all visual: `width` · `padding` · `maxHeight` ·
+`header`. **Two things are invariants, not props** — a call site cannot forget
+them, which is the whole point (a per-surface panel is how `PopoverContent`
+shipped with no height clamp at all while its four siblings each had a different
+one):
+
+- **Fit the viewport, and scroll.** `overflow-x-hidden overflow-y-auto` is
+  unconditional; `POPOVER_MAX_HEIGHT` roles are only a *comfort cap*, folded into
+  the same class as `min(cap, var(--available-height,100vh))`. One `max-h` class
+  per role, never a clamp plus a cap — two classes in the same twMerge group
+  compose correctly only while nobody touches their order. The in-var fallback is
+  required: the var doesn't exist until Floating UI's `size.apply` has run, and an
+  undefined var invalidates the whole `min()` → `max-height: none` → one
+  full-height frame. X is *hidden*, not scrolled, because CSS cannot pair
+  `overflow-y: auto` with `overflow-x: visible`; content of unbounded natural
+  width wants `width="fit"`, not a fixed width it would clip.
+- **The clamp announces itself — a measured sticky edge fade.** With macOS overlay
+  scrollbars invisible at rest, a clamped panel ending in clean padding reads as a
+  *complete* list. The `scroll-fade` utility (`app.css`) fades content into
+  `--chrome-mask` at any edge with content beyond it; `useScrollFade`
+  (`web/components/use-scroll-fade.ts`) measures and stamps `data-fade-top` /
+  `data-fade-bottom`. Four constraints, each with a reason it looks wrong:
+  - **Additive only — never `no-scrollbar`** (nor `scrollbar-width` /
+    `::-webkit-scrollbar`). The native transient scrollbar during a gesture is the
+    other half of the signal; an always-on visible scrollbar was rejected.
+  - **Pseudo-elements, never a wrapper div** (same percentage-chain reason as the
+    Ctrl+A handler below), each cancelled by an equal-and-opposite
+    **`margin-top`** so it hangs *backwards* off its anchor point: the strip
+    overlays the first/last row instead of eating 5rem of panel, and
+    `scrollHeight` — the thing `useScrollFade` measures — is what it would be with
+    no fade at all. The **direction** is load-bearing, not just the cancellation:
+    cancelling forwards (`margin-bottom`) leaves the border box extending past the
+    panel's end edge — scrollable overflow, which a margin cannot cancel — so a
+    fits-on-screen menu measures as overflowing and paints a fade over nothing.
+  - **Offset by `--scroll-pad`, not over-bled.** A sticky inset resolves against the
+    scroller's **content** box, so `bottom: 0` parks the strip `padding-bottom`
+    short of the inner edge — where scrolled content still shows, unfaded. Inline
+    over-bleed can't fix the block axis (`overflow-y: auto` would make it
+    scrollable area), so each `POPOVER_PADDING` role co-publishes its value as
+    `--scroll-pad` (the `SURFACE_LEVELS` → `--chrome-mask` contract) and the strip
+    offsets by it — every role, no per-role CSS.
+  - **Scroll alone is not enough.** The `/` and "Turn into" menus filter as the
+    user types, so scrollable-ness changes with no scroll event — hence also a
+    `ResizeObserver` (via `element-size`; no cycle, it imports only `latest-ref`)
+    and a per-commit re-measure.
+  - **Select never arms it.** Under `alignItemWithTrigger` base-ui makes the inner
+    `[role=listbox]` the scroller, so the panel reads `scrollHeight ===
+    clientHeight` and keeps only its own scroll arrows. The measurement's 1px slack
+    is what holds that against fractional percentage sizing — don't drop it.
+- **Ctrl+A scopes to the panel — via the root's own `onKeyDown`, never a
+  `<ContentScope>` wrapper.** With `alignItemWithTrigger` (SelectContent's
+  default) base-ui's `SelectPopup` writes `height: 100%` on the popup and
+  `max-height: 100%` on the list; an intervening auto-height div makes those
+  percentages resolve against nothing and Select's scrolling silently dies. No
+  `tabIndex` either — base-ui stamps one on every popup and focus is already
+  inside, so the keydown reaches the root by bubbling.
+
+Composing it through base-ui's `render` has three rules:
+
+- **A real host element at the panel's root, spreading `{...rest}`.** `render`
+  `cloneElement`s your element with the popup's merged props; a root that emits no
+  DOM node swallows `ref`, handlers and aria wiring silently. Enforced by
+  `no-provider-trigger-render`.
+- **`{...props}` before `render`**, with `Omit<…, "render" | "className">` on the
+  public prop type, so a caller can never replace the panel. (`className` is
+  narrowed to a plain string: base-ui also accepts `(state) => string`, which the
+  panel — having no access to the popup's state — could not evaluate; the
+  state-driven variants are `data-*` selectors in the panel's own bundle anyway.)
+- **The caller's `className` stays the LAST `cn()` argument.** That is what keeps
+  overrides like `pane-chrome.tsx`'s `min-w-0` resolving. Surface-specific chrome
+  rides there too (`SelectContent`'s `relative isolate
+  data-[align-trigger=true]:animate-none`, `DropdownMenuSubContent`'s `shadow-lg`)
+  — never a second copy of the surface bundle layered on the first.
+
+## Dialog: pass content, never chrome
+
+`DialogContent` is an `OverlayPanel` inside the full-viewport
+`DialogPrimitive.Popup` positioner. Pass content only —
+`<DialogContent size="md" padded={false}>…`.
 
 - `size`: `sm` (28rem, confirms) · `md` (32rem, default) · `lg` (56rem, two-pane).
-  The three widths in use; no free-form width.
-- `padded`: default `true` (`p-lg`); `false` for flush header/list panels whose
-  rows self-inset. `className` lands on the panel (e.g. `h-[32rem]`).
-- Panel is `overflow-y-auto max-h-[75vh]` — clips to rounded corners (no `<Clip>`),
-  scrolls only past the viewport, so a caller's inner `<ScrollArea>` stays active.
+  The three widths in use; no free-form width. Safe against the panel's own width
+  role because the default `POPOVER_WIDTH.content` is the empty string.
+- `padded`: default `true` (`padding="lg"`); `false` for flush header/list panels
+  whose rows self-inset. `className` lands on the panel (e.g. `h-[32rem]`).
+- A dialog is **centered, not anchored**, so no positioner publishes
+  `--available-height` for it — it injects `style={{"--available-height":"75vh"}}`
+  itself, which is how the panel's unconditional clamp reproduces this surface's
+  historical `max-h-[75vh]`. It only bites past 20vh top + 75vh, so a caller's
+  inner `<ScrollArea>` stays the only active scroller.
 
 **Never wrap your own `<Surface>`/`<Clip>` inside `<DialogContent>`** — doubles the
 ring/shadow/bg. Imperative twin: `openDialog(render, { size, padded })`; yes/no
@@ -144,13 +235,17 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Description: Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
 - Web:
   - Uses:
+    - `primitives/element-size.useResizeObserver`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay-boundary.OverlayBoundary`
     - `primitives/popup-open.useReportPopupOpen`
     - `primitives/select-scope.ContentScope`
+    - `primitives/select-scope.scopeSelectAllKeyDown`
   - Exports (types):
     - `ButtonIconSize`
     - `ControlSize`
     - `DensityControlled`
+    - `OverlayPanelProps`
     - `PopoverMaxHeight`
     - `PopoverPadding`
     - `PopoverWidth`
@@ -190,6 +285,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `DropdownMenuTrigger`
     - `iconSizeFor`
     - `Input`
+    - `OverlayPanel`
     - `Popover`
     - `POPOVER_MAX_HEIGHT`
     - `POPOVER_PADDING`

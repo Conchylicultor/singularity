@@ -1,5 +1,5 @@
 import { cn, SURFACE_LEVELS, type SurfaceLevel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { selectScopeProps } from "@plugins/primitives/plugins/select-scope/web";
+import { selectScopeProps, scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web";
 import type React from "react";
 
 export interface SurfaceProps {
@@ -59,7 +59,7 @@ export function Surface({
 }: SurfaceProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     onKeyDown?.(e);
-    selectScopeProps.onKeyDown(e);
+    scopeSelectAllKeyDown(e);
   };
   return (
     <Comp

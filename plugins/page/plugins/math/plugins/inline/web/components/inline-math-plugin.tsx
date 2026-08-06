@@ -77,7 +77,13 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
     <CaretTriggerMenu
       caret={caret}
       open={surfaceOpen}
-      width="lg"
+      // `fit`, not a fixed width: `KatexMath` renders a formula of UNBOUNDED
+      // natural width, and the surface now clips its X axis (CSS cannot pair
+      // `overflow-y: auto` with `overflow-x: visible`), so a fixed box would cut
+      // the tail of a long expression off unreachably. `fit` is the role for
+      // exactly this — grow to the content, floor at a comfortable min, cap at
+      // the viewport.
+      width="fit"
       padding="sm"
     >
       <Stack gap="sm">

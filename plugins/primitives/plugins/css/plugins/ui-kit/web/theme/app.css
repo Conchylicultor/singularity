@@ -209,6 +209,166 @@
   }
 }
 
+/* Scroll-edge fades — the "there is more content this way" signal for a box that
+ * clamps its height and scrolls internally (the `OverlayPanel` case). macOS
+ * overlay scrollbars are invisible at rest, so a clamped menu showing 8 items and
+ * ending in clean padding reads as a COMPLETE list of 8; the gradient is the only
+ * thing that says otherwise. Deliberately ADDITIVE: unlike `no-scrollbar` above,
+ * this touches no scrollbar chrome at all, so the transient native scrollbar still
+ * appears during an active gesture.
+ *
+ * Seven mechanics, all load-bearing rather than cosmetic:
+ *
+ *  - `::before`/`::after` on the SCROLLER ITSELF, never wrapper divs. An
+ *    intervening element would break the `height:100%` / `max-height:100%`
+ *    percentage chain base-ui's `SelectPopup` installs for `alignItemWithTrigger`
+ *    — the same reason `OverlayPanel` scopes Ctrl+A with a root handler instead of
+ *    a `<ContentScope>` wrapper.
+ *  - `position: sticky`, so each strip tracks the scrollport of the box it lives
+ *    in with no positioning context to establish and no measurement in JS.
+ *  - An equal and opposite `margin-top` ON BOTH STRIPS, so each hangs BACKWARDS
+ *    off its anchor point (`::before` off the content start, `::after` off the
+ *    content end). Two separate invariants ride on that one declaration:
+ *      · ZERO LAYOUT SPACE — the strip overlays the first/last row instead of
+ *        pushing it. (Sticky boxes do participate in flow; without the margin the
+ *        panel would gain 2 × `--scroll-fade-span` of dead space.)
+ *      · ZERO SCROLLABLE OVERFLOW — a box that hangs backwards occupies extent
+ *        that already exists, so it can never push the scrollable region past the
+ *        panel's end edge. The DIRECTION is the load-bearing part, not just the
+ *        cancellation: `::before` used to cancel FORWARDS (`margin-bottom:
+ *        -span`), which parks its border box at the content start extending
+ *        `span` DOWN — and a border box counts toward the scrollable overflow
+ *        region whether or not a margin cancels its flow contribution. Any panel
+ *        shorter than the strip then reported `padTop + span - clientHeight` of
+ *        PHANTOM overflow (measured: 4px on a one-item `p-xs` menu; 164px with
+ *        the ramp forced to 200px), and `useScrollFade` armed a bottom fade on a
+ *        menu with nothing more to show — the always-on lie this whole utility
+ *        exists to avoid. `scrollHeight` is what `useScrollFade` measures, so it
+ *        must be exactly what it would be with no fade at all.
+ *        NOT the sticky insets below, though they look like the likelier suspect:
+ *        zeroing both left the phantom extent unchanged to the pixel. A sticky
+ *        shift is not folded into the scrollable overflow region — only the
+ *        box's unshifted flow position is.
+ *  - A negative INLINE margin that over-bleeds past the host's own padding (which
+ *    is a role here — `p-none`…`p-lg`, at three density presets) and lets the
+ *    host's own `overflow-x: hidden` clip the excess at the padding box. The
+ *    gradient then reaches the border for every padding role with no per-role
+ *    wiring; -1.5rem clears the 1rem `p-lg` ceiling.
+ *  - A BLOCK-AXIS OFFSET BY `--scroll-pad`, because the same over-bleed trick is
+ *    illegal on this axis: `overflow-y` is `auto`, so an over-bleeding block box
+ *    would ADD scrollable area rather than be clipped. And an offset is needed,
+ *    because a sticky inset resolves against the scroller's CONTENT box, not its
+ *    scrollport — measured, not assumed: at `bottom: 0` the strip parks exactly
+ *    `padding-bottom` short of the panel's inner edge, while scrolled content DOES
+ *    pass through that padding strip, so the last row re-emerged UNFADED in the
+ *    final few pixels (and the first row at the top, by the same geometry).
+ *    Hence `top`/`bottom: calc(-1 * var(--scroll-pad))`, with the strip grown by
+ *    the same amount so the visible ramp above the padding stays `--scroll-fade-h`
+ *    for every role. `--scroll-pad` is the host's own block padding, co-published
+ *    by the padding ROLE (`POPOVER_PADDING`, theme/popover-width.ts) exactly as
+ *    `SURFACE_LEVELS` co-publishes `--chrome-mask` — so the fade fits any role,
+ *    present and future, with no per-role wiring here. Absent it, the `0px`
+ *    fallback reproduces the un-padded case. The offset is free: measured, a
+ *    sticky shift adds no scrollable extent — the strip's own box does (above).
+ *  - Fades to `--chrome-mask` — the surface's co-published "my background, for
+ *    something painting over me" (see theme/surface.ts) — never a hardcoded
+ *    `--popover`, so the fade follows the surface if it is ever re-toned. The ramp
+ *    is EASED (a solid lip, then a fast-then-slow decay to transparent) and lives
+ *    in one `--scroll-fade-stops` list both directions substitute: a single linear
+ *    stop reads far weaker than its numbers suggest, because alpha compositing
+ *    spends most of a linear ramp already near-invisible.
+ *  - Painted ONLY where content actually exists, via `data-fade-top` /
+ *    `data-fade-bottom` set from the host's measured scroll metrics. An always-on
+ *    fade would be a lie, and worse than no signal at all. */
+@utility scroll-fade {
+  /* twmerge: standalone -- Additive ::before/::after gradient overlays gated on data-fade-*; pseudo-element paint has no single-value built-in group to conflict with. */
+  /* The visible ramp, above the host's own padding. */
+  --scroll-fade-h: 2.5rem;
+  /* The strip's real extent: the ramp plus the padding it has to reach across. */
+  --scroll-fade-span: calc(var(--scroll-fade-h) + var(--scroll-pad, 0px));
+  /* Solid across the host's padding plus a short lip, then an eased decay. Every
+   * stop is `padding + <fraction of the ramp>`, so the ramp itself is identical
+   * at every padding role — only the solid part grows. */
+  --scroll-fade-stops:
+    var(--chrome-mask) 0,
+    var(--chrome-mask) calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.18),
+    color-mix(in oklab, var(--chrome-mask) 82%, transparent)
+      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.4),
+    color-mix(in oklab, var(--chrome-mask) 55%, transparent)
+      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.58),
+    color-mix(in oklab, var(--chrome-mask) 28%, transparent)
+      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.74),
+    color-mix(in oklab, var(--chrome-mask) 9%, transparent)
+      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.88),
+    transparent var(--scroll-fade-span);
+  &::before,
+  &::after {
+    content: "";
+    display: block;
+    position: sticky;
+    z-index: var(--z-raised);
+    flex: 0 0 auto;
+    height: var(--scroll-fade-span);
+    /* Never taller than the visible box. A percentage max-height resolves
+     * against the containing block's USED height — the panel's own content box,
+     * i.e. what is on screen, not the full scroll extent. Without it the ramp
+     * (2.5rem + padding) is taller than a one-item menu's content box, so the
+     * strip overflows the end edge and hands the panel exactly that much phantom
+     * scroll height — enough for a menu that fits to measure as overflowing and
+     * paint a fade advertising content that is not there. */
+    max-height: 100%;
+    margin-inline: -1.5rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+  }
+  /* Anchored flush at the scrollport edge — offset 0, NEVER a negative inset.
+   * A sticky box is confined to its containing block (the host's CONTENT box),
+   * so it stops `--scroll-pad` short of the visible inner edge while scrolled
+   * content passes right through that padding strip — which is the unfaded
+   * sliver this whole mechanism exists to kill. The tempting fix, pushing the
+   * strip out with `bottom: calc(-1 * var(--scroll-pad))`, silently breaks a
+   * different invariant: a relative offset contributes to the SCROLLABLE
+   * OVERFLOW region in the end direction, so every panel gained exactly
+   * `--scroll-pad` of phantom scroll height — enough for a menu that fits to
+   * measure as overflowing and paint a fade advertising content that is not
+   * there.
+   *
+   * `box-shadow` covers the strip instead: it is INK overflow, never scrollable
+   * overflow, so it cannot add extent. It is clipped at the host's padding box
+   * (not its content box), which is precisely the region that needs covering,
+   * and the solid mask is contiguous with the gradient's own solid lip. */
+  /* The two strips are MIRRORS, not copies — a first child and a last child
+   * cancel their flow contribution in opposite directions, and collapsing this
+   * into one shared `margin-top` silently kills the top fade: `::before` then
+   * hangs backwards, its static position lands entirely ABOVE the content box,
+   * and it never paints over the first rows (the attribute and opacity both
+   * still read as on, so only a screenshot catches it).
+   *  - `::before` is FIRST: it sits at the content start and cancels FORWARDS,
+   *    pulling the rows that follow back up over it.
+   *  - `::after` is LAST: it cancels BACKWARDS, hanging up over the rows that
+   *    precede it.
+   * Neither uses a relative inset, so neither adds scrollable overflow. */
+  &::before {
+    top: 0;
+    margin-bottom: calc(-1 * var(--scroll-fade-span));
+    background: linear-gradient(to bottom, var(--scroll-fade-stops));
+    box-shadow: 0 calc(-1 * var(--scroll-pad, 0px)) 0 0 var(--chrome-mask);
+  }
+  &::after {
+    bottom: 0;
+    margin-top: calc(-1 * var(--scroll-fade-span));
+    background: linear-gradient(to top, var(--scroll-fade-stops));
+    box-shadow: 0 var(--scroll-pad, 0px) 0 0 var(--chrome-mask);
+  }
+  &[data-fade-top]::before {
+    opacity: 1;
+  }
+  &[data-fade-bottom]::after {
+    opacity: 1;
+  }
+}
+
 /* Density padding utilities — the only bridge for runtime-themeable padding,
  * since padding utilities can't read theme vars. Values come from the density
  * token group (--pad-* runtime vars, overridden by ThemeInjector).

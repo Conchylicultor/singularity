@@ -4,7 +4,6 @@ export interface OverlayFallbackProps {
   error: Error;
   componentStack: string | null;
   retry: () => void;
-  kind: string;
 }
 type OverlayFallbackRenderer = (props: OverlayFallbackProps) => ReactNode;
 
@@ -17,7 +16,6 @@ export function registerOverlayFallback(fn: OverlayFallbackRenderer): void {
 }
 
 interface Props {
-  kind: string;
   children: ReactNode;
 }
 interface State {
@@ -45,7 +43,6 @@ export class OverlayBoundary extends Component<Props, State> {
           error: this.state.error,
           componentStack: this.state.componentStack,
           retry: this.retry,
-          kind: this.props.kind,
         });
       }
       // Minimal text-only fallback for the pre-registration edge only

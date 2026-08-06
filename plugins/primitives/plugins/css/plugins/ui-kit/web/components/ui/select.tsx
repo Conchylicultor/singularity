@@ -3,8 +3,13 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
-import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
 import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel"
+import type {
+  PopoverWidth,
+  PopoverPadding,
+  PopoverMaxHeight,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md"
 
 // Kept generic over base-ui's own `<Value, Multiple>` params: this was a bare
@@ -87,12 +92,32 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = true,
+  width = "anchor",
+  padding = "none",
+  maxHeight = "viewport",
   ...props
-}: SelectPrimitive.Popup.Props &
+}: Omit<SelectPrimitive.Popup.Props, "render" | "className"> &
   Pick<
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   > & {
+    /**
+     * Plain override class landing LAST on the panel. Narrower than base-ui's
+     * `className`, which also accepts a `(state) => string` form: the panel is
+     * composed by `OverlayPanel`, which has no access to the popup's state, and
+     * the state-driven variants are already expressed as `data-*` selectors in
+     * the panel's own class bundle.
+     */
+    className?: string
+    /** Closed width role; default "exactly the trigger's width". */
+    width?: PopoverWidth
+    /** Padding role; default `none` — a listbox's rows self-inset via `SelectGroup`. */
+    padding?: PopoverPadding
+    /**
+     * Max-height COMFORT CAP on top of the unconditional viewport fit; default
+     * `viewport` (fit the space Floating UI measured, and nothing tighter).
+     */
+    maxHeight?: PopoverMaxHeight
     /** Optional sticky header rendered above the item list (not a focusable item). */
     header?: React.ReactNode
   }) {
@@ -108,23 +133,48 @@ function SelectContent({
         alignItemWithTrigger={alignItemWithTrigger}
         className="isolate z-popover"
       >
+        {/* The popup IS the shared panel (see `overlay-panel.tsx`); `{...props}`
+            stays BEFORE `render` and `render` is `Omit`ed from the public prop
+            type, so a caller can never replace it.
+
+            The arrows and the list stay DIRECT children of the panel, and the
+            header stays a plain child rather than `OverlayPanel`'s `header` prop:
+            with `alignItemWithTrigger` (the default) `SelectPopup` writes
+            `height: 100%` onto the popup and `max-height: 100%` onto the list, so
+            any intervening auto-height box would break that percentage chain,
+            and the arrows are `position: absolute` against the panel's own
+            `relative`. The `header` prop's full-bleed negative margins are sized
+            for a padded panel; a listbox has none. */}
         <SelectPrimitive.Popup
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
-          className={cn("relative isolate z-popover max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
-        >
-          <SelectScrollUpButton />
-          {header != null && (
-            <div className="sticky top-0 z-raised border-b bg-popover px-xs py-xs">
-              {header}
-            </div>
-          )}
-          <SelectPrimitive.List>
-            <OverlayBoundary kind="select">{children}</OverlayBoundary>
-          </SelectPrimitive.List>
-          <SelectScrollDownButton />
-        </SelectPrimitive.Popup>
+          render={
+            <OverlayPanel
+              width={width}
+              padding={padding}
+              maxHeight={maxHeight}
+              className={cn(
+                // `relative` is the arrows' containing block; `isolate` keeps the
+                // sticky header / arrows stacking inside the panel. The
+                // animate-none is genuinely Select-specific: with
+                // `alignItemWithTrigger` base-ui places the popup by measuring it,
+                // so a zoom/slide entrance would fight its own measurement.
+                "relative isolate data-[align-trigger=true]:animate-none",
+                className
+              )}
+            >
+              <SelectScrollUpButton />
+              {header != null && (
+                <div className="sticky top-0 z-raised border-b bg-popover px-xs py-xs">
+                  {header}
+                </div>
+              )}
+              <SelectPrimitive.List>{children}</SelectPrimitive.List>
+              <SelectScrollDownButton />
+            </OverlayPanel>
+          }
+        />
       </SelectPrimitive.Positioner>
     </SelectPrimitive.Portal>
   )

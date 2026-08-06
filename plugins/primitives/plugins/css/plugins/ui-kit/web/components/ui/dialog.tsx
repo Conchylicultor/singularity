@@ -1,11 +1,9 @@
+import type * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
-import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
-import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -42,7 +40,15 @@ const DIALOG_SIZES = {
   lg: "w-full max-w-4xl",
 } as const
 
-type DialogContentProps = DialogPrimitive.Popup.Props & {
+type DialogContentProps = Omit<DialogPrimitive.Popup.Props, "className"> & {
+  /**
+   * Plain override class landing LAST on the panel. Narrower than base-ui's
+   * `className`, which also accepts a `(state) => string` form: this class goes
+   * to the inner `OverlayPanel`, which has no access to the popup's state (and
+   * the state-driven variants live as `data-*` selectors in the panel's own
+   * class bundle anyway).
+   */
+  className?: string
   /** Panel width tier. Default "md". */
   size?: keyof typeof DIALOG_SIZES
   /** Default panel padding (p-lg). Pass false for flush headers/rows that own their own insets. Default true. */
@@ -67,30 +73,24 @@ function DialogContent({
         className="fixed inset-0 z-popover flex items-start justify-center pt-[20vh] outline-none"
         {...props}
       >
-        <div
+        {/* The dialog's box IS the shared panel — see `overlay-panel.tsx`. A
+            dialog is CENTERED rather than anchored, so it publishes no
+            `--available-height` of its own; injecting one turns the panel's
+            unconditional clamp into exactly this surface's historical
+            `max-h-[75vh]`, instead of leaving it at the `100vh` fallback. The
+            cap only ever bites past 20vh top + 75vh = 95vh, so a caller's inner
+            ScrollArea stays the only active scroller. `POPOVER_WIDTH.content`
+            (the default role) is the empty string, so `DIALOG_SIZES` owns width
+            unopposed, and `padding="lg"` is the same `p-lg` this panel always
+            had. */}
+        <OverlayPanel
           data-slot="dialog-panel"
-          // Panel box = the SURFACE_LEVELS.overlay bundle (the same one Popover /
-          // DropdownMenu / Surface use) + one width tier + optional padding.
-          // overflow-y-auto clips children to the rounded corners (replacing callers'
-          // <Clip>) and scrolls ONLY if the whole panel would exceed the viewport
-          // (20vh top + 75vh = 95vh). No current caller reaches that cap, so their own
-          // internal ScrollAreas stay the only active scroller (no double scrollbar).
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- p-lg is the density-ramp token; ui-kit sits below the spacing primitive so it can't route through <Inset>
-          className={cn(
-            SURFACE_LEVELS.overlay,
-            DIALOG_SIZES[size],
-            "max-h-[75vh] overflow-y-auto",
-            padded && "p-lg",
-            className,
-          )}
+          padding={padded ? "lg" : "none"}
+          style={{ "--available-height": "75vh" } as React.CSSProperties}
+          className={cn(DIALOG_SIZES[size], className)}
         >
-          {/* Floating panel = fresh flow root: reset the ambient single-line contract. */}
-          <OverlayBoundary kind="dialog">
-            <SingleLineProvider value={false}>
-              <ContentScope fill={false}>{children}</ContentScope>
-            </SingleLineProvider>
-          </OverlayBoundary>
-        </div>
+          {children}
+        </OverlayPanel>
       </DialogPrimitive.Popup>
     </DialogPortal>
   )

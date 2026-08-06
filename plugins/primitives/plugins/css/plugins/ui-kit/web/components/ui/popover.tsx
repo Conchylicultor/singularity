@@ -1,18 +1,14 @@
+import type * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
-import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
-import {
-  POPOVER_WIDTH,
-  POPOVER_PADDING,
-  type PopoverWidth,
-  type PopoverPadding,
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel"
+import type {
+  PopoverWidth,
+  PopoverPadding,
+  PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
-import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
 
 function Popover({
   open,
@@ -44,18 +40,35 @@ function PopoverContent({
   sideOffset = 4,
   width = "content",
   padding = "md",
+  maxHeight = "viewport",
+  header,
   className,
   children,
   ...props
-}: PopoverPrimitive.Popup.Props &
+}: Omit<PopoverPrimitive.Popup.Props, "render" | "className"> &
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   > & {
+    /**
+     * Plain override class landing LAST on the panel. Narrower than base-ui's
+     * `className`, which also accepts a `(state) => string` form: the panel is
+     * composed by `OverlayPanel`, which has no access to the popup's state, and
+     * the state-driven variants are already expressed as `data-*` selectors in
+     * the panel's own class bundle.
+     */
+    className?: string
     /** Closed width role; default size-to-content. */
     width?: PopoverWidth
     /** Padding role; default `md` (the previously baked-in padding). */
     padding?: PopoverPadding
+    /**
+     * Max-height COMFORT CAP on top of the unconditional viewport fit; default
+     * `viewport` (fit the space Floating UI measured, and nothing tighter).
+     */
+    maxHeight?: PopoverMaxHeight
+    /** Optional sticky header rendered above the content, full-bleed through the padding. */
+    header?: React.ReactNode
   }) {
   // Portaled content escapes the originating window's DOM subtree to
   // document.body, so it no longer matches that window's [data-theme-scope]
@@ -73,27 +86,27 @@ function PopoverContent({
         side={side}
         sideOffset={sideOffset}
       >
+        {/* The popup IS the shared panel: base-ui owns the state machine, and
+            `render` hands it `OverlayPanel` as the element to clone its merged
+            props onto (`{...props}` stays BEFORE `render`, and `render` is
+            `Omit`ed from the public prop type, so a caller can never replace the
+            panel). Chrome, geometry, viewport fit and the content-context resets
+            all live in one place — see `overlay-panel.tsx`. */}
         <PopoverPrimitive.Popup
           data-slot="popover-content"
-          className={cn(
-            SURFACE_LEVELS.overlay,
-            "z-popover origin-(--transform-origin) duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            POPOVER_WIDTH[width],
-            POPOVER_PADDING[padding],
-            className,
-          )}
           {...props}
-        >
-          {/* A floating panel is a fresh flow root: reset the ambient
-              single-line contract so content opened from a line container
-              (Bar/Row) wraps/pretty-prints instead of collapsing onto one
-              line. Line containers inside re-assert `true` locally. */}
-          <OverlayBoundary kind="popover">
-            <SingleLineProvider value={false}>
-              <ContentScope fill={false}>{children}</ContentScope>
-            </SingleLineProvider>
-          </OverlayBoundary>
-        </PopoverPrimitive.Popup>
+          render={
+            <OverlayPanel
+              width={width}
+              padding={padding}
+              maxHeight={maxHeight}
+              header={header}
+              className={className}
+            >
+              {children}
+            </OverlayPanel>
+          }
+        />
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>
   )

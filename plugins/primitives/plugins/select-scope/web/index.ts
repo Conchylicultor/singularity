@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { ContentScope, selectScopeProps } from "./internal/select-scope";
+export {
+  ContentScope,
+  selectScopeProps,
+  scopeSelectAllKeyDown,
+} from "./internal/select-scope";
 
 export default {
   description:

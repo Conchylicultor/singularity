@@ -2120,6 +2120,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `page/turn-into-page`
     - `page/url-paste`
     - `page/video`
+    - `primitives/css/ui-kit`
     - `reports/caret-flight`
     - `reports/collab-hydration`
   - Extended by:

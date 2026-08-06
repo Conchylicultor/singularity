@@ -69,6 +69,7 @@ export {
   usePortalForwardedAttrs,
   type PortalForwardedAttrs,
 } from "./components/portal-forward";
+export { OverlayPanel, type OverlayPanelProps } from "./components/overlay-panel";
 export { Popover, PopoverTrigger, PopoverContent } from "./components/ui/popover";
 export {
   ResizableHandle,

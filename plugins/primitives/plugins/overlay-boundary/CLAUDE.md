@@ -1,10 +1,15 @@
 # overlay-boundary
 
 A React-only leaf primitive that gives **transient overlay content** its own
-error boundary, so a crash inside an open overlay (popover / dialog / dropdown /
-select / tooltip / floating-surface) stays contained to that overlay rather than
-bubbling up to the slot-level `PluginErrorBoundary` that wraps the launching
-chrome (e.g. the action-bar trigger).
+error boundary, so a crash inside an open overlay stays contained to that overlay
+rather than bubbling up to the slot-level `PluginErrorBoundary` that wraps the
+launching chrome (e.g. the action-bar trigger).
+
+There are exactly **two** wrap sites, and neither is a per-surface one:
+ui-kit's `OverlayPanel` — the one panel every floating surface (popover,
+dropdown, select, dialog, caret surface) is composed from — and `TooltipContent`,
+which is deliberately not an `OverlayPanel` (a one-line label with its own
+chrome, where a max-height clamp is meaningless).
 
 `OverlayBoundary` is a plain React `Component` class. When healthy it renders
 `children` with no DOM node of its own (transparent, like `SingleLineProvider`).
@@ -34,11 +39,14 @@ lives low; the fallback UI is filled from above.
 The built-in fallback (a text-only Retry `<button>`) exists only for the
 pre-registration edge; in the real app the injected `CrashFallback` always wins.
 
-## The `kind` prop
+## No per-surface tag — `children` is the whole API
 
-Each `*Content` passes its overlay kind (`"popover"`, `"dialog"`, `"dropdown"`,
-`"select"`, `"tooltip"`, `"floating"`). It flows into the injected fallback's
-`report.slot`, so a crashed popover's tag reads `popover crashed`.
+Don't reintroduce a `kind` prop. It would feed only the fallback's `report.slot`
+(the word in the chip's `… crashed` label), which the crash report does not need:
+the fingerprint is `sha256(errorType + top stack frames)`
+(`reports/crash/core/crash-kind.ts`), so a tag can never split or merge two
+crashes, and the captured `componentStack` already names the real consumer chain.
+The registration hardcodes `slot: "overlay"`.
 
 ## Reset semantics
 
@@ -55,7 +63,6 @@ The fallback's **Retry** button covers residual cases (`keepMounted` surfaces).
   - Imported by:
     - `primitives/css/ui-kit`
     - `primitives/error-boundary`
-    - `primitives/floating-surface`
 - Web:
   - Exports (types): `OverlayFallbackProps`
   - Exports (values):

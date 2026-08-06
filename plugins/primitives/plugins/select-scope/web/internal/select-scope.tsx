@@ -11,7 +11,14 @@ function isEditableTarget(el: EventTarget | null): boolean {
   return el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable;
 }
 
-function handleSelectAllScope(e: KeyboardEvent<HTMLElement>) {
+/**
+ * The scope behavior itself, as a plain keydown handler: Ctrl/Cmd+A selects only
+ * `e.currentTarget`'s subtree. Exported so a root that is ALREADY focusable and
+ * already owns its own `onKeyDown` composition (a `<Surface>`, an overlay panel)
+ * can become the scope without either an extra wrapper element or reaching into
+ * `selectScopeProps`'s object literal for one of its two halves.
+ */
+export function scopeSelectAllKeyDown(e: KeyboardEvent<HTMLElement>) {
   if ((e.ctrlKey || e.metaKey) && e.key === "a" && !e.defaultPrevented) {
     if (isEditableTarget(e.target)) return;
     e.preventDefault();
@@ -32,7 +39,7 @@ function handleSelectAllScope(e: KeyboardEvent<HTMLElement>) {
  */
 export const selectScopeProps = {
   tabIndex: -1 as const,
-  onKeyDown: handleSelectAllScope,
+  onKeyDown: scopeSelectAllKeyDown,
 };
 
 /**

@@ -15,6 +15,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["rounded-checkbox"], extend: "rounded" },
   { classes: ["region-line"], standalone: true, reason: "Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property." },
   { classes: ["no-scrollbar"], standalone: true, reason: "Hides scrollbar chrome (scrollbar-width + ::-webkit-scrollbar); additive, no single-value built-in group to conflict with." },
+  { classes: ["scroll-fade"], standalone: true, reason: "Additive ::before/::after gradient overlays gated on data-fade-*; pseudo-element paint has no single-value built-in group to conflict with." },
   { classes: ["p-chip", "p-control", "p-row", "p-card"], group: "sg-pad", conflictsWith: ["p"] },
   { classes: ["control-xs", "control-sm", "control-md", "control-lg"], group: "sg-control-height", conflictsWith: ["size", "h"] },
   { classes: ["control-icon-xs", "control-icon-sm", "control-icon-md", "control-icon-lg"], group: "sg-control-icon", conflictsWith: ["size", "h", "w"] },

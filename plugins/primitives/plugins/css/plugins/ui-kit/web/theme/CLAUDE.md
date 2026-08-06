@@ -48,6 +48,12 @@ co-publishes both — see the `:root, [data-theme-scope]` defaults here,
 | `--chrome-mask` | `bg-chrome-mask` | *my background*, for a sticky bar painting **over** me |
 | `--hover-fill` | `bg-hover-fill` | *a visible step off my background*, for a control highlighting **inside** me |
 
+A third var follows the same publish-your-own-role contract: `--scroll-pad`, *my
+own block padding*, co-published by each `POPOVER_PADDING` role. A padding role is
+just a class name, so its length is unreadable to CSS — `scroll-fade`'s sticky edge
+strips need it because a sticky inset resolves against the **content** box and
+would otherwise stop short of the padded edge.
+
 `--hover-fill` exists because a **transparent** control has no surface of its own:
 `Button variant="ghost"` used to hover to the fixed `bg-muted`, which is
 calibrated against the page canvas (`--background`). Dropped in a sidebar, where

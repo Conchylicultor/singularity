@@ -61,6 +61,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `apps/sonata/piano-roll`
     - `primitives/collapsible-wrap`
     - `primitives/css/sticky/stack`
+    - `primitives/css/ui-kit`
     - `primitives/data-table`
     - `primitives/data-view`
     - `primitives/data-view/gallery`

@@ -122,6 +122,12 @@ export function BlockActionsMenu({
       // and the turn-into list both fit the narrow one.
       width={ContainerMenu ? "xl" : "sm"}
       padding="xs"
+      // The SAME comfort cap the `/` menu takes (`CaretTriggerMenu`'s
+      // `maxHeight="lg"`) — the two render the same `BlockTypeList` and must
+      // open the same size. Fitting the viewport is already unconditional; the
+      // cap is what stops a full-height wall of block types under the cursor,
+      // with the pointer travel and the covered-content that implies.
+      maxHeight="lg"
       trigger={trigger}
     >
       <Stack gap="xs">
