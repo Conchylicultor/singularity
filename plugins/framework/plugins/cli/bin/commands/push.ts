@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { basename } from "path";
 import { checkBroadcasts } from "../broadcasts";
 import { reportInterruptedPredecessor } from "../build-receipt";
+import { ensureDeps } from "../ensure-deps";
 import { normalizeGeneratedArtifacts, SKIP_POST_REWRITE_ENV } from "../git/normalize-generated";
 import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
@@ -53,6 +54,41 @@ const rebaseEnv = (): Record<string, string | undefined> => ({
   ...process.env,
   [SKIP_POST_REWRITE_ENV]: "1",
 });
+
+// Install the lockfile the rebase just brought in — main may have added
+// dependencies this worktree has never installed.
+//
+// Routed through `ensureDeps` rather than a bare `bun install --frozen-lockfile`,
+// which is what this used to be. That call had three defects, all of which
+// `ensureDeps` already answers and none of which are push-specific:
+//
+//   • UNSERIALIZED — it took no `.install.lock`, so it could run concurrently
+//     with any other CLI-mediated install in this checkout, which is exactly the
+//     `clonefileat` race bun 1.3.13 has no mutex for.
+//   • UNSTAMPED — it left `node_modules/.singularity-deps` describing the
+//     PRE-rebase inputs, so the very next CLI process saw stale inputs and
+//     reinstalled everything. In this flow that next process is the checks
+//     subprocess, four lines below: every push whose rebase touched the lockfile
+//     paid for two full installs back-to-back, the second one while holding the
+//     host-wide push mutex.
+//   • UNATTRIBUTED — a failure exited 1 through the generic `exec` path with no
+//     statement of which phase died.
+//
+// `--frozen-lockfile` is preserved via the option: the tree is mid-push, and a
+// re-resolved `bun.lock` would dirty the very commit about to fast-forward onto
+// main. The freshness gate is sound here for the same reason it is everywhere —
+// `bun.lock` and every `package.json` are signature inputs, so a rebase that
+// moved any of them installs, and one that moved none has nothing to install.
+async function installRebasedDeps(root: string): Promise<void> {
+  try {
+    await ensureDeps({ root, frozenLockfile: true });
+  } catch (err) {
+    // The message is written to be the whole story (which phase, likely cause,
+    // what to do); a stack would name this bootstrap rather than the problem.
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+}
 
 // Spawns a fresh process so checks see the post-rebase code on disk, not the
 // stale module cache from process start. The eslint check always considers the
@@ -342,7 +378,7 @@ export function registerPush(program: Command) {
             const fromMainRoot = await getWorktreeRoot();
 
             profiler.stepStart("bun-install");
-            await exec(["bun", "install", "--frozen-lockfile"], fromMainRoot);
+            await installRebasedDeps(fromMainRoot);
             profiler.stepEnd("bun-install");
 
             profiler.stepStart("normalize");
@@ -447,7 +483,7 @@ export function registerPush(program: Command) {
           // 3b. Ensure node_modules matches the rebased lockfile — main may
           //     have added dependencies the worktree hasn't installed yet.
           profiler.stepStart("bun-install");
-          await exec(["bun", "install", "--frozen-lockfile"]);
+          await installRebasedDeps(await getWorktreeRoot());
           profiler.stepEnd("bun-install");
 
           // 3c. Post-rebase normalize: regenerate auto-generated artifacts

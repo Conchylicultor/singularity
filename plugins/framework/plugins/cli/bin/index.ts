@@ -1,13 +1,15 @@
 import { installOrphanGuard, isOpCommand, ORPHAN_EXIT_CODE } from "./orphan-guard";
 import { ensureDeps } from "./ensure-deps";
+import { reexecAfterInstall } from "./reexec";
 
 /**
- * `./singularity`'s entrypoint — and deliberately NOT the CLI. Three ordered
+ * `./singularity`'s entrypoint — and deliberately NOT the CLI. Four ordered
  * steps that must all be able to run with `node_modules` absent or stale:
  *
  *   1. arm the orphan guard
  *   2. `await ensureDeps()`   — this checkout's `node_modules` is correct
- *   3. `await import("./cli")` — the commander program, from ./cli.ts
+ *   3. if it INSTALLED, hand the command to a fresh process and exit
+ *   4. `await import("./cli")` — the commander program, from ./cli.ts
  *
  * WHY THIS FILE EXISTS. The wrapper used to be:
  *
@@ -30,15 +32,24 @@ import { ensureDeps } from "./ensure-deps";
  * "commander"` here would resolve `commander` out of the very `node_modules`
  * that step 2 exists to repair — the fresh-checkout case would crash on an
  * unresolved module, which is the same class of pre-CLI death this whole file
- * removes. `commander` is exactly why `./cli.ts` exists, and why step 3 is a
+ * removes. `commander` is exactly why `./cli.ts` exists, and why step 4 is a
  * *dynamic* import: it is the one form that resolves only after step 2 has
  * returned. Enforced by the `cli:bootstrap-package-free` check (the transitive
  * closure is measured with `Bun.build`, so it cannot drift from what actually
  * loads) — if you need a package, put the import in `./cli.ts`.
  *
- * Both current imports satisfy the constraint: `./orphan-guard` has zero imports
- * of its own, and `./ensure-deps` is written under the same rule (see its
- * docblock).
+ * All three current imports satisfy the constraint: `./orphan-guard` has zero
+ * imports of its own, and `./ensure-deps` / `./reexec` are written under the
+ * same rule (see their docblocks).
+ *
+ * THE PROCESS CONSTRAINT (step 3, and the reason it is not redundant with the
+ * dynamic import). Bun's resolver caches directory listings from the moment it
+ * loads this process's first modules, so a process that installs `node_modules`
+ * cannot see what it installed: `plugins/framework/plugins/cli/node_modules` is
+ * already cached as absent, and step 4 then fails with `Cannot find package
+ * 'commander'` on every fresh checkout. The dynamic import fixes WHEN resolution
+ * happens; step 3 fixes WHICH PROCESS does it. Full reproduction and rationale:
+ * `./reexec.ts`.
  */
 
 // A long-running op runs in THIS process, whose ppid is the invoking shell —
@@ -59,15 +70,30 @@ if (isOpCommand(process.argv[2])) {
 // failure it throws a message written to be the entire story — which phase
 // failed, the likely cause, and what to do — so print the message and stop.
 // Deliberately no stack: the stack would name this bootstrap, not the problem.
+let installed: boolean;
 try {
-  await ensureDeps();
+  ({ installed } = await ensureDeps());
 } catch (err) {
   console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
 }
 
-// Only now is `node_modules` known good, so only now may a module that imports
-// npm packages be resolved. Dynamic, and after the await, for that reason alone.
-// Extensionless like every other import here: `allowImportingTsExtensions` is
-// off, so a `./cli.ts` specifier is a TS5097 type error.
+// An install happened, so THIS process's resolver cache predates the
+// `node_modules` it just created and can no longer resolve an npm package (see
+// the process-constraint note above, and `./reexec.ts` for the reproduction).
+// Hand the user's command to a fresh process and exit with its status. Skipped
+// entirely on the common fresh-stamp path, which is why it costs nothing.
+if (installed) {
+  const outcome = await reexecAfterInstall(import.meta.path);
+  if (outcome.reexeced) process.exit(outcome.exitCode);
+  // Budget spent — say so and fall through rather than loop. The reason is the
+  // whole story; see `reexecAfterInstall`.
+  console.error(`singularity: ${outcome.reason}`);
+}
+
+// Only now is `node_modules` known good AND resolvable from this process, so
+// only now may a module that imports npm packages be resolved. Dynamic, and
+// after the await, for that reason alone. Extensionless like every other import
+// here: `allowImportingTsExtensions` is off, so a `./cli.ts` specifier is a
+// TS5097 type error.
 await import("./cli");

@@ -62,11 +62,23 @@ export interface SpawnedChild {
   kill: (signal?: number | NodeJS.Signals) => void;
 }
 
-/** Options for `spawnPassthrough` (stdout/stderr inherit, stdin ignore). */
+/** Options for `spawnPassthrough` (stdout/stderr inherit, stdin ignore by default). */
 export interface SpawnPassthroughOptions {
   cwd?: string;
   env?: Record<string, string | undefined>;
   background?: boolean;
+  /**
+   * The child's stdin. Defaults to `"ignore"`: the exec-shaped build/push steps
+   * read no input, and an inherited stdin would let a child silently consume the
+   * parent's.
+   *
+   * `"inherit"` is for a child that must be INDISTINGUISHABLE from the parent —
+   * today only the CLI bootstrap's post-install re-exec (`bin/reexec.ts`), which
+   * hands the user's own command to a fresh process. There, `"ignore"` would be a
+   * behavior change hiding in a fd: invisible until the day a command reads
+   * stdin, and then only on the rare install path.
+   */
+  stdin?: "ignore" | "inherit";
   /** Called synchronously after spawn with `{ pid, kill }` (signal forwarding). */
   onSpawn?: (child: SpawnedChild) => void;
 }

@@ -275,6 +275,15 @@ const importSubsetCheck: Check = {
  * measures it — the next edit that "just adds an import at the top" silently
  * undoes it.
  *
+ * NOT THE WHOLE STORY, and this check must not be read as saying it is. Passing
+ * here means nothing resolves BEFORE the install; it says nothing about whether
+ * what resolves after it can be found. Bun's resolver caches directory listings,
+ * so the installing process cannot see its own `node_modules` — a green check
+ * here still ended in `Cannot find package 'commander'` on every fresh checkout
+ * until `bin/index.ts` started re-execing after an install. Ordering and process
+ * identity are two separate requirements; this check measures the first.
+ * `bin/reexec.ts` owns the second.
+ *
  * Measured off the same `Bun.build` closure as the check above, from the opposite
  * side: the set of specifiers the resolver declared external IS the set the
  * entrypoint needs `node_modules` for. No independent scanner, and the alias

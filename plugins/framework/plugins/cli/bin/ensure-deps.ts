@@ -92,7 +92,17 @@ const PROVISION_REGISTRY_REL = join(
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 
 export interface EnsureDepsResult {
-  /** false when the freshness stamp matched and no install ran. */
+  /**
+   * false when the freshness stamp matched and no install ran.
+   *
+   * **true is a constraint on the CALLER, not just a report:** Bun's resolver
+   * caches directory listings, so a process that installs cannot resolve what it
+   * installed — a `node_modules` cached as absent before the install stays absent
+   * for this process's whole life. A caller that goes on to import an npm package
+   * after a `true` may die with `Cannot find package …`. The bootstrap answers
+   * this by re-execing (`./reexec.ts`); a caller that cannot re-exec must be
+   * satisfied that everything it still needs is already resolved.
+   */
   installed: boolean;
 }
 
@@ -108,14 +118,26 @@ export interface EnsureDepsOptions {
   /** Progress sink; defaults to `console.log`. */
   log?: (line: string) => void;
   /**
+   * Install with `--frozen-lockfile`: resolve nothing, fail rather than rewrite
+   * `bun.lock`. For the caller that has just checked out someone else's lockfile
+   * and must install EXACTLY it — `push`, mid-rebase, one step before the checks
+   * and the fast-forward merge, where a re-resolved lockfile would dirty the tree
+   * it is about to land on main.
+   */
+  frozenLockfile?: boolean;
+  /**
    * @internal TEST SEAM. Overrides how the install is run, so the test suite can
    * exercise the freshness gate, the under-lock re-check and the failure wording
    * without a real 10–25 s `bun install` (three agents share a checkout;
    * concurrent installs are the bug under repair). Production callers pass
    * nothing and get `runBunInstall`. Mirrors how `build-lock.ts` exposes its
    * timings through `opts` purely so its own test can drive them.
+   *
+   * Takes `frozenLockfile` as an argument rather than closing over it, so the
+   * flag that decides whether a mid-push tree can be re-resolved is visible to
+   * the seam instead of invisible inside a wrapper.
    */
-  installer?: (root: string) => Promise<InstallOutcome>;
+  installer?: (root: string, frozenLockfile: boolean) => Promise<InstallOutcome>;
 }
 
 /** What `node_modules/.singularity-deps` holds. */
@@ -331,8 +353,9 @@ function writeStamp(stampPath: string, signature: DepSignature): void {
  * per-invocation noise — and passthrough is the whole reason a failed install can
  * no longer be invisible.
  */
-function runBunInstall(root: string): Promise<InstallOutcome> {
-  return spawnPassthrough(["bun", "install"], { cwd: root });
+function runBunInstall(root: string, frozenLockfile: boolean): Promise<InstallOutcome> {
+  const argv = frozenLockfile ? ["bun", "install", "--frozen-lockfile"] : ["bun", "install"];
+  return spawnPassthrough(argv, { cwd: root });
 }
 
 /**
@@ -400,7 +423,7 @@ export async function ensureDeps(opts: EnsureDepsOptions = {}): Promise<EnsureDe
     if (state.fresh) return { installed: false };
 
     log(`Installing dependencies — ${state.reason}...`);
-    const result = await install(root);
+    const result = await install(root, opts.frozenLockfile === true);
     if (result.exitCode !== 0) throw new Error(installFailureMessage(result));
 
     // Recompute AFTER the install: it rewrites `bun.lock`, and its postinstall

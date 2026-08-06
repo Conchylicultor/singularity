@@ -48,9 +48,11 @@ tmpdir sweep (repo convention).
 - **`spawnExpectOk(argv, opts?)`** — the same, but THROWS `SpawnFailedError`
   (carrying argv/exitCode/signalCode/stdout/stderr) on non-zero exit, so a
   failed command can never be read as empty success.
-- **`spawnPassthrough(argv, { cwd, env, background, onSpawn }?)`** —
-  exec-shaped spawn: stdout/stderr `"inherit"`, stdin `"ignore"`. `onSpawn`
-  exposes `{ pid, kill }` synchronously for signal forwarding. Returns
+- **`spawnPassthrough(argv, { cwd, env, background, stdin, onSpawn }?)`** —
+  exec-shaped spawn: stdout/stderr `"inherit"`, stdin `"ignore"` unless
+  `stdin: "inherit"` (only for a child that must be indistinguishable from the
+  parent — the CLI's post-install re-exec). `onSpawn` exposes `{ pid, kill }`
+  synchronously for signal forwarding. Returns
   `{ exitCode, signalCode, resourceUsage }`.
 - **`getWorktreeRoot(cwd?)` / `getMainRepoRoot(cwd?)`** — THE canonical git
   root helpers (`git rev-parse --show-toplevel` /

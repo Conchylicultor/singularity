@@ -84,12 +84,15 @@ function makeFixture(): string {
 /** An injected installer that records its calls instead of running `bun install`. */
 function recordingInstaller(outcome: InstallOutcome = { exitCode: 0 }) {
   let calls = 0;
+  const frozen: boolean[] = [];
   return {
-    installer: (): Promise<InstallOutcome> => {
+    installer: (_root: string, frozenLockfile: boolean): Promise<InstallOutcome> => {
       calls += 1;
+      frozen.push(frozenLockfile);
       return Promise.resolve(outcome);
     },
     calls: () => calls,
+    frozen: () => frozen,
   };
 }
 
@@ -119,6 +122,27 @@ async function expectSkips(dir: string): Promise<void> {
   expect(result.installed).toBe(false);
   expect(rec.calls()).toBe(0);
 }
+
+/**
+ * `push` installs the lockfile it has just rebased onto, one step before the
+ * checks and the fast-forward merge. A plain `bun install` there may RE-RESOLVE
+ * and rewrite `bun.lock`, dirtying the very commit about to land on main, so the
+ * flag reaching the installer is the property — not merely that it was accepted.
+ */
+test("frozenLockfile reaches the installer, and is off by default", async () => {
+  const frozenRec = recordingInstaller();
+  await ensureDeps({
+    root: makeFixture(),
+    log: silent,
+    installer: frozenRec.installer,
+    frozenLockfile: true,
+  });
+  expect(frozenRec.frozen()).toEqual([true]);
+
+  const defaultRec = recordingInstaller();
+  await ensureDeps({ root: makeFixture(), log: silent, installer: defaultRec.installer });
+  expect(defaultRec.frozen()).toEqual([false]);
+});
 
 /** Seed a fixture's stamp by running one gated install through the seam. */
 async function seeded(): Promise<string> {

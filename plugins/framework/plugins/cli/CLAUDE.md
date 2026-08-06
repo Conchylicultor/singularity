@@ -72,7 +72,19 @@ freshness-gated on a `(mtimeMs,size)` signature stamped in
 serialized on `.install.lock`, and **loud** — it runs `bun install` with output
 passed through and throws a message naming the phase on failure. Every install
 site routes through it: the `bin/index.ts` bootstrap, `mise.toml`'s setup task,
-and `app-artifacts.ts` stage 1.
+`app-artifacts.ts` stage 1, and `push`'s post-rebase install (`frozenLockfile:
+true`, so a mid-push tree is never re-resolved). No bare `bun install` remains:
+one skipping the lock races `clonefileat`, one skipping the stamp makes the next
+process reinstall from scratch.
+
+**A process that installs must not then resolve an npm package — it re-execs**
+(`bin/reexec.ts`, on `installed: true`). Bun's resolver caches directory listings
+from process start, so the process that runs `bun install` cannot see the
+`node_modules` it just created — every workspace-local one (`commander` under
+`plugins/framework/plugins/cli/`) was already cached absent. The dynamic
+`await import("./cli")`
+fixes *when* resolution happens, the re-exec fixes *which process* does it; both
+are required, and `cli:bootstrap-package-free` measures only the first.
 
 **`./singularity` is a bare `exec` — never add a step above it.** It used to run
 `bun install --silent` first; a failed install (bun 1.3.13 has no install mutex,
