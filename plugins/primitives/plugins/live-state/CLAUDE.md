@@ -746,6 +746,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`
     - `primitives/optimistic-mutation`
+    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `reports/live-state-stale-drop`

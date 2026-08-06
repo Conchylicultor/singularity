@@ -9451,6 +9451,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/floating-action.FloatingActionFadeIn`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `primitives/responsive-overflow.ResponsiveOverflow`
+              - `primitives/usage-rank.recordUsage`
+              - `primitives/usage-rank.useUsageOrder`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
@@ -10276,6 +10278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/data-view/custom-columns`
       - `primitives/data-view/view-order`
       - `primitives/rank`
+      - `primitives/usage-rank`
       - `release`
       - `reports`
       - `search/engine`
@@ -14194,6 +14197,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
+              - `conversations/conversation-view/prompt-templates`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
               - `improve/element-picker`
@@ -14965,6 +14969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state`
           - `primitives/log-channels`
           - `primitives/optimistic-mutation`
+          - `primitives/usage-rank`
           - `release`
           - `reports`
           - `reports/endpoint-errors`
@@ -15850,6 +15855,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
+          - `primitives/usage-rank`
           - `shell/notifications`
           - `tasks/auto-start`
           - `tasks/task-category`
@@ -15880,6 +15886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `history/engine`
           - `infra/trash`
           - `page/annotations/agent-notes/authorship`
+          - `primitives/usage-rank`
           - `reports`
     - **`runtime-profiler`**
       - Cross-plugin:
@@ -23263,6 +23270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-order`
           - `primitives/optimistic-mutation`
+          - `primitives/usage-rank`
           - `release`
           - `reports`
           - `reports/live-state-stale-drop`
@@ -24009,6 +24017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/auto-scroll`
           - `primitives/css/color-picker`
           - `primitives/detail-sections`
+          - `primitives/usage-rank`
           - `shell/global-action-bar`
           - `tasks/task-draft-form`
       - Web:
@@ -24949,6 +24958,48 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `infra/trash`
           - `page/editor`
+    - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced point subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a bounded point resource and swept by a nightly 1-year retention job.
+      - Server:
+        - Contributes: `resource.declare` "usage-stats"
+        - Uses:
+          - `database.db`
+          - `infra/endpoints.implement`
+          - `infra/query-resource.windowQueryResource`
+          - `infra/retention.defineRetention`
+        - DB schema: `plugins/primitives/plugins/usage-rank/server/internal/tables.ts`
+        - Exports (values):
+          - `_usageStats`
+          - `usageStatsResource`
+        - Register: `defineJob('retention.usage_stats')`
+        - Routes: `POST /api/usage-rank/record`
+      - Web:
+        - Uses:
+          - `infra/endpoints.fetchEndpoint`
+          - `primitives/live-state.usePointResources`
+          - `primitives/persistent-draft.readDraft`
+          - `primitives/persistent-draft.writeDraft`
+        - Exports (values):
+          - `recordUsage`
+          - `useUsageOrder`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `infra/query-resource.pointQueryResourceDescriptor`
+        - Exports (types):
+          - `RecordUsageBody`
+          - `ScorableStat`
+          - `UsageStat`
+        - Exports (values):
+          - `decayedScore`
+          - `HALF_LIFE_MS`
+          - `RecordUsageBodySchema`
+          - `recordUsageEndpoint`
+          - `sortByUsage`
+          - `usageKey`
+          - `UsageStatSchema`
+          - `usageStatsResource`
+      - Cross-plugin:
+        - Imported by: `conversations/conversation-view/prompt-templates`
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
         - Uses: `primitives/css/toggle-chip.SegmentedControl`

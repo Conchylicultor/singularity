@@ -27,6 +27,8 @@
     - `primitives/floating-action.FloatingActionFadeIn`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `primitives/responsive-overflow.ResponsiveOverflow`
+    - `primitives/usage-rank.recordUsage`
+    - `primitives/usage-rank.useUsageOrder`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

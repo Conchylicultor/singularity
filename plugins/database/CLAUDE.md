@@ -254,6 +254,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`
     - `primitives/rank`
+    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `search/engine`

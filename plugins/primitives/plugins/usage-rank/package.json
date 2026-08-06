@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-usage-rank",
+  "description": "Frecency usage ranking: a (namespace, key) → decayed-count rollup with an atomic record endpoint, a bounded point resource, and the frozen-order useUsageOrder hook.",
+  "private": true,
+  "version": "0.0.1"
+}

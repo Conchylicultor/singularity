@@ -15,7 +15,14 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversation, useConversationById } from "@plugins/conversations/web";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
+import {
+  recordUsage,
+  useUsageOrder,
+} from "@plugins/primitives/plugins/usage-rank/web";
 import { promptTemplatesConfig } from "../../shared/config";
+
+/** Usage-rank namespace for the prompt-template chips. */
+const USAGE_NAMESPACE = "prompt-templates";
 
 interface TemplateItem {
   id: string;
@@ -23,10 +30,15 @@ interface TemplateItem {
   prompt: string;
 }
 
+// Both use sites record: the ✎ insert-into-draft here and the ➤ send-turn in
+// `sendTemplate`. Recording inside the two handlers — rather than at each of
+// the two surfaces that render `TemplateChip` — is what keeps the pinned strip
+// and the floating panel from drifting apart.
 function applyTemplate(
   t: TemplateItem,
   insertText: (text: string) => void,
 ) {
+  recordUsage(USAGE_NAMESPACE, t.id);
   insertText(t.prompt);
 }
 
@@ -86,9 +98,28 @@ export function FloatingTemplateChips({
     live.status !== "starting" &&
     !live.waitingFor;
 
+  // Most-used first, frozen for as long as this conversation is open (the
+  // primitive owns the freeze). The authored config order stays the tie-break
+  // for anything never used, so an untouched install looks exactly as before.
+  const ids = useMemo(() => templates.map((t) => t.id), [templates]);
+  const order = useUsageOrder(USAGE_NAMESPACE, ids, convId);
+
+  // ONE derived array feeds both surfaces — the pinned strip is its head and
+  // the panel is the whole of it, so the two can never disagree on the order.
+  const ordered = useMemo(() => {
+    const byId = new Map(templates.map((t) => [t.id, t]));
+    return order.map((id) => {
+      const t = byId.get(id);
+      // `useUsageOrder` returns a permutation of the ids it was given; a miss
+      // means that contract broke, and silently dropping the chip would hide it.
+      if (!t) throw new Error(`No prompt template for usage-ranked id: ${id}`);
+      return t;
+    });
+  }, [order, templates]);
+
   const pinnedTemplates = useMemo(
-    () => templates.slice(0, pinnedCount),
-    [templates, pinnedCount],
+    () => ordered.slice(0, pinnedCount),
+    [ordered, pinnedCount],
   );
 
   // No in-flight state, no error toast: sendConversationTurn owns the echo
@@ -96,6 +127,7 @@ export function FloatingTemplateChips({
   // synchronously mirrors the prompt input's own send.
   function sendTemplate(t: TemplateItem) {
     if (!canSend) return;
+    recordUsage(USAGE_NAMESPACE, t.id);
     const existing = getContent().trim();
     const text = existing ? `${t.prompt}\n\n${existing}` : t.prompt;
     clearContent();
@@ -140,7 +172,7 @@ export function FloatingTemplateChips({
             </div>
             <Scroll className="max-h-40">
               <Cluster gap="xs" align="center">
-                {templates.map((t) => (
+                {ordered.map((t) => (
                   <TemplateChip
                     key={t.id}
                     template={t}

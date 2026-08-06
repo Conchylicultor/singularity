@@ -20,6 +20,7 @@ would be absurd. Reach for those rather than hand-rolling a second envelope.
     - `primitives/auto-scroll`
     - `primitives/css/color-picker`
     - `primitives/detail-sections`
+    - `primitives/usage-rank`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
 - Web:
