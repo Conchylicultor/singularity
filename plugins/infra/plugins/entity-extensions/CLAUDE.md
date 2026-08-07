@@ -121,6 +121,7 @@ If no data needs preserving, accept the auto-generated migration as-is.
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/queue`
+    - `page/annotations/todo/task-link`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `tasks/auto-start`

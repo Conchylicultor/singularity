@@ -81,6 +81,7 @@ Consumers read only the generic aggregate:
     - `conversations`
     - `conversations/agents`
     - `improve`
+    - `page/annotations/todo/task-link`
     - `page/prompt/link`
     - `tasks`
     - `tasks/reports-investigation`

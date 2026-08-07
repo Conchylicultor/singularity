@@ -365,6 +365,7 @@ fixed raw size escapes per-site via
     - `infra/events-test`
     - `layouts/route-fallback`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/bookmark`
     - `page/callout`
     - `page/editor`

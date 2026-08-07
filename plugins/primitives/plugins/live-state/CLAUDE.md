@@ -734,6 +734,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `infra/query-resource`
     - `infra/trash`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/editor`
     - `page/editor-collab`
     - `page/inline-page-link`

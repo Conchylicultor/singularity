@@ -4,6 +4,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   PAGE_BLOCK_TYPE,
   _blocks,
+  resolveBlockAnnotations,
   serializePageContent,
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
@@ -83,10 +84,25 @@ export async function loadBlockScope(blockId: string): Promise<BlockScope> {
  * shell rather than a tag it has to re-mint. It is also the same walk the
  * planner flattens the stored side with — the two must not diverge, or the
  * apply would be a diff against a document nobody ever saw.
+ *
+ * The annotations — the values of a tag's `markdown.tag.annotated` attributes,
+ * which live outside the block's `data` — are resolved against the ROWS THIS
+ * FUNCTION WAS HANDED, i.e. after any `redact` the caller applied. That is the
+ * whole reason the resolve happens here rather than at either entry point: a
+ * hidden card is not in `rows`, so it costs no provider query and its linked
+ * task can never surface in a document that does not show the card itself.
+ *
+ * Those rows are the (redacted) whole page partition, which for a block-rooted
+ * read is a superset of the subtree the walk emits. A superset costs only work;
+ * a subset would silently drop an annotation from a node the walk does reach.
  */
-function serializeRoot(rows: readonly StoredBlock[], rootId: string): string {
+async function serializeRoot(
+  rows: readonly StoredBlock[],
+  rootId: string,
+): Promise<string> {
+  const annotations = await resolveBlockAnnotations(rows);
   return serializeForestToMarkdown(
-    markdownNodesOfRows(rows, rootId),
+    markdownNodesOfRows(rows, rootId, annotations),
     serverMarkdownContext(),
   );
 }
@@ -137,7 +153,7 @@ export async function readBlockAsMarkdown(
   opts?: ReadBlockOptions,
 ): Promise<string> {
   const { pageId, title, rows } = await loadBlockScope(blockId);
-  const markdown = serializeRoot(opts?.redact ? opts.redact(rows) : rows, blockId);
+  const markdown = await serializeRoot(opts?.redact ? opts.redact(rows) : rows, blockId);
   return blockId === pageId ? withTitleBanner(markdown, title) : markdown;
 }
 
@@ -156,5 +172,8 @@ export async function readPageAsMarkdown(pageId: string): Promise<string> {
   }
   // Unconditionally banner-ed, where {@link readBlockAsMarkdown} tests its id:
   // this entry point has already ASSERTED that the root is a page.
-  return withTitleBanner(serializeRoot(snapshot.blocks, pageId), snapshot.page.title);
+  return withTitleBanner(
+    await serializeRoot(snapshot.blocks, pageId),
+    snapshot.page.title,
+  );
 }

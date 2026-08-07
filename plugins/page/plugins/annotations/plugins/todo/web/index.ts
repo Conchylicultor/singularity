@@ -4,12 +4,13 @@ import { ContainerNoRow } from "@plugins/page/plugins/container/web";
 import { todoBlock } from "../core";
 import { TodoAnchor } from "./components/todo-anchor";
 import { TodoFrame } from "./components/todo-frame";
+import { TodoMenu } from "./components/todo-menu";
 
 export { todoBlock } from "../core";
 
 export default {
   description:
-    "TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line.",
+    "TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its glyph and its rail menu open the dispatch panel, and its box and glyph follow the dispatched task's live status.",
   contributions: [
     // The card renders NO row of its own — `BlockRow`'s anchored branch never
     // dispatches `Editor.Block` for an `anchor` type, so the container
@@ -28,10 +29,18 @@ export default {
     // there is no second "I am a container" flag to drift from who actually
     // paints a box. `anchor` rides on the SAME registration
     // (`./singularity check page-editor:anchor-has-decoration`).
+    // `menu` rides on the SAME registration for the same reason `anchor` does:
+    // the card's two surfaces (its glyph, and the rail popover on the line it
+    // borrows) cannot drift from who paints the box. Both render the SAME
+    // dispatch panel, deliberately — the rail is where a user looks for a
+    // block's actions, the glyph is where they look for the glyph. The
+    // structural half of that popover (Collapse / Remove TODO / Delete) stays
+    // generic and is contributed by nobody.
     Editor.BlockFrame({
       match: todoBlock.type,
       component: TodoFrame,
       anchor: TodoAnchor,
+      menu: TodoMenu,
     }),
   ],
 } satisfies PluginDefinition;

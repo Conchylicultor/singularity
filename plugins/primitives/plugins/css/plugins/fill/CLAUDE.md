@@ -73,6 +73,7 @@ composes last.
     - `debug/trace/spans`
     - `debug/trace/stall`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/inline-date`
     - `page/prompt/block`
     - `primitives/data-view`

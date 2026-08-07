@@ -340,6 +340,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/secrets`
     - `infra/trash`
     - `page/annotations/agent-access`
+    - `page/annotations/todo/task-link`
     - `page/bookmark`
     - `page/editor`
     - `page/editor-collab`

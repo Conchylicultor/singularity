@@ -52,6 +52,16 @@ export interface MarkdownNode {
   expanded: boolean;
   /** Row id, when the caller has one. Reaches a type's `tag.attrs` as `ctx.id`. */
   id?: string;
+  /**
+   * Values for this node's tag's {@link BlockTag.annotated} attributes — facts
+   * about the row that live OUTSIDE its `data`, supplied by whoever ran the walk
+   * (see there).
+   *
+   * Same optionality story as {@link MarkdownNode.id}: a forest carrying none is
+   * the CLIPBOARD, and it must still serialize. A name the tag never declared is
+   * a loud failure at serialize, never a silent drop.
+   */
+  annotations?: Readonly<Record<string, string>>;
   children: MarkdownNode[];
 }
 
@@ -83,6 +93,14 @@ export interface MdSerializeCtx {
    * {@link BlockTag.identified} tag simply omits the attribute — see there.
    */
   id?: string;
+  /**
+   * The node's externally-owned attribute values, when the walk's input carried
+   * them ({@link MarkdownNode.annotations}). Only names the tag declared in
+   * {@link BlockTag.annotated} may appear here — one it did not is a loud
+   * failure, because an attribute the tag does not reserve comes back on parse
+   * as a `data` key.
+   */
+  annotations?: Readonly<Record<string, string>>;
 }
 
 export interface MdParseCtx {
@@ -170,6 +188,36 @@ export interface BlockTag<T> {
    * document says when it wants a card MINTED.
    */
   identified?: true;
+  /**
+   * Attribute names this tag carries whose values are supplied from OUTSIDE the
+   * block's `data`, reserved in BOTH directions. It is the generalization of
+   * {@link identified}, whose reserved `id` is the one such name the walk itself
+   * can produce.
+   *
+   * The fact it exists for: some things a reader of a block needs to know are
+   * not the block's to store. A TODO card's linked task, and that task's status,
+   * live in another table keyed by the block id — so neither the derived
+   * attribute projection (which reads `data`) nor a declared `attrs(data, ctx)`
+   * can produce them, and putting them in `data` would make the block's own row
+   * a second, drifting copy of somebody else's record. They are handed to the
+   * SERIALIZE walk instead ({@link MarkdownNode.annotations} →
+   * {@link MdSerializeCtx.annotations}) and emitted here, after the reserved
+   * `id` and before the type's own attrs.
+   *
+   * **These attributes are READ-ONLY, and parse DISCARDS them.** The parser is
+   * pure: it can neither tell a value an agent edited from the one it emitted a
+   * minute ago, nor write the table that owns it. So an agent that edits
+   * `status="done"` in a document has that edit ignored — stated by the tool
+   * that hands out the document, never silently absorbed. What parse must still
+   * do is take the names OFF the attribute record before the handle's schema
+   * sees them; see `claimTag`.
+   *
+   * **An absent value omits the attribute** rather than emitting an empty one —
+   * the same rule {@link identified} follows for an id-less forest, and for the
+   * same reason: a TODO nobody has dispatched simply has no task, and a forest
+   * on the clipboard has no annotations at all.
+   */
+  annotated?: readonly string[];
   /**
    * This tag is emitted but never CLAIMED on parse: another handle owns the name
    * on the parse side. The one case is `page` — minting a sub-page means minting
@@ -280,6 +328,12 @@ interface ResolvedTag {
   serializeOnly: boolean;
   /** The reserved `id` attribute is this tag's row ref — see {@link BlockTag.identified}. */
   identified: boolean;
+  /**
+   * Attribute names supplied from outside `data`, reserved both ways — see
+   * {@link BlockTag.annotated}. Empty for a tag that declares none, so both the
+   * emit and the strip are unconditional loops rather than a branch.
+   */
+  annotated: readonly string[];
 }
 
 /** Attribute names that survive as PLAIN attributes; anything else is JSON'd. */
@@ -354,6 +408,30 @@ function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
         "row ref with the payload's. Rename the schema field; the attribute name is reserved.",
     );
   }
+  const annotated = spec.annotated ?? [];
+  for (const name of annotated) {
+    // Each of the three is a name that ALREADY has a meaning on this tag, so
+    // emitting an annotation under it would produce one attribute standing for
+    // two things and parse would have to guess which. Caught at resolution —
+    // the first time anything serializes or parses this type — rather than on
+    // the one document where both values happen to be present.
+    const clash =
+      name in h.schema.shape
+        ? "this type's schema declares a field of its own under that name, which the derived " +
+          "attribute projection emits"
+        : name === "data"
+          ? "`data` is the attribute the derived projection JSON-encodes everything non-string into"
+          : spec.identified === true && name === "id"
+            ? "`id` is already reserved by `markdown.tag.identified` for the block's ROW id"
+            : null;
+    if (clash !== null) {
+      throw new Error(
+        `defineBlock("${h.type}"): markdown.tag.annotated reserves the \`${name}\` attribute for a ` +
+          `value supplied from OUTSIDE this block's data, but ${clash}. The two meanings would ` +
+          "fight over one attribute — rename one of them; the annotated name is reserved.",
+      );
+    }
+  }
   const attrs = spec.attrs;
   const parseAttrs = spec.parseAttrs;
   return {
@@ -372,6 +450,7 @@ function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
       : (a, inner, ctx) => derivedTagData(h, a, inner, ctx, body),
     serializeOnly: spec.serializeOnly === true,
     identified: spec.identified === true,
+    annotated,
   };
 }
 
@@ -796,6 +875,21 @@ function claimTag(
   // never hears it, so alignment is free to re-pair a card with another card's
   // row and detach its authorship.
   const ref = tag.identified ? takeRef(open.attrs) : undefined;
+
+  // The `annotated` attributes come off here for the SAME reason and in the same
+  // place: they were supplied from outside `data` on the way out, so they are not
+  // fields of the payload and must not reach `dataOf` (or, through it, the
+  // handle's own `schema.parse`). Leaving one in place is the failure this is
+  // written against from both ends — a void `z.object({})` STRIPS the unknown key
+  // and the attribute is merely decorative, while a strict schema rejects the
+  // document outright over an attribute this side emitted itself.
+  //
+  // The VALUES are DISCARDED, deliberately. These attributes are read-only: the
+  // row they describe lives in another table, and a pure parser can neither tell
+  // an edited value from the one it was handed nor write the owner. See
+  // {@link BlockTag.annotated}.
+  for (const name of tag.annotated) delete open.attrs[name];
+
   const withRef = (token: FlatToken): FlatToken =>
     ref === undefined ? token : { ...token, ref };
 
@@ -914,21 +1008,31 @@ function indentLines(lines: string[]): string[] {
 }
 
 /**
- * The open tag's attributes, with the reserved `id` of an
- * {@link BlockTag.identified} tag lifted in FRONT of the type's own — so the
- * address is the first thing anything reading the line sees, and stays in one
- * place across types.
+ * The open tag's attributes, with the RESERVED ones lifted in FRONT of the
+ * type's own — the `id` of an {@link BlockTag.identified} tag first, then the
+ * {@link BlockTag.annotated} values the caller supplied, in declaration order.
+ * So the address is the first thing anything reading the line sees, the facts
+ * about the row come next, and both stay in one place across types.
  *
- * **An absent `ctx.id` omits it rather than throwing.** An id-less forest is the
- * clipboard (copy/paste, a fuzz round trip) and it must still serialize: the
- * bare `<agent-note>` it produces is portable markdown that mints a fresh card
+ * **An absent value omits the attribute rather than throwing**, for `id` and for
+ * every annotation alike. An id-less, annotation-less forest is the clipboard
+ * (copy/paste, a fuzz round trip) and it must still serialize: the bare
+ * `<agent-note>` it produces is portable markdown that mints a fresh card
  * wherever it is pasted. `page` is the type that throws instead, and the
  * difference is not an inconsistency — a sub-page's identity IS its row, so an
  * id-less pointer would point at nothing.
  *
- * A declared `attrs` that emits its own `id` is a LOUD failure here rather than
- * a silent overwrite. `resolveTag` catches the schema-shaped half of that
- * collision at resolution time; this catches the half only a function body knows.
+ * Two LOUD failures rather than a silent overwrite or a silent drop:
+ *
+ * - a declared `attrs` emitting a reserved name itself. `resolveTag` catches the
+ *   schema-shaped half of that collision at resolution time; this catches the
+ *   half only a function body knows. For an annotated name it fires whether or
+ *   not a value was supplied this time — the conflict is in the declaration, and
+ *   a failure that waits for the first annotated document is one that ships.
+ * - a node carrying an annotation the tag never declared. Emitting it would make
+ *   it a `data` key on the way back in (nothing reserves it, so `claimTag` leaves
+ *   it for the schema); dropping it would make a fact its supplier believes is in
+ *   the document silently absent.
  */
 function tagAttrs(
   tag: ResolvedTag,
@@ -936,14 +1040,59 @@ function tagAttrs(
   ctx: MdSerializeCtx,
 ): Record<string, string> {
   const attrs = tag.attrsOf(data, ctx);
-  if (!tag.identified || ctx.id === undefined) return attrs;
-  if ("id" in attrs) {
-    throw new Error(
-      `markdown: <${tag.name}> declares \`identified\`, which reserves the \`id\` attribute for ` +
-        "the block's ROW id, but its own `attrs` emitted an `id` too. One of the two must go.",
-    );
+  const reserved: Record<string, string> = {};
+
+  if (tag.identified && ctx.id !== undefined) {
+    if ("id" in attrs) {
+      throw new Error(
+        `markdown: <${tag.name}> declares \`identified\`, which reserves the \`id\` attribute for ` +
+          "the block's ROW id, but its own `attrs` emitted an `id` too. One of the two must go.",
+      );
+    }
+    reserved.id = ctx.id;
   }
-  return { id: ctx.id, ...attrs };
+
+  const supplied = ctx.annotations;
+  for (const name of Object.keys(supplied ?? {})) {
+    if (!tag.annotated.includes(name)) {
+      throw new Error(
+        `markdown: a "${tag.handle.type}" node was given the annotation \`${name}\`, which ` +
+          `<${tag.name}> does not declare in \`markdown.tag.annotated\`. An undeclared attribute ` +
+          "is not reserved on the way back in, so it would parse as a `data` key — declare the " +
+          "name, or stop supplying it.",
+      );
+    }
+  }
+  for (const name of tag.annotated) {
+    if (name in attrs) {
+      throw new Error(
+        `markdown: <${tag.name}> declares \`${name}\` in \`markdown.tag.annotated\`, which reserves ` +
+          "that attribute for a value supplied from OUTSIDE the block's data, but its own `attrs` " +
+          "emitted one too. One of the two must go.",
+      );
+    }
+    const value = supplied?.[name];
+    if (value !== undefined) reserved[name] = value;
+  }
+
+  return Object.keys(reserved).length === 0 ? attrs : { ...reserved, ...attrs };
+}
+
+/**
+ * A node's annotations have exactly one place to go — its open tag's attribute
+ * list — so a node carrying one for a type that serializes as plain LINES (or
+ * that no handle claims at all) is a defect, not a no-op. Same refusal
+ * {@link tagAttrs} makes for an undeclared name, at the other branch of the same
+ * decision: whoever supplied the value believes the document carries it.
+ */
+function assertNoLineAnnotations(node: MarkdownNode): void {
+  const names = Object.keys(node.annotations ?? {});
+  if (names.length === 0) return;
+  throw new Error(
+    `markdown: a "${node.type}" node was given the annotation(s) ${names.join(", ")}, but this ` +
+      "type serializes as markdown LINES, which have no attributes to carry them. Only a " +
+      "`markdown.tag` declaring them in `annotated` can.",
+  );
 }
 
 export function serializeForestToMarkdown(
@@ -968,11 +1117,18 @@ export function serializeForestToMarkdown(
       ordinal = n.type === prevType ? ordinal + 1 : 1;
       prevType = n.type;
       const h = byType.get(n.type);
-      const serializeCtx: MdSerializeCtx = { md, plain: plainOf, ordinal, id: n.id };
+      const serializeCtx: MdSerializeCtx = {
+        md,
+        plain: plainOf,
+        ordinal,
+        id: n.id,
+        annotations: n.annotations,
+      };
       const resolved = h ? serializerFor(h) : null;
 
       // Flat line(s): the walk owns the children, exactly as it always has.
       if (resolved === null || resolved.kind === "lines") {
+        assertNoLineAnnotations(n);
         const line = resolved === null ? "" : resolved.serialize(n.data, serializeCtx);
         out.push(...line.split("\n"));
         out.push(...indentLines(renderList(n.children)));

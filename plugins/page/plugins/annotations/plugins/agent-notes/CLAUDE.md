@@ -18,10 +18,13 @@ deliberately not renamed: this directory, `authorship`, the packages, the
 exported `agentNotesBlock`, the `agent-notes-authors` resource. `"agent-notes"`
 survives as a `/` menu alias.
 
-Uniquely in this family the tag is `identified` (`<agent-note id="…">`): it
-carries the row it addresses, which is what makes the card writable by id. See
+The tag is `identified` (`<agent-note id="…">`): it carries the row it
+addresses, which is what makes the card writable by id. See
 `page/editor/core/markdown.ts` and
 [`markdown-apply`](../../../markdown-apply/CLAUDE.md).
+
+[`todo`](../todo/CLAUDE.md) is identified too. `context` and `private-note` are
+not: nothing addresses them by id, and neither carries state keyed on the row.
 
 ## Who wrote it is a sub-plugin, not a field
 

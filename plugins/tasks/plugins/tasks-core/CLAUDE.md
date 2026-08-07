@@ -186,6 +186,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `tasksResource`
     - `taskStatusChanged`
     - `TaskStatusSchema`
+    - `tasksView`
     - `touchConversationViewed`
     - `unionTaskClusters`
     - `updateConversation`
@@ -300,6 +301,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `debug/session-divergence`
     - `debug/slow-ops/cluster`
     - `debug/worktree-cleanup`
+    - `page/annotations/todo/task-link`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `review/plugin-changes`

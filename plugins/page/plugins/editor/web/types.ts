@@ -229,6 +229,19 @@ export interface BlockFrameProps {
   /** The container block's `data`; the frame reads its own appearance off it. */
   data: unknown;
   /**
+   * The container block's row id, for a frame whose appearance depends on
+   * something stored BESIDE the row — a side table keyed by block id, say the
+   * status of a task the card is linked to — rather than on `data`. Same reason
+   * `BlockAnchorProps` carries one: a frame is dispatched by `type`/`data`
+   * alone, so without an id it can only ever paint what `data` says.
+   *
+   * OPTIONAL, and it degrades exactly like the anchor's does: the read-only
+   * surface renders `ReadOnlyNode`s, which may legitimately carry no id at all
+   * (see `read-only-view`'s renderer), so a frame that needs one must fall back
+   * to its static appearance rather than assume the editable surface.
+   */
+  blockId?: string;
+  /**
    * Distance (px) from the frame box's left edge to the container block's
    * content edge `C`. The decoration starts here so it aligns with the block
    * content instead of bleeding over the editable surface's hover rail. Zero on

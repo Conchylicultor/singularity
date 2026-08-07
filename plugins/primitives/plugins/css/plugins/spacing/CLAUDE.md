@@ -309,6 +309,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `layouts/miller`
     - `layouts/route-fallback`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/attachment-block`
     - `page/bookmark`
     - `page/callout`

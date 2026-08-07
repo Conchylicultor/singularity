@@ -86,20 +86,39 @@ export function documentOrderRows(
  *
  * Same `rootId` contract as {@link documentOrderRows}: the emitted document is
  * the root's CONTENT, and the root itself has no line in it.
+ *
+ * `annotations` carries the values of a tag's `markdown.tag.annotated`
+ * attributes — facts about a row that live in ANOTHER table (a TODO card's
+ * linked task and its status), resolved by the caller and keyed by block id. A
+ * row the map says nothing about gets no `annotations` KEY at all, not an
+ * `undefined` one: the same structural-identity rule the parse side keeps for
+ * `ref`, so a node built here is byte-for-byte a node built without a map.
+ *
+ * **The planner is deliberately not told about any of this.** A void card's
+ * alignment key is `type ␀ stableJson(data)` (see {@link identityKeyOf}) and an
+ * annotation is by definition not in `data` — so dispatching an agent from a
+ * TODO changes what the card SAYS without changing what it IS, and the card
+ * keeps its row id through the next apply with no rank rewritten. An annotation
+ * that reached the key would make every status change look like a new block.
  */
 export function markdownNodesOfRows(
   rows: readonly StoredRow[],
   rootId: string,
+  annotations?: ReadonlyMap<string, Record<string, string>>,
 ): MarkdownNode[] {
   const byParent = childrenByParent(rows);
   const build = (parentId: string | null): MarkdownNode[] =>
-    (byParent.get(parentId) ?? []).map((row) => ({
-      id: row.id,
-      type: row.type,
-      data: row.data,
-      expanded: row.expanded,
-      children: isShell(row) ? [] : build(row.id),
-    }));
+    (byParent.get(parentId) ?? []).map((row) => {
+      const annotated = annotations?.get(row.id);
+      return {
+        id: row.id,
+        type: row.type,
+        data: row.data,
+        expanded: row.expanded,
+        children: isShell(row) ? [] : build(row.id),
+        ...(annotated === undefined ? {} : { annotations: annotated }),
+      };
+    });
   return build(rootId);
 }
 

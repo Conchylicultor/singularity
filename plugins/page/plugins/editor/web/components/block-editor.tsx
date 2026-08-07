@@ -1373,6 +1373,7 @@ function SelectionLayer({
                   <Editor.BlockFrame.Dispatch
                     type={span.block.type}
                     data={span.block.data}
+                    blockId={span.block.id}
                     inset={blockContentLeft(span.depth)}
                   />
                 </div>

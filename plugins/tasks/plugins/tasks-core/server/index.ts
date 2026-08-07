@@ -30,6 +30,13 @@ export { _tasks, _attempts, _conversations } from "./internal/tables";
 // on top of the base columns). Exposed so the All-conversations query compiler can
 // bind its FieldColumnMap to the SAME view the live resources read.
 export { conversations as conversationsView } from "./internal/views";
+// The derived `tasks_v` relation. A task's `status` is COMPUTED there and exists
+// as no column of `tasks`, so a consumer that needs the status of a SET of tasks
+// in one query has nowhere else to read it: `readTaskStatus` answers for one id
+// at a time, which turns a page read into one round trip per linked task. Bound
+// to the same view the live resources read, for the same reason `conversationsView`
+// is. Today's consumer is `page/annotations/todo/task-link`'s markdown provider.
+export { tasks as tasksView } from "./internal/views";
 
 // Zod schemas and TS types
 export {

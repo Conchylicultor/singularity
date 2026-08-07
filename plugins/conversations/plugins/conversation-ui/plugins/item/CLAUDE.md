@@ -66,6 +66,7 @@ directly — it is no longer re-exported here.)
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/prompt/block`
     - `tasks/attempt-view`
     - `tasks/task-events`

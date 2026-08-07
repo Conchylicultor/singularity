@@ -648,6 +648,7 @@ See "Open questions" in the design doc.
     - `layouts/miller`
     - `layouts/route-fallback`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/prompt/block`
     - `plugin-meta/contributions-table`
     - `plugin-meta/plugin-view`

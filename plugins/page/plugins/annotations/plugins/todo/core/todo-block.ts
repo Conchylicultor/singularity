@@ -52,5 +52,39 @@ export const todoBlock = defineAnnotationBlock({
   // `TODO ` is markdown's business nowhere: it lives on `typingPrefixes`, which
   // the clipboard pipeline never reads, so a `TODO ` line in pasted prose stays
   // prose.
-  markdown: { tag: { body: "children" } },
+  //
+  // `annotated` reserves two attributes whose values come from OUTSIDE this
+  // block's `data` — the task an agent was dispatched onto and that task's
+  // status, which live in `page_blocks_ext_todo_task` and `tasks_v` respectively
+  // (see the `task-link` sub-plugin). They are not in `data` and must not be:
+  // the block's row would then be a second, drifting copy of somebody else's
+  // record, and this card's payload is `z.object({})` on purpose. What they buy
+  // is that an agent reading the page can tell a TODO somebody is already on
+  // from one nobody has touched.
+  //
+  // They are READ-ONLY, and the parser discards them (see `BlockTag.annotated`):
+  // a pure parser can neither tell an edited value from the one it emitted nor
+  // write the table that owns it. `read_page`'s own description says so; a TODO
+  // is completed through the task, not by editing the document.
+  //
+  // `identified` carries the card's own ROW id as the reserved `id` attribute,
+  // the same way `<agent-note>` does. Two things need it, and the second is why
+  // it is not optional:
+  //
+  //  - **An agent can address the card.** `task_id` says which task is on this
+  //    work; `id` says which card that is. A dispatched agent is handed its
+  //    card's id in its prompt, and without this attribute it cannot match that
+  //    id against anything in the document it reads back.
+  //  - **The card keeps its row through an apply.** An identified tag is a PIN
+  //    in `markdown-apply`'s planner (`markdownTagIsIdentified` derives the set
+  //    from the handles, so this declaration is the whole change): identity is
+  //    ASSERTED by the id rather than inferred from content. A void card's
+  //    content key is `type ␀ {}` — byte-identical for every TODO on the page —
+  //    so without a pin two cards are indistinguishable to the aligner, and an
+  //    edit near them can hand one card's row (and with it its task link) to the
+  //    other. That is exactly the ambiguity the pin pass exists to close for
+  //    `<agent-note>`, and a TODO now has strictly more to lose by it.
+  markdown: {
+    tag: { body: "children", identified: true, annotated: ["task_id", "status"] },
+  },
 });

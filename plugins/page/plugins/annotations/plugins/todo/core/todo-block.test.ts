@@ -63,6 +63,36 @@ describe("todoBlock (derived + forced facts)", () => {
     // generic TAG: the children go inside it and it comes back as a container.
     // The retired `**[…]**` marker could only ever go one way.
     expect(todoBlock.markdown?.serialize).toBeUndefined();
-    expect(todoBlock.markdown?.tag).toEqual({ body: "children" });
+    expect(todoBlock.markdown?.tag).toEqual({
+      body: "children",
+      identified: true,
+      annotated: ["task_id", "status"],
+    });
+  });
+
+  it("carries its ROW id, so the card is addressable and pinned", () => {
+    // `identified` is what makes `<todo id="…">` an ADDRESS: an agent handed a
+    // block id in its prompt can find that card in the document, and
+    // `markdown-apply` pins the row instead of inferring identity from content.
+    // The second half is the load-bearing one — every TODO card's content key is
+    // `type ␀ {}`, byte-identical, so without a pin the aligner cannot tell two
+    // cards apart and an edit can hand one card's row (and its task link) to the
+    // other.
+    expect(todoBlock.markdown?.tag?.identified).toBe(true);
+    // `identified` reserves `id`, so the payload must not declare one — the
+    // factory throws on that collision, and the void schema is what keeps it
+    // impossible here.
+    expect(Object.keys(todoDataSchema.shape)).not.toContain("id");
+  });
+
+  it("reserves task_id / status as EXTERNALLY-owned attributes", () => {
+    // The two facts a dispatched card carries live in another table, so they can
+    // reach the tag only through `annotated` — and reserving them is also what
+    // keeps the round trip closed: the parser strips both before the void
+    // `z.object({}).strict()` sees them, which it would otherwise 400 on.
+    // Neither may collide with a `data` field, which is why the payload staying
+    // `z.object({})` is load-bearing rather than incidental.
+    expect(todoBlock.markdown?.tag?.annotated).toEqual(["task_id", "status"]);
+    expect(Object.keys(todoDataSchema.shape)).toEqual([]);
   });
 });

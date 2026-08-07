@@ -96,6 +96,7 @@ genuine transient-chrome list escapes with
     - `fields/date/filter`
     - `history/dialog`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo/task-link`
     - `page/callout`
     - `page/editor`
     - `page/inline-date`

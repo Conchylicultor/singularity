@@ -117,6 +117,13 @@ Two things in the output are ADDRESSES, and both matter when you write back:
 The markdown is a LOSSLESS projection of the block forest: what this returns
 re-parses to the same blocks, so feeding it straight back changes nothing.
 
+Some tags also carry READ-ONLY attributes describing state that lives outside
+the page — facts about the block held elsewhere in the system, not text anyone
+typed into the document. Write them back exactly as you found them. Editing one
+changes nothing: the value comes from its own owner, and a write is judged on
+the blocks it touches, so an edited attribute is simply ignored. To change what
+such an attribute reports, act on the thing it describes.
+
 **Content may be missing, with nothing marking where.** Cards the page's author
 addressed to themselves (\`/private\`) are removed from this output entirely,
 along with everything inside them. So a gap in the prose may be a note you are

@@ -56,6 +56,7 @@ rule keeps the broken shape from coming back.
     - `page/annotations`
     - `page/annotations/agent-access`
     - `page/annotations/context`
+    - `page/annotations/todo/task-link`
     - `page/callout`
     - `page/container`
     - `page/editor`

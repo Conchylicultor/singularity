@@ -145,12 +145,16 @@ const privateNotes = defineBlock({
   markdown: { tag: { body: "children" } },
 });
 
+// The ONE annotated type, mirroring the real `todo`: a card an agent can be
+// dispatched from, whose linked task and that task's status live in ANOTHER
+// table. Neither is in `data` (which is `z.object({})` and stays so), so the two
+// attributes are supplied to the serialize walk and reserved on the way back in.
 const todo = defineBlock({
   type: "todo",
   schema: z.object({}),
   empty: () => ({}),
   anchor: true,
-  markdown: { tag: { body: "children" } },
+  markdown: { tag: { body: "children", annotated: ["task_id", "status"] } },
 });
 
 // The ONE identified type: `<agent-notes id="…">` carries the row it addresses,
@@ -861,6 +865,171 @@ describe("identified tags (the row id, both ways)", () => {
     const [minted] = withMintedIds(parse('<agent-notes id="block-card"/>'));
     expect(minted!.id).not.toBe("block-card");
     expect(minted!.ref).toBe("block-card");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Annotated tags: attributes whose value lives in ANOTHER table
+// ---------------------------------------------------------------------------
+//
+// `markdown.tag.annotated` is `identified` generalized to a declared SET of
+// names. What it buys is a document that can state a fact about a block the
+// block does not own — a TODO card's linked task and that task's status — which
+// no projection of `data` could produce. What it must never do is let one of
+// those names reach `data` on the way back in, which is what makes the round
+// trip closed: the same card, re-parsed, is byte-for-byte the card that was
+// there before anything was dispatched from it.
+
+describe("annotated tags (facts the block does not own)", () => {
+  const annotated = (
+    type: string,
+    data: unknown,
+    annotations: Record<string, string>,
+    children: MarkdownNode[] = [],
+    id?: string,
+  ): MarkdownNode => ({
+    ...(id === undefined ? {} : { id }),
+    type,
+    data,
+    annotations,
+    expanded: true,
+    children,
+  });
+
+  test("annotations are emitted, and parse gives back the UN-annotated card", () => {
+    const md = serializeForestToMarkdown(
+      [
+        annotated("todo", {}, { task_id: "task-7", status: "in_progress" }, [
+          node("text", { text: runs("fix the parser") }),
+        ]),
+      ],
+      mdCtx,
+    );
+    expect(md).toBe(
+      [
+        '<todo task_id="task-7" status="in_progress">',
+        "  fix the parser",
+        "</todo>",
+      ].join("\n"),
+    );
+    // The attributes come OFF before `dataOf`, so the payload stays void — the
+    // void `z.object({})` would otherwise have stripped them silently, and a
+    // strict schema would have rejected a document this side emitted itself.
+    const parsed = parse(md);
+    expect(parsed).toEqual([
+      {
+        type: "todo",
+        data: {},
+        expanded: true,
+        children: [node("text", { text: runs("fix the parser") })],
+      },
+    ]);
+    // …which is byte-for-byte what the SAME card with no task parses to. That
+    // equality is the point: dispatching an agent changes what the card SAYS
+    // without changing what it IS, so the next apply reads no edit at all.
+    expect(parsed).toEqual(parse(["<todo>", "  fix the parser", "</todo>"].join("\n")));
+  });
+
+  test("reserved attributes come first: `id`, then annotations, then the type's own", () => {
+    // One tag with all three sources, so the ORDER is pinned in one place rather
+    // than inferred from two tags that each show half of it.
+    const dispatchCard = defineBlock({
+      type: "dispatch-card",
+      schema: z.object({ label: z.string() }),
+      empty: () => ({ label: "" }),
+      markdown: {
+        tag: { body: "children", identified: true, annotated: ["task_id", "status"] },
+      },
+    }) as BlockHandle<unknown>;
+    const ctx: MarkdownContext = { handles: [...handles, dispatchCard], protectedSpans: [] };
+    const md = serializeForestToMarkdown(
+      [annotated("dispatch-card", { label: "ship it" }, { task_id: "t1", status: "done" }, [], "block-9")],
+      ctx,
+    );
+    expect(md).toBe('<dispatch-card id="block-9" task_id="t1" status="done" label="ship it"/>');
+    expect(parseMarkdownToForest(md, ctx)).toEqual([
+      { type: "dispatch-card", data: { label: "ship it" }, expanded: true, ref: "block-9", children: [] },
+    ]);
+  });
+
+  test("an absent value omits its attribute — a card nobody dispatched is bare", () => {
+    // The clipboard case, and the ordinary case: a TODO with no task has no
+    // task_id, and an empty attribute would be a lie about a row that does not
+    // exist. Annotations are declared per TYPE, supplied per NODE.
+    expect(serialize([node("todo", {})])).toBe("<todo/>");
+    expect(
+      serializeForestToMarkdown([annotated("todo", {}, { status: "held" })], mdCtx),
+    ).toBe('<todo status="held"/>');
+  });
+
+  test("an `annotated` name colliding with a schema field is a LOUD failure", () => {
+    const clashing = defineBlock({
+      type: "clashing-field",
+      schema: z.object({ status: z.string() }),
+      empty: () => ({ status: "" }),
+      markdown: { tag: { body: "children", annotated: ["status"] } },
+    }) as BlockHandle<unknown>;
+    // `markdownTagIsIdentified` merely RESOLVES the tag — which is the first
+    // thing any serialize or parse of this type does.
+    expect(() => markdownTagIsIdentified(clashing)).toThrow(
+      /reserves the `status` attribute/,
+    );
+  });
+
+  test("`data` and (on an identified tag) `id` are reserved against annotations too", () => {
+    const overData = defineBlock({
+      type: "clashing-data",
+      schema: z.object({}),
+      empty: () => ({}),
+      markdown: { tag: { body: "children", annotated: ["data"] } },
+    }) as BlockHandle<unknown>;
+    expect(() => markdownTagIsIdentified(overData)).toThrow(/JSON-encodes/);
+
+    const overId = defineBlock({
+      type: "clashing-id",
+      schema: z.object({}),
+      empty: () => ({}),
+      markdown: { tag: { body: "children", identified: true, annotated: ["id"] } },
+    }) as BlockHandle<unknown>;
+    expect(() => markdownTagIsIdentified(overId)).toThrow(/already reserved by/);
+  });
+
+  test("a type whose own `attrs` emits a reserved annotated name throws at serialize", () => {
+    // The half only a function body knows, so it cannot be caught at resolution
+    // — and it fires whether or not a value was supplied for this node, since
+    // the conflict is in the declaration, not in one document.
+    const doubled = defineBlock({
+      type: "doubled",
+      schema: z.object({}),
+      empty: () => ({}),
+      markdown: {
+        tag: { body: "children", annotated: ["status"], attrs: () => ({ status: "mine" }) },
+      },
+    }) as BlockHandle<unknown>;
+    const ctx: MarkdownContext = { handles: [...handles, doubled], protectedSpans: [] };
+    expect(() => serializeForestToMarkdown([node("doubled", {})], ctx)).toThrow(
+      /own `attrs` emitted one too/,
+    );
+  });
+
+  test("a node carrying an UNDECLARED annotation throws rather than emitting it", () => {
+    // Emitting it would make it a `data` key on the way back in (nothing
+    // reserves it, so the strip never sees it); dropping it would make a fact
+    // its supplier believes is in the document silently absent.
+    expect(() =>
+      serializeForestToMarkdown([annotated("todo", {}, { priority: "high" })], mdCtx),
+    ).toThrow(/does not declare in `markdown.tag.annotated`/);
+  });
+
+  test("a LINE-serialized type cannot carry an annotation either", () => {
+    // Same refusal at the other branch: a paragraph has no attribute list, so
+    // there is nowhere for the value to go and no tag that could declare it.
+    expect(() =>
+      serializeForestToMarkdown(
+        [annotated("text", { text: runs("plain") }, { status: "done" })],
+        mdCtx,
+      ),
+    ).toThrow(/serializes as markdown LINES/);
   });
 });
 

@@ -23,6 +23,8 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `page/annotations/todo`
+    - `page/annotations/todo/task-link`
     - `tasks/task-deps-tree`
     - `tasks/task-graph`
     - `tasks/task-header`

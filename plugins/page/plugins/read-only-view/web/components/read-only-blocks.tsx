@@ -432,9 +432,21 @@ function NodeView({
   // `BlockFrameProps`), so this surface positions it as a full-bleed layer
   // behind the node's content. `inset` is 0: there is no hover rail here, so
   // the content edge `C` is simply the renderer's left edge.
+  //
+  // `blockId` is passed through as-is and is `undefined` whenever the node is a
+  // detached snapshot (a version-history preview, the public site) — that is the
+  // documented degradation, not a gap: a frame reading a side table keyed by
+  // block id falls back to its static appearance there.
   const framed = framedTypes.has(node.type) ? (
     <Overlay
-      behind={<Editor.BlockFrame.Dispatch type={node.type} data={node.data} inset={0} />}
+      behind={
+        <Editor.BlockFrame.Dispatch
+          type={node.type}
+          data={node.data}
+          blockId={node.id}
+          inset={0}
+        />
+      }
     >
       {body}
     </Overlay>

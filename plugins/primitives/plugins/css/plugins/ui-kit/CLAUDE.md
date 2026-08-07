@@ -529,6 +529,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `layouts/full-pane`
     - `layouts/miller`
     - `layouts/route-fallback`
+    - `page/annotations/todo`
     - `page/attachment-block`
     - `page/audio`
     - `page/bookmark`

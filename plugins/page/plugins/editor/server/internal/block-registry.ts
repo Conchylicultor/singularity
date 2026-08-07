@@ -29,6 +29,27 @@ export const Editor = {
   InlineToken: defineServerContribution<{ pattern: RegExp }>("page.inline-token", {
     docLabel: (t) => t.pattern.source,
   }),
+
+  /**
+   * A supplier of `markdown.tag.annotated` attribute values — the facts a block
+   * tag carries that do NOT live in the block's `data` (a TODO card's linked
+   * task id and that task's status live in another table keyed by block id).
+   *
+   * `resolve` is handed the rows a markdown read is about to walk and answers
+   * with a block id → attribute record map, holding only the blocks it has
+   * something to say about. A provider that recognizes none of the rows answers
+   * with an empty map and does no work; the whole registry being empty means the
+   * read pays nothing at all.
+   *
+   * It takes the rows in one call rather than one call per block on purpose: a
+   * provider's natural query is a single `WHERE parent_id IN (…)`, bounded by
+   * the page, and a per-block seam would turn a page read into N round trips.
+   */
+  BlockAnnotation: defineServerContribution<{
+    resolve(
+      rows: readonly { id: string; type: string }[],
+    ): Promise<ReadonlyMap<string, Record<string, string>>>;
+  }>("page.block-annotation"),
 };
 
 /**
@@ -71,4 +92,64 @@ export function resolveBlockHandle(
  */
 export function blockTextProtectedSpans(): RegExp[] {
   return Editor.InlineToken.getContributions().map((t) => t.pattern);
+}
+
+/**
+ * Every registered provider's answer for `rows`, merged into one block id →
+ * attribute record map — what a markdown read stamps onto its nodes as
+ * `MarkdownNode.annotations`.
+ *
+ * Read at call time, never memoized, for the same reason `blockTextProtectedSpans`
+ * is: a snapshot taken before `collectContributions` would silently degrade to
+ * "no annotations", which reads exactly like a TODO nobody has dispatched.
+ *
+ * Providers run CONCURRENTLY — they are independent queries over the same rows —
+ * and two of them claiming one `(block, attribute)` pair is a defect, not a
+ * last-write-wins: the value a document shows would depend on contribution
+ * order, and the two owners would each believe they own it. So it throws,
+ * naming both.
+ */
+export async function resolveBlockAnnotations(
+  rows: readonly { id: string; type: string }[],
+): Promise<ReadonlyMap<string, Record<string, string>>> {
+  const providers = Editor.BlockAnnotation.getContributions();
+  const merged = new Map<string, Record<string, string>>();
+  if (providers.length === 0) return merged;
+
+  const answers = await Promise.all(
+    providers.map(async (p) => ({
+      owner: p._pluginId ?? "<unknown>",
+      byBlock: await p.resolve(rows),
+    })),
+  );
+
+  /** `blockId → attribute → the plugin that already claimed it`. */
+  const claimedBy = new Map<string, Map<string, string>>();
+  for (const { owner, byBlock } of answers) {
+    for (const [blockId, record] of byBlock) {
+      for (const [name, value] of Object.entries(record)) {
+        let claims = claimedBy.get(blockId);
+        if (!claims) {
+          claims = new Map();
+          claimedBy.set(blockId, claims);
+        }
+        const previous = claims.get(name);
+        if (previous !== undefined) {
+          throw new Error(
+            `Two Editor.BlockAnnotation providers claim the \`${name}\` attribute of block ` +
+              `${blockId}: ${previous} and ${owner}. An externally-owned attribute must have ` +
+              "exactly one owner.",
+          );
+        }
+        claims.set(name, owner);
+        let target = merged.get(blockId);
+        if (!target) {
+          target = {};
+          merged.set(blockId, target);
+        }
+        target[name] = value;
+      }
+    }
+  }
+  return merged;
 }
