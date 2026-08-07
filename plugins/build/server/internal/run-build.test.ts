@@ -20,9 +20,9 @@
  * Run: `bun test plugins/build/server/internal/run-build.test.ts`
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { currentWorktreeName, worktreeArtifacts, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
-import { isPidAlive, needsRebuild, readBuildTerminal } from "./run-build";
+import { isPidAlive, needsRebuild, readBuildTerminal, recoverBuildArtifacts } from "./run-build";
 
 const name = currentWorktreeName();
 const created: string[] = [];
@@ -85,7 +85,7 @@ describe("readBuildTerminal", () => {
     expect(readBuildTerminal(buildId)).toBeNull();
   });
 
-  test("empty steps ⇒ null (not a terminal record)", () => {
+  test("empty steps and no exitCode ⇒ null (nothing to read an outcome from)", () => {
     const buildId = uniqueBuildId("nosteps");
     writeArtifact(buildId, { steps: [], finishedAt: Date.now() });
     expect(readBuildTerminal(buildId)).toBeNull();
@@ -95,6 +95,106 @@ describe("readBuildTerminal", () => {
     const buildId = uniqueBuildId("nofin");
     writeArtifact(buildId, { steps: [{ success: true }] });
     expect(readBuildTerminal(buildId)).toBeNull();
+  });
+
+  test("an explicit exitCode wins over the step derivation", () => {
+    const finishedAt = Date.now() - 42;
+    const buildId = uniqueBuildId("explicit");
+    writeArtifact(buildId, {
+      steps: [{ success: false }],
+      finishedAt,
+      exitCode: 2,
+    });
+    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 2, finishedAt: new Date(finishedAt) });
+  });
+
+  test("a partial ALL-GREEN step list with exitCode 143 reads as killed, not success", () => {
+    // The regression this field exists for. A build killed mid-step has closed
+    // only the steps that finished — every one of them green — so the old
+    // `steps.every(s => s.success)` derivation would call a SIGTERM a clean
+    // deploy, and the run's badge would read succeeded.
+    const finishedAt = Date.now() - 7;
+    const buildId = uniqueBuildId("killed");
+    writeArtifact(buildId, {
+      steps: [{ success: true }, { success: true }],
+      finishedAt,
+      exitCode: 143,
+    });
+    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 143, finishedAt: new Date(finishedAt) });
+  });
+
+  test("a zero-step abort is terminal once it carries an exitCode", () => {
+    // Killed before any step closed: nothing to derive from, but the artifact
+    // says what happened, so the row can close at the real code and instant
+    // rather than the -1/now sentinel.
+    const finishedAt = Date.now() - 3;
+    const buildId = uniqueBuildId("zerostep");
+    writeArtifact(buildId, { steps: [], finishedAt, exitCode: 143 });
+    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 143, finishedAt: new Date(finishedAt) });
+  });
+});
+
+/**
+ * The SIGKILL backstop. It is the only writer left for a build that ran no exit
+ * handler at all, and the verdict such a build printed (if it printed one) names
+ * BOTH files — so writing one of the two is what left a pointer dangling.
+ */
+describe("recoverBuildArtifacts", () => {
+  const lines: Array<{ text: string; stream: "stdout" | "stderr" }> = [
+    { text: "Restarting backend...", stream: "stdout" },
+    { text: "boom", stream: "stderr" },
+  ];
+
+  function recover(buildId: string, exitCode: number, finishedAt: Date): [string, string] {
+    const paths: [string, string] = [
+      worktreeArtifacts.buildLogs(name, buildId),
+      worktreeArtifacts.buildLogText(name, buildId),
+    ];
+    created.push(...paths);
+    recoverBuildArtifacts({ worktree: name, buildId, lines, durationMs: 4_000, finishedAt, exitCode });
+    return paths;
+  }
+
+  test("writes BOTH artifacts — the json AND the text log a verdict points at", () => {
+    const [jsonPath, textPath] = recover(uniqueBuildId("both"), 137, new Date());
+    expect(existsSync(jsonPath)).toBe(true);
+    expect(existsSync(textPath)).toBe(true);
+  });
+
+  test("the text log replays the captured output verbatim under a recovered header", () => {
+    const [, textPath] = recover(uniqueBuildId("text"), 137, new Date());
+    const text = readFileSync(textPath, "utf-8");
+    expect(text.split("\n")[0]).toContain("recovered by the backend");
+    for (const { text: line } of lines) expect(text).toContain(line);
+  });
+
+  test("readBuildTerminal reads back the exact code and instant the row is stamped with", () => {
+    // The property the whole helper is for: the artifact and the build_runs row
+    // are written from one value, so a later reconcile cannot contradict them.
+    const buildId = uniqueBuildId("roundtrip");
+    const finishedAt = new Date(Date.now() - 1_000);
+    recover(buildId, 143, finishedAt);
+    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 143, finishedAt });
+  });
+
+  test("never overwrites an artifact the CLI already wrote", () => {
+    const buildId = uniqueBuildId("noclobber");
+    mkdirSync(worktreeDataDir(name), { recursive: true });
+    const jsonPath = worktreeArtifacts.buildLogs(name, buildId);
+    const textPath = worktreeArtifacts.buildLogText(name, buildId);
+    writeFileSync(jsonPath, JSON.stringify({ steps: [], finishedAt: 1, exitCode: 0 }) + "\n");
+    writeFileSync(textPath, "the CLI's own transcript\n");
+    created.push(jsonPath, textPath);
+    recoverBuildArtifacts({
+      worktree: name,
+      buildId,
+      lines,
+      durationMs: 1,
+      finishedAt: new Date(),
+      exitCode: 137,
+    });
+    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 0, finishedAt: new Date(1) });
+    expect(readFileSync(textPath, "utf-8")).toBe("the CLI's own transcript\n");
   });
 });
 

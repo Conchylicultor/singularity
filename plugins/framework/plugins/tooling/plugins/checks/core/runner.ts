@@ -1,5 +1,3 @@
-import { writeFileSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check, CheckContext, CheckResult, CheckScope } from "@plugins/framework/plugins/tooling/core";
@@ -10,6 +8,7 @@ import { withScanView } from "./scan-context";
 import { loadTreeSnapshot, validate, type TreeSnapshot, type QueryFact, type ValidateResult } from "./read-set";
 import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
+import { openCheckTranscript } from "./transcript";
 
 function isCheck(value: unknown): value is Check {
   return (
@@ -90,14 +89,23 @@ export interface RunChecksOptions {
    */
   scope?: CheckScope;
   /**
-   * Absolute path to write the FULL, untruncated results to. The console
-   * (`log`) output stays summarized/truncated so it doesn't flood an agent's
-   * context (and survives being piped through `tail`); the file holds the
-   * complete failure messages so they can be read directly. When set, the
-   * console truncation note points at this file instead of telling the caller
-   * to re-run.
+   * The run this transcript belongs to — the worktree whose data dir it sits in,
+   * and the id the caller ALREADY owns (a build's `buildId`, a standalone
+   * check's `opId`). Omitted, no transcript is written.
+   *
+   * The runner derives the path itself (`worktreeArtifacts.checkLog`) AND uses
+   * `runId` as the progress-log run id, so the filename and this run's lines in
+   * `check-progress.jsonl` can never name different runs. That is the whole
+   * reason this is not a path: a caller handing in `check-<x>.log` while the
+   * progress log minted its own uuid is precisely the drift that made a
+   * transcript unattributable.
+   *
+   * The file holds the complete failure messages; the console (`log`) copy stays
+   * summarized/truncated so it doesn't flood an agent's context (and survives
+   * being piped through `tail`). When set, the console truncation note points at
+   * this file instead of telling the caller to re-run.
    */
-  logFile?: string;
+  logRun?: { worktree: string; runId: string };
 }
 
 export async function runChecks(ids: string[] | undefined, options: RunChecksOptions): Promise<boolean> {
@@ -113,10 +121,21 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // itself is a hang we learn nothing about. Only the caller's own request is
   // knowable here; `treeHash` and the resolved selection arrive via
   // `progress.resolved()` once bootstrap has earned them.
+  const requested = ids && ids.length > 0 ? ids : null;
   const progress = openProgressRun({
     scope: options.scope ?? null,
-    requested: ids && ids.length > 0 ? ids : null,
+    requested,
+    runId: options.logRun?.runId,
   });
+
+  // The transcript opens HERE, beside the progress run and for the same reason:
+  // it must exist from the first moment, not once every check has settled. Its
+  // header is on disk before the checks are even loaded, so a run killed
+  // mid-checks leaves a partial transcript OF ITSELF rather than its
+  // predecessor's complete one.
+  const transcript = options.logRun
+    ? openCheckTranscript({ ...options.logRun, scope: options.scope ?? null, requested })
+    : null;
 
   const all = await progress.bootstrap("load-checks", () => listAllChecks());
 
@@ -127,9 +146,12 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   if (ids && named.length !== ids.length) {
     const known = new Set(all.map((c) => c.id));
     const unknown = ids.filter((id) => !known.has(id));
-    console.error(`Unknown check(s): ${unknown.join(", ")}`);
+    const message = `Unknown check(s): ${unknown.join(", ")}`;
+    console.error(message);
     // Close the run: an early return is a finished run, and a run left open
-    // would sit in `--status` forever as a phantom hang.
+    // would sit in `--status` forever as a phantom hang. Same for the
+    // transcript, which otherwise ends at its header with no reason given.
+    transcript?.finish([message], false);
     progress.finish(false);
     return false;
   }
@@ -145,11 +167,12 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   if (scope !== undefined && ids && ids.length > 0) {
     const excluded = named.filter((c) => scopeOf(c) !== scope);
     if (excluded.length > 0) {
-      console.error(
+      const message =
         `Excluded by --scope ${scope}: ${excluded
           .map((c) => `${c.id} is ${scopeOf(c)}-scoped`)
-          .join(", ")}. Drop the --scope flag, or run only checks of that scope.`,
-      );
+          .join(", ")}. Drop the --scope flag, or run only checks of that scope.`;
+      console.error(message);
+      transcript?.finish([message], false);
       progress.finish(false);
       return false;
     }
@@ -311,69 +334,75 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
             outcome?.result.ok ?? false,
             outcome?.cached ?? false,
           );
+          // The transcript is written as each check SETTLES, not from the print
+          // loop below — the loop runs after `Promise.all`, which a hung or
+          // killed run reaches never. A check that threw has no outcome to
+          // render; its `end` record above is what says so.
+          if (outcome) {
+            transcript?.record({
+              checkId: check.id,
+              result: outcome.result,
+              cached: outcome.cached,
+              observations: outcome.observations,
+            });
+          }
         }
       }),
     );
   } catch (err) {
     // The run is over either way: stop the heartbeat so it can never outlive the
-    // run, and close the record. Rethrown untouched — this changes no semantics.
+    // run, and close the records. Rethrown untouched — this changes no semantics.
+    transcript?.finish([`run aborted: ${String(err)}`], false);
     progress.finish(false);
     throw err;
   }
 
+  // Everything below renders to the CONSOLE only. The durable copy is the
+  // transcript, already written check by check as they settled — so this loop
+  // is free to truncate, and losing it (a kill, a throw) costs no record.
   const log = options.log;
-  const logFile = options.logFile;
-
-  // Full, untruncated transcript mirrored to `logFile`. Every line emitted to
-  // the console is also recorded here verbatim; failure messages are recorded
-  // in full even when the console copy is truncated.
-  const full: string[] = [];
-  const emit = (line: string, stream: "stdout" | "stderr") => {
-    log(line, stream);
-    full.push(line);
-  };
 
   const MAX_MESSAGE_LINES = 100;
 
-  // Render a non-passing result's (possibly huge) message + optional hint: a
-  // truncated copy to the console, the full copy to the transcript file. Shared
-  // by the fatal-FAIL and the non-fatal inconclusive branches so the two can't
-  // drift in truncation behaviour.
+  // Render a non-passing result's (possibly huge) message + optional hint,
+  // truncated in the middle when it is enormous: truncation protects an agent's
+  // context window, which is why it is a console concern and the transcript
+  // keeps the full text. Shared by the fatal-FAIL and the non-fatal inconclusive
+  // branches so the two can't drift in truncation behaviour.
   const emitDetail = (check: Check, result: { message: string; hint?: string }) => {
-    const indented = `  ${result.message.split("\n").join("\n  ")}`;
     const lines = result.message.split("\n");
     if (lines.length > MAX_MESSAGE_LINES) {
       const head = lines.slice(0, 50).join("\n");
       const tail = lines.slice(-50).join("\n");
       const omitted = lines.length - 100;
-      const moreHint = logFile
-        ? `see ${logFile} for full output`
+      const moreHint = transcript
+        ? `see ${transcript.path} for full output`
         : `re-run \`./singularity check ${check.id}\` for full output`;
-      // Truncated copy to the console; full copy to the file.
       log(`  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`, "stderr");
-      full.push(indented);
     } else {
-      emit(`  ${result.message}`, "stderr");
+      log(`  ${result.message}`, "stderr");
     }
-    if (result.hint) emit(`  hint: ${result.hint}`, "stderr");
+    if (result.hint) log(`  hint: ${result.hint}`, "stderr");
   };
 
-  // Flush a check's `ctx.log` observations through the SAME `emit()` the runner
-  // uses for its own lines — console + full transcript (`logFile`, and the
-  // build's checks section) — indented under the check's result line, exactly
-  // like `emitDetail`. Purely informational: the verdict is already decided.
+  // Flush a check's `ctx.log` observations to the console, indented under the
+  // check's result line exactly like `emitDetail` (and like the transcript's own
+  // block). Purely informational: the verdict is already decided.
   const emitObservations = (observations: { line: string; stream: "stdout" | "stderr" }[]) => {
     for (const { line, stream } of observations) {
-      emit(`  ${line.split("\n").join("\n  ")}`, stream);
+      log(`  ${line.split("\n").join("\n  ")}`, stream);
     }
   };
 
   let allOk = true;
   let anyInconclusive = false;
+  // Selection-ordered, deliberately unlike the transcript's completion order: a
+  // terminal summary printed once is easier to read (and to diff across runs) in
+  // the order the checks were named.
   for (const { check, result, durationMs, wallStart, cached, observations } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
-      emit(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
+      log(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
       emitObservations(observations);
     } else if (result.inconclusive) {
       // Environmental, non-fatal outcome: NOT a pass and NOT a hard failure.
@@ -381,37 +410,40 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       // it re-runs next build and re-verifies the real invariant. We only
       // soften fatality here (allOk untouched).
       anyInconclusive = true;
-      emit(`⚠ ${check.id} ... inconclusive — ${result.message.split("\n")[0]}`, "stdout");
+      log(`⚠ ${check.id} ... inconclusive — ${result.message.split("\n")[0]}`, "stdout");
       emitObservations(observations);
       emitDetail(check, result);
     } else {
       allOk = false;
-      emit(`• ${check.id} ... FAIL`, "stdout");
+      log(`• ${check.id} ... FAIL`, "stdout");
       emitObservations(observations);
       emitDetail(check, result);
     }
   }
+
+  // The closing banner is the one thing the console and the transcript still
+  // share verbatim: it is about the RUN, not about any one check, so neither the
+  // settle loop nor the print loop can own it.
+  const trailer: string[] = [];
   if (!allOk) {
-    emit(
+    const stop =
       "\nIf you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
-        "Do NOT work around check failures — not by disabling checks, editing check code, " +
-        "expanding skip lists, committing via raw git, or any other means.",
-      "stderr",
-    );
+      "Do NOT work around check failures — not by disabling checks, editing check code, " +
+      "expanding skip lists, committing via raw git, or any other means.";
+    log(stop, "stderr");
+    trailer.push(stop);
   } else if (anyInconclusive) {
     // Distinct from the STOP banner above (which correctly does NOT fire for an
     // inconclusive-only run): non-fatal, so it goes to stdout, not stderr.
-    emit(
+    const note =
       "\nNote: some check(s) were inconclusive for environmental reasons (host-load timeout, " +
-        "unlaunchable browser). They are non-fatal and NOT cached — they re-run and re-verify next build.",
-      "stdout",
-    );
+      "unlaunchable browser). They are non-fatal and NOT cached — they re-run and re-verify next build.";
+    log(note, "stdout");
+    trailer.push(note);
   }
 
-  if (logFile) {
-    mkdirSync(dirname(logFile), { recursive: true });
-    writeFileSync(logFile, full.join("\n") + "\n");
-  }
+  // Closes the transcript and prunes the family.
+  transcript?.finish(trailer, allOk);
 
   // Stops the heartbeat and closes the run's records. A run that reaches here
   // has, by definition, not hung — `started − ended` is empty.

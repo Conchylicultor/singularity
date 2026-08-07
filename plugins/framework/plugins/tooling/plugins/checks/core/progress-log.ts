@@ -146,8 +146,16 @@ export function openProgressRun(args: {
   scope: string | null;
   /** The ids the caller named, or null for "every check". */
   requested: string[] | null;
+  /**
+   * The run's identity, when the caller already owns one — a build's `buildId`,
+   * a standalone check's `opId`. Passing it is what makes these lines joinable
+   * to the run's other artifacts (`check-<runId>.log`, `build-<runId>.log`)
+   * instead of only to each other. A caller with no artifact to join to omits
+   * it and gets a fresh uuid.
+   */
+  runId?: string;
 }): ProgressRun {
-  const runId = crypto.randomUUID();
+  const runId = args.runId ?? crypto.randomUUID();
   const pid = process.pid;
   const worktree = worktreeName();
   const startedAt = performance.now();

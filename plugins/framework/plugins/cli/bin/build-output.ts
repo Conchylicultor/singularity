@@ -160,11 +160,7 @@ export function fallbackVerdict(
   return { ok: false, headline, reason, pointers, steps: [] };
 }
 
-// process.on("exit") backstop: the build cannot terminate without a verdict, and
-// a verdict that disagrees with the exit code prints a loud bug banner. Register
-// once, after `name`/`buildId` (and after finalizeBuildLog's own exit hook) exist.
-// Thin wrapper over the pure `fallbackVerdict`.
-export function installVerdictGuard(ctx: {
+export interface VerdictGuardCtx {
   url: string;
   buildLogPath: string;
   /**
@@ -174,11 +170,51 @@ export function installVerdictGuard(ctx: {
    * is blocked in synchronous work still reaches whichever exit path runs.
    */
   termination?: () => SignalTermination | null;
-}): void {
+  /**
+   * Materialize `buildLogPath` — the file every fallback verdict points at on
+   * its last line. Called only when the build never emitted a verdict of its
+   * own, which is exactly when nothing wrote that file: a killed build reaches
+   * neither of build.ts's own `writeBuildLogs` calls, so without this the guard
+   * would print a pointer to a file that cannot exist. The two contradiction
+   * arms DID emit, so their transcript is already on disk; re-writing it would
+   * only churn the trailer.
+   *
+   * Must be synchronous — it runs from a `process.on("exit")` handler.
+   */
+  onFallback?: (verdict: Verdict, code: number) => void;
+}
+
+/**
+ * The guard's exit-time action: print the fallback verdict, and — on the arms
+ * where no transcript was ever written — materialize the file its pointer names.
+ * Printing the pointer and writing the file are one action, deliberately: they
+ * are what makes the pointer honest on every path the CLI can take.
+ *
+ * Extracted from `installVerdictGuard` (as `fallbackVerdict` already was) so the
+ * pairing is unit-testable without a live exit handler. Returns the verdict it
+ * acted on, or null when the emitted verdict already agreed with the exit code.
+ */
+export function runVerdictGuard(
+  emitted: { ok: boolean } | null,
+  code: number,
+  ctx: VerdictGuardCtx,
+): Verdict | null {
+  const v = fallbackVerdict(emitted, code, ctx, ctx.termination?.() ?? null);
+  if (v === null) return null;
+  // Before the print, so the pointer is already resolvable when it is read.
+  if (emitted === null) ctx.onFallback?.(v, code);
+  writeSync(1, `\n${renderVerdict(v)}\n`);
+  return v;
+}
+
+// process.on("exit") backstop: the build cannot terminate without a verdict, and
+// a verdict that disagrees with the exit code prints a loud bug banner. Register
+// once, after `name`/`buildId` (and after finalizeBuildLog's own exit hook) exist.
+// Thin wrapper over the pure `fallbackVerdict` + `runVerdictGuard`.
+export function installVerdictGuard(ctx: VerdictGuardCtx): void {
   process.on("exit", (code) => {
     // Bun silently ignores process.exitCode reassignment inside an exit handler,
     // so this guard can only report a wrong code, never repair it.
-    const v = fallbackVerdict(emittedVerdict, code, ctx, ctx.termination?.() ?? null);
-    if (v !== null) writeSync(1, `\n${renderVerdict(v)}\n`);
+    runVerdictGuard(emittedVerdict, code, ctx);
   });
 }

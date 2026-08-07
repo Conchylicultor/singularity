@@ -248,7 +248,7 @@ const check: Check = {
     // Fan out at exactly `grant.units` concurrency, spending one unit per worker
     // via `grant.run`. A reduced grant (`units < targets.length`) simply runs the
     // fleet at lower concurrency — surfaced as ONE observation line through the
-    // runner's `ctx.log` seam, so it lands in check.log/build.log and not only in
+    // runner's `ctx.log` seam, so it lands in check-<id>.log/build.log and not only in
     // a terminal (never a blocking log or a progress bar: checks run under
     // Promise.all in the runner, which buffers and attributes these lines).
     const units = ctx.grant.units;
@@ -271,7 +271,7 @@ const check: Check = {
     // Peak RSS of every worker that ran, one labelled line per target (target
     // order, not completion order, so successive runs are diffable). Emitted
     // through the runner's `ctx.log` observation seam, so the measurement is
-    // DURABLE (check.log + the build's checks section) — a terminal-only write
+    // DURABLE (check-<id>.log + the build's checks section) — a terminal-only write
     // would evaporate, and calibrating host-admission's RAM quantum is exactly
     // an after-the-fact grep over many runs. Purely an observation: a missing
     // rusage, or a crashed worker (which threw before it could be measured),

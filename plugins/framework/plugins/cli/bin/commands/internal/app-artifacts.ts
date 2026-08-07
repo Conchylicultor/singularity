@@ -471,11 +471,12 @@ export async function generateAppSources(opts: {
  */
 export async function fastValidationJobs(opts: {
   root: string;
-  checkLogFile: string;
+  /** The run these checks belong to — the runner derives `check-<runId>.log` from it. */
+  checkLogRun: { worktree: string; runId: string };
   background: boolean;
   hooks: ArtifactHooks;
 }): Promise<HeavyJob[]> {
-  const { root, checkLogFile, background, hooks } = opts;
+  const { root, checkLogRun, background, hooks } = opts;
   const jobs: HeavyJob[] = [];
 
   const alwaysRunIds = (await listAllChecks()).filter((c) => c.alwaysRun).map((c) => c.id);
@@ -486,7 +487,7 @@ export async function fastValidationJobs(opts: {
       const start = performance.now();
       const ok = await runChecks(alwaysRunIds, {
         grant,
-        logFile: checkLogFile,
+        logRun: checkLogRun,
         onCheckDone: (id, durationMs, wallStartMs) => {
           hooks.pushSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
         },

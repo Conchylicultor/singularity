@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { basename, join, resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { WEB_CORE_RELATIVE, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { createValveDeps } from "../admission-valve";
 import { printStepBlocks } from "../build-output";
@@ -193,7 +193,7 @@ export function registerBuildComposition(program: Command) {
         // build-specific observability and a release is downstream of it.
         const companions = await fastValidationJobs({
           root,
-          checkLogFile: join(worktreeDataDir(name), "check.log"),
+          checkLogRun: { worktree: name, runId: buildId },
           background: false,
           hooks,
         });

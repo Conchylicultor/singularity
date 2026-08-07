@@ -108,10 +108,14 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   { pattern: /["'`]release-logs[^"'`\s]*\.json/, grepArg: "release-logs" },
   // build.log human-readable artifact filename.
   { pattern: /["'`]build(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
+  // check.log check-transcript filename. Its absence here is what let four
+  // separate `join(worktreeDataDir(name), "check.log")` call sites be written by
+  // hand — and stay in sync with each other but not with the artifact layout.
+  { pattern: /["'`]check(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
 ];
 
 // The paths plugin OWNS the artifact layout: paths.ts defines it, the prune
-// logic (server/internal/prune-build-artifacts.ts) mirrors the filename families
+// logic (core/internal/prune-artifacts.ts) mirrors the filename families
 // to reap old artifacts, and both have co-located tests that reference concrete
 // filenames. Anything inside the plugin is source-of-truth territory, exempt by
 // the same principle that exempts paths.ts. This guard exists to stop *other*
@@ -154,7 +158,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
     return {
       ok: false,
       message: `inlined worktree-artifact path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import `worktreeDataDir` / `worktreeArtifacts` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding artifact filenames (build-profile*.json, build-logs*.json, build*.log, release-logs-*.json). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
+      hint: "Import `worktreeDataDir` / `worktreeArtifacts` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding artifact filenames (build-profile*.json, build-logs*.json, build*.log, check*.log, release-logs-*.json). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
     };
   },
 };

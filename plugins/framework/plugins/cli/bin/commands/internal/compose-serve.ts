@@ -288,7 +288,9 @@ async function serveOne(opts: {
     // both success and failure so a failed composition still has a Logs /
     // Profiling detail to inspect. closeRun is guarded (isNull(finishedAt)).
     prof.write(MAIN_WORKTREE_NAME, compRunId);
-    logs.write(MAIN_WORKTREE_NAME, compRunId);
+    // Same `ok ? 0 : 1` the row is closed with on the next line, so this
+    // composition's artifact and its ledger row report the same outcome.
+    logs.write(MAIN_WORKTREE_NAME, compRunId, ok ? 0 : 1);
     await stage.recorder.closeRun(compRunId, ok ? 0 : 1);
   }
 }

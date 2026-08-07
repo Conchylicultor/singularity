@@ -14080,8 +14080,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
               - `infra/file-sink.defineFileSink`
+              - `infra/paths.pruneWorktreeCheckArtifacts`
               - `infra/paths.REPO_ROOT`
               - `infra/paths.SINGULARITY_DIR`
+              - `infra/paths.worktreeArtifacts`
               - `infra/spawn.getWorktreeRoot`
               - `infra/spawn.spawnCaptured`
               - `plugin-meta/parse-utils.findImports`
@@ -15922,6 +15924,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ATTACHMENTS_DIR`
           - `BACKUPS_DIR`
           - `BUILD_ARTIFACTS_RETENTION`
+          - `CHECK_ARTIFACTS_RETENTION`
           - `CLAUDE`
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
@@ -15942,6 +15945,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PGREP`
           - `PLUGINS_DIR`
           - `pruneWorktreeBuildArtifacts`
+          - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeReleaseArtifacts`
           - `PS`
           - `RELEASE_ARTIFACTS_RETENTION`
@@ -15964,6 +15968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `ATTACHMENTS_DIR`
           - `BACKUPS_DIR`
+          - `CHECK_ARTIFACTS_RETENTION`
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
@@ -15979,6 +15984,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LEGACY_AUTH_KEY`
           - `MAIN_WORKTREE_NAME`
           - `PLUGINS_DIR`
+          - `pruneWorktreeCheckArtifacts`
           - `releaseIdentity`
           - `REPO_CONFIG_DIR`
           - `REPO_ROOT`

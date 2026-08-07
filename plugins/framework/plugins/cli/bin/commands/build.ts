@@ -952,6 +952,12 @@ export function registerBuild(program: Command) {
           // point after this call. With it the guard prints BUILD ABORTED rather
           // than BUILD FAILED for a build that was killed rather than broken.
           termination: () => termination,
+          // A build killed here reaches none of the writeBuildLogs calls below, so
+          // the guard writes the transcript its own pointer names. Whatever steps
+          // had closed by then are all green (the one it died inside never closed),
+          // which is why the artifact carries the exit code rather than letting a
+          // reader infer it — see BuildLogs.exitCode.
+          onFallback: (v, code) => writeBuildLogs(name, renderVerdict(v), code),
         });
 
         // Catchable fatal signals → graceful exit so the exit handlers above
@@ -1304,7 +1310,7 @@ export function registerBuild(program: Command) {
 
         // The FULL checks pass stays HERE rather than moving into the shared
         // pipeline: it is build-specific observability — the untruncated
-        // `check.log` plus a per-check `pushBuildSpan` that draws the build
+        // check transcript plus a per-check `pushBuildSpan` that draws the build
         // Gantt's `build:checks` lane. Validation is not artifact production, so
         // stage 3 takes it as a companion job sharing its ONE host grant.
         const fullChecksJob: HeavyJob = async (grant) => {
@@ -1313,9 +1319,10 @@ export function registerBuild(program: Command) {
           const ok = await runChecks(undefined, {
             // The build's host CPU grant — type-check spends it per worker.
             grant,
-            // Full, untruncated check output lands here; the buffered
-            // `lines` (console + build.log) stay summarized.
-            logFile: join(worktreeDataDir(name), "check.log"),
+            // Full, untruncated check output lands in this build's own
+            // `check-<buildId>.log`, beside its other per-run artifacts; the
+            // buffered `lines` (console + build.log) stay summarized.
+            logRun: { worktree: name, runId: buildId },
             onCheckDone: (id, durationMs, wallStartMs) => {
               pushBuildSpan(
                 `check:${id}`,
@@ -1344,7 +1351,7 @@ export function registerBuild(program: Command) {
         const companions: HeavyJob[] = opts.skipChecks
           ? await fastValidationJobs({
               root,
-              checkLogFile: join(worktreeDataDir(name), "check.log"),
+              checkLogRun: { worktree: name, runId: buildId },
               background: backgroundBuild,
               hooks,
             })
@@ -1445,7 +1452,7 @@ export function registerBuild(program: Command) {
           ];
           if (stepResults.some((r) => r.id === "checks" && !r.success)) {
             pointers.push(
-              `Check logs:  ${join(worktreeDataDir(name), "check.log")}`,
+              `Check logs:  ${worktreeArtifacts.checkLog(name, buildId)}`,
             );
           }
           // Asked here, at the ONE funnel every failure routes through, so no
@@ -1475,7 +1482,11 @@ export function registerBuild(program: Command) {
                   pointers,
                   steps: stepRoster(),
                 };
-          writeBuildLogs(name, renderVerdict(v));
+          // The one code this failure ends on. Resolved here rather than beside
+          // closeRun below so the artifact, main's ledger row and the receipt are
+          // all stamped from the same value and cannot disagree.
+          const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
+          writeBuildLogs(name, renderVerdict(v), exitCode);
           // Close main's build_runs row as failed, BEFORE finalizeBuild releases the
           // recorder pool. Main-target only: an agent worktree's row lives in its
           // own DB (the recorder always targets main's), so this is scoped to avoid
@@ -1483,7 +1494,6 @@ export function registerBuild(program: Command) {
           // only after main's row was already closed 0 at deploy — hits closeRun's
           // isNull(finishedAt) guard as a no-op, so main's row keeps reflecting the
           // successful main deploy (decision 1).
-          const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
           if (isMainBuild) await recorder.closeRun(buildId, exitCode);
           // `superseded` is its own receipt status, not a flavour of `failed`:
           // the tree moved mid-build, so this build answers for no coherent tree —
@@ -1672,7 +1682,7 @@ export function registerBuild(program: Command) {
           flushFootprint();
           writeBuildProfile(name);
           const okV = buildOkVerdict();
-          writeBuildLogs(name, renderVerdict(okV));
+          writeBuildLogs(name, renderVerdict(okV), 0);
           await finalizeBuild(true);
           emitVerdict(okV);
           return;
@@ -1769,7 +1779,7 @@ export function registerBuild(program: Command) {
         flushFootprint();
         writeBuildProfile(name);
         const okV = buildOkVerdict();
-        writeBuildLogs(name, renderVerdict(okV));
+        writeBuildLogs(name, renderVerdict(okV), 0);
         await finalizeBuild(true);
         emitVerdict(okV);
       },

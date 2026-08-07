@@ -13,7 +13,8 @@ export interface CheckContext {
   /**
    * Emit a NON-FATAL OBSERVATION from inside a check — a measurement, a capacity
    * note, anything a passing check needs to say. The line goes wherever the
-   * runner's own lines go: the console AND the durable transcript (`check.log`,
+   * runner's own lines go: the console AND the durable transcript (the run's own
+   * `check-<runId>.log`,
    * and the build's checks section in `build.log`), so an observation is
    * greppable after the fact instead of scrolling past in a terminal.
    *

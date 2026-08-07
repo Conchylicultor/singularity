@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pruneBuildArtifactsInDir, pruneReleaseArtifactsInDir } from "./prune-artifacts";
+import {
+  pruneBuildArtifactsInDir,
+  pruneCheckArtifactsInDir,
+  pruneReleaseArtifactsInDir,
+} from "./prune-artifacts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -122,6 +126,97 @@ describe("pruneBuildArtifactsInDir", () => {
     expect(remaining.has("release-logs-r0.json")).toBe(true);
     expect(remaining.has("release-logs-r1.json")).toBe(true);
     expect(remaining.has("build-profile-c1-1.json")).toBe(false);
+  });
+
+  // The one pair that shares a suffix: both families end in `.log`, so only the
+  // prefix keeps them apart. A build's prune must not reap that build's own
+  // check transcript — the build log's `Check logs:` pointer names it.
+  test("never touches check-family files", () => {
+    const dir = seed([
+      { name: "check-c1-1.log", ageMs: 10_000 },
+      { name: "check-c1-1.log.tmp.777", ageMs: 10_000 },
+      { name: "build-c1-1.log", ageMs: 1_000 },
+    ]);
+
+    pruneBuildArtifactsInDir(dir, 0);
+
+    const remaining = new Set(readdirSync(dir));
+    expect(remaining.has("check-c1-1.log")).toBe(true);
+    expect(remaining.has("check-c1-1.log.tmp.777")).toBe(true);
+    expect(remaining.has("build-c1-1.log")).toBe(false);
+  });
+});
+
+describe("pruneCheckArtifactsInDir", () => {
+  test("keeps the newest N check transcripts and deletes older ones", () => {
+    const files: Array<{ name: string; ageMs: number }> = [];
+    for (let i = 0; i < 5; i++) {
+      const ageMs = (5 - i) * 60_000; // i=0 oldest, i=4 newest
+      files.push({ name: `check-c${i}-${1000 + i}.log`, ageMs });
+    }
+    const dir = seed(files);
+
+    pruneCheckArtifactsInDir(dir, 2);
+
+    const remaining = new Set(readdirSync(dir));
+    for (const i of [3, 4]) {
+      expect(remaining.has(`check-c${i}-${1000 + i}.log`)).toBe(true);
+    }
+    for (const i of [0, 1, 2]) {
+      expect(remaining.has(`check-c${i}-${1000 + i}.log`)).toBe(false);
+    }
+    expect(remaining.size).toBe(2);
+  });
+
+  test("sweeps crashed-write .tmp leftovers regardless of retention", () => {
+    const dir = seed([
+      { name: "check-c9-9.log", ageMs: 1_000 },
+      { name: "check-c8-8.log.tmp.12345", ageMs: 2_000 },
+    ]);
+
+    pruneCheckArtifactsInDir(dir, 50);
+
+    const remaining = new Set(readdirSync(dir));
+    expect(remaining.has("check-c9-9.log")).toBe(true);
+    expect(remaining.has("check-c8-8.log.tmp.12345")).toBe(false);
+  });
+
+  test("reaps the legacy fixed-path check.log", () => {
+    const dir = seed([
+      { name: "check.log", ageMs: 1_000 },
+      { name: "check-c1-1.log", ageMs: 1_000 },
+    ]);
+
+    pruneCheckArtifactsInDir(dir, 50);
+
+    const remaining = new Set(readdirSync(dir));
+    expect(remaining.has("check.log")).toBe(false);
+    expect(remaining.has("check-c1-1.log")).toBe(true);
+  });
+
+  test("never touches build- or release-family files", () => {
+    const dir = seed([
+      { name: "build-profile-c1-1.json", ageMs: 10_000 },
+      { name: "build-logs-c1-1.json", ageMs: 10_000 },
+      { name: "build-c1-1.log", ageMs: 10_000 },
+      { name: "build.log", ageMs: 10_000 },
+      { name: "release-logs-r1.json", ageMs: 10_000 },
+      { name: "check-c1-1.log", ageMs: 1_000 },
+    ]);
+
+    pruneCheckArtifactsInDir(dir, 0);
+
+    const remaining = new Set(readdirSync(dir));
+    expect(remaining.has("build-profile-c1-1.json")).toBe(true);
+    expect(remaining.has("build-logs-c1-1.json")).toBe(true);
+    expect(remaining.has("build-c1-1.log")).toBe(true);
+    expect(remaining.has("build.log")).toBe(true);
+    expect(remaining.has("release-logs-r1.json")).toBe(true);
+    expect(remaining.has("check-c1-1.log")).toBe(false);
+  });
+
+  test("no-ops on a missing dir", () => {
+    expect(() => pruneCheckArtifactsInDir(join(tmpdir(), "nope-xyz-789"), 5)).not.toThrow();
   });
 });
 

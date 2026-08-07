@@ -87,17 +87,25 @@ export async function liveInflightBuildCommit(): Promise<string | null> {
  * profile. We prefer the recorded instant; the caller supplies its own fallback
  * when the artifact carries none.
  *
- * The CLI writes this file — atomically (tmp + rename), exactly once — on both
- * terminal paths: full success (every step green) and a checks/vite step failure
- * (the failing step carries success=false), and never mid-build. So a non-null
- * return is a race-free "build finished" push signal: reconcileOrphanBuilds uses
- * it both to recover the exit code AND as the terminal-detection condition, even
- * while the CLI pid may still be alive for the moment before it reaps.
+ * The CLI writes this file — atomically (tmp + rename), exactly once — at every
+ * terminal it can reach: full success, a checks/vite step failure, and an abort,
+ * where the process was ended from outside and the exit-time verdict guard is the
+ * writer. Never mid-build. So a non-null return is a race-free "build finished"
+ * push signal: reconcileOrphanBuilds uses it both to recover the exit code AND as
+ * the terminal-detection condition, even while the CLI pid may still be alive for
+ * the moment before it reaps.
+ *
+ * The exit code comes from the artifact's own `exitCode`, never from the steps,
+ * because an aborted build's steps are all green — the one it died inside never
+ * closed — so a `steps.every(s => s.success)` reading would report a kill as a
+ * successful deploy. That derivation survives only as the fallback for artifacts
+ * written before `exitCode` existed.
  *
  * Returns `null` when the artifact is absent (ENOENT — a hard SIGKILL, or a
  * post-publish boot/health-probe failure that exits before the log is written),
- * unparseable (SyntaxError), or carries no terminal step / no `finishedAt` — i.e.
- * no clean terminal signal. Any other read error is a genuine fault and rethrows.
+ * unparseable (SyntaxError), or carries no `finishedAt` / neither an `exitCode`
+ * nor a step to derive one from — i.e. no clean terminal signal. Any other read
+ * error is a genuine fault and rethrows.
  */
 export function readBuildTerminal(
   buildId: string,
@@ -108,13 +116,14 @@ export function readBuildTerminal(
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
       steps?: Array<{ success: boolean }>;
       finishedAt?: number;
+      exitCode?: number;
     };
     const steps = parsed.steps ?? [];
-    // The artifact always carries at least the terminal step on both success and
-    // step-failure paths, and always carries `finishedAt`. Absent either ⇒ no
-    // recorded terminal ⇒ null, so the caller supplies its own -1/now sentinel.
-    if (steps.length === 0 || parsed.finishedAt == null) return null;
-    const exitCode = steps.every((s) => s.success) ? 0 : 1;
+    // A terminal record is `finishedAt` plus something to read the outcome from.
+    // An abort can close zero steps, so step-count alone no longer qualifies it.
+    if (parsed.finishedAt == null) return null;
+    if (parsed.exitCode == null && steps.length === 0) return null;
+    const exitCode = parsed.exitCode ?? (steps.every((s) => s.success) ? 0 : 1);
     return { exitCode, finishedAt: new Date(parsed.finishedAt) };
   } catch (err) {
     if (
@@ -124,6 +133,76 @@ export function readBuildTerminal(
       throw err;
     return null;
   }
+}
+
+/** Writes `contents` at `path` atomically, unless something is already there. */
+function writeArtifactIfAbsent(path: string, contents: string): void {
+  // Never overwrite the CLI's own: it is the authoritative writer, this is only
+  // the recovery for the case where it never got to run one.
+  if (existsSync(path)) return;
+  const tmp = `${path}.tmp.${process.pid}`;
+  writeFileSync(tmp, contents);
+  renameSync(tmp, path);
+}
+
+/** The one line that tells a reader this transcript is not the build's own. */
+const RECOVERED_HEADER =
+  "(recovered by the backend — this build was killed before writing its own transcript)";
+
+/**
+ * Write, from the output this backend captured, the artifacts a build died before
+ * writing itself. SIGKILL runs no handler, so the CLI's own exit-time guard never
+ * fires and both of these are missing — including `build-<id>.log`, which the
+ * build's verdict names on its last line, so without this the pointer a reader
+ * follows resolves to nothing.
+ *
+ * Both files, from one helper, so a future third artifact cannot be half-written:
+ * the set is written together or not at all. Each write is skipped when the CLI's
+ * own file is already there, and each is atomic, so a reader never sees a partial.
+ *
+ * `exitCode` is the code the caller also stamps on the build_runs row, which is
+ * what makes the artifact and the row agree by construction — `readBuildTerminal`
+ * then recovers the same value a later reconcile pass would have had to guess.
+ */
+export function recoverBuildArtifacts(opts: {
+  worktree: string;
+  buildId: string;
+  lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
+  durationMs: number;
+  finishedAt: Date;
+  exitCode: number;
+}): void {
+  const { worktree, buildId, lines, durationMs, finishedAt, exitCode } = opts;
+  mkdirSync(worktreeDataDir(worktree), { recursive: true });
+  // One synthetic step holding the whole captured stream: the CLI's per-step
+  // structure died with it, and inventing a shape it never reported would be
+  // worse than a single honest block.
+  const logs = {
+    steps: [{
+      id: "raw",
+      label: "Build Output",
+      lines,
+      durationMs,
+      success: exitCode === 0,
+    }],
+    // Terminal instant, so a later reconcile pass reading this fallback artifact
+    // recovers the real finish rather than its own `now`.
+    finishedAt: finishedAt.getTime(),
+    exitCode,
+  };
+  writeArtifactIfAbsent(
+    worktreeArtifacts.buildLogs(worktree, buildId),
+    JSON.stringify(logs) + "\n",
+  );
+  // Verbatim, under the header — this is the text the verdict's `Full output:`
+  // pointer promised, and reformatting it would make the two disagree.
+  writeArtifactIfAbsent(
+    worktreeArtifacts.buildLogText(worktree, buildId),
+    [RECOVERED_HEADER, "", ...lines.map((l) => l.text)].join("\n") + "\n",
+  );
+  // A build the backend had to recover (mid-build restart) may never have reached
+  // the CLI's own prune, so cap this namespace's artifacts here too.
+  pruneWorktreeBuildArtifacts(worktree);
 }
 
 /**
@@ -342,39 +421,28 @@ async function doRunBuild(
   // CLI that died before stamping); the `isNull(finishedAt)` guard below makes it
   // first-writer-wins so it never overwrites the CLI's authoritative close.
 
+  // Sampled once and shared with the recovery below, so the instant on the row
+  // and the instant in the artifact are literally the same value.
+  const finishedAt = new Date();
+
   if (exitCode !== 0 && allLines.length > 0) {
     const worktreeName = process.env.SINGULARITY_WORKTREE;
     if (worktreeName) {
-      const worktreeDir = worktreeDataDir(worktreeName);
-      mkdirSync(worktreeDir, { recursive: true });
-      const logPath = worktreeArtifacts.buildLogs(worktreeName, buildId);
-      if (!existsSync(logPath)) {
-        const tmp = `${logPath}.tmp.${process.pid}`;
-        const logs = {
-          steps: [{
-            id: "raw",
-            label: "Build Output",
-            lines: allLines,
-            durationMs: Date.now() - buildStartMs,
-            success: false,
-          }],
-          // Terminal instant, so a later reconcile pass reading this fallback
-          // artifact recovers the real finish rather than its own `now`.
-          finishedAt: Date.now(),
-        };
-        writeFileSync(tmp, JSON.stringify(logs) + "\n");
-        renameSync(tmp, logPath);
-      }
-      // A build the backend had to recover (mid-build restart) may never have
-      // reached the CLI's own prune, so cap this namespace's artifacts here too.
-      pruneWorktreeBuildArtifacts(worktreeName);
+      recoverBuildArtifacts({
+        worktree: worktreeName,
+        buildId,
+        lines: allLines,
+        durationMs: finishedAt.getTime() - buildStartMs,
+        finishedAt,
+        exitCode,
+      });
     }
   }
 
   // The terminal outcome, written once and then READ BACK by the notification
   // arms below through `buildStatusOf` — so the bell and the run's own status
   // badge are derived from the same row by the same function, and cannot drift.
-  const outcome = { finishedAt: new Date(), exitCode };
+  const outcome = { finishedAt, exitCode };
   await db
     .update(_buildRuns)
     .set(outcome)

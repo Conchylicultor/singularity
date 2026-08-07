@@ -20,6 +20,16 @@ export interface BuildLogs {
    * reads this field so Duration reflects the real finish, not the reconcile.
    */
   finishedAt: number;
+  /**
+   * The exit code this build ended on, stamped by whoever writes: 0 on success,
+   * 1 / BUILD_EXIT_SUPERSEDED from failBuild, 128+signo from the abort guard.
+   *
+   * Carried rather than inferred because the artifact is no longer written only
+   * at a COMPLETE terminal. An aborted build writes whatever steps it had
+   * finished — all of them green, since the one it died inside never closed — so
+   * `steps.every(s => s.success)` would read a kill as a successful deploy.
+   */
+  exitCode: number;
 }
 
 /**
@@ -41,8 +51,12 @@ export interface StepLogCollector {
    * synthetic step can never itself fail the orphan-exit verdict.
    */
   line(text: string, stream: "stdout" | "stderr"): void;
-  /** Writes `build-logs-<runId>.json` + `build-<runId>.log` under worktree `name`. */
-  write(name: string, runId: string, trailer?: string): void;
+  /**
+   * Writes `build-logs-<runId>.json` + `build-<runId>.log` under worktree `name`.
+   * `exitCode` is the code the run ends on — the caller stamps it here and on the
+   * run's ledger row from the same value, so artifact and row cannot disagree.
+   */
+  write(name: string, runId: string, exitCode: number, trailer?: string): void;
 }
 
 /** Plain-text render of every step, mirroring the console layout. */
@@ -68,7 +82,12 @@ interface StepLogCollectorInternal extends StepLogCollector {
    * collector can still produce the unsuffixed `build-logs.json` / `build.log`) and
    * returning the text-log path for the failure-line pointer.
    */
-  writeLogs(name: string, buildId: string | undefined, trailer?: string): string;
+  writeLogs(
+    name: string,
+    buildId: string | undefined,
+    exitCode: number,
+    trailer?: string,
+  ): string;
 }
 
 function makeStepLogCollector(): StepLogCollectorInternal {
@@ -80,9 +99,10 @@ function makeStepLogCollector(): StepLogCollectorInternal {
   function writeLogs(
     name: string,
     buildId: string | undefined,
+    exitCode: number,
     trailer?: string,
   ): string {
-    const logs: BuildLogs = { steps, finishedAt: Date.now() };
+    const logs: BuildLogs = { steps, finishedAt: Date.now(), exitCode };
     const dir = worktreeDataDir(name);
     mkdirSync(dir, { recursive: true });
     const jsonPath = worktreeArtifacts.buildLogs(name, buildId);
@@ -121,8 +141,8 @@ function makeStepLogCollector(): StepLogCollectorInternal {
     pushStep(step) {
       steps.push(step);
     },
-    write(name, runId, trailer) {
-      writeLogs(name, runId, trailer);
+    write(name, runId, exitCode, trailer) {
+      writeLogs(name, runId, exitCode, trailer);
     },
     writeLogs,
   };
@@ -146,7 +166,10 @@ export function pushBuildStepLog(step: BuildStepLog): void {
  * absolute path to the text log so callers can point at it on the last line of
  * a failure — readable directly, even when the console output was piped through
  * `tail`.
+ *
+ * Fully synchronous (writeFileSync + renameSync), so the exit-time verdict guard
+ * — which prints the pointer at that path — can call it from its exit handler.
  */
-export function writeBuildLogs(name: string, trailer?: string): string {
-  return defaultCollector.writeLogs(name, process.env.SINGULARITY_BUILD_ID, trailer);
+export function writeBuildLogs(name: string, trailer: string, exitCode: number): string {
+  return defaultCollector.writeLogs(name, process.env.SINGULARITY_BUILD_ID, exitCode, trailer);
 }

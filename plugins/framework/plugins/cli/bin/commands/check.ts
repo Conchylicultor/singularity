@@ -1,4 +1,4 @@
-import { basename, join } from "path";
+import { basename } from "path";
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
 import { reportInterruptedPredecessor } from "../build-receipt";
@@ -6,7 +6,7 @@ import { installFatalSignalExit } from "../fatal-signals";
 import { signalOriginTap } from "../signal-origin-tap";
 import { withHostGrant, inheritedGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
-import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
+import { MAIN_WORKTREE_NAME, worktreeArtifacts } from "../paths";
 import { publishLane } from "../lane";
 import { listAllChecks, readCheckProgress, runChecks, scopeOf, type RunChecksOptions } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { CHECK_SCOPES, type CheckScope } from "@plugins/framework/plugins/tooling/core";
@@ -126,12 +126,11 @@ export function registerCheck(program: Command) {
       }
       await checkBroadcasts("check");
 
-      // Resolve the worktree slug once: it names both the op marker and the
-      // full-output log file. The full check transcript is always written here
-      // so a failure's real cause is one `cat` away even when the console copy
-      // is truncated or piped through `tail`.
+      // Resolve the worktree slug once: it names the op marker and the data dir
+      // this run's transcript is written into. The full check transcript is
+      // always written so a failure's real cause is one `cat` away even when the
+      // console copy is truncated or piped through `tail`.
       const { slug, branch } = await getWorktreeIdentity();
-      const logFile = join(worktreeDataDir(slug), "check.log");
 
       // An interrupted build prints no verdict and sets no exit code its caller
       // can see, so the next op is where it surfaces. Checks are very often run
@@ -176,6 +175,13 @@ export function registerCheck(program: Command) {
       // op-log record and the signal-origin sink line are about the same run, so
       // "who killed this check?" resolves to a row the profiler also wrote.
       const opId = crypto.randomUUID();
+
+      // …and shared once more, with this run's transcript: `check-<opId>.log`
+      // sits in the worktree's data dir beside a build's artifacts, so the three
+      // records of one run (op row, kill line, transcript) all answer to the
+      // same id. Derived here rather than passed in, so the path this prints and
+      // the path the runner writes are the same expression.
+      const checkLogPath = worktreeArtifacts.checkLog(slug, opId);
 
       const profiler = marker
         ? createOpProfiler("check", {
@@ -251,7 +257,7 @@ export function registerCheck(program: Command) {
               : undefined,
             noCache: opts.cache === false,
             scope,
-            logFile,
+            logRun: { worktree: slug, runId: opId },
             log: (line, stream) =>
               stream === "stderr" ? console.error(line) : console.log(line),
           };
@@ -267,7 +273,7 @@ export function registerCheck(program: Command) {
         profiler?.complete(ok ? "success" : "failed");
         if (!ok) {
           // Last line, so it survives `./singularity check | tail`.
-          console.error(`\nFull check output: ${logFile}`);
+          console.error(`\nFull check output: ${checkLogPath}`);
           process.exit(1);
         }
       } finally {

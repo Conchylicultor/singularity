@@ -1,6 +1,15 @@
 import { readdirSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { worktreeDataDir } from "../../core/internal/paths";
+import { worktreeDataDir } from "./paths";
+
+/*
+ * Lives in `core/` beside `paths.ts` — the layout it mirrors — rather than in
+ * `server/`, which is where it started when every caller happened to be a server
+ * plugin. The check transcript's writer is the check RUNNER, a `core`-runtime
+ * module that cannot import a `server` barrel; and there is nothing server-side
+ * about the code itself (`node:fs` only, same as spawn/core and file-sink/core).
+ * `server/index.ts` re-exports the whole surface, so no caller changed.
+ */
 
 /**
  * How many recent per-build artifact *sets* to retain per worktree. A "set" is all
@@ -34,10 +43,24 @@ export const BUILD_ARTIFACTS_RETENTION = 50;
 export const RELEASE_ARTIFACTS_RETENTION = 50;
 
 /**
+ * How many recent per-run check transcripts (`check-<id>.log`) to retain per
+ * worktree.
+ *
+ * Same disk-bound rationale as {@link BUILD_ARTIFACTS_RETENTION}, and the same
+ * number on purpose: a build's checks write one of these per build, so a smaller
+ * window would reap the transcript of a build whose `build-<id>.log` is still
+ * there — and the build log's `Check logs:` pointer would then name a file that
+ * no longer exists. Standalone `./singularity check` runs share the window, so
+ * the true depth is "the last 50 check runs", not "the last 50 builds".
+ */
+export const CHECK_ARTIFACTS_RETENTION = 50;
+
+/**
  * An id-keyed on-disk artifact family living in the per-worktree data dir. Each
- * family is pruned independently to its own retention window; the families are
- * disjoint id-namespaces (a build id and a release id never collide), so keeping
- * the newest N of one never affects the other.
+ * family is pruned independently to its own retention window, and a prune only
+ * ever sees filenames matching its OWN patterns — so keeping the newest N of one
+ * family never affects another, even where two families share a run id (a build
+ * and its check transcript deliberately do).
  */
 interface ArtifactFamily {
   /**
@@ -74,6 +97,19 @@ const RELEASE_FAMILY: ArtifactFamily = {
   tmpPrefixes: ["release-logs-"],
 };
 
+// Check transcripts: a single always-id-keyed family (`check-<id>.log`), where
+// the id is the RUN's id (a build's buildId, a standalone check's opId). Disjoint
+// from the build family by construction — `check-<id>.log` does not start with
+// `build-`, and `build-<id>.log` does not start with `check-` — so neither can
+// reap the other's files even though both end in `.log`.
+const CHECK_FAMILY: ArtifactFamily = {
+  patterns: [{ prefix: "check-", suffix: ".log" }],
+  tmpPrefixes: ["check-"],
+};
+
+/** The one legacy fixed-path check transcript, reaped alongside the family below. */
+const LEGACY_CHECK_LOG = "check.log";
+
 /** The run id an id-keyed artifact filename belongs to, or null if it is not one. */
 function runIdOf(filename: string, patterns: ArtifactFamily["patterns"]): string | null {
   for (const { prefix, suffix } of patterns) {
@@ -92,6 +128,18 @@ function runIdOf(filename: string, patterns: ArtifactFamily["patterns"]): string
 /** A `<path>.tmp.<pid>` leftover from a crashed atomic write in this family. */
 function isCrashedWriteTemp(filename: string, tmpPrefixes: ArtifactFamily["tmpPrefixes"]): boolean {
   return filename.includes(".tmp.") && tmpPrefixes.some((p) => filename.startsWith(p));
+}
+
+/**
+ * Delete one entry, tolerating the races inherent to concurrent readers/writers
+ * (it vanished between the scan and the unlink) but loud on any other fs error.
+ */
+function unlinkQuiet(dir: string, entry: string): void {
+  try {
+    unlinkSync(join(dir, entry));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
 }
 
 /**
@@ -117,20 +165,12 @@ function pruneArtifactsInDir(dir: string, family: ArtifactFamily, keep: number):
     throw err;
   }
 
-  const unlinkQuiet = (entry: string): void => {
-    try {
-      unlinkSync(join(dir, entry));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
-  };
-
   // Group id-keyed files by run id; a group's recency is the newest mtime among
   // its files (a build's profile/logs/log can be written microseconds apart).
   const groups = new Map<string, { files: string[]; mtimeMs: number }>();
   for (const entry of entries) {
     if (isCrashedWriteTemp(entry, family.tmpPrefixes)) {
-      unlinkQuiet(entry);
+      unlinkQuiet(dir, entry);
       continue;
     }
     const id = runIdOf(entry, family.patterns);
@@ -151,7 +191,7 @@ function pruneArtifactsInDir(dir: string, family: ArtifactFamily, keep: number):
   if (groups.size <= keep) return;
   const stale = [...groups.values()].sort((a, b) => b.mtimeMs - a.mtimeMs).slice(keep);
   for (const group of stale) {
-    for (const entry of group.files) unlinkQuiet(entry);
+    for (const entry of group.files) unlinkQuiet(dir, entry);
   }
 }
 
@@ -163,6 +203,21 @@ export function pruneBuildArtifactsInDir(dir: string, keep: number): void {
 /** Directory-scoped release prune, split out so it is testable against a throwaway dir. */
 export function pruneReleaseArtifactsInDir(dir: string, keep: number): void {
   pruneArtifactsInDir(dir, RELEASE_FAMILY, keep);
+}
+
+/**
+ * Directory-scoped check prune, split out so it is testable against a throwaway dir.
+ *
+ * Also reaps the one legacy fixed-path transcript. Before `check-<id>.log`, every
+ * run wrote `check.log`, and that file is exactly the misreading this layout
+ * removed: it holds whichever run last *finished*, so a reader who opens it after
+ * a killed run reads a different run's failures. Leaving it beside the per-run
+ * files preserves the trap. (Removable once the fleet has turned over — nothing
+ * writes it any more.)
+ */
+export function pruneCheckArtifactsInDir(dir: string, keep: number): void {
+  pruneArtifactsInDir(dir, CHECK_FAMILY, keep);
+  unlinkQuiet(dir, LEGACY_CHECK_LOG);
 }
 
 /** Cap the per-build artifacts in one worktree's data dir to the newest `keep` build ids. */
@@ -179,4 +234,12 @@ export function pruneWorktreeReleaseArtifacts(
   keep: number = RELEASE_ARTIFACTS_RETENTION,
 ): void {
   pruneReleaseArtifactsInDir(worktreeDataDir(name), keep);
+}
+
+/** Cap the per-run check transcripts in one worktree's data dir to the newest `keep` run ids. */
+export function pruneWorktreeCheckArtifacts(
+  name: string,
+  keep: number = CHECK_ARTIFACTS_RETENTION,
+): void {
+  pruneCheckArtifactsInDir(worktreeDataDir(name), keep);
 }

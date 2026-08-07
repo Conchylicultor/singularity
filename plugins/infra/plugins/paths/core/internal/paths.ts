@@ -177,6 +177,25 @@ export const worktreeArtifacts = {
    * be confused with. Do not add a `buildId` parameter.
    */
   buildStatus: (name: string): string => join(worktreeDataDir(name), "build-status.json"),
+  /**
+   * One check run's full, untruncated transcript. ALWAYS id-keyed (like
+   * `releaseLogs`, unlike `buildStatus` directly above), and for a reason that
+   * is the mirror image of the receipt's.
+   *
+   * A transcript is only COMPLETE once its run ends. Under a fixed path, a run
+   * killed mid-checks therefore writes nothing and silently leaves its
+   * predecessor's file in place — so the killed run's own verdict points a
+   * reader at another run's failures. The receipt escapes that trap from the
+   * other side: it is written EARLY and is meaningful while incomplete, so it
+   * never needs an id. A transcript cannot be, so it buys the same guarantee
+   * with identity instead. Do not converge the two.
+   *
+   * `runId` is the caller's OWN id — a build's `buildId`, a standalone check's
+   * `opId` — never a fresh one: reusing it is what joins this file to the
+   * `build-<id>.log` beside it and to the run's lines in `check-progress.jsonl`.
+   */
+  checkLog: (name: string, runId: string): string =>
+    join(worktreeDataDir(name), `check-${runId}.log`),
   /** Per-release fallback log. Always keyed to a release run id. */
   releaseLogs: (name: string, releaseId: string): string =>
     join(worktreeDataDir(name), `release-logs-${releaseId}.json`),

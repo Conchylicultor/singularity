@@ -39,9 +39,11 @@ export { listWorktreeDirs } from "./internal/worktree-dirs";
 export {
   pruneWorktreeBuildArtifacts,
   pruneWorktreeReleaseArtifacts,
+  pruneWorktreeCheckArtifacts,
   BUILD_ARTIFACTS_RETENTION,
   RELEASE_ARTIFACTS_RETENTION,
-} from "./internal/prune-artifacts";
+  CHECK_ARTIFACTS_RETENTION,
+} from "../core/internal/prune-artifacts";
 
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 

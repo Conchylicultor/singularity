@@ -28,8 +28,10 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `infra/file-sink.defineFileSink`
+    - `infra/paths.pruneWorktreeCheckArtifacts`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.SINGULARITY_DIR`
+    - `infra/paths.worktreeArtifacts`
     - `infra/spawn.getWorktreeRoot`
     - `infra/spawn.spawnCaptured`
     - `plugin-meta/parse-utils.findImports`
