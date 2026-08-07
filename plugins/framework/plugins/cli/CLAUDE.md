@@ -17,6 +17,7 @@ when it is an ordered *stage sequence* rather than a helper, in
 | `check` | Run the repo validation checks (also the first step of `push`, and mid-`build`). |
 | `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
 | `push` | Checks → merge the worktree branch back into main → push. |
+| `format` | Prettier over the `.ts`/`.tsx` changed on this branch — the same pass `build` runs, in seconds. It exists because `push` never builds, so a `format-clean` failure would otherwise cost a full build. |
 | `regen-generated` / `regen-migrations` | The repo-tree codegen and migration-generation pipelines as standalone commands (used by the normalize pass). |
 | `normalize-generated` | Marker-gated repair of generated artifacts a merge driver auto-resolved. Invoked by the `post-rewrite` hook; rarely run by hand. |
 | `apply-migrations` / `serve-app` | Runtime entrypoints a released bundle's launcher invokes. |

@@ -4,6 +4,7 @@ import {
   preBarrelManifests,
   type PreBarrelManifest,
 } from "./pre-barrel-manifests";
+import { formatGenerated } from "./write-generated";
 
 /**
  * Runtime freeze-point guard for the pre-barrel manifest invariant.
@@ -22,7 +23,10 @@ export async function assertPreBarrelManifestsFresh(
   const stale: { m: PreBarrelManifest; rel: string }[] = [];
   for (const m of preBarrelManifests) {
     const file = m.path(root);
-    const next = await m.render(root);
+    // Through the same funnel `writePreBarrelManifest` writes with — comparing
+    // raw render output against formatted bytes on disk would report every
+    // manifest as stale and abort the build.
+    const next = await formatGenerated(file, await m.render(root));
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) stale.push({ m, rel: relative(root, file) });
   }

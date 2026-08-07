@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync } from "fs";
 import { join, relative } from "path";
+import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./docgen";
 import {
   registerBarrelStubs,
@@ -97,9 +98,7 @@ async function collectTokenGroupVarsUncached(
     }
     const def = mod.default as
       | {
-          contributions?: Array<
-            Record<string, unknown> & { _slotId?: string }
-          >;
+          contributions?: Array<Record<string, unknown> & { _slotId?: string }>;
         }
       | undefined;
     const contributions = def?.contributions;
@@ -108,8 +107,7 @@ async function collectTokenGroupVarsUncached(
       if (c._slotId !== TOKEN_GROUP_SLOT_ID) continue;
       const id = c.id;
       const descriptor = c.descriptor as
-        | { vars?: Record<string, string> }
-        | undefined;
+        { vars?: Record<string, string> } | undefined;
       if (typeof id !== "string" || !descriptor?.vars) continue;
       const vars = Object.values(descriptor.vars).filter(
         (v): v is string => typeof v === "string",
@@ -128,7 +126,9 @@ function renderManifest(byGroup: Record<string, string[]>): string {
   lines.push(
     "export const TOKEN_GROUP_VARS: Record<string, readonly string[]> = {",
   );
-  for (const groupId of Object.keys(byGroup).sort((a, b) => a.localeCompare(b))) {
+  for (const groupId of Object.keys(byGroup).sort((a, b) =>
+    a.localeCompare(b),
+  )) {
     const vars = byGroup[groupId]!;
     const rendered = vars.map((v) => JSON.stringify(v)).join(", ");
     lines.push(`  ${JSON.stringify(groupId)}: [${rendered}],`);
@@ -155,8 +155,8 @@ export async function renderTokenGroupVarsManifest(
 export async function generateTokenGroupVars(opts: {
   root: string;
 }): Promise<void> {
-  const next = await renderTokenGroupVarsManifest(opts.root);
-  const file = tokenGroupVarsManifestPath(opts.root);
-  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-  if (next !== existing) writeFileSync(file, next);
+  await writeGenerated(
+    tokenGroupVarsManifestPath(opts.root),
+    await renderTokenGroupVarsManifest(opts.root),
+  );
 }

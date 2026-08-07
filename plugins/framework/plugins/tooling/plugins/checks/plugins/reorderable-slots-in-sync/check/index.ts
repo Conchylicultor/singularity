@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   renderReorderableSlotsManifest,
   reorderableSlotsManifestPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -48,7 +49,10 @@ const check: Check = {
       };
     }
     const committed = readFileSync(file, "utf8");
-    const rendered = await renderReorderableSlotsManifest(root);
+    const rendered = await formatGenerated(
+      file,
+      await renderReorderableSlotsManifest(root),
+    );
     if (committed !== rendered) {
       const committedIds = new Set(parseSlots(committed).map((s) => s.slotId));
       const added = parseSlots(rendered).filter(

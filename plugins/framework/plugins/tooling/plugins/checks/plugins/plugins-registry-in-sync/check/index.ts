@@ -5,6 +5,7 @@ import {
   renderCollectedDirRegistry,
   collectedDirRegistryPath,
   buildRegistryGenContext,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -29,7 +30,11 @@ const check: Check = {
           hint: "Run `./singularity build` to generate it.",
         };
       }
-      if (readFileSync(file, "utf8") !== renderCollectedDirRegistry({ ctx, def })) {
+      const expected = await formatGenerated(
+        file,
+        renderCollectedDirRegistry({ ctx, def }),
+      );
+      if (readFileSync(file, "utf8") !== expected) {
         return {
           ok: false,
           message: `${rel} is out of sync with plugin source`,

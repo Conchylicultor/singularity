@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
+import { writeGenerated } from "./write-generated";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
@@ -51,7 +52,8 @@ const MANIFEST_HEADER = [
 
 // A fields capability sub-plugin whose `server` barrel must be eagerly loaded:
 // `fields/plugins/<type>/plugins/{storage,filter-sql}`.
-const CAPABILITY_RE = /^fields\/plugins\/[^/]+\/plugins\/(?:storage|filter-sql)$/;
+const CAPABILITY_RE =
+  /^fields\/plugins\/[^/]+\/plugins\/(?:storage|filter-sql)$/;
 
 function hasDefaultExport(file: string): boolean {
   // Mask comments/regex/strings so a commented-out or string-embedded `export
@@ -69,7 +71,9 @@ function hasDefaultExport(file: string): boolean {
  * specifier of every fields storage/filter-sql `server` barrel with a default
  * export. Sorted for deterministic output.
  */
-export async function collectFieldEagerBarrels(root: string): Promise<string[]> {
+export async function collectFieldEagerBarrels(
+  root: string,
+): Promise<string[]> {
   const tree = await buildPluginTree(resolve(root, "plugins"), {
     skipBarrelImport: true,
   });
@@ -101,9 +105,11 @@ export async function renderFieldsEagerManifest(root: string): Promise<string> {
 }
 
 /** Regenerate `eager.generated.ts` if it drifted. */
-export async function generateFieldsEager(opts: { root: string }): Promise<void> {
-  const next = await renderFieldsEagerManifest(opts.root);
-  const file = fieldsEagerManifestPath(opts.root);
-  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-  if (next !== existing) writeFileSync(file, next);
+export async function generateFieldsEager(opts: {
+  root: string;
+}): Promise<void> {
+  await writeGenerated(
+    fieldsEagerManifestPath(opts.root),
+    await renderFieldsEagerManifest(opts.root),
+  );
 }

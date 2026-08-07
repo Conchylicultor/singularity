@@ -3236,6 +3236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useSonata`
+                  - `primitives/css/clip.Clip`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/slot-render.renderIsolated`
@@ -14147,11 +14148,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`durable-signals-accounted`**
             - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
+            - **`format-clean`**
             - **`generated-artifacts-normalized`**
             - **`host-budget`**
             - **`host-pools-declared`**
             - **`inherited-theme-defaults-scoped`**
             - **`keyed-resource-scope`**
+            - **`lint-directives-stable`**
             - **`migration-hashes-unique`**
             - **`migration-metadata-consistent`**
             - **`migrations-in-sync`**
@@ -14197,6 +14200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/plugin-id.asPluginId`
               - `framework/plugin-id.PluginId`
               - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
+              - `framework/tooling/format.formatSource`
               - `plugin-meta/barrel-import.AUTO_STUB_CSS`
               - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
               - `plugin-meta/barrel-import.AutoStubEntry`
@@ -14264,6 +14268,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `extractRuntimeImportSpecifiers`
               - `fieldsEagerManifestPath`
               - `fileConfigProxy`
+              - `formatGenerated`
               - `generateBarrelStubs`
               - `generateCompositionRegistry`
               - `generateConfigOrigins`
@@ -14313,6 +14318,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `setDefaultOriginDefaultsPreparer`
               - `standardPluginDirs`
               - `tokenGroupVarsManifestPath`
+              - `writeGenerated`
               - `writePreBarrelManifest`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
@@ -14383,6 +14389,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder/node-types`
               - `shell/toast`
               - `tasks/launch-options`
+        - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
+          - Core:
+            - Uses: `infra/spawn.spawnCaptured`
+            - Exports (types):
+              - `DirectiveDisplacement`
+              - `DirectiveTarget`
+            - Exports (values):
+              - `findDirectiveDisplacements`
+              - `findDisplacedDirectives`
+              - `findUnformatted`
+              - `formatChangedSources`
+              - `formatDirectiveDisplacementReport`
+              - `formatSource`
+              - `FORMATTABLE_EXTENSIONS`
+              - `isFormattable`
+              - `listChangedFormattableFiles`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses: `infra/paths.HOME_DIR`
@@ -14416,6 +14440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
+            - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
@@ -16206,6 +16231,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
+          - `framework/tooling/format`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally.
       - Cross-plugin:
         - Imported by: `apps/deploy/health`
@@ -19684,6 +19710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/primitives/keyboard`
+              - `apps/sonata/progress/scrubber`
               - `apps/studio/graph`
               - `apps/website/demos/release-switcher`
               - `backup`

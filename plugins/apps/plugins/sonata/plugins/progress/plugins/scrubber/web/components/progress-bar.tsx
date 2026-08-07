@@ -10,6 +10,7 @@ import {
   scoreEndBeat,
   buildTempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SonataProgress } from "../slots";
@@ -182,10 +183,13 @@ export function ProgressBar() {
         aria-valuenow={0}
         onPointerDown={ready ? onPointerDown : undefined}
         onPointerMove={ready ? onPointerMove : undefined}
+        // Kept on ONE line deliberately: block-form eslint directives are not
+        // expressible in JSX attribute position, so this stays positional — and
+        // a positional directive is only stable if formatting cannot move it.
+        // This is already prettier's own output, so the format pass is a no-op
+        // here (see `lint-directives-stable`).
         // eslint-disable-next-line layout/no-adhoc-layout -- flexible track fills the row; a role="slider" positioning context with pointer handlers has no primitive home
-        className={
-          "relative flex-1 py-md" + (ready ? " cursor-pointer" : "")
-        }
+        className={"relative flex-1 py-md" + (ready ? " cursor-pointer" : "")}
       >
         {/* Layering (bottom → top): the rail track + fill are the background
             bar, the marker layer is the annotation stratum painted *on* the
@@ -196,10 +200,12 @@ export function ProgressBar() {
 
         {/* The track rail, centered within the region. Its thickness is the
             single source the on-rail markers (ticks, key bars) align to.
-            `overflow-hidden` clips the scaleX-driven fill so its right edge
-            keeps the rail's rounded cap without per-frame width mutations. */}
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- the rail clips its scaleX-driven fill so the fill keeps the rail's rounded cap without a per-frame width mutation */}
-        <div className={`relative overflow-hidden ${RAIL_THICKNESS} rounded-full bg-muted`}>
+            `<Clip>` — the sanctioned clipping box — keeps the scaleX-driven
+            fill inside the rail's rounded cap without per-frame width
+            mutations. It is the primitive rather than raw `overflow-hidden`
+            because that removes the violation outright: no positional lint
+            directive here for a later format pass to move off its target. */}
+        <Clip className={`relative ${RAIL_THICKNESS} rounded-full bg-muted`}>
           {/* Filled portion up to the playhead. Driven by `transform: scaleX`
               from the cursor subscription (origin-left), so the playback
               advance composites on the GPU and emits no counted DOM mutation. */}
@@ -209,7 +215,7 @@ export function ProgressBar() {
             className="absolute inset-0 origin-left bg-primary"
             style={{ transform: "scaleX(0)" }}
           />
-        </div>
+        </Clip>
 
         {/* Marker layer — spans the full region (not just the rail) so markers
             have vertical headroom for labels/bands above and below the track.
@@ -219,10 +225,14 @@ export function ProgressBar() {
         {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting fraction-positioned contributed markers */}
         <div className="pointer-events-none absolute inset-0">
           {markers.map((m) =>
-            renderIsolated("sonata.progress.marker", m as unknown as Contribution, {
-              score,
-              beatToFraction,
-            }),
+            renderIsolated(
+              "sonata.progress.marker",
+              m as unknown as Contribution,
+              {
+                score,
+                beatToFraction,
+              },
+            ),
           )}
         </div>
 

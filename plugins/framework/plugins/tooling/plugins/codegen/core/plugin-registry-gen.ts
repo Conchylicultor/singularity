@@ -1,11 +1,16 @@
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { findImports, findMarkerCalls, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  findImports,
+  findMarkerCalls,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./docgen";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
+import { writeGenerated } from "./write-generated";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
   ownerDir: string;
@@ -33,7 +38,8 @@ function findCoreBarrels(pluginsRoot: string): string[] {
       entries = readdirSync(dir, { withFileTypes: true });
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
+      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
+        throw err;
       return;
     }
     for (const e of entries) {
@@ -46,7 +52,8 @@ function findCoreBarrels(pluginsRoot: string): string[] {
           children = readdirSync(join(dir, e.name), { withFileTypes: true });
         } catch (err) {
           const code = (err as NodeJS.ErrnoException).code;
-          if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
+          if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
+            throw err;
           continue;
         }
         for (const c of children) {
@@ -68,9 +75,7 @@ const FIRST_STRING_ARG_RE = /^\s*["']([^"']+)["']/;
 // `await` — consume it without a top-level await. A top-level await here would
 // suspend the facet module mid-evaluation inside the facets ⇄ codegen import
 // cycle, surfacing as a TDZ crash ("Cannot access 'default' before initialization").
-export function discoverCollectedDirs(
-  root: string,
-): DiscoveredCollectedDir[] {
+export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
   const pluginsRoot = resolve(root, "plugins");
   const coreBarrels = findCoreBarrels(pluginsRoot);
   const out: DiscoveredCollectedDir[] = [];
@@ -81,7 +86,8 @@ export function discoverCollectedDirs(
       coreFiles = readdirSync(coreDir, { withFileTypes: true });
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
+      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
+        throw err;
       continue;
     }
     for (const entry of coreFiles) {
@@ -233,7 +239,11 @@ function collectImportSpecifiers(pluginDir: string, dir: string): Set<string> {
   return specifiers;
 }
 
-function collectImportPrefixes(pluginDir: string, dir: string, entryPrefixes: Set<string>): Set<string> {
+function collectImportPrefixes(
+  pluginDir: string,
+  dir: string,
+  entryPrefixes: Set<string>,
+): Set<string> {
   const prefixes = new Set<string>();
   for (const mod of collectImportSpecifiers(pluginDir, dir)) {
     if (!mod.startsWith("@plugins/")) continue;
@@ -330,8 +340,9 @@ export function collectEntriesWithDeps(
   const { disabled } = ctx;
   const allEntries = collectEntries(ctx.tree, dir);
   const rawDeps = buildDepsForDir(ctx.root, allEntries, dir);
-  const entries = (bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries)
-    .filter((e) => !disabled.has(asPluginId(e.id)));
+  const entries = (
+    bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries
+  ).filter((e) => !disabled.has(asPluginId(e.id)));
   const survivingPaths = new Set(entries.map((e) => e.pluginPath));
   const deps = new Map<string, string[]>();
   for (const e of entries) {
@@ -373,9 +384,10 @@ export function renderCollectedDirRegistry(opts: {
   lines.push(`export const ${exportName}: CollectedEntry[] = [`);
   for (const e of entries) {
     const entryDeps = deps.get(e.pluginPath) ?? [];
-    const depsLiteral = entryDeps.length > 0
-      ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
-      : "[]";
+    const depsLiteral =
+      entryDeps.length > 0
+        ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
+        : "[]";
     lines.push(
       `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(e.id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral} },`,
     );
@@ -387,9 +399,7 @@ export function renderCollectedDirRegistry(opts: {
 
 // ── Public API ─────────────────────────────────────────────────────
 
-export function collectedDirRegistryPath(
-  def: DiscoveredCollectedDir,
-): string {
+export function collectedDirRegistryPath(def: DiscoveredCollectedDir): string {
   return join(def.ownerDir, "core", `${def.dir}.generated.ts`);
 }
 
@@ -403,10 +413,10 @@ export async function generatePluginRegistry(opts: {
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
-    const file = collectedDirRegistryPath(def);
-    const next = renderCollectedDirRegistry({ ctx, def });
-    const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-    if (next !== existing) writeFileSync(file, next);
+    await writeGenerated(
+      collectedDirRegistryPath(def),
+      renderCollectedDirRegistry({ ctx, def }),
+    );
   }
 }
 
@@ -485,7 +495,11 @@ export function collectedDirNamedCompositionRegistryPath(
   name: string,
 ): string {
   assertCompositionName(name);
-  return join(def.ownerDir, "core", `${def.dir}.composition.${name}.generated.ts`);
+  return join(
+    def.ownerDir,
+    "core",
+    `${def.dir}.composition.${name}.generated.ts`,
+  );
 }
 
 export async function generateCompositionRegistry(opts: {
@@ -504,16 +518,20 @@ export async function generateCompositionRegistry(opts: {
   if (opts.name !== undefined) assertCompositionName(opts.name);
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
-  const dirs = opts.name === undefined ? COMPOSITION_RUNTIME_DIRS : NAMED_COMPOSITION_RUNTIME_DIRS;
+  const dirs =
+    opts.name === undefined
+      ? COMPOSITION_RUNTIME_DIRS
+      : NAMED_COMPOSITION_RUNTIME_DIRS;
   for (const def of defs) {
     if (!dirs.has(def.dir)) continue;
     const file =
       opts.name === undefined
         ? collectedDirCompositionRegistryPath(def)
         : collectedDirNamedCompositionRegistryPath(def, opts.name);
-    const next = renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle });
-    const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-    if (next !== existing) writeFileSync(file, next);
+    await writeGenerated(
+      file,
+      renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle }),
+    );
   }
 }
 
@@ -537,7 +555,10 @@ export async function clearCompositionRegistries(opts: {
 export function parseNamedCompositionRegistryFileName(
   fileName: string,
 ): { dir: string; name: string } | null {
-  const m = /^([a-z]+)\.composition\.([a-z0-9][a-z0-9-]{0,62})\.generated\.ts$/.exec(fileName);
+  const m =
+    /^([a-z]+)\.composition\.([a-z0-9][a-z0-9-]{0,62})\.generated\.ts$/.exec(
+      fileName,
+    );
   if (m === null) return null;
   return { dir: m[1]!, name: m[2]! };
 }

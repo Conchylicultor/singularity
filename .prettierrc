@@ -1,0 +1,11 @@
+# NOT read by the build. `./singularity build` formats through
+# `@plugins/framework/plugins/tooling/plugins/format/core`, whose authority is
+# FORMATTABLE_EXTENSIONS + the hardcoded PRETTIER_OPTIONS object in
+# `core/internal/prettier.ts` — resolveConfig() is deliberately never called, so
+# the writer and the in-sync checkers produce byte-identical output by
+# construction. `.prettierignore` is likewise not honored.
+#
+# This file exists ONLY so editors agree with the build. It is empty (prettier
+# defaults) because that is what the options object encodes; if the two ever
+# disagree, the options object wins and this file is the bug.
+{}

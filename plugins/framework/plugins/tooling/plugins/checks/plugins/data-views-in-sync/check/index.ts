@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   renderDataViewsManifest,
   dataViewsManifestPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -24,7 +25,11 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    if (readFileSync(file, "utf8") !== (await renderDataViewsManifest(root))) {
+    const expected = await formatGenerated(
+      file,
+      await renderDataViewsManifest(root),
+    );
+    if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,
         message: `${rel} is out of sync with the defineDataView ids`,

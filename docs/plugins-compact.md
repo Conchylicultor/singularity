@@ -269,10 +269,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [48 sub-plugins] — Check runner and built-in checks for ./singularity check
+        - **`checks`** [50 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+        - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Plugins:
@@ -283,6 +284,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
+            - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react

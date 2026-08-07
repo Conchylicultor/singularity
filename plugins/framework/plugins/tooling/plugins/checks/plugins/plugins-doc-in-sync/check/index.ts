@@ -8,6 +8,7 @@ import {
   renderCompactDoc,
   renderDetailsDoc,
   renderPluginClaudeMd,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -38,14 +39,20 @@ const check: Check = {
       };
     }
 
-    if (readFileSync(compactFile, "utf8") !== await renderCompactDoc({ root })) {
+    if (
+      readFileSync(compactFile, "utf8") !==
+      (await formatGenerated(compactFile, await renderCompactDoc({ root })))
+    ) {
       return {
         ok: false,
         message: "docs/plugins-compact.md is out of sync with plugin source",
         hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }
-    if (readFileSync(detailsFile, "utf8") !== await renderDetailsDoc({ root })) {
+    if (
+      readFileSync(detailsFile, "utf8") !==
+      (await formatGenerated(detailsFile, await renderDetailsDoc({ root })))
+    ) {
       return {
         ok: false,
         message: "docs/plugins-details.md is out of sync with plugin source",
@@ -58,7 +65,10 @@ const check: Check = {
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
-      const expected = renderPluginClaudeMd(info, existing, root, tree.facets, disabled);
+      const expected = await formatGenerated(
+        file,
+        renderPluginClaudeMd(info, existing, root, tree.facets, disabled),
+      );
       if (existing !== expected) {
         return {
           ok: false,

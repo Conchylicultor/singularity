@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   renderCustomUtilities,
   customUtilitiesManifestPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -38,7 +39,9 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    if (readFileSync(file, "utf8") !== expected) {
+    if (
+      readFileSync(file, "utf8") !== (await formatGenerated(file, expected))
+    ) {
       return {
         ok: false,
         message: `${rel} is out of sync with the app.css @utility markers`,

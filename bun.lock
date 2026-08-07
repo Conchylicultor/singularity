@@ -49,6 +49,7 @@
         "jiti": "^2.4.0",
         "jsdom": "^29.0.2",
         "playwright": "^1.60.0",
+        "prettier": "3.9.6",
         "typescript": "~6.0.3",
         "vitest": "^4.1.4",
       },
@@ -2453,6 +2454,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-fields-eager-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/format-clean": {
+      "name": "@singularity/plugin-framework-tooling-checks-format-clean",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/generated-artifacts-normalized": {
       "name": "@singularity/plugin-framework-tooling-checks-generated-artifacts-normalized",
       "version": "0.0.1",
@@ -2471,6 +2476,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-scope": {
       "name": "@singularity/plugin-framework-tooling-checks-keyed-resource-scope",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/lint-directives-stable": {
+      "name": "@singularity/plugin-framework-tooling-checks-lint-directives-stable",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique": {
@@ -2593,6 +2602,10 @@
       "name": "@singularity/plugin-framework-tooling-e2e-harness",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/format": {
+      "name": "@singularity/plugin-framework-tooling-format",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/guards": {
       "name": "@singularity/plugin-framework-tooling-guards",
       "version": "0.0.1",
@@ -2627,6 +2640,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-entity-projection-safety",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/format-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-format-safety",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/git-grep-safety": {
@@ -6493,6 +6510,8 @@
 
     "@singularity/plugin-framework-tooling-checks-fields-eager-in-sync": ["@singularity/plugin-framework-tooling-checks-fields-eager-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/fields-eager-in-sync"],
 
+    "@singularity/plugin-framework-tooling-checks-format-clean": ["@singularity/plugin-framework-tooling-checks-format-clean@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/format-clean"],
+
     "@singularity/plugin-framework-tooling-checks-generated-artifacts-normalized": ["@singularity/plugin-framework-tooling-checks-generated-artifacts-normalized@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/generated-artifacts-normalized"],
 
     "@singularity/plugin-framework-tooling-checks-host-budget": ["@singularity/plugin-framework-tooling-checks-host-budget@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/host-budget"],
@@ -6502,6 +6521,8 @@
     "@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped": ["@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped"],
 
     "@singularity/plugin-framework-tooling-checks-keyed-resource-scope": ["@singularity/plugin-framework-tooling-checks-keyed-resource-scope@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-scope"],
+
+    "@singularity/plugin-framework-tooling-checks-lint-directives-stable": ["@singularity/plugin-framework-tooling-checks-lint-directives-stable@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/lint-directives-stable"],
 
     "@singularity/plugin-framework-tooling-checks-migration-hashes-unique": ["@singularity/plugin-framework-tooling-checks-migration-hashes-unique@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique"],
 
@@ -6563,6 +6584,8 @@
 
     "@singularity/plugin-framework-tooling-e2e-harness": ["@singularity/plugin-framework-tooling-e2e-harness@workspace:plugins/framework/plugins/tooling/plugins/e2e-harness"],
 
+    "@singularity/plugin-framework-tooling-format": ["@singularity/plugin-framework-tooling-format@workspace:plugins/framework/plugins/tooling/plugins/format"],
+
     "@singularity/plugin-framework-tooling-guards": ["@singularity/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
 
     "@singularity/plugin-framework-tooling-lint": ["@singularity/plugin-framework-tooling-lint@workspace:plugins/framework/plugins/tooling/plugins/lint"],
@@ -6580,6 +6603,8 @@
     "@singularity/plugin-framework-tooling-lint-element-type-safety": ["@singularity/plugin-framework-tooling-lint-element-type-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety"],
 
     "@singularity/plugin-framework-tooling-lint-entity-projection-safety": ["@singularity/plugin-framework-tooling-lint-entity-projection-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-format-safety": ["@singularity/plugin-framework-tooling-lint-format-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/format-safety"],
 
     "@singularity/plugin-framework-tooling-lint-git-grep-safety": ["@singularity/plugin-framework-tooling-lint-git-grep-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/git-grep-safety"],
 
@@ -8732,6 +8757,8 @@
     "prebuild-install": ["prebuild-install@7.1.3", "", { "dependencies": { "detect-libc": "^2.0.0", "expand-template": "^2.0.3", "github-from-package": "0.0.0", "minimist": "^1.2.3", "mkdirp-classic": "^0.5.3", "napi-build-utils": "^2.0.0", "node-abi": "^3.3.0", "pump": "^3.0.0", "rc": "^1.2.7", "simple-get": "^4.0.0", "tar-fs": "^2.0.0", "tunnel-agent": "^0.6.0" }, "bin": { "prebuild-install": "bin.js" } }, "sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug=="],
 
     "prelude-ls": ["prelude-ls@1.2.1", "", {}, "sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g=="],
+
+    "prettier": ["prettier@3.9.6", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g=="],
 
     "pretty-format": ["pretty-format@27.5.1", "", { "dependencies": { "ansi-regex": "^5.0.1", "ansi-styles": "^5.0.0", "react-is": "^17.0.1" } }, "sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ=="],
 

@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   renderEagerTierManifest,
   eagerTierManifestPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -34,11 +35,15 @@ const check: Check = {
       return {
         ok: false,
         message:
-          err instanceof Error ? err.message : `Failed to derive load tiers: ${String(err)}`,
+          err instanceof Error
+            ? err.message
+            : `Failed to derive load tiers: ${String(err)}`,
         hint: "A boot-critical resource descriptor is unreachable — see the message.",
       };
     }
-    if (readFileSync(file, "utf8") !== expected) {
+    if (
+      readFileSync(file, "utf8") !== (await formatGenerated(file, expected))
+    ) {
       return {
         ok: false,
         message: `${rel} is out of sync with the derived load tiers`,

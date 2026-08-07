@@ -68,6 +68,7 @@ naming the one sanctioned home of an idiom — e.g. `scroll-safety` exempts the
   - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
   - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
   - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
+  - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
   - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
   - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
   - **`icon-safety`** — icon-safety lint rules: no-lucide-react

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import { writeGenerated } from "./write-generated";
 import { buildEnrichedTree, buildBarrelFreeTree } from "./docgen";
 import {
   setDefaultOriginAnnotationsPreparer,
@@ -230,8 +230,8 @@ setDefaultOriginDefaultsPreparer(async (root: string) => {
 export async function generateReorderableSlots(opts: {
   root: string;
 }): Promise<void> {
-  const next = await renderReorderableSlotsManifest(opts.root);
-  const file = reorderableSlotsManifestPath(opts.root);
-  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-  if (next !== existing) writeFileSync(file, next);
+  await writeGenerated(
+    reorderableSlotsManifestPath(opts.root),
+    await renderReorderableSlotsManifest(opts.root),
+  );
 }

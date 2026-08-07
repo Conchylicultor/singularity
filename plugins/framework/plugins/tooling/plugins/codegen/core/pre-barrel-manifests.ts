@@ -1,8 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
 import {
   dataViewsManifestPath,
   renderDataViewsManifest,
 } from "./data-views-gen";
+import { writeGenerated } from "./write-generated";
 import {
   reorderableSlotsManifestPath,
   renderReorderableSlotsManifest,
@@ -93,16 +93,14 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
 ];
 
 /**
- * Regenerate one pre-barrel manifest if it drifted: render in-memory, compare
- * to the on-disk copy, write only on difference. Mirrors the write-on-diff body
- * each `generateX` helper uses, so routing through this is byte-identical.
+ * Regenerate one pre-barrel manifest if it drifted: render in-memory, then hand
+ * the bytes to the shared generated-artifact funnel. Every `generateX` helper
+ * writes through that same funnel, so routing a manifest through this is
+ * byte-identical to generating it directly.
  */
 export async function writePreBarrelManifest(
   m: PreBarrelManifest,
   root: string,
 ): Promise<void> {
-  const next = await m.render(root);
-  const file = m.path(root);
-  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-  if (next !== existing) writeFileSync(file, next);
+  await writeGenerated(m.path(root), await m.render(root));
 }

@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   renderTokenGroupVarsManifest,
   tokenGroupVarsManifestPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -24,9 +25,11 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    if (
-      readFileSync(file, "utf8") !== (await renderTokenGroupVarsManifest(root))
-    ) {
+    const expected = await formatGenerated(
+      file,
+      await renderTokenGroupVarsManifest(root),
+    );
+    if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,
         message: `${rel} is out of sync with the token-group descriptors`,

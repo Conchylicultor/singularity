@@ -1,10 +1,33 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, readdirSync, rmdirSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  unlinkSync,
+  readdirSync,
+  rmdirSync,
+} from "fs";
 import { randomUUID } from "crypto";
 import { dirname, join, relative } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
-import { computeHash, effective, propagate, readonlyProxy, readTypedConfig, stringifyConfigValue, APP_SCOPE_DIR, configFileOwner } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigProxy, ConfigValues, JsonValue } from "@plugins/config_v2/core";
+import {
+  computeHash,
+  effective,
+  propagate,
+  readonlyProxy,
+  readTypedConfig,
+  stringifyConfigValue,
+  APP_SCOPE_DIR,
+  configFileOwner,
+} from "@plugins/config_v2/core";
+import type {
+  ConfigDescriptor,
+  ConfigProxy,
+  ConfigValues,
+  JsonValue,
+} from "@plugins/config_v2/core";
 import type { FieldDef, FieldsRecord } from "@plugins/fields/core";
 import {
   registerBarrelStubs,
@@ -12,6 +35,7 @@ import {
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
+import { writeGenerated } from "./write-generated";
 
 interface DiscoveredConfig {
   hierarchyPath: string;
@@ -80,7 +104,10 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
         const explicit =
           typeof contrib.pluginId === "string" ? contrib.pluginId : undefined;
         const id = explicit ? asPluginId(explicit) : node.id;
-        results.push({ hierarchyPath: asPath(id), descriptor: contrib.descriptor });
+        results.push({
+          hierarchyPath: asPath(id),
+          descriptor: contrib.descriptor,
+        });
       }
     }
   }
@@ -120,7 +147,9 @@ function renderFieldLines(
       lines.push(...renderFieldLines(subFields, subDefaults, `${indent}  `));
       lines.push(`${indent}}${comma}`);
     } else {
-      lines.push(`${indent}"${key}": ${stringifyConfigValue(value, indent)}${comma}`);
+      lines.push(
+        `${indent}"${key}": ${stringifyConfigValue(value, indent)}${comma}`,
+      );
     }
   }
   return lines;
@@ -336,7 +365,11 @@ export async function loadConfigDescriptorsByOriginPath(opts: {
 }
 
 /** Every `*.jsonc` under `dir`, as paths relative to `baseDir` (forward slashes). */
-export function walkJsoncFiles(dir: string, baseDir: string, out: string[]): void {
+export function walkJsoncFiles(
+  dir: string,
+  baseDir: string,
+  out: string[],
+): void {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -412,12 +445,10 @@ export async function generateConfigOrigins(opts: {
   const configDir = join(opts.root, "config");
 
   for (const [relPath, content] of rendered) {
-    const filePath = join(configDir, relPath);
-    const existing = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
-    if (content !== existing) {
-      mkdirSync(dirname(filePath), { recursive: true });
-      writeFileSync(filePath, content);
-    }
+    // `.jsonc` is not in the format allowlist, so the funnel returns these bytes
+    // unchanged — routing through it anyway is what keeps one write idiom for
+    // every generated artifact. It also creates the parent dir on the write path.
+    await writeGenerated(join(configDir, relPath), content);
   }
 
   // Prune anything whose descriptor disappeared, so removing a `defineConfig`
@@ -499,12 +530,25 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
   },
 ): ConfigValues<F> {
   const gitDir = join(opts.root, "config", opts.hierarchyPath);
-  const gitOrigin = fileConfigProxy(join(gitDir, `${descriptor.name}.origin.jsonc`));
-  const gitOverwrites = fileConfigProxy(join(gitDir, `${descriptor.name}.jsonc`));
+  const gitOrigin = fileConfigProxy(
+    join(gitDir, `${descriptor.name}.origin.jsonc`),
+  );
+  const gitOverwrites = fileConfigProxy(
+    join(gitDir, `${descriptor.name}.jsonc`),
+  );
 
-  const userDir = join(opts.singularityDir, "config", opts.worktreeName, opts.hierarchyPath);
-  const userOrigin = fileConfigProxy(join(userDir, `${descriptor.name}.origin.jsonc`));
-  const userOverwrites = fileConfigProxy(join(userDir, `${descriptor.name}.jsonc`));
+  const userDir = join(
+    opts.singularityDir,
+    "config",
+    opts.worktreeName,
+    opts.hierarchyPath,
+  );
+  const userOrigin = fileConfigProxy(
+    join(userDir, `${descriptor.name}.origin.jsonc`),
+  );
+  const userOverwrites = fileConfigProxy(
+    join(userDir, `${descriptor.name}.jsonc`),
+  );
 
   let origin: ConfigProxy = userOrigin;
   if (!userOrigin.exists()) {
@@ -524,7 +568,12 @@ export async function propagateConfigToUser(opts: {
 
   for (const { hierarchyPath, descriptor } of configs) {
     const gitOrigin = fileConfigProxy(
-      join(opts.root, "config", hierarchyPath, `${descriptor.name}.origin.jsonc`),
+      join(
+        opts.root,
+        "config",
+        hierarchyPath,
+        `${descriptor.name}.origin.jsonc`,
+      ),
     );
     const gitOverwrites = fileConfigProxy(
       join(opts.root, "config", hierarchyPath, `${descriptor.name}.jsonc`),
@@ -542,14 +591,23 @@ export async function propagateConfigToUser(opts: {
     );
     // Sibling snapshot of the merge base, captured by propagate() when an
     // in-sync override is about to go stale (see threeWayMerge / mergeConflict).
-    const ancestorPath = join(userConfigDir, hierarchyPath, `${descriptor.name}.ancestor.jsonc`);
+    const ancestorPath = join(
+      userConfigDir,
+      hierarchyPath,
+      `${descriptor.name}.ancestor.jsonc`,
+    );
     const userAncestor = fileConfigProxy(ancestorPath);
 
-    const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites, userAncestor);
+    const { conflict } = propagate(
+      gitEffProxy,
+      userOrigin,
+      userOverwrites,
+      userAncestor,
+    );
     if (conflict) {
       console.warn(
         `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
-        `were based on a different upstream. Review ${join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`)}`,
+          `were based on a different upstream. Review ${join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`)}`,
       );
     } else if (existsSync(ancestorPath)) {
       // No live conflict — any leftover ancestor snapshot is orphaned (override
@@ -581,23 +639,41 @@ export async function propagateConfigToUser(opts: {
         if (!delta) continue;
         gitScopedAppIds.add(appId);
         const scopedDelta =
-          delta.content && typeof delta.content === "object" && !Array.isArray(delta.content)
+          delta.content &&
+          typeof delta.content === "object" &&
+          !Array.isArray(delta.content)
             ? (delta.content as Record<string, JsonValue>)
             : {};
         const mergedProxy = readonlyProxy({ ...baseEff, ...scopedDelta });
 
         const userScopedOrigin = fileConfigProxy(
-          join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.origin.jsonc`),
+          join(
+            userConfigDir,
+            hierarchyPath,
+            APP_SCOPE_DIR,
+            appId,
+            `${descriptor.name}.origin.jsonc`,
+          ),
         );
         const userScopedOverwrites = fileConfigProxy(
-          join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`),
+          join(
+            userConfigDir,
+            hierarchyPath,
+            APP_SCOPE_DIR,
+            appId,
+            `${descriptor.name}.jsonc`,
+          ),
         );
 
-        const { conflict: scopedConflict } = propagate(mergedProxy, userScopedOrigin, userScopedOverwrites);
+        const { conflict: scopedConflict } = propagate(
+          mergedProxy,
+          userScopedOrigin,
+          userScopedOverwrites,
+        );
         if (scopedConflict) {
           console.warn(
             `[config-v2] conflict: user scoped override for "${descriptor.name}" @app/${appId} at ${hierarchyPath} ` +
-            `was based on a different upstream. Review ${join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`)}`,
+              `was based on a different upstream. Review ${join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`)}`,
           );
         }
       }
@@ -616,7 +692,10 @@ export async function propagateConfigToUser(opts: {
       if (gitScopedAppIds.has(appId)) continue;
       const appDir = join(userAppDir, appId);
       if (existsSync(join(appDir, `${descriptor.name}.jsonc`))) continue; // runtime fork — keep
-      const stalePropagatedOrigin = join(appDir, `${descriptor.name}.origin.jsonc`);
+      const stalePropagatedOrigin = join(
+        appDir,
+        `${descriptor.name}.origin.jsonc`,
+      );
       if (!existsSync(stalePropagatedOrigin)) continue;
       unlinkSync(stalePropagatedOrigin);
       try {

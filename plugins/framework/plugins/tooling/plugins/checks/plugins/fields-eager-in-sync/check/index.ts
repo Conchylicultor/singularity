@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   renderFieldsEagerManifest,
   fieldsEagerManifestPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -24,7 +25,11 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    if (readFileSync(file, "utf8") !== (await renderFieldsEagerManifest(root))) {
+    const expected = await formatGenerated(
+      file,
+      await renderFieldsEagerManifest(root),
+    );
+    if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,
         message: `${rel} is out of sync with the fields storage/filter-sql server barrels`,

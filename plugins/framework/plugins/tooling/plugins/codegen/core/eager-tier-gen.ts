@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import { writeGenerated } from "./write-generated";
 import {
   findImports,
   findMarkerCalls,
@@ -150,11 +150,13 @@ export function computeEagerTier(input: {
 
   // (1) Structural: every non-app-content web entry (incl. shell subtrees).
   for (const p of input.webEntryPaths) {
-    if (!isAppContent(p)) addSeed(p, "structural (non-app-content / shell subtree)");
+    if (!isAppContent(p))
+      addSeed(p, "structural (non-app-content / shell subtree)");
   }
   // (2) Watched boot slots.
   for (const hit of input.watchedSlotHits) {
-    if (webSet.has(hit.path)) addSeed(hit.path, `watched boot slot ${hit.slot}`);
+    if (webSet.has(hit.path))
+      addSeed(hit.path, `watched boot slot ${hit.slot}`);
   }
   // (3) Boot-critical descriptors (all reachable after the guard above).
   for (const owner of input.bootCriticalOwners) {
@@ -181,7 +183,10 @@ export function computeEagerTier(input: {
   const appContentPins: { path: string; reason: string }[] = [];
   for (const p of input.webEntryPaths) {
     if (!isAppContent(p) || !eager.has(p)) continue;
-    appContentPins.push({ path: p, reason: seedReason.get(p) ?? CLOSURE_REASON });
+    appContentPins.push({
+      path: p,
+      reason: seedReason.get(p) ?? CLOSURE_REASON,
+    });
   }
   appContentPins.sort((a, b) => a.path.localeCompare(b.path));
 
@@ -275,7 +280,9 @@ function scanBootCriticalKeys(pluginDir: string): string[] {
 
 function renderManifest(result: EagerTierResult): string {
   const lines: string[] = [MANIFEST_HEADER, ""];
-  lines.push("// App-content plugins pinned EAGER (would otherwise defer), and why:");
+  lines.push(
+    "// App-content plugins pinned EAGER (would otherwise defer), and why:",
+  );
   if (result.appContentPins.length === 0) {
     lines.push("//   (none)");
   } else {
@@ -284,7 +291,9 @@ function renderManifest(result: EagerTierResult): string {
     }
   }
   lines.push("");
-  lines.push("export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([");
+  lines.push(
+    "export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([",
+  );
   for (const p of result.deferred) lines.push(`  ${JSON.stringify(p)},`);
   lines.push("]);");
   lines.push("");
@@ -295,7 +304,9 @@ function renderManifest(result: EagerTierResult): string {
  * Scan the tree and build the pure-core inputs. `ctx` carries the barrel-free
  * tree + disabled closure so it can be shared with the registry generator.
  */
-function scanEagerTierInputs(ctx: RegistryGenContext): Parameters<typeof computeEagerTier>[0] {
+function scanEagerTierInputs(
+  ctx: RegistryGenContext,
+): Parameters<typeof computeEagerTier>[0] {
   const { entries, deps } = collectEntriesWithDeps(ctx, "web");
   const webEntryPaths = entries.map((e) => e.pluginPath);
   const webSet = new Set(webEntryPaths);
@@ -316,7 +327,8 @@ function scanEagerTierInputs(ctx: RegistryGenContext): Parameters<typeof compute
   const bootCriticalOwners: BootCriticalOwner[] = [];
   for (const node of ctx.tree.byDir.values()) {
     const keys = scanBootCriticalKeys(node.dir);
-    if (keys.length > 0) bootCriticalOwners.push({ path: node.path, keys: keys.sort() });
+    if (keys.length > 0)
+      bootCriticalOwners.push({ path: node.path, keys: keys.sort() });
   }
   bootCriticalOwners.sort((a, b) => a.path.localeCompare(b.path));
 
@@ -327,7 +339,12 @@ function scanEagerTierInputs(ctx: RegistryGenContext): Parameters<typeof compute
     if (kept.length > 0) prunedDeps.set(path, kept);
   }
 
-  return { webEntryPaths, deps: prunedDeps, bootCriticalOwners, watchedSlotHits };
+  return {
+    webEntryPaths,
+    deps: prunedDeps,
+    bootCriticalOwners,
+    watchedSlotHits,
+  };
 }
 
 /** Path to the committed manifest file. */
@@ -353,8 +370,8 @@ export async function generateEagerTier(opts: {
   root: string;
   ctx?: RegistryGenContext;
 }): Promise<void> {
-  const next = await renderEagerTierManifest(opts.root, opts.ctx);
-  const file = eagerTierManifestPath(opts.root);
-  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-  if (next !== existing) writeFileSync(file, next);
+  await writeGenerated(
+    eagerTierManifestPath(opts.root),
+    await renderEagerTierManifest(opts.root, opts.ctx),
+  );
 }

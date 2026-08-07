@@ -155,3 +155,9 @@ export {
   extractRuntimeImportSpecifiers,
   resolveImportSpecifier,
 } from "./import-graph";
+
+// The ONE write seam for every generated artifact. The emitters write through
+// `writeGenerated`; the `*-in-sync` checks compare disk against
+// `formatGenerated(file, renderX(...))`. Both sides call the same function, so
+// the bytes an emitter produces and the bytes a check asserts cannot drift.
+export { formatGenerated, writeGenerated } from "./write-generated";

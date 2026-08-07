@@ -3,6 +3,7 @@ import { relative } from "path";
 import {
   barrelStubsPath,
   renderBarrelStubs,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -34,7 +35,9 @@ const check: Check = {
         hint: "Fix the error in auto-stub-packages.ts or stubs.ts.",
       };
     }
-    if (readFileSync(file, "utf8") !== expected) {
+    if (
+      readFileSync(file, "utf8") !== (await formatGenerated(file, expected))
+    ) {
       return {
         ok: false,
         message: `${rel} is out of sync with auto-stub-packages.ts or node_modules .d.ts files`,

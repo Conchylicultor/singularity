@@ -18,6 +18,7 @@
   - **`codegen`** — Plugin doc generation and registry codegen
   - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
   - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+  - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
   - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
   - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
   - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.

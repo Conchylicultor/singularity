@@ -3,11 +3,15 @@ import { join, relative } from "path";
 import {
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
+  formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { computeHash, APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its // @hash and schema anchor to the BASE origin
@@ -62,7 +66,9 @@ const check: Check = {
     // injects the exact same comment lines the build wrote into committed
     // origins. With no provider registered this is byte-identical to before.
     const expected = await renderConfigOriginContent({ root });
-    const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({ root });
+    const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({
+      root,
+    });
 
     for (const [relPath, content] of expected) {
       const filePath = join(configDir, relPath);
@@ -75,7 +81,7 @@ const check: Check = {
         };
       }
       const raw = readFileSync(filePath, "utf8");
-      if (raw !== content) {
+      if (raw !== (await formatGenerated(filePath, content))) {
         return {
           ok: false,
           message: `${rel} is out of sync with defineConfig defaults`,
@@ -91,9 +97,12 @@ const check: Check = {
 
     if (!existsSync(configDir)) return { ok: true };
 
-    const result = await spawnCaptured(["git", "ls-files", "--others", "--cached", "--", "config/"], {
-      cwd: root,
-    });
+    const result = await spawnCaptured(
+      ["git", "ls-files", "--others", "--cached", "--", "config/"],
+      {
+        cwd: root,
+      },
+    );
     const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
 
     // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that
@@ -126,7 +135,11 @@ const check: Check = {
     }
 
     for (const relFromRoot of allConfigFiles) {
-      if (!relFromRoot.endsWith(".jsonc") || relFromRoot.endsWith(".origin.jsonc")) continue;
+      if (
+        !relFromRoot.endsWith(".jsonc") ||
+        relFromRoot.endsWith(".origin.jsonc")
+      )
+        continue;
 
       const filePath = join(root, relFromRoot);
       if (!existsSync(filePath)) continue;
@@ -142,7 +155,10 @@ const check: Check = {
       }
       const hash = match[1]!;
 
-      const originPath = stripScopeSegment(filePath).replace(/\.jsonc$/, ".origin.jsonc");
+      const originPath = stripScopeSegment(filePath).replace(
+        /\.jsonc$/,
+        ".origin.jsonc",
+      );
       const originRel = relative(root, originPath);
       if (!existsSync(originPath)) {
         return {
@@ -154,7 +170,9 @@ const check: Check = {
 
       const originRaw = readFileSync(originPath, "utf8");
       const originMatch = HASH_RE.exec(originRaw);
-      const originBody = originMatch ? originRaw.slice(originMatch[0].length) : originRaw;
+      const originBody = originMatch
+        ? originRaw.slice(originMatch[0].length)
+        : originRaw;
       const originContent = parseJsonc(originBody) as JsonValue;
       const expectedHash = computeHash(originContent);
 

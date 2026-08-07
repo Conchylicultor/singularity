@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeGenerated } from "./write-generated";
 import {
   AUTO_STUB_PACKAGES,
   AUTO_STUB_CSS,
@@ -34,8 +35,7 @@ function resolveDtsEntry(root: string, entry: AutoStubEntry): string {
     unknown
   >;
 
-  if (typeof pkg.types === "string")
-    return join(base, entry.pkg, pkg.types);
+  if (typeof pkg.types === "string") return join(base, entry.pkg, pkg.types);
   if (typeof pkg.typings === "string")
     return join(base, entry.pkg, pkg.typings);
 
@@ -45,8 +45,7 @@ function resolveDtsEntry(root: string, entry: AutoStubEntry): string {
 }
 
 // `export { A, B as C, type D, default as E } from './sub'`
-const NAMED_RE =
-  /^[ \t]*export\s+\{([^}]+)\}/gm;
+const NAMED_RE = /^[ \t]*export\s+\{([^}]+)\}/gm;
 // `export type { ... }` — skip the whole block
 const TYPE_BLOCK_RE = /^[ \t]*export\s+type\s+\{/;
 // `export declare function/class/const/enum/let/var X` or `export class X`
@@ -56,10 +55,13 @@ const DECL_RE =
 // `export * from './path'` — hard error
 const STAR_RE = /^[ \t]*export\s+\*\s+from/m;
 // `export namespace X` — value export
-const NAMESPACE_RE =
-  /^[ \t]*export\s+(?:declare\s+)?namespace\s+(\w+)/gm;
+const NAMESPACE_RE = /^[ \t]*export\s+(?:declare\s+)?namespace\s+(\w+)/gm;
 
-function extractExportNames(src: string, pkg: string, dtsPath: string): string[] {
+function extractExportNames(
+  src: string,
+  pkg: string,
+  dtsPath: string,
+): string[] {
   if (STAR_RE.test(src)) {
     throw new Error(
       `[barrel-stubs-gen] Package "${pkg}" uses "export * from" in its .d.ts entry ` +
@@ -179,10 +181,5 @@ export async function generateBarrelStubs({
 }: {
   root: string;
 }): Promise<void> {
-  const content = renderBarrelStubs({ root });
-  const outPath = barrelStubsPath(root);
-  const existing = existsSync(outPath) ? readFileSync(outPath, "utf8") : "";
-  if (content !== existing) {
-    writeFileSync(outPath, content);
-  }
+  await writeGenerated(barrelStubsPath(root), renderBarrelStubs({ root }));
 }

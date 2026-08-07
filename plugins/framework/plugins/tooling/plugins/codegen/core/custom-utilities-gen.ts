@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
+import { writeGenerated } from "./write-generated";
 
 /**
  * Generates `custom-utilities.generated.ts` — the twMerge registry consumed by
@@ -30,9 +31,23 @@ const MANIFEST_REL_PATH =
 // Keep in sync with `BuiltinGroupId` in
 // plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities-types.ts.
 const BUILTIN_GROUP_IDS = new Set([
-  "font-size", "z", "h", "w", "size", "min-h",
-  "p", "px", "py", "pt", "pr", "pb", "pl",
-  "gap", "gap-x", "gap-y", "rounded",
+  "font-size",
+  "z",
+  "h",
+  "w",
+  "size",
+  "min-h",
+  "p",
+  "px",
+  "py",
+  "pt",
+  "pr",
+  "pb",
+  "pl",
+  "gap",
+  "gap-x",
+  "gap-y",
+  "rounded",
 ]);
 
 const MANIFEST_HEADER = [
@@ -105,7 +120,8 @@ function parseMarker(ref: string, where: string): Marker {
 /** Scan every `/* @twmerge group <id> conflicts: <ids…> *\/` decl file-wide. */
 function collectGroupDecls(css: string): Map<string, GroupDecl> {
   const decls = new Map<string, GroupDecl>();
-  const re = /@twmerge\s+group\s+([\w-]+)\s+conflicts:\s*([^*]+?)\s*(?:\*\/|\n|$)/g;
+  const re =
+    /@twmerge\s+group\s+([\w-]+)\s+conflicts:\s*([^*]+?)\s*(?:\*\/|\n|$)/g;
   for (const m of css.matchAll(re)) {
     const id = m[1]!;
     const conflicts = m[2]!.trim().split(/\s+/).filter(Boolean);
@@ -130,7 +146,10 @@ function collectGroupDecls(css: string): Map<string, GroupDecl> {
  * original text can still be sliced for the markers (which ARE comments).
  */
 function maskCommentBodies(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, (m) => "/*" + " ".repeat(m.length - 4) + "*/");
+  return css.replace(
+    /\/\*[\s\S]*?\*\//g,
+    (m) => "/*" + " ".repeat(m.length - 4) + "*/",
+  );
 }
 
 /**
@@ -205,7 +224,11 @@ export function parseCustomUtilities(css: string): RegistryEntry[] {
         conflictsWith: groupDecls.get(rec.marker.group)!.conflicts,
       };
     } else {
-      entry = { classes: [rec.name], standalone: true, reason: rec.marker.reason };
+      entry = {
+        classes: [rec.name],
+        standalone: true,
+        reason: rec.marker.reason,
+      };
     }
     entries.push(entry);
     current = { key, entry };
@@ -220,7 +243,9 @@ function renderEntry(entry: RegistryEntry): string {
     return `  { classes: [${classes}], extend: ${JSON.stringify(entry.extend)} },`;
   }
   if ("group" in entry) {
-    const conflicts = entry.conflictsWith.map((c) => JSON.stringify(c)).join(", ");
+    const conflicts = entry.conflictsWith
+      .map((c) => JSON.stringify(c))
+      .join(", ");
     return `  { classes: [${classes}], group: ${JSON.stringify(entry.group)}, conflictsWith: [${conflicts}] },`;
   }
   return `  { classes: [${classes}], standalone: true, reason: ${JSON.stringify(entry.reason)} },`;
@@ -236,7 +261,9 @@ function renderManifest(entries: RegistryEntry[]): string {
   for (const entry of entries) lines.push(renderEntry(entry));
   lines.push("] as const satisfies readonly RegistryEntry[];");
   lines.push("");
-  lines.push("// Synthetic group ids (for extendTailwindMerge's generic type parameter).");
+  lines.push(
+    "// Synthetic group ids (for extendTailwindMerge's generic type parameter).",
+  );
   lines.push(
     'export type CustomGroupId = Extract<(typeof CUSTOM_UTILITY_REGISTRY)[number], { group: string }>["group"];',
   );
@@ -262,9 +289,11 @@ export function renderCustomUtilities(root: string): string {
 }
 
 /** Regenerate `custom-utilities.generated.ts` if it drifted. */
-export function generateCustomUtilities(opts: { root: string }): void {
-  const next = renderCustomUtilities(opts.root);
-  const file = customUtilitiesManifestPath(opts.root);
-  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
-  if (next !== existing) writeFileSync(file, next);
+export async function generateCustomUtilities(opts: {
+  root: string;
+}): Promise<void> {
+  await writeGenerated(
+    customUtilitiesManifestPath(opts.root),
+    renderCustomUtilities(opts.root),
+  );
 }

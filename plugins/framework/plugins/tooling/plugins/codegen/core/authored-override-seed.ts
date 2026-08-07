@@ -1,9 +1,18 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
+import { existsSync, readdirSync, readFileSync } from "fs";
+import { join } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
-import { APP_SCOPE_DIR, REVIEW_MARKER, configFileOwner, hasReviewMarker } from "@plugins/config_v2/core";
+import {
+  APP_SCOPE_DIR,
+  REVIEW_MARKER,
+  configFileOwner,
+  hasReviewMarker,
+} from "@plugins/config_v2/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
-import { loadConfigDescriptorsByOriginPath, walkJsoncFiles } from "./config-origin-gen";
+import {
+  loadConfigDescriptorsByOriginPath,
+  walkJsoncFiles,
+} from "./config-origin-gen";
+import { writeGenerated } from "./write-generated";
 
 /**
  * Build-time seeding of the **mandatory** committed overrides — the files a
@@ -49,8 +58,14 @@ export interface AuthoredOverrideSeedResult {
 }
 
 /** `// @hash <hash>` + the marker block + the body, verbatim. */
-function renderHeaderedFile(hash: string, markerLines: string[], body: string): string {
-  return `// @hash ${hash}\n` + markerLines.map((l) => `${l}\n`).join("") + body;
+function renderHeaderedFile(
+  hash: string,
+  markerLines: string[],
+  body: string,
+): string {
+  return (
+    `// @hash ${hash}\n` + markerLines.map((l) => `${l}\n`).join("") + body
+  );
 }
 
 function seedMarkerLines(descriptor: ConfigDescriptor): string[] {
@@ -61,7 +76,10 @@ function seedMarkerLines(descriptor: ConfigDescriptor): string[] {
   ];
 }
 
-function remarkMarkerLines(descriptor: ConfigDescriptor, delta: string | null): string[] {
+function remarkMarkerLines(
+  descriptor: ConfigDescriptor,
+  delta: string | null,
+): string[] {
   if (delta) {
     return [
       `${REVIEW_MARKER} — ${delta}`,
@@ -103,7 +121,8 @@ function entryKeyOf(node: Record<string, unknown>): string | null {
 }
 
 function collectEntryKeys(value: unknown, out: Set<string>, depth = 0): void {
-  if (depth > MAX_DELTA_DEPTH || value === null || typeof value !== "object") return;
+  if (depth > MAX_DELTA_DEPTH || value === null || typeof value !== "object")
+    return;
   if (Array.isArray(value)) {
     for (const el of value) {
       if (typeof el === "string") out.add(el);
@@ -126,8 +145,12 @@ function collectEntryKeys(value: unknown, out: Set<string>, depth = 0): void {
  * `@app/<id>/` file is a partial delta of the base, so fields it doesn't carry
  * are not absences to report. Returns null when nothing entry-shaped differs.
  */
-function catalogDelta(originContent: unknown, overrideContent: unknown): string | null {
-  if (!isPlainObject(originContent) || !isPlainObject(overrideContent)) return null;
+function catalogDelta(
+  originContent: unknown,
+  overrideContent: unknown,
+): string | null {
+  if (!isPlainObject(originContent) || !isPlainObject(overrideContent))
+    return null;
 
   const originKeys = new Set<string>();
   const overrideKeys = new Set<string>();
@@ -152,12 +175,12 @@ function catalogDelta(originContent: unknown, overrideContent: unknown): string 
  * Re-stamp + re-mark one existing override iff its hash went stale. Returns true
  * when the file was rewritten.
  */
-function remarkIfStale(opts: {
+async function remarkIfStale(opts: {
   filePath: string;
   descriptor: ConfigDescriptor;
   originHash: string;
   originContent: unknown;
-}): boolean {
+}): Promise<boolean> {
   const raw = readFileSync(opts.filePath, "utf8");
   // Already marked → the gate is open and its guidance is the author's to act
   // on. Rewriting it would clobber a marker they may have already edited.
@@ -171,9 +194,13 @@ function remarkIfStale(opts: {
 
   const body = raw.slice(match[0].length);
   const delta = catalogDelta(opts.originContent, parseJsonc(body) as unknown);
-  writeFileSync(
+  await writeGenerated(
     opts.filePath,
-    renderHeaderedFile(opts.originHash, remarkMarkerLines(opts.descriptor, delta), body),
+    renderHeaderedFile(
+      opts.originHash,
+      remarkMarkerLines(opts.descriptor, delta),
+      body,
+    ),
   );
   return true;
 }
@@ -188,10 +215,10 @@ function remarkIfStale(opts: {
  * written on-diff — the render map is not the set of files that changed, so
  * re-deriving would miss every already-committed origin.
  */
-export function applyAuthoredOverrideSeeding(opts: {
+export async function applyAuthoredOverrideSeeding(opts: {
   configDir: string;
   descriptorsByOriginRel: Map<string, ConfigDescriptor>;
-}): AuthoredOverrideSeedResult {
+}): Promise<AuthoredOverrideSeedResult> {
   const { configDir } = opts;
   const seeded: string[] = [];
   const remarked: string[] = [];
@@ -218,7 +245,9 @@ export function applyAuthoredOverrideSeeding(opts: {
     const originRaw = readFileSync(originPath, "utf8");
     const originMatch = HASH_RE.exec(originRaw);
     if (!originMatch) {
-      throw new Error(`seedAuthoredOverrides: config/${originRel} carries no // @hash header.`);
+      throw new Error(
+        `seedAuthoredOverrides: config/${originRel} carries no // @hash header.`,
+      );
     }
     const originHash = originMatch[1]!;
     const originBody = originRaw.slice(originMatch[0].length);
@@ -226,16 +255,24 @@ export function applyAuthoredOverrideSeeding(opts: {
 
     // The BASE override is the mandatory one. Seed it when missing; otherwise it
     // is an authored file and only ever gets re-marked.
-    const baseRel = owner.hier ? `${owner.hier}/${owner.name}.jsonc` : `${owner.name}.jsonc`;
+    const baseRel = owner.hier
+      ? `${owner.hier}/${owner.name}.jsonc`
+      : `${owner.name}.jsonc`;
     const basePath = join(configDir, baseRel);
     if (!existsSync(basePath)) {
-      mkdirSync(dirname(basePath), { recursive: true });
-      writeFileSync(
+      await writeGenerated(
         basePath,
         renderHeaderedFile(originHash, seedMarkerLines(descriptor), originBody),
       );
       seeded.push(baseRel);
-    } else if (remarkIfStale({ filePath: basePath, descriptor, originHash, originContent })) {
+    } else if (
+      await remarkIfStale({
+        filePath: basePath,
+        descriptor,
+        originHash,
+        originContent,
+      })
+    ) {
       remarked.push(baseRel);
     }
 
@@ -249,8 +286,17 @@ export function applyAuthoredOverrideSeeding(opts: {
       if (!entry.isDirectory()) continue;
       const scopedPath = join(appDir, entry.name, `${owner.name}.jsonc`);
       if (!existsSync(scopedPath)) continue;
-      if (remarkIfStale({ filePath: scopedPath, descriptor, originHash, originContent })) {
-        remarked.push(`${owner.hier}/${APP_SCOPE_DIR}/${entry.name}/${owner.name}.jsonc`);
+      if (
+        await remarkIfStale({
+          filePath: scopedPath,
+          descriptor,
+          originHash,
+          originContent,
+        })
+      ) {
+        remarked.push(
+          `${owner.hier}/${APP_SCOPE_DIR}/${entry.name}/${owner.name}.jsonc`,
+        );
       }
     }
   }
@@ -265,9 +311,11 @@ export function applyAuthoredOverrideSeeding(opts: {
 export async function seedAuthoredOverrides(opts: {
   root: string;
 }): Promise<AuthoredOverrideSeedResult> {
-  return applyAuthoredOverrideSeeding({
+  return await applyAuthoredOverrideSeeding({
     configDir: join(opts.root, "config"),
-    descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({ root: opts.root }),
+    descriptorsByOriginRel: await loadConfigDescriptorsByOriginPath({
+      root: opts.root,
+    }),
   });
 }
 

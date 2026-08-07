@@ -12,6 +12,7 @@
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useSonata`
+    - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/slot-render.renderIsolated`
