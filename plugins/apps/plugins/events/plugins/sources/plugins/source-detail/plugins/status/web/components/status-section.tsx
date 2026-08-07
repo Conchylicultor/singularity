@@ -94,6 +94,32 @@ export function SourceStatusSection({
           : "None yet"}
       </Field>
 
+      {/* `lastFlags` is written by the last EXTRACTION, not the last run — an
+          `unchanged` run never re-read the page, so these caveats still stand
+          and are NOT stale. The label says "extraction" for exactly that
+          reason: read as "last run" beside a fresh unchanged run, they would
+          look like something that just happened. Rendered as a flow stack so
+          the model's own free text wraps instead of widening the card. */}
+      {source.lastFlags.length > 0 && (
+        <Stack gap="2xs">
+          <Text as="p" variant="label">
+            Caveats from the last extraction
+          </Text>
+          {source.lastFlags.map((flag, index) => (
+            // Keyed by position: free text, no id, and duplicates are possible.
+            <Text
+              key={`${index}:${flag}`}
+              as="p"
+              variant="caption"
+              tone="muted"
+              className="break-words"
+            >
+              {flag}
+            </Text>
+          ))}
+        </Stack>
+      )}
+
       {/* Only a TERMINAL failure lands on the row (a transient one stays on the
           run), so when this is set it is the classified reason the source is
           parked — rendered verbatim, never summarized away. */}

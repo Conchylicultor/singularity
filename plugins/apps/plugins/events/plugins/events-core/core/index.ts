@@ -24,6 +24,8 @@ export {
 export {
   ExtractedEventSchema,
   type ExtractedEvent,
+  ExtractionResultSchema,
+  type ExtractionResult,
 } from "./internal/extracted-event";
 export {
   listEventSources,

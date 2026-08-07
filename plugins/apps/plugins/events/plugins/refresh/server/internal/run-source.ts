@@ -128,11 +128,14 @@ export async function runSource(sourceId: string): Promise<void> {
       return;
     }
 
-    const extracted = await sourceType.extract(
+    const { events, flags } = await sourceType.extract(
       probed.payload,
       probeContext(source, runId),
     );
-    const plan = planEventWrites(source.id, extracted);
+    // The clock the plan is normalized against, read ONCE and passed in: the
+    // anchor of every event in this run is then resolved against the same
+    // instant, so two events of one page can never straddle a midnight.
+    const plan = planEventWrites(source.id, events, { now: new Date() });
     const { created, updated } = await upsertEvents(plan.inputs);
     const disappeared = await markEventsDisappeared(
       source.id,
@@ -143,6 +146,7 @@ export async function runSource(sourceId: string): Promise<void> {
       runId,
       startedAt,
       fingerprint,
+      flags,
       counts: {
         found: plan.inputs.length,
         created,

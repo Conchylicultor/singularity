@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:events.date",
+      "entityType": "column",
+      "entityName": "date",
+      "action": "create"
+    }
+  ]
+}

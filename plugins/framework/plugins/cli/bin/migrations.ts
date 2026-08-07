@@ -86,7 +86,7 @@ export function parseMigrationAnswers(raw: string): MigrationAnswer[] {
 }
 
 /**
- * One persisted answer in a `meta/<tag>_answers.json` sidecar. Carries the
+ * One persisted answer in a `meta/_<tag>_answers.json` sidecar. Carries the
  * entity identity (so it survives reordering on regen) plus the resolved action.
  */
 export type KeyedAnswerEntry =
@@ -105,7 +105,29 @@ interface AnswersSidecar {
 }
 
 /**
- * Read every branch-local `meta/*_answers.json` sidecar (those whose migration
+ * The `meta/` filename holding migration `<tag>`'s answers.
+ *
+ * **The leading underscore is load-bearing.** drizzle-kit's `prepareOutFolder`
+ * runs its pg-schema snapshot validator over every `meta/*.json` whose name does
+ * NOT start with `_`, and a sidecar is not a snapshot — so an unprefixed one
+ * makes drizzle print "data is malformed", exit 0, and generate nothing. That
+ * blocks every subsequent build in the repo, permanently, from the first
+ * answered prompt onward. `_journal.json` sits in that directory unmolested for
+ * exactly this reason.
+ *
+ * The name is derived HERE, in one function, rather than interpolated at each of
+ * the four call sites (writer, reader, two cleanup paths): a prefix that only
+ * three of them apply is the same outage arriving later and harder to see.
+ */
+const ANSWERS_PREFIX = "_";
+const ANSWERS_SUFFIX = "_answers.json";
+
+export function answersSidecarName(tag: string): string {
+  return `${ANSWERS_PREFIX}${tag}${ANSWERS_SUFFIX}`;
+}
+
+/**
+ * Read every branch-local `meta/_*_answers.json` sidecar (those whose migration
  * `.sql` is NOT tracked on origin/main) and merge their entries into one keyed
  * map. Main's accumulated sidecars are ignored, so a re-emitted prompt is only
  * ever resolved from this branch's own authored answers. Fails loud on malformed
@@ -124,10 +146,11 @@ export async function readBranchLocalAnswers(
     : new Set<string>();
 
   for (const f of readdirSync(metaDir)) {
-    if (!f.endsWith("_answers.json")) continue;
-    // A sidecar <tag>_answers.json maps to migration <tag>.sql; skip sidecars
+    if (!f.startsWith(ANSWERS_PREFIX) || !f.endsWith(ANSWERS_SUFFIX)) continue;
+    // A sidecar _<tag>_answers.json maps to migration <tag>.sql; skip sidecars
     // whose migration is already on main (their answers are immutable history).
-    const sqlBasename = `${f.slice(0, -"_answers.json".length)}.sql`;
+    const tag = f.slice(ANSWERS_PREFIX.length, -ANSWERS_SUFFIX.length);
+    const sqlBasename = `${tag}.sql`;
     if (tracked.has(sqlBasename)) continue;
     const raw = readFileSync(join(metaDir, f), "utf8");
     const parsed = JSON.parse(raw) as AnswersSidecar;
@@ -144,7 +167,7 @@ export async function readBranchLocalAnswers(
 }
 
 /**
- * Write a `meta/<schemaTag>_answers.json` sidecar capturing the resolved
+ * Write a `meta/_<schemaTag>_answers.json` sidecar capturing the resolved
  * create-vs-rename decision for each prompt, keyed by entity identity so a later
  * regen can replay it. `resolve` yields the answer chosen for a given prompt.
  */
@@ -167,7 +190,7 @@ export function writeAnswersSidecar(
   });
   const sidecar: AnswersSidecar = { version: 1, answers };
   writeFileSync(
-    join(metaDir, `${schemaTag}_answers.json`),
+    join(metaDir, answersSidecarName(schemaTag)),
     JSON.stringify(sidecar, null, 2) + "\n",
   );
 }
@@ -479,7 +502,7 @@ export async function generateMigration(opts: {
         : (p: DetectedPrompt) =>
             migrationAnswers![result.detectedPrompts.indexOf(p)]!;
       writeAnswersSidecar(metaDir, schemaTag, result.detectedPrompts, resolver);
-      console.log(`  wrote answers sidecar ${schemaTag}_answers.json`);
+      console.log(`  wrote answers sidecar ${answersSidecarName(schemaTag)}`);
     }
   }
 
@@ -574,7 +597,7 @@ async function resetBranchLocalMigrations(
     // Drop the answers sidecar too — regen reads it before this reset runs, so
     // the in-memory keyed map already captured it; the on-disk copy is rewritten
     // for the consolidated migration after generate.
-    rmSync(join(metaDir, `${f.slice(0, -4)}_answers.json`), { force: true });
+    rmSync(join(metaDir, answersSidecarName(f.slice(0, -4))), { force: true });
   }
   for (const f of readdirSync(metaDir)) {
     if (!f.endsWith("_snapshot.json")) continue;
@@ -944,7 +967,7 @@ export function removeGeneratedFiles(
       rmSync(join(metaDir, `${idxMatch[1]}_snapshot.json`), { force: true });
     }
     // Drop any answers sidecar keyed to this migration's tag (the .sql basename).
-    rmSync(join(metaDir, `${f.slice(0, -4)}_answers.json`), { force: true });
+    rmSync(join(metaDir, answersSidecarName(f.slice(0, -4))), { force: true });
   }
 }
 

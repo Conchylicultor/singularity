@@ -16,6 +16,7 @@ function run(patch: Partial<EventSourceRun>): EventSourceRun {
     fingerprint: null,
     durationMs: 3400,
     error: null,
+    flags: [],
     ...patch,
   };
 }

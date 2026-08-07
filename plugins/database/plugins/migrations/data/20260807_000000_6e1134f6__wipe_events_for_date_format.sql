@@ -1,0 +1,44 @@
+-- Custom SQL migration file, put your code below! --
+-- migration: 20260807_000000__wipe_events_for_date_format --
+
+-- Clear `events` so the schema migration that follows can add `events.date`
+-- (`jsonb NOT NULL`, no default) to a non-empty table.
+--
+-- WHY A WIPE AND NOT A BACKFILL. `date` has no honest constant default — there
+-- is no truthful answer to "when does this happen" — so the column must be
+-- NOT NULL with no DDL default, and Postgres rejects that ADD COLUMN while rows
+-- exist. A backfill cannot fill a column that does not exist yet, and a data
+-- migration is DML-only by design (`data-migration-dml-only`), so it cannot add
+-- the column itself. Wiping first is the sanctioned mechanism
+-- (`plugins/database/plugins/migrations/CLAUDE.md`, "Backfill that must precede
+-- a schema change"); the alternative — a permanent placeholder DDL default — is
+-- a lie that outlives this migration and silently dates any future write that
+-- forgets `date`.
+--
+-- WHY THAT IS SAFE HERE. Every `events` row is scraped, reproducible state: the
+-- refresh engine re-derives the full set from the source on its next extraction.
+-- Verified against main before writing: 18 rows, 1 configured source, of type
+-- `url`, and ZERO rows belonging to a `manual` source — a hand-typed row is the
+-- only kind that could not be re-imported. This app shipped four days ago.
+--
+-- What the rows would have been worth keeping anyway is small: the old prompt
+-- MATERIALIZED recurrence (one near-identical row per occurrence within 60
+-- days), so most of them are exactly the duplicates this format change exists to
+-- remove, and the next extraction would have stamped `disappeared_at` on them
+-- regardless. They come back as one row per series.
+DELETE FROM events;
+
+-- Force the next run to actually re-extract.
+--
+-- Load-bearing, not tidy-up: the engine skips `extract` entirely while
+-- `fingerprint = last_fingerprint`, so without this a source whose page has not
+-- changed would report `unchanged` forever and the deleted events would never
+-- come back. `next_run_at = NULL` makes a scheduled source due on the next
+-- cadence tick rather than at its old watermark (the tick's predicate is
+-- `next_run_at IS NULL OR next_run_at <= now`); a `manual`-cadence source is
+-- untouched by the tick either way and refreshes when the user asks.
+--
+-- `last_flags` is deliberately not named here: the schema migration that follows
+-- adds it with a `[]` default, and it has no meaning until the first extraction
+-- under the new format writes one.
+UPDATE event_sources SET last_fingerprint = NULL, next_run_at = NULL;

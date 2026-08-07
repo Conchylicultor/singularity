@@ -29,6 +29,7 @@ const eventSources = defineEntity("event_sources", eventSourceFields, {
     refresh: { default: "manual" },
     enabled: { default: true },
     status: { default: "idle" },
+    lastFlags: { default: [] },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
   },
@@ -44,6 +45,10 @@ const events = defineEntity("events", eventFields, {
     sourceId: {
       references: { column: () => eventSources.table.id, onDelete: "cascade" },
     },
+    // `date` deliberately has NO default: there is no honest constant for "when
+    // does this happen", so a write that omits it must fail loudly rather than
+    // land an epoch-dated row. Its wire default in `core/internal/fields.ts` is
+    // unreachable for exactly this reason.
     allDay: { default: false },
     tags: { default: [] },
     recurring: { default: false },
@@ -80,6 +85,7 @@ const eventSourceRuns = defineEntity(
       eventsCreated: { default: 0 },
       eventsUpdated: { default: 0 },
       eventsDisappeared: { default: 0 },
+      flags: { default: [] },
     },
     indexes: (t) => [
       // The source detail pane's Runs section: this source, newest first.

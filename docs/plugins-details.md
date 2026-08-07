@@ -1051,6 +1051,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/setup-steps.StepNote`
     - **`events`** — Events — track events from pluggable sources in one database.
       - Plugins:
+        - **`event-date`** — The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift.
+          - Cross-plugin:
+            - Imported by: `apps/events/events-core`
+          - Core:
+            - Exports (types):
+              - `AnchorResolution`
+              - `EventDate`
+              - `EventDateProjection`
+              - `EventOccurrence`
+              - `ExpandWindow`
+              - `NextOccurrence`
+              - `RecurrenceFreq`
+              - `RecurrenceRule`
+              - `Weekday`
+            - Exports (values):
+              - `describeEventDate`
+              - `EVENT_DATE_PROMPT_SPEC`
+              - `eventDateIdentityKey`
+              - `eventDateProjection`
+              - `EventDateSchema`
+              - `expandEventDate`
+              - `MAX_EXPANDED_OCCURRENCES`
+              - `nextOccurrence`
+              - `RECURRENCE_FREQS`
+              - `RecurrenceRuleSchema`
+              - `resolveAnchor`
+              - `WEEKDAYS`
         - **`event-list`** — The events DataView: a server-delegated keyset query over the events table rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the keyset events query (POST /api/events/query) over the events table — filter/sort/search compiled to SQL, cursor-paginated, with soft-deleted events hidden by default.
           - Web:
             - Slots:
@@ -1187,6 +1214,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `GET /api/events/runs/:runId`
           - Core:
             - Uses:
+              - `apps/events/event-date.EventDate`
+              - `apps/events/event-date.EventDateSchema`
               - `fields.FieldsRecord`
               - `fields.fieldsToZodObject`
               - `fields.nullable`
@@ -1206,6 +1235,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSource`
               - `EventSourceRun`
               - `ExtractedEvent`
+              - `ExtractionResult`
               - `RefreshCadence`
               - `RefreshSourceResult`
               - `RunOutcome`
@@ -1225,6 +1255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `eventSourcesResource`
               - `eventsRevisionResource`
               - `ExtractedEventSchema`
+              - `ExtractionResultSchema`
               - `getEventSource`
               - `getEventSourceRun`
               - `listEventSourceRuns`
@@ -1244,6 +1275,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/manual`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -1403,7 +1435,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
                   - Web:
                     - Slots:
-                      - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.model-call`
+                      - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.model-call`
                       - `RunActions.RunActions` ← `apps.events.sources.source-detail.runs`
                       - `eventSourceRunPane.Actions`
                     - Contributes:
@@ -1445,8 +1477,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `eventSourceRunPane`
                       - `RunActions`
                   - Cross-plugin:
-                    - Imported by: `apps/events/sources/source-detail/runs/model-call`
+                    - Imported by:
+                      - `apps/events/sources/source-detail/runs/caveats`
+                      - `apps/events/sources/source-detail/runs/model-call`
                   - Plugins:
+                    - **`caveats`** — Extraction caveats section of the Events run pane: what the page's schedule said that the event date format could not express, as the extraction itself reported it. Renders the three arms — the caveats, the fetch failure, and 'reported none', which is the healthy answer and is worded as one.
+                      - Web:
+                        - Contributes: `EventSourceRunDetail.Section` "Extraction caveats" → `CaveatsSection`
+                        - Uses:
+                          - `apps/events/events-core.useEventSourceRun`
+                          - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
+                          - `infra/endpoints.getEndpointErrorMessage`
+                          - `primitives/css/placeholder.Placeholder`
+                          - `primitives/css/spacing.Inset`
+                          - `primitives/css/spacing.Stack`
+                          - `primitives/css/surface.Surface`
+                          - `primitives/css/text.Text`
+                          - `primitives/loading.Loading`
                     - **`model-call`** — Model call section of the Events run pane: the prompt and output behind one run, reached through claude-cli's generic correlation API. Renders all three arms — the calls, 'never called' (the right answer for a cheap unchanged run), and 'the log no longer retains it'.
                       - Web:
                         - Contributes: `EventSourceRunDetail.Section` "Model call" → `ModelCallSection`
@@ -14941,6 +14988,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/events-core`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/runs/caveats`
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
@@ -20158,6 +20206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -20440,6 +20489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/shell`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -20855,6 +20905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps/browser/webview`
+              - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/mail/reading-pane`
               - `apps/studio/graph`
@@ -20920,6 +20971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/shell`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
@@ -23516,6 +23568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/remote-deploy`
           - `apps/deploy/servers`
           - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/runs/caveats`
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`

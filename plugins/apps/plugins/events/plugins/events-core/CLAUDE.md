@@ -19,9 +19,11 @@ second fetch. A type that genuinely cannot probe cheaply returns
 `fingerprint: null` and always extracts.
 
 `probe`/`extract` **throw**; `NonRetryableError` is terminal and classifies onto
-the source row. Returning `[]` means the page genuinely lists no events — never
-use it to signal a failure, or the engine will stamp `disappearedAt` on
-everything it previously found.
+the source row. `extract` returns `{ events, flags }`: `events: []` means the page
+genuinely lists no events — never use it to signal a failure, or the engine will
+stamp `disappearedAt` on everything it previously found. `flags` is a *report* on
+a successful run (what the `date` format could not express), never a soft failure
+and never a reason to keep an event whose date is undeterminable.
 
 `ProbeContext` carries `runId` — the run the phase belongs to, minted by the
 engine before the first phase. Stamp any durable side effect (a model call, a
@@ -48,7 +50,13 @@ Three `defineEntity` tables, field records in `core/internal/fields.ts`:
 - `event_sources` — one row per *configured instance*. Runtime/derived state
   (`status`, `lastFingerprint`, `lastRunAt`/`nextRunAt`, the classified error)
   lives here, never in `config` — the `mail_accounts` + `mail_sync_state` split.
-- `events` — unique `(source_id, external_id)`; the engine upserts against it,
+- `events` — one row per event *or series*: `date` (jsonb, `event-date`) states
+  recurrence once, and `starts_at`/`ends_at`/`all_day`/`recurring`/
+  `recurrence_label` are its projections, written only via `eventDateProjection`.
+  There is no `series_key`: the row IS the series and its `external_id` is the
+  key. `date` is NOT NULL with **no** DB default — there is no honest constant
+  for "when", so a write that omits it must fail loudly.
+  Unique `(source_id, external_id)`; the engine upserts against it,
   which is why `external_id` is NOT NULL (a nullable column makes the conflict
   target unusable). A source type MAY supply an `externalId`; when it can't, the
   **engine** derives one — deriving it there is what keeps re-extraction
@@ -156,6 +164,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `GET /api/events/runs/:runId`
 - Core:
   - Uses:
+    - `apps/events/event-date.EventDate`
+    - `apps/events/event-date.EventDateSchema`
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
     - `fields.nullable`
@@ -175,6 +185,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSource`
     - `EventSourceRun`
     - `ExtractedEvent`
+    - `ExtractionResult`
     - `RefreshCadence`
     - `RefreshSourceResult`
     - `RunOutcome`
@@ -194,6 +205,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventSourcesResource`
     - `eventsRevisionResource`
     - `ExtractedEventSchema`
+    - `ExtractionResultSchema`
     - `getEventSource`
     - `getEventSourceRun`
     - `listEventSourceRuns`
@@ -213,6 +225,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources`
     - `apps/events/sources/manual`
     - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`

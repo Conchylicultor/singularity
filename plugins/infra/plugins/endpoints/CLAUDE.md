@@ -211,6 +211,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/events/events-core`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`

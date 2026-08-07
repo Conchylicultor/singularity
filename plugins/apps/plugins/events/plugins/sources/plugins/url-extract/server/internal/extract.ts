@@ -1,5 +1,5 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
-import type { ExtractedEvent } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import type { ExtractionResult } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import type { ProbeContext } from "@plugins/apps/plugins/events/plugins/events-core/server";
 import type { UrlSourceConfig } from "../../core";
 import { parseExtractionResponse } from "./parse-response";
@@ -27,7 +27,7 @@ const EXTRACTION_TIMEOUT_MS = 120_000;
 export async function extractUrlEvents(
   payload: UrlPagePayload,
   ctx: ProbeContext<UrlSourceConfig>,
-): Promise<ExtractedEvent[]> {
+): Promise<ExtractionResult> {
   const config = readUrlSourceConfig(ctx.config);
 
   const out = await runClaudePrint({

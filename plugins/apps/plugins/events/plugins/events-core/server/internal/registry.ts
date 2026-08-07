@@ -1,6 +1,6 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import type { ExtractedEvent } from "../../core";
+import type { ExtractionResult } from "../../core";
 
 /** What a source type is handed on every phase: its own row's validated config. */
 export interface ProbeContext<TConfig> {
@@ -54,9 +54,13 @@ export interface ProbeResult<TPayload> {
  * `probe` / `extract` **throw**. A plain throw is transient (the refresh job
  * retries); `NonRetryableError` from `@plugins/infra/plugins/jobs/server` is
  * terminal and gets classified onto the source row's `status: "error"` +
- * `lastError`. A source type must NEVER return `[]` to mean "it broke" — an
- * empty array means the page genuinely lists no events, and the engine will
+ * `lastError`. A source type must NEVER return `events: []` to mean "it broke" —
+ * an empty array means the page genuinely lists no events, and the engine will
  * happily stamp `disappearedAt` on everything it previously found.
+ *
+ * `flags` is not a softer failure either: it reports what the extractor could not
+ * EXPRESS, on a run that otherwise succeeded. An event it could not read at all
+ * is omitted; an extraction it could not perform still throws.
  */
 export interface EventSourceType<TConfig = unknown, TPayload = unknown> {
   /** Matches the row's `type` column and the web `EventSources.Type` id. */
@@ -70,11 +74,17 @@ export interface EventSourceType<TConfig = unknown, TPayload = unknown> {
   configFields: FieldsRecord;
   /** Cheap. Fetch raw material and fingerprint it. No LLM, no parsing, no writes. */
   probe(ctx: ProbeContext<TConfig>): Promise<ProbeResult<TPayload>>;
-  /** Expensive. Only ever called when the fingerprint moved (or is `null`). */
+  /**
+   * Expensive. Only ever called when the fingerprint moved (or is `null`).
+   *
+   * Returns the source's FULL current set plus the session's `flags` — every
+   * identity absent from `events` gets `disappearedAt` stamped, so a partial
+   * answer is a data-loss bug, not a smaller answer.
+   */
   extract(
     payload: TPayload,
     ctx: ProbeContext<TConfig>,
-  ): Promise<ExtractedEvent[]>;
+  ): Promise<ExtractionResult>;
 }
 
 // Module-load-time registry, populated by `defineEventSourceType`'s `register()`

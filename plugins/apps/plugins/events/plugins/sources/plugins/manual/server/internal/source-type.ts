@@ -89,8 +89,12 @@ export const manualSourceType = defineEventSourceType<ManualSourceConfig, null>(
    * run in practice, plus a run after a fingerprint bump or after every earlier
    * run failed (a failed run deliberately leaves the fingerprint untouched).
    * Hands back the rows the user authored, unchanged — a vouch, not an import.
+   *
+   * `flags` is always empty, and truthfully so: the channel reports schedules a
+   * page stated that the `date` format could not hold, and here the format IS
+   * how the user stated it. There is nothing that failed to survive the trip.
    */
   async extract(_payload, ctx) {
-    return echoRows(await loadLiveEvents(ctx.sourceId));
+    return { events: echoRows(await loadLiveEvents(ctx.sourceId)), flags: [] };
   },
 });

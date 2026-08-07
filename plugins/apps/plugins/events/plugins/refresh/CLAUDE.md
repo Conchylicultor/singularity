@@ -31,17 +31,36 @@ Two invariants the *shape* enforces:
 `events` is unique on `(source_id, external_id)`, so identity IS idempotence. An
 LLM extraction has no upstream id, and letting each type invent its own fallback
 would make idempotence a per-provider discipline one of them gets wrong.
-`external-id.ts` derives `sha256(sourceId + normalizedTitle + startsAt-as-UTC-date)`:
-**day** granularity (a door time nudged 30 min is the same party), case/whitespace
-folded — while next week's occurrence of a series is a different day, so a
-different row.
+`external-id.ts` derives
+`sha256(sourceId + normalizedTitle + eventDateIdentityKey(date))`, and the date
+half is where the whole design sits:
 
-`plan-writes.ts` is a **pure function** (no DB, clock, or randomness — even
-`events.id` is derived), which is what makes the interesting half of the engine
-unit-testable. It re-validates the extractor's output rather than trusting it,
-collapses same-identity duplicates last-wins, and writes every absent optional as
-an explicit `null` — the upsert's conflict path sets exactly the keys present, so
-an omitted key would keep a price the venue removed on the row forever.
+- a **one-off** contributes the UTC **day** key of its instant — a door time
+  nudged 30 min is the same party. Byte-identical to the pre-recurrence
+  derivation, so no existing row's identity moved when the format landed
+  (pinned by a literal digest in `external-id.test.ts`).
+- a **series** contributes its RULE signature, independent of the anchor. One
+  series is ONE row: next week's extraction reports a later anchor, and hashing
+  that would insert a duplicate every week and bury the previous one as
+  disappeared.
+
+`plan-writes.ts` is a **pure function** (no DB, no randomness, and `now` is a
+parameter rather than a clock read — even `events.id` is derived), which is what
+makes the interesting half of the engine unit-testable. One extracted event
+becomes exactly one row. It re-validates the extractor's output rather than
+trusting it, collapses same-identity duplicates last-wins, and writes every
+absent optional as an explicit `null` — the upsert's conflict path sets exactly
+the keys present, so an omitted key would keep a price the venue removed on the
+row forever.
+
+`date` is written verbatim and the `startsAt`/`endsAt`/`allDay`/`recurring`/
+`recurrenceLabel` columns are **projections** of it (`eventDateProjection`), never
+hand-set — one fact, one writable home. The anchor is re-derived through
+`nextOccurrence(date, now)` rather than trusted: a model that anchors "every
+Thursday" on a Tuesday is corrected deterministically. An **exhausted** series
+(`{ found: false }` — its `until` passed) drops out of the plan *and* the
+seen-set, so its row is stamped disappeared: "this series has ended", not a
+failure.
 
 ## Scheduling
 
@@ -78,6 +97,15 @@ for three identical failures. Transient → detail stays on the run row
 (`lastError` is terminal-only), source drops to `idle`, graphile retries. Either
 way a `failed` run row is written and the job still throws: recording it is
 reporting, not handling.
+
+## Extraction caveats
+
+`extract` returns `{ events, flags }`. `flags` is what the extractor could not
+*express* on a run that otherwise succeeded — never a failure, never per event.
+`finishExtracted` writes it to the run row AND to the source's `lastFlags` in the
+same transaction; `finishUnchanged`/`finishFailed` write `flags: []` on their own
+row and leave `lastFlags` **alone** — neither re-read the page, so the last
+extraction's caveats still stand.
 
 ## The ledger is written at the end, not the start
 

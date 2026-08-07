@@ -76,6 +76,8 @@ async function completeRun(
     outcome: RunOutcome;
     fingerprint: string | null;
     counts: RunCounts;
+    /** What the extractor could not express. `[]` for a run that never read. */
+    flags: string[];
     error: string | null;
   },
   sourceState: SourceStatePatch,
@@ -93,6 +95,7 @@ async function completeRun(
       eventsDisappeared: run.counts.disappeared,
       fingerprint: run.fingerprint,
       durationMs: run.finishedAt.getTime() - run.startedAt.getTime(),
+      flags: run.flags,
       error: run.error,
     });
     await tx
@@ -127,6 +130,10 @@ export async function finishUnchanged(
       outcome: "unchanged",
       fingerprint: args.fingerprint,
       counts: NO_COUNTS,
+      // This run read nothing, so it has nothing to report — and `lastFlags` is
+      // deliberately NOT cleared below: the last extraction's caveats still
+      // stand about a page nobody re-read.
+      flags: [],
       error: null,
     },
     // The fingerprint is unchanged by definition; a successful run clears any
@@ -135,7 +142,13 @@ export async function finishUnchanged(
   );
 }
 
-/** The full path: extraction ran, the diff landed, the fingerprint advances. */
+/**
+ * The full path: extraction ran, the diff landed, the fingerprint advances.
+ *
+ * The ONLY writer of `lastFlags`, and it writes it in the same transaction as
+ * the run row that produced it — so the Status card's caveats and the run they
+ * came from can never disagree, and the card needs no second query to find them.
+ */
 export async function finishExtracted(
   source: EventSource,
   args: {
@@ -143,6 +156,7 @@ export async function finishExtracted(
     startedAt: Date;
     fingerprint: string | null;
     counts: RunCounts;
+    flags: string[];
   },
 ): Promise<void> {
   await completeRun(
@@ -154,9 +168,14 @@ export async function finishExtracted(
       outcome: "extracted",
       fingerprint: args.fingerprint,
       counts: args.counts,
+      flags: args.flags,
       error: null,
     },
     {
+      // Written even when empty: this run DID read the page, so an extraction
+      // that reported nothing is the positive statement "the caveats are gone",
+      // not an absence of news.
+      lastFlags: args.flags,
       // A `null` fingerprint is stored verbatim: the source declared it cannot
       // be fingerprinted cheaply, so the next run must extract again. Writing a
       // placeholder here would silently turn that into a permanent cache hit.
@@ -177,6 +196,10 @@ export async function finishExtracted(
  * message; a TRANSIENT one drops back to `idle` and leaves the source row's
  * error columns alone, because graphile is still retrying and the detail already
  * lives on this run row (`lastError` is documented as terminal-only).
+ *
+ * `lastFlags` is untouched for the same reason as `lastFingerprint`: a failed run
+ * produced no extraction, so it has nothing to say about what the format could or
+ * could not express, and clearing the caveats would erase a true report.
  */
 export async function finishFailed(
   source: EventSource,
@@ -196,6 +219,7 @@ export async function finishFailed(
       outcome: "failed",
       fingerprint: null,
       counts: NO_COUNTS,
+      flags: [],
       error: `${failure.code}: ${failure.message}`,
     },
     failure.terminal

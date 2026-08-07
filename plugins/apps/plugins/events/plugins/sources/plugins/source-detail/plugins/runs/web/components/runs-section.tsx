@@ -85,6 +85,17 @@ export function SourceRunsSection({
         value: (r) => r.eventsDisappeared,
         align: "end",
       },
+      // The count, not the text: "show me runs that reported caveats" is then a
+      // filter on a typed dimension rather than a bespoke control, exactly like
+      // "show me only the failures" is a filter on `outcome`. An `unchanged` or
+      // `failed` run never extracted anything, so it reads 0 — truthfully.
+      {
+        id: "flags",
+        label: "Caveats",
+        type: "number",
+        value: (r) => r.flags.length,
+        align: "end",
+      },
       {
         id: "durationMs",
         label: "Duration",

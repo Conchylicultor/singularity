@@ -6,10 +6,13 @@ import { EVENT_CATEGORIES } from "@plugins/apps/plugins/events/plugins/events-co
 // type they are, or what enum choices they offer. Plain data only (browser-safe)
 // — no React, no drizzle.
 //
-// `description` / `imageUrl` / `allDay` / `seriesKey` are deliberately NOT
-// fields: they are display or formatting inputs the row renderer reads straight
-// off the record, and promoting them here would only add dead sort/filter axes.
+// `description` / `imageUrl` / `allDay` / `date` are deliberately NOT fields:
+// they are display or formatting inputs the row renderer reads straight off the
+// record, and promoting them here would only add dead sort/filter axes.
 // (`description` is still reachable — the server search covers it via ILIKE.)
+// `date` in particular is jsonb: the queryable dimensions are its denormalized
+// projections (`startsAt`, `recurring`), which are indexed columns and already
+// fields below.
 //
 // `sourceId` is deliberately absent too: the `source` dimension arrives later as
 // a CONTRIBUTED field extension (its label and its option list are the sources

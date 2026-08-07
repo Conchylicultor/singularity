@@ -31,10 +31,13 @@ here, and it costs belt 2. Versioned (`manual:v1`) only because bumping it is th
 way to force one re-run if the echo changes.
 
 **The echo is lossless by proof.** `planEventWrites` writes unreceived optionals
-as explicit `null`, so a column `ExtractedEvent` cannot carry is *erased* on the
-round trip. `EchoIsLossless` (`server/internal/echo.ts`) fails `tsc` naming any
-such column, so adding an `events` column forces a decision here. `echo.ts` is
-pure (type-only imports) and unit-tested; the query is in `live-events.ts`.
+as explicit `null`, so a column the echo cannot carry is *erased* on the round
+trip. `EchoIsLossless` (`server/internal/echo.ts`) fails `tsc` naming any such
+column, so adding an `events` column forces a decision here. A column counts as
+carried by EITHER route: its own `ExtractedEvent` field, or derivation by the
+engine from one (`keyof EventDateProjection` — the five `date` projections, which
+is why the echo must NOT restate them). `echo.ts` is pure (type-only imports) and
+unit-tested; the query is in `live-events.ts`.
 
 ## Zero config, deliberately
 

@@ -9,11 +9,30 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
+  EventDateSchema,
+  type EventDate,
+} from "@plugins/apps/plugins/events/plugins/event-date/core";
+import {
   EVENT_CATEGORIES,
   REFRESH_CADENCES,
   RUN_OUTCOMES,
   SOURCE_STATUSES,
 } from "./vocab";
+
+/**
+ * The `date` field's wire default, and nothing more.
+ *
+ * `FieldDef` requires a `defaultValue`, but there is no honest constant for "when
+ * does this happen" — so this one is deliberately unreachable rather than
+ * plausible: the column carries NO DB default (see `server/internal/tables.ts`),
+ * so every insert must state a date, and a row therefore never falls back to it.
+ * The epoch is chosen because it is obviously wrong on sight; a "sensible" value
+ * like `now` would let a future write that forgot `date` look correct.
+ */
+const UNREACHABLE_DATE_DEFAULT: EventDate = {
+  kind: "once",
+  startsAt: new Date(0),
+};
 
 // Web-safe field records for the Events app's three persisted tables — one
 // `FieldsRecord` per table, the single source of truth for both the Drizzle
@@ -57,6 +76,17 @@ export const eventSourceFields = {
   /** Classified TERMINAL failure only; a transient failure stays on the run row. */
   lastError: nullable(textField()),
   lastErrorCode: nullable(textField()),
+  /**
+   * What the LAST EXTRACTION could not express — copied off that run's `flags`,
+   * atomically with the ledger row, so the Status card reads the source's caveats
+   * without a second query.
+   *
+   * Derived runtime state like `lastFingerprint` / `lastError`, and specifically
+   * the last *extraction*'s, not the last run's: an `unchanged` run never re-read
+   * the page, so it leaves this alone rather than clearing caveats that still
+   * stand.
+   */
+  lastFlags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;
@@ -78,13 +108,36 @@ export const eventFields = {
   /**
    * Dedup identity, unique per `(sourceId, externalId)`. A source type MAY
    * supply it; when it can't (an LLM extraction can't), the ENGINE derives
-   * `sha256(sourceId + normalizedTitle + startsAt::date)`. Deriving it in the
-   * engine rather than per-type is what keeps re-extraction idempotent by
-   * construction — never make this nullable.
+   * `sha256(sourceId + normalizedTitle + eventDateIdentityKey(date))`. Deriving
+   * it in the engine rather than per-type is what keeps re-extraction idempotent
+   * by construction — never make this nullable.
+   *
+   * With one row per series, this IS the series key: a recurring event keeps one
+   * identity however far its anchor moves, because the identity key of a
+   * `recurring` date is the rule signature, not the anchor.
    */
   externalId: textField(),
   title: textField(),
   description: nullable(textField()),
+  /**
+   * When it happens, stated ONCE — a single instant, or a whole series with its
+   * recurrence rule. The AUTHORITY on time for this row.
+   *
+   * Five columns are denormalized projections of it (`startsAt`, `endsAt`,
+   * `allDay` here; `recurring`, `recurrenceLabel` below), written only through
+   * `eventDateProjection` — never hand-set, never a second place to state the
+   * fact. They exist so the event list, its keyset query and its date filters
+   * keep working on plain indexed columns instead of digging into jsonb.
+   *
+   * NOT NULL with no DB default (`server/internal/tables.ts` gives it none):
+   * there is no honest constant for "when", so a row without a date must be
+   * unrepresentable rather than silently epoch-dated.
+   */
+  date: jsonField<EventDate>({
+    schema: EventDateSchema,
+    default: UNREACHABLE_DATE_DEFAULT,
+  }),
+  /** Projection of `date`: for a series, the NEXT occurrence's anchor. */
   startsAt: dateField(),
   endsAt: nullable(dateField()),
   allDay: boolField(),
@@ -99,11 +152,14 @@ export const eventFields = {
   // no `Fields.Storage` contribution, so `defineEntity` cannot map it to a column
   // (it is a config-only type). This is the `mail_threads.labelIds` idiom.
   tags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
+  /** Projection of `date`: true iff its `kind` is `recurring`. */
   recurring: boolField(),
-  /** Human label for a recurring series ("every Thursday"). */
+  /** Projection of `date`: the series' human label ("every Thursday"). */
   recurrenceLabel: nullable(textField()),
-  /** Shared by every materialized occurrence of one series. */
-  seriesKey: nullable(textField()),
+  // No `seriesKey`: with one row per series the ROW is the series, and its
+  // `externalId` is the key. A second identifier for the same thing is a
+  // correctness hazard — two ids for one concept drift, and the one the upsert
+  // does not use wins nothing.
   firstSeenAt: dateField(),
   lastSeenAt: dateField(),
   disappearedAt: nullable(dateField()),
@@ -129,4 +185,15 @@ export const eventSourceRunFields = {
   fingerprint: nullable(textField()),
   durationMs: nullable(intField()),
   error: nullable(textField()),
+  /**
+   * What the extractor could not express, one free-text entry per limitation —
+   * global to the run, never per event.
+   *
+   * Empty is the expected outcome and never a fault; a non-empty list is a
+   * successful run reporting a schedule or event shape the `date` format could
+   * not hold. Distinct from `error`, which is a run that FAILED. Only an
+   * `extracted` run can populate this: `unchanged` and `failed` runs write `[]`
+   * because neither of them read the page.
+   */
+  flags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
 } satisfies FieldsRecord;

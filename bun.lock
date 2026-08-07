@@ -285,6 +285,10 @@
       "name": "@singularity/plugin-apps-events",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/event-date": {
+      "name": "@singularity/plugin-apps-events-event-date",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/event-list": {
       "name": "@singularity/plugin-apps-events-event-list",
       "version": "0.0.1",
@@ -315,6 +319,10 @@
     },
     "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs": {
       "name": "@singularity/plugin-apps-events-sources-source-detail-runs",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/caveats": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-runs-caveats",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call": {
@@ -5439,6 +5447,8 @@
 
     "@singularity/plugin-apps-events": ["@singularity/plugin-apps-events@workspace:plugins/apps/plugins/events"],
 
+    "@singularity/plugin-apps-events-event-date": ["@singularity/plugin-apps-events-event-date@workspace:plugins/apps/plugins/events/plugins/event-date"],
+
     "@singularity/plugin-apps-events-event-list": ["@singularity/plugin-apps-events-event-list@workspace:plugins/apps/plugins/events/plugins/event-list"],
 
     "@singularity/plugin-apps-events-events-core": ["@singularity/plugin-apps-events-events-core@workspace:plugins/apps/plugins/events/plugins/events-core"],
@@ -5454,6 +5464,8 @@
     "@singularity/plugin-apps-events-sources-source-detail": ["@singularity/plugin-apps-events-sources-source-detail@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail"],
 
     "@singularity/plugin-apps-events-sources-source-detail-runs": ["@singularity/plugin-apps-events-sources-source-detail-runs@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-runs-caveats": ["@singularity/plugin-apps-events-sources-source-detail-runs-caveats@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/caveats"],
 
     "@singularity/plugin-apps-events-sources-source-detail-runs-model-call": ["@singularity/plugin-apps-events-sources-source-detail-runs-model-call@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call"],
 

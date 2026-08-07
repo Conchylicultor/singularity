@@ -164,6 +164,7 @@ fixed raw size escapes per-site via
     - `apps/events/shell`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`

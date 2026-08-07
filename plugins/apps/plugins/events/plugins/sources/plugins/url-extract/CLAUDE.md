@@ -38,15 +38,21 @@ builder puts them back. The output tree and serializer are ours, so `<img>` stay
   per chunk: the rewriter splits text on its own buffer boundaries, so a
   character reference can straddle two chunks.
 - **A response the parser cannot vouch for throws `NonRetryableError` carrying an
-  excerpt of the raw output** (`parse-response.ts`). Returning `[]` would read to
-  the engine as "the page genuinely lists nothing" and stamp `disappearedAt` on
-  every event this source ever found.
+  excerpt of the raw output** (`parse-response.ts`). Returning `events: []` would
+  read to the engine as "the page genuinely lists nothing" and stamp
+  `disappearedAt` on every event this source ever found. There is deliberately no
+  fallback for the pre-recurrence bare array: one format, loud on a stale shape.
 - **The call is stamped with `ctx.runId`** (`correlationId`), which is what lets
   a run's own pane show the prompt and output that produced it — the call log
   stays the single copy of that text, never duplicated into the events schema.
-- **The prompt materializes recurrence**: one row per concrete occurrence within
-  60 days, sharing a `seriesKey`. No RRULE engine, and idempotent because the
-  engine's derived identity ends in the occurrence's date.
+- **The prompt states recurrence ONCE, never materializes it**: a weekly night is
+  one event whose `date` carries the rule. The format's own description of itself
+  (`EVENT_DATE_PROMPT_SPEC`, from the `event-date` plugin) is interpolated into
+  the prompt, so spec / parser / expander cannot drift.
+- **The response envelope is `{"events": [], "flags": []}`.** `flags` is global to
+  the page — one entry per schedule the `date` format could not hold. Not a
+  commentary channel, and never a substitute for omitting an event whose date is
+  undeterminable.
 - **The bound is on visible TEXT (200k chars), not markup bytes.** A byte offset
   says nothing about where content is — Wix pages hide `<body>` behind ~700 KB of
   inline `<style>`. `MAX_HTML_BYTES` (8 MB) is only a DoS backstop; do not shrink

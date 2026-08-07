@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { MdWarningAmber } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -21,12 +22,27 @@ import {
  */
 export function RunRow({ run }: { run: EventSourceRun }): ReactElement {
   const duration = formatDuration(run.durationMs);
+  const caveats = run.flags.length;
   return (
     <Fill>
       <Line className="gap-sm">
         <Badge variant={RUN_OUTCOME_VARIANT[run.outcome]}>
           {RUN_OUTCOME_LABEL[run.outcome]}
         </Badge>
+        {/* Only when the extraction actually reported something it could not
+            express. A run with no caveats renders nothing at all — a "0 caveats"
+            chip on every healthy row would turn the good outcome into noise and
+            train the eye to skip the one row that matters. The count only; the
+            text is long free-form model prose and lives in the run pane. */}
+        {caveats > 0 && (
+          <Badge
+            variant="warning"
+            icon={<MdWarningAmber />}
+            title="The extraction reported schedules it could not express"
+          >
+            {caveats}
+          </Badge>
+        )}
         <Fill>
           <Text variant="caption" tone="muted">
             {describeRun(run)}
