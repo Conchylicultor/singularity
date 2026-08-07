@@ -158,21 +158,30 @@ one):
     `::-webkit-scrollbar`). The native transient scrollbar during a gesture is the
     other half of the signal; an always-on visible scrollbar was rejected.
   - **Pseudo-elements, never a wrapper div** (same percentage-chain reason as the
-    Ctrl+A handler below), each cancelled by an equal-and-opposite
-    **`margin-top`** so it hangs *backwards* off its anchor point: the strip
-    overlays the first/last row instead of eating 5rem of panel, and
-    `scrollHeight` — the thing `useScrollFade` measures — is what it would be with
-    no fade at all. The **direction** is load-bearing, not just the cancellation:
-    cancelling forwards (`margin-bottom`) leaves the border box extending past the
-    panel's end edge — scrollable overflow, which a margin cannot cancel — so a
-    fits-on-screen menu measures as overflowing and paints a fade over nothing.
-  - **Offset by `--scroll-pad`, not over-bled.** A sticky inset resolves against the
-    scroller's **content** box, so `bottom: 0` parks the strip `padding-bottom`
-    short of the inner edge — where scrolled content still shows, unfaded. Inline
-    over-bleed can't fix the block axis (`overflow-y: auto` would make it
-    scrollable area), so each `POPOVER_PADDING` role co-publishes its value as
-    `--scroll-pad` (the `SURFACE_LEVELS` → `--chrome-mask` contract) and the strip
-    offsets by it — every role, no per-role CSS.
+    Ctrl+A handler below), both cancelled by ONE shared **`margin-top`** so each
+    hangs *backwards* off its anchor point: the strip overlays the first/last row
+    instead of eating 5rem of panel, and `scrollHeight` — the thing `useScrollFade`
+    measures — is what it would be with no fade at all. The **direction** is
+    load-bearing, not just the cancellation: cancelling forwards (`margin-bottom`)
+    leaves the border box extending past the panel's end edge — scrollable
+    overflow, which a margin cannot cancel — so a fits-on-screen menu measures as
+    overflowing and paints a fade over nothing. Hence ONE declaration for both
+    strips: an invariant that holds for one mirror and not the other is this
+    utility's recurring bug. `scroll-fade-verify.ts` asserts it by re-measuring
+    with the class removed.
+  - **The padded edge is covered by a `box-shadow`, not reached by the box.** A
+    sticky inset resolves against the scroller's **content** box, so `bottom: 0`
+    parks the strip `padding-bottom` short of the inner edge — where scrolled
+    content still shows, unfaded. Growing or offsetting the box to reach it is
+    illegal (that is scrollable area again); ink is not. Each `POPOVER_PADDING`
+    role co-publishes its value as `--scroll-pad` (the `SURFACE_LEVELS` →
+    `--chrome-mask` contract), and the gradient's stops are offset by it so the
+    ramp *over content* is identical at every role.
+  - **The gradient must read as a gradient.** A row under the strip should visibly
+    dissolve; hidden outright, it reads as a cutoff and says nothing about what is
+    beyond. So: solid across the host's padding plus a hairline, then a long decay.
+    One `--scroll-fade-stops` list serves both edges mirrored — splitting them is
+    how they drift apart.
   - **Scroll alone is not enough.** The `/` and "Turn into" menus filter as the
     user types, so scrollable-ness changes with no scroll event — hence also a
     `ResizeObserver` (via `element-size`; no cycle, it imports only `latest-ref`)

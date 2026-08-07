@@ -20,6 +20,8 @@ export { stallRoute } from "./stall";
 export type { StalledRoute, StallRouteOptions } from "./stall";
 export { snap, DEFAULT_SNAP_TIMEOUT_MS } from "./shots";
 export type { SnapResult } from "./shots";
+export { samplePixels, colorDistance } from "./pixels";
+export type { PixelGrid, Rgba, Rect } from "./pixels";
 export { pushDiagnostic } from "./diagnostics";
 export { detectOsColorScheme } from "./color-scheme";
 export type { ColorScheme } from "./color-scheme";

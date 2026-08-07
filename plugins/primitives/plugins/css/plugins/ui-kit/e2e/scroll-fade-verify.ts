@@ -1,10 +1,23 @@
 // OverlayPanel's scroll-edge fade — the "there is more below" signal.
 //
 // The claim under test is narrow and easy to fake, so every assertion reads the
-// SAME element two ways: the panel's own scroll metrics (is there really more
-// content that way?) and the painted `::before`/`::after` opacity (is the
-// gradient actually on?). A fade that is always on would satisfy the second
-// alone; a data attribute nobody styled would satisfy the first alone.
+// SAME element three ways: the panel's own scroll metrics (is there really more
+// content that way?), the painted `::before`/`::after` opacity (is the gradient
+// actually on?), and the PIXELS at each edge (did it land where the user would
+// see it, and does it dissolve rather than cut off?). A fade that is always on
+// would satisfy the second alone; a data attribute nobody styled would satisfy
+// the first alone; a strip painted at full opacity outside the visible box
+// satisfied both, and shipped.
+//
+// Two assertions are about the mechanism rather than any one state, and run
+// wherever they apply:
+//
+//  - **no scrollable extent** — the panel re-measured with `scroll-fade` off must
+//    report the same `scrollHeight`. This is what "the fade never lies" reduces
+//    to; a strip contributing even 4px makes a menu that fits paint a fade over
+//    nothing.
+//  - **painted geometry** — how far from the padded edge the content underneath
+//    first shows through, bounded on both sides (see `edgeGeometry`).
 //
 // Four states, all driven on a throwaway page this script creates itself:
 //
@@ -19,9 +32,12 @@ import type { Page } from "playwright";
 import {
   arg,
   baseUrl,
+  colorDistance,
   report,
+  samplePixels,
   snap,
   withBrowser,
+  type Rgba,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
@@ -35,6 +51,8 @@ interface Probe {
   scrollTop: number;
   clientHeight: number;
   scrollHeight: number;
+  /** The same panel re-measured with the `scroll-fade` class off. */
+  scrollHeightBare: number;
   /** True when the panel really does have content past that edge. */
   moreAbove: boolean;
   moreBelow: boolean;
@@ -54,28 +72,274 @@ async function probe(page: Page): Promise<Probe | null> {
   return page.evaluate(() => {
     const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(-1);
     if (!el) return null;
+    const paintTop = getComputedStyle(el, "::before").opacity;
+    const paintBottom = getComputedStyle(el, "::after").opacity;
+    // LAST, and only after the opacities are read: dropping the class deletes
+    // both pseudo-elements, so re-adding it restarts their 120ms opacity
+    // transition — read the paint first and this stays invisible to everything
+    // else. Reading `scrollHeight` forces the layout in between, which is the
+    // whole point; no frame is painted inside one evaluate, so nothing flickers.
+    el.classList.remove("scroll-fade");
+    const scrollHeightBare = Math.round(el.scrollHeight);
+    el.classList.add("scroll-fade");
     return {
       scrollTop: Math.round(el.scrollTop),
       clientHeight: Math.round(el.clientHeight),
       scrollHeight: Math.round(el.scrollHeight),
+      scrollHeightBare,
       moreAbove: el.scrollTop > 1,
       moreBelow: el.scrollTop + el.clientHeight < el.scrollHeight - 1,
       attrTop: el.hasAttribute("data-fade-top"),
       attrBottom: el.hasAttribute("data-fade-bottom"),
-      paintTop: getComputedStyle(el, "::before").opacity,
-      paintBottom: getComputedStyle(el, "::after").opacity,
+      paintTop,
+      paintBottom,
     };
   });
 }
 
 /** Assert one state end to end: metrics ⇒ attributes ⇒ paint. */
 function expect(label: string, p: Probe, top: boolean, bottom: boolean): void {
+  // The invariant the whole utility rests on, stated directly rather than
+  // inferred from a symptom: whatever the strips do, the panel must measure
+  // exactly as it would with no fade at all. `useScrollFade` reads
+  // `scrollHeight` and believes it, so a strip that adds even 4px of extent
+  // makes a menu that FITS arm a fade over content that does not exist. Asserted
+  // in every state, because the failure only shows on panels shorter than the
+  // strip — the states that look least worth checking.
+  r.eq(`${label}: the fade adds no scrollable extent`, p.scrollHeight, p.scrollHeightBare);
   r.eq(`${label}: content above?`, p.moreAbove, top);
   r.eq(`${label}: content below?`, p.moreBelow, bottom);
   r.eq(`${label}: data-fade-top`, p.attrTop, top);
   r.eq(`${label}: data-fade-bottom`, p.attrBottom, bottom);
   r.eq(`${label}: ::before painted`, p.paintTop, top ? "1" : "0");
   r.eq(`${label}: ::after painted`, p.paintBottom, bottom ? "1" : "0");
+}
+
+/**
+ * Where the strip actually LANDS, read off the screen.
+ *
+ * Everything above this point is DOM-level, and DOM-level checks cannot see a
+ * gradient: a pseudo-element has no rect to query, and its computed opacity
+ * reports what it was given, not where it was painted. A top strip that was
+ * fully opaque AND positioned outside the visible box once passed every
+ * assertion in this file; only a screenshot caught it. So this reads pixels.
+ *
+ * It reads them TWICE — once as shipped, once with `scroll-fade` removed — and
+ * reports per-distance COVERAGE: how much the strip attenuates whatever is
+ * underneath, `1 - faded/bare`. The second sample is not a luxury. The obvious
+ * measurement, "how far in does content first appear", conflates *masked* with
+ * *nothing there*: a menu row is mostly leading, so ~9px bands of bare
+ * background sit between glyph rows, and the number then swings by half a row
+ * depending on where a row boundary happens to land. Against its own unmasked
+ * control, the same pixels answer the actual question.
+ *
+ * Two failure modes, one profile:
+ *
+ *  - **uncovered at the edge** ⇒ either the strip isn't there, or it parks short
+ *    of the padded edge and leaves the unfaded sliver the `box-shadow` bleed
+ *    exists to cover.
+ *  - **still covered late in the ramp** ⇒ a CUTOFF, not a fade: the row under it
+ *    is simply hidden rather than visibly dissolving, which is the whole point of
+ *    a gradient.
+ *
+ * Both edges come out of ONE pair of screenshots, because restoring the class
+ * restarts the strips' 120ms fade-in — a second capture would sample a
+ * half-opaque strip and understate its coverage.
+ *
+ * `--chrome-mask` is never parsed: the reference background is SAMPLED, from a
+ * state where the padded edge is provably unmasked (an unscrolled panel's top
+ * edge has no fade and nothing under it).
+ */
+interface EdgeGeometry {
+  /** Distance of the first content row the strip covers by less than 90%. */
+  uncoveredAt: number;
+  /** Distance at which coverage crosses 50%, interpolated between content rows. */
+  clearedAt: number;
+  /** Strongest deviation from the panel background in the unmasked control. */
+  contrast: number;
+  /** `--scroll-pad` and `--scroll-fade-h`, in px, read off the live panel. */
+  pad: number;
+  ramp: number;
+  profile: string;
+}
+
+async function panelGeometry(
+  page: Page,
+  bg: Rgba,
+): Promise<{ top: EdgeGeometry; bottom: EdgeGeometry }> {
+  const panel = page.locator(".scroll-fade").last();
+  const box = await panel.boundingBox();
+  if (!box) throw new Error("panelGeometry: panel has no box");
+  const css = await panel.evaluate((el) => {
+    // Resolve the two custom properties to PIXELS by laying them out, never by
+    // parsing their text: `--scroll-fade-h` is `2.5rem` and `--scroll-pad` is
+    // itself a `var()` onto a spacing token, so `parseFloat` on the computed
+    // value reads 2.5 and NaN respectively — an 18px band that never reaches
+    // past the solid plateau, and assertions that then measure nothing.
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:fixed;top:-9999px;left:-9999px;visibility:hidden;width:0";
+    el.appendChild(probe);
+    const lengthOf = (name: string) => {
+      probe.style.height = `var(${name})`;
+      // An undefined var makes the declaration invalid → height auto → 0, which
+      // is the same fallback the utility itself uses for `--scroll-pad`.
+      return probe.getBoundingClientRect().height;
+    };
+    const pad = lengthOf("--scroll-pad");
+    const ramp = lengthOf("--scroll-fade-h");
+    probe.remove();
+    const s = getComputedStyle(el);
+    const px = (v: string) => parseFloat(v) || 0;
+    return {
+      pad,
+      ramp,
+      borderTop: px(s.borderTopWidth),
+      borderBottom: px(s.borderBottomWidth),
+      borderLeft: px(s.borderLeftWidth),
+      borderRight: px(s.borderRightWidth),
+    };
+  });
+  // The padding box, not the border box: the border is its own colour and would
+  // read as "content" at distance 0. Inset horizontally as well, past the corner
+  // radius, so an antialiased corner is not mistaken for content either.
+  const rect = {
+    x: box.x + css.borderLeft + 12,
+    y: box.y + css.borderTop,
+    width: box.width - css.borderLeft - css.borderRight - 24,
+    height: box.height - css.borderTop - css.borderBottom,
+  };
+  const faded = await samplePixels(page, rect);
+  // The control: the same pixels with no fade painting over them. Removing the
+  // class changes no layout (that is asserted separately), so the two grids are
+  // registered pixel for pixel.
+  //
+  // Held as an element HANDLE, not the locator: `.scroll-fade` is the selector
+  // the locator resolves by, so the moment the class comes off it matches
+  // nothing and putting it back would time out. Restored in a `finally` — a
+  // throw between the two would otherwise leave the panel unmasked for every
+  // later assertion, and they would fail somewhere else entirely.
+  const handle = await panel.elementHandle();
+  if (!handle) throw new Error("panelGeometry: panel vanished");
+  let control;
+  try {
+    await handle.evaluate((el) => el.classList.remove("scroll-fade"));
+    control = await samplePixels(page, rect);
+  } finally {
+    await handle.evaluate((el) => el.classList.add("scroll-fade"));
+    await handle.dispose();
+  }
+
+  /** How far the strip's paint reaches in from one edge. */
+  const readEdge = (edge: "top" | "bottom"): EdgeGeometry => {
+    const depth = Math.min(faded.height, Math.round(css.ramp + 2 * css.pad + 16));
+    const rows = Array.from({ length: depth }, (_, i) => {
+      const y = edge === "top" ? i : faded.height - 1 - i;
+      let bareDev = 0;
+      let fadedDev = 0;
+      for (let x = 0; x < faded.width; x++) {
+        bareDev = Math.max(bareDev, colorDistance(control.at(x, y), bg));
+        fadedDev = Math.max(fadedDev, colorDistance(faded.at(x, y), bg));
+      }
+      return { bareDev, fadedDev };
+    });
+    const contrast = Math.max(...rows.map((v) => v.bareDev));
+    // Only a row with something under it can say anything about coverage — the
+    // leading between glyph rows is background either way.
+    const coverage = rows.map((v) =>
+      v.bareDev > contrast * 0.25 ? Math.min(1, Math.max(0, 1 - v.fadedDev / v.bareDev)) : null,
+    );
+    // Only content rows carry a verdict, so both numbers are indexed over THEM.
+    // Asking "how deep does full coverage reach" instead would answer with the
+    // last row that happened to have glyphs under it — 3px on a panel whose last
+    // item ends well above the edge, which says nothing about masking.
+    const seen = coverage
+      .map((c, i) => ({ i, c }))
+      .filter((v): v is { i: number; c: number } => v.c !== null);
+    const uncoveredAt = seen.find((v) => v.c < 0.9)?.i ?? depth;
+    // The 50% crossing, interpolated between the two content rows bracketing it:
+    // glyph rows are ~9px apart, so taking the first row under 50% reports the
+    // ramp as up to a row longer than it is, and the budget below would have to
+    // absorb that slack instead of measuring the ramp.
+    let clearedAt = depth;
+    for (let k = 0; k < seen.length; k++) {
+      const cur = seen[k]!;
+      if (cur.c >= 0.5) continue;
+      const prev = [...seen.slice(0, k)].reverse().find((v) => v.c >= 0.5);
+      clearedAt = prev
+        ? prev.i + ((prev.c - 0.5) / (prev.c - cur.c)) * (cur.i - prev.i)
+        : cur.i;
+      break;
+    }
+    return {
+      uncoveredAt,
+      clearedAt: Math.round(clearedAt),
+      contrast,
+      pad: css.pad,
+      ramp: css.ramp,
+      // Every row near the edge, every fourth after: a sliver is a one-pixel
+      // event, so a coarse profile shows a failure without showing its shape.
+      profile: coverage
+        .map((c, i) => ((i < 14 || i % 4 === 0) && c !== null ? `${i}:${Math.round(c * 100)}` : null))
+        .filter(Boolean)
+        .join(" "),
+    };
+  };
+  return { top: readEdge("top"), bottom: readEdge("bottom") };
+}
+
+/**
+ * The panel's own background, measured rather than parsed out of
+ * `--chrome-mask`.
+ *
+ * Read at the TOP padding of an UNSCROLLED panel: no top fade is armed there and
+ * nothing has scrolled under it, so those pixels are the surface itself. Fails
+ * loudly if the row isn't uniform — that would mean the assumption is wrong and
+ * every coverage number taken against it would be quietly meaningless.
+ */
+async function panelBackground(page: Page): Promise<Rgba> {
+  const panel = page.locator(".scroll-fade").last();
+  const box = await panel.boundingBox();
+  if (!box) throw new Error("panelBackground: panel has no box");
+  const border = await panel.evaluate((el) => parseFloat(getComputedStyle(el).borderTopWidth) || 0);
+  const grid = await samplePixels(page, {
+    x: box.x + 16,
+    y: box.y + border + 1,
+    width: Math.max(1, box.width - 32),
+    height: 1,
+  });
+  const first = grid.at(0, 0);
+  for (let x = 1; x < grid.width; x++) {
+    const spread = colorDistance(grid.at(x, 0), first);
+    if (spread > 6)
+      throw new Error(
+        `panelBackground: the unscrolled top padding is not uniform (${spread} at x=${x}) — ` +
+          `it is not the surface colour, so nothing measured against it would mean anything`,
+      );
+  }
+  return first;
+}
+
+/** Assert one edge's painted geometry. */
+function expectGeometry(label: string, g: EdgeGeometry): void {
+  r.note(
+    `${label}: ${JSON.stringify({ uncoveredAt: g.uncoveredAt, clearedAt: g.clearedAt, contrast: g.contrast })}`,
+  );
+  r.note(`${label} coverage % by distance: ${g.profile}`);
+  r.ok(
+    `${label}: something is actually under the strip`,
+    g.contrast > 24,
+    `strongest deviation ${g.contrast} with the fade off — nothing is under this edge, so the rest measures nothing`,
+  );
+  r.ok(
+    `${label}: the padded edge is masked`,
+    g.uncoveredAt > g.pad,
+    `content is under 90% covered ${g.uncoveredAt}px in, inside the panel's own ${g.pad}px padding — the unfaded sliver`,
+  );
+  r.ok(
+    `${label}: the mask is a fade, not a wall`,
+    g.clearedAt <= g.pad + g.ramp * 0.65,
+    `content is still ≥50% covered at ${g.clearedAt}px of a ${g.ramp}px ramp (budget ${g.pad + g.ramp * 0.65}px)`,
+  );
 }
 
 /**
@@ -198,12 +462,23 @@ await withBrowser(async (h) => {
   );
   expect("turn-into rest", rest, false, true);
 
+  // The surface colour every coverage number below is measured against — taken
+  // here, while the panel is unscrolled and its top edge is provably unmasked.
+  const bg = await panelBackground(page);
+  r.note(`panel background: ${JSON.stringify(bg)}`);
+  expectGeometry("turn-into rest bottom", (await panelGeometry(page, bg)).bottom);
+
   await wheelPanel(page, 120);
   const mid = await probe(page);
   await snap(page, out, "turn-into-mid");
   if (!mid) return r.fail("turn-into mid: panel found");
   r.note(`turn-into mid: ${JSON.stringify(mid)}`);
   expect("turn-into mid", mid, true, true);
+  // Mid-scroll is the only state where BOTH strips paint, so it is the only one
+  // that can show the two edges are the same ramp mirrored.
+  const midGeom = await panelGeometry(page, bg);
+  expectGeometry("turn-into mid top", midGeom.top);
+  expectGeometry("turn-into mid bottom", midGeom.bottom);
 
   await wheelPanel(page, 2000);
   const end = await probe(page);
