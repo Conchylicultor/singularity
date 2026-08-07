@@ -8,8 +8,8 @@ import { useConversationById } from "@plugins/conversations/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { commitDetailPane } from "@plugins/code-explorer/plugins/commit-detail/web";
 import { commitsGraphResource } from "../../shared/resources";
-import { convCommitDiffPane } from "../panes";
 
 const BRANCH_COLOR = "var(--primary)";
 const LANDED_COLOR = "#10b981"; // emerald-500 — commits pushed to main
@@ -63,6 +63,14 @@ export function CommitsGraphBody() {
   const behindCommits = behind_;
   const branchLabel = branch ?? "HEAD";
   const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
+  // The detail pane carries the worktree in its own params, so this is the only
+  // place the conversation's attempt enters the picture.
+  const openCommit = (sha: string) =>
+    openPane(
+      commitDetailPane,
+      { worktree: conversation.attemptId, sha },
+      { mode: "push" },
+    );
 
   return (
     <Column
@@ -89,7 +97,7 @@ export function CommitsGraphBody() {
             isFirst={idx === 0}
             isLast={idx === commits.length - 1}
             color={BRANCH_COLOR}
-            onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push" })}
+            onClick={(c) => openCommit(c.sha)}
           />
         ))}
         {hasAgentWork && (
@@ -108,7 +116,7 @@ export function CommitsGraphBody() {
             isLast={idx === landedCommits.length - 1}
             color={LANDED_COLOR}
             pushed
-            onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push" })}
+            onClick={(c) => openCommit(c.sha)}
           />
         ))}
         {behindCommits.length > 0 && (
@@ -121,7 +129,7 @@ export function CommitsGraphBody() {
                 isFirst={false}
                 isLast={idx === behindCommits.length - 1}
                 color={BEHIND_COLOR}
-                onClick={(c) => openPane(convCommitDiffPane, { sha: c.sha }, { mode: "push" })}
+                onClick={(c) => openCommit(c.sha)}
               />
             ))}
           </>

@@ -3,6 +3,7 @@ import type { Components } from "react-markdown";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { langFromClassName, nodeToText } from "./helpers";
+import { InlineCode } from "./inline-code";
 
 // react-markdown hands every component override a fresh `node` (the hast AST
 // node) on every render. Any override that spreads its props onto an intrinsic
@@ -104,14 +105,7 @@ export function buildBaseComponents(
         const result = handler(text);
         if (result !== null) return <>{result}</>;
       }
-      return (
-        <code
-          className="rounded-md bg-muted px-xs py-2xs font-mono text-caption"
-          {...rest}
-        >
-          {children}
-        </code>
-      );
+      return <InlineCode {...rest}>{children}</InlineCode>;
     },
     pre: ({ children }) => <>{children}</>,
     // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm; siblings rendered independently by react-markdown

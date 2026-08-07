@@ -20,6 +20,7 @@
     - `WithTooltip`
 - Cross-plugin:
   - Imported by:
+    - `active-data/commit-link`
     - `apps-core/app-rail`
     - `apps-core/surface/floating`
     - `apps-core/tab-bar`

@@ -1,11 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleCommitFiles } from "./internal/commit-handler";
+import { handleCommitInfo } from "./internal/commit-info-handler";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";
 import { handlePushFiles } from "./internal/push-handler";
 import { handleTree } from "./internal/tree-handler";
-import { getCodeTree, getFileContent, getFileDiff, getImageContent, getPushFiles, getCommitFiles } from "@plugins/code-explorer/plugins/code-api/core";
+import { getCodeTree, getFileContent, getFileDiff, getImageContent, getPushFiles, getCommitFiles, getCommitInfo } from "@plugins/code-explorer/plugins/code-api/core";
 
 export { resolveWorktreePath } from "./internal/resolve-worktree-path";
 export { resolveParentSha, getRangeFiles } from "./internal/get-push-files";
@@ -20,5 +21,6 @@ export default {
     [getImageContent.route]: handleImageContent,
     [getPushFiles.route]: handlePushFiles,
     [getCommitFiles.route]: handleCommitFiles,
+    [getCommitInfo.route]: handleCommitInfo,
   },
 } satisfies ServerPluginDefinition;

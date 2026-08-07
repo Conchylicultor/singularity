@@ -14,6 +14,44 @@ Each contribution declares a `display` mode:
   pre-extracts these before markdown parsing, so blank lines inside the tag
   body are handled correctly. Requires `tag: string`. The component receives
   `content` (trimmed inner text) and `attrs` (parsed tag attributes).
+- **`display: 'code'`** — like inline, but applied only inside backtick-wrapped
+  inline code spans, never to regular text nodes. Two gates, and a claim protocol
+  between them — see below.
+
+## `display:'code'` — the claim protocol
+
+`pattern` is only the **syntactic** gate; several contributions legitimately
+full-match one token (a short sha is also a valid plugin name). The **semantic**
+gate is `useClaim`, sealed to its renderer by `codeTag()`:
+
+```ts
+ActiveData.Tag(codeTag({
+  id: "plugin-link",
+  pattern: PLUGIN_NAME_RE,
+  useClaim: usePluginClaim,   // (text) => CodeClaim<PluginNode>
+  component: PluginLinkChip,  // ({ content, value: PluginNode }) — pure renderer
+}))
+```
+
+`CodeClaim<T>` (`web/claim.ts`): `claimPending()` / `declined(reason)` /
+`claimed(value)`. `internal/code-chain.tsx` walks the syntactic candidates and
+renders the first that claims — on `declined` it moves on, on `pending` it renders
+the plain terminal `<code>` and **stops** (walking past a loading candidate would
+fire the next one's I/O for an answer about to be discarded, then flicker).
+
+Rules that look optional and aren't:
+
+- **No contribution renders its own plain `<code>`.** A rendered fallback is
+  indistinguishable from a success, so it starves every other candidate for the
+  token. The host owns the fallback (`<InlineCode>`); `./singularity check
+  active-data:no-adhoc-inline-code` enforces it.
+- **The chain reads the registry itself, never a candidates prop** — the markdown
+  renderer memoizes its whole element, so a prop freezes a boot-time snapshot in.
+- **`display:'inline'` has no claim protocol and must stay self-certifying.**
+  `node-extension-bridge.ts` unions every inline pattern into one Lexical node, so
+  a "declined" inline token would still be a committed node in the user's document
+  with no host to catch it. A pattern whose validity needs I/O goes in
+  `display:'code'`.
 
 Hosts wire two helpers:
 
@@ -81,7 +119,7 @@ Behavior:
 
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 - Web:
-  - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
+  - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.commit-link`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
@@ -100,6 +138,7 @@ Behavior:
     - `primitives/inline-text.InlineTextWalkerSlot`
     - `primitives/inline-text.useInlineTextWalker`
     - `primitives/live-state.useResource`
+    - `primitives/markdown.InlineCode`
     - `primitives/markdown.MarkdownEnhancement`
     - `primitives/markdown.MarkdownEnhancementContext`
     - `primitives/markdown.MarkdownEnhancerSlot`
@@ -113,12 +152,16 @@ Behavior:
     - `ActiveDataIdentity`
     - `ActiveDataInlineContribution`
     - `ActiveDataSegment`
-    - `CodeReplaceContrib`
+    - `CodeClaim`
+    - `CodeResolver`
   - Exports (values):
     - `ActiveData`
     - `ActiveDataIdentityProvider`
+    - `claimed`
+    - `claimPending`
+    - `codeTag`
+    - `declined`
     - `useActiveDataBinding`
-    - `useActiveDataCodeReplace`
     - `useActiveDataIdentity`
     - `useActiveDataLinkify`
     - `useActiveDataSegments`
@@ -156,6 +199,7 @@ Behavior:
 - Cross-plugin:
   - Imported by:
     - `active-data/attempt`
+    - `active-data/commit-link`
     - `active-data/conv`
     - `active-data/page-link`
     - `active-data/plugin-link`
@@ -165,6 +209,7 @@ Behavior:
     - `improve/element-picker`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
+  - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
   - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
   - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.

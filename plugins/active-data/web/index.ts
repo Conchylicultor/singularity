@@ -3,13 +3,13 @@ import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
 import { InlineTextWalkerSlot } from "@plugins/primitives/plugins/inline-text/web";
 import { TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
 
-export { ActiveData } from "./slots";
+export { ActiveData, codeTag } from "./slots";
 export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution, ActiveDataCodeContribution } from "./slots";
+export { claimPending, declined, claimed } from "./claim";
+export type { CodeClaim, CodeResolver } from "./claim";
 export { useActiveDataSegments } from "./internal/segment-active-data";
 export type { ActiveDataSegment } from "./internal/segment-active-data";
 export { useActiveDataLinkify } from "./internal/linkify-active-data";
-export { useActiveDataCodeReplace } from "./internal/use-code-replace";
-export type { CodeReplaceContrib } from "./internal/use-code-replace";
 export {
   ActiveDataIdentityProvider,
   useActiveDataIdentity,

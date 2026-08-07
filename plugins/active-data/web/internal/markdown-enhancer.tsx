@@ -5,7 +5,8 @@ import {
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
 import { useActiveDataLinkify } from "./linkify-active-data";
-import { useActiveDataCodeReplace } from "./use-code-replace";
+import { ActiveDataCodeChain } from "./code-chain";
+import { anyCandidateMatches, useActiveDataCodeCandidates } from "./use-code-candidates";
 
 export function ActiveDataMarkdownEnhancer({
   children,
@@ -13,7 +14,7 @@ export function ActiveDataMarkdownEnhancer({
   children: ReactNode;
 }) {
   const linkify = useActiveDataLinkify();
-  const codeContribs = useActiveDataCodeReplace();
+  const candidates = useActiveDataCodeCandidates();
 
   const inlineCode = useCallback(
     (text: string): ReactNode | null => {
@@ -22,16 +23,15 @@ export function ActiveDataMarkdownEnhancer({
       // match any kebab-case string and rely on runtime validation.
       const result = linkify(text);
       if (result !== text) return result as ReactNode;
-      // display:"code" contributions are matched against the full code text
-      // only — never applied to regular text nodes.
-      for (const { pattern, Component } of codeContribs) {
-        const re = new RegExp(pattern.source, pattern.flags.replace("g", ""));
-        const m = re.exec(text);
-        if (m && m[0] === text) return <Component content={text} attrs={{}} />;
-      }
-      return null;
+      // SYNTACTIC pre-test only. If no code contribution can even full-match this
+      // span, return null so the NEXT enhancer plugin still gets its turn
+      // (markdown-extensions' URL / file-path handler). Whether a matching
+      // candidate can actually RESOLVE the token is the chain's business, not
+      // ours: deciding it here would need the claims, and the claims are hooks.
+      if (!anyCandidateMatches(candidates, text)) return null;
+      return <ActiveDataCodeChain text={text} />;
     },
-    [linkify, codeContribs],
+    [linkify, candidates],
   );
 
   const enhancement = useMemo(

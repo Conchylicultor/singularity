@@ -23,9 +23,30 @@ type PatternContrib = {
   Component: ActiveDataInlineContribution["component"];
 };
 
+type Match = {
+  start: number;
+  end: number;
+  text: string;
+  patternSource: string;
+  Component: PatternContrib["Component"];
+};
+
+// Dev-only loud guard for the leftmost-longest tie-break: when two inline
+// patterns claim overlapping spans of the same text, the later one is silently
+// dropped. That is a registry-level conflict (two contributions competing for one
+// token), invisible at runtime because the winner renders normally. Never throws
+// — the rendered output is unchanged; this just names the loser.
+function warnOverlapSkip(winner: Match | null, dropped: Match, text: string): void {
+  if (process.env.NODE_ENV === "production") return;
+  console.error(
+    `[active-data] inline pattern overlap: /${dropped.patternSource}/ matched "${dropped.text}" at ${dropped.start}-${dropped.end}, but that span is already taken by ${
+      winner ? `/${winner.patternSource}/ ("${winner.text}" at ${winner.start}-${winner.end})` : "an earlier match"
+    }. The later match is DROPPED — it will never render. Text: ${JSON.stringify(text)}`,
+  );
+}
+
 function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
   if (!text) return text;
-  type Match = { start: number; end: number; text: string; Component: PatternContrib["Component"] };
   const matches: Match[] = [];
   for (const c of contribs) {
     const flags = c.pattern.flags.includes("g") ? c.pattern.flags : `${c.pattern.flags}g`;
@@ -36,6 +57,7 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
         start: m.index,
         end: m.index + m[0].length,
         text: m[0],
+        patternSource: c.pattern.source,
         Component: c.Component,
       });
       if (m[0].length === 0) re.lastIndex++;
@@ -46,14 +68,19 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
   const out: ReactNode[] = [];
   let cursor = 0;
   let i = 0;
+  let lastAccepted: Match | null = null;
   for (const m of matches) {
-    if (m.start < cursor) continue;
+    if (m.start < cursor) {
+      warnOverlapSkip(lastAccepted, m, text);
+      continue;
+    }
     if (m.start > cursor) {
       out.push(<Fragment key={`t-${i}`}>{text.slice(cursor, m.start)}</Fragment>);
     }
     const C = m.Component;
     out.push(<C key={`m-${i}`} content={m.text} attrs={{}} />);
     cursor = m.end;
+    lastAccepted = m;
     i++;
   }
   if (cursor < text.length) out.push(<Fragment key={`t-end`}>{text.slice(cursor)}</Fragment>);

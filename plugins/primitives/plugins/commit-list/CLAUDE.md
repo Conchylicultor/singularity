@@ -32,6 +32,7 @@
     - `build`
     - `build/build-commits`
     - `code-explorer`
+    - `code-explorer/code-api`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/commits-graph`
     - `infra/git-watcher`

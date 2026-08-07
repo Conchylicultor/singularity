@@ -68,8 +68,8 @@ element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
     - `apps/workflows/engine`
     - `build`
     - `build/build-logs`
+    - `code-explorer/commit-detail`
     - `conversations/agents`
-    - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/turn-summary`

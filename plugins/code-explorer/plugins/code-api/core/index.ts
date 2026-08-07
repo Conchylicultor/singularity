@@ -5,4 +5,5 @@ export {
   getImageContent,
   getPushFiles,
   getCommitFiles,
+  getCommitInfo,
 } from "./endpoints";

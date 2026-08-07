@@ -7,6 +7,7 @@
 - Description: Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
 - Cross-plugin:
   - Imported by:
+    - `active-data/commit-link`
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
     - `apps/deploy/deploy-history`

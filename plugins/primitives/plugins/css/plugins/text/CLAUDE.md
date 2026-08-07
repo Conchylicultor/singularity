@@ -136,6 +136,7 @@ fixed raw size escapes per-site via
     - `Text`
 - Cross-plugin:
   - Imported by:
+    - `active-data/commit-link`
     - `active-data/plugin-link`
     - `active-data/task`
     - `apps-core/layout`
@@ -250,6 +251,7 @@ fixed raw size escapes per-site via
     - `build/build-logs`
     - `build/serve-composition`
     - `code-explorer`
+    - `code-explorer/commit-detail`
     - `code-explorer/file-resolve`
     - `config_v2/config-link`
     - `config_v2/fields`

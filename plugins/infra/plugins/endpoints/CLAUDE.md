@@ -267,6 +267,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `build/serve-composition`
     - `code-explorer`
     - `code-explorer/code-api`
+    - `code-explorer/commit-detail`
     - `code-explorer/file-resolve`
     - `config_v2`
     - `config_v2/settings`
@@ -278,7 +279,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
-    - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/drop-dependents`

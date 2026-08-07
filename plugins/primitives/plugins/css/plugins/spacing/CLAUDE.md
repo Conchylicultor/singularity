@@ -91,6 +91,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `Stack`
 - Cross-plugin:
   - Imported by:
+    - `active-data/commit-link`
     - `active-data/task`
     - `apps-core/app-rail`
     - `apps-core/app-rail-framing/hidden`
@@ -207,6 +208,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `build/build-info`
     - `build/build-logs`
     - `build/serve-composition`
+    - `code-explorer/commit-detail`
     - `code-explorer/file-resolve`
     - `config_v2/fields`
     - `config_v2/settings`

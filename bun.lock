@@ -65,6 +65,10 @@
       "name": "@singularity/plugin-active-data-attempt",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/commit-link": {
+      "name": "@singularity/plugin-active-data-commit-link",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/conv": {
       "name": "@singularity/plugin-active-data-conv",
       "version": "0.0.1",
@@ -1176,6 +1180,10 @@
     },
     "plugins/code-explorer/plugins/code-api": {
       "name": "@singularity/plugin-code-explorer-code-api",
+      "version": "0.0.1",
+    },
+    "plugins/code-explorer/plugins/commit-detail": {
+      "name": "@singularity/plugin-code-explorer-commit-detail",
       "version": "0.0.1",
     },
     "plugins/code-explorer/plugins/file-resolve": {
@@ -5301,6 +5309,8 @@
 
     "@singularity/plugin-active-data-attempt": ["@singularity/plugin-active-data-attempt@workspace:plugins/active-data/plugins/attempt"],
 
+    "@singularity/plugin-active-data-commit-link": ["@singularity/plugin-active-data-commit-link@workspace:plugins/active-data/plugins/commit-link"],
+
     "@singularity/plugin-active-data-conv": ["@singularity/plugin-active-data-conv@workspace:plugins/active-data/plugins/conv"],
 
     "@singularity/plugin-active-data-page-link": ["@singularity/plugin-active-data-page-link@workspace:plugins/active-data/plugins/page-link"],
@@ -5840,6 +5850,8 @@
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
 
     "@singularity/plugin-code-explorer-code-api": ["@singularity/plugin-code-explorer-code-api@workspace:plugins/code-explorer/plugins/code-api"],
+
+    "@singularity/plugin-code-explorer-commit-detail": ["@singularity/plugin-code-explorer-commit-detail@workspace:plugins/code-explorer/plugins/commit-detail"],
 
     "@singularity/plugin-code-explorer-file-resolve": ["@singularity/plugin-code-explorer-file-resolve@workspace:plugins/code-explorer/plugins/file-resolve"],
 

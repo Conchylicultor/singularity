@@ -6,7 +6,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`active-data`** — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
   - Web:
-    - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
+    - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.commit-link`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
     - Contributes:
       - `MarkdownEnhancerSlot`
       - `InlineTextWalkerSlot`
@@ -25,6 +25,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/inline-text.InlineTextWalkerSlot`
       - `primitives/inline-text.useInlineTextWalker`
       - `primitives/live-state.useResource`
+      - `primitives/markdown.InlineCode`
       - `primitives/markdown.MarkdownEnhancement`
       - `primitives/markdown.MarkdownEnhancementContext`
       - `primitives/markdown.MarkdownEnhancerSlot`
@@ -38,12 +39,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ActiveDataIdentity`
       - `ActiveDataInlineContribution`
       - `ActiveDataSegment`
-      - `CodeReplaceContrib`
+      - `CodeClaim`
+      - `CodeResolver`
     - Exports (values):
       - `ActiveData`
       - `ActiveDataIdentityProvider`
+      - `claimed`
+      - `claimPending`
+      - `codeTag`
+      - `declined`
       - `useActiveDataBinding`
-      - `useActiveDataCodeReplace`
       - `useActiveDataIdentity`
       - `useActiveDataLinkify`
       - `useActiveDataSegments`
@@ -81,6 +86,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by:
       - `active-data/attempt`
+      - `active-data/commit-link`
       - `active-data/conv`
       - `active-data/page-link`
       - `active-data/plugin-link`
@@ -101,6 +107,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `tasks/attempt-view.attemptPane`
         - Exports (values): `AttemptChip`
+    - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
+      - Web:
+        - Contributes: `ActiveData.Tag` "commit-link"
+        - Uses:
+          - `active-data.ActiveData`
+          - `active-data.claimed`
+          - `active-data.claimPending`
+          - `active-data.CodeClaim`
+          - `active-data.codeTag`
+          - `active-data.declined`
+          - `code-explorer/commit-detail.commitDetailPane`
+          - `code-explorer/commit-detail.useCommitInfo`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/link-chip.LinkChip`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/pane.useOpenPane`
+          - `primitives/relative-time.formatRelativeTime`
+          - `primitives/tooltip.WithTooltip`
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Web:
         - Contributes: `ActiveData.Tag` "(?<!\/)conv-\d+-[a-z0-9]{4}(?![/.])\b" → `ConvChip`
@@ -130,10 +155,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
         - Contributes:
-          - `ActiveData.Tag` "(?<!\/)[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*(?![/.])\b" → `PluginLinkChip`
+          - `ActiveData.Tag` "plugin-link"
           - `Pane.Register` "plugin-conv-side"
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.claimed`
+          - `active-data.claimPending`
+          - `active-data.CodeClaim`
+          - `active-data.codeTag`
+          - `active-data.declined`
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.useEndpoint`
           - `plugin-meta/plugin-view.PluginDetail`
@@ -146,7 +176,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
-        - Exports (values): `PluginLinkChip`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
@@ -6839,6 +6868,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.HOME_DIR`
       - `infra/paths.REPO_ROOT`
       - `infra/worktree.ensureMainWorktreeRoot`
+      - `primitives/commit-list.LOG_FORMAT`
+      - `primitives/commit-list.parseGitLog`
       - `primitives/commit-list.tryRunGit`
       - `tasks/tasks-core.getAttempt`
       - `tasks/tasks-core.listPushesByPushId`
@@ -6857,13 +6888,41 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations/conversation-view/code.EditedFileSchema`
           - `infra/endpoints.defineEndpoint`
+          - `primitives/commit-list.CommitRowSchema`
+          - `primitives/live-state.resolvableSchema`
         - Exports (values):
           - `getCodeTree`
           - `getCommitFiles`
+          - `getCommitInfo`
           - `getFileContent`
           - `getFileDiff`
           - `getImageContent`
           - `getPushFiles`
+    - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
+      - Web:
+        - Slots: `commitDetailPane.Actions`
+        - Contributes: `Pane.Register` "commit-detail"
+        - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.useEndpoint`
+          - `primitives/collapsible.CollapsibleChevron`
+          - `primitives/css/column.Column`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/sticky.Sticky`
+          - `primitives/css/text.Text`
+          - `primitives/diff-view.DiffOrImageView`
+          - `primitives/loading.Loading`
+          - `primitives/pane.Pane`
+          - `primitives/pane.PaneChrome`
+        - Exports (types): `CommitInfoState`
+        - Exports (values):
+          - `commitDetailPane`
+          - `useCommitInfo`
+      - Cross-plugin:
+        - Imported by:
+          - `active-data/commit-link`
+          - `conversations/conversation-view/commits-graph`
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Web:
         - Uses:
@@ -8292,24 +8351,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Pane.Register` "conv-commits-graph"
-              - `Pane.Register` "conv-commit-diff"
               - `Conversation.ActionBar` → `CommitsChip`
             - Uses:
+              - `code-explorer/commit-detail.commitDetailPane`
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
-              - `infra/endpoints.EndpointError`
-              - `infra/endpoints.useEndpoint`
-              - `primitives/collapsible.CollapsibleChevron`
               - `primitives/commit-list.CommitRowItem`
               - `primitives/commit-list.MergeBaseMarker`
               - `primitives/css/column.Column`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/diff-view.DiffOrImageView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.Pane`
@@ -14878,6 +14932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/serve-composition`
           - `code-explorer`
           - `code-explorer/code-api`
+          - `code-explorer/commit-detail`
           - `code-explorer/file-resolve`
           - `config_v2`
           - `config_v2/settings`
@@ -14889,7 +14944,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code/docs-button`
           - `conversations/conversation-view/code/file-pane`
-          - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/drop-dependents`
@@ -19040,8 +19094,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/engine`
           - `build`
           - `build/build-logs`
+          - `code-explorer/commit-detail`
           - `conversations/agents`
-          - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer/collapsible-card`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/turn-summary`
@@ -19128,6 +19182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-commits`
           - `code-explorer`
+          - `code-explorer/code-api`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/commits-graph`
           - `infra/git-watcher`
@@ -19599,6 +19654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/studio/contributions`
               - `apps/studio/graph`
+              - `code-explorer/commit-detail`
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
@@ -19703,6 +19759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data`
+              - `active-data/commit-link`
               - `apps/deploy/ssh-setup`
               - `apps/events/shell`
               - `apps/mail/reading-pane`
@@ -19848,6 +19905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/attempt`
+              - `active-data/commit-link`
               - `active-data/conv`
               - `active-data/page-link`
               - `active-data/plugin-link`
@@ -20001,6 +20059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/contributions/tables/sample-rows`
               - `build/build-commits`
+              - `code-explorer/commit-detail`
               - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/agents`
@@ -20235,6 +20294,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Stack`
           - Cross-plugin:
             - Imported by:
+              - `active-data/commit-link`
               - `active-data/task`
               - `apps-core/app-rail`
               - `apps-core/app-rail-framing/hidden`
@@ -20351,6 +20411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-info`
               - `build/build-logs`
               - `build/serve-composition`
+              - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
               - `config_v2/fields`
               - `config_v2/settings`
@@ -20631,7 +20692,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/mail/search`
-              - `conversations/conversation-view/commits-graph`
+              - `code-explorer/commit-detail`
               - `conversations/conversation-view/jsonl-viewer`
               - `debug/profiling/ops/op-gantt`
               - `debug/queue`
@@ -20714,6 +20775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Text`
           - Cross-plugin:
             - Imported by:
+              - `active-data/commit-link`
               - `active-data/plugin-link`
               - `active-data/task`
               - `apps-core/layout`
@@ -20828,6 +20890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-logs`
               - `build/serve-composition`
               - `code-explorer`
+              - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
               - `config_v2/config-link`
               - `config_v2/fields`
@@ -22468,9 +22531,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useFileDiff`
       - Cross-plugin:
         - Imported by:
+          - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `conversations/conversation-view/code/file-pane/diff`
-          - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
@@ -23200,6 +23263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-fix`
           - `build/build-info`
           - `build/serve-composition`
+          - `code-explorer/code-api`
           - `config_v2`
           - `config_v2/settings`
           - `conversations`
@@ -23376,6 +23440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/build-info`
           - `code-explorer`
+          - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `conversations/agents`
           - `conversations/conversation-view`
@@ -23530,6 +23595,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/syntax-highlight.HighlightedCode`
         - Exports (types): `MarkdownEnhancement`
         - Exports (values):
+          - `InlineCode`
           - `langFromClassName`
           - `Markdown`
           - `MarkdownEnhancementContext`
@@ -23682,7 +23748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
@@ -23787,6 +23853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data/attempt`
+          - `active-data/commit-link`
           - `active-data/conv`
           - `active-data/page-link`
           - `active-data/plugin-link`
@@ -23858,6 +23925,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backup`
           - `build`
           - `code-explorer`
+          - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `conversations`
           - `conversations/agents`
@@ -24158,6 +24226,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
       - Cross-plugin:
         - Imported by:
+          - `active-data/commit-link`
           - `apps/agent-manager/welcome`
           - `apps/browser/start-page`
           - `apps/deploy/deploy-history`
@@ -24780,6 +24849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WithTooltip`
       - Cross-plugin:
         - Imported by:
+          - `active-data/commit-link`
           - `apps-core/app-rail`
           - `apps-core/surface/floating`
           - `apps-core/tab-bar`

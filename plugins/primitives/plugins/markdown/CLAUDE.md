@@ -33,6 +33,7 @@ Design rationale lives in:
     - `primitives/syntax-highlight.HighlightedCode`
   - Exports (types): `MarkdownEnhancement`
   - Exports (values):
+    - `InlineCode`
     - `langFromClassName`
     - `Markdown`
     - `MarkdownEnhancementContext`

@@ -682,6 +682,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `build/build-fix`
     - `build/build-info`
     - `build/serve-composition`
+    - `code-explorer/code-api`
     - `config_v2`
     - `config_v2/settings`
     - `conversations`

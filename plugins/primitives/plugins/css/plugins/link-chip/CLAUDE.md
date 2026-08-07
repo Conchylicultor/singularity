@@ -12,6 +12,7 @@
 - Cross-plugin:
   - Imported by:
     - `active-data/attempt`
+    - `active-data/commit-link`
     - `active-data/conv`
     - `active-data/page-link`
     - `active-data/plugin-link`

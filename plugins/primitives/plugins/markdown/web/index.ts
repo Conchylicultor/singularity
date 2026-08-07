@@ -7,6 +7,7 @@ export {
 } from "./internal/enhancement-context";
 export type { MarkdownEnhancement } from "./internal/enhancement-context";
 export { langFromClassName, nodeToText } from "./internal/helpers";
+export { InlineCode } from "./internal/inline-code";
 
 export default {
   description:
