@@ -15,7 +15,11 @@ import {
   pushesByAttemptResource,
 } from "./internal/resources";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
-import { pushLanded, taskStatusChanged, conversationStatusChanged } from "./internal/tables-events";
+import {
+  pushLanded,
+  taskStatusChanged,
+  conversationStatusChanged,
+} from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
@@ -72,10 +76,7 @@ export {
   conversationsGoneStatsResource,
   pushesByAttemptResource,
 } from "./internal/resources";
-export type {
-  AttemptWithConversations,
-  ConversationSummary,
-} from "../core";
+export type { AttemptWithConversations, ConversationSummary } from "../core";
 
 // Query functions — reads
 export {
@@ -137,7 +138,10 @@ export type {
 // Monotone dependency-tree membership (`tasks.clusterId`). Every writer of a
 // membership edge (dependency edge or `folderId`) must union at or before the
 // edge write; nothing ever un-unions.
-export { clusterLabelOf, unionTaskClusters } from "./internal/mutations/clusters";
+export {
+  clusterLabelOf,
+  unionTaskClusters,
+} from "./internal/mutations/clusters";
 
 export { createAttempt, deleteAttempt } from "./internal/mutations/attempts";
 export type { CreateAttemptInput } from "./internal/mutations/attempts";
@@ -187,7 +191,10 @@ export type { ConversationStatusChangedPayload } from "./internal/tables-events"
 // Helpers to read the derived status of a task and emit a status-change
 // event when it flips. Used internally by tasks-core mutations and exposed
 // for plugins that perform writes outside the core mutation surface.
-export { readTaskStatus, emitStatusChangeIfChanged } from "./internal/status-emit";
+export {
+  readTaskStatus,
+  emitStatusChangeIfChanged,
+} from "./internal/status-emit";
 
 // Coalesce a multi-edge dependency mutation to one DB transaction and at most
 // one net tasks.statusChanged per affected task. Consumers thread the provided
@@ -195,14 +202,37 @@ export { readTaskStatus, emitStatusChangeIfChanged } from "./internal/status-emi
 export { withTaskStatusBatch } from "./internal/status-batch";
 export type { DbExecutor } from "./internal/status-batch";
 
-export { adoptOrphanConversation, maybeDropTaskOnExit } from "./internal/mutations/cross-table";
+export {
+  adoptOrphanConversation,
+  maybeDropTaskOnExit,
+} from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
 
 export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(pushesByAttemptResource), Resource.Declare(conversationsActiveResource), Resource.Declare(conversationsSystemResource), Resource.Declare(conversationsGoneResource), Resource.Declare(conversationsGoneStatsResource), DerivedTable(attemptConvAggSpec), DerivedTable(attemptPushAggSpec), View({ view: attempts, identityTable: "attempts" }), View({ view: conversations, identityTable: "conversations" }), View({ view: taskBlocking, dependsOn: ["attempts_v"] }), View({ view: tasks, dependsOn: ["attempts_v", "task_blocking_v"], identityTable: "tasks" })],
+  contributions: [
+    Resource.Declare(tasksResource),
+    Resource.Declare(taskDetailResource),
+    Resource.Declare(attemptsResource),
+    Resource.Declare(pushesResource),
+    Resource.Declare(pushesByAttemptResource),
+    Resource.Declare(conversationsActiveResource),
+    Resource.Declare(conversationsSystemResource),
+    Resource.Declare(conversationsGoneResource),
+    Resource.Declare(conversationsGoneStatsResource),
+    DerivedTable(attemptConvAggSpec),
+    DerivedTable(attemptPushAggSpec),
+    View({ view: attempts, identityTable: "attempts" }),
+    View({ view: conversations, identityTable: "conversations" }),
+    View({ view: taskBlocking, dependsOn: ["attempts_v"] }),
+    View({
+      view: tasks,
+      dependsOn: ["attempts_v", "task_blocking_v"],
+      identityTable: "tasks",
+    }),
+  ],
   register: [pushLanded, taskStatusChanged, conversationStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

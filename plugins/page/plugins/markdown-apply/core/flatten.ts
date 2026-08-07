@@ -25,7 +25,9 @@ import type { StoredRow } from "./stored-row";
  * the same reason: an unreachable row cannot be placed, and a planner that
  * cannot place a row must not claim authority to delete it either.
  */
-function childrenByParent(rows: readonly StoredRow[]): Map<string | null, StoredRow[]> {
+function childrenByParent(
+  rows: readonly StoredRow[],
+): Map<string | null, StoredRow[]> {
   const byParent = new Map<string | null, StoredRow[]>();
   for (const row of rows) {
     const list = byParent.get(row.parentId);
@@ -160,7 +162,10 @@ export function stableJson(value: unknown): string {
  * structurally; the changed runs ride the text channel instead). Void types have
  * no text lens and answer `""`.
  */
-export function plainTextOf(data: unknown, handle?: BlockHandle<unknown>): string {
+export function plainTextOf(
+  data: unknown,
+  handle?: BlockHandle<unknown>,
+): string {
   return handle?.text ? plainOf(handle.text(data)) : "";
 }
 

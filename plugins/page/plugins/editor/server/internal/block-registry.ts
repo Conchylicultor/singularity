@@ -26,9 +26,12 @@ export const Editor = {
    * as its web registration does, so the two registries read one source and
    * cannot drift — which is why there is no parity check here.
    */
-  InlineToken: defineServerContribution<{ pattern: RegExp }>("page.inline-token", {
-    docLabel: (t) => t.pattern.source,
-  }),
+  InlineToken: defineServerContribution<{ pattern: RegExp }>(
+    "page.inline-token",
+    {
+      docLabel: (t) => t.pattern.source,
+    },
+  ),
 
   /**
    * A supplier of `markdown.tag.annotated` attribute values — the facts a block

@@ -64,7 +64,8 @@ interface DispatchResult {
 async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
   return page.evaluate(async (id: string) => {
     const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
     return (await res.json()) as StoredRow[];
   }, pageId);
 }
@@ -200,7 +201,11 @@ await withBrowser(async (h) => {
   );
 
   // --- 4. one task, many attempts --------------------------------------------
-  const second = await dispatch(page, cardId, "second dispatch, different notes");
+  const second = await dispatch(
+    page,
+    cardId,
+    "second dispatch, different notes",
+  );
   r.ok(
     "a SECOND dispatch returns the SAME task — one task per card, so this is a new attempt",
     second.status === 200 && second.taskId === first.taskId,
@@ -217,7 +222,9 @@ await withBrowser(async (h) => {
   // fresh task is `new`, whose `STATUS_META` icon replaces the pending-actions
   // mark and whose trigger label changes with it.
   await page.waitForTimeout(1500);
-  const dispatchedTrigger = page.getByRole("button", { name: "TODO card's agent run" });
+  const dispatchedTrigger = page.getByRole("button", {
+    name: "TODO card's agent run",
+  });
   const reports = (await dispatchedTrigger.count()) > 0;
   r.ok(
     "the card's glyph switches to reporting the task it is bound to",
@@ -252,7 +259,8 @@ await withBrowser(async (h) => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ drop: true }),
     });
-    if (!res.ok) throw new Error(`PATCH task ${res.status}: ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(`PATCH task ${res.status}: ${await res.text()}`);
   }, first.taskId!);
   // POLLED, not slept on. The repaint arrives with the `tasks` push, which is
   // sub-second in the ordinary case — but a fixed wait turns "usually fast
@@ -262,7 +270,9 @@ await withBrowser(async (h) => {
   await snap(page, out, "3-card-dropped");
   r.ok(
     "dropping the task repaints the card's dashed box",
-    beforeDrop !== undefined && afterDrop !== undefined && beforeDrop !== afterDrop,
+    beforeDrop !== undefined &&
+      afterDrop !== undefined &&
+      beforeDrop !== afterDrop,
     JSON.stringify({ beforeDrop, afterDrop }),
   );
 

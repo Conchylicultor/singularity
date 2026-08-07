@@ -85,6 +85,10 @@ export const todoBlock = defineAnnotationBlock({
   //    other. That is exactly the ambiguity the pin pass exists to close for
   //    `<agent-note>`, and a TODO now has strictly more to lose by it.
   markdown: {
-    tag: { body: "children", identified: true, annotated: ["task_id", "status"] },
+    tag: {
+      body: "children",
+      identified: true,
+      annotated: ["task_id", "status"],
+    },
   },
 });

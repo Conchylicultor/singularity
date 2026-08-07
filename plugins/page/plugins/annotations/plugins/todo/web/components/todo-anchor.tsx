@@ -1,6 +1,9 @@
 import { MdPendingActions } from "react-icons/md";
 import { ContainerAnchor } from "@plugins/page/plugins/container/web";
-import type { BlockAnchorProps, BlockEditorAPI } from "@plugins/page/plugins/editor/web";
+import type {
+  BlockAnchorProps,
+  BlockEditorAPI,
+} from "@plugins/page/plugins/editor/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
@@ -56,7 +59,8 @@ function TodoStatusGlyph({ status }: { status: TaskStatus }) {
  * `conversationPane.useRouteEntries()` do not exist on the public-site surface).
  */
 export function TodoAnchor({ blockId, editor }: BlockAnchorProps) {
-  if (!editor || blockId === undefined) return <ContainerAnchor glyph={<TodoGlyph />} />;
+  if (!editor || blockId === undefined)
+    return <ContainerAnchor glyph={<TodoGlyph />} />;
   return <DispatchableTodoAnchor blockId={blockId} editor={editor} />;
 }
 
@@ -77,7 +81,11 @@ function DispatchableTodoAnchor({
     <ContainerAnchor
       editor={editor}
       glyph={
-        dispatched ? <TodoStatusGlyph status={dispatched.status} /> : <TodoGlyph />
+        dispatched ? (
+          <TodoStatusGlyph status={dispatched.status} />
+        ) : (
+          <TodoGlyph />
+        )
       }
       triggerLabel={dispatched ? "TODO card's agent run" : "Dispatch an agent"}
       width="2xl"

@@ -42,7 +42,9 @@ import {
  * — and this plugin's results, which were already snake_case.
  */
 
-const jsonResult = (value: unknown): { content: [{ type: "text"; text: string }] } => ({
+const jsonResult = (
+  value: unknown,
+): { content: [{ type: "text"; text: string }] } => ({
   content: [{ type: "text", text: JSON.stringify(value) }],
 });
 
@@ -55,7 +57,10 @@ const jsonResult = (value: unknown): { content: [{ type: "text"; text: string }]
  * note. The cards a write actually touched are `note_ids`, plural, because one
  * edit may create and revise several of them.
  */
-function applySummary(report: ApplyReport, noteIds: readonly string[]): unknown {
+function applySummary(
+  report: ApplyReport,
+  noteIds: readonly string[],
+): unknown {
   return {
     scope_id: report.rootId,
     page_id: report.pageId,
@@ -92,8 +97,12 @@ function countOccurrences(haystack: string, needle: string): number {
  * The tool layer is where `conversationId` exists at all — neither the engine nor
  * the policy ever learns one.
  */
-async function stampAuthors(cardIds: Iterable<string>, conversationId: string): Promise<void> {
-  for (const id of new Set(cardIds)) await recordAgentNotesAuthor(id, conversationId);
+async function stampAuthors(
+  cardIds: Iterable<string>,
+  conversationId: string,
+): Promise<void> {
+  for (const id of new Set(cardIds))
+    await recordAgentNotesAuthor(id, conversationId);
 }
 
 export const readPageTool = Mcp.tool({
@@ -141,7 +150,9 @@ changes anything, as long as every block it touches sits inside an
     block_id: z
       .string()
       .min(1)
-      .describe("The page's block id, or any block within it to scope the read to."),
+      .describe(
+        "The page's block id, or any block within it to scope the read to.",
+      ),
   },
   async handler({ block_id: blockId }) {
     // The scope is loaded here to decide ABOUT the block (rule 2) and again
@@ -150,7 +161,9 @@ changes anything, as long as every block it touches sits inside an
     // before the id is handed over as a root, and the engine's own read is what
     // keeps its walk and its rows one thing.
     assertAgentAddressable(await loadBlockScope(blockId), blockId);
-    const markdown = await readBlockAsMarkdown(blockId, { redact: redactHumanAudience });
+    const markdown = await readBlockAsMarkdown(blockId, {
+      redact: redactHumanAudience,
+    });
     return { content: [{ type: "text" as const, text: markdown }] };
   },
 });
@@ -194,7 +207,9 @@ open the run that produced the note. Returns what the write actually did
       .describe("The `<agent-note>` card's block id, as read_page emits it."),
     content: z
       .string()
-      .describe("The card's full new contents, in the same dialect `read_page` emits."),
+      .describe(
+        "The card's full new contents, in the same dialect `read_page` emits.",
+      ),
   },
   async handler({ block_id: blockId, content }, ctx) {
     assertNoteCard(await loadBlockScope(blockId), blockId);
@@ -215,7 +230,9 @@ open the run that produced the note. Returns what the write actually did
     // card" is true either way, and an agent that re-sends an unchanged document
     // has still taken authorship of what it says.
     await stampAuthors([blockId, ...cards], ctx.conversationId);
-    return jsonResult(applySummary(report, [blockId, ...cards.filter((c) => c !== blockId)]));
+    return jsonResult(
+      applySummary(report, [blockId, ...cards.filter((c) => c !== blockId)]),
+    );
   },
 });
 
@@ -287,15 +304,24 @@ including the \`# Title\` line and every \`<page id="…"/>\` pointer.`,
     old_string: z
       .string()
       .min(1)
-      .describe("Exact text to replace, as it appears in `read_page`'s output."),
+      .describe(
+        "Exact text to replace, as it appears in `read_page`'s output.",
+      ),
     new_string: z.string().describe("Replacement text."),
     replace_all: z
       .boolean()
       .default(false)
-      .describe("Replace every occurrence instead of requiring a unique match."),
+      .describe(
+        "Replace every occurrence instead of requiring a unique match.",
+      ),
   },
   async handler(
-    { block_id: blockId, old_string: oldString, new_string: newString, replace_all: replaceAll },
+    {
+      block_id: blockId,
+      old_string: oldString,
+      new_string: newString,
+      replace_all: replaceAll,
+    },
     ctx,
   ) {
     if (oldString === newString) {
@@ -311,7 +337,9 @@ including the \`# Title\` line and every \`<page id="…"/>\` pointer.`,
     // same reason `read_page` refuses it. What may be WRITTEN is judged on the
     // plan, below.
     assertAgentAddressable(scope, blockId);
-    const markdown = await readBlockAsMarkdown(blockId, { redact: redactHumanAudience });
+    const markdown = await readBlockAsMarkdown(blockId, {
+      redact: redactHumanAudience,
+    });
 
     const matches = countOccurrences(markdown, oldString);
     if (matches === 0) {
@@ -335,7 +363,9 @@ including the \`# Title\` line and every \`<page id="…"/>\` pointer.`,
     const at = markdown.indexOf(oldString);
     const next = replaceAll
       ? markdown.split(oldString).join(newString)
-      : markdown.slice(0, at) + newString + markdown.slice(at + oldString.length);
+      : markdown.slice(0, at) +
+        newString +
+        markdown.slice(at + oldString.length);
 
     // The `# Title` banner is a READER-SIDE PREFIX, not a block: a page-rooted
     // read prepends it and the apply strips it back off by BYTE-IDENTITY. An edit

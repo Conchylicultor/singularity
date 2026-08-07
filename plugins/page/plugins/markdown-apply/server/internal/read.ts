@@ -153,7 +153,10 @@ export async function readBlockAsMarkdown(
   opts?: ReadBlockOptions,
 ): Promise<string> {
   const { pageId, title, rows } = await loadBlockScope(blockId);
-  const markdown = await serializeRoot(opts?.redact ? opts.redact(rows) : rows, blockId);
+  const markdown = await serializeRoot(
+    opts?.redact ? opts.redact(rows) : rows,
+    blockId,
+  );
   return blockId === pageId ? withTitleBanner(markdown, title) : markdown;
 }
 

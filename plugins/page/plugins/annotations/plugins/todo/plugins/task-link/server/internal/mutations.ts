@@ -49,7 +49,12 @@ const EMPTY_CARD_TITLE = "Empty TODO card";
  * own first line is the one thing in this whole payload a human wrote.
  */
 function titleSeed(markdown: string): string {
-  return markdown.split(/\r?\n/).find((line) => line.trim() !== "")?.trim() ?? "";
+  return (
+    markdown
+      .split(/\r?\n/)
+      .find((line) => line.trim() !== "")
+      ?.trim() ?? ""
+  );
 }
 
 function composePrompt(
@@ -124,7 +129,8 @@ export async function ensureTodoTask(
   if (existing) return { taskId: existing.taskId, prompt };
 
   const seed = titleSeed(cardMarkdown);
-  const fallbackTitle = seed === "" ? EMPTY_CARD_TITLE : synthesiseTitleFallback(seed);
+  const fallbackTitle =
+    seed === "" ? EMPTY_CARD_TITLE : synthesiseTitleFallback(seed);
   const task = await createTask({
     title: fallbackTitle,
     // Synthesised summary, upgraded by Haiku.

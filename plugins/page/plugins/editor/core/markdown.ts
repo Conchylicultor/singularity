@@ -15,7 +15,10 @@
 // Pure module (no React, no DB): unit-tested directly in `markdown.test.ts`.
 
 import { plainOf, runsOf, type RichText } from "./rich-text";
-import { parseInlineMarkdown, serializeInlineMarkdown } from "./inline-markdown";
+import {
+  parseInlineMarkdown,
+  serializeInlineMarkdown,
+} from "./inline-markdown";
 import type { BlockHandle } from "./define-block";
 import type { SerializedBlock } from "./serialized-block";
 
@@ -126,7 +129,8 @@ export interface MdParseCtx {
  * - `"none"` — always self-closing. A body on PARSE is a loud rejection, never a
  *   silent drop.
  */
-export type BlockTagBody = "children" | "children-when-expanded" | "text" | "none";
+export type BlockTagBody =
+  "children" | "children-when-expanded" | "text" | "none";
 
 /**
  * A tag-delimited markdown region for one block type: `<name attrs>…</name>`.
@@ -155,7 +159,10 @@ export interface BlockTag<T> {
    * lossy exactly where it claims not to be. Declare `attrs` (with a matching
    * `parseAttrs`) to get a prettier form for a specific type.
    */
-  attrs?(data: T, ctx: MdSerializeCtx): Record<string, string | number | boolean | null | undefined>;
+  attrs?(
+    data: T,
+    ctx: MdSerializeCtx,
+  ): Record<string, string | number | boolean | null | undefined>;
   /**
    * Rebuild this type's data from the parsed attributes. Defaults to the inverse
    * of the derived projection, finished with the handle's own `schema.parse`, so
@@ -324,7 +331,11 @@ interface ResolvedTag {
   body: BlockTagBody;
   attrsOf(data: unknown, ctx: MdSerializeCtx): Record<string, string>;
   /** `inner` is the tag's body text — only ever supplied for `body: "text"`. */
-  dataOf(attrs: Record<string, string>, inner: string | null, ctx: MdParseCtx): unknown;
+  dataOf(
+    attrs: Record<string, string>,
+    inner: string | null,
+    ctx: MdParseCtx,
+  ): unknown;
   serializeOnly: boolean;
   /** The reserved `id` attribute is this tag's row ref — see {@link BlockTag.identified}. */
   identified: boolean;
@@ -344,7 +355,10 @@ const ATTR_NAME = /^[A-Za-z_][A-Za-z0-9_-]*$/;
  * keys that are not legal attribute names go into one JSON `data` attribute, so
  * the projection is lossless for ANY schema without the type declaring anything.
  */
-function derivedAttrs(data: unknown, body: BlockTagBody): Record<string, string> {
+function derivedAttrs(
+  data: unknown,
+  body: BlockTagBody,
+): Record<string, string> {
   const out: Record<string, string> = {};
   if (data === undefined || data === null) return out;
   if (typeof data !== "object" || Array.isArray(data)) {
@@ -357,7 +371,8 @@ function derivedAttrs(data: unknown, body: BlockTagBody): Record<string, string>
     // A `"text"` body carries the text between the tags; keeping it here too
     // would emit it twice and make the two copies drift.
     if (body === "text" && key === "text") continue;
-    if (typeof value === "string" && ATTR_NAME.test(key) && key !== "data") out[key] = value;
+    if (typeof value === "string" && ATTR_NAME.test(key) && key !== "data")
+      out[key] = value;
     else rest[key] = value;
   }
   if (Object.keys(rest).length > 0) out.data = JSON.stringify(rest);
@@ -376,7 +391,11 @@ function derivedTagData(
   const blob = attrs.data;
   if (blob !== undefined) {
     const decoded: unknown = JSON.parse(blob);
-    if (decoded !== null && typeof decoded === "object" && !Array.isArray(decoded)) {
+    if (
+      decoded !== null &&
+      typeof decoded === "object" &&
+      !Array.isArray(decoded)
+    ) {
       Object.assign(raw, decoded);
     } else {
       // A non-object payload was the WHOLE `data` — there is nothing to merge it
@@ -445,7 +464,10 @@ function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
       ? (a, inner, ctx) => {
           const data = parseAttrs(a, ctx);
           if (body !== "text") return data;
-          return { ...(data as Record<string, unknown>), text: ctx.runs(inner ?? "") };
+          return {
+            ...(data as Record<string, unknown>),
+            text: ctx.runs(inner ?? ""),
+          };
         }
       : (a, inner, ctx) => derivedTagData(h, a, inner, ctx, body),
     serializeOnly: spec.serializeOnly === true,
@@ -524,10 +546,15 @@ function serializerFor(h: Handle): ResolvedSerializer {
   // neither takes the derived-tag branch above), so the lens is present.
   const lens = h.text!;
   const prefix = outputPrefix(h);
-  return { kind: "lines", serialize: (data, ctx) => prefix + ctx.md(lens(data)) };
+  return {
+    kind: "lines",
+    serialize: (data, ctx) => prefix + ctx.md(lens(data)),
+  };
 }
 
-function parserFor(h: Handle): (line: string, ctx: MdParseCtx) => unknown | null {
+function parserFor(
+  h: Handle,
+): (line: string, ctx: MdParseCtx) => unknown | null {
   if (h.markdown?.parseLine) return h.markdown.parseLine;
   const lens = h.text;
   if (lens) {
@@ -537,7 +564,10 @@ function parserFor(h: Handle): (line: string, ctx: MdParseCtx) => unknown | null
     return (line, ctx) => {
       const prefix = prefixes.find((p) => line.startsWith(p));
       if (prefix === undefined) return null;
-      return { ...(empty?.() ?? {}), text: ctx.runs(line.slice(prefix.length)) };
+      return {
+        ...(empty?.() ?? {}),
+        text: ctx.runs(line.slice(prefix.length)),
+      };
     };
   }
   return () => null;
@@ -565,7 +595,8 @@ function quoteAttr(value: string): string {
 /** `<name a="1" b="2"` — the open tag's prefix, without its `>` / `/>`. */
 function openTagPrefix(name: string, attrs: Record<string, string>): string {
   let out = `<${name}`;
-  for (const [key, value] of Object.entries(attrs)) out += ` ${key}=${quoteAttr(value)}`;
+  for (const [key, value] of Object.entries(attrs))
+    out += ` ${key}=${quoteAttr(value)}`;
   return out;
 }
 
@@ -698,7 +729,11 @@ export function parseMarkdownToForest(
   // handle is the fallback, never a claiming parser.
   const claimers = handles
     .filter((h) => !h.defaultText)
-    .map((h) => ({ handle: h, precedence: h.markdown?.precedence ?? 0, parse: parserFor(h) }))
+    .map((h) => ({
+      handle: h,
+      precedence: h.markdown?.precedence ?? 0,
+      parse: parserFor(h),
+    }))
     .sort((a, b) => b.precedence - a.precedence);
   const fenceHandles = handles.filter((h) => h.markdown?.fence);
   const fences = fenceHandles.map((h) => h.markdown!.fence!);
@@ -729,7 +764,16 @@ export function parseMarkdownToForest(
     // pasted prose stays prose and a `| ` line stays a table row rather than
     // becoming a quote. This pass keys on the tag NAME alone.
     if (content.startsWith("<")) {
-      const claimed = claimTag(lines, i, indent, content, tagParsers, fences, parseCtx, ctx);
+      const claimed = claimTag(
+        lines,
+        i,
+        indent,
+        content,
+        tagParsers,
+        fences,
+        parseCtx,
+        ctx,
+      );
       if (claimed) {
         tokens.push(claimed.token);
         i = claimed.next;
@@ -739,7 +783,9 @@ export function parseMarkdownToForest(
 
     // Fenced multi-line (code): capture the info string, accumulate until the
     // closing fence, then hand the body to the type's `parseFenced`.
-    const fenceH = fenceHandles.find((h) => content.startsWith(h.markdown!.fence!.open));
+    const fenceH = fenceHandles.find((h) =>
+      content.startsWith(h.markdown!.fence!.open),
+    );
     if (fenceH) {
       const fence = fenceH.markdown!.fence!;
       const info = content.slice(fence.open.length).trim();
@@ -949,7 +995,9 @@ function claimTag(
   // than swallowing the rest of the document into a block it never closed.
   if (depth !== 0) return null;
   return {
-    token: withRef(tagToken(tag, indent, open.attrs, dedentBlock(body), parseCtx, ctx)),
+    token: withRef(
+      tagToken(tag, indent, open.attrs, dedentBlock(body), parseCtx, ctx),
+    ),
     next: j + 1,
   };
 }
@@ -1129,14 +1177,18 @@ export function serializeForestToMarkdown(
       // Flat line(s): the walk owns the children, exactly as it always has.
       if (resolved === null || resolved.kind === "lines") {
         assertNoLineAnnotations(n);
-        const line = resolved === null ? "" : resolved.serialize(n.data, serializeCtx);
+        const line =
+          resolved === null ? "" : resolved.serialize(n.data, serializeCtx);
         out.push(...line.split("\n"));
         out.push(...indentLines(renderList(n.children)));
         continue;
       }
 
       const tag = resolved.tag;
-      const prefix = openTagPrefix(tag.name, tagAttrs(tag, n.data, serializeCtx));
+      const prefix = openTagPrefix(
+        tag.name,
+        tagAttrs(tag, n.data, serializeCtx),
+      );
       if (tag.body === "text") {
         // The block's OWN text between the tags; children still nest below, as
         // for any text block.
@@ -1154,7 +1206,8 @@ export function serializeForestToMarkdown(
       // pointer) deliberately not at all. Either way the walk must not re-emit
       // them, which is why this is an explicit branch and never inferred.
       const emitsChildren =
-        tag.body === "children" || (tag.body === "children-when-expanded" && n.expanded);
+        tag.body === "children" ||
+        (tag.body === "children-when-expanded" && n.expanded);
       const childLines = emitsChildren ? renderList(n.children) : [];
       if (childLines.length === 0) out.push(`${prefix}/>`);
       else out.push(`${prefix}>`, ...indentLines(childLines), `</${tag.name}>`);

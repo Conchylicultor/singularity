@@ -14,6 +14,12 @@ import { TodoDispatch } from "@plugins/page/plugins/annotations/plugins/todo/plu
  * `api` is deliberately unused: this panel writes no block data. It launches an
  * agent against the card's id, which the server resolves to a page on its own.
  */
-export function TodoMenu({ block, close }: { block: Block; close: () => void }) {
+export function TodoMenu({
+  block,
+  close,
+}: {
+  block: Block;
+  close: () => void;
+}) {
   return <TodoDispatch blockId={block.id} close={close} />;
 }

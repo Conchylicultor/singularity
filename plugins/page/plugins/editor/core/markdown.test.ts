@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { conversionPrefixesOf, defineBlock, type BlockHandle } from "./define-block";
+import {
+  conversionPrefixesOf,
+  defineBlock,
+  type BlockHandle,
+} from "./define-block";
 import { textBlockSchema, textDataSchema } from "./text-data";
 import { plainOf, runsLength, type RichText } from "./rich-text";
 import type { SerializedBlock } from "./serialized-block";
@@ -29,7 +33,8 @@ const text = defineBlock({
   // An EMPTY paragraph gets `<text/>`; anything else is ordinary prose. The tag
   // is parse-only here (`serialize` wins on the way out).
   markdown: {
-    serialize: (d, ctx) => (runsLength(d.text) === 0 ? "<text/>" : ctx.md(d.text)),
+    serialize: (d, ctx) =>
+      runsLength(d.text) === 0 ? "<text/>" : ctx.md(d.text),
     tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
   },
 });
@@ -118,7 +123,10 @@ const callout = defineBlock({
   type: "callout",
   schema: z.object({
     icon: z.string().nullable().default(null),
-    iconSvgNodes: z.array(z.object({ tag: z.string() })).nullable().default(null),
+    iconSvgNodes: z
+      .array(z.object({ tag: z.string() }))
+      .nullable()
+      .default(null),
     color: z.enum(["default", "info"]).default("default"),
   }),
   empty: () => ({ icon: null, iconSvgNodes: null, color: "default" as const }),
@@ -185,13 +193,19 @@ const image = defineBlock({
 
 const video = defineBlock({
   type: "video",
-  schema: z.object({ attachmentId: z.string().optional(), mime: z.string().optional() }),
+  schema: z.object({
+    attachmentId: z.string().optional(),
+    mime: z.string().optional(),
+  }),
   empty: () => ({}),
 });
 
 const audio = defineBlock({
   type: "audio",
-  schema: z.object({ attachmentId: z.string().optional(), mime: z.string().optional() }),
+  schema: z.object({
+    attachmentId: z.string().optional(),
+    mime: z.string().optional(),
+  }),
   empty: () => ({}),
 });
 
@@ -232,7 +246,8 @@ const page = defineBlock({
       name: "page",
       body: "children-when-expanded",
       attrs: (_data, ctx) => {
-        if (ctx.id === undefined) throw new Error("a `page` block needs its row id");
+        if (ctx.id === undefined)
+          throw new Error("a `page` block needs its row id");
         return { id: ctx.id };
       },
       serializeOnly: true,
@@ -251,7 +266,8 @@ const pageLink = defineBlock({
       attrs: (data) => ({ id: data.pageId }),
       parseAttrs: (attrs) => {
         const id = attrs.id;
-        if (id === undefined || id === "") throw new Error("<page/> needs an `id`");
+        if (id === undefined || id === "")
+          throw new Error("<page/> needs an `id`");
         return { pageId: id };
       },
     },
@@ -260,7 +276,10 @@ const pageLink = defineBlock({
 
 const codeBlock = defineBlock({
   type: "code-block",
-  schema: z.object({ code: z.string().default(""), language: z.string().optional() }),
+  schema: z.object({
+    code: z.string().default(""),
+    language: z.string().optional(),
+  }),
   empty: () => ({ code: "" }),
   markdown: {
     fence: {
@@ -331,7 +350,8 @@ const handles: BlockHandle<unknown>[] = [
 // No token extensions in the pure suite: `protectedSpans` is exercised directly
 // in `inline-markdown.test.ts`, where the masking rule lives.
 const mdCtx: MarkdownContext = { handles, protectedSpans: [] };
-const parse = (md: string): SerializedBlock[] => parseMarkdownToForest(md, mdCtx);
+const parse = (md: string): SerializedBlock[] =>
+  parseMarkdownToForest(md, mdCtx);
 const serialize = (forest: SerializedBlock[]): string =>
   serializeForestToMarkdown(forest, mdCtx);
 
@@ -344,7 +364,8 @@ const node = (type: string, data: unknown): SerializedBlock => ({
 });
 const runs = (s: string): RichText => (s ? [{ text: s }] : []);
 /** The parsed `text` field flattened to a plain string (parse emits runs). */
-const dataText = (b: SerializedBlock): string => plainOf((b.data as { text?: unknown }).text);
+const dataText = (b: SerializedBlock): string =>
+  plainOf((b.data as { text?: unknown }).text);
 
 describe("defaultTextHandle", () => {
   test("selects the block declaring `defaultText`", () => {
@@ -379,7 +400,9 @@ describe("headings", () => {
   });
 
   test("serialize heading-1 → `# ` prefix", () => {
-    expect(serialize([node("heading-1", { text: runs("Title") })])).toBe("# Title");
+    expect(serialize([node("heading-1", { text: runs("Title") })])).toBe(
+      "# Title",
+    );
   });
 });
 
@@ -418,9 +441,9 @@ describe("to-do (precedence over bulleted list)", () => {
   });
 
   test("serialize both states", () => {
-    expect(serialize([node("to-do", { text: runs("a"), checked: false })])).toBe(
-      "- [ ] a",
-    );
+    expect(
+      serialize([node("to-do", { text: runs("a"), checked: false })]),
+    ).toBe("- [ ] a");
     expect(serialize([node("to-do", { text: runs("a"), checked: true })])).toBe(
       "- [x] a",
     );
@@ -430,7 +453,10 @@ describe("to-do (precedence over bulleted list)", () => {
 describe("numbered list", () => {
   test("parses `1.` / `2)` discarding the literal number", () => {
     const forest = parse("1. one\n2) two");
-    expect(forest.map((b) => b.type)).toEqual(["numbered-list", "numbered-list"]);
+    expect(forest.map((b) => b.type)).toEqual([
+      "numbered-list",
+      "numbered-list",
+    ]);
     expect(forest.map(dataText)).toEqual(["one", "two"]);
   });
 
@@ -469,7 +495,10 @@ describe("code fence", () => {
     const forest = parse("```ts\nconst x = 1;\nconst y = 2;\n```");
     expect(forest).toHaveLength(1);
     expect(forest[0]!.type).toBe("code-block");
-    expect(forest[0]!.data).toEqual({ code: "const x = 1;\nconst y = 2;", language: "ts" });
+    expect(forest[0]!.data).toEqual({
+      code: "const x = 1;\nconst y = 2;",
+      language: "ts",
+    });
   });
 
   test("no info string ⇒ no language key", () => {
@@ -478,9 +507,9 @@ describe("code fence", () => {
   });
 
   test("serialize round-trips code + language", () => {
-    expect(serialize([node("code-block", { code: "a\nb", language: "ts" })])).toBe(
-      "```ts\na\nb\n```",
-    );
+    expect(
+      serialize([node("code-block", { code: "a\nb", language: "ts" })]),
+    ).toBe("```ts\na\nb\n```");
   });
 
   test("a NESTED fence round-trips byte-identically (the dedent fix)", () => {
@@ -498,7 +527,12 @@ describe("code fence", () => {
             type: "bulleted-list",
             data: { text: runs("inner") },
             expanded: true,
-            children: [node("code-block", { code: "const x = 1;\nreturn x;", language: "ts" })],
+            children: [
+              node("code-block", {
+                code: "const x = 1;\nreturn x;",
+                language: "ts",
+              }),
+            ],
           },
         ],
       },
@@ -523,7 +557,10 @@ describe("code fence", () => {
     // Genuine leading whitespace inside the code survives: the second body line
     // is indented four columns beyond the fence's own two.
     const md = ["  ```py", "  def f():", "      return 1", "  ```"].join("\n");
-    expect(parse(md)[0]!.data).toEqual({ code: "def f():\n    return 1", language: "py" });
+    expect(parse(md)[0]!.data).toEqual({
+      code: "def f():\n    return 1",
+      language: "py",
+    });
   });
 });
 
@@ -619,7 +656,9 @@ describe("quote (a void container: its passage is its children)", () => {
       },
     ];
     const md = serialize(forest);
-    expect(md).toBe(["<quote>", "  wisdom", "  * and more", "</quote>"].join("\n"));
+    expect(md).toBe(
+      ["<quote>", "  wisdom", "  * and more", "</quote>"].join("\n"),
+    );
     expect(parse(md)).toEqual(forest);
   });
 });
@@ -649,7 +688,9 @@ describe("the derived tag: the nine types that used to serialize to a blank line
   test("string fields are plain attributes; everything else is the JSON `data` blob", () => {
     // An attribute value is a string BOTH ways, so `width="640"` would read back
     // as the string "640" — indistinguishable from a genuinely-string field.
-    const forest = [node("image", { attachmentId: "att_9f2", width: 640, alt: "a cat" })];
+    const forest = [
+      node("image", { attachmentId: "att_9f2", width: 640, alt: "a cat" }),
+    ];
     expect(serialize(forest)).toBe(
       '<image attachmentId="att_9f2" alt="a cat" data="{\\"width\\":640}"/>',
     );
@@ -701,7 +742,9 @@ describe("annotation containers (a real syntax, not a one-way marker)", () => {
     ];
     const md = serialize(forest);
     expect(md).toBe(
-      ["<context>", "  # Conventions", "  * always run X", "</context>"].join("\n"),
+      ["<context>", "  # Conventions", "  * always run X", "</context>"].join(
+        "\n",
+      ),
     );
     expect(parse(md)).toEqual(forest);
   });
@@ -774,11 +817,17 @@ describe("identified tags (the row id, both ways)", () => {
 
   test("the row id is emitted as the FIRST attribute and comes back as `ref`", () => {
     const md = serializeForestToMarkdown(
-      [withId("block-card", "agent-notes", {}, [withId("c1", "text", { text: runs("found it") })])],
+      [
+        withId("block-card", "agent-notes", {}, [
+          withId("c1", "text", { text: runs("found it") }),
+        ]),
+      ],
       mdCtx,
     );
     expect(md).toBe(
-      ['<agent-notes id="block-card">', "  found it", "</agent-notes>"].join("\n"),
+      ['<agent-notes id="block-card">', "  found it", "</agent-notes>"].join(
+        "\n",
+      ),
     );
     expect(parse(md)).toEqual([
       {
@@ -827,9 +876,9 @@ describe("identified tags (the row id, both ways)", () => {
   test("a non-identified sibling annotation carries no id, in or out", () => {
     // `identified` is opt-in per type, so `<context>` / `<todo>` /
     // `<private-notes>` stay content-addressed: the row id is not emitted…
-    expect(serializeForestToMarkdown([withId("block-x", "context", {})], mdCtx)).toBe(
-      "<context/>",
-    );
+    expect(
+      serializeForestToMarkdown([withId("block-x", "context", {})], mdCtx),
+    ).toBe("<context/>");
     // …and one written by hand is SILENTLY DROPPED by the void schema, yielding
     // no `ref`. That is exactly the failure `identified` exists to close, stated
     // as a fact rather than left to be rediscovered: without the opt-in the
@@ -842,7 +891,9 @@ describe("identified tags (the row id, both ways)", () => {
   test("the identified type set is derivable from the registry, never named", () => {
     // What the markdown-apply planner reads, so it can pin a `ref` without ever
     // naming a block type (and so a rename cannot silently stop the pinning).
-    expect(handles.filter(markdownTagIsIdentified).map((h) => h.type)).toEqual(["agent-notes"]);
+    expect(handles.filter(markdownTagIsIdentified).map((h) => h.type)).toEqual([
+      "agent-notes",
+    ]);
   });
 
   test("a handle declaring `identified` beside an `id` field is a LOUD failure", () => {
@@ -855,7 +906,9 @@ describe("identified tags (the row id, both ways)", () => {
       empty: () => ({ id: "" }),
       markdown: { tag: { body: "children", identified: true } },
     }) as BlockHandle<unknown>;
-    expect(() => markdownTagIsIdentified(clashing)).toThrow(/reserves the `id` attribute/);
+    expect(() => markdownTagIsIdentified(clashing)).toThrow(
+      /reserves the `id` attribute/,
+    );
   });
 
   test("minting ids ignores a node's `ref` — paste can never reuse a live row", () => {
@@ -927,7 +980,9 @@ describe("annotated tags (facts the block does not own)", () => {
     // …which is byte-for-byte what the SAME card with no task parses to. That
     // equality is the point: dispatching an agent changes what the card SAYS
     // without changing what it IS, so the next apply reads no edit at all.
-    expect(parsed).toEqual(parse(["<todo>", "  fix the parser", "</todo>"].join("\n")));
+    expect(parsed).toEqual(
+      parse(["<todo>", "  fix the parser", "</todo>"].join("\n")),
+    );
   });
 
   test("reserved attributes come first: `id`, then annotations, then the type's own", () => {
@@ -938,17 +993,40 @@ describe("annotated tags (facts the block does not own)", () => {
       schema: z.object({ label: z.string() }),
       empty: () => ({ label: "" }),
       markdown: {
-        tag: { body: "children", identified: true, annotated: ["task_id", "status"] },
+        tag: {
+          body: "children",
+          identified: true,
+          annotated: ["task_id", "status"],
+        },
       },
     }) as BlockHandle<unknown>;
-    const ctx: MarkdownContext = { handles: [...handles, dispatchCard], protectedSpans: [] };
+    const ctx: MarkdownContext = {
+      handles: [...handles, dispatchCard],
+      protectedSpans: [],
+    };
     const md = serializeForestToMarkdown(
-      [annotated("dispatch-card", { label: "ship it" }, { task_id: "t1", status: "done" }, [], "block-9")],
+      [
+        annotated(
+          "dispatch-card",
+          { label: "ship it" },
+          { task_id: "t1", status: "done" },
+          [],
+          "block-9",
+        ),
+      ],
       ctx,
     );
-    expect(md).toBe('<dispatch-card id="block-9" task_id="t1" status="done" label="ship it"/>');
+    expect(md).toBe(
+      '<dispatch-card id="block-9" task_id="t1" status="done" label="ship it"/>',
+    );
     expect(parseMarkdownToForest(md, ctx)).toEqual([
-      { type: "dispatch-card", data: { label: "ship it" }, expanded: true, ref: "block-9", children: [] },
+      {
+        type: "dispatch-card",
+        data: { label: "ship it" },
+        expanded: true,
+        ref: "block-9",
+        children: [],
+      },
     ]);
   });
 
@@ -958,7 +1036,10 @@ describe("annotated tags (facts the block does not own)", () => {
     // exist. Annotations are declared per TYPE, supplied per NODE.
     expect(serialize([node("todo", {})])).toBe("<todo/>");
     expect(
-      serializeForestToMarkdown([annotated("todo", {}, { status: "held" })], mdCtx),
+      serializeForestToMarkdown(
+        [annotated("todo", {}, { status: "held" })],
+        mdCtx,
+      ),
     ).toBe('<todo status="held"/>');
   });
 
@@ -989,9 +1070,13 @@ describe("annotated tags (facts the block does not own)", () => {
       type: "clashing-id",
       schema: z.object({}),
       empty: () => ({}),
-      markdown: { tag: { body: "children", identified: true, annotated: ["id"] } },
+      markdown: {
+        tag: { body: "children", identified: true, annotated: ["id"] },
+      },
     }) as BlockHandle<unknown>;
-    expect(() => markdownTagIsIdentified(overId)).toThrow(/already reserved by/);
+    expect(() => markdownTagIsIdentified(overId)).toThrow(
+      /already reserved by/,
+    );
   });
 
   test("a type whose own `attrs` emits a reserved annotated name throws at serialize", () => {
@@ -1003,10 +1088,17 @@ describe("annotated tags (facts the block does not own)", () => {
       schema: z.object({}),
       empty: () => ({}),
       markdown: {
-        tag: { body: "children", annotated: ["status"], attrs: () => ({ status: "mine" }) },
+        tag: {
+          body: "children",
+          annotated: ["status"],
+          attrs: () => ({ status: "mine" }),
+        },
       },
     }) as BlockHandle<unknown>;
-    const ctx: MarkdownContext = { handles: [...handles, doubled], protectedSpans: [] };
+    const ctx: MarkdownContext = {
+      handles: [...handles, doubled],
+      protectedSpans: [],
+    };
     expect(() => serializeForestToMarkdown([node("doubled", {})], ctx)).toThrow(
       /own `attrs` emitted one too/,
     );
@@ -1017,7 +1109,10 @@ describe("annotated tags (facts the block does not own)", () => {
     // reserves it, so the strip never sees it); dropping it would make a fact
     // its supplier believes is in the document silently absent.
     expect(() =>
-      serializeForestToMarkdown([annotated("todo", {}, { priority: "high" })], mdCtx),
+      serializeForestToMarkdown(
+        [annotated("todo", {}, { priority: "high" })],
+        mdCtx,
+      ),
     ).toThrow(/does not declare in `markdown.tag.annotated`/);
   });
 
@@ -1069,7 +1164,10 @@ describe("typingPrefixes never reach the markdown pipeline", () => {
       "+ ",
     ]);
     // …while a type carrying only input-only entries hands back exactly those.
-    expect(conversionPrefixesOf(toDo as BlockHandle<unknown>)).toEqual(["[] ", "[ ] "]);
+    expect(conversionPrefixesOf(toDo as BlockHandle<unknown>)).toEqual([
+      "[] ",
+      "[ ] ",
+    ]);
     // Ordering when a type declares BOTH: markdown syntax first, input-only after.
     const both = defineBlock({
       type: "both",
@@ -1078,7 +1176,10 @@ describe("typingPrefixes never reach the markdown pipeline", () => {
       markdownPrefixes: ["# "],
       typingPrefixes: ["! "],
     });
-    expect(conversionPrefixesOf(both as BlockHandle<unknown>)).toEqual(["# ", "! "]);
+    expect(conversionPrefixesOf(both as BlockHandle<unknown>)).toEqual([
+      "# ",
+      "! ",
+    ]);
   });
 
   test("a to-do's `[] ` shorthand is typing-only: pasted, it stays prose", () => {
@@ -1103,10 +1204,16 @@ describe("page tags", () => {
     const data = { title: "Sub", icon: null };
     const child = identified("c1", "text", { text: runs("inside") });
     expect(
-      serializeForestToMarkdown([identified("p1", "page", data, [child])], mdCtx),
+      serializeForestToMarkdown(
+        [identified("p1", "page", data, [child])],
+        mdCtx,
+      ),
     ).toBe(['<page id="p1">', "  inside", "</page>"].join("\n"));
     expect(
-      serializeForestToMarkdown([identified("p1", "page", data, [child], false)], mdCtx),
+      serializeForestToMarkdown(
+        [identified("p1", "page", data, [child], false)],
+        mdCtx,
+      ),
     ).toBe('<page id="p1"/>');
   });
 
@@ -1119,23 +1226,27 @@ describe("page tags", () => {
         children: [node("text", { text: runs("hidden but copied") })],
       },
     ];
-    expect(serialize(forest)).toBe(["> folded", "  hidden but copied"].join("\n"));
+    expect(serialize(forest)).toBe(
+      ["> folded", "  hidden but copied"].join("\n"),
+    );
   });
 
   test("a sub-page needs its row id — an id-less forest fails LOUDLY", () => {
-    expect(() => serialize([node("page", { title: "Sub", icon: null })])).toThrow(
-      /needs its row id/,
-    );
+    expect(() =>
+      serialize([node("page", { title: "Sub", icon: null })]),
+    ).toThrow(/needs its row id/);
   });
 
   test("markdown parse alone can never mint a sub-page: `<page/>` is a page-link", () => {
-    expect(parse('<page id="p1"/>')).toEqual([node("page-link", { pageId: "p1" })]);
+    expect(parse('<page id="p1"/>')).toEqual([
+      node("page-link", { pageId: "p1" }),
+    ]);
   });
 
   test("a BODY on a parsed page tag is a loud rejection, never a silent drop", () => {
-    expect(() => parse(['<page id="p1">', "  smuggled", "</page>"].join("\n"))).toThrow(
-      /takes no body/,
-    );
+    expect(() =>
+      parse(['<page id="p1">', "  smuggled", "</page>"].join("\n")),
+    ).toThrow(/takes no body/);
     expect(() => parse('<page id="p1"></page>')).toThrow(/takes no body/);
   });
 
@@ -1212,7 +1323,14 @@ describe("round-trip property (fuzzed forest)", () => {
   // starts with `- `, `# `, `1. `, `> `, `$$`, `---`, `[ ] ` or a space. That is
   // a genuine (pre-existing) lossiness of markdown itself — a paragraph reading
   // "- x" is a bullet — not of this mechanism.
-  const words = ["alpha", "bravo", "charlie", "delta*star", "echo_under", "foxtrot<lt"];
+  const words = [
+    "alpha",
+    "bravo",
+    "charlie",
+    "delta*star",
+    "echo_under",
+    "foxtrot<lt",
+  ];
 
   const gens: {
     type: string;
@@ -1241,7 +1359,11 @@ describe("round-trip property (fuzzed forest)", () => {
       }),
       children: true,
     },
-    { type: "equation", data: (r) => ({ expression: `x^${Math.floor(r() * 9)}` }), children: true },
+    {
+      type: "equation",
+      data: (r) => ({ expression: `x^${Math.floor(r() * 9)}` }),
+      children: true,
+    },
     {
       type: "callout",
       data: (r) => ({
@@ -1267,14 +1389,26 @@ describe("round-trip property (fuzzed forest)", () => {
       }),
       children: true,
     },
-    { type: "video", data: (r) => ({ attachmentId: `v_${Math.floor(r() * 99)}` }), children: true },
-    { type: "audio", data: (r) => ({ attachmentId: `s_${Math.floor(r() * 99)}` }), children: true },
+    {
+      type: "video",
+      data: (r) => ({ attachmentId: `v_${Math.floor(r() * 99)}` }),
+      children: true,
+    },
+    {
+      type: "audio",
+      data: (r) => ({ attachmentId: `s_${Math.floor(r() * 99)}` }),
+      children: true,
+    },
     {
       type: "file",
       data: (r) => ({ filename: "notes.pdf", size: Math.floor(r() * 5000) }),
       children: true,
     },
-    { type: "embed", data: () => ({ url: "https://example.com/e" }), children: true },
+    {
+      type: "embed",
+      data: () => ({ url: "https://example.com/e" }),
+      children: true,
+    },
     {
       type: "bookmark",
       data: (r) => ({
@@ -1287,14 +1421,24 @@ describe("round-trip property (fuzzed forest)", () => {
     },
     // `page-link` is a POINTER: its body is `"none"`, so it never carries
     // children (they belong to the page it points at, not to this document).
-    { type: "page-link", data: (r) => ({ pageId: `p${Math.floor(r() * 99)}` }), children: false },
+    {
+      type: "page-link",
+      data: (r) => ({ pageId: `p${Math.floor(r() * 99)}` }),
+      children: false,
+    },
   ];
 
   function pick(r: () => number): RichText {
     const n = 1 + Math.floor(r() * 3);
     const parts: string[] = [];
-    for (let i = 0; i < n; i++) parts.push(words[Math.floor(r() * words.length)]!);
-    const marks = r() < 0.25 ? ["bold" as const] : r() < 0.4 ? ["italic" as const] : undefined;
+    for (let i = 0; i < n; i++)
+      parts.push(words[Math.floor(r() * words.length)]!);
+    const marks =
+      r() < 0.25
+        ? ["bold" as const]
+        : r() < 0.4
+          ? ["italic" as const]
+          : undefined;
     return [{ text: parts.join(" "), ...(marks ? { marks } : {}) }];
   }
 
@@ -1305,7 +1449,12 @@ describe("round-trip property (fuzzed forest)", () => {
       const n = Math.floor(r() * (depth === 0 ? 3 : 2));
       for (let i = 0; i < n; i++) kids.push(build(r, depth + 1));
     }
-    return { type: gen.type, data: gen.data(r), expanded: true, children: kids };
+    return {
+      type: gen.type,
+      data: gen.data(r),
+      expanded: true,
+      children: kids,
+    };
   };
 
   test("parse(serialize(forest)) === forest, over 400 seeds", () => {
@@ -1372,7 +1521,10 @@ describe("round-trip property (fuzzed forest)", () => {
         serializeForestToMarkdown(stamped, mdCtx),
         mdCtx,
       );
-      expect({ seed, forest: parsed }).toEqual({ seed, forest: expected(stamped) });
+      expect({ seed, forest: parsed }).toEqual({
+        seed,
+        forest: expected(stamped),
+      });
     }
   });
 });

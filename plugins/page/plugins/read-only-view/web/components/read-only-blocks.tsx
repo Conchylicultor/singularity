@@ -13,8 +13,14 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Text, type TextVariant } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Inset, insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Text,
+  type TextVariant,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Inset,
+  insetClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
@@ -29,7 +35,10 @@ import {
   type BlockAnchorProps,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
-import type { BlockHandle, BlockTextVariant } from "@plugins/page/plugins/editor/core";
+import type {
+  BlockHandle,
+  BlockTextVariant,
+} from "@plugins/page/plugins/editor/core";
 import { RunsRenderer } from "./runs-renderer";
 import { PlaceholderCard } from "./placeholder-card";
 import type { BlockDiffKind, ReadOnlyNode } from "../node";
@@ -53,7 +62,9 @@ type BlockEntry = ReturnType<typeof Editor.Block.useContributions>[number];
 
 /** A record-view of a block's `data`. */
 function asRecord(data: unknown): Record<string, unknown> {
-  return data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  return data && typeof data === "object"
+    ? (data as Record<string, unknown>)
+    : {};
 }
 
 // ---------------------------------------------------------------------------
@@ -69,11 +80,18 @@ function asRecord(data: unknown): Record<string, unknown> {
  */
 const DIFF_CLASS: Record<BlockDiffKind, string> = {
   added: "border-l-2 border-success bg-success/10",
-  removed: "border-l-2 border-muted-foreground/40 bg-muted/40 opacity-60 line-through",
+  removed:
+    "border-l-2 border-muted-foreground/40 bg-muted/40 opacity-60 line-through",
   modified: "border-l-2 border-primary bg-primary/5",
 };
 
-function DiffWrap({ kind, children }: { kind?: BlockDiffKind; children: ReactNode }) {
+function DiffWrap({
+  kind,
+  children,
+}: {
+  kind?: BlockDiffKind;
+  children: ReactNode;
+}) {
   if (!kind) return <>{children}</>;
   return (
     // eslint-disable-next-line radius/no-adhoc-radius -- rounded-sm is the token-driven small radius for the diff rail wrapper
@@ -124,7 +142,13 @@ function TextLikeBlock({
     );
   } else if (handle.ordinalMarker) {
     fallbackMarker = (
-      <Text as="span" variant="body" tone="muted" aria-hidden className="tabular-nums py-xs">
+      <Text
+        as="span"
+        variant="body"
+        tone="muted"
+        aria-hidden
+        className="tabular-nums py-xs"
+      >
         {handle.ordinalMarker(ordinal)}
       </Text>
     );
@@ -197,18 +221,33 @@ function MediaBlock({
   }
 
   if (type === "image") {
-    const attachmentId = typeof data.attachmentId === "string" ? data.attachmentId : null;
+    const attachmentId =
+      typeof data.attachmentId === "string" ? data.attachmentId : null;
     const alt = typeof data.alt === "string" ? data.alt : "";
     const width = typeof data.width === "number" ? data.width : undefined;
     if (!attachmentId) {
-      return <PlaceholderCard label="Image" icon={MdImage} caption="No image" />;
+      return (
+        <PlaceholderCard label="Image" icon={MdImage} caption="No image" />
+      );
     }
-    const style: CSSProperties = { width: width ? `${width}px` : undefined, maxWidth: "100%" };
+    const style: CSSProperties = {
+      width: width ? `${width}px` : undefined,
+      maxWidth: "100%",
+    };
     return (
       <Inset x={BLOCK_INSET} y="xs">
         <div className="inline-block max-w-full" style={style}>
+          {/* Written in prettier's OWN shape (already split as it would split
+              it), so the format pass is a no-op here and has nothing left to
+              move — the positional directive below then cannot be displaced off
+              the code it means. A JSX attribute position admits no
+              disable/enable pair, so this is the only stable form. */}
           {/* eslint-disable-next-line radius/no-adhoc-radius -- rounded-md token matches the editor's image chrome */}
-          <img src={attachmentUrl(attachmentId)} alt={alt} className="block w-full rounded-md" />
+          <img
+            src={attachmentUrl(attachmentId)}
+            alt={alt}
+            className="block w-full rounded-md"
+          />
         </div>
       </Inset>
     );
@@ -229,7 +268,8 @@ function SubPageChip({ data }: { data: Record<string, unknown> }) {
   const iconNodes = Array.isArray(data.iconSvgNodes)
     ? (data.iconSvgNodes as Parameters<typeof PageIcon>[0]["nodes"])
     : null;
-  const title = typeof data.title === "string" && data.title ? data.title : "Untitled";
+  const title =
+    typeof data.title === "string" && data.title ? data.title : "Untitled";
   return (
     <Inset x="md" y="xs">
       <Inline gap="xs">
@@ -251,11 +291,15 @@ const PLACEHOLDER_ICONS: Record<string, typeof MdWidgets> = {
   "page-link": MdLinkIcon,
 };
 
-function captionFor(type: string, data: Record<string, unknown>): string | undefined {
+function captionFor(
+  type: string,
+  data: Record<string, unknown>,
+): string | undefined {
   if (typeof data.filename === "string") return data.filename;
   if (type === "embed" && typeof data.url === "string") return data.url;
   if (type === "bookmark" && typeof data.title === "string") return data.title;
-  if (type === "equation" && typeof data.expression === "string") return data.expression;
+  if (type === "equation" && typeof data.expression === "string")
+    return data.expression;
   return undefined;
 }
 
@@ -373,7 +417,11 @@ function NodeView({
             decoration and the first child share one visual line. */}
         <div className="relative">
           {Anchor ? (
-            <Pin to="top-left" className="py-xs" style={{ width: BLOCK_INDENT }}>
+            <Pin
+              to="top-left"
+              className="py-xs"
+              style={{ width: BLOCK_INDENT }}
+            >
               {/* Appearance and nothing else. An anchor's structural actions live
                   on the rail of the line the container borrows, which this
                   surface has none of — and it carries no id here either, since a

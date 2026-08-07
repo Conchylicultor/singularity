@@ -33,7 +33,9 @@ export async function resolveTodoAnnotations(
   rows: readonly { id: string; type: string }[],
 ): Promise<ReadonlyMap<string, Record<string, string>>> {
   const byBlock = new Map<string, Record<string, string>>();
-  const todoIds = rows.filter((r) => r.type === todoBlock.type).map((r) => r.id);
+  const todoIds = rows
+    .filter((r) => r.type === todoBlock.type)
+    .map((r) => r.id);
   if (todoIds.length === 0) return byBlock;
 
   const links = await db

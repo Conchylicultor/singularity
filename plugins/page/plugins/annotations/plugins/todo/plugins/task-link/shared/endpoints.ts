@@ -25,4 +25,6 @@ export const createTodoBlockTask = defineEndpoint({
   body: CreateTodoBlockTaskBodySchema,
   response: z.object({ taskId: z.string(), prompt: z.string() }),
 });
-export type CreateTodoBlockTaskBody = z.infer<typeof CreateTodoBlockTaskBodySchema>;
+export type CreateTodoBlockTaskBody = z.infer<
+  typeof CreateTodoBlockTaskBodySchema
+>;

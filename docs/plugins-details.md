@@ -8140,6 +8140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
               - `page/annotations/agent-notes/authorship`
+              - `page/annotations/todo/task-link`
               - `page/prompt/block`
               - `tasks/attempt-view`
               - `tasks/task-events`
@@ -8235,6 +8236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/summary`
           - `debug/profiling/ops`
           - `page/annotations/agent-notes/authorship`
+          - `page/annotations/todo/task-link`
           - `page/prompt/block`
           - `primitives/launch`
           - `review`
@@ -10425,6 +10427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/retention`
       - `infra/trash`
       - `page/annotations/agent-notes/authorship`
+      - `page/annotations/todo/task-link`
       - `page/attachment-block`
       - `page/editor`
       - `page/editor-collab`
@@ -14370,6 +14373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations`
               - `page/annotations/agent-access`
               - `page/annotations/context`
+              - `page/annotations/todo/task-link`
               - `page/callout`
               - `page/container`
               - `page/editor`
@@ -15137,6 +15141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/secrets`
           - `infra/trash`
           - `page/annotations/agent-access`
+          - `page/annotations/todo/task-link`
           - `page/bookmark`
           - `page/editor`
           - `page/editor-collab`
@@ -15273,6 +15278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/queue`
+          - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `tasks/auto-start`
@@ -16085,6 +16091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `history/engine`
           - `infra/trash`
           - `page/annotations/agent-notes/authorship`
+          - `page/annotations/todo/task-link`
           - `primitives/usage-rank`
           - `reports`
     - **`runtime-profiler`**
@@ -16758,16 +16765,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `privateNotesBlock`
               - `privateNotesDataSchema`
-        - **`todo`** — TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`todo`** — TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its glyph and its rail menu open the dispatch panel, and its box and glyph follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "todo" → `ContainerNoRow`
               - `Editor.BlockFrame` "todo" → `TodoFrame`
             - Uses:
+              - `page/annotations/todo/task-link.TodoDispatch`
+              - `page/annotations/todo/task-link.useTodoTaskState`
               - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
+              - `primitives/css/ui-kit.cn`
+              - `tasks/task-status.STATUS_META`
             - Exports (values): `todoBlock`
           - Server:
             - Contributes: `page.block-data` "todo"
@@ -16777,6 +16788,69 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `todoBlock`
               - `todoDataSchema`
+          - Plugins:
+            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource) and renders the card's dispatch panel — the launch form, and once dispatched the task's title, status and newest run. Contributes no slot of its own; the todo card's anchor and rail menu host it. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+              - Server:
+                - Contributes:
+                  - `resource.declare` "todo-block-task"
+                  - `page.block-annotation`
+                - Uses:
+                  - `database.db`
+                  - `infra/endpoints.HttpError`
+                  - `infra/endpoints.implement`
+                  - `infra/entity-extensions.defineExtension`
+                  - `infra/retention.markCascadeBounded`
+                  - `page/editor._blocks`
+                  - `page/editor.Editor`
+                  - `page/markdown-apply.loadBlockScope`
+                  - `page/markdown-apply.readBlockAsMarkdown`
+                  - `page/prompt/link.PAGES_CATEGORY_ID`
+                  - `tasks/task-category.setTaskCategory`
+                  - `tasks/task-title.scheduleTaskTitleUpdate`
+                  - `tasks/task-title.synthesiseTitleFallback`
+                  - `tasks/tasks-core._tasks`
+                  - `tasks/tasks-core.createTask`
+                  - `tasks/tasks-core.tasksView`
+                - DB schema: `plugins/page/plugins/annotations/plugins/todo/plugins/task-link/server/internal/tables.ts`
+                - Entity extension of: `page/editor` (table `page_blocks_ext_todo_task`)
+                - Exports (values):
+                  - `_pageBlocksTodoTaskExt`
+                  - `ensureTodoTask`
+                  - `todoTask`
+                  - `todoTaskServerResource`
+                - Resources: `todo-block-task` (keyed)
+                - Routes: `POST /api/todo-blocks/:blockId/task`
+              - Web:
+                - Uses:
+                  - `conversations/conversation-ui/item.ConversationItem`
+                  - `conversations/conversation-view.conversationPane`
+                  - `infra/endpoints.fetchEndpoint`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/row.Row`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/launch.LaunchAgentForm`
+                  - `primitives/live-state.useResource`
+                  - `primitives/pane.useOpenPane`
+                  - `tasks/task-status.StatusBadge`
+                - Exports (types):
+                  - `TodoTaskLink`
+                  - `TodoTaskState`
+                - Exports (values):
+                  - `TodoDispatch`
+                  - `useTodoTask`
+                  - `useTodoTaskState`
+              - Cross-plugin:
+                - Imported by: `page/annotations/todo`
+              - Shared:
+                - Exports (types):
+                  - `CreateTodoBlockTaskBody`
+                  - `TodoTaskLink`
+                - Exports (values):
+                  - `createTodoBlockTask`
+                  - `TodoTaskLinkSchema`
+                  - `todoTaskResource`
     - **`attachment-block`** — Shared web infra for attachment-owning page blocks: the reusable <AttachmentUpload> empty-state (click/drop/paste) funnel. Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.
       - Server:
         - Contributes: `trigger` "page.attachment-block.reconcile"
@@ -17183,6 +17257,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageDataSchema`
           - `pagesLiveResource`
           - `replacePageContent`
+          - `resolveBlockAnnotations`
           - `serializePageContent`
         - Register:
           - `defineTriggerEvent('page.blocksChanged')`
@@ -17364,6 +17439,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/context`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
+          - `page/annotations/todo/task-link`
           - `page/attachment-block`
           - `page/audio`
           - `page/bookmark`
@@ -17411,6 +17487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
           - `apps/pages/starred` (table `page_blocks_ext_starred`)
           - `apps/story/marker` (table `page_blocks_ext_story`)
+          - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
         - Endpoint callers: `editor-collab`
     - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
       - Server:
@@ -17781,6 +17858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.blockTextProtectedSpans`
           - `page/editor.Editor`
           - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.resolveBlockAnnotations`
           - `page/editor.serializePageContent`
           - `page/editor.StoredBlock`
         - Exports (types):
@@ -17838,7 +17916,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stripPageTitleBanner`
           - `touchedBlocks`
       - Cross-plugin:
-        - Imported by: `page/annotations/agent-access`
+        - Imported by:
+          - `page/annotations/agent-access`
+          - `page/annotations/todo/task-link`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
       - Plugins:
         - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
@@ -18018,6 +18098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/pages/prompt-origin`
+              - `page/annotations/todo/task-link`
               - `page/prompt/block`
           - Shared:
             - Exports (types):
@@ -19904,6 +19985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/spans`
               - `debug/trace/stall`
               - `page/annotations/agent-notes/authorship`
+              - `page/annotations/todo/task-link`
               - `page/inline-date`
               - `page/prompt/block`
               - `primitives/data-view`
@@ -20081,6 +20163,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversations-view`
               - `debug/timeline`
+              - `page/annotations/todo/task-link`
               - `page/inline-date`
               - `page/prompt/block`
               - `primitives/bar`
@@ -20344,6 +20427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/date/filter`
               - `history/dialog`
               - `page/annotations/agent-notes/authorship`
+              - `page/annotations/todo/task-link`
               - `page/callout`
               - `page/editor`
               - `page/inline-date`
@@ -20708,6 +20792,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller`
               - `layouts/route-fallback`
               - `page/annotations/agent-notes/authorship`
+              - `page/annotations/todo/task-link`
               - `page/attachment-block`
               - `page/bookmark`
               - `page/callout`
@@ -21202,6 +21287,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `layouts/route-fallback`
               - `page/annotations/agent-notes/authorship`
+              - `page/annotations/todo/task-link`
               - `page/bookmark`
               - `page/callout`
               - `page/editor`
@@ -21653,6 +21739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/full-pane`
               - `layouts/miller`
               - `layouts/route-fallback`
+              - `page/annotations/todo`
               - `page/attachment-block`
               - `page/audio`
               - `page/bookmark`
@@ -23286,10 +23373,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor.TextEditor`
           - `primitives/tooltip.Kbd`
         - Exports (types):
+          - `LaunchAgentFormProps`
           - `LaunchAgentPopoverProps`
           - `LaunchControlProps`
           - `LaunchRequest`
         - Exports (values):
+          - `LaunchAgentForm`
           - `LaunchAgentPopover`
           - `LaunchControl`
           - `LaunchModelMenuContent`
@@ -23306,6 +23395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
           - `conversations/conversations-view`
           - `debug/reports`
+          - `page/annotations/todo/task-link`
           - `page/prompt/block`
           - `reports/launch-fix`
           - `screenshot`
@@ -23514,6 +23604,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource`
           - `infra/trash`
           - `page/annotations/agent-notes/authorship`
+          - `page/annotations/todo/task-link`
           - `page/editor`
           - `page/editor-collab`
           - `page/inline-page-link`
@@ -24177,6 +24268,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/miller`
           - `layouts/route-fallback`
           - `page/annotations/agent-notes/authorship`
+          - `page/annotations/todo/task-link`
           - `page/prompt/block`
           - `plugin-meta/contributions-table`
           - `plugin-meta/plugin-view`
@@ -27137,6 +27229,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/agents`
           - `improve`
+          - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
           - `tasks/reports-investigation`
@@ -27557,6 +27650,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+          - `page/annotations/todo`
+          - `page/annotations/todo/task-link`
           - `tasks/task-deps-tree`
           - `tasks/task-graph`
           - `tasks/task-header`
@@ -27585,6 +27680,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('task-title.on-user-turn-sent')`
       - Cross-plugin:
         - Imported by:
+          - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
@@ -27728,6 +27824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasksResource`
           - `taskStatusChanged`
           - `TaskStatusSchema`
+          - `tasksView`
           - `touchConversationViewed`
           - `unionTaskClusters`
           - `updateConversation`
@@ -27842,6 +27939,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/session-divergence`
           - `debug/slow-ops/cluster`
           - `debug/worktree-cleanup`
+          - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `review/plugin-changes`

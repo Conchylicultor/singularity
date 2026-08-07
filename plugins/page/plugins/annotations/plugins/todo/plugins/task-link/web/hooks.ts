@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource, type TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  tasksResource,
+  type TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { todoTaskResource, type TodoTaskLink } from "../shared/schemas";
 
 /**

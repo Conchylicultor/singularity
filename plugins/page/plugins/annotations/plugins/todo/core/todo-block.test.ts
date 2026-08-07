@@ -10,12 +10,16 @@ describe("todoDataSchema (void)", () => {
   it("rejects a `text` key at the write boundary", () => {
     // `parse-block-data.ts` parses through `handle.schema.strict()`, so this is
     // literally what POST /api/blocks does with a text-bearing payload.
-    const strict = todoDataSchema.strict().safeParse({ text: [{ text: "hello" }] });
+    const strict = todoDataSchema
+      .strict()
+      .safeParse({ text: [{ text: "hello" }] });
     expect(strict.success).toBe(false);
   });
 
   it("rejects a `done` flag — this card is not the checkable item", () => {
-    expect(todoDataSchema.strict().safeParse({ done: true }).success).toBe(false);
+    expect(todoDataSchema.strict().safeParse({ done: true }).success).toBe(
+      false,
+    );
   });
 
   it("parses to exactly {}", () => {

@@ -10,7 +10,8 @@ import { useTodoTaskState } from "@plugins/page/plugins/annotations/plugins/todo
 const TINTS = {
   open: "rounded-md border border-dashed border-warning/40 bg-warning/10",
   done: "rounded-md border border-dashed border-success/40 bg-success/10",
-  dropped: "rounded-md border border-dashed border-muted-foreground/30 bg-muted/40",
+  dropped:
+    "rounded-md border border-dashed border-muted-foreground/30 bg-muted/40",
 } as const;
 
 /**
@@ -44,7 +45,8 @@ const TINTS = {
  * the card today whichever revision of its text you are reading.
  */
 export function TodoFrame({ blockId, inset }: BlockFrameProps) {
-  if (blockId === undefined) return <ContainerBackdrop inset={inset} className={TINTS.open} />;
+  if (blockId === undefined)
+    return <ContainerBackdrop inset={inset} className={TINTS.open} />;
   return <LinkedTodoFrame blockId={blockId} inset={inset} />;
 }
 
@@ -52,7 +54,13 @@ export function TodoFrame({ blockId, inset }: BlockFrameProps) {
  * The editable-surface arm, split out so the link subscription is a hook on a
  * component that only ever mounts when there is a block id to key it by.
  */
-function LinkedTodoFrame({ blockId, inset }: { blockId: string; inset: number }) {
+function LinkedTodoFrame({
+  blockId,
+  inset,
+}: {
+  blockId: string;
+  inset: number;
+}) {
   const dispatched = useTodoTaskState(blockId);
   const tint =
     dispatched?.status === "done"
