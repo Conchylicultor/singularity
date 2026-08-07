@@ -11,25 +11,38 @@ import {
   type LexicalNode,
   type TextNode,
 } from "lexical";
-import { matchInlineFormat, tokenOf, type InlineFormatMatch } from "../../core";
+import { matchInlineFormat, tokenOf, type InlineFormatMatch, type Mark } from "../../core";
 import { getBlockTextExtensions } from "./block-text-extensions";
 import { INLINE_FORMAT_TAG } from "./inline-format-tag";
+import type { DelimiterDeletion } from "./mark-boundary";
+import { $setCaretMarks } from "./mark-depth";
 
 export { INLINE_FORMAT_TAG };
 
-// Inline markdown autoformat on a block's BOUND Lexical editor — the sibling of
+// Inline MARK surgery on a block's BOUND Lexical editor — the sibling of
 // `collab-text-surgery.ts`, and the same doctrine: drive the change THROUGH
 // LEXICAL (never hand-rolled `Y.XmlText` deltas) so the `CollaborationPlugin`
 // binding syncs it into the block's `Y.Doc` exactly like typing, and pass
 // `discrete: true` so that transaction lands synchronously inside the caller's
 // `captureBlockDocEdit` window.
 //
-// The pure delimiter decision lives in `core/inline-markdown.ts`
-// (`matchInlineFormat`); this module is only the Lexical read that feeds it and
-// the Lexical write that realizes its answer.
+// Two mutations live here, and they are deliberately together rather than in two
+// near-identical modules — both need the same paragraph-local leaf walk, the same
+// `hasFormat`-guarded `toggleFormat` idiom (which is what makes the runs
+// round-trip correct BY CONSTRUCTION), the same `INLINE_FORMAT_TAG` re-entrancy
+// marker, and the same "plan now, re-verify later, abort on drift" contract:
+//
+//  - **`applyInlineFormat`** — markdown autoformat: typing `` `xxx` `` strips
+//    both delimiters and applies the marks. The pure delimiter decision lives in
+//    `core/inline-markdown.ts` (`matchInlineFormat`); this module is only the
+//    Lexical read that feeds it and the Lexical write that realizes its answer.
+//  - **`removeMarkSpan`** — the mark-boundary delimiter's deletion: Backspace on
+//    the far side of a marked run drops the mark from that whole run. The pure
+//    boundary decision lives in `internal/mark-boundary.ts`; same division.
 //
 // ---------------------------------------------------------------------------
-// SCOPE RESTRICTION: the whole match must live inside the caret's own TextNode.
+// SCOPE RESTRICTION (`applyInlineFormat` only): the whole match must live inside
+// the caret's own TextNode.
 // ---------------------------------------------------------------------------
 //
 // This is a deliberate narrowing, not a simplification of something that should
@@ -62,8 +75,12 @@ export { INLINE_FORMAT_TAG };
  * another one would be a lie. It does step OUT of an inline wrapper (a
  * `LinkNode`) and INTO one (via `getLastDescendant`), because those are the same
  * visual line.
+ *
+ * Exported for the caret's mark-boundary read (`caret-geometry.ts`), which asks
+ * the same question about the same scope: what leaf is on the other side of this
+ * seam, without leaving the line.
  */
-function prevLeafInParagraph(node: LexicalNode): LexicalNode | null {
+export function prevLeafInParagraph(node: LexicalNode): LexicalNode | null {
   let cursor: LexicalNode = node;
   for (;;) {
     const prev = cursor.getPreviousSibling();
@@ -77,7 +94,7 @@ function prevLeafInParagraph(node: LexicalNode): LexicalNode | null {
 }
 
 /** Mirror image of {@link prevLeafInParagraph}. */
-function nextLeafInParagraph(node: LexicalNode): LexicalNode | null {
+export function nextLeafInParagraph(node: LexicalNode): LexicalNode | null {
   let cursor: LexicalNode = node;
   for (;;) {
     const next = cursor.getNextSibling();
@@ -309,6 +326,159 @@ export function applyInlineFormat(editor: LexicalEditor, plan: InlineFormatPlan)
     // `inline-markdown-plugin.tsx`.
     throw new Error(
       "applyInlineFormat: the discrete update was enqueued, not committed — it must be called outside editor.update() / an update listener",
+    );
+  }
+  return outcome.applied;
+}
+
+// ---------------------------------------------------------------------------
+// The mark boundary's delimiter: deleting it drops the mark
+// ---------------------------------------------------------------------------
+
+/**
+ * Everything `removeMarkSpan` needs, plus everything it needs to prove the live
+ * state has not drifted since the scan — the {@link InlineFormatPlan} shape, for
+ * the same reason: the mutation is DEFERRED one microtask (see
+ * `removeMarkSpan`), so the caret it was planned against may be gone by the time
+ * it runs.
+ */
+export interface MarkSpanPlan {
+  /** Key of the `TextNode` the caret was anchored in. */
+  anchorKey: string;
+  /** Caret offset WITHIN that node at detection time. */
+  anchorOffset: number;
+  /** The node's FULL text at detection time — re-verified before mutating. */
+  anchorText: string;
+  /** What deleting the delimiter does — which marks come off which side. */
+  delimiter: DelimiterDeletion;
+}
+
+/**
+ * Inside a Lexical READ: the mark span the caret's delimiter would strip, or
+ * `null` when the caret is not on a text anchor.
+ *
+ * `null` is not an absorbed failure — it is the same non-event
+ * {@link $scanInlineFormat} answers `null` for. The resolver has already decided
+ * this keystroke IS a delimiter deletion; this only snapshots the live position
+ * it will be re-verified against.
+ */
+export function $scanMarkSpan(delimiter: DelimiterDeletion): MarkSpanPlan | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
+  const anchor = selection.anchor;
+  if (anchor.type !== "text") return null;
+  const node = anchor.getNode();
+  if (!$isTextNode(node)) return null;
+  return {
+    anchorKey: node.getKey(),
+    anchorOffset: anchor.offset,
+    anchorText: node.getTextContent(),
+    delimiter,
+  };
+}
+
+/**
+ * Inside a Lexical UPDATE: strip `marks` from the maximal contiguous span of
+ * leaves that carry them, walking outward from `start`. Returns whether anything
+ * changed.
+ *
+ * The walk stops at a leaf without the mark (the opener's position, correct by
+ * construction), at a decorator or line break (both UNMARKED in the runs model,
+ * so a mark span across a soft break is genuinely two spans — documented, not
+ * "fixed"), or at the paragraph edge. Nodes that differ in some OTHER attribute
+ * are separate `TextNode`s but all carry the mark, so the whole span goes —
+ * right, since `coalesce()` guarantees distinct-attributes ⇒ distinct node.
+ */
+function $stripMarkSpan(
+  start: LexicalNode | null,
+  marks: readonly Mark[],
+  dir: "before" | "after",
+): boolean {
+  let applied = false;
+  for (const mark of marks) {
+    let cursor: LexicalNode | null = start;
+    while (cursor !== null && $isTextNode(cursor) && cursor.hasFormat(mark)) {
+      // Resolve the neighbour BEFORE mutating, so the walk never reads a sibling
+      // relation through a node it has just made writable.
+      const next: LexicalNode | null =
+        dir === "before" ? prevLeafInParagraph(cursor) : nextLeafInParagraph(cursor);
+      // NODE-level and `hasFormat`-guarded, byte-identically to
+      // `applyInlineFormat` above and to `runs-lexical.ts`'s `styleTextNode` —
+      // which is why the serializer reads back exactly what is left here.
+      cursor.toggleFormat(mark);
+      applied = true;
+      cursor = next;
+    }
+  }
+  return applied;
+}
+
+/**
+ * Realize `plan`: delete the boundary's delimiter — strip each of its marks from
+ * the maximal contiguous span of leaves carrying it — as ONE discrete Lexical
+ * update. Returns `false` when the plan no longer matches live state (aborted,
+ * nothing changed).
+ *
+ * The `discrete: true` + must-be-called-outside-an-update contract is byte-for-
+ * byte {@link applyInlineFormat}'s, including the loud throw — a Lexical command
+ * listener runs INSIDE an `editor.update()`, where a nested discrete update is
+ * *enqueued rather than committed*, and the caller's `captureBlockDocEdit` window
+ * would already have closed. Hence the executor's `queueMicrotask`.
+ *
+ * **Both sides are walked, from the two leaves the boundary sits between.** A
+ * mark lives on exactly ONE side of a boundary (that is what makes it part of the
+ * delimiter at all), so a one-directional walk from the anchor reaches only the
+ * marks of the anchor's own side and silently no-ops on the other's. That was
+ * survivable while every covered boundary had its marks on the anchor's side; it
+ * is not, now that the caret can stand on a stop whose marked run is across the
+ * seam (`` a|`zz` ``), where a one-sided Backspace would strip nothing at all.
+ *
+ * Which leaf starts which walk is STRUCTURAL, not a flag: a boundary only exists
+ * at a leaf EDGE, so an anchor offset above 0 puts the left run in the anchor's
+ * own node and anything else puts it in the previous leaf (mirrored on the
+ * right). An empty anchor node — both edges at once — is skipped by both walks,
+ * which is right: it carries no text, and its own bits are not either run's.
+ *
+ * **The caret IS repaired**, to `plan.delimiter.residual`. It is standing on the
+ * stop, carrying the FAR side's marks, and the strip has just taken those marks
+ * off the far side; without the repair the next character typed would re-mint the
+ * mark the user just deleted. The repair is a no-op at every block edge (where
+ * the residual and the stop's marks coincide), which is why nothing needed it
+ * while the stop's mark set was miscomputed as `left ∩ right`.
+ */
+export function removeMarkSpan(editor: LexicalEditor, plan: MarkSpanPlan): boolean {
+  const outcome: { ran: boolean; applied: boolean } = { ran: false, applied: false };
+  editor.update(
+    () => {
+      outcome.ran = true;
+      // Same re-entrancy marker as the autoformat: this is a programmatic format
+      // mutation, not the user typing, so neither markdown plugin may read it as
+      // a delimiter or a block prefix being typed.
+      $addUpdateTag(INLINE_FORMAT_TAG);
+
+      // --- Abort unless the plan still describes live state. -----------------
+      const node = $getNodeByKey(plan.anchorKey);
+      if (!$isTextNode(node)) return;
+      if (node.getTextContent() !== plan.anchorText) return;
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return;
+      const anchor = selection.anchor;
+      if (anchor.type !== "text") return;
+      if (anchor.key !== plan.anchorKey || anchor.offset !== plan.anchorOffset) return;
+
+      const size = node.getTextContentSize();
+      const leftLeaf = plan.anchorOffset > 0 ? node : prevLeafInParagraph(node);
+      const rightLeaf = plan.anchorOffset < size ? node : nextLeafInParagraph(node);
+      const before = $stripMarkSpan(leftLeaf, plan.delimiter.before, "before");
+      const after = $stripMarkSpan(rightLeaf, plan.delimiter.after, "after");
+      outcome.applied = before || after;
+      if (outcome.applied) $setCaretMarks(selection, plan.delimiter.residual);
+    },
+    { discrete: true },
+  );
+  if (!outcome.ran) {
+    throw new Error(
+      "removeMarkSpan: the discrete update was enqueued, not committed — it must be called outside editor.update() / an update listener",
     );
   }
   return outcome.applied;

@@ -202,8 +202,16 @@ export function $appendRuns(
 // Lexical → runs
 // ---------------------------------------------------------------------------
 
-/** Derive a run's canonical marks from a `TextNode`'s format flags. */
-function marksOf(node: TextNode): Mark[] {
+/**
+ * Derive a run's canonical marks from a `TextNode`'s format flags.
+ *
+ * Exported because the CARET model needs the same derivation: the mark boundary
+ * a caret sits at (`web/internal/caret-geometry.ts`) is stated in the marks of
+ * the leaves either side of it, and if that read ever disagreed with the one the
+ * serializer performs, the editor would offer a delimiter position the persisted
+ * runs do not have. One derivation, two consumers.
+ */
+export function marksOfTextNode(node: TextNode): Mark[] {
   const marks: Mark[] = [];
   for (const mark of MARK_ORDER) {
     if (node.hasFormat(mark)) marks.push(mark);
@@ -221,7 +229,7 @@ function colorOf(node: TextNode): ColorToken | undefined {
 /** Build a styled run from a `TextNode`, carrying an enclosing link url if any. */
 function runFromTextNode(node: TextNode, link: string | undefined): TextRun {
   const run: TextRun = { text: node.getTextContent() };
-  const marks = marksOf(node);
+  const marks = marksOfTextNode(node);
   if (marks.length > 0) run.marks = marks;
   const color = colorOf(node);
   if (color && color !== "default") run.color = color;

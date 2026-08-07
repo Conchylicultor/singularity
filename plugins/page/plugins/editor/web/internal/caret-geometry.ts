@@ -31,12 +31,19 @@ import {
   type ElementNode,
   type LexicalEditor,
   type LexicalNode,
+  type RangeSelection,
+  type TextNode,
 } from "lexical";
+import { marksOfTextNode, type Mark } from "../../core";
 import {
   $linearCaretOffset,
   $paragraphsPlainLength,
   $placeCaretAtLinearOffset,
+  $resolveLinearOffset,
 } from "./block-text-extensions";
+import { nextLeafInParagraph, prevLeafInParagraph } from "./inline-format-surgery";
+import type { MarkBoundary } from "./mark-boundary";
+import type { MarkDepthEntry } from "./mark-depth";
 
 /** A snapshot of the caret in one block editor, consumed by the intent resolver. */
 export interface CaretContext {
@@ -54,6 +61,33 @@ export interface CaretContext {
   onBottomLine: boolean;
   /** Viewport x (px) of the caret — preserved when crossing up/down. */
   caretX: number;
+  /**
+   * The inline-mark boundary at the caret, or null when there is none (mid-run,
+   * an unresolvable anchor, or a non-collapsed selection). See
+   * `internal/mark-boundary.ts` for what a boundary implies.
+   */
+  boundary: MarkBoundary | null;
+  /**
+   * Has the caret already stepped past this boundary's virtual delimiter?
+   *
+   * TRUE ONLY after our own `markStep` recorded it and the live anchor still
+   * verifies — never inferred from `selection.format`, which three shipped
+   * mechanisms alias (see `internal/mark-depth.ts`). This flag is the gate the
+   * whole feature's safety rests on.
+   */
+  escaped: boolean;
+  /**
+   * The mark boundary one caret step to the LEFT / RIGHT would land on, or null
+   * when that step lands mid-run (the ordinary case) or off the block's edge.
+   *
+   * A seam holds TWO caret states — `natural` and the virtual stop — and which
+   * one is correct depends on which side the caret ARRIVES from: nearest the
+   * approach. The browser always delivers `natural`, so for one of the two
+   * approaches it lands on the far state and the near one is skipped. Seeing the
+   * destination is what lets the resolver own that press instead.
+   */
+  stepLeftBoundary: MarkBoundary | null;
+  stepRightBoundary: MarkBoundary | null;
 }
 
 // --- structural reads -------------------------------------------------------
@@ -62,6 +96,102 @@ export interface CaretContext {
 // matching `splitRuns`/`textOf`/`serializeBlockRuns`). `readCaretContext`'s
 // structural read derives offset / atStart / atEnd from `$linearCaretOffset()`
 // and `$paragraphsPlainLength()` directly — no bespoke per-helper walk.
+
+// --- mark boundary (inline format bits either side of the caret) ------------
+//
+// A boundary exists wherever the caret sits at a LEAF edge: the two runs meeting
+// there may carry different marks, and the delimiter position between them is
+// what `mark-boundary.ts` reasons about. Cost is one anchor read plus at most two
+// sibling steps per keystroke — `readCaretContext` already does two full
+// paragraph walks, so this is noise beside it.
+
+/**
+ * The marks a neighbouring leaf contributes to a boundary.
+ *
+ * Anything that is not a `TextNode` contributes none.
+ *
+ * `null` — the paragraph edge — is the block edge modelled as an empty unmarked
+ * neighbour, which is what collapses block-start, block-end and mid-block into
+ * one code path. A line break or a decorator answering `[]` is not a shortcut
+ * either: `walkNode` in `core/runs-lexical.ts` emits BOTH as unmarked runs, so
+ * the caret model and the persisted model cannot drift.
+ */
+function $leafMarks(leaf: LexicalNode | null): Mark[] {
+  return leaf !== null && $isTextNode(leaf) ? marksOfTextNode(leaf) : [];
+}
+
+/**
+ * Inside a Lexical READ: the mark boundary the collapsed caret stands on, or
+ * `null` when it stands on none.
+ *
+ * Only leaf EDGES are boundaries; a caret in the middle of a run has the same
+ * marks on both sides of it by definition. An empty `TextNode` satisfies both
+ * edges at once, so its neighbours on both sides are the boundary's runs while
+ * `natural` stays the node's own (possibly marked) bits.
+ *
+ * An ELEMENT anchor is a boundary too — the caret between two of the paragraph's
+ * children, which is what a position beside an inline decorator or on an empty
+ * soft line is. Its `natural` is `[]` because there is no text node to read bits
+ * off, and `virtualStop` answers `null` for it: the caret has not
+ * stepped out of either run, so there is no delimiter for it to have crossed.
+ */
+export function $readMarkBoundary(selection: RangeSelection): MarkBoundary | null {
+  if (!selection.isCollapsed()) return null;
+  const anchor = selection.anchor;
+  if (anchor.type === "element") {
+    const parent = anchor.getNode();
+    if (!$isElementNode(parent)) return null;
+    const children = parent.getChildren();
+    return {
+      left: $leafMarks(children[anchor.offset - 1] ?? null),
+      right: $leafMarks(children[anchor.offset] ?? null),
+      natural: [],
+    };
+  }
+  const node = anchor.getNode();
+  if (!$isTextNode(node)) return null;
+  return $boundaryAtTextAnchor(node, anchor.offset);
+}
+
+/** The boundary at `within` inside the text leaf `node`, or null mid-run. */
+function $boundaryAtTextAnchor(node: TextNode, within: number): MarkBoundary | null {
+  const size = node.getTextContentSize();
+  const atLeafStart = within === 0;
+  const atLeafEnd = within === size;
+  if (!atLeafStart && !atLeafEnd) return null;
+  const natural = marksOfTextNode(node);
+  return {
+    left: atLeafStart ? $leafMarks(prevLeafInParagraph(node)) : natural,
+    right: atLeafEnd ? $leafMarks(nextLeafInParagraph(node)) : natural,
+    natural,
+  };
+}
+
+/**
+ * Inside a Lexical READ: the boundary a caret step to `offset` would LAND on.
+ *
+ * The caret's state at a seam depends on the direction it arrived from — the seam
+ * has two states (`natural` and the virtual stop) and only one is correct for each
+ * approach — but the browser always delivers the same one. So the resolver needs
+ * to see the boundary at the DESTINATION, one step out, not only the one under the
+ * caret.
+ *
+ * The destination is resolved through `$resolveLinearOffset`, the same walk
+ * `$placeCaretAtLinearOffset` lands with. That shared resolver is what makes this
+ * a LOOKAHEAD rather than a PREDICTION: the executor places the caret itself, so
+ * the anchor this reads `natural` off is by construction the anchor the landing
+ * produces. Nothing here guesses what Chromium would have chosen — and
+ * `virtualStop` keeps deriving from a real anchor's real marks, which is
+ * the property that made the design's one falsified assumption cost a test
+ * expectation instead of a redesign.
+ */
+function $boundaryAtLinearOffset(offset: number): MarkBoundary | null {
+  const resolved = $resolveLinearOffset(offset);
+  if (resolved === null || "emptyParagraph" in resolved) return null;
+  const { leaf, leafStart } = resolved;
+  if (!$isTextNode(leaf)) return null;
+  return $boundaryAtTextAnchor(leaf, offset - leafStart);
+}
 
 // --- visual geometry (DOM measurement) -------------------------------------
 //
@@ -220,10 +350,28 @@ function measureVisualLines(
  * that would make them contradict each other (an unresolved anchor used to read
  * as `offset: 0` AND `atStart: false`, so every structural keystroke silently
  * degraded to a passthrough).
+ *
+ * `depth` is the caller's recorded mark-delimiter step (`readMarkDepth`), passed
+ * IN rather than read here so this module keeps no module state of its own. It is
+ * verified against the live anchor inside the same read — an entry only counts
+ * while the selection is still collapsed at exactly the position it was taken at,
+ * which is what makes a stale entry structurally impossible.
  */
-export function readCaretContext(editor: LexicalEditor): CaretContext | null {
+export function readCaretContext(
+  editor: LexicalEditor,
+  depth: MarkDepthEntry | null = null,
+): CaretContext | null {
   const structural = editor.getEditorState().read(():
-    | { offset: number; collapsed: boolean; atStart: boolean; atEnd: boolean }
+    | {
+        offset: number;
+        collapsed: boolean;
+        atStart: boolean;
+        atEnd: boolean;
+        boundary: MarkBoundary | null;
+        escaped: boolean;
+        stepLeftBoundary: MarkBoundary | null;
+        stepRightBoundary: MarkBoundary | null;
+      }
     | null => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return null;
@@ -232,11 +380,24 @@ export function readCaretContext(editor: LexicalEditor): CaretContext | null {
     if (off === null) return null;
     const total = $paragraphsPlainLength();
     const collapsed = selection.isCollapsed();
+    const anchor = selection.anchor;
     return {
       offset: off,
       collapsed,
       atStart: collapsed && off === 0,
       atEnd: collapsed && off === total,
+      boundary: $readMarkBoundary(selection),
+      escaped:
+        collapsed &&
+        depth !== null &&
+        anchor.key === depth.anchorKey &&
+        anchor.offset === depth.anchorOffset,
+      // Only INSIDE the block: a step off either edge is a cross-block move, and
+      // clamping would otherwise re-read the caret's own position as its own
+      // destination — which would let a boundary at offset 0 absorb the ArrowLeft
+      // that is supposed to leave the block.
+      stepLeftBoundary: collapsed && off > 0 ? $boundaryAtLinearOffset(off - 1) : null,
+      stepRightBoundary: collapsed && off < total ? $boundaryAtLinearOffset(off + 1) : null,
     };
   });
   if (!structural) return null;

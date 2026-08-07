@@ -8,6 +8,14 @@
 // executor (keyboard-plugin) just maps the returned intent to a thin API call.
 //
 // Pure module (no React, no Lexical, no DOM): unit-tested directly.
+//
+// Two rungs sit ABOVE the ladders rather than inside them — the virtual
+// mark-delimiter step (Arrows) and its deletion (Backspace/Delete). Both are
+// gated so tightly that the ladders below them are unchanged: the deletion rung
+// fires only at `caret.escaped`, i.e. only after our own arrow step in the same
+// interaction, and that is the safety property of the whole affordance. A
+// Backspace nobody preceded with a step still merges, outdents and resets types
+// exactly as it always did.
 
 import {
   childrenOf,
@@ -16,8 +24,10 @@ import {
   prevVisibleLine,
   visibleChildrenOf,
   type BlockNode,
+  type Mark,
 } from "../../core";
 import type { CaretContext } from "./caret-geometry";
+import { delimiterDeletion, virtualStop, type DelimiterDeletion } from "./mark-boundary";
 
 export type KeystrokeKey =
   | "Enter"
@@ -77,6 +87,44 @@ export type KeyIntent =
    * children — a re-nesting nobody asked for.
    */
   | { type: "unwrap"; blockId: string }
+  /**
+   * Cross an inline-mark boundary's VIRTUAL DELIMITER: set the caret's pending
+   * marks to `marks` and move its depth to `escaped`. The linear offset does not
+   * change — the delimiter is an invisible position, not a character — so the
+   * executor consumes the keystroke and every reducer path sees the same numbers
+   * it saw before.
+   *
+   * `escaped: true` is the step OUT (onto the far side of the delimiter, where
+   * typing is unmarked); `escaped: false` is the step back IN.
+   */
+  | { type: "markStep"; marks: Mark[]; escaped: boolean }
+  /**
+   * Move the caret one position to `offset` AND land it on the delimiter stop
+   * there, as one press.
+   *
+   * The arrival half of the same model. A seam holds two states and the correct
+   * landing is the one nearest the side the caret came from, but the browser
+   * always delivers `natural` — so on the approach where the stop is the nearer
+   * state, letting the browser move would skip it silently. This intent is that
+   * press: the executor places the caret (through the same resolver the lookahead
+   * read) and asserts the stop, so `across → stop → inside` going one way mirrors
+   * `inside → stop → across` going the other.
+   */
+  | { type: "markArrive"; offset: number; marks: Mark[] }
+  /**
+   * Delete an inline-mark boundary's virtual delimiter — which, since the
+   * delimiter is what carries the marks that CHANGE across the boundary, means
+   * reducing both runs to the marks they share. The markdown-source behavior,
+   * without markdown source.
+   *
+   * The payload is split by side ({@link DelimiterDeletion}) because a mark only
+   * ever lives on ONE side of the boundary and the strip walks outward from the
+   * seam: an anchor sitting in the left run cannot reach a `right \ left` mark by
+   * walking its own side.
+   *
+   * Reachable ONLY at `caret.escaped` — see the rung in `Backspace` below.
+   */
+  | { type: "unmark"; delimiter: DelimiterDeletion }
   | { type: "indent" } // tab
   | { type: "nav"; dir: "up" | "down" | "left" | "right" }
   | { type: "selectBlock"; extend?: "up" | "down" } // shift+arrow at a visual edge
@@ -202,6 +250,110 @@ function hasExcessIndentation(ctx: IntentContext, node: BlockNode): boolean {
   return !hasVisibleChildren(ctx, node) && !hasNextSibling(ctx.nodes, node);
 }
 
+// ---------------------------------------------------------------------------
+// The virtual mark delimiter
+// ---------------------------------------------------------------------------
+//
+// Every inline-mark boundary behaves as if it held an invisible one-character
+// delimiter: one arrow press crosses it, and one Backspace/Delete deletes it —
+// which, the delimiter being what carries the mark, drops the mark from the run.
+// The model and the arithmetic are `internal/mark-boundary.ts`; these two rungs
+// are only where the keystrokes land on it.
+//
+// Both return null (not an intent) for the overwhelmingly common case of a caret
+// that is nowhere near a delimiter, so the ladders below run EXACTLY as they did
+// before — see the `escaped` gate on the deletion rung for why that matters.
+
+/**
+ * The delimiter step `dir` makes at the caret, or null when it makes none.
+ *
+ * A delimiter has two sides and the caret is on one of them, so the arrow that
+ * crosses it out is fixed by the boundary (`virtualStop`) and the
+ * opposite arrow is the only way back. Each is a no-op from the wrong depth,
+ * which is what leaves ordinary caret movement — a press of the same key one
+ * position earlier, or one press later — completely untouched.
+ */
+function markStepFor(caret: CaretContext, dir: "left" | "right"): KeyIntent | null {
+  if (caret.boundary === null) return null;
+  const stop = virtualStop(caret.boundary);
+  if (stop === null) return null;
+  if (dir === stop.direction) {
+    return caret.escaped ? null : { type: "markStep", marks: stop.marks, escaped: true };
+  }
+  return caret.escaped
+    ? { type: "markStep", marks: caret.boundary.natural, escaped: false }
+    : null;
+}
+
+/**
+ * The delimiter ARRIVAL `dir` makes, or null when the browser's own landing is
+ * already right.
+ *
+ * At a seam the caret has two states — `natural` and the virtual stop — laid out
+ * in the order `virtualStop` gives. Traversal must visit the one nearest
+ * the approach first, so:
+ *
+ *   ...aaa | stop | a...        (a seam whose stop lies RIGHT of `natural`)
+ *          ^natural
+ *
+ * arriving RIGHTWARD meets `natural` first (the browser's landing — correct,
+ * nothing to do), and arriving LEFTWARD meets the STOP first (the browser lands on
+ * `natural` and the stop is skipped — this rung). The condition is therefore
+ * "the stop sits on the side we are coming FROM", i.e. the stop's direction is
+ * the opposite of the travel direction; the mirrored seam (stop LEFT of `natural`,
+ * which is what a block-start boundary always is) is broken on the rightward
+ * approach instead, by the same test.
+ *
+ * Ordered BELOW `markStepFor` at each arrow: a delimiter still to be crossed HERE
+ * is nearer than one a step away.
+ */
+function markArriveFor(caret: CaretContext, dir: "left" | "right"): KeyIntent | null {
+  const dest = dir === "left" ? caret.stepLeftBoundary : caret.stepRightBoundary;
+  if (dest === null) return null;
+  const stop = virtualStop(dest);
+  if (stop === null) return null;
+  if (stop.direction === dir) return null; // the stop is on the far side — natural is right
+  return {
+    type: "markArrive",
+    offset: caret.offset + (dir === "left" ? -1 : 1),
+    marks: stop.marks,
+  };
+}
+
+/**
+ * The delimiter deletion a Backspace (`side: "before"`) or Delete
+ * (`side: "after"`) makes at the caret, or null.
+ *
+ * **`caret.escaped` is the gate, and it is the safety property of the whole
+ * feature.** Depth is not inferred from `selection.format` — it exists only
+ * because our own `markStep` recorded it and the live anchor still verifies
+ * (`internal/mark-depth.ts`). Three shipped mechanisms produce a caret whose
+ * `selection.format` diverges from its node's bits WITHOUT being a delimiter
+ * step: Cmd+E on a collapsed caret (a pure selection toggle by design),
+ * `applyInlineFormat`'s `preFormat` restore onto every successful autoformat, and
+ * `appendRunsAtJoin`'s caret landing at the end of a possibly-marked run. Under a
+ * naive gate each of those would turn the next Backspace into a silent,
+ * destructive strip of a whole span instead of deleting one character.
+ *
+ * Which KEY deletes the delimiter is the OPPOSITE of the direction the caret
+ * escaped in: a step to the RIGHT leaves it behind the caret (Backspace's side),
+ * a step to the LEFT puts it ahead (Delete's). That is a question about the
+ * caret; which RUN loses which mark is a question about the document, answered
+ * side-by-side in {@link delimiterDeletion} — the two used to be one field, and
+ * conflating them is what made a Backspace at a seam whose marked run is on the
+ * right walk the unmarked side and strip nothing.
+ *
+ * `virtualStop` returning non-null already guarantees the deletion is non-empty
+ * (the two sides differ), so there is no "nothing to strip" arm to fall through.
+ */
+function unmarkFor(caret: CaretContext, side: "before" | "after"): KeyIntent | null {
+  if (!caret.escaped || !caret.collapsed || caret.boundary === null) return null;
+  const stop = virtualStop(caret.boundary);
+  if (stop === null) return null;
+  if ((stop.direction === "right" ? "before" : "after") !== side) return null;
+  return { type: "unmark", delimiter: delimiterDeletion(caret.boundary) };
+}
+
 export function resolveKeystroke(
   key: KeystrokeKey,
   mods: { shift: boolean },
@@ -254,6 +406,15 @@ export function resolveKeystroke(
       return { type: "split", position, asChild, childType: p?.childType, siblingType, tailData };
     }
     case "Backspace": {
+      // The nearest thing to the LEFT may be a virtual mark delimiter the caret
+      // has ALREADY stepped past — the caret is then at a run's END, so
+      // `atStart` is false and the guard below would hand this to native
+      // deletion. The rung has to sit above it, and it fires ONLY at
+      // `caret.escaped` (see `unmarkFor`): everything below this line is
+      // therefore byte-for-byte the ladder that shipped, reachable only after an
+      // explicit arrow step in the same interaction.
+      const unmark = unmarkFor(caret, "before");
+      if (unmark) return unmark;
       // Only a collapsed caret at the very start triggers structural intent;
       // anything else is ordinary text deletion (native).
       if (!caret.atStart || !caret.collapsed) return { type: "passthrough" };
@@ -330,6 +491,11 @@ export function resolveKeystroke(
       return { type: "nav", dir: "left" };
     }
     case "Delete": {
+      // The symmetric rung: a caret that stepped LEFT out of a run (block start,
+      // `` |`zz` ``) left the delimiter ahead of it, so Delete is what removes
+      // it. Same `escaped` gate, same "everything below is unchanged" property.
+      const unmark = unmarkFor(caret, "after");
+      if (unmark) return unmark;
       // Only a collapsed caret at the very end triggers structural intent;
       // anything else is ordinary forward text deletion (native).
       if (!caret.atEnd || !caret.collapsed) return { type: "passthrough" };
@@ -379,13 +545,27 @@ export function resolveKeystroke(
         : { type: "nav", dir: "down" };
     }
     case "ArrowLeft": {
+      if (mods.shift || !caret.collapsed) return { type: "passthrough" };
+      // A virtual delimiter is crossed BEFORE the block edge is: at
+      // `` |`zz` `` the caret is already at the block start, and stepping out of
+      // the mark is what the user meant by the first press — leaving the block
+      // entirely is what the second one means.
+      const step = markStepFor(caret, "left");
+      if (step) return step;
+      const arrive = markArriveFor(caret, "left");
+      if (arrive) return arrive;
       // Left at the very start crosses to the end of the previous block.
-      if (mods.shift || !caret.collapsed || !caret.atStart) return { type: "passthrough" };
+      if (!caret.atStart) return { type: "passthrough" };
       return { type: "nav", dir: "left" };
     }
     case "ArrowRight": {
+      if (mods.shift || !caret.collapsed) return { type: "passthrough" };
+      const step = markStepFor(caret, "right");
+      if (step) return step;
+      const arrive = markArriveFor(caret, "right");
+      if (arrive) return arrive;
       // Right at the very end crosses to the start of the next block.
-      if (mods.shift || !caret.collapsed || !caret.atEnd) return { type: "passthrough" };
+      if (!caret.atEnd) return { type: "passthrough" };
       return { type: "nav", dir: "right" };
     }
   }

@@ -45,6 +45,7 @@ import {
   placeCaretAtColumn,
   placeCaretAtOffset,
 } from "../internal/caret-geometry";
+import { markStepOnArrival } from "../internal/mark-arrival";
 import {
   appendRunsAtJoin,
   deleteBlockTextRange,
@@ -280,6 +281,13 @@ export function BlockTextEditor({
         const ed = lexicalEditorRef.current;
         if (!ed) return;
         placeCaretAtBoundary(ed, edge, opts?.scroll ?? false);
+        // A block's edge can itself be a mark boundary, which holds two caret
+        // states while the placement above produces only one. A HORIZONTAL
+        // crossing must meet the one facing the side it came from — the same
+        // rule an arrow step obeys within a block. Anything else (a click, a
+        // focus restore, a vertical crossing) declares no `crossing` and lands
+        // exactly where it did before.
+        if (opts?.crossing) markStepOnArrival(ed, opts.crossing);
         opts?.onLanded?.();
       },
       focusOffset: (n, opts) => {

@@ -15,6 +15,24 @@ export interface CaretLandOptions {
    *  a pointer-driven placement lands where the user pointed (already visible). */
   scroll?: boolean;
   /**
+   * Set only by a HORIZONTAL crossing, to the direction the caret is travelling
+   * in (`landCaret`'s `left`/`right` arms). Absent for a click, a focus restore,
+   * a vertical crossing, and every explicit placement.
+   *
+   * It exists because a surface's very edge can be an inline-mark boundary, and
+   * such a boundary holds TWO caret states while the browser (and
+   * `focusBoundary`'s own placement) only ever produces one. The arrival must
+   * land on whichever of the two faces the side it came from — the same rule
+   * `markArriveFor` applies to a step WITHIN a block, applied at the block seam,
+   * which is why crossing into `` hello `code` `` from the right stops OUTSIDE
+   * the code run and a second press is what goes inside.
+   *
+   * A click must never assert that state (nothing was crossed), so this is an
+   * explicit declaration by the one caller that knows a crossing happened,
+   * never an inference from `edge`.
+   */
+  crossing?: "left" | "right";
+  /**
    * Fired when the caret is really IN the surface — i.e. caret-READY, not merely
    * mounted. A CRDT-bound editor's root is childless until its content doc lands,
    * and there is nothing to hold a caret until then, so the two moments are

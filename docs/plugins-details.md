@@ -17289,6 +17289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MARK_ORDER`
           - `markdownParseTagName`
           - `markdownTagIsIdentified`
+          - `marksOfTextNode`
           - `matchInlineFormat`
           - `mergeRuns`
           - `moveBlock`

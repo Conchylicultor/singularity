@@ -512,6 +512,151 @@ guess. Rules that look redundant but are not:
 Spec: `e2e/soft-line-caret-verify.ts`. Crossing a decorator sideways belongs to
 `primitives/text-editor/decorator-nav` (mounted by both Lexical hosts), not here.
 
+## A mark boundary is a caret position (the virtual delimiter)
+
+> Every inline-mark boundary holds one INVISIBLE ONE-CHARACTER DELIMITER.
+> Rendering is unchanged; only the caret and the edit semantics pretend the
+> character is there.
+
+Marks are format **bits on a `TextNode`**, not nodes with edges — so at a
+boundary the caret is one point with two meanings (inside the span, outside it)
+and the DOM offers one. A block ending in a marked run therefore trapped the
+caret: `offset === getTextContentSize()` was the last position that existed, and
+plain text could never be typed after it. Not `decorator-nav`'s bug (a position
+that exists but isn't painted); a position that does not exist. Design:
+[`research/2026-08-06-page-inline-mark-boundary-caret.md`](../../../../research/2026-08-06-page-inline-mark-boundary-caret.md).
+
+> **A boundary has TWO caret states, carrying the LEFT run's marks and the RIGHT
+> run's. The browser hands you one of them (`natural`). The stop is THE OTHER
+> ONE.**
+
+- **One stop per boundary.** One press crosses the whole boundary; one Backspace
+  deletes the whole boundary. `virtualStop()` returns the direction AND the marks
+  from one branch, because they are one fact — which of the two states the caret
+  is standing in. Do not split them again (see below).
+- **A block edge is an empty unmarked neighbour.** That single modelling choice
+  is what makes block-start, block-end and mid-block ONE code path — the boundary
+  strip (`internal/mark-boundary.ts`) never asks which of the three it is.
+- **The stop is a question about the LIVE anchor**, not about the boundary's
+  shape. **Measured** (`e2e/mark-boundary-verify.ts` phases 6 and 9): Chromium
+  resolves a text/text seam to the END of the left run, so `natural = L` and
+  **every** boundary gets a stop — mid-block ones included, one extra press each.
+  The design predicted the opposite (`` `zz`|plain `` would need none, since the
+  plain run's own start already carries `{}`) and was wrong; consistent behavior
+  everywhere is the trade, taken deliberately. Two things follow. The direction
+  needed no change, because it asks the anchor instead of predicting the browser
+  — so a falsified assumption cost one test expectation, not a redesign; **keep
+  it derived**. And **mid-block was broken before this feature too**: typing at
+  `` `zz`|abc `` used to produce a `{code}`-marked character in a run the user is
+  typing outside of.
+- **`left ∩ right` is NOT the stop — it is the deletion's residual**, and this is
+  the trap to not "fix" back. `L ∩ R` coincides with the real answer whenever the
+  stop's side is a SUBSET of `natural`'s (every block edge, and the measured
+  `` `zz`|plain `` seam), so it looks right and tests green. It fails silently at
+  `` a|`zz` ``, where it computes `{}`, sees `natural` already carrying `{}`, and
+  synthesizes NO stop: you can append to a code span but never prepend into one.
+  `L ∩ R` is `delimiterDeletion().residual` — what both runs keep once the
+  delimiter is deleted, hence the caret's marks afterwards.
+- **The delimiter's deletion is split by SIDE** (`before` = `L \ R`, `after` =
+  `R \ L`), walked outward from the seam's two leaves. A mark lives on exactly
+  ONE side, so a single-direction walk from the anchor no-ops on the other's —
+  at `` a|`zz` `` that is a Backspace consumed for no effect.
+- **A block's own edge is a boundary too, and a horizontal CROSSING must meet the
+  state facing the side it came from** — `markArriveFor`'s rule, one scope up
+  (`internal/mark-arrival.ts`). `landCaret`'s left/right arms declare
+  `CaretLandOptions.crossing`; nothing else does, so a click, a focus restore, a
+  vertical crossing and every explicit placement land `natural` and cannot arm
+  the `escaped` gate. That declaration must never become an inference from
+  `edge`: `focusBoundary("end")` is also how a click at the end of a line lands.
+- **Virtual positions, never real zero-width nodes.** Phantom characters shift
+  every node-local offset `inline-format-surgery.ts` slices by, and a seam node in
+  a shared `Y.XmlText` is peer-local, order-dependent CONTENT — two peers at one
+  boundary give two seams `coalesce` won't merge. A real seam is derived state
+  stored as content, reconciled on every keystroke.
+
+### Depth is STORED, never derived from `selection.format`
+
+The cheapest-looking design — "depth = the caret's format diverges from its
+node's" — is **aliased by three shipped mechanisms**, each of which produces that
+divergence with no escape step anywhere in the interaction:
+
+1. **`FormatShortcutsPlugin`'s Cmd+E** fires on a collapsed caret by design, and
+   Lexical's collapsed branch of `formatText` is a pure selection toggle — so
+   Cmd+E at the end of a `` `xxxx` `` run yields `format = N \ {code}`,
+   **bit-identical** to depth 1.
+2. **`applyInlineFormat`** snapshots `preFormat` and restores it onto the
+   post-transform caret, so **every** successful autoformat lands at `format = 0`
+   on a marked node — the single most common path in the editor.
+3. **Programmatic caret landings.** `TextNode.select()` leaves `format`
+   untouched, `$placeCaretAtLinearOffset` deliberately resolves a boundary to the
+   *end of the earlier leaf*, and `appendRunsAtJoin` focuses a selection-less
+   editor at the end of a possibly-bold run.
+
+Under a derived depth, each of those makes the user's next Backspace strip
+formatting from a whole span instead of deleting a character — an invisible,
+destructive edit on the undo stack. **This is the trap most likely to be
+reintroduced**, because the derived version looks like it needs no state at all.
+
+So `internal/mark-depth.ts` stores it: a `WeakMap<LexicalEditor, anchor>`
+**written only by the `markStep` executor**, **read with verification** (it counts
+only while the live selection is still collapsed at exactly that anchor; anything
+else is depth 0), and **cleared on any update with dirty leaves** — its own key is
+its invalidation. Lexical's format-divergence carry is a ~200 ms window keyed on
+`(anchorKey, offset)`, not durable state, so `selection.format` is the **effect**
+(what to type with), re-asserted from the store by a `SELECTION_CHANGE_COMMAND`
+listener — never the encoding.
+
+### The `escaped` gate is the safety property
+
+Backspace's new rung sits at the **top** of the ladder, above the `atStart` guard
+(the caret is at a run's *end*, so `atStart` is false and today's guard would
+passthrough) — and fires **only when `caret.escaped`**, i.e. only after our own
+arrow step in the same interaction. Delete gets the symmetric rung above its
+`atEnd` guard.
+
+> **The ladder below the new rung is unchanged.** Cmd+E, autoformat and merge
+> landings all take the ordinary character deletion, and Backspace-at-start on a
+> bold line still merges exactly as today.
+
+`e2e/mark-boundary-verify.ts` is the executable statement: phase 4 is that gate,
+one sub-case per aliasing mechanism above, and phase 1 is the feature itself — its
+deliberate *settle before typing* is what makes it non-vacuous, since typing
+inside Lexical's 200 ms window gives the same rows with no feature at all.
+
+The unmark is a content mutation, so it lives in `inline-format-surgery.ts`
+(`removeMarkSpan`) rather than a third near-identical surgery module: that file
+already owns the leaf walks, the `hasFormat`-guarded `toggleFormat` idiom that
+makes the runs round-trip correct by construction, and the defer-then-re-verify
+contract a command listener needs. Wired through `recordDocEdit`, so the
+`captureBlockDocEdit` fence gives it its own undo item — **one Cmd+Z restores the
+mark and nothing else**.
+
+### `MARK_ORDER` is a storage sort key, NOT a nesting order
+
+Cap-at-1 dissolves the nesting question outright: the caret never stops between
+two delimiters, so exit order is **unobservable** and nothing can drift. Do not
+reach for one. Had it been observable it would have had to derive from
+`wrappersOf` reversed (`core/inline-markdown.ts`) — `code, strikethrough, italic,
+bold, underline` — which is deliberately *not* reverse `MARK_ORDER`.
+
+### Known bounds
+
+- **The feature is currently invisible.** Nothing reflects a collapsed caret's
+  pending marks (`FormatToolbarPlugin` is gated on a non-collapsed selection), so
+  depth 0 and depth 1 are pixel-identical and ArrowRight paints nothing. Filed as
+  a follow-up, not an oversight.
+- **`color` and `link` are not delimiters.** `link` needs nothing — Lexical
+  already moves a collapsed caret out of an inline parent whose
+  `canInsertTextAfter()` is false. `color` is a genuine gap: stepping out of red
+  `` `code` `` leaves the caret red.
+- **A mark span across a soft line break is genuinely two spans.** `walkNode`
+  emits a line break (and a decorator) as an *unmarked run*, so the strip walk
+  stops there and the caret model cannot drift from the persisted one. Document
+  it; don't "fix" it.
+- **Page-editor only.** `primitives/text-editor` mounts `PlainTextPlugin` — no
+  marks at all — so this does **not** belong beside `decorator-nav` in the
+  text-editor primitive.
+
 ## Visible-line invariants (Enter / Backspace / Delete)
 
 Split, merge, and the keystroke ladders all restate one fact: the user's mental
@@ -2007,6 +2152,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `MARK_ORDER`
     - `markdownParseTagName`
     - `markdownTagIsIdentified`
+    - `marksOfTextNode`
     - `matchInlineFormat`
     - `mergeRuns`
     - `moveBlock`

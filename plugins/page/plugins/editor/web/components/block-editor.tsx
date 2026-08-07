@@ -341,9 +341,13 @@ function BlockEditorInner({
         const first = flat[0]?.block;
         if (first) focusBlock(first.id);
       },
-      focusBoundary(edge) {
+      focusBoundary(edge, opts) {
+        // `opts` is forwarded, not dropped: the list is a pass-through surface,
+        // so the crossing's scroll intent and its `crossing` direction (which
+        // decides whether the target block's edge mark stop is asserted) belong
+        // to the block that ends up holding the caret.
         const target = edge === "start" ? flat[0]?.block : flat.at(-1)?.block;
-        if (target) focusBlockBoundary(target.id, edge);
+        if (target) focusBlockBoundary(target.id, edge, opts);
       },
       // No `focusAtColumn`: an empty page has no block to measure a column
       // against, and a host entering from above wants the body's start anyway.

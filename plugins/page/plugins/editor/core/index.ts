@@ -88,7 +88,7 @@ export {
 } from "./inline-markdown";
 export type { InlineSyntax, InlineFormatMatch, InlineFormatContext } from "./inline-markdown";
 
-export { $appendRuns, colorCssValue, runsToLexical, serializeBlockRuns, tokenOf } from "./runs-lexical";
+export { $appendRuns, colorCssValue, marksOfTextNode, runsToLexical, serializeBlockRuns, tokenOf } from "./runs-lexical";
 export type { RunsTokenExtension } from "./runs-lexical";
 
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";

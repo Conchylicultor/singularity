@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   COMMAND_PRIORITY_HIGH,
   KEY_ARROW_DOWN_COMMAND,
@@ -18,7 +19,13 @@ import { Editor } from "../slots";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { serializeBlockRuns } from "../internal/block-text-extensions";
-import { readCaretContext, type CaretContext } from "../internal/caret-geometry";
+import {
+  placeCaretAtOffset,
+  readCaretContext,
+  type CaretContext,
+} from "../internal/caret-geometry";
+import { $scanMarkSpan, removeMarkSpan } from "../internal/inline-format-surgery";
+import { markStep, readMarkDepth, registerMarkDepth } from "../internal/mark-depth";
 import { toNodes } from "../internal/optimistic-block-ops";
 import {
   resolveKeystroke,
@@ -42,7 +49,8 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, unwrapBlock, makeBlockAPI } = useBlockEditor();
+  const { rowsRef, unwrapBlock, makeBlockAPI, recordDocEdit } = useBlockEditor();
+  const recordDocEditRef = useLatestRef(recordDocEdit);
   const unwrapRef = useRef(unwrapBlock);
   unwrapRef.current = unwrapBlock;
   const makeBlockAPIRef = useRef(makeBlockAPI);
@@ -135,6 +143,50 @@ export function KeyboardPlugin({
           event.preventDefault();
           makeBlockAPIRef.current(intent.blockId).setExpanded(true);
           return true;
+        case "markStep":
+          // Selection only: the caret must NOT move, so the arrow's default is
+          // suppressed and the linear offset is left exactly where it was. No
+          // undo capture and no `discrete` — `captureBlockDocEdit` fences
+          // CONTENT mutations, and this changes none.
+          event.preventDefault();
+          markStep(lexicalEditor, intent.marks, intent.escaped);
+          return true;
+        case "markArrive":
+          // The caret moves AND lands on the seam's stop, as one press. We place
+          // it rather than letting the browser, because the stop is the state the
+          // browser never picks — and because placing through
+          // `$placeCaretAtLinearOffset` is what makes the resolver's lookahead
+          // exact: it read the boundary off the very anchor this lands on.
+          event.preventDefault();
+          placeCaretAtOffset(lexicalEditor, intent.offset);
+          markStep(lexicalEditor, intent.marks, true);
+          return true;
+        case "unmark": {
+          event.preventDefault();
+          // A Lexical command listener runs INSIDE an `editor.update()`, where a
+          // nested `discrete: true` update is ENQUEUED rather than committed —
+          // so `recordDocEdit`'s capture window would already have closed by the
+          // time the edit landed, losing the undo boundary AND double-recording
+          // through the mirror. Deferring one microtask is the same contract the
+          // inline autoformat and `split` already keep; `removeMarkSpan` throws
+          // rather than degrade if it is ever violated.
+          //
+          // Deferring means the caret may have moved, hence the plan: snapshot
+          // the live position now, re-verify it there, and abort changing
+          // nothing on drift (which records nothing — a free no-op).
+          const plan = lexicalEditor
+            .getEditorState()
+            .read(() => $scanMarkSpan(intent.delimiter));
+          if (plan === null) return true;
+          queueMicrotask(() => {
+            // Its own undo entry, fenced off the 500ms typing run on both sides:
+            // ONE Cmd+Z restores the mark and nothing else.
+            recordDocEditRef.current(blockIdRef.current, "Remove formatting", () => {
+              removeMarkSpan(lexicalEditor, plan);
+            });
+          });
+          return true;
+        }
         case "indent":
           event.preventDefault();
           api.indent();
@@ -153,7 +205,10 @@ export function KeyboardPlugin({
 
     function handle(key: KeystrokeKey, event: KeyboardEvent | null): boolean {
       if (!event || event.isComposing) return false;
-      const caret = readCaretContext(lexicalEditor);
+      // The mark-delimiter depth is passed IN rather than read by the geometry
+      // module, which keeps that module free of module state; it is verified
+      // against the live anchor inside the same read.
+      const caret = readCaretContext(lexicalEditor, readMarkDepth(lexicalEditor));
       if (!caret) return false;
       const nodes = toNodes(rowsRef.current);
       // Resolve the current block's declarative edit policy from the registry.
@@ -192,6 +247,10 @@ export function KeyboardPlugin({
       lexicalEditor.registerCommand(cmd, (e) => handle(key, e), COMMAND_PRIORITY_HIGH);
 
     const unregister = [
+      // The mark-delimiter depth store's own lifecycle: cleared on any update
+      // with dirty leaves, re-asserted onto `selection.format` on every
+      // selection change while it is valid.
+      registerMarkDepth(lexicalEditor),
       reg(KEY_ENTER_COMMAND, "Enter"),
       reg(KEY_BACKSPACE_COMMAND, "Backspace"),
       reg(KEY_DELETE_COMMAND, "Delete"),
@@ -217,7 +276,7 @@ export function KeyboardPlugin({
     return () => {
       for (const u of unregister) u();
     };
-  }, [lexicalEditor, rowsRef]);
+  }, [lexicalEditor, rowsRef, recordDocEditRef]);
 
   // Undo/redo (Cmd+Z / Cmd+Shift+Z / Cmd+Y) is NOT handled per-block. With no
   // Lexical `HistoryPlugin`, nothing here consumes those keystrokes, so the native

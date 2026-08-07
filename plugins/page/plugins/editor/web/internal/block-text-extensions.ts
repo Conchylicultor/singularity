@@ -445,23 +445,27 @@ function offsetOfElementAnchor(
 }
 
 /**
- * Inside a Lexical update: place a collapsed caret at the linear `offset` in the
- * stored-runs basis (clamped to `[0, $paragraphsPlainLength()]`). Walks leaves
- * tracking `[leafStart, leafEnd]`; the target is the FIRST leaf where
- * `offset <= leafEnd` (`<=` so a text/text boundary resolves to the END of the
- * earlier run — correct for the merge seam). TextNode → text selection; an
- * atomic leaf (line break / decorator) → element selection in its parent at the
- * before/after child index. An empty paragraph collapses to its start.
+ * The leaf a linear `offset` resolves to, and where that leaf starts.
+ *
+ * `emptyParagraph` is the one outcome with no leaf: the offset lands in a
+ * paragraph that has none, so the caret collapses to that paragraph's start.
+ *
+ * The `<=` in the leaf search is the load-bearing detail and the reason this is
+ * shared rather than reimplemented: **a text/text boundary resolves to the END of
+ * the EARLIER run.** That single choice is the editor's caret bias at a run seam,
+ * and it must be answered ONCE — the caret's mark-boundary lookahead
+ * (`caret-geometry.ts`) reads the boundary at a destination the executor is about
+ * to land on, so a second resolver that biased the other way would have the
+ * lookahead describing a position the landing never produces.
  */
-export function $placeCaretAtLinearOffset(offset: number): void {
+export function $resolveLinearOffset(
+  offset: number,
+): { leaf: LexicalNode; leafStart: number } | { emptyParagraph: ElementNode } | null {
   const total = $paragraphsPlainLength();
   const target = Math.min(Math.max(offset, 0), total);
 
   const paras = paragraphs();
-  if (paras.length === 0) {
-    $getRoot().selectStart();
-    return;
-  }
+  if (paras.length === 0) return null;
 
   // Find the first leaf whose span contains `target` (inclusive end), spanning
   // paragraph joins. We track an absolute cursor across all paragraphs.
@@ -483,26 +487,37 @@ export function $placeCaretAtLinearOffset(offset: number): void {
     });
     if (r) break outer;
     // Empty paragraph with target landing here (no leaves consumed it).
-    if (startBefore === cursor && target <= cursor) {
-      para.selectStart();
-      return;
-    }
+    if (startBefore === cursor && target <= cursor) return { emptyParagraph: para };
   }
 
-  if (!hit) {
-    // Past the last leaf (or no leaves at all) — collapse to the last paragraph.
-    const last = paras[paras.length - 1]!;
-    const lastLeaf = lastLeafOf(last);
-    if (!lastLeaf) {
-      last.selectStart();
-      return;
-    }
-    placeAtLeaf(lastLeaf, target, total - nodePlainLength(lastLeaf));
+  if (hit) return hit;
+
+  // Past the last leaf (or no leaves at all) — collapse to the last paragraph.
+  const last = paras[paras.length - 1]!;
+  const lastLeaf = lastLeafOf(last);
+  if (!lastLeaf) return { emptyParagraph: last };
+  return { leaf: lastLeaf, leafStart: total - nodePlainLength(lastLeaf) };
+}
+
+/**
+ * Inside a Lexical update: place a collapsed caret at the linear `offset` in the
+ * stored-runs basis (clamped to `[0, $paragraphsPlainLength()]`), at the leaf
+ * {@link $resolveLinearOffset} picks. TextNode → text selection; an atomic leaf
+ * (line break / decorator) → element selection in its parent at the before/after
+ * child index. An empty paragraph collapses to its start.
+ */
+export function $placeCaretAtLinearOffset(offset: number): void {
+  const resolved = $resolveLinearOffset(offset);
+  if (resolved === null) {
+    $getRoot().selectStart();
     return;
   }
-
-  const { leaf, leafStart } = hit;
-  placeAtLeaf(leaf, target, leafStart);
+  if ("emptyParagraph" in resolved) {
+    resolved.emptyParagraph.selectStart();
+    return;
+  }
+  const total = $paragraphsPlainLength();
+  placeAtLeaf(resolved.leaf, Math.min(Math.max(offset, 0), total), resolved.leafStart);
 }
 
 /** The last leaf descendant of `node` (null when it has none). */

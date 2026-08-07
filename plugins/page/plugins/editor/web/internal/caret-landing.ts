@@ -13,7 +13,11 @@ export type CaretDirection = "up" | "down" | "left" | "right";
  *
  * - Vertical crossings preserve the caret's pixel column when the surface can
  *   honor it, entering on the visual line facing the origin.
- * - Horizontal crossings land on the boundary the caret was travelling toward.
+ * - Horizontal crossings land on the boundary the caret was travelling toward,
+ *   and declare the travel direction (`crossing`) so a surface whose edge is an
+ *   inline-mark boundary can land on the state facing the approach rather than
+ *   the one its own placement produces. Vertical crossings deliberately do NOT
+ *   declare it: a mark stop costs a horizontal press, never a line change.
  * - A surface that offers neither refinement just takes focus.
  *
  * `caret` is absent for void/textarea blocks that have no measurable caret; the
@@ -39,10 +43,10 @@ export function landCaret(
       else landBoundary(surface, "start", opts);
       return;
     case "left":
-      landBoundary(surface, "end", opts);
+      landBoundary(surface, "end", { ...opts, crossing: "left" });
       return;
     case "right":
-      landBoundary(surface, "start", opts);
+      landBoundary(surface, "start", { ...opts, crossing: "right" });
       return;
   }
 }

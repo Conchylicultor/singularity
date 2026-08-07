@@ -10,9 +10,10 @@
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { applyBlockOp, nextVisibleLine, type BlockNode } from "../../core";
+import { applyBlockOp, nextVisibleLine, type BlockNode, type Mark } from "../../core";
 import { resolveKeystroke, type IntentContext, type KeystrokeKey } from "./keystroke-intent";
 import type { CaretContext } from "./caret-geometry";
+import type { MarkBoundary } from "./mark-boundary";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -89,6 +90,13 @@ function caret(over: Partial<CaretContext> = {}): CaretContext {
     onTopLine: false,
     onBottomLine: false,
     caretX: 0,
+    // No mark boundary and depth 0 — the state every caret in this file is in
+    // unless a spec says otherwise, so the whole existing suite is also the
+    // proof that the two new rungs change nothing when they do not fire.
+    boundary: null,
+    escaped: false,
+    stepLeftBoundary: null,
+    stepRightBoundary: null,
     ...over,
   };
 }
@@ -1194,6 +1202,562 @@ describe("excess indentation (outdent vs merge order)", () => {
         editPolicy: { resetToOnBackspaceAtStart: "text" },
       }),
     ).toEqual({ type: "convertTo", to: "text" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The virtual mark delimiter. Two rungs sit above the ladders: the arrow step
+// across a boundary's invisible delimiter, and its deletion.
+//
+// The deletion rung's gate is `caret.escaped` — depth set by our OWN step and
+// nothing else. Three shipped mechanisms leave a caret whose `selection.format`
+// diverges from its node's bits without being a step (Cmd+E on a collapsed
+// caret, `applyInlineFormat`'s `preFormat` restore, a merge landing), so a gate
+// that read the format instead would turn each of them into a silent strip of a
+// whole span. The `escaped: false` cases below are that regression.
+// ---------------------------------------------------------------------------
+
+describe("mark boundary", () => {
+  /** `` `zz`| `` — a code run at the END of the block, caret inside its far edge. */
+  const atBlockEnd: MarkBoundary = { left: ["code"], right: [], natural: ["code"] };
+  /** `` |`zz` `` — a code run at the START of the block. */
+  const atBlockStart: MarkBoundary = { left: [], right: ["code"], natural: ["code"] };
+  /**
+   * `` a|`zz` `` — a marked run on the RIGHT of a seam, the browser anchored on
+   * the plain run's end. The stop is the state INSIDE the code run at its start,
+   * which is what makes prepending into a code span possible; the retired
+   * `left ∩ right` rule computed `{}` here, saw that `natural` already carried
+   * it, and synthesized no stop at all.
+   */
+  const markedRight: MarkBoundary = { left: [], right: ["code"], natural: [] };
+
+  describe("stepping across it", () => {
+    test("ArrowRight at the end of a trailing marked run steps OUT", () => {
+      expect(
+        resolveKeystroke(
+          "ArrowRight",
+          NO_SHIFT,
+          caret({ atEnd: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "markStep", marks: [], escaped: true });
+    });
+
+    test("...and ArrowLeft from there steps back INSIDE, restoring the run's marks", () => {
+      expect(
+        resolveKeystroke(
+          "ArrowLeft",
+          NO_SHIFT,
+          caret({ atEnd: true, escaped: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "markStep", marks: ["code"], escaped: false });
+    });
+
+    test("a SECOND ArrowRight leaves the block — the delimiter is spent", () => {
+      expect(
+        resolveKeystroke(
+          "ArrowRight",
+          NO_SHIFT,
+          caret({ atEnd: true, escaped: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "nav", dir: "right" });
+    });
+
+    test("ArrowLeft at the start of a leading marked run steps OUT (mirror image)", () => {
+      expect(
+        resolveKeystroke(
+          "ArrowLeft",
+          NO_SHIFT,
+          caret({ atStart: true, boundary: atBlockStart }),
+          ctx("B"),
+        ),
+      ).toEqual({ type: "markStep", marks: [], escaped: true });
+      // ...and a second press then leaves the block.
+      expect(
+        resolveKeystroke(
+          "ArrowLeft",
+          NO_SHIFT,
+          caret({ atStart: true, escaped: true, boundary: atBlockStart }),
+          ctx("B"),
+        ),
+      ).toEqual({ type: "nav", dir: "left" });
+    });
+
+    test("the arrow pointing INTO the text is never the delimiter's", () => {
+      // At `` `zz`| `` the delimiter is to the caret's right, so ArrowLeft is
+      // ordinary character movement — it must not be consumed.
+      expect(
+        resolveKeystroke(
+          "ArrowLeft",
+          NO_SHIFT,
+          caret({ atEnd: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "passthrough" });
+    });
+
+    test("a marked run on the RIGHT of a seam gets a stop INSIDE it", () => {
+      // The bug this rule replaced: `left ∩ right` is `{}` here, `natural`
+      // already carries `{}`, so no stop was synthesized and the caret could
+      // never sit inside the code run at its start.
+      expect(
+        resolveKeystroke("ArrowRight", NO_SHIFT, caret({ boundary: markedRight }), ctx("A")),
+      ).toEqual({ type: "markStep", marks: ["code"], escaped: true });
+      // ...and the arrow pointing the other way is ordinary movement, as always.
+      expect(
+        resolveKeystroke("ArrowLeft", NO_SHIFT, caret({ boundary: markedRight }), ctx("A")),
+      ).toEqual({ type: "passthrough" });
+    });
+
+    test("...and one more press leaves the stop, so the seam still costs ONE press", () => {
+      expect(
+        resolveKeystroke(
+          "ArrowRight",
+          NO_SHIFT,
+          caret({ escaped: true, boundary: markedRight }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "passthrough" });
+    });
+
+    test("shift+Arrow is native selection, boundary or not", () => {
+      expect(
+        resolveKeystroke("ArrowRight", SHIFT, caret({ atEnd: true, boundary: atBlockEnd }), ctx("A")),
+      ).toEqual({ type: "passthrough" });
+    });
+  });
+
+  describe("deleting it", () => {
+    test("Backspace after stepping out drops the mark from the run", () => {
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ atEnd: true, escaped: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({
+        type: "unmark",
+        delimiter: { before: ["code"], after: [], residual: [] },
+      });
+    });
+
+    test("Delete does it at the block START, where the delimiter is ahead", () => {
+      expect(
+        resolveKeystroke(
+          "Delete",
+          NO_SHIFT,
+          caret({ atStart: true, escaped: true, boundary: atBlockStart }),
+          ctx("B"),
+        ),
+      ).toEqual({
+        type: "unmark",
+        delimiter: { before: [], after: ["code"], residual: [] },
+      });
+    });
+
+    test("a marked run on the RIGHT of a seam is stripped FORWARD", () => {
+      // The strip walks outward from the seam, and this boundary's only mark is
+      // on the side the anchor is NOT in — so a payload that named one direction
+      // for the whole deletion would walk the plain run and strip nothing, i.e.
+      // swallow the Backspace.
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ escaped: true, boundary: markedRight }),
+          ctx("A"),
+        ),
+      ).toEqual({
+        type: "unmark",
+        delimiter: { before: [], after: ["code"], residual: [] },
+      });
+    });
+
+    test("the WRONG key at each end falls straight through to today's ladder", () => {
+      // Delete at the end of a trailing marked run: the delimiter is behind the
+      // caret, so this is the ordinary forward-deletion ladder (B follows A).
+      expect(
+        resolveKeystroke(
+          "Delete",
+          NO_SHIFT,
+          caret({ atEnd: true, escaped: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "mergeNext" });
+      // Backspace at the start of a leading marked run: ordinary merge.
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ atStart: true, escaped: true, boundary: atBlockStart }),
+          ctx("B"),
+        ),
+      ).toEqual({ type: "merge" });
+    });
+
+    test("one press crosses the WHOLE boundary between two differently marked runs", () => {
+      // Cap-1 applied consistently: the press lands in the RIGHT run's state,
+      // not in a third state that neither run carries — and the deletion takes
+      // both sides' marks off, leaving the shared residual (here, nothing).
+      const seam: MarkBoundary = { left: ["bold"], right: ["code"], natural: ["bold"] };
+      expect(
+        resolveKeystroke("ArrowRight", NO_SHIFT, caret({ boundary: seam }), ctx("A")),
+      ).toEqual({ type: "markStep", marks: ["code"], escaped: true });
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ escaped: true, boundary: seam }),
+          ctx("A"),
+        ),
+      ).toEqual({
+        type: "unmark",
+        delimiter: { before: ["bold"], after: ["code"], residual: [] },
+      });
+    });
+
+    test("a mark SHARED by both runs survives the deletion and becomes the caret's", () => {
+      // `` **a**|**`b`** `` — the code span nested inside a bold run. Only the
+      // code delimiter is there to delete; the bold run is not being escaped.
+      const nested: MarkBoundary = {
+        left: ["bold"],
+        right: ["bold", "code"],
+        natural: ["bold"],
+      };
+      expect(
+        resolveKeystroke("ArrowRight", NO_SHIFT, caret({ boundary: nested }), ctx("A")),
+      ).toEqual({ type: "markStep", marks: ["bold", "code"], escaped: true });
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ escaped: true, boundary: nested }),
+          ctx("A"),
+        ),
+      ).toEqual({
+        type: "unmark",
+        delimiter: { before: [], after: ["code"], residual: ["bold"] },
+      });
+    });
+  });
+
+  describe("the `escaped` gate", () => {
+    test("a caret at the same boundary that never stepped takes the ORDINARY ladder", () => {
+      // The Cmd+E / autoformat / merge-landing case: the format diverges from the
+      // node's bits, but no step was recorded, so Backspace deletes a character
+      // (passthrough — not at the block start) rather than stripping the run.
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ atEnd: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "passthrough" });
+    });
+
+    test("Backspace-at-start on a marked line still MERGES, exactly as before", () => {
+      // The ladder below the new rung is byte-for-byte unchanged: B's previous
+      // visible line is A, so this is the plain merge it has always been — the
+      // leading mark run makes no difference at depth 0.
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ atStart: true, boundary: atBlockStart }),
+          ctx("B"),
+        ),
+      ).toEqual({ type: "merge" });
+    });
+
+    test("a non-collapsed selection is never a delimiter deletion", () => {
+      // Belt and braces: `readCaretContext` cannot produce this pair (its
+      // `escaped` is already gated on `collapsed`), but the resolver is pure and
+      // takes a plain struct, so it validates rather than trusting one producer.
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ atEnd: true, collapsed: false, escaped: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "passthrough" });
+    });
+
+    test("a boundary with nothing to strip yields no deletion rung", () => {
+      // Two identical runs are not a boundary at all — one state, nothing to
+      // cross — so `virtualStop` is null and Backspace falls through even at
+      // depth 1. (Reachable: `coalesce` splits on colour and link too.)
+      const noDelimiter: MarkBoundary = {
+        left: ["bold"],
+        right: ["bold"],
+        natural: ["bold"],
+      };
+      expect(
+        resolveKeystroke(
+          "Backspace",
+          NO_SHIFT,
+          caret({ atEnd: true, escaped: true, boundary: noDelimiter }),
+          ctx("A"),
+        ),
+      ).toEqual({ type: "passthrough" });
+    });
+  });
+
+  test("Enter and Tab never see the boundary — the linear offset is unaffected", () => {
+    expect(
+      resolveKeystroke(
+        "Enter",
+        NO_SHIFT,
+        caret({ offset: 5, atEnd: true, escaped: true, boundary: atBlockEnd }),
+        ctx("A"),
+      ),
+    ).toMatchObject({ type: "split", position: 5, asChild: true });
+    expect(
+      resolveKeystroke("Tab", NO_SHIFT, caret({ escaped: true, boundary: atBlockEnd }), ctx("B")),
+    ).toEqual({ type: "indent" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Traversal symmetry: walking a `` `aaa`a `` block right-to-left must visit the
+// same caret states left-to-right does, in reverse.
+//
+// A per-direction spot check is what let the original asymmetry through: the
+// rightward path (`inside → stop → across`) was pinned, the leftward one was not,
+// and ArrowLeft skipped the stop entirely because the browser's landing at a seam
+// is always `natural` regardless of which side the caret came from.
+//
+// The block's caret states, left to right — two of the five linear offsets carry
+// TWO states each, because a seam holds `natural` AND the virtual stop:
+//
+//   (0, escaped)  the block-START stop: outside the code run
+//   (0, natural)  inside it, before the first `a`
+//   (1) (2)       within `aaa`
+//   (3, natural)  inside the code run, after the last `a`
+//   (3, escaped)  the seam's stop: outside the code, before the plain `a`
+//   (4)           after the plain `a`
+//
+// Both walks are driven by the real resolver over boundaries derived exactly as
+// `$placeCaretAtLinearOffset` resolves them (a text/text seam biases to the END of
+// the earlier run — measured, not assumed: `e2e/mark-boundary-verify.ts` phase 6
+// reads the anchor and records it).
+// ---------------------------------------------------------------------------
+
+const CODE: Mark[] = ["code"];
+
+interface Spot {
+  offset: number;
+  escaped: boolean;
+}
+
+/** A block's boundaries by linear offset (null = mid-run), and its last offset. */
+type BoundaryMap = Record<number, MarkBoundary | null>;
+
+const contextIn =
+  (boundaries: BoundaryMap, last: number) =>
+  (spot: Spot): CaretContext =>
+    caret({
+      offset: spot.offset,
+      atStart: spot.offset === 0,
+      atEnd: spot.offset === last,
+      escaped: spot.escaped,
+      boundary: boundaries[spot.offset] ?? null,
+      stepLeftBoundary: spot.offset > 0 ? (boundaries[spot.offset - 1] ?? null) : null,
+      stepRightBoundary: spot.offset < last ? (boundaries[spot.offset + 1] ?? null) : null,
+    });
+
+/**
+ * Press `key` from `start` until the caret leaves the block, returning every
+ * state it occupied. Each intent is applied exactly as the executor does:
+ * `markStep` changes depth in place, `markArrive` moves AND lands escaped, a
+ * passthrough is the browser's one-character move (which always lands at depth
+ * 0 — the store cannot survive a caret move).
+ */
+function walkIn(
+  boundaries: BoundaryMap,
+  last: number,
+  start: Spot,
+  key: "ArrowLeft" | "ArrowRight",
+): string[] {
+  const contextAt = contextIn(boundaries, last);
+  const step = key === "ArrowLeft" ? -1 : 1;
+  let spot = start;
+  const seen = [`${spot.offset}${spot.escaped ? "*" : ""}`];
+  for (let guard = 0; guard < 12; guard++) {
+    const intent = resolveKeystroke(key, NO_SHIFT, contextAt(spot), ctx("A"));
+    if (intent.type === "markStep") spot = { ...spot, escaped: intent.escaped };
+    else if (intent.type === "markArrive") spot = { offset: intent.offset, escaped: true };
+    else if (intent.type === "passthrough") spot = { offset: spot.offset + step, escaped: false };
+    else break; // nav — the caret left the block
+    seen.push(`${spot.offset}${spot.escaped ? "*" : ""}`);
+  }
+  return seen;
+}
+
+describe("traversal symmetry", () => {
+  /** Boundaries of `[{aaa,code},{a}]` at each linear offset (null = mid-run). */
+  const BOUNDARIES: BoundaryMap = {
+    // Block start: no earlier leaf, so the anchor is inside the code run and the
+    // stop lies to its LEFT.
+    0: { left: [], right: CODE, natural: CODE },
+    1: null,
+    2: null,
+    // The seam: the `<=` bias resolves it to the END of the code run, so the
+    // anchor is inside and the stop lies to its RIGHT.
+    3: { left: CODE, right: [], natural: CODE },
+    // Block end, after the plain run: nothing marked on either side.
+    4: { left: [], right: [], natural: [] },
+  };
+  const LAST = 4;
+
+  const contextAt = contextIn(BOUNDARIES, LAST);
+  const walk = (start: Spot, key: "ArrowLeft" | "ArrowRight") =>
+    walkIn(BOUNDARIES, LAST, start, key);
+
+  test("rightward visits every state in order", () => {
+    expect(walk({ offset: 0, escaped: true }, "ArrowRight")).toEqual([
+      "0*", // the block-start stop
+      "0", // inside the code run
+      "1",
+      "2",
+      "3", // inside, at the seam
+      "3*", // the seam's stop, outside
+      "4",
+    ]);
+  });
+
+  test("leftward visits the same states in reverse — the regression", () => {
+    // Before the arrival rung, this walk read ["4","3","2","1","0","0*"]: the
+    // press from 4 landed on `natural` at the seam, so `3*` was skipped and the
+    // caret was INSIDE the code run one press earlier than the model says.
+    expect(walk({ offset: LAST, escaped: false }, "ArrowLeft")).toEqual([
+      "4",
+      "3*", // the seam's stop is met FIRST coming from the right
+      "3", // then inside
+      "2",
+      "1",
+      "0",
+      "0*", // and the block-start stop is met last
+    ]);
+  });
+
+  test("the two walks are exact mirror images", () => {
+    const rightward = walk({ offset: 0, escaped: true }, "ArrowRight");
+    const leftward = walk({ offset: LAST, escaped: false }, "ArrowLeft");
+    expect([...leftward].reverse()).toEqual(rightward);
+  });
+
+  test("an arrival whose stop is on the FAR side is left to the browser", () => {
+    // Approaching the seam from the LEFT, `natural` is the nearer state and the
+    // browser's own landing is already correct — the rung must not fire, or the
+    // caret would jump the inside state going rightward.
+    expect(
+      resolveKeystroke("ArrowRight", NO_SHIFT, contextAt({ offset: 2, escaped: false }), ctx("A")),
+    ).toEqual({ type: "passthrough" });
+    // The mirror: approaching block start from the right, `natural` is nearer.
+    expect(
+      resolveKeystroke("ArrowLeft", NO_SHIFT, contextAt({ offset: 1, escaped: false }), ctx("A")),
+    ).toEqual({ type: "passthrough" });
+  });
+
+  test("a delimiter still to cross HERE outranks one a step away", () => {
+    // At the seam already escaped, ArrowLeft steps back INSIDE rather than
+    // arriving somewhere new — `markStepFor` is ordered above `markArriveFor`.
+    expect(
+      resolveKeystroke("ArrowLeft", NO_SHIFT, contextAt({ offset: 3, escaped: true }), ctx("A")),
+    ).toEqual({ type: "markStep", marks: CODE, escaped: false });
+  });
+
+  test("stepping off a block edge is never an arrival", () => {
+    // `stepLeftBoundary` is null at offset 0 by construction, so the boundary AT
+    // the caret can never be re-read as its own destination and absorb the press
+    // that is supposed to leave the block.
+    expect(
+      resolveKeystroke("ArrowLeft", NO_SHIFT, contextAt({ offset: 0, escaped: true }), ctx("A")),
+    ).toEqual({ type: "nav", dir: "left" });
+    expect(
+      resolveKeystroke("ArrowRight", NO_SHIFT, contextAt({ offset: LAST, escaped: false }), ctx("A")),
+    ).toEqual({ type: "nav", dir: "right" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The MIRRORED block: `` a`aaa` `` — the marked run on the RIGHT of the seam.
+//
+// Same walk, opposite orientation, and the one the `left ∩ right` rule could not
+// traverse at all. There, the seam's two states are `{}` (the browser's landing,
+// on the plain run's end) and `{code}` (inside the code run at its start); the
+// old rule computed the stop as `{}`, saw `natural` already carrying it, and
+// synthesized nothing — so the state INSIDE the code span was unreachable and
+// text could not be prepended into it. Rightward the walk simply lost a state;
+// leftward the arrival rung had nothing to arrive at.
+//
+//   (0)           before the plain `a`
+//   (1, natural)  after it, outside the code run
+//   (1, escaped)  the seam's stop: INSIDE the code run, before its first `a`
+//   (2) (3)       within `aaa`
+//   (4, natural)  inside, after the last `a`
+//   (4, escaped)  the block-end stop: outside the code run
+// ---------------------------------------------------------------------------
+
+describe("traversal symmetry, mirrored (the marked run on the RIGHT)", () => {
+  /** Boundaries of `[{a},{aaa,code}]` at each linear offset (null = mid-run). */
+  const BOUNDARIES: BoundaryMap = {
+    // Block start, before the plain run: nothing marked on either side, so this
+    // is not a boundary at all.
+    0: { left: [], right: [], natural: [] },
+    // The seam: the same END-of-the-earlier-run bias, which here puts the anchor
+    // OUTSIDE the code run — so the stop is the state inside it, to the RIGHT.
+    1: { left: [], right: CODE, natural: [] },
+    2: null,
+    3: null,
+    // Block end: the anchor is inside the code run and the stop lies to its RIGHT.
+    4: { left: CODE, right: [], natural: CODE },
+  };
+  const LAST = 4;
+  const walk = (start: Spot, key: "ArrowLeft" | "ArrowRight") =>
+    walkIn(BOUNDARIES, LAST, start, key);
+
+  test("rightward stops INSIDE the code run at its start", () => {
+    expect(walk({ offset: 0, escaped: false }, "ArrowRight")).toEqual([
+      "0",
+      "1", // outside the code run, at the seam
+      "1*", // the seam's stop: inside it — typing here appends to the code run
+      "2",
+      "3",
+      "4", // inside, at the block end
+      "4*", // the block-end stop, outside
+    ]);
+  });
+
+  test("leftward visits the same states in reverse", () => {
+    expect(walk({ offset: LAST, escaped: true }, "ArrowLeft")).toEqual([
+      "4*",
+      "4",
+      "3",
+      "2",
+      "1*", // the stop is met FIRST coming from the right — the arrival rung
+      "1",
+      "0",
+    ]);
+  });
+
+  test("the two walks are exact mirror images", () => {
+    const rightward = walk({ offset: 0, escaped: false }, "ArrowRight");
+    const leftward = walk({ offset: LAST, escaped: true }, "ArrowLeft");
+    expect([...leftward].reverse()).toEqual(rightward);
+  });
+
+  test("the seam still costs exactly ONE extra press in each direction", () => {
+    // Cap 1: the stop is a single state, not one the caret can be trapped in.
+    // Both walks visit 7 states across 5 offsets — the two seams contribute one
+    // extra each, and nothing else does.
+    expect(walk({ offset: 0, escaped: false }, "ArrowRight")).toHaveLength(LAST + 3);
+    expect(walk({ offset: LAST, escaped: true }, "ArrowLeft")).toHaveLength(LAST + 3);
   });
 });
 
