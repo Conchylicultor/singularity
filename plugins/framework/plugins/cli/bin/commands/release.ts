@@ -14,9 +14,17 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
-import { REPO_ROOT, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  checkoutWorktreeName,
+  currentWorktreeName,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { asFsPath } from "@plugins/framework/plugins/plugin-id/core";
-import { buildPluginTree, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  buildPluginTree,
+  type PluginNode,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   compositionsConfig,
@@ -70,12 +78,9 @@ import {
 
 const DEFAULT_PORT = 9100;
 
-const SERVER_ENTRY =
-  "plugins/framework/plugins/server-core/bin/index.ts";
-const LAUNCH_ENTRY =
-  "plugins/infra/plugins/launcher/bin/launch.ts";
-const PG_START_ENTRY =
-  "plugins/database/plugins/embedded/scripts/start.ts";
+const SERVER_ENTRY = "plugins/framework/plugins/server-core/bin/index.ts";
+const LAUNCH_ENTRY = "plugins/infra/plugins/launcher/bin/launch.ts";
+const PG_START_ENTRY = "plugins/database/plugins/embedded/scripts/start.ts";
 const PGBOUNCER_START_ENTRY =
   "plugins/database/plugins/pgbouncer/scripts/start.ts";
 // Tauri-only: the desktop shell runs this on app exit to stop the detached
@@ -93,10 +98,12 @@ const SENTINEL_WORKER_ENTRY =
 
 // The filtered registry the compiled backend's `@composition-server-registry`
 // alias is repointed at, so the bundler's closure IS the composition closure.
-const FILTERED_SERVER_REGISTRY =
-  "plugins/framework/plugins/server-core/core/server.composition.generated.ts";
-const FILTERED_WEB_REGISTRY =
-  "plugins/framework/plugins/web-sdk/core/web.composition.generated.ts";
+// Keyed by composition NAME: filtered registries have no checkout-global
+// flavour, so a release can never reconfigure another namespace's backend.
+const FILTERED_SERVER_REGISTRY = (composition: string): string =>
+  `plugins/framework/plugins/server-core/core/server.composition.${composition}.generated.ts`;
+const FILTERED_WEB_REGISTRY = (composition: string): string =>
+  `plugins/framework/plugins/web-sdk/core/web.composition.${composition}.generated.ts`;
 
 /** The tag of the machine cutting the release, or a loud failure. */
 function hostTagOrThrow(): PlatformTag {
@@ -162,10 +169,7 @@ const DMG_APPLICATIONS_X = 410;
 
 /** XML-escape a string for safe interpolation into the SVG background. */
 function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /**
@@ -379,7 +383,9 @@ async function bundleSentinelWorker(opts: {
   });
   if (!result.success) {
     for (const log of result.logs) console.error(String(log));
-    throw new Error(`bun build failed for the sentinel worker (${SENTINEL_WORKER_ENTRY})`);
+    throw new Error(
+      `bun build failed for the sentinel worker (${SENTINEL_WORKER_ENTRY})`,
+    );
   }
 }
 
@@ -399,9 +405,7 @@ async function bundleSentinelWorker(opts: {
 //   • `staged` — a foreign tag: a `bun install --os=<os> --cpu=<cpu>` tree under
 //                a cache dir, joined into directly (`Bun.resolveSync` is useless
 //                here — the target package is not in the host's resolution graph).
-type NativeSource =
-  | { kind: "repo" }
-  | { kind: "staged"; dir: string };
+type NativeSource = { kind: "repo" } | { kind: "staged"; dir: string };
 
 /** The `@parcel/watcher` platform package for a tag. */
 function parcelWatcherPkg(tag: PlatformTag): string {
@@ -415,11 +419,7 @@ function parcelWatcherPkg(tag: PlatformTag): string {
 }
 
 /** A missing native is fatal, but the remedy differs by where we looked. */
-function missingNative(
-  what: string,
-  path: string,
-  src: NativeSource,
-): Error {
+function missingNative(what: string, path: string, src: NativeSource): Error {
   return new Error(
     src.kind === "repo"
       ? `release: ${what} not found at ${path}; run \`bun install\` first`
@@ -510,7 +510,9 @@ async function stageForeignNatives(opts: {
   // bun's install overrides take npm's own `os`/`cpu` spelling, which is exactly
   // the tag's two halves — a split, not a mapping, so nothing is re-derived here.
   const [os, cpu] = tag.split("-") as [string, string];
-  console.log(`  • staging ${tag} native packages (bun install --os=${os} --cpu=${cpu})`);
+  console.log(
+    `  • staging ${tag} native packages (bun install --os=${os} --cpu=${cpu})`,
+  );
   // Populate a scratch dir and rename it into place, so a concurrent release for
   // the same tag can never read a half-installed tree (same temp+rename shape as
   // the worktree DB fork).
@@ -548,7 +550,12 @@ function embeddedNativeDir(
   const pkg = `@embedded-postgres/${tag}`;
   const dir =
     src.kind === "repo"
-      ? join(root, "plugins/database/plugins/embedded/node_modules", pkg, "native")
+      ? join(
+          root,
+          "plugins/database/plugins/embedded/node_modules",
+          pkg,
+          "native",
+        )
       : join(src.dir, "node_modules", pkg, "native");
   if (!existsSync(dir)) {
     throw missingNative("embedded-postgres native dir", dir, src);
@@ -678,7 +685,9 @@ export function registerRelease(program: Command) {
           releaseOutDir(opts.composition, opts.target, newReleaseRunId());
         const runId = basename(out);
 
-        console.log(`Releasing composition "${opts.composition}" (${platform})`);
+        console.log(
+          `Releasing composition "${opts.composition}" (${platform})`,
+        );
         if (platform !== hostTag) {
           console.log(`  Cross-building from ${hostTag}`);
         }
@@ -726,7 +735,9 @@ export function registerRelease(program: Command) {
         // run and no longer shows up in the build Gantt as one. The old
         // `--skip-checks` validation set (always-run checks + one incremental tsc
         // per runtime entrypoint) still runs, from the same shared module.
-        console.log("\n[1/5] Building composition (filtered registries + web dist)...");
+        console.log(
+          "\n[1/5] Building composition (filtered registries + web dist)...",
+        );
         await run(
           [
             "bun",
@@ -738,31 +749,42 @@ export function registerRelease(program: Command) {
           { cwd: root },
         );
 
-        const filteredServerReg = join(root, FILTERED_SERVER_REGISTRY);
-        const filteredWebReg = join(root, FILTERED_WEB_REGISTRY);
+        const serverRegRel = FILTERED_SERVER_REGISTRY(opts.composition);
+        const webRegRel = FILTERED_WEB_REGISTRY(opts.composition);
+        const filteredServerReg = join(root, serverRegRel);
+        const filteredWebReg = join(root, webRegRel);
         if (!existsSync(filteredServerReg)) {
           console.error(
-            `Composition build did not produce ${FILTERED_SERVER_REGISTRY}. Is "${opts.composition}" a known composition?`,
+            `Composition build did not produce ${serverRegRel}. Is "${opts.composition}" a known composition?`,
           );
           process.exit(1);
         }
         if (!existsSync(filteredWebReg)) {
-          console.error(
-            `Composition build did not produce ${FILTERED_WEB_REGISTRY}.`,
-          );
+          console.error(`Composition build did not produce ${webRegRel}.`);
           process.exit(1);
         }
 
-        // `dist` is a symlink → dist.live.<pid>; follow it to the real tree.
-        const webDistLink = join(
-          root,
-          "plugins/framework/plugins/web-core/dist",
+        // The RELEASE dist phase 1 just published — scratch, keyed by (this
+        // checkout, composition), and nothing the gateway serves. Derived from
+        // the identity, never spelled as a path: the checkout's own served dist
+        // is a different tree, and publishing over it is the bug this stage
+        // closes (research/2026-08-06-global-one-dist-per-namespace.md, S3).
+        //
+        // `checkoutWorktreeName(root)` — NOT `currentWorktreeName()`, which
+        // answers "singularity" in a hand-run CLI from every worktree. Phase 1
+        // is spawned with `cwd: root`, so its `basename(getWorktreeRoot())`
+        // resolves to this same name and the two processes agree by
+        // construction rather than by coincidence.
+        const releaseDist = worktreeArtifacts.releaseWebDist(
+          checkoutWorktreeName(root),
+          opts.composition,
         );
-        if (!existsSync(webDistLink)) {
-          console.error(`Web dist not found at ${webDistLink}.`);
+        if (!existsSync(releaseDist)) {
+          console.error(`Web dist not found at ${releaseDist}.`);
           process.exit(1);
         }
-        const webDistReal = realpathSync(webDistLink);
+        // It is a symlink → `<base>.live.<pid>`; follow it to the real tree.
+        const webDistReal = realpathSync(releaseDist);
 
         // Stage from scratch.
         rmSync(out, { recursive: true, force: true });
@@ -829,7 +851,11 @@ export function registerRelease(program: Command) {
             ? { kind: "repo" }
             : {
                 kind: "staged",
-                dir: await stageForeignNatives({ root, tag: platform, hostTag }),
+                dir: await stageForeignNatives({
+                  root,
+                  tag: platform,
+                  hostTag,
+                }),
               };
 
         // Gateway: build it (forced) so the bundle ships a fresh prebuilt.
@@ -927,9 +953,13 @@ export function registerRelease(program: Command) {
         // here, before any target-specific packing, so it covers both --target
         // web (packStagedTree tars it) and --target tauri (wrapTauri embeds the
         // staged tree as a resource). Phase 1's `build-composition` already
-        // regenerated the filtered prewarm.composition.generated the runner reads.
-        console.log("\n[3.5] Pre-warming asset-mirror caches for the composition closure...");
+        // regenerated the filtered prewarm.composition.<name>.generated the
+        // runner reads.
+        console.log(
+          "\n[3.5] Pre-warming asset-mirror caches for the composition closure...",
+        );
         await runAssetMirrorPrewarm({
+          composition: opts.composition,
           destRoot: join(out, "asset-mirror"),
           log: console.log,
         });
@@ -978,14 +1008,18 @@ export function registerRelease(program: Command) {
         if (opts.dev) {
           console.log("\n[done] Staged release (--dev):");
           console.log(`  ${out}`);
-          console.log("\nRun it (self-roots SINGULARITY_DIR under <out>/data):");
+          console.log(
+            "\nRun it (self-roots SINGULARITY_DIR under <out>/data):",
+          );
           console.log(`  ${join(out, "launch")}`);
           console.log(`\nThen: http://${opts.composition}.localhost:${port}`);
           return;
         }
 
         // ── 5. Pack into a single self-extracting binary ─────────────────────
-        console.log("\n[4/5] Packing staged tree into a self-extracting binary...");
+        console.log(
+          "\n[4/5] Packing staged tree into a self-extracting binary...",
+        );
         const binaryPath = await packStagedTree({
           stagedDir: out,
           root,
@@ -1096,7 +1130,9 @@ async function wrapTauri(opts: {
     "icon.ico",
   ]) {
     if (!existsSync(join(iconsDir, f))) {
-      throw new Error(`release: tauri icon did not produce ${f} in ${iconsDir}`);
+      throw new Error(
+        `release: tauri icon did not produce ${f} in ${iconsDir}`,
+      );
     }
   }
 
@@ -1114,7 +1150,9 @@ async function wrapTauri(opts: {
   // package the dmg ourselves with `appdmg` (writes the `.DS_Store` directly).
   // Other platforms: the default bundles are all headless-safe.
   if (process.platform === "darwin") {
-    console.log("\n[tauri] Running tauri build --bundles app (host platform)...");
+    console.log(
+      "\n[tauri] Running tauri build --bundles app (host platform)...",
+    );
     await run(
       [
         "bun",
@@ -1153,9 +1191,12 @@ async function wrapTauri(opts: {
   }
 
   console.log("\n[tauri] Running tauri build (host platform)...");
-  await run(["bun", "x", "@tauri-apps/cli@2", "build", "--config", overridePath], {
-    cwd: tauriDir,
-  });
+  await run(
+    ["bun", "x", "@tauri-apps/cli@2", "build", "--config", overridePath],
+    {
+      cwd: tauriDir,
+    },
+  );
 
   // Copy the produced bundle tree INTO <out>/bundle/ so the run dir holds the
   // shippable artifact (cargo emits it under target/release/bundle otherwise).

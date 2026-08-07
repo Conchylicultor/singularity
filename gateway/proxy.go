@@ -354,6 +354,12 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case action == "restart" && r.Method == http.MethodPost:
 			ctx := r.Context()
+			// The caller is a build that just rewrote this worktree's spec.json
+			// (a new dist path, a new server argv). Adopt it BEFORE restarting:
+			// Restart snapshots wt.Spec() to spawn with, so refreshing after
+			// would apply the new argv only on some later respawn, and the
+			// build would report "deployed" against the previous spec.
+			p.reg.RefreshSpec(name)
 			snap := wt.Snapshot()
 			switch snap.State {
 			case "running", "restarting":

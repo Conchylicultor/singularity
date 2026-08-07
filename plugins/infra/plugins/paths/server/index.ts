@@ -3,7 +3,7 @@ export {
   REPO_CONFIG_DIR,
   PLUGINS_DIR,
   WEB_CORE_RELATIVE,
-  WEB_DIST_DIR,
+  webDistDir,
   HOME_DIR,
   SINGULARITY_DIR,
   BACKUPS_DIR,
@@ -29,6 +29,7 @@ export {
   releaseIdentity,
   setReleaseIdentity,
   currentWorktreeName,
+  checkoutWorktreeName,
 } from "../core/internal/paths";
 export type { ReleaseIdentity } from "../core/internal/paths";
 

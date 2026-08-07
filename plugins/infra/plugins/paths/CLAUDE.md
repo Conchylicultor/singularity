@@ -84,6 +84,7 @@
     - `BACKUPS_DIR`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutWorktreeName`
     - `CLAUDE`
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
@@ -118,7 +119,7 @@
     - `STORE_PATH`
     - `TMUX`
     - `WEB_CORE_RELATIVE`
-    - `WEB_DIST_DIR`
+    - `webDistDir`
     - `worktreeArtifacts`
     - `worktreeDataDir`
     - `WORKTREES_DIR`
@@ -128,6 +129,7 @@
     - `ATTACHMENTS_DIR`
     - `BACKUPS_DIR`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutWorktreeName`
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`

@@ -7,14 +7,20 @@ import {
   reportServerError,
   markServerReady,
 } from "@plugins/framework/plugins/server-core/core";
-import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition, LoadedServerPlugin } from "@plugins/framework/plugins/server-core/core";
+import type {
+  WsData,
+  HttpHandler,
+  WsHandler,
+  ServerPluginDefinition,
+  LoadedServerPlugin,
+} from "@plugins/framework/plugins/server-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 // The registry import goes through the `@composition-server-registry` alias
 // (declared in tsconfig.base.json → `bin/plugins-active`). In dev this resolves
 // to `plugins-active.ts`, whose existsSync selector picks full vs. filtered at
 // runtime — identical behavior to a direct relative import. At release-compile
-// time, `release.ts` overrides this alias to resolve STATICALLY to the filtered
-// `core/server.composition.generated.ts`, so the bundler's closure IS the
+// time, `release.ts` overrides this alias to resolve STATICALLY to that
+// release's filtered `core/server.composition.<name>.generated.ts`, so the bundler's closure IS the
 // composition closure (no runtime dynamic specifier to defeat `bun --compile`).
 import { serverEntries } from "@composition-server-registry";
 import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
@@ -22,7 +28,10 @@ import { isMain, PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
-import { computeLoadWaves, topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
+import {
+  computeLoadWaves,
+  topoSortPlugins,
+} from "@plugins/framework/plugins/plugin-loader/core";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
@@ -35,7 +44,9 @@ import { computeLoadWaves, topoSortPlugins } from "@plugins/framework/plugins/pl
 // own builds and defeat priority isolation. See
 // research/perfs/2026-07-08-host-saturation-agent-checks-starve-main.md.
 if (isMain() && boostInteractiveQos()) {
-  console.log("[boot] main backend event-loop thread raised to user-interactive QoS");
+  console.log(
+    "[boot] main backend event-loop thread raised to user-interactive QoS",
+  );
 }
 
 // ── Per-phase RSS attribution (boot Gantt) ──────────────────────
@@ -87,7 +98,9 @@ for (const wave of waves) {
   // cannot occur and `PLUGINS_DIR` may not exist on disk; core-warming simply
   // no-ops via `hasCoreBarrel`.)
   const coreWave = wave.filter((e) => hasCoreBarrel(e.pluginPath));
-  await Promise.allSettled(coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)));
+  await Promise.allSettled(
+    coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)),
+  );
 
   const results = await Promise.allSettled(
     wave.map((e) => e.loader() as Promise<{ default: ServerPluginDefinition }>),
@@ -181,7 +194,9 @@ const literalHttpRoutes: Record<string, HttpHandler> = {};
 const paramHttpRoutes: HttpParamRoute[] = [];
 const wsRoutes: Record<string, WsHandler> = {};
 
-function pathSegments(path: string): Array<{ literal: string } | { param: string }> {
+function pathSegments(
+  path: string,
+): Array<{ literal: string } | { param: string }> {
   return path
     .split("/")
     .filter((s) => s.length > 0)
@@ -228,7 +243,11 @@ function matchSegments<H>(
 }
 
 {
-  const end = profilerStart("routePopulation", "routePopulation", "Route Population");
+  const end = profilerStart(
+    "routePopulation",
+    "routePopulation",
+    "Route Population",
+  );
   for (const plugin of ordered) {
     if (plugin.httpRoutes) {
       for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
@@ -260,7 +279,8 @@ if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 // that set their own Cache-Control keep it. Bun's constructed-Response headers are
 // mutable in place (probed), so no clone is needed.
 function withDefaultCacheControl(res: Response): Response {
-  if (!res.headers.has("cache-control")) res.headers.set("cache-control", "no-store");
+  if (!res.headers.has("cache-control"))
+    res.headers.set("cache-control", "no-store");
   return res;
 }
 
@@ -280,7 +300,10 @@ async function safeHandle(
     // boot window before the reports plugin registers its reporter — so it can't
     // be the only signal. A 500 with zero log line made this class of bug
     // invisible.
-    console.error(`[http] ${req.method} ${pathname}: ${errObj.message}`, errObj.stack ?? "");
+    console.error(
+      `[http] ${req.method} ${pathname}: ${errObj.message}`,
+      errObj.stack ?? "",
+    );
     reportServerError({
       message: `[http] ${req.method} ${pathname}: ${errObj.message}`,
       stack: errObj.stack ?? null,
@@ -324,7 +347,8 @@ Bun.serve<WsData>({
       paramHttpRoutes,
       (r) => (r as HttpParamRoute).method === req.method,
     );
-    if (matched) return safeHandle(matched.handler, req, matched.params, url.pathname);
+    if (matched)
+      return safeHandle(matched.handler, req, matched.params, url.pathname);
 
     return new Response("Not found", { status: 404 });
   },
@@ -410,7 +434,11 @@ async function runGraphPhase(
 // its fatality is NOT gated on `loadBearing` (a plugin with optional blocking work
 // handles its own failure inside the hook). See `runGraphPhase`.
 {
-  const end = profilerStart("onReadyBlocking", "onReadyBlocking", "Blocking Ready");
+  const end = profilerStart(
+    "onReadyBlocking",
+    "onReadyBlocking",
+    "Blocking Ready",
+  );
   try {
     await runGraphPhase(ordered, "onReadyBlocking");
   } finally {
@@ -487,8 +515,12 @@ async function shutdown(signal: string): Promise<void> {
   );
   process.exit(0);
 }
-process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
-process.on("SIGINT", () => { void shutdown("SIGINT"); });
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
 
 // Exit when orphaned (parent gateway died and we were reparented to init).
 // macOS has no PR_SET_PDEATHSIG equivalent, so poll. Without this, old

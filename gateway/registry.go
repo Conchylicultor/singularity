@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -72,6 +73,35 @@ func (r *Registry) Resolve(name string) *Worktree {
 	}
 	r.loadFile(specPath)
 	return r.Get(name)
+}
+
+// RefreshSpec re-reads <name>/spec.json now, applying it if it is a revision
+// the registry has not loaded. Reconcile does the same on its own schedule;
+// this is the on-demand form, so a caller that has just rewritten the file does
+// not have to race a tick.
+//
+// Its one caller is the restart route: a build writes spec.json and immediately
+// POSTs /gateway/worktrees/<name>/restart, and Restart snapshots w.Spec() to
+// spawn with — so refreshing first is what makes a changed `server`/`command`
+// take effect on the restart the build asked for rather than on some later
+// respawn. A changed `web` is applied by the same call and is live on the next
+// static request.
+//
+// Never evicts and never errors out: an absent or unreadable spec leaves the
+// worktree exactly as it is (see loadFile).
+func (r *Registry) RefreshSpec(name string) {
+	if r.cfg.RegistryDir == "" || !nameRegex.MatchString(name) {
+		return
+	}
+	specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+	fi, err := os.Stat(specPath)
+	if err != nil {
+		return
+	}
+	if wt := r.Get(name); wt != nil && wt.SpecRev() == specRevOf(fi) {
+		return
+	}
+	r.loadFile(specPath)
 }
 
 // List returns a snapshot of all known worktrees.
@@ -211,15 +241,26 @@ func (r *Registry) reconcileOnce() {
 		}
 		name := e.Name()
 		present[name] = true
-		// Already registered → skip the stat/load. Steady state hits this for
-		// nearly every dir, so reconcile stays cheap even with thousands.
-		if r.Get(name) != nil {
+		specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+		fi, serr := os.Stat(specPath)
+		if serr != nil {
+			// No readable spec.json. Never an eviction: unregistration is keyed
+			// on DIR presence (below), so a non-atomic rewrite that briefly
+			// leaves no file cannot drop a live worktree.
 			continue
 		}
-		specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
-		if _, serr := os.Stat(specPath); serr == nil {
-			r.loadFile(specPath)
+		// Registered AND the file is the same revision we loaded → nothing to do.
+		// This is the steady-state path for nearly every dir, and costs exactly
+		// one stat: ~12µs each, so ~1ms per tick at ~90 namespaces, i.e. 0.01%
+		// of one core at the default 10s interval. The pre-existing ReadDir on
+		// the same dir already costs a fifth of that.
+		if wt := r.Get(name); wt != nil && wt.SpecRev() == specRevOf(fi) {
+			continue
 		}
+		// Either not registered yet, or the spec.json on disk is a revision we
+		// have not loaded — a build rewriting `web` at a new dist is exactly
+		// this case. loadFile re-reads and upsert applies it.
+		r.loadFile(specPath)
 	}
 	// Unregister worktrees whose backing dir/file vanished. Keyed on dir/file
 	// presence, NOT spec.json presence, so a non-atomic spec rewrite can never
@@ -300,9 +341,18 @@ func (r *Registry) loadFile(path string) {
 		slog.Warn("invalid worktree name", "name", name, "path", path)
 		return
 	}
+	// Every rejection below LEAVES A REGISTERED WORKTREE EXACTLY AS IT WAS —
+	// same spec, same backend, still routable. A spec.json that is malformed,
+	// truncated mid-write, or momentarily unreadable is a failure to *learn
+	// something new*, never a reason to forget what we already know. This is
+	// the same conservatism as the dir-presence keying in reconcileOnce.
 	spec, err := loadSpec(path)
 	if err != nil {
-		slog.Warn("failed to load spec", "path", path, "err", err)
+		if r.Get(name) != nil {
+			slog.Warn("failed to load spec; keeping the previously loaded one", "name", name, "path", path, "err", err)
+		} else {
+			slog.Warn("failed to load spec", "path", path, "err", err)
+		}
 		return
 	}
 	// Never register a spec whose backing worktree is already gone — the
@@ -312,6 +362,11 @@ func (r *Registry) loadFile(path string) {
 	// registration would only ever fail to spawn. Skip at Debug: the reconcile
 	// hot path re-attempts this every tick for leftover on-disk specs, so a
 	// louder level would spam.
+	//
+	// For an ALREADY-registered worktree this also declines to adopt a rewrite
+	// that repoints `server` at a path that does not exist: the old spec stays
+	// live rather than the worktree becoming unspawnable. reconcileOnce's own
+	// eviction check then judges the still-live old spec on its own terms.
 	if serverPathMissing(spec.Server) {
 		slog.Debug("skipping worktree: backing server dir gone", "name", name, "server", spec.Server)
 		return
@@ -335,8 +390,20 @@ func (r *Registry) upsert(name string, spec *Spec) {
 		return
 	}
 	r.mu.Unlock()
+	// Already registered. Apply the spec only when it came from a DIFFERENT
+	// spec.json revision than the one in memory. Deciding this here rather than
+	// in each caller makes "no churn" an invariant of the registry instead of
+	// something LoadAll / Watch / Resolve / Reconcile each have to remember: an
+	// unconditional loadFile is always safe, and the reconcile stat gate is a
+	// pure cost optimization on top, never a correctness dependency.
+	if wt.SpecRev() == spec.rev {
+		return
+	}
+	prev := wt.Spec()
 	wt.UpdateSpec(spec)
-	slog.Info("worktree spec updated", "name", name)
+	slog.Info("worktree spec updated", "name", name,
+		"server", spec.Server, "web", spec.Web,
+		"prevServer", prev.Server, "prevWeb", prev.Web)
 }
 
 func (r *Registry) remove(name string) {
@@ -355,8 +422,28 @@ func (r *Registry) remove(name string) {
 	}()
 }
 
+// loadSpec parses a spec.json and stamps it with the fingerprint of the exact
+// file revision it read.
+//
+// It opens ONCE and stats the file descriptor rather than the path: a concurrent
+// temp+rename swaps the directory entry but leaves this fd on the inode it is
+// reading, so the returned rev describes the returned bytes exactly. Statting
+// the path instead could pair the new file's fingerprint with the old file's
+// content — recording a revision as loaded that never was, which is precisely
+// the "gateway thinks it is current" failure this whole mechanism exists to
+// remove. The rewrite is then observed on the next tick, whose stat sees the
+// new inode.
 func loadSpec(path string) (*Spec, error) {
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -364,6 +451,7 @@ func loadSpec(path string) (*Spec, error) {
 	if err := json.Unmarshal(data, &spec); err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
+	spec.rev = specRevOf(fi)
 	if spec.Server == "" {
 		return nil, errors.New("server is required")
 	}

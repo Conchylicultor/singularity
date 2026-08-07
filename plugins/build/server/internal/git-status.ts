@@ -1,5 +1,9 @@
-import { REPO_ROOT, WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
-import { runGit, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
+import { REPO_ROOT, webDistDir } from "@plugins/infra/plugins/paths/server";
+import {
+  runGit,
+  LOG_FORMAT,
+  parseGitLog,
+} from "@plugins/primitives/plugins/commit-list/server";
 import type { MainAheadCount } from "../../shared";
 
 // Local-main only: the git-watcher plugin guarantees that any movement of
@@ -10,7 +14,11 @@ import type { MainAheadCount } from "../../shared";
 // merged externally and that pull will itself bump local main.
 export async function getMainAhead(): Promise<MainAheadCount> {
   let base = "HEAD";
-  const commitFile = Bun.file(`${WEB_DIST_DIR}/.build-commit`);
+  // The commit THIS namespace's deployed bundle was built from — read from this
+  // backend's own dist (`webDistDir()`), not from the checkout it runs out of:
+  // an auto-served composition's backend shares main's checkout, and reading
+  // main's `.build-commit` would report main's staleness on that namespace.
+  const commitFile = Bun.file(`${webDistDir()}/.build-commit`);
   if (await commitFile.exists()) {
     const stored = (await commitFile.text()).trim();
     if (stored) base = stored;

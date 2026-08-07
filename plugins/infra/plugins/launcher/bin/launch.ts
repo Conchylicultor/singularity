@@ -72,6 +72,13 @@ process.env.SINGULARITY_SENTINEL_WORKER_JS ??= join(
 // raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves into the compiled
 // binary's virtual FS, so point these at the vendored tree.
 process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
+// The served frontend. In dev this derives from the namespace
+// (`~/.singularity/worktrees/<name>/web`); a release ships one bundle whose web
+// tree is vendored at `<bundleRoot>/web` (already carrying `.build-id` /
+// `.build-commit`, copied by release.ts), so point the backend's readers —
+// the stale-tab frontend hash, the build-commit base, the report build id — at
+// it. Inherited launch → gateway → backend, like every var above.
+process.env.SINGULARITY_WEB_DIST ??= join(bundleRoot, "web");
 // Reroot the embedded-PG / PgBouncer sockets AND the gateway's per-worktree
 // backend sockets onto short `/tmp` paths (each reads a single env override).
 // The data root above may be a long versioned `<out>/data`
@@ -232,7 +239,10 @@ async function main(): Promise<void> {
   // stop. That is a failure even when it exited 0, so never report success:
   // under a supervisor, exit 0 means "the service finished", which would leave
   // a dead app un-restarted.
-  await stop(`Gateway exited (code ${gatewayExit})`, gatewayExit === 0 ? 1 : gatewayExit);
+  await stop(
+    `Gateway exited (code ${gatewayExit})`,
+    gatewayExit === 0 ? 1 : gatewayExit,
+  );
 }
 
 await main();

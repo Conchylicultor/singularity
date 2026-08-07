@@ -1,4 +1,4 @@
-import { WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
+import { webDistDir } from "@plugins/infra/plugins/paths/server";
 import { readFileSync } from "node:fs";
 
 // Read the build id baked into the currently-served bundle from `dist/.build-id`,
@@ -10,11 +10,15 @@ import { readFileSync } from "node:fs";
 // while the server keeps reporting the old id) until the restart landed — the
 // stuck "Server updated" reload button. Reading the tiny dotfile per call is
 // negligible (callers are the push-based frontendHash resource and report
-// tagging), and by resolving through the same `dist` symlink the gateway serves
+// tagging), and by resolving through the same live symlink the gateway serves
 // from, the reported id always matches the bundle in the browser's hands.
+//
+// `webDistDir()` is resolved per call for the same reason the read is: it is
+// this BACKEND's namespace dist (or, in a release, the bundle's `web/`), never a
+// path frozen from the checkout this process happens to run out of.
 export function getServerBuildId(): string | null {
   try {
-    return readFileSync(`${WEB_DIST_DIR}/.build-id`, "utf8").trim() || null;
+    return readFileSync(`${webDistDir()}/.build-id`, "utf8").trim() || null;
     // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read; a missing/unreadable .build-id (before first build or in dev) legitimately means "build id unknown" → staleness detection inert, never a bug to surface
   } catch {
     return null;

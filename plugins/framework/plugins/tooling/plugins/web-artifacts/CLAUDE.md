@@ -4,11 +4,26 @@ Per-plugin web build artifacts: each plugin's `web/` barrel (and every imported
 folder barrel — `core`, `fixtures`, …) builds into an independent,
 content-addressed vite lib-mode artifact under `~/.singularity/web-artifacts/`;
 the compose step assembles `dist/` (inline import map + entry + preloads +
-symlinks into the store). This is the DEFAULT frontend mode of
-`./singularity build`; `--monolith` / `SINGULARITY_WEB_MONOLITH=1` force the
-monolithic vite build, and `./singularity build-composition` (the release path)
-is always monolithic. Design/history:
-`research/2026-07-15-global-per-plugin-web-artifacts.md`.
+links into the store). This is the ONLY frontend build — the monolithic vite
+build it replaced is gone (`web-core/vite.config.ts`, `--monolith`,
+`SINGULARITY_WEB_MONOLITH`), so every dist producer runs this pipeline:
+`./singularity build`, the compose-serve stage, and `./singularity
+build-composition` (the release path). Design/history:
+`research/2026-07-15-global-per-plugin-web-artifacts.md`,
+`research/2026-08-06-global-one-dist-per-namespace.md`.
+
+Two knobs distinguish the producers, both passed to `runWebArtifactsPipeline`:
+
+- **`source`** — WHICH fleet to plan. Omitted ⇒ the committed full registry; a
+  composition MUST pass `compositionFleetSource({ root, name })` or it silently
+  composes every plugin in the repo. Never `vendors` on the release path:
+  `readFleetVendorMeta` throws unless the full non-composition fleet is already
+  in this host's store, which a bare release host does not have; omitted, the
+  pipeline resolves its own vendor set.
+- **`materialize`** — real copies instead of store symlinks. Release only: its
+  dist is copied into a shippable bundle, and it is written and read across a
+  window where `.build.lock` is released, so a concurrent build's store pruning
+  could dangle the links.
 
 Key invariants:
 

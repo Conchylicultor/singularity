@@ -59,12 +59,54 @@ func (s State) String() string {
 	}
 }
 
-// Spec is the on-disk schema parsed from ~/.singularity/worktrees/<name>.json.
+// Spec is the on-disk schema parsed from ~/.singularity/worktrees/<name>/spec.json.
 type Spec struct {
 	Server    string         `json:"server"`              // absolute path to the backend's working directory (cwd)
 	Web       string         `json:"web"`                 // absolute path to web/dist
 	Command   []string       `json:"command,omitempty"`   // optional: argv to spawn (release: compiled server binary). When empty, falls back to the bun convention.
 	ZeroCache *ZeroCacheSpec `json:"zeroCache,omitempty"` // optional: per-worktree zero-cache sidecar. Absent when the feature is off.
+
+	// rev identifies the spec.json revision this value was parsed from. It rides
+	// INSIDE Spec — rather than as a sibling field on Worktree — so a spec and
+	// the fingerprint asserting "this is what's on disk" travel through the same
+	// atomic pointer and can never disagree. Unexported, so json.Unmarshal never
+	// touches it and it never appears on the wire. A hand-constructed Spec has
+	// the zero rev, which compares equal to no real file revision.
+	rev specRev
+}
+
+// specRev fingerprints one revision of a spec.json. Comparable with ==; the
+// zero value means "revision unknown".
+//
+// Detection is keyed on (mtime, size, dev, ino). mtime alone is not enough: the
+// writer replaces spec.json by an atomic temp+rename, so on a filesystem with
+// coarse (1s) mtime granularity two rewrites within the same second and of the
+// same length would be indistinguishable. That same rename is what makes the
+// inode decisive — a renamed-into-place file is always a NEW inode, so the pair
+// covers both the nanosecond-mtime case (APFS, ext4) and the coarse one. dev is
+// carried alongside ino because inode numbers are only unique per device.
+//
+// A content hash would also be exact, but costs a read of every spec on every
+// reconcile tick (measured ~10x the stat) to answer a question the stat already
+// answers for the one writer that exists.
+type specRev struct {
+	mtimeNs int64
+	size    int64
+	dev     uint64
+	ino     uint64
+}
+
+// specRevOf derives the fingerprint from a stat result. dev/ino come from the
+// platform stat struct when available; where it is not, the fingerprint
+// degrades to (mtime, size), which is still exact on any nanosecond-mtime
+// filesystem.
+func specRevOf(fi os.FileInfo) specRev {
+	rev := specRev{mtimeNs: fi.ModTime().UnixNano(), size: fi.Size()}
+	if st, ok := fi.Sys().(*syscall.Stat_t); ok {
+		rev.dev = uint64(st.Dev)
+		rev.ino = uint64(st.Ino)
+	}
+	return rev
 }
 
 // ZeroCacheSpec describes the per-worktree zero-cache sidecar process. The
@@ -246,13 +288,27 @@ func (w *Worktree) CloseLog() {
 // Spec returns the current spec snapshot. Lock-free.
 func (w *Worktree) Spec() *Spec { return w.spec.Load() }
 
-// UpdateSpec replaces the spec atomically. Backend respawn is lazy: changes to
-// fields affecting the backend take effect on the next spawn (after the
-// current backend, if any, is stopped). Static asset reads pick up the new
-// web dir on the next request.
+// UpdateSpec replaces the spec atomically. What each field's change costs:
+//
+//   - Web — live on the NEXT REQUEST. handleStatic reads wt.Spec().Web per
+//     request, so a rewritten dist path takes effect with no respawn at all.
+//     This is the field a build rewrites, and the reason a spec refresh is
+//     worth doing at all.
+//   - Server, Command, ZeroCache — LAZY. They are read at spawn time
+//     (Ensure/Restart both snapshot w.Spec() before startBackend), so a
+//     running backend keeps the argv and cwd it was started with until it is
+//     stopped and respawned. Refreshing the spec alone does not restart
+//     anything; the build's write→restart sequence is what applies them, and
+//     the /gateway/worktrees/<name>/restart handler refreshes the spec first
+//     precisely so the restart it then performs uses the new values.
 func (w *Worktree) UpdateSpec(s *Spec) {
 	w.spec.Store(s)
 }
+
+// SpecRev returns the fingerprint of the spec.json revision the current spec
+// was loaded from. The registry compares it against a fresh stat to decide
+// whether a reload is needed.
+func (w *Worktree) SpecRev() specRev { return w.spec.Load().rev }
 
 func (w *Worktree) primarySocketPath() string {
 	return filepath.Join(w.cfg.SocketsDir, w.Name+".sock")

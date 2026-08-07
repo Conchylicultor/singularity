@@ -6644,7 +6644,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.isMain`
       - `infra/paths.pruneWorktreeBuildArtifacts`
       - `infra/paths.REPO_ROOT`
-      - `infra/paths.WEB_DIST_DIR`
+      - `infra/paths.webDistDir`
       - `infra/paths.worktreeArtifacts`
       - `infra/paths.worktreeDataDir`
       - `infra/query-resource.queryResource`
@@ -6925,7 +6925,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/release`
     - **`server-build-id`** — Server build-id leaf: reads the .build-id baked into the served bundle. A leaf so stale-tab detection reads it without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
-        - Uses: `infra/paths.WEB_DIST_DIR`
+        - Uses: `infra/paths.webDistDir`
         - Exports (values): `getServerBuildId`
       - Cross-plugin:
         - Imported by:
@@ -14533,7 +14533,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `findViteContributions`
           - `loadBabelContributions`
       - Structure:
-        - Loose top-level files: `vite.config.ts`
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
@@ -15927,6 +15926,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BACKUPS_DIR`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutWorktreeName`
           - `CLAUDE`
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
@@ -15961,7 +15961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `STORE_PATH`
           - `TMUX`
           - `WEB_CORE_RELATIVE`
-          - `WEB_DIST_DIR`
+          - `webDistDir`
           - `worktreeArtifacts`
           - `worktreeDataDir`
           - `WORKTREES_DIR`
@@ -15971,6 +15971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ATTACHMENTS_DIR`
           - `BACKUPS_DIR`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutWorktreeName`
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`

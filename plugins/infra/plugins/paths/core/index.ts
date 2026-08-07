@@ -27,6 +27,7 @@ export {
   releaseIdentity,
   setReleaseIdentity,
   currentWorktreeName,
+  checkoutWorktreeName,
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
 

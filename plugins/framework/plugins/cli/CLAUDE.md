@@ -170,7 +170,7 @@ The ordered pipeline both commands drive is
 [`bin/commands/internal/app-artifacts.ts`](bin/commands/internal/app-artifacts.ts)
 — read its docblock before touching either command. It owns the three stages
 (`prepareCompositionSources` → `generateAppSources` → `buildAndPublishWebDist`),
-`resolveFrontendMode`, `fastValidationJobs` and `acquireArtifactLock`, plus the
+`fastValidationJobs` and `acquireArtifactLock`, plus the
 explicit list of what stays *out* (cluster readiness, the run ledger, gateway
 HTTP, worktree-op markers, compose-serve, `propagateConfigToUser`). It is split
 into three functions rather than one because `build`'s dev-only steps interleave
@@ -195,6 +195,35 @@ Two consequences worth knowing before editing:
 
 Design + rationale:
 [`research/2026-07-28-cli-hermetic-artifact-phase.md`](../../../../research/2026-07-28-cli-hermetic-artifact-phase.md).
+
+### A build names WHICH dist it produces; it never spells a path
+
+`buildAndPublishWebDist` takes a `WebDistTarget` — `{kind:"served",name}` or
+`{kind:"release",worktree,composition}` — and `webDistPath()` is the one mapping
+from identity to directory (callers resolve their own `sweepDistLeftovers`
+through it too). Two consequences that look wrong and are not:
+
+- **`webDir` is for `.build.lock` only.** The lock is per-checkout because it
+  guards registry codegen written *into* the checkout — unrelated to where the
+  dist lands. Don't re-derive `livePath` from it.
+- **The building worktree's name is `checkoutWorktreeName(root)`, never
+  `currentWorktreeName()`** — the CLI never sets `SINGULARITY_WORKTREE` for
+  itself, so the env-derived name answers `singularity` from every worktree.
+  `release` spawns `build-composition` with `cwd` at that root, so both resolve
+  the same dist by construction.
+
+**No dist lives in a checkout.** Both arms resolve under
+`~/.singularity/worktrees/` — served at `<name>/web`, release scratch at
+`<wt>/release-web/<id>` — so a checkout carries no build output. The backend-side
+twin is `webDistDir()` (`infra/paths`), which is per-NAMESPACE and must stay a
+function, not a const. The pre-S4 in-checkout tree is reclaimed by
+`internal/legacy-dist-reap.ts`, gated on the **running gateway** reporting the
+new path (`GET /gateway/worktrees`), never on `spec.json` — the gateway serves
+from its own in-memory spec, so disk is no evidence about what is being served,
+and that gate was observed deleting a live tree. Every other answer (unreachable,
+unregistered, malformed) fails closed, which also keeps `build-composition`
+hermetic: a bare release host has no gateway and no served legacy dist either.
+[`research/2026-08-06-global-one-dist-per-namespace.md`](../../../../research/2026-08-06-global-one-dist-per-namespace.md).
 
 ### The experimental frame is stamped by the producer
 

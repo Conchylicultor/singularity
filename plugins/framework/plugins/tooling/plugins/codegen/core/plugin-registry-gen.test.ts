@@ -36,20 +36,20 @@ function writeCoreBarrel(pluginName: string, contents: string) {
 test("discoverCollectedDirs ignores commented/stringified markers but finds real calls", () => {
   writeCoreBarrel(
     "real",
-    [
-      'export const realDir = defineCollectedDir("widget");',
-    ].join("\n"),
+    ['export const realDir = defineCollectedDir("widget");'].join("\n"),
   );
   writeCoreBarrel(
     "phantoms",
     [
       '// defineCollectedDir("phantom")',
-      'const s = "defineCollectedDir(\'stringed\')";',
-      "/* block defineCollectedDir(\"blocked\") */",
+      "const s = \"defineCollectedDir('stringed')\";",
+      '/* block defineCollectedDir("blocked") */',
     ].join("\n"),
   );
 
-  const dirs = discoverCollectedDirs(root).map((d) => d.dir).sort();
+  const dirs = discoverCollectedDirs(root)
+    .map((d) => d.dir)
+    .sort();
 
   // Only the genuine call is discovered; the comment- and string-embedded
   // markers must not produce phantom collected dirs.
@@ -61,25 +61,41 @@ test("discoverCollectedDirs ignores commented/stringified markers but finds real
 test("composition name validation rejects namespace-unsafe names", () => {
   expect(() => assertCompositionName("sonata")).not.toThrow();
   expect(() => assertCompositionName("a-1")).not.toThrow();
-  for (const bad of ["", "Sonata", "so nata", "-sonata", "so/nata", "so.nata", "a".repeat(64)]) {
-    expect(() => assertCompositionName(bad)).toThrow("Invalid composition name");
+  for (const bad of [
+    "",
+    "Sonata",
+    "so nata",
+    "-sonata",
+    "so/nata",
+    "so.nata",
+    "a".repeat(64),
+  ]) {
+    expect(() => assertCompositionName(bad)).toThrow(
+      "Invalid composition name",
+    );
   }
 });
 
 test("servable namespace validation additionally rejects the reserved namespaces", () => {
   expect(() => assertServableCompositionNamespace("sonata")).not.toThrow();
   for (const reserved of ["central", "singularity", "main"]) {
-    expect(() => assertServableCompositionNamespace(reserved)).toThrow("reserved namespace");
+    expect(() => assertServableCompositionNamespace(reserved)).toThrow(
+      "reserved namespace",
+    );
   }
-  expect(() => assertServableCompositionNamespace("So nata")).toThrow("Invalid composition name");
+  expect(() => assertServableCompositionNamespace("So nata")).toThrow(
+    "Invalid composition name",
+  );
 });
 
-test("per-name registry path renders beside the singleton and round-trips through parse", () => {
+test("per-name registry path renders and round-trips through parse", () => {
   const def: DiscoveredCollectedDir = {
     dir: "web",
     _brand: "CollectedDirDef",
     ownerDir: "/repo/plugins/framework/plugins/web-sdk",
   };
+  // The singleton spelling survives ONLY as `clearCompositionRegistries`' reap
+  // target (legacy, deleted in S5) — nothing writes or selects it.
   expect(collectedDirCompositionRegistryPath(def)).toBe(
     "/repo/plugins/framework/plugins/web-sdk/core/web.composition.generated.ts",
   );
@@ -87,26 +103,40 @@ test("per-name registry path renders beside the singleton and round-trips throug
   expect(file).toBe(
     "/repo/plugins/framework/plugins/web-sdk/core/web.composition.sonata.generated.ts",
   );
-  expect(parseNamedCompositionRegistryFileName("web.composition.sonata.generated.ts")).toEqual({
+  expect(
+    parseNamedCompositionRegistryFileName(
+      "web.composition.sonata.generated.ts",
+    ),
+  ).toEqual({
     dir: "web",
     name: "sonata",
   });
-  expect(() => collectedDirNamedCompositionRegistryPath(def, "../evil")).toThrow(
-    "Invalid composition name",
-  );
+  expect(() =>
+    collectedDirNamedCompositionRegistryPath(def, "../evil"),
+  ).toThrow("Invalid composition name");
 });
 
 test("parse rejects the singleton, committed, and non-registry file names", () => {
-  expect(parseNamedCompositionRegistryFileName("web.composition.generated.ts")).toBeNull();
+  expect(
+    parseNamedCompositionRegistryFileName("web.composition.generated.ts"),
+  ).toBeNull();
   expect(parseNamedCompositionRegistryFileName("web.generated.ts")).toBeNull();
-  expect(parseNamedCompositionRegistryFileName("web.composition.Sonata.generated.ts")).toBeNull();
-  expect(parseNamedCompositionRegistryFileName("web.composition.sonata.generated.ts.bak")).toBeNull();
+  expect(
+    parseNamedCompositionRegistryFileName(
+      "web.composition.Sonata.generated.ts",
+    ),
+  ).toBeNull();
+  expect(
+    parseNamedCompositionRegistryFileName(
+      "web.composition.sonata.generated.ts.bak",
+    ),
+  ).toBeNull();
 });
 
 test("listNamedCompositionRegistries finds per-name files, skipping singletons", () => {
-  // The fake root's `widget` collected dir is not a served runtime — build a
-  // second fake root declaring `web` + `server` (+ `prewarm`, which must be
-  // excluded from the per-name listing).
+  // The fake root's `widget` collected dir is not a composition runtime — build
+  // a second fake root declaring the three that are: `web`, `server`, and
+  // `prewarm` (per-name too since S1, so a deactivation sweep reclaims it).
   const namedRoot = mkdtempSync(join(tmpdir(), "named-registry-test-"));
   try {
     const coreDir = join(namedRoot, "plugins", "sdk", "core");
@@ -124,7 +154,7 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
       "web.composition.generated.ts", // singleton — not per-name
       "server.composition.sonata.generated.ts",
       "server.composition.pages.generated.ts",
-      "prewarm.composition.sonata.generated.ts", // prewarm — singleton-only runtime
+      "prewarm.composition.sonata.generated.ts",
       "web.generated.ts", // committed — never listed
     ]) {
       writeFileSync(join(coreDir, f), "export const x = [];\n");
@@ -133,7 +163,12 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
     const listed = listNamedCompositionRegistries(namedRoot)
       .map((e) => `${e.dir}:${e.name}`)
       .sort();
-    expect(listed).toEqual(["server:pages", "server:sonata", "web:sonata"]);
+    expect(listed).toEqual([
+      "prewarm:sonata",
+      "server:pages",
+      "server:sonata",
+      "web:sonata",
+    ]);
   } finally {
     rmSync(namedRoot, { recursive: true, force: true });
   }

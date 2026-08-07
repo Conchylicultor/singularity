@@ -1,7 +1,10 @@
 import type { Command } from "commander";
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
+import {
+  WEB_CORE_RELATIVE,
+  checkoutWorktreeName,
+} from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { createValveDeps } from "../admission-valve";
 import { printStepBlocks } from "../build-output";
@@ -13,10 +16,12 @@ import {
   generateAppSources,
   maxRssLine,
   prepareCompositionSources,
-  resolveFrontendMode,
+  webDistPath,
   type ArtifactHooks,
+  type WebDistTarget,
 } from "./internal/app-artifacts";
 import { sweepDistLeftovers } from "./internal/dist-publish";
+import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 
 /**
  * The HERMETIC half of `./singularity build`: produce the app-artifact set for
@@ -116,15 +121,13 @@ export function registerBuildComposition(program: Command) {
         markBuildInProgress();
 
         const root = await getWorktreeRoot();
-        const name = basename(root);
-
-        // Composition builds are always monolithic; passing `composition` makes
-        // that unconditional inside the shared resolver rather than asserted here.
-        const artifactsMode = resolveFrontendMode({
-          composition: opts.composition,
-          env: process.env,
-          log: (line) => console.log(line),
-        }).artifacts;
+        // The identity of the CHECKOUT, not of the environment: the CLI never
+        // sets `SINGULARITY_WORKTREE` for itself, so `currentWorktreeName()`
+        // would answer "singularity" from every worktree. `release` (the parent
+        // process) resolves the release dist through the SAME function on the
+        // same root — it spawns this command with `cwd` at that root — so the
+        // producer and the consumer of the dist cannot land on different trees.
+        const name = checkoutWorktreeName(root);
 
         // A release is NOT a build run, so `SINGULARITY_BUILD_ID` is deliberately
         // neither read nor written here: reading it would make a release adopt the
@@ -145,14 +148,53 @@ export function registerBuildComposition(program: Command) {
 
         // The per-checkout artifact lock. REQUIRED, and the one non-obvious
         // hermetic step: it is the only thing serializing this run against a
-        // concurrent `./singularity build` in the same checkout — both rewrite the
-        // committed registries and publish over the same `dist`. A plain
-        // filesystem symlink, so it works on a bare host. Sweeping the dist dir's
-        // leftovers is the caller's job (see the app-artifacts docblock) and must
-        // happen before any staging dir exists.
+        // concurrent `./singularity build` in the same checkout — both rewrite
+        // the committed registries in it. `webDir` is used for the lock and for
+        // NOTHING else: the lock is per-checkout because it guards codegen
+        // written INTO the checkout, which is a separate question from where the
+        // dist lands. A plain filesystem symlink, so it works on a bare host.
         const webDir = resolve(root, WEB_CORE_RELATIVE);
         await acquireArtifactLock(webDir);
-        await sweepDistLeftovers(resolve(webDir, "dist"));
+
+        // WHICH dist this run publishes: a release's scratch dist, keyed by
+        // (this checkout, composition) — NOT the tree the gateway serves for
+        // this namespace. That separation is the whole point: a release used to
+        // publish over the checkout's live served dist and reclaim it, replacing
+        // the running app with the composition until the next plain build.
+        // Keying by checkout also makes the `.build.lock` above sufficient to
+        // serialize two releases of the same composition, by construction.
+        // research/2026-08-06-global-one-dist-per-namespace.md.
+        const distTarget: WebDistTarget = {
+          kind: "release",
+          worktree: name,
+          composition: opts.composition,
+        };
+        const distPath = webDistPath(distTarget);
+
+        // Sweeping the dist dir's leftovers is the caller's job (see the
+        // app-artifacts docblock) and must happen before any staging dir exists.
+        await sweepDistLeftovers(distPath);
+
+        // Same one-shot migration reap as `build`: a checkout that a release
+        // runs in may still carry the pre-S4 in-checkout served dist, and a
+        // release host may never run a plain `build`. Gated on the RUNNING
+        // GATEWAY already reporting the new location for this checkout's own
+        // namespace, so it cannot delete a served tree. A bare release host has
+        // no gateway — the gate simply stays closed, and such a host has no
+        // served legacy dist to reclaim either. See ./internal/legacy-dist-reap.ts.
+        const reaped = await reapLegacyCheckoutDist({
+          webDir,
+          namespace: name,
+        });
+        if (reaped.kind === "skipped") {
+          console.log(
+            `Legacy in-checkout dist left in place: ${reaped.reason}`,
+          );
+        } else if (reaped.entries.length > 0) {
+          console.log(
+            `Reclaimed ${reaped.entries.length} legacy in-checkout dist tree(s) from ${webDir}`,
+          );
+        }
 
         // Light observability seam: console only. No build profile, no
         // build-progress log, no footprint step — see the module docblock.
@@ -214,10 +256,14 @@ export function registerBuildComposition(program: Command) {
         const artifact = await buildAndPublishWebDist({
           root,
           webDir,
+          target: distTarget,
           buildId,
           composition: opts.composition,
-          artifactsMode,
           minify: opts.minify,
+          // Self-contained dist: `release` copies this tree into the shippable
+          // bundle, so every artifact must be REAL bytes, not a symlink into
+          // this host's `~/.singularity/web-artifacts/` store.
+          materialize: true,
           // A release artifact is never experimental — it is the shipped app.
           experimental: false,
           lane: "interactive",
@@ -235,7 +281,8 @@ export function registerBuildComposition(program: Command) {
           console.error(
             `\nARTIFACT BUILD FAILED — ${artifact.failedLabels.join(", ")}\n` +
               `  ${artifact.steps.map((s) => `${s.label} ${s.success ? "✓" : "✗"}`).join("   ")}\n` +
-              `Nothing was published; ${resolve(webDir, "dist")} still resolves to the previous release.`,
+              `Nothing was published; this composition's release dist (${distPath}) still ` +
+              `resolves to the previous build of it. No served app was touched.`,
           );
           process.exit(1);
         }

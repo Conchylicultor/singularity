@@ -427,12 +427,12 @@ export async function generatePluginRegistry(opts: {
 // committed `<dir>.generated.ts` files are never touched, so the build stays
 // byte-identical and `plugins-registry-in-sync` + `git status` stay clean.
 //
-// Two flavors share one generator:
-//   - SINGLETON `<dir>.composition.generated.ts` — the `build-composition` /
-//     release path, where the whole checkout IS the composition.
-//   - PER-NAME `<dir>.composition.<name>.generated.ts` — the auto-serve path,
-//     where main's checkout serves several compositions at once and each
-//     backend/dist selects its own registry by name.
+// There is exactly ONE flavor: PER-NAME `<dir>.composition.<name>.generated.ts`.
+// Every producer (auto-serve AND release) keys its registries by composition id,
+// so no checkout-global "this checkout is currently composition X" state exists
+// and a release can never reconfigure another namespace's backend. The singleton
+// `<dir>.composition.generated.ts` spelling survives only as a legacy reaper —
+// see `clearCompositionRegistries`.
 
 // The registries that need a composition-filtered (closure-restricted) sibling.
 // `web`/`server` are the runtime registries the app actually loads at the import
@@ -442,11 +442,12 @@ export async function generatePluginRegistry(opts: {
 // release only pre-warms mirrors in the composition's closure. Central is
 // dropped per the F1 requirements; check/lint are build-time-only and never
 // loaded into a served app.
+//
+// `prewarm` is in this ONE set (rather than a released-only sibling set)
+// because release is its only consumer and release is now per-name too — which
+// also means `listNamedCompositionRegistries` lists prewarm files, so
+// compose-serve's deactivation sweep reclaims them like any other.
 const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm"]);
-
-// Per-name registries cover only the runtimes a SERVED composition loads;
-// `prewarm` stays on the singleton (release) path.
-const NAMED_COMPOSITION_RUNTIME_DIRS = new Set(["web", "server"]);
 
 // Composition ids double as gateway namespaces and per-name registry file
 // segments — same charset as the gateway's name regex (gateway/registry.go),
@@ -484,6 +485,13 @@ export function assertServableCompositionNamespace(name: string): void {
   }
 }
 
+/**
+ * LEGACY (pre-S1) singleton registry path. Nothing WRITES or SELECTS this
+ * spelling any more — it exists solely so `clearCompositionRegistries` can REAP
+ * the poisoning leftovers a pre-S1 release left in a developer's checkout.
+ * Delete both, and `plugins-active.ts`'s singleton branch, in S5 once every
+ * active checkout has run one post-S1 plain build.
+ */
 export function collectedDirCompositionRegistryPath(
   def: DiscoveredCollectedDir,
 ): string {
@@ -506,40 +514,34 @@ export async function generateCompositionRegistry(opts: {
   root: string;
   bundle: Set<string>;
   /**
-   * When set, emit per-name siblings (`<dir>.composition.<name>.generated.ts`)
-   * for the served runtimes instead of the singletons — the auto-serve path,
-   * which leaves `build-composition` (release) untouched.
+   * The composition id these registries belong to. REQUIRED: every filtered
+   * registry is keyed by name, so no producer can write a checkout-global one.
    */
-  name?: string;
+  name: string;
   // Optional prebuilt context so one build shares ONE tree walk across several
   // compositions' registries. Built here when absent so standalone callers work.
   ctx?: RegistryGenContext;
 }): Promise<void> {
-  if (opts.name !== undefined) assertCompositionName(opts.name);
+  assertCompositionName(opts.name);
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
-  const dirs =
-    opts.name === undefined
-      ? COMPOSITION_RUNTIME_DIRS
-      : NAMED_COMPOSITION_RUNTIME_DIRS;
   for (const def of defs) {
-    if (!dirs.has(def.dir)) continue;
-    const file =
-      opts.name === undefined
-        ? collectedDirCompositionRegistryPath(def)
-        : collectedDirNamedCompositionRegistryPath(def, opts.name);
+    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
     await writeGenerated(
-      file,
+      collectedDirNamedCompositionRegistryPath(def, opts.name),
       renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle }),
     );
   }
 }
 
-// Remove any stale filtered SINGLETON registries so a plain (non-composition)
-// build reverts the runtimes to the full committed registries. No-throw if
-// absent. Per-name registries are deliberately NOT cleared here — they belong
-// to the auto-serve stage, which rewrites the activated set and sweeps
-// deactivated leftovers itself (via `listNamedCompositionRegistries`).
+// LEGACY REAPER (delete in S5). Removes any stale filtered SINGLETON registries
+// a PRE-S1 release left behind, so a plain (non-composition) build reverts the
+// runtimes to the full committed registries. Nothing writes that spelling any
+// more; this is purely the drain path for existing developer checkouts, paired
+// with `plugins-active.ts`'s singleton fallback branch. No-throw if absent.
+// Per-name registries are deliberately NOT cleared here — they belong to the
+// auto-serve stage, which rewrites the activated set and sweeps deactivated
+// leftovers itself (via `listNamedCompositionRegistries`).
 export async function clearCompositionRegistries(opts: {
   root: string;
 }): Promise<void> {
@@ -572,7 +574,7 @@ export function listNamedCompositionRegistries(
 ): Array<{ dir: string; name: string; file: string }> {
   const out: Array<{ dir: string; name: string; file: string }> = [];
   for (const def of discoverCollectedDirs(root)) {
-    if (!NAMED_COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
+    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
     const coreDir = join(def.ownerDir, "core");
     let entries;
     try {

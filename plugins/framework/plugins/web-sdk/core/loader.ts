@@ -30,17 +30,16 @@ export async function loadPlugins(
   //     dependency barrel's not-yet-initialized `const` exports as a TDZ
   //     `ReferenceError`) cannot occur here. Bun's loader violates that ordering
   //     under concurrent `import()`; the browser does not.
-  //   • In release/monolith mode the whole graph is a SINGLE Rollup bundle with
-  //     no cross-artifact dynamic-import edge, so there is nothing to race.
+  //   • A release bundle is the same import-map artifact fleet (its dist is
+  //     composed by the same pipeline, just with real copies instead of store
+  //     symlinks), so the browser argument above covers it unchanged.
   // The claim is scoped to the concurrent-load ordering class only — NOT genuine
   // import cycles (a different class the boundary checker confirms doesn't
   // exist). Do NOT reorder this into waves: it would be dead complexity fighting
   // the deliberate deferred-batch boot-perf design, buying nothing. If this ever
   // regressed, `plugin-render.test.tsx` (a load-only canary that loads every web
   // plugin) would fail loudly.
-  const results = await Promise.allSettled(
-    entries.map((e) => e.loader()),
-  );
+  const results = await Promise.allSettled(entries.map((e) => e.loader()));
   const plugins: LoadedPlugin[] = [];
   const errors: PluginLoadError[] = [];
   const seenIds = new Set<string>();
@@ -63,7 +62,10 @@ export async function loadPlugins(
       plugin.id = id;
       plugins.push(plugin);
     } else {
-      console.error(`[plugin.${entry.pluginPath}] failed to load`, result.reason);
+      console.error(
+        `[plugin.${entry.pluginPath}] failed to load`,
+        result.reason,
+      );
       errors.push({ pluginPath: entry.pluginPath, error: result.reason });
     }
   }

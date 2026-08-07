@@ -8,9 +8,13 @@ import { join } from "path";
 //      this namespace is an auto-served composition running from main's
 //      checkout. Absent for a normal git-worktree name — that is NOT an error,
 //      it just falls through.
-//   2. `server.composition.generated.ts` — the singleton emitted by
-//      `./singularity build-composition --composition <name>` / release checkouts, where
-//      the whole checkout IS the composition.
+//   2. `server.composition.generated.ts` — LEGACY singleton. Nothing produces
+//      this spelling any more: every filtered registry is per-name (step 1),
+//      including `build-composition` / release. It is retained ONLY as the
+//      drain path for a pre-S1 checkout that still carries one, which a plain
+//      `build` reaps via `clearCompositionRegistries`. Delete this branch (and
+//      the reaper) in S5, once every active checkout has run one post-S1 build.
+//      See research/2026-08-06-global-one-dist-per-namespace.md.
 //   3. `server.generated.ts` — the full committed registry.
 //
 // All composition registries are gitignored, so the specifier is held in a
@@ -41,4 +45,6 @@ function selectRegistry(): string {
 }
 
 const spec = selectRegistry();
-export const { serverEntries } = (await import(spec)) as typeof import("../core/server.generated");
+export const { serverEntries } = (await import(
+  spec
+)) as typeof import("../core/server.generated");

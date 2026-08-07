@@ -80,9 +80,19 @@ func TestGatewayAPIReservedUnderDefaultNamespace(t *testing.T) {
 	}
 }
 
+// staticFixture is a proxy serving one registered worktree from a real dist dir,
+// plus the registry and registry dir behind it — so a test can rewrite the
+// worktree's spec.json and observe what handleStatic serves afterwards.
+type staticFixture struct {
+	proxy  *Proxy
+	reg    *Registry
+	regDir string
+	web    string
+}
+
 // newStaticProxy registers a worktree with a real web dist dir (index.html +
 // one artifact file) and returns a proxy serving it — exercising handleStatic.
-func newStaticProxy(t *testing.T) (*Proxy, string) {
+func newStaticProxy(t *testing.T) staticFixture {
 	t.Helper()
 	regDir := t.TempDir()
 	sockDir, err := os.MkdirTemp("/tmp", "gwsta")
@@ -119,12 +129,17 @@ func newStaticProxy(t *testing.T) (*Proxy, string) {
 		t.Fatal(err)
 	}
 	routes := NewCentralRoutesStore(filepath.Join(t.TempDir(), "central-routes.json"))
-	return NewProxy(reg, routes, &Supervisor{}, ""), web
+	return staticFixture{
+		proxy:  NewProxy(reg, routes, &Supervisor{}, ""),
+		reg:    reg,
+		regDir: regDir,
+		web:    web,
+	}
 }
 
 // An existing /artifacts/* file is served as-is.
 func TestArtifactsHitServesFile(t *testing.T) {
-	p, _ := newStaticProxy(t)
+	p := newStaticProxy(t).proxy
 	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/index.js")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
@@ -138,7 +153,7 @@ func TestArtifactsHitServesFile(t *testing.T) {
 // import-map loader would otherwise receive index.html for a module URL and
 // die with a cryptic parse error.
 func TestArtifactsMissReturns404NotSPAFallback(t *testing.T) {
-	p, _ := newStaticProxy(t)
+	p := newStaticProxy(t).proxy
 	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/missing.js")
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
@@ -150,12 +165,64 @@ func TestArtifactsMissReturns404NotSPAFallback(t *testing.T) {
 
 // Non-artifact unknown paths keep today's SPA fallback.
 func TestNonArtifactMissKeepsSPAFallback(t *testing.T) {
-	p, _ := newStaticProxy(t)
+	p := newStaticProxy(t).proxy
 	rec := serve(p, "alpha.localhost:9000", "/tasks/t/some-route")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (SPA fallback)", rec.Code)
 	}
 	if !strings.Contains(rec.Body.String(), "spa-shell") {
 		t.Fatalf("expected index.html fallback, got %q", rec.Body.String())
+	}
+}
+
+// The end-to-end statement of the fix: after a build rewrites `web` to a new
+// dist, the gateway serves the NEW dist. Previously the in-memory spec was
+// frozen at first registration, so the gateway kept serving the old path — and
+// once anything deleted it, every static asset 404'd while the build reported
+// success (its readiness probe is /api/health, which never reaches
+// handleStatic).
+func TestRewrittenWebPathChangesWhatStaticServes(t *testing.T) {
+	f := newStaticProxy(t)
+
+	rec := serve(f.proxy, "alpha.localhost:9000", "/")
+	if !strings.Contains(rec.Body.String(), "spa-shell") {
+		t.Fatalf("setup: expected the original dist, got %q", rec.Body.String())
+	}
+
+	// A new dist, as a build would publish it, and a spec.json rewritten to
+	// point at it (atomic temp+rename, matching the real writer).
+	newWeb := t.TempDir()
+	if err := os.WriteFile(filepath.Join(newWeb, "index.html"), []byte("<html>new-dist</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(f.regDir, "alpha")
+	body := `{"server":"` + filepath.Join(sub, "server") + `","web":"` + newWeb + `"}`
+	tmp := filepath.Join(sub, "spec.json.tmp")
+	if err := os.WriteFile(tmp, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(tmp, filepath.Join(sub, "spec.json")); err != nil {
+		t.Fatal(err)
+	}
+
+	// Nothing is served from the new dist until the gateway observes the rewrite.
+	f.reg.reconcileOnce()
+
+	rec = serve(f.proxy, "alpha.localhost:9000", "/")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "new-dist") {
+		t.Fatalf("expected the relocated dist to be served, got %q", rec.Body.String())
+	}
+
+	// And the old dist is genuinely no longer the source: deleting it (what the
+	// legacy reap does) must not affect serving.
+	if err := os.RemoveAll(f.web); err != nil {
+		t.Fatal(err)
+	}
+	rec = serve(f.proxy, "alpha.localhost:9000", "/")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "new-dist") {
+		t.Fatalf("removing the old dist must not break serving: status=%d body=%q", rec.Code, rec.Body.String())
 	}
 }

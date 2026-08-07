@@ -60,6 +60,18 @@ Registration is decoupled from fsnotify so it cannot silently fail at scale. Thr
 
 Net effect: `spec.json` on disk ⟺ worktree reachable. The watch is a latency optimization, never a correctness dependency.
 
+### A rewritten `spec.json` is picked up
+
+A registered worktree re-reads its spec when — and only when — the file on disk is a revision it has not loaded. Each `Spec` carries the fingerprint of the file it was parsed from (`specRev`, an unexported field so spec and provenance ride one atomic pointer and cannot disagree). Triggered by `reconcileOnce` (stat per tick) and by `Registry.RefreshSpec`, which `POST /gateway/worktrees/<name>/restart` calls *before* restarting — so a build that writes `spec.json` then POSTs doesn't race the tick.
+
+- **Keyed on `(mtime, size, dev, ino)`, not mtime+size.** The writer uses atomic temp+rename, so on a coarse-mtime filesystem two same-length rewrites in one second look identical — but a renamed-into-place file always has a new inode. A content hash is equally exact and ~10× the cost (a read of every spec, every tick) for a question the stat already answers.
+- **`loadSpec` opens once and stats the fd, not the path** — the recorded revision must describe the bytes actually parsed. Statting the path could pair a new file's fingerprint with old content, recording as loaded a revision that never was.
+- **Cost:** one `os.Stat` per subdir per tick, ~12µs each ⇒ ~1ms at ~90 namespaces, 0.01% of a core at the default 10s. The `ReadDir` that pass already did costs a fifth of that.
+- **A load failure changes nothing and never evicts.** Malformed / truncated / absent / schema-invalid, or a rewrite naming a `server` path that doesn't exist: the previous spec stays live. Unregistration stays keyed on **dir** presence only.
+- **The revision check lives in `upsert`**, not its callers — so `LoadAll`/`Watch`/`Resolve`/`Reconcile` may all call `loadFile` unconditionally with no churn, and the reconcile stat gate is purely a cost optimization.
+
+When a change applies (see `UpdateSpec`'s docblock): `web` on the **next request** (`handleStatic` re-reads it per request, no respawn); `server`/`command`/`zeroCache` on the **next spawn** — `Ensure`/`Restart` snapshot the spec before `startBackend`, so refreshing alone restarts nothing.
+
 ### Self-healing stale registrations (dead `spec.Server`)
 
 The registry subdir (`~/.singularity/worktrees/<name>/`, holding `spec.json` + logs) is a *different* path from `spec.Server` (the git worktree's server dir, e.g. `<repo>/.claude/worktrees/<name>/plugins/.../server-core`). The subdir can outlive the worktree it points at — `worktree-cleanup` or a manual `git worktree remove` can delete the git worktree while leaving the registry subdir behind. Such a registration is born-dead: it can only ever fail to spawn (`cmd.Dir = spec.Server` does not exist).

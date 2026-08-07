@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 
 export const REPO_ROOT = resolve(
   import.meta.dir,
@@ -20,13 +20,10 @@ export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
 export const REPO_CONFIG_DIR =
   process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
 
-// Canonical location of the built frontend. `./singularity build` publishes the
-// Vite output here and the gateway serves it. This is the ONE source of truth:
-// the build CLI, the frontend-hash stale-tab signal, and the git-status
-// build-commit marker all derive from these constants so the path can never
-// silently diverge again (it previously pointed at a dead `web/dist`).
+// The web-core plugin dir, relative to a checkout root. Used for the
+// per-checkout `.build.lock` beside it and (until S5) the legacy served-dist
+// reap. It is NOT where a built frontend lives any more — see `webDistDir()`.
 export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
-export const WEB_DIST_DIR = join(REPO_ROOT, WEB_CORE_RELATIVE, "dist");
 
 export const MAIN_WORKTREE_NAME = "singularity";
 
@@ -119,6 +116,33 @@ export function currentWorktreeName(): string {
   return process.env.SINGULARITY_WORKTREE ?? MAIN_WORKTREE_NAME;
 }
 
+/**
+ * The worktree name a CHECKOUT ON DISK carries: its root directory's basename.
+ * This is the identity a **CLI process** has, and the one every per-worktree
+ * artifact a CLI produces is keyed by (the op marker, the build profile, the
+ * build-progress log, the DB fork name — and, since the release dist moved out
+ * of the checkout, `worktreeArtifacts.releaseWebDist`).
+ *
+ * DELIBERATELY NOT {@link currentWorktreeName}, and the two are not
+ * interchangeable:
+ *
+ * - `currentWorktreeName()` reads `SINGULARITY_WORKTREE`, which the gateway sets
+ *   when it spawns a backend. It is the right answer THERE — a composition
+ *   namespace's backend runs out of main's checkout, so only the env can say
+ *   which namespace it serves.
+ * - The CLI never sets `SINGULARITY_WORKTREE` for itself, so in a hand-run CLI
+ *   process `currentWorktreeName()` answers `"singularity"` from *every*
+ *   worktree. Anything a CLI writes per-worktree must therefore derive its name
+ *   from the checkout it is operating on, never from the environment.
+ *
+ * Two processes that must agree on which checkout produced an artifact — a
+ * `release` and the `build-composition` child it spawns with `cwd` at that same
+ * root — both call this on that root, so they cannot drift.
+ */
+export function checkoutWorktreeName(root: string): string {
+  return basename(root);
+}
+
 export const HOME_DIR = homedir();
 export const SINGULARITY_DIR =
   process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
@@ -156,8 +180,19 @@ export function worktreeDataDir(name: string): string {
  * server-side orphan-recovery fallback) derives its path from here, so a layout
  * change is one edit and readers can never drift from writers.
  *
- * The `id`-less variants are the "most recent / manual CLI" artifacts; passing a
- * build/release run id yields the per-run artifact for that run.
+ * Most entries are FILES, and for those the `id`-less variant is the "most
+ * recent / manual CLI" artifact while passing a build/release run id yields the
+ * per-run artifact for that run.
+ *
+ * `webDist` and `releaseWebDist` are the exceptions: they are DIRECTORIES, not
+ * files, and have no run-id variant. Each is a symlink published atomically by
+ * `dist-publish.ts` at `<base>` → `<base>.live.<pid>` (with `<base>.staging.*` /
+ * `<base>.swap.*` siblings in flight), so the path named here is the stable
+ * pointer, never the tree itself. Their cleanup is NOT the file-retention
+ * pruner (`pruneWorktreeBuildArtifacts`, which only ever matches the file
+ * patterns above): a dist tree is reclaimed by `sweepDistLeftovers` at publish
+ * time and, wholesale, by `removeWorktreeSpec`'s recursive remove of
+ * `worktreeDataDir(name)` (`infra/worktree/server/internal/spec.ts`).
  */
 export const worktreeArtifacts = {
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
@@ -210,7 +245,54 @@ export const worktreeArtifacts = {
   /** Per-release fallback log. Always keyed to a release run id. */
   releaseLogs: (name: string, releaseId: string): string =>
     join(worktreeDataDir(name), `release-logs-${releaseId}.json`),
+  /**
+   * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
+   * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree
+   * slug (`singularity`, an agent branch) or an auto-served composition id.
+   */
+  webDist: (name: string): string => join(worktreeDataDir(name), "web"),
+  /**
+   * DIRECTORY. A release's scratch web dist — copied into the shippable bundle
+   * and served by nobody. Keyed by the worktree that BUILT it (not a namespace:
+   * a release has none), so two checkouts releasing the same composition, or one
+   * checkout releasing two, can never share a tree.
+   */
+  releaseWebDist: (worktree: string, composition: string): string =>
+    join(worktreeDataDir(worktree), "release-web", composition),
 } as const;
+
+/**
+ * The built frontend THIS BACKEND is serving — the tree the gateway hands the
+ * browser for this backend's namespace. The one source of truth for the runtime
+ * readers of the served bundle: the frontend-hash stale-tab signal
+ * (`index.html`), the "N commits behind main" base (`.build-commit`) and the
+ * report-tagging build id (`.build-id`).
+ *
+ * A FUNCTION, not a const, for two independent reasons — do not re-freeze it at
+ * module eval:
+ *
+ * - `SINGULARITY_WEB_DIST` is set by the release launcher (`launch.ts`) before
+ *   it imports anything path-dependent, but a const here would still capture
+ *   whatever the env said when *this* module was first imported. In a release
+ *   the alternative — deriving from `REPO_ROOT` — resolves into the compiled
+ *   binary's virtual FS, which is why a release used to report a null build id.
+ * - The derived arm is per-NAMESPACE (`currentWorktreeName()`, i.e. the
+ *   `SINGULARITY_WORKTREE` the gateway spawned this backend with), and an
+ *   auto-served composition's backend runs out of MAIN's checkout. A
+ *   `REPO_ROOT`-derived path made every such backend read main's dist and
+ *   report main's build id and build commit.
+ *
+ * Correct only in a backend, where the gateway sets `SINGULARITY_WORKTREE`. A
+ * CLI process must use `worktreeArtifacts.webDist(checkoutWorktreeName(root))`
+ * instead — see {@link checkoutWorktreeName}.
+ */
+export function webDistDir(): string {
+  return (
+    process.env.SINGULARITY_WEB_DIST ??
+    worktreeArtifacts.webDist(currentWorktreeName())
+  );
+}
+
 export const CLAUDE_DIR = join(HOME_DIR, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(HOME_DIR, ".claude", "projects");
 export const CLAUDE_SESSIONS_DIR = join(HOME_DIR, ".claude", "sessions");

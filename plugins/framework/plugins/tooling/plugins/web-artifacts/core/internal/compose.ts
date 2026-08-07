@@ -1,11 +1,23 @@
 // Compose step: turn the artifact fleet into a servable dist — the inline
 // import map, index.html (preserving web-core's two inline pre-React scripts),
-// symlinks from the shared store, the eager-tier modulepreload closure, and the
-// hard-fail URL/coverage verification.
+// symlinks into the shared store (or real copies, under `materialize`), the
+// eager-tier modulepreload closure, and the hard-fail URL/coverage verification.
 
-import { cpSync, existsSync, mkdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { buildImportMap, findUnmappedSpecifiers, type ImportMapEntry } from "../import-map";
+import {
+  buildImportMap,
+  findUnmappedSpecifiers,
+  type ImportMapEntry,
+} from "../import-map";
 import { BUILD_ID_GLOBAL } from "./vite-builder";
 
 export interface ComposeOptions {
@@ -18,6 +30,25 @@ export interface ComposeOptions {
   cssHref: string;
   /** dist/artifacts/<linkName> → store dir symlinks. */
   links: Array<{ linkName: string; storePath: string }>;
+  /**
+   * COPY each store dir into `dist/artifacts/<linkName>` instead of symlinking
+   * it, making the dist self-contained (no reference to
+   * `~/.singularity/web-artifacts/` survives). Vendor sets ride the same `links`
+   * array, so they are covered too.
+   *
+   * For the RELEASE path only — its dist is copied into a shippable bundle, and
+   * a symlink into this host's store either ships dangling or, if the copier
+   * dereferenced, races the store: a release writes its dist in phase 1 (a
+   * `build-composition` child that drops `.build.lock` on exit) and copies it in
+   * phase 3, and in that unlocked window a concurrent build's `pruneStore()` can
+   * unlink the very artifact dirs the links point at. Materializing at
+   * composition time closes the window instead of narrowing it: the produced
+   * tree never referenced the store at all.
+   *
+   * Served dists (`build`, `compose-serve`) leave this off — the symlinks are
+   * the whole point of the shared content-addressed store there.
+   */
+  materialize?: boolean;
   /** The full import map (web + core + vendors + registry alias). */
   mapEntries: ImportMapEntry[];
   /** url → emitted STATIC import specifiers (bare or relative) — preload BFS. */
@@ -60,9 +91,10 @@ export function computePreloadClosure(opts: {
   return [...seen].sort();
 }
 
-export function composeDist(
-  opts: ComposeOptions,
-): { importMap: { imports: Record<string, string> }; preloads: string[] } {
+export function composeDist(opts: ComposeOptions): {
+  importMap: { imports: Record<string, string> };
+  preloads: string[];
+} {
   const { stagingDir } = opts;
   mkdirSync(stagingDir, { recursive: true });
 
@@ -78,17 +110,25 @@ export function composeDist(
   const importMap = buildImportMap(opts.mapEntries);
   const unmapped = findUnmappedSpecifiers(opts.emitted, importMap);
   if (unmapped.length > 0) {
-    const lines = unmapped.map((u) => `  ${u.specifier}  (imported by ${u.importer})`);
+    const lines = unmapped.map(
+      (u) => `  ${u.specifier}  (imported by ${u.importer})`,
+    );
     throw new Error(
       `compose: ${unmapped.length} emitted import(s) have no import-map entry:\n${lines.join("\n")}`,
     );
   }
 
-  // 3. Symlink artifacts from the shared store.
+  // 3. Symlink artifacts from the shared store — or copy them, when the dist
+  // must outlive the store it was composed from (see `materialize`).
   const artifactsDir = join(stagingDir, "artifacts");
   mkdirSync(artifactsDir, { recursive: true });
   for (const link of opts.links) {
-    symlinkSync(link.storePath, join(artifactsDir, link.linkName));
+    const dest = join(artifactsDir, link.linkName);
+    if (opts.materialize) {
+      cpSync(link.storePath, dest, { recursive: true });
+    } else {
+      symlinkSync(link.storePath, dest);
+    }
   }
 
   // 4. Modulepreload closure for the eager tier.
@@ -103,7 +143,9 @@ export function composeDist(
   // preloads, and swap the /main.tsx module script for the entry artifact.
   const htmlSrc = readFileSync(join(opts.webSrcDir, "index.html"), "utf8");
   if (!htmlSrc.includes(MAIN_SCRIPT_TAG)) {
-    throw new Error(`compose: ${MAIN_SCRIPT_TAG} not found in web-core index.html`);
+    throw new Error(
+      `compose: ${MAIN_SCRIPT_TAG} not found in web-core index.html`,
+    );
   }
   if (!htmlSrc.includes("</head>")) {
     throw new Error("compose: </head> not found in web-core index.html");
@@ -120,7 +162,10 @@ export function composeDist(
     .join("\n");
   const html = htmlSrc
     .replace("</head>", `${headInject}\n  </head>`)
-    .replace(MAIN_SCRIPT_TAG, `<script type="module" src="${opts.entryUrl}"></script>`);
+    .replace(
+      MAIN_SCRIPT_TAG,
+      `<script type="module" src="${opts.entryUrl}"></script>`,
+    );
   writeFileSync(join(stagingDir, "index.html"), html);
 
   // 6. HARD verification: every URL the page will request must resolve to a
@@ -144,8 +189,8 @@ export function composeDist(
     );
   }
 
-  // 7. Manifest — doubles as the artifact-mode marker the web-artifacts checks
-  // detect a deployed artifact dist by (a monolith dist never contains it).
+  // 7. Manifest — doubles as the marker the web-artifacts checks detect a
+  // composed dist by; its absence means nothing was ever composed here.
   writeFileSync(
     join(stagingDir, ".web-artifacts.json"),
     JSON.stringify(

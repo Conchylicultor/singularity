@@ -1,7 +1,7 @@
 # server-build-id
 
 Server-only leaf that reads the `.build-id` baked into the served frontend
-bundle (`${WEB_DIST_DIR}/.build-id`) **fresh on every call — never memoized**.
+bundle (`${webDistDir()}/.build-id`) **fresh on every call — never memoized**.
 `./singularity build` swaps the `dist` symlink (what the browser downloads)
 *before* it restarts this backend, so a value cached at process start would
 disagree with the currently-served bundle during the swap→restart window and
@@ -20,7 +20,7 @@ it eagerly).
 
 - Description: Server build-id leaf: reads the .build-id baked into the served bundle. A leaf so stale-tab detection reads it without importing the heavy build barrel (which pulls git-watcher/worktree).
 - Server:
-  - Uses: `infra/paths.WEB_DIST_DIR`
+  - Uses: `infra/paths.webDistDir`
   - Exports (values): `getServerBuildId`
 - Cross-plugin:
   - Imported by:

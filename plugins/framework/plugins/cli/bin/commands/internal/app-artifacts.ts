@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import {
   clearCompositionRegistries,
   generateCompositionRegistry,
@@ -17,7 +17,10 @@ import {
   runChecks,
   tsBuildInfoPath,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import {
+  compositionFleetSource,
+  runWebArtifactsPipeline,
+} from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   flattenManifest,
@@ -28,6 +31,7 @@ import {
   manifestItemToManifest,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import {
   cpuBudget,
@@ -50,7 +54,7 @@ import { stampExperimentalMarker } from "./experimental-marker";
 /**
  * Single source of truth for the ordered **app-artifact** pipeline: the part of
  * `./singularity build` that is a deterministic function of (source tree,
- * composition, frontend mode) — filesystem, CPU and network-for-deps only.
+ * composition) — filesystem, CPU and network-for-deps only.
  *
  * `build`'s action conflates two jobs: *produce the artifact set* and *deploy it
  * into the live dev cluster*. Only the first is portable; the second needs a
@@ -146,9 +150,6 @@ import { stampExperimentalMarker } from "./experimental-marker";
  * exit code:
  *   - `generateMigration` (stage 2) exits 1 on an invalid name and exits 2 when
  *     drizzle-kit shows rename/create prompts — `release` relies on that code.
- * `resolveFrontendMode` likewise exits 1 on contradictory flags, mirroring
- * `parseMigrationAnswers` in ../../migrations.ts: it is argv validation, before
- * any artifact exists and with no cleanup owed.
  *
  * Stage 1's install used to be a second such exception (`exec` exited 1 on a
  * nonzero `bun install`). It is now `ensureDeps`, which THROWS a message naming
@@ -279,54 +280,6 @@ function codegenStepFor(hooks: ArtifactHooks): CodegenStep {
 }
 
 /**
- * Frontend mode. Per-plugin web artifacts are the DEFAULT for normal
- * (agent-branch and main) builds; the monolithic vite build is the rollback
- * escape hatch. Precedence: explicit flag > env > default. A COMPOSITION build
- * is ALWAYS monolithic regardless of flags/env — that unconditional branch is
- * the release pipeline's hard guard, and it lives HERE, in the shared module, so
- * it holds for every caller rather than being restated by the one command that
- * can set a composition.
- *
- * `composition` is REQUIRED (`string | null`) rather than optional: `build` has
- * no composition of its own since `--composition` was removed, and passing an
- * explicit `null` makes "this checkout is not a composition" a decision at the
- * call site instead of a forgotten field. There is consequently no way to reach
- * this with both a composition and `--artifacts`/`--monolith` — those are
- * `build`-only flags and `build` always passes `null` — so the old
- * `--artifacts` + `--composition` contradiction guard is gone with the flag it
- * policed. `--artifacts` / SINGULARITY_WEB_ARTIFACTS=1 remain accepted no-ops
- * from the opt-in phase, except against `--monolith` (fail loudly).
- */
-export function resolveFrontendMode(opts: {
-  composition: string | null;
-  monolith?: boolean;
-  artifacts?: boolean;
-  env: { readonly [key: string]: string | undefined };
-  log: (line: string) => void;
-}): { artifacts: boolean; why: string } {
-  if (opts.artifacts && opts.monolith) {
-    console.error("ERROR: --artifacts and --monolith are contradictory.");
-    process.exit(1);
-  }
-  const frontendMode: { artifacts: boolean; why: string } = opts.composition
-    ? {
-        artifacts: false,
-        why: "composition/release builds are always monolithic",
-      }
-    : opts.monolith
-      ? { artifacts: false, why: "--monolith" }
-      : opts.artifacts
-        ? { artifacts: true, why: "--artifacts" }
-        : opts.env.SINGULARITY_WEB_MONOLITH === "1"
-          ? { artifacts: false, why: "SINGULARITY_WEB_MONOLITH=1" }
-          : { artifacts: true, why: "default" };
-  opts.log(
-    `Frontend mode: ${frontendMode.artifacts ? "web artifacts" : "monolithic vite build"} (${frontendMode.why})`,
-  );
-  return frontendMode;
-}
-
-/**
  * The per-checkout artifact lock. Serializes artifact production (codegen +
  * dist publish) against any other build/release in the same checkout — a plain
  * filesystem symlink, so it works on a bare host. Callers sweep their own dist
@@ -398,10 +351,11 @@ export async function prepareCompositionSources(opts: {
 
   // 2a'. Composition build-gating. With a composition, emit gitignored
   // filtered registries (the bundle's hard closure) beside the committed
-  // full ones; the web/server import seams select the filtered file. Without
-  // one, clear any stale filtered registries so the runtimes revert to
-  // the full committed set. The committed `<dir>.generated.ts` files are
-  // never touched either way, so the build stays byte-identical.
+  // full ones, keyed by the composition NAME; the web/server import seams
+  // select the filtered file by that name. Without one, reap any stale
+  // pre-S1 singleton registries so the runtimes revert to the full committed
+  // set. The committed `<dir>.generated.ts` files are never touched either
+  // way, so the build stays byte-identical.
   endSpan = hooks.span(
     "compositionRegistry",
     "build:codegen",
@@ -421,7 +375,7 @@ export async function prepareCompositionSources(opts: {
       facets: true,
     });
     const bundle = resolveComposition(tree, flat).bundle;
-    await generateCompositionRegistry({ root, bundle });
+    await generateCompositionRegistry({ root, bundle, name: composition });
     hooks.log(
       `Composition "${composition}": ${bundle.size} plugins in closure.`,
     );
@@ -635,21 +589,87 @@ export type ArtifactBuildResult =
       steps: StepResult[];
       /** The staging dir, already renamed into the published release. */
       stagingPath: string;
-      /** The live `dist` symlink now resolving to the fresh release. */
+      /**
+       * The published dist for `opts.target` — the live symlink now resolving
+       * to the fresh release. Equal to `webDistPath(opts.target)`.
+       */
       livePath: string;
       /** `git rev-parse HEAD` at publish time; `""` when git could not answer. */
       buildCommit: string;
     }
   | { ok: false; steps: StepResult[]; failedLabels: string[] };
 
+/**
+ * WHICH dist this build produces — an IDENTITY, never a path. The path module
+ * (`worktreeArtifacts`) owns the layout; a caller names what it is building and
+ * gets the one location that identity maps to, so no two producers can be
+ * pointed at the same tree by two independent path expressions. That is exactly
+ * how a `release` came to publish over the checkout's live served dist.
+ */
+export type WebDistTarget =
+  /**
+   * The dist the gateway SERVES at `<name>.localhost:9000`. `name` is a
+   * *namespace*: a worktree slug or an auto-served composition id. Published
+   * atomically because a live reader exists.
+   */
+  | { kind: "served"; name: string }
+  /**
+   * A release's scratch dist — copied into a shippable bundle and served by
+   * nobody. Keyed by *(the worktree that BUILT it, composition)*: a release has
+   * no namespace of its own, and keying by the building checkout is what makes
+   * the existing per-checkout `.build.lock` sufficient to serialize it.
+   */
+  | { kind: "release"; worktree: string; composition: string };
+
+/**
+ * The ONE mapping from a dist identity to its live path. Exported because a
+ * caller must sweep its own dist dir's leftovers (`sweepDistLeftovers`) before
+ * stage 3 creates a staging dir — and sweeping a *different* path than the one
+ * about to be published is precisely the drift this seam exists to prevent, so
+ * the caller resolves its `target` through here rather than spelling a path.
+ *
+ * Both arms live under `~/.singularity/worktrees/`: no dist is written into a
+ * checkout any more, so a checkout carries no build output and the served tree
+ * survives operations on the checkout (a `git clean`, a worktree re-checkout).
+ * It takes no checkout path at all — a build's `webDir` is the `.build.lock`'s
+ * home and nothing else.
+ */
+export function webDistPath(target: WebDistTarget): string {
+  return target.kind === "release"
+    ? worktreeArtifacts.releaseWebDist(target.worktree, target.composition)
+    : worktreeArtifacts.webDist(target.name);
+}
+
 export interface BuildWebDistOptions {
   root: string;
-  /** The web-core dir holding `dist` and `.build.lock`. */
+  /**
+   * The web-core dir, used for ONE thing: the `.build.lock` beside it
+   * (`acquireArtifactLock`). The lock is per-checkout by necessity — it guards
+   * the registry codegen this pipeline writes *into* the checkout — which is a
+   * different question from where the dist lands. The dist location comes from
+   * `target` alone; do not re-conflate the two.
+   */
   webDir: string;
+  /** WHICH dist to publish. Derives `livePath`; see {@link WebDistTarget}. */
+  target: WebDistTarget;
   buildId: string;
   composition: string | null;
-  artifactsMode: boolean;
   minify: boolean;
+  /**
+   * Copy each artifact out of the shared content-addressed store instead of
+   * symlinking it, so the produced dist is SELF-CONTAINED. Only the release
+   * path (`build-composition`) wants this: its dist is `cpSync`'d into a
+   * shippable bundle, and symlinks into `~/.singularity/web-artifacts/` would
+   * ship as dangling links on any other machine.
+   *
+   * Materializing HERE rather than dereferencing at the copy site is deliberate:
+   * the release dist is written in release phase 1 (a `build-composition` child
+   * process, which releases `.build.lock` when it exits) and read in phase 3, so
+   * in that unlocked window a concurrent build's store pruning can dangle the
+   * links — a `cpSync({ dereference: true })` in phase 3 would then fail or ship
+   * a hole. A materialized dist has no window: it never referenced the store.
+   */
+  materialize: boolean;
   /**
    * Stamp the served `index.html` as an experimental (agent-worktree) deploy —
    * the red frame. Only `./singularity build` from a non-main worktree says
@@ -688,28 +708,23 @@ export interface BuildWebDistOptions {
 export async function buildAndPublishWebDist(
   opts: BuildWebDistOptions,
 ): Promise<ArtifactBuildResult> {
-  const {
-    root,
-    webDir,
-    buildId,
-    composition,
-    artifactsMode,
-    companions,
-    hooks,
-  } = opts;
+  // `opts.webDir` is deliberately NOT destructured: since S4 the dist location
+  // comes from `opts.target` alone, and this body has no use for the checkout
+  // path. It survives on the options object as the `.build.lock`'s home, which
+  // `acquireArtifactLock` — a caller's concern, not this function's — consumes.
+  const { root, buildId, composition, companions, hooks } = opts;
 
-  const livePath = resolve(webDir, "dist");
+  const livePath = webDistPath(opts.target);
   const stagingPath = distStagingPath(livePath);
-  const stagingName = basename(stagingPath);
 
   hooks.log(
     "Running checks, type-checking, and building frontend in parallel...",
   );
 
   const webArtifactsJob: HeavyJob = async (grant) => {
-    // Per-plugin artifact pipeline, in-process, into the SAME staging
-    // dir the monolith would use — the atomic publish below is shared.
-    // Grant-gated like the vite build it replaces: the pipeline's
+    // Per-plugin artifact pipeline, in-process, into a staging dir the
+    // atomic publish below then swaps in.
+    // Grant-gated like the vite build it replaced: the pipeline's
     // internal fan-out (per-plugin vite builds on a cold store) is the
     // same class of heavy work, so it spends a unit of the build's CPU
     // budget rather than running on top of it.
@@ -718,12 +733,31 @@ export async function buildAndPublishWebDist(
     const lines: StepResult["lines"] = [];
     let success = true;
     try {
+      // WHAT the fleet is planned from. Without a composition the pipeline
+      // defaults to the committed FULL registry; with one it MUST be told, or
+      // it composes a green bundle containing every plugin in the repo instead
+      // of the composition's closure — a silently wrong artifact, not a build
+      // failure. The per-name `web.composition.<name>.generated.ts` this reads
+      // was emitted by stage 1 moments ago.
+      //
+      // `vendors` is deliberately NOT passed. compose-serve reuses main's
+      // full-fleet vendor set via `readFleetVendorMeta`, and copying that here
+      // is the obvious wrong optimization: `readFleetVendorMeta` THROWS unless
+      // the full non-composition fleet is already in this host's artifact store,
+      // which is exactly what a hermetic release host (fresh `git clone`, cold
+      // store) does not have. Omitted, the pipeline resolves the vendor set from
+      // this fleet's own requests — correct on any host.
+      const source = composition
+        ? await compositionFleetSource({ root, name: composition })
+        : undefined;
       const result = await grant.run(() =>
         runWebArtifactsPipeline({
           root,
           stagingDir: stagingPath,
           minify: opts.minify,
           buildId,
+          source,
+          materialize: opts.materialize,
           log: (line) => lines.push({ text: line, stream: "stdout" }),
           onStage: async (id, label, run) => {
             const endStage = hooks.span(id, "build:frontend", label);
@@ -760,39 +794,9 @@ export async function buildAndPublishWebDist(
     };
   };
 
-  const viteJob: HeavyJob = async (grant) => {
-    const end = hooks.span("viteBuild", "build:frontend", "vite build");
-    const start = performance.now();
-    // Vite is one of the heavy children the grant covers: spend a unit
-    // for it so it shares the build's CPU budget with the type-check
-    // workers rather than running on top of it.
-    const output = await grant.run(() =>
-      execBuffered(
-        ["bun", "run", "build"],
-        webDir,
-        {
-          VITE_OUT_DIR: stagingName,
-          VITE_BUILD_ID: buildId,
-          ...(composition ? { VITE_COMPOSITION: composition } : {}),
-        },
-        opts.background,
-      ),
-    );
-    end({ maxRssBytes: output.maxRssBytes });
-    const rss = maxRssLine("vite build", output.maxRssBytes);
-    if (rss) output.lines.push({ text: rss, stream: "stdout" });
-    return {
-      id: "viteBuild",
-      label: "vite build",
-      lines: output.lines,
-      durationMs: Math.round(performance.now() - start),
-      success: output.exitCode === 0,
-    };
-  };
-
   // The heavy section itself: everything the host CPU grant covers (checks +
-  // tsc + vite), running on the grant it is handed. Extracted so the acquire
-  // around it can be a retry loop (below) without the body moving.
+  // tsc + the artifact fleet), running on the grant it is handed. Extracted so
+  // the acquire around it can be a retry loop (below) without the body moving.
   //
   // buildId is baked into the bundle (VITE_BUILD_ID) and written to
   // dist/.build-id below — bundle and server agree by construction (no
@@ -800,7 +804,7 @@ export async function buildAndPublishWebDist(
   const runHeavySection = async (grant: Grant): Promise<StepResult[]> => {
     const parallel: Array<Promise<StepResult>> = [];
     for (const job of companions) parallel.push(job(grant));
-    parallel.push((artifactsMode ? webArtifactsJob : viteJob)(grant));
+    parallel.push(webArtifactsJob(grant));
     return await Promise.all(parallel);
   };
 

@@ -7,13 +7,25 @@
 // absent. (`<base>.old.` is the legacy move-aside scheme; still swept for
 // back-compat.)
 //
-// Two publishers share this machinery: main's web dist (`<web-core>/web/dist`)
-// and each auto-served composition's `~/.singularity/worktrees/<id>/web`.
-// Leftovers from a crashed run are swept per target dir by
-// `sweepDistLeftovers` at the start of each build.
+// Three publishers share this machinery, and all three publish under
+// `~/.singularity/worktrees/`: a checkout's served dist (`<name>/web`), each
+// auto-served composition's (`<id>/web` — the same arm, a namespace either way),
+// and a release's scratch dist at `<wt>/release-web/<composition>`.
+// Which one a build publishes is an IDENTITY it names, not a path it spells —
+// see `WebDistTarget` / `webDistPath` in ./app-artifacts.ts. Leftovers from a
+// crashed run are swept per target dir by `sweepDistLeftovers` at the start of
+// each build.
 
 import { existsSync, lstatSync } from "fs";
-import { mkdir, readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
+import {
+  mkdir,
+  readdir,
+  readlink,
+  rename,
+  rm,
+  symlink,
+  unlink,
+} from "fs/promises";
 import { basename, dirname, join } from "path";
 
 export interface DistNames {
@@ -51,7 +63,10 @@ export function distNames(dir: string, pid: number = process.pid): DistNames {
 }
 
 /** The staging dir a build of this process should compile into for `dir`. */
-export function distStagingPath(dir: string, pid: number = process.pid): string {
+export function distStagingPath(
+  dir: string,
+  pid: number = process.pid,
+): string {
   return distNames(dir, pid).stagingPath;
 }
 

@@ -1,12 +1,12 @@
 // Shared discovery + loading of per-plugin `vite/index.ts` build contributions
-// (Babel plugins handed to `@vitejs/plugin-react`). Extracted from
+// (Babel plugins handed to `@vitejs/plugin-react`). Originally extracted from
 // `web-core/vite.config.ts` so the per-plugin artifact builder
-// (`tooling/web-artifacts`) reuses the EXACT same transform set as the
-// monolithic build — one discovery walk, one ordering rule, zero duplication.
+// (`tooling/web-artifacts`) reused the EXACT same transform set as the
+// monolithic build; that build is gone, so web-artifacts is now the sole
+// consumer — one discovery walk, one ordering rule, still the single owner of
+// the ordering contract each `vite/index.ts` contribution is written against.
 //
-// `vite.config.ts` imports this file RELATIVELY (its esbuild config loader
-// cannot resolve the `@plugins` alias); other plugins import it through the
-// `@plugins/framework/plugins/web-core/core` barrel.
+// Imported through the `@plugins/framework/plugins/web-core/core` barrel.
 
 import path from "node:path";
 import { existsSync, readdirSync } from "node:fs";
@@ -31,7 +31,10 @@ export type BabelPluginItem = NonNullable<ReactBabelObject["plugins"]>[number];
 // FIRST in Babel's plugin list; a bare return normalizes to `order: 0`.
 // Convention: reserve a low value like `-100` for "must run first" transforms
 // (e.g. a whole-program compiler that other JSX-stamping transforms must follow).
-export type OrderedBabelContribution = { order?: number; plugin: BabelPluginItem };
+export type OrderedBabelContribution = {
+  order?: number;
+  plugin: BabelPluginItem;
+};
 export type ViteContributionReturn = BabelPluginItem | OrderedBabelContribution;
 
 // Robustly discriminate the ordered wrapper from a bare `BabelPluginItem`. A bare
@@ -69,12 +72,17 @@ export function findViteContributions(pluginsRoot: string): string[] {
       entries = readdirSync(dir, { withFileTypes: true });
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
+      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
+        throw err;
       return;
     }
     for (const e of entries) {
       if (!e.isDirectory()) continue;
-      if (e.name === "node_modules" || e.name === "dist" || e.name.startsWith("dist.")) {
+      if (
+        e.name === "node_modules" ||
+        e.name === "dist" ||
+        e.name.startsWith("dist.")
+      ) {
         continue;
       }
       if (e.name === "vite") {

@@ -71,6 +71,7 @@ import {
   SINGULARITY_DIR,
   WORKTREES_DIR,
   MAIN_WORKTREE_NAME,
+  worktreeArtifacts,
 } from "../../paths";
 import type { SpanCollector } from "../../profiler";
 import type { StepLogCollector } from "../../build-logs-writer";
@@ -264,7 +265,9 @@ async function serveOne(opts: {
       generateCompositionRegistry({ root, bundle, name: id, ctx: opts.ctx }),
     );
 
-    const distDir = join(specDir, "web");
+    // The served dist for this namespace. Derived from `worktreeArtifacts`
+    // (byte-identical to `join(specDir, "web")`) so the layout has ONE owner.
+    const distDir = worktreeArtifacts.webDist(id);
     await sweepDistLeftovers(distDir);
     const stagingPath = distStagingPath(distDir);
     const source = await compositionFleetSource({ root, name: id });

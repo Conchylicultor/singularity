@@ -49,8 +49,9 @@ export interface WorktreeSpec {
  * This is the single seam shared by the dev build (identity derived from the git
  * worktree) and the release launcher (a fixed name, no git operation). The spec
  * is pure identity — composition filtering is baked into the `server`/`web`
- * trees the spec points at (a present `server.composition.generated.ts` selects
- * the filtered server), never carried here.
+ * trees the spec points at (a present `server.composition.<name>.generated.ts`,
+ * selected by the backend's own `SINGULARITY_WORKTREE`, gives the filtered
+ * server), never carried here.
  */
 export function writeWorktreeSpec({
   name,

@@ -9,7 +9,10 @@ import { basename, join } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION } from "../constants";
-import { findUnmappedDynamicWarnings, type ImportMapEntry } from "../import-map";
+import {
+  findUnmappedDynamicWarnings,
+  type ImportMapEntry,
+} from "../import-map";
 import {
   artifactUrl,
   collectVendorRequests,
@@ -32,7 +35,11 @@ import {
   touchArtifact,
   type ArtifactMeta,
 } from "./store";
-import { buildArtifact, buildRegistryArtifact, type BuilderCtx } from "./vite-builder";
+import {
+  buildArtifact,
+  buildRegistryArtifact,
+  type BuilderCtx,
+} from "./vite-builder";
 import {
   ensureVendorSet,
   pruneVendorSets,
@@ -66,6 +73,15 @@ export interface WebArtifactsPipelineOptions {
    * the staged ground-truth scan) still verify the dist end-to-end.
    */
   vendors?: VendorSetMeta;
+  /**
+   * Copy every artifact (plugin artifacts AND the vendor set — they ride the
+   * same `links` array) out of the shared content-addressed store into the dist
+   * instead of symlinking, so the produced tree is self-contained and
+   * relocatable. The release path passes this; served dists do not. Rationale
+   * for materializing here rather than dereferencing at the copy site is in
+   * `ComposeOptions.materialize`.
+   */
+  materialize?: boolean;
   log: (line: string) => void;
   /** Stage wrapper — the caller records profiler spans here. */
   onStage: <T>(id: string, label: string, run: () => Promise<T>) => Promise<T>;
@@ -90,19 +106,28 @@ export async function runWebArtifactsPipeline(
 
   // ── Stage 1: detect ─────────────────────────────────────────────────
   const cache = loadFingerprintCache(worktreeName);
-  const plan = await opts.onStage("artifacts:detect", "detect changed artifacts", async () => {
-    ensureStoreDirs();
-    pruneStore();
-    pruneVendorSets();
-    pruneGlobalCssCache();
+  const plan = await opts.onStage(
+    "artifacts:detect",
+    "detect changed artifacts",
+    async () => {
+      ensureStoreDirs();
+      pruneStore();
+      pruneVendorSets();
+      pruneGlobalCssCache();
 
-    const fleet = await planFleet({ root, minify: opts.minify, cache, source: opts.source });
-    saveFingerprintCache(worktreeName, cache);
-    log(
-      `detect: ${fleet.webTargets.length} web artifacts (${fleet.staleWeb} stale), entry ${fleet.entryTarget.needsBuild ? "stale" : "cached"}, registry ${fleet.registryTarget.needsBuild ? "stale" : "cached"}`,
-    );
-    return fleet;
-  });
+      const fleet = await planFleet({
+        root,
+        minify: opts.minify,
+        cache,
+        source: opts.source,
+      });
+      saveFingerprintCache(worktreeName, cache);
+      log(
+        `detect: ${fleet.webTargets.length} web artifacts (${fleet.staleWeb} stale), entry ${fleet.entryTarget.needsBuild ? "stale" : "cached"}, registry ${fleet.registryTarget.needsBuild ? "stale" : "cached"}`,
+      );
+      return fleet;
+    },
+  );
 
   // ── Stage 2: build (webs + entry + registry, then the core closure) ─
   const buildOut = await opts.onStage(
@@ -112,7 +137,10 @@ export async function runWebArtifactsPipeline(
       const ctx: BuilderCtx = {
         repoRoot: root,
         pluginsRoot,
-        babelPlugins: await loadBabelContributions({ pluginsRoot, repoRoot: root }),
+        babelPlugins: await loadBabelContributions({
+          pluginsRoot,
+          repoRoot: root,
+        }),
         minify: opts.minify,
       };
       const gate = createSemaphore(
@@ -148,7 +176,10 @@ export async function runWebArtifactsPipeline(
           built++;
         } else {
           touchArtifact(plan.registryTarget.dirName);
-          metas.set(plan.registryTarget.dirName, readArtifactMeta(plan.registryTarget.dirName));
+          metas.set(
+            plan.registryTarget.dirName,
+            readArtifactMeta(plan.registryTarget.dirName),
+          );
           reused++;
         }
       })();
@@ -169,7 +200,9 @@ export async function runWebArtifactsPipeline(
       });
       saveFingerprintCache(worktreeName, cache);
 
-      log(`build: ${built} built, ${reused} reused (${barrelTargets.size} barrel artifacts)`);
+      log(
+        `build: ${built} built, ${reused} reused (${barrelTargets.size} barrel artifacts)`,
+      );
       return { metas, coreTargets: [...barrelTargets.values()], built, reused };
     },
   );
@@ -181,36 +214,51 @@ export async function runWebArtifactsPipeline(
     plan.entryTarget,
   ];
 
-  const vendors = await opts.onStage("artifacts:vendors", "vendor pre-bundles", async () => {
-    if (opts.vendors !== undefined) {
+  const vendors = await opts.onStage(
+    "artifacts:vendors",
+    "vendor pre-bundles",
+    async () => {
+      if (opts.vendors !== undefined) {
+        log(
+          `vendors: reusing set ${opts.vendors.setHash.slice(0, 12)} ` +
+            `(${Object.keys(opts.vendors.entries).length} specifiers)`,
+        );
+        return opts.vendors;
+      }
+      const requests = await collectVendorRequests({
+        root,
+        pluginsRoot,
+        targets: allTargets,
+        metaOf: (dirName) => buildOut.metas.get(dirName)!,
+      });
+      const meta = await ensureVendorSet({
+        requests,
+        minify: opts.minify,
+        builderVersion: BUILDER_VERSION,
+        builderSource: plan.identity.sourceDigest,
+      });
       log(
-        `vendors: reusing set ${opts.vendors.setHash.slice(0, 12)} ` +
-          `(${Object.keys(opts.vendors.entries).length} specifiers)`,
+        `vendors: ${requests.length} specifiers (set ${meta.setHash.slice(0, 12)})`,
       );
-      return opts.vendors;
-    }
-    const requests = await collectVendorRequests({
-      root,
-      pluginsRoot,
-      targets: allTargets,
-      metaOf: (dirName) => buildOut.metas.get(dirName)!,
-    });
-    const meta = await ensureVendorSet({
-      requests,
-      minify: opts.minify,
-      builderVersion: BUILDER_VERSION,
-      builderSource: plan.identity.sourceDigest,
-    });
-    log(`vendors: ${requests.length} specifiers (set ${meta.setHash.slice(0, 12)})`);
-    return meta;
-  });
+      return meta;
+    },
+  );
 
   // ── Stage 4: global css ─────────────────────────────────────────────
-  const cssKey = await opts.onStage("artifacts:css-key", "global css input fingerprint", async () => {
-    const key = computeGlobalCssKey({ repoRoot: root, pluginsRoot, minify: opts.minify, cache });
-    saveFingerprintCache(worktreeName, cache);
-    return key;
-  });
+  const cssKey = await opts.onStage(
+    "artifacts:css-key",
+    "global css input fingerprint",
+    async () => {
+      const key = computeGlobalCssKey({
+        repoRoot: root,
+        pluginsRoot,
+        minify: opts.minify,
+        cache,
+      });
+      saveFingerprintCache(worktreeName, cache);
+      return key;
+    },
+  );
   const cssCached = hasGlobalCssCache(cssKey);
   const css = await opts.onStage(
     "artifacts:css",
@@ -224,127 +272,163 @@ export async function runWebArtifactsPipeline(
         key: cssKey,
       }),
   );
-  log(`css: ${css.cached ? "cache hit" : "tailwind pass"} (key ${cssKey.slice(0, 12)})`);
+  log(
+    `css: ${css.cached ? "cache hit" : "tailwind pass"} (key ${cssKey.slice(0, 12)})`,
+  );
 
   // ── Stage 5: compose ────────────────────────────────────────────────
-  const composed = await opts.onStage("artifacts:compose", "compose dist", async () => {
-    const links: Array<{ linkName: string; storePath: string }> = [];
-    const staticImportsByUrl: Record<string, string[]> = {};
-    const emitted: Array<{ importer: string; specifiers: string[] }> = [];
+  const composed = await opts.onStage(
+    "artifacts:compose",
+    "compose dist",
+    async () => {
+      const links: Array<{ linkName: string; storePath: string }> = [];
+      const staticImportsByUrl: Record<string, string[]> = {};
+      const emitted: Array<{ importer: string; specifiers: string[] }> = [];
 
-    // Coverage is STRICT for static imports (a miss breaks module evaluation)
-    // and for the registry's dynamic imports (its loaders are the app). Other
-    // artifacts' dynamic imports are mapped by construction too — the barrel
-    // closure follows them — EXCEPT the kinds declared browser-unreachable
-    // (BROWSER_UNREACHABLE_DYNAMIC_KINDS), which are silent by declaration.
-    // Anything else unmapped here is a pipeline bug and warns loudly.
-    const dynamicOnly: Array<{ importer: string; specifiers: string[] }> = [];
-    const registerArtifact = (dirName: string, strictDynamic: boolean): void => {
-      links.push({ linkName: dirName, storePath: artifactStorePath(dirName) });
-      const meta = buildOut.metas.get(dirName)!;
-      // Per emitted file (index.js + code-split .mjs chunks): the preload BFS
-      // must walk real static edges, so a lazy chunk's deps stay unpreloaded.
-      for (const [file, imports] of Object.entries(meta.staticImportsByFile)) {
-        staticImportsByUrl[`/artifacts/${dirName}/${file}`] = imports;
-      }
-      const statics = allStaticImports(meta);
-      emitted.push({
-        importer: dirName,
-        specifiers: strictDynamic ? [...statics, ...meta.dynamicImports] : statics,
+      // Coverage is STRICT for static imports (a miss breaks module evaluation)
+      // and for the registry's dynamic imports (its loaders are the app). Other
+      // artifacts' dynamic imports are mapped by construction too — the barrel
+      // closure follows them — EXCEPT the kinds declared browser-unreachable
+      // (BROWSER_UNREACHABLE_DYNAMIC_KINDS), which are silent by declaration.
+      // Anything else unmapped here is a pipeline bug and warns loudly.
+      const dynamicOnly: Array<{ importer: string; specifiers: string[] }> = [];
+      const registerArtifact = (
+        dirName: string,
+        strictDynamic: boolean,
+      ): void => {
+        links.push({
+          linkName: dirName,
+          storePath: artifactStorePath(dirName),
+        });
+        const meta = buildOut.metas.get(dirName)!;
+        // Per emitted file (index.js + code-split .mjs chunks): the preload BFS
+        // must walk real static edges, so a lazy chunk's deps stay unpreloaded.
+        for (const [file, imports] of Object.entries(
+          meta.staticImportsByFile,
+        )) {
+          staticImportsByUrl[`/artifacts/${dirName}/${file}`] = imports;
+        }
+        const statics = allStaticImports(meta);
+        emitted.push({
+          importer: dirName,
+          specifiers: strictDynamic
+            ? [...statics, ...meta.dynamicImports]
+            : statics,
+        });
+        if (!strictDynamic && meta.dynamicImports.length > 0) {
+          dynamicOnly.push({
+            importer: dirName,
+            specifiers: meta.dynamicImports,
+          });
+        }
+      };
+
+      for (const t of allTargets) registerArtifact(t.dirName, false);
+      registerArtifact(plan.registryTarget.dirName, true);
+
+      // Map entries: one per target specifier + the registry alias + one per
+      // vendor specifier — assembled by the same helper the map-in-sync check
+      // recomputes with, so the two cannot drift.
+      const mapEntries: ImportMapEntry[] = composeMapEntries({
+        targets: allTargets,
+        registryDirName: plan.registryTarget.dirName,
+        vendorMeta: vendors,
       });
-      if (!strictDynamic && meta.dynamicImports.length > 0) {
-        dynamicOnly.push({ importer: dirName, specifiers: meta.dynamicImports });
+
+      // Vendor set: one symlink; per-file imports feed the preload closure.
+      const vendorLink = vendorSetDirName(vendors.setHash);
+      links.push({
+        linkName: vendorLink,
+        storePath: vendorSetPath(vendors.setHash),
+      });
+      for (const [file, imports] of Object.entries(vendors.imports)) {
+        staticImportsByUrl[`/artifacts/${vendorLink}/${file}`] = imports;
       }
-    };
 
-    for (const t of allTargets) registerArtifact(t.dirName, false);
-    registerArtifact(plan.registryTarget.dirName, true);
+      const entryUrl = artifactUrl(plan.entryTarget.dirName);
+      const eagerSeeds = eagerWebTargets(
+        plan.webTargets,
+        plan.deferredPaths,
+      ).map((t) => artifactUrl(t.dirName));
+      const preloadSeeds = [
+        entryUrl,
+        artifactUrl(plan.registryTarget.dirName),
+        ...eagerSeeds,
+      ];
 
-    // Map entries: one per target specifier + the registry alias + one per
-    // vendor specifier — assembled by the same helper the map-in-sync check
-    // recomputes with, so the two cannot drift.
-    const mapEntries: ImportMapEntry[] = composeMapEntries({
-      targets: allTargets,
-      registryDirName: plan.registryTarget.dirName,
-      vendorMeta: vendors,
-    });
+      const { importMap, preloads } = composeDist({
+        stagingDir: opts.stagingDir,
+        webSrcDir,
+        buildId: opts.buildId,
+        minify: opts.minify,
+        cssHref: css.href,
+        links,
+        materialize: opts.materialize,
+        mapEntries,
+        staticImportsByUrl,
+        emitted,
+        entryUrl,
+        preloadSeeds,
+      });
+      const unmappedDynamic = findUnmappedDynamicWarnings(
+        dynamicOnly,
+        importMap,
+      );
+      for (const u of unmappedDynamic) {
+        log(
+          `warning: dynamic import "${u.specifier}" (from ${u.importer}) has no import-map entry — ` +
+            `it will fail if ever invoked in the browser`,
+        );
+      }
 
-    // Vendor set: one symlink; per-file imports feed the preload closure.
-    const vendorLink = vendorSetDirName(vendors.setHash);
-    links.push({ linkName: vendorLink, storePath: vendorSetPath(vendors.setHash) });
-    for (const [file, imports] of Object.entries(vendors.imports)) {
-      staticImportsByUrl[`/artifacts/${vendorLink}/${file}`] = imports;
-    }
+      // Ground truth: re-scan the STAGED module files themselves (through the
+      // store symlinks) — independent of the builders' meta.json, so a scanner
+      // blind spot cannot blind this gate too. Verifies both specifier
+      // resolution and the linkage of every bound name: an importer is reused
+      // from the store unrebuilt when its target changes, so this is the only
+      // place the composed fleet's bytes are ever read against each other.
+      const groundTruth = await scanStagedModules({
+        stagingDir: opts.stagingDir,
+        imports: importMap.imports,
+      });
+      for (const w of groundTruth.warnings) {
+        log(
+          `warning: staged dynamic import "${w.specifier}" (in ${w.file}) has no import-map entry — ` +
+            `it will fail if ever invoked in the browser`,
+        );
+      }
+      for (const file of groundTruth.opaqueTargets) {
+        log(
+          `warning: staged module ${file} emits \`export *\` — its export set is incomplete, ` +
+            `so imports of its names are NOT link-verified`,
+        );
+      }
+      if (groundTruth.failures.length > 0) {
+        const lines = groundTruth.failures.map(
+          (f) => `  ${f.specifier}  (in ${f.file})`,
+        );
+        throw new Error(
+          `compose: ${groundTruth.failures.length} staged import(s) do not resolve ` +
+            `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
+        );
+      }
+      if (groundTruth.linkFailures.length > 0) {
+        const lines = groundTruth.linkFailures.map(
+          (f) =>
+            `  "${f.specifier}" does not export "${f.name}"  (imported by ${f.file})`,
+        );
+        throw new Error(
+          `compose: ${groundTruth.linkFailures.length} staged import(s) do not link ` +
+            `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
+        );
+      }
 
-    const entryUrl = artifactUrl(plan.entryTarget.dirName);
-    const eagerSeeds = eagerWebTargets(plan.webTargets, plan.deferredPaths).map((t) =>
-      artifactUrl(t.dirName),
-    );
-    const preloadSeeds = [entryUrl, artifactUrl(plan.registryTarget.dirName), ...eagerSeeds];
-
-    const { importMap, preloads } = composeDist({
-      stagingDir: opts.stagingDir,
-      webSrcDir,
-      buildId: opts.buildId,
-      minify: opts.minify,
-      cssHref: css.href,
-      links,
-      mapEntries,
-      staticImportsByUrl,
-      emitted,
-      entryUrl,
-      preloadSeeds,
-    });
-    const unmappedDynamic = findUnmappedDynamicWarnings(dynamicOnly, importMap);
-    for (const u of unmappedDynamic) {
       log(
-        `warning: dynamic import "${u.specifier}" (from ${u.importer}) has no import-map entry — ` +
-          `it will fail if ever invoked in the browser`,
+        `compose: ${links.length} links, ${mapEntries.length} map entries, ${preloads.length} preloads`,
       );
-    }
-
-    // Ground truth: re-scan the STAGED module files themselves (through the
-    // store symlinks) — independent of the builders' meta.json, so a scanner
-    // blind spot cannot blind this gate too. Verifies both specifier
-    // resolution and the linkage of every bound name: an importer is reused
-    // from the store unrebuilt when its target changes, so this is the only
-    // place the composed fleet's bytes are ever read against each other.
-    const groundTruth = await scanStagedModules({
-      stagingDir: opts.stagingDir,
-      imports: importMap.imports,
-    });
-    for (const w of groundTruth.warnings) {
-      log(
-        `warning: staged dynamic import "${w.specifier}" (in ${w.file}) has no import-map entry — ` +
-          `it will fail if ever invoked in the browser`,
-      );
-    }
-    for (const file of groundTruth.opaqueTargets) {
-      log(
-        `warning: staged module ${file} emits \`export *\` — its export set is incomplete, ` +
-          `so imports of its names are NOT link-verified`,
-      );
-    }
-    if (groundTruth.failures.length > 0) {
-      const lines = groundTruth.failures.map((f) => `  ${f.specifier}  (in ${f.file})`);
-      throw new Error(
-        `compose: ${groundTruth.failures.length} staged import(s) do not resolve ` +
-          `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
-      );
-    }
-    if (groundTruth.linkFailures.length > 0) {
-      const lines = groundTruth.linkFailures.map(
-        (f) => `  "${f.specifier}" does not export "${f.name}"  (imported by ${f.file})`,
-      );
-      throw new Error(
-        `compose: ${groundTruth.linkFailures.length} staged import(s) do not link ` +
-          `(ground-truth scan of the staged dist):\n${lines.join("\n")}`,
-      );
-    }
-
-    log(`compose: ${links.length} links, ${mapEntries.length} map entries, ${preloads.length} preloads`);
-    return { preloads };
-  });
+      return { preloads };
+    },
+  );
 
   return {
     webArtifacts: plan.webTargets.length,

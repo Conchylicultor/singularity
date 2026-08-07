@@ -19,13 +19,13 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const STAMP = '<script>document.documentElement.classList.add("experimental");</script>';
+const STAMP =
+  '<script>document.documentElement.classList.add("experimental");</script>';
 
 /**
  * Mark a staged dist as an experimental (agent-worktree) deploy. Runs on the
- * staging dir before the atomic publish, so it covers BOTH frontend modes: the
- * artifact composer and the monolithic vite build write the same `index.html`
- * there.
+ * staging dir before the atomic publish — after the artifact composer has
+ * written `index.html` there and before anything can serve it.
  */
 export function stampExperimentalMarker(distDir: string): void {
   const path = resolve(distDir, "index.html");

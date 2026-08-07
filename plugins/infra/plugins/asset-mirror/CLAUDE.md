@@ -55,10 +55,13 @@ export default defineAssetMirrorPrewarm({
 The `defineCollectedDir("prewarm")` marker (in this plugin's `core/`) makes
 `./singularity build` codegen discover every `prewarm/index.ts` into
 `core/prewarm.generated.ts`, and a composition build emits the closure-filtered
-`core/prewarm.composition.generated.ts`. The mechanism:
+`core/prewarm.composition.<name>.generated.ts` — keyed by composition name, like
+every other filtered registry, so two compositions never share one. The
+mechanism:
 
-- **Release** (`release.ts` `[3.5]`) calls `runAssetMirrorPrewarm({ destRoot })`,
-  which reads the closure-filtered registry and downloads each declared file into
+- **Release** (`release.ts` `[3.5]`) calls
+  `runAssetMirrorPrewarm({ composition, destRoot })`, which reads that
+  composition's closure-filtered registry and downloads each declared file into
   `<destRoot>/<id>/<file>` (fail-loud: any failed download aborts the release).
 - **Launch** (`launch.ts`) calls `seedAssetMirrorCache({ bundleRoot, dataDir })`,
   which copies the bundled `asset-mirror/` tree into `<SINGULARITY_DIR>/asset-mirror`

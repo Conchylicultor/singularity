@@ -6,7 +6,7 @@
  * `defineAssetMirrorPrewarm({...})`. Codegen discovers it (via the
  * `defineCollectedDir("prewarm")` marker in this plugin's core) into
  * `./prewarm.generated.ts`; a composition build emits the closure-filtered
- * `./prewarm.composition.generated.ts` the release runner reads.
+ * `./prewarm.composition.<name>.generated.ts` the release runner reads.
  *
  * The descriptor is deliberately self-contained data (no live mirror registry)
  * so the release runner reads it generically without booting the server.

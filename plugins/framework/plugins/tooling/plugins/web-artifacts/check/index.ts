@@ -1,19 +1,22 @@
 // Contributed checks guarding the per-plugin web-artifact composition.
 //
 // BOTH are `scope: "deploy"`: their subject is the local deployment `build`
-// produces — `web-core/dist` (gitignored) and the `~/.singularity/web-artifacts`
-// store (outside any repo) — not the tree. So neither is in the push payload,
+// produces — this checkout's served dist (`~/.singularity/worktrees/<name>/web`)
+// and the `~/.singularity/web-artifacts` store, both outside any repo — not the
+// tree. So neither is in the push payload,
 // and `push` (which asks for `--scope tree`) does not run them; `build`, a
 // standalone `./singularity check`, and main's post-push auto-build do. Each
 // therefore owes a `cacheSignature()` covering that deploy state, since the
 // runner's tree hash does not reach it — see `Check.scope`.
 //
-//   web-artifacts:map-in-sync — the deployed artifact dist's import map is the
-//   one the CURRENT tree composes. A monolith dist passes (nothing to verify);
-//   a stale map fails with the `./singularity build` fix. Skips (uncached)
-//   inside a `./singularity build` process, where the dist under inspection is
-//   the one that very build is about to replace — standalone runs verify for
-//   real.
+//   web-artifacts:map-in-sync — the deployed dist's import map is the one the
+//   CURRENT tree composes. Every dist is an artifact dist since the monolithic
+//   vite build was removed, so a MISSING `.web-artifacts.json` marker is now a
+//   real failure (nothing deployed, or a pre-artifacts dist), not the old
+//   "monolith ⇒ nothing to verify" pass. A stale map fails with the
+//   `./singularity build` fix. Skips (uncached) inside a `./singularity build`
+//   process, where the dist under inspection is the one that very build is about
+//   to replace — standalone runs verify for real.
 //
 //   web-artifacts:no-vendored-state-inlined — no plugin artifact in the current
 //   fleet's expected set bundles modules of an npm package outside the inline
@@ -32,15 +35,30 @@
 //     all, whatever process is or isn't building.
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Check,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 import { isBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
+import {
+  checkoutWorktreeName,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { INLINE_PACKAGES } from "../core/constants";
 import { diffImportMaps } from "../core/import-map";
-import { computeExpectedComposition, planExpectedFleet } from "../core/internal/expected";
+import {
+  computeExpectedComposition,
+  planExpectedFleet,
+} from "../core/internal/expected";
 import {
   artifactStorePath,
   hasArtifact,
@@ -55,7 +73,8 @@ import {
 } from "./scan";
 
 const MARKER_NAME = ".web-artifacts.json";
-const BUILD_HINT = "Run `./singularity build` to recompose the dist from the current tree.";
+const BUILD_HINT =
+  "Run `./singularity build` to recompose the dist from the current tree.";
 
 function rootSync(): string {
   const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
@@ -65,8 +84,17 @@ function rootSync(): string {
   return new TextDecoder().decode(proc.stdout).trim();
 }
 
+/**
+ * The dist THIS CHECKOUT deploys — `~/.singularity/worktrees/<name>/web`, where
+ * `<name>` is the checkout's own basename.
+ *
+ * `checkoutWorktreeName(root)`, never `currentWorktreeName()`: a check runs in a
+ * CLI process, which never sets `SINGULARITY_WORKTREE` for itself, so the
+ * env-derived name answers `singularity` from every worktree — an agent's
+ * `map-in-sync` would silently inspect MAIN's dist and pass or fail on it.
+ */
 function distDir(root: string): string {
-  return join(root, WEB_CORE_RELATIVE, "dist");
+  return worktreeArtifacts.webDist(checkoutWorktreeName(root));
 }
 
 function readIfExists(file: string): string | null {
@@ -106,7 +134,7 @@ function truncatedList(items: readonly string[], max = 15): string {
 const mapInSync: Check = {
   id: "web-artifacts:map-in-sync",
   description:
-    "the deployed artifact-mode dist's import map matches the composition the current tree produces (monolith dists pass)",
+    "the deployed dist's import map matches the composition the current tree produces",
   scope: "deploy",
   cacheSignature(): string | null {
     // Never cache the build-time skip: a cached "pass" recorded while the check
@@ -114,7 +142,9 @@ const mapInSync: Check = {
     if (isBuildInProgress()) return null;
     const dist = distDir(rootSync());
     const marker = readIfExists(join(dist, MARKER_NAME));
-    if (marker === null) return "monolith-dist";
+    // No marker ⇒ a real failure below. Never cache that verdict: the fix is a
+    // build, which changes the dist but not the tree hash the runner keys on.
+    if (marker === null) return null;
     const html = readIfExists(join(dist, "index.html")) ?? "";
     // The verdict depends on the deployed dist AND on which artifacts the store
     // holds (the expected map is recomputed through store metas) — fold both in.
@@ -130,9 +160,21 @@ const mapInSync: Check = {
     const root = await getWorktreeRoot();
     const dist = distDir(root);
     const markerRaw = readIfExists(join(dist, MARKER_NAME));
-    // No marker ⇒ a monolith dist (or nothing deployed yet): a genuine pass —
-    // there is no artifact composition to verify.
-    if (markerRaw === null) return { ok: true };
+    // The marker is written by every compose. Its absence used to mean "a
+    // monolith dist — nothing to verify"; with the monolith gone it can only
+    // mean nothing is deployed at this path, or what is deployed predates the
+    // artifacts pipeline. Either way there is no composition to compare, which
+    // is a failure, not a pass.
+    if (markerRaw === null) {
+      return {
+        ok: false,
+        message:
+          `no artifact dist deployed at ${dist} (missing ${MARKER_NAME}) — every dist is ` +
+          `composed by the web-artifacts pipeline, so this checkout has either never been ` +
+          `built or carries a pre-artifacts dist.`,
+        hint: BUILD_HINT,
+      };
+    }
 
     const html = readIfExists(join(dist, "index.html"));
     if (html === null) {
@@ -151,7 +193,10 @@ const mapInSync: Check = {
       };
     }
 
-    const expected = await computeExpectedComposition({ root, minify: markerMinify(markerRaw) });
+    const expected = await computeExpectedComposition({
+      root,
+      minify: markerMinify(markerRaw),
+    });
     if (expected.kind === "missing-artifacts") {
       return {
         ok: false,
@@ -167,7 +212,11 @@ const mapInSync: Check = {
     if (diff.changed.length > 0) {
       problems.push(
         `${diff.changed.length} specifier(s) point at a stale artifact:\n` +
-          truncatedList(diff.changed.map((c) => `${c.specifier}: ${c.deployed} → ${c.expected}`)),
+          truncatedList(
+            diff.changed.map(
+              (c) => `${c.specifier}: ${c.deployed} → ${c.expected}`,
+            ),
+          ),
       );
     }
     if (diff.missing.length > 0) {
@@ -217,7 +266,10 @@ function loadScanCache(): VendoredScanCache {
   if (raw !== null) {
     try {
       const parsed = JSON.parse(raw) as VendoredScanCache;
-      if (parsed.version === SCANNER_VERSION && typeof parsed.inlined === "object") {
+      if (
+        parsed.version === SCANNER_VERSION &&
+        typeof parsed.inlined === "object"
+      ) {
         return parsed;
       }
     } catch (err) {
@@ -247,7 +299,9 @@ function scanArtifact(dirName: string): string[] {
   if (raw === null) {
     // The builder emits sourcemaps unconditionally — a missing map means the
     // scan has no signal, which must be loud, not a silent pass.
-    throw new Error(`artifact ${dirName} has no index.js.map — cannot verify inlined modules`);
+    throw new Error(
+      `artifact ${dirName} has no index.js.map — cannot verify inlined modules`,
+    );
   }
   // Fast path: no `node_modules/` substring anywhere ⇒ no npm module inlined
   // (spares the JSON.parse of multi-MB maps for the overwhelmingly common case).

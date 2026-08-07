@@ -100,7 +100,7 @@ commit; the docblock says why, and both alternatives loop.
     - `infra/paths.isMain`
     - `infra/paths.pruneWorktreeBuildArtifacts`
     - `infra/paths.REPO_ROOT`
-    - `infra/paths.WEB_DIST_DIR`
+    - `infra/paths.webDistDir`
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
     - `infra/query-resource.queryResource`

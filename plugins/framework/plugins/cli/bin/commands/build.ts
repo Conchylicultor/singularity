@@ -12,12 +12,14 @@ import {
   generateAppSources,
   maxRssLine,
   prepareCompositionSources,
-  resolveFrontendMode,
+  webDistPath,
   type ArtifactHooks,
   type HeavyJob,
   type StepResult,
+  type WebDistTarget,
 } from "./internal/app-artifacts";
 import { runComposeServeStage } from "./internal/compose-serve";
+import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { parseMigrationAnswers } from "../migrations";
@@ -629,16 +631,8 @@ export function registerBuild(program: Command) {
       "Force ONE composition through the compose-serve stage regardless of its autoBuild toggle (main checkout only; artifact mode only; skips the deactivation sweep). Composes a per-composition dist + empty DB served at http://<name>.localhost:9000.",
     )
     .option(
-      "--monolith",
-      "Force the monolithic vite build instead of the default per-plugin web artifacts (rollback escape hatch; also SINGULARITY_WEB_MONOLITH=1).",
-    )
-    .option(
-      "--artifacts",
-      "Accepted no-op: per-plugin web artifacts are the DEFAULT (kept so pre-flip invocations, incl. SINGULARITY_WEB_ARTIFACTS=1, don't break).",
-    )
-    .option(
       "--no-minify",
-      "Artifact mode only: skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
+      "Skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
     )
     .action(
       async (opts: {
@@ -650,8 +644,6 @@ export function registerBuild(program: Command) {
         skipChecks?: boolean;
         allowMain?: boolean;
         serveComposition?: string;
-        artifacts?: boolean;
-        monolith?: boolean;
         minify: boolean;
       }) => {
         // Mark this process as a build: dist-comparing checks (map-in-sync) skip
@@ -663,13 +655,6 @@ export function registerBuild(program: Command) {
         // OTHER namespaces from main's artifact fleet after main itself deploys.)
         // Producing a composition's artifact set is `./singularity
         // build-composition`, which shares this module's stages.
-        const artifactsMode = resolveFrontendMode({
-          composition: null,
-          monolith: opts.monolith,
-          artifacts: opts.artifacts,
-          env: process.env,
-          log: (line) => console.log(line),
-        }).artifacts;
 
         let endSpan = buildProfilerStart(
           "ensureHooksPath",
@@ -735,15 +720,8 @@ export function registerBuild(program: Command) {
 
         // --serve-composition preflight. The compose-serve stage composes over
         // main's artifact fleet (vendor set + store), so it needs the MAIN
-        // checkout in artifact mode — fail before any work, not after the build.
+        // checkout — fail before any work, not after the build.
         if (opts.serveComposition !== undefined) {
-          if (!artifactsMode) {
-            console.error(
-              "ERROR: --serve-composition requires artifact mode (it composes over the artifact fleet). " +
-                "Drop --monolith / SINGULARITY_WEB_MONOLITH=1.",
-            );
-            process.exit(1);
-          }
           if (root !== (await getMainRepoRoot())) {
             console.error(
               "ERROR: --serve-composition only runs from the MAIN checkout — " +
@@ -1036,12 +1014,34 @@ export function registerBuild(program: Command) {
         };
         writeBuildReceipt(name, receipt);
 
+        // WHICH dist this build publishes: the one SERVED for this namespace. The
+        // sweep below and stage 3's publish both resolve this one identity, so
+        // they cannot be aimed at different trees.
+        const distTarget: WebDistTarget = { kind: "served", name };
+
         endSpan = buildProfilerStart(
           "sweepStaging",
           "build:setup",
           "sweep staging leftovers",
         );
-        await sweepDistLeftovers(resolve(webDir, "dist"));
+        await sweepDistLeftovers(webDistPath(distTarget));
+        // One-shot migration: reclaim the served dist that used to live inside the
+        // checkout. Gated on the RUNNING GATEWAY already reporting the new
+        // location for this namespace — the only authority on what it is serving
+        // — so it can never delete a live tree; see ./internal/legacy-dist-reap.ts.
+        const reaped = await reapLegacyCheckoutDist({
+          webDir,
+          namespace: name,
+        });
+        if (reaped.kind === "skipped") {
+          console.log(
+            `Legacy in-checkout dist left in place: ${reaped.reason}`,
+          );
+        } else if (reaped.entries.length > 0) {
+          console.log(
+            `Reclaimed ${reaped.entries.length} legacy in-checkout dist tree(s) from ${webDir}`,
+          );
+        }
         endSpan();
 
         // The non-heavy phases — `bun install`, drizzle generate, and the build
@@ -1114,10 +1114,13 @@ export function registerBuild(program: Command) {
         // in sync). See ./internal/app-artifacts.ts.
         //
         // `composition: null` is load-bearing, not a placeholder: it is what makes
-        // stage 1 run `clearCompositionRegistries`, so a filtered singleton
-        // registry left behind by a `build-composition` / release in this checkout
-        // is swept and the runtimes revert to the full committed set. A dev build
-        // that skipped it would silently serve the previous release's closure.
+        // stage 1 run `clearCompositionRegistries`, the LEGACY reaper for a
+        // filtered SINGLETON registry left behind by a PRE-S1 `build-composition`
+        // / release in this checkout, so the runtimes revert to the full committed
+        // set. A dev build that skipped it would silently serve that old release's
+        // closure. Post-S1 producers write per-name registries only, which
+        // `plugins-active.ts` never selects for a plain worktree name — so this
+        // reaper (and the call) goes away in S5.
         await prepareCompositionSources({
           root,
           composition: null,
@@ -1393,10 +1396,13 @@ export function registerBuild(program: Command) {
         const artifact = await buildAndPublishWebDist({
           root,
           webDir,
+          target: distTarget,
           buildId,
           composition: null,
-          artifactsMode,
           minify: opts.minify,
+          // A served dist links into the shared content-addressed store; only the
+          // release path materializes real copies.
+          materialize: false,
           // Every dev deploy that isn't main is an agent worktree — the one
           // producer of an experimental app. Composition namespaces are published
           // by the compose-serve stage, which never stamps.
@@ -1604,22 +1610,13 @@ export function registerBuild(program: Command) {
         // resolved `compositions` config, or the one forced by
         // --serve-composition) get per-composition dists + empty DBs served at
         // http://<id>.localhost:9000. Main-checkout builds only (same gating as
-        // the central restart above), artifact mode only (the stage composes
-        // over the fleet this build just produced). Per-composition failures
+        // the central restart above); the stage composes over the artifact fleet
+        // this build just produced. Per-composition failures
         // are collected and fail the build AFTER main's own deploy completes —
         // main IS deployed either way; a failed composition keeps serving its
         // previous dist.
         const runComposeServe = async (): Promise<void> => {
           if (root !== mainRoot) return;
-          if (!artifactsMode) {
-            // Config-driven activations are NOT recomposed under --monolith (no
-            // fresh fleet to compose from) — loud skip, never a silent stale serve.
-            console.warn(
-              "compose-serve: skipped (monolithic build) — activated compositions were NOT rebuilt.",
-            );
-            softNotes.push("compose-serve skipped (monolith)");
-            return;
-          }
           endSpan = buildProfilerStart(
             "composeServe",
             "build:deploy",
