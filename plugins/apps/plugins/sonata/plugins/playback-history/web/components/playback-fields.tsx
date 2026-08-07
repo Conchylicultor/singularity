@@ -24,9 +24,18 @@ export function PlaybackFields({ render }: FieldExtensionProps<Song>) {
         id: "playCount",
         label: "Plays",
         type: "int",
-        width: "5rem",
+        // Wide enough for the `cell`'s longest string ("Not played yet"), not
+        // just for the digits — at 5rem the unplayed case clipped mid-word.
+        width: "8rem",
         align: "end",
         value: (s) => map.get(s.id)?.playCount ?? 0,
+        // The copy the old per-card `PlayStats` strip owned, recovered as this
+        // field's cell — so the number reads as a sentence on the card (and in
+        // the table) instead of a bare `0`.
+        cell: (s) => {
+          const n = map.get(s.id)?.playCount ?? 0;
+          return n ? `${n} ${n === 1 ? "play" : "plays"}` : "Not played yet";
+        },
         sortable: true,
       },
       {

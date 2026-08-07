@@ -81,6 +81,10 @@ export function QuickThemeSection() {
         defaultView="themes"
         loading={isLoading}
         searchAccessor={(t) => `${t.name} ${t.tags.join(" ")}`}
+        // Picking a swatch applies its theme. It lives here rather than inside
+        // the swatch because the swatch is now only a body — the DataCard the
+        // gallery builds owns the click and the Enter/Space handling.
+        onRowActivate={(t) => applyTheme(t.id)}
         emptyState={
           <Text as="p" variant="body" tone="muted">
             No themes match your search.
@@ -89,12 +93,11 @@ export function QuickThemeSection() {
         viewOptions={{
           gallery: {
             minCardWidth: 190,
-            renderCard: (t: CatalogTheme) => (
-              <QuickThemeSwatch
-                theme={t}
-                isPending={applyingId === t.id}
-                onApply={() => applyTheme(t.id)}
-              />
+            // The picker's rows are one line each, so the card takes the dense
+            // density rather than the pane gallery's roomy default.
+            size: "sm",
+            renderBody: (t: CatalogTheme) => (
+              <QuickThemeSwatch theme={t} isPending={applyingId === t.id} />
             ),
           },
         }}

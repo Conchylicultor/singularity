@@ -43,6 +43,7 @@ export type {
   ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
+  ItemActionZone,
   FieldExtensionProps,
   FieldExtensionsDescriptor,
 } from "./internal/types";

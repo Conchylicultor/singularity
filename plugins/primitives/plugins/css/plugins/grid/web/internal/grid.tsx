@@ -122,6 +122,7 @@ export function Grid({
   as: As = "div",
   ref,
   className,
+  style,
   children,
   ...rest
 }: GridProps) {
@@ -144,7 +145,13 @@ export function Grid({
         justify && JUSTIFY_CLASS[justify],
         className,
       )}
-      style={{ gridTemplateColumns: columns }}
+      // The caller's `style` merges UNDER the track list. Grid owns its column
+      // geometry — it is a closed prop surface, not a `grid-template`
+      // passthrough — so a caller painting a background must not erase it. It
+      // did: `style` was set here and `{...rest}` (which still carried `style`)
+      // spread after, so any fixed-column Grid that also set a background
+      // silently collapsed to ONE column and overflowed its container.
+      style={{ ...style, gridTemplateColumns: columns }}
       {...rest}
     >
       {children}

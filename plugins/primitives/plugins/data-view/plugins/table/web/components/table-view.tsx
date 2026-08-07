@@ -17,6 +17,7 @@ import {
   pickPrimaryField,
   resolveBodyFields,
   useDataViewSections,
+  useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -68,6 +69,16 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   const aggregate = props.aggregate as
     | DataViewAggregateConfig<unknown>
     | undefined;
+  // Documented cast boundary: itemActions arrives type-erased.
+  const itemActions = props.itemActions as
+    | ItemActionsDescriptor<unknown>
+    | undefined;
+  // A table row HAS a permanent per-row region — the reserved trailing track —
+  // so persistent-zone actions stay painted at rest there, ahead of the
+  // hover-revealed cluster. Resolved before the early empty-state return.
+  const { persistent, revealed } = useItemActionZones(itemActions, {
+    hasPersistentSlot: true,
+  });
   const sections = useDataViewSections(
     props.rows,
     props.fields,
@@ -140,11 +151,6 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     return <>{props.emptyState}</>;
   }
 
-  // Documented cast boundary: itemActions arrives type-erased.
-  const itemActions = props.itemActions as
-    | ItemActionsDescriptor<unknown>
-    | undefined;
-
   // Body columns follow the view's Properties (visible-fields) policy: which
   // fields and in what order. `null` → identity (`props.fields`), so a view with
   // no Properties configured renders every column unchanged. Sort/filter/search
@@ -192,13 +198,15 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     },
   }));
 
-  const rowActions = itemActions
-    ? (row: unknown, i: number) => (
-        <itemActions.Row
-          row={row}
-          hasChildren={props.hasChildren?.(props.rowKey(row, i)) ?? false}
-        />
-      )
+  const actionProps = (row: unknown, i: number) => ({
+    row,
+    hasChildren: props.hasChildren?.(props.rowKey(row, i)) ?? false,
+  });
+  const rowActions = revealed
+    ? (row: unknown, i: number) => revealed(actionProps(row, i))
+    : undefined;
+  const rowPersistentActions = persistent
+    ? (row: unknown, i: number) => persistent(actionProps(row, i))
     : undefined;
 
   const shared = {
@@ -211,6 +219,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     filter: undefined,
     emptyLabel: "No results found",
     rowActions,
+    rowPersistentActions,
     // Pin the table's own sticky rows (column header + group headers) below the
     // DataView's sticky toolbar, reading the host-published toolbar height. Fixes
     // both the column header (was hiding behind the toolbar) and the group headers

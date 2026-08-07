@@ -41,8 +41,26 @@ open-after-create step can't use the `useOpenSong` hook. Sources call
 `openSongImperative(song)` instead — the imperative twin exported from this
 plugin's web barrel (`open-song.ts`), which writes to the live pane store via the
 imperative `openPane` (mirroring `useOpenSong`'s exact `mode:"root"` + `input`
-call). `useOpenSong` is kept for the gallery cards, which open from inside a
-component where the caller-aware context store is correct.
+call). `useOpenSong` is kept for `SongLibrary`'s `onRowActivate`, which runs
+inside a component where the caller-aware context store is correct.
+
+## One surface, no bespoke card
+
+The library has NO custom card component. The gallery builds the shared
+`DataCard` from the same `FieldDef` schema the table uses, plus a `leading`
+music-note block (`viewOptions.gallery.leading`). Everything a card wants is
+declared once on the `<DataView>` and honoured by both views:
+
+| Affordance | Where it is declared |
+|---|---|
+| Play / Pause, Delete | `Library.SongActions` contributions (Play carries `zone: "persistent"`, so it is painted at rest) |
+| Ring on the loaded song | `selectedRowId={currentSongId}` |
+| Opening a song | `onRowActivate` |
+| Anything per-song another plugin knows | a `Library.Fields` field extension |
+
+Which fields the CARD shows is authored config, not code — `visibleFields` on
+the `cards` row of `config/apps/sonata/library/sonata.library.jsonc`. Leave it
+unauthored and every contributed field stacks another caption row.
 
 ## The section column (`SectionPane`)
 
@@ -84,15 +102,15 @@ the title — a chord-grid save endpoint physically cannot carry one.
 - Web:
   - Slots:
     - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
-    - `Library.CardMeta` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
     - `Library.SongActions` ← `apps.sonata.library`
-    - `Library.Fields` ← `apps.sonata.playback-history`
+    - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
   - Contributes:
     - `Sonata.Home` "library" → `SongLibrary`
     - `SonataToolbar.Start` "back" → `BackToLibrary`
     - `SonataToolbar.Start` "title" → `SongTitle`
     - `SonataToolbar.Start` "display-picker" → `DisplayPicker`
     - `Library.SongActions` "play" → `PlaySongAction`
+    - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
   - Uses:
@@ -109,7 +127,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
-    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
@@ -126,8 +143,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/data-view.defineFieldExtensions`
     - `primitives/data-view.defineItemActions`
     - `primitives/editable-field.useEditableField`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.matchResource`
@@ -145,7 +160,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/pane.usePaneStore`
     - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.formatRelativeTime`
-    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/row-actions.RowActionButton`
   - Exports (values):
     - `Library`
     - `openSongImperative`

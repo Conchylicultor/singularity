@@ -12,28 +12,48 @@ export interface DataCardProps {
   onActivate?: () => void;
   /** Top region: cover image / icon block. */
   media?: ReactNode;
+  /** Leading block rendered BESIDE the body (icon / avatar / status dot), the
+   *  card twin of `Row`'s `icon` slot. Sits below `media`, which is a full-width
+   *  region above the body. */
+  leading?: ReactNode;
   /** Trailing action cluster, rendered through `RowActions` — revealed on card
    *  hover/focus, and never activating the card (the primitive stops the press). */
   actions?: ReactNode;
-  /** Bottom row: badges / affordances. */
+  /** Bottom row: badges / affordances (the gallery puts the persistent-zone
+   *  action cluster here). */
   footer?: ReactNode;
   /** Body: title + property rows. */
   children: ReactNode;
   /** Persistent active/selected highlight (ring around the card). */
   selected?: boolean;
+  /** Card density. `"md"` (default) is the roomy gallery card; `"sm"` tightens
+   *  the padding and the region gap for dense pickers. */
+  size?: "sm" | "md";
   className?: string;
 }
 
 /**
  * Composable card chrome mirroring the tree's RowChrome region model: media /
- * body / actions / footer regions, with focus and click→`onActivate` behavior
- * baked in so consumers don't re-implement it. The actions region is the shared
- * `RowActions` primitive, which owns the reveal, the pin + scrim, the popup-hold
- * and the press guards — this card only says WHERE it sits.
+ * leading / body / actions / footer regions, with focus and click→`onActivate`
+ * behavior baked in so consumers don't re-implement it. The actions region is
+ * the shared `RowActions` primitive, which owns the reveal, the pin + scrim, the
+ * popup-hold and the press guards — this card only says WHERE it sits.
  */
 export function DataCard(props: DataCardProps) {
-  const { onActivate, media, actions, footer, children, selected, className } =
-    props;
+  const {
+    onActivate,
+    media,
+    leading,
+    actions,
+    footer,
+    children,
+    selected,
+    size = "md",
+    className,
+  } = props;
+
+  // eslint-disable-next-line layout/no-adhoc-layout -- card body fills the column and allows its children to truncate horizontally
+  const body = <div className="min-w-0 flex-1">{children}</div>;
 
   return (
     <Card
@@ -51,15 +71,25 @@ export function DataCard(props: DataCardProps) {
       // cluster anchors to — the card needs no `relative` of its own.
       className={cn(
         rowActionsAnchor,
-        "rounded-lg p-lg",
+        "rounded-lg",
+        size === "sm" ? "p-card" : "p-lg",
         selected && "ring-2 ring-primary",
         className,
       )}
     >
-      <Stack gap="md">
+      <Stack gap={size === "sm" ? "sm" : "md"}>
         {media}
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- card body fills the column and allows its children to truncate horizontally */}
-        <div className="min-w-0 flex-1">{children}</div>
+        {/* The leading block sits BESIDE the body (Row's `icon` slot, card
+            edition); with no leading block the body is the plain column child it
+            has always been. */}
+        {leading ? (
+          <Stack direction="row" gap="sm" align="start">
+            {leading}
+            {body}
+          </Stack>
+        ) : (
+          body
+        )}
         {footer}
       </Stack>
       {/* The cluster overlays the card's own body (a long title wraps under it),

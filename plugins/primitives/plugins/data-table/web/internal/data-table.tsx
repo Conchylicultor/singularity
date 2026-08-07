@@ -22,6 +22,7 @@ import {
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type {
   ColumnDef,
   DataTableGroup,
@@ -74,6 +75,7 @@ export function DataTable<TRow>({
   onToggleSort,
   onRowClick,
   rowActions,
+  rowPersistentActions,
   selectedRowId,
   useRowDecoration,
   keepMountedRowKeys,
@@ -115,10 +117,12 @@ export function DataTable<TRow>({
   // One grid owns the column tracks; the header and every row are full-span
   // subgrids that inherit those exact tracks (and the column gap), so columns
   // align structurally — independent of content. Dynamic template → inline style.
-  // A trailing `auto` track holds the hover-revealed per-row actions column.
+  // A trailing `auto` track holds the per-row actions column — the ONE track
+  // both clusters share, so it is reserved whenever either is present.
+  const hasActionsTrack = !!rowActions || !!rowPersistentActions;
   const template = [
     ...columns.map((col) => col.width ?? "auto"),
-    ...(rowActions ? ["auto"] : []),
+    ...(hasActionsTrack ? ["auto"] : []),
   ].join(" ");
 
   // Shared row renderer so the plain branch and the windowed branch render
@@ -140,6 +144,7 @@ export function DataTable<TRow>({
       selectedRowId={selectedRowId}
       onRowClick={onRowClick}
       rowActions={rowActions}
+      rowPersistentActions={rowPersistentActions}
       useRowDecoration={decorate}
       measure={measure}
       gutter={gutter}
@@ -191,7 +196,7 @@ export function DataTable<TRow>({
             </Text>
           );
         })}
-        {rowActions && <span aria-hidden />}
+        {hasActionsTrack && <span aria-hidden />}
       </Sticky>
       {groups
         ? renderGroupedBody(groups, renderRow, groupHeaderTop, gutter)
@@ -226,6 +231,7 @@ function DataTableRow<TRow>({
   selectedRowId,
   onRowClick,
   rowActions,
+  rowPersistentActions,
   useRowDecoration,
   measure,
   gutter,
@@ -237,6 +243,7 @@ function DataTableRow<TRow>({
   selectedRowId: string | undefined;
   onRowClick: ((row: TRow) => void) | undefined;
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
+  rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
   useRowDecoration: (row: TRow, index: number) => DataTableRowDecoration | undefined;
   measure?: { ref: (el: Element | null) => void; index: number };
   gutter: boolean;
@@ -305,17 +312,32 @@ function DataTableRow<TRow>({
           </Text>
         ))}
       </SingleLineProvider>
-      {rowActions && (
-        // `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
-        // `auto` track. A table column is genuine flow — an overlaying cluster
-        // would cover the last column's data — and the track is content-sized,
-        // so the anchor is stable without pinning. The track is as wide as the
-        // widest row's action set, hence the right-alignment.
+      {/* `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
+          `auto` track. A table column is genuine flow — an overlaying cluster
+          would cover the last column's data — and the track is content-sized,
+          so the anchor is stable without pinning. The track is as wide as the
+          widest row's action set, hence the right-alignment.
+
+          Both clusters share that ONE track, so when a persistent cluster
+          exists the two sit side by side inside a single flow child (persistent
+          first, hover-revealed at the trailing edge). They cannot be two direct
+          children: a subgrid row has no implicit tracks, so the second would be
+          clamped into the last track and paint on top of the first. */}
+      {rowPersistentActions ? (
+        <Stack direction="row" gap="none" align="center" justify="end">
+          <RowActions pin={null} alwaysVisible>
+            {rowPersistentActions(row, index)}
+          </RowActions>
+          {rowActions ? (
+            <RowActions pin={null}>{rowActions(row, index)}</RowActions>
+          ) : null}
+        </Stack>
+      ) : rowActions ? (
         // eslint-disable-next-line layout/no-adhoc-layout -- placement class for the reserved actions track; RowActions owns everything else about the cluster
         <RowActions pin={null} className="justify-end">
           {rowActions(row, index)}
         </RowActions>
-      )}
+      ) : null}
       {decorationOverlay}
     </div>
   );

@@ -1,17 +1,19 @@
 import { useMemo } from "react";
+import { MdMusicNote } from "react-icons/md";
 import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useOpenSong } from "../hooks";
-import { SongCard, formatDuration } from "./song-card";
+import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
 import { SonataOnboarding } from "./onboarding";
 
@@ -25,8 +27,13 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * the library never names MIDI (or any source). Each source's create affordance
  * (`Library.Source.createOption`, a data-view `CreateOption`) is mapped into the
  * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The song
- * list is reactive via the live `songsResource`; the gallery view keeps the custom
- * `SongCard` (play affordance + hover-delete) via `viewOptions.gallery.renderCard`.
+ * list is reactive via the live `songsResource`.
+ *
+ * There is no bespoke card: the gallery builds the standard `DataCard` from this
+ * schema, plus a `leading` music-note block. Everything the old `SongCard` drew
+ * is now declared once and honoured by BOTH views — Play/Delete as
+ * `Library.SongActions` contributions, the currently-loaded ring as
+ * `selectedRowId`, and opening a song as `onRowActivate`.
  *
  * Extra fields (e.g. play-count / last-played from `playback-history`) are
  * injected via the `Library.Fields` extension factory passed as
@@ -78,10 +85,12 @@ export function SongLibrary() {
         id: "composer",
         label: "Composer",
         type: "text",
-        // Project the raw nullable value (not the "Unknown" placeholder) so the
-        // inline editor opens from the true value and an empty cell reads as
-        // empty; clearing it stores `null`. The gallery card keeps its own
-        // "Unknown" fallback.
+        // Project the raw nullable value (not a placeholder) so the inline
+        // editor opens from the true value and clearing it stores `null`.
+        // No `cell`: the field is editable, so `EditableCell` owns the empty
+        // rendering and paints its own italic "Empty" hint — which is the
+        // affordance (it invites the edit) where the old card's flat "Unknown"
+        // was not. Both views read the same.
         value: (s) => s.composer,
         onEdit: (s, next) => {
           const composer = String(next ?? "").trim();
@@ -145,8 +154,9 @@ export function SongLibrary() {
       views={["gallery", "table"]}
       defaultView="gallery"
       storageKey={LIBRARY_VIEW}
-      // Trailing per-row Play/Pause action (table view); the gallery uses its
-      // own SongCard button. Highlight the background-playing row.
+      // The one per-row action set, rendered by both views: Play/Pause at rest
+      // (zone "persistent") and Delete on hover. Highlight the background-
+      // playing row.
       itemActions={Library.SongActions}
       selectedRowId={currentSongId ?? undefined}
       // The "Library" title is owned by the enclosing `PaneChrome` (the pane
@@ -163,8 +173,12 @@ export function SongLibrary() {
       emptyState={<>No songs yet — add one to get started.</>}
       viewOptions={{
         gallery: {
-          renderCard: (s: Song) => (
-            <SongCard song={s} onOpen={(x) => void openSong(x)} />
+          // The card's identity block, beside the body — the one piece of the
+          // old SongCard that was a real gap in the generic card.
+          leading: () => (
+            <Center className="size-10 rounded-md bg-primary/10 text-primary">
+              <MdMusicNote className="size-5" />
+            </Center>
           ),
         },
       }}

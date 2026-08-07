@@ -58,6 +58,7 @@ see `data-view/CLAUDE.md` ("Pane gutter") and `data-table/CLAUDE.md`.
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.SortRule`
     - `primitives/data-view.useDataViewSections`
+    - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`

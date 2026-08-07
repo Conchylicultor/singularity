@@ -1,6 +1,15 @@
 # folders
 
 Mirrors user-configured folders of `.mid`/`.midi` files into the Sonata library.
+
+`sourceMissing` surfaces as this plugin's OWN `Library.Fields` contributor (a
+`bool` field whose `cell` is a "File missing" badge, nothing when present; it is
+labelled **"File"**, not "Source" — the library already ships a `source` enum
+field, and two columns headed "Source" is unreadable) —
+kept separate from `midi`'s field contributor because the semantics are this
+plugin's, and one contributor per plugin is the boundary rule. Being a field, "show
+me the songs whose file vanished" is a filter, not a visual scan.
+
 Two mechanisms keep the DB in sync with disk:
 
 - **Live watcher** (`watcher.ts`) — a `@parcel/watcher` over the configured dirs.
@@ -53,14 +62,14 @@ is drift repair, not a correctness dependency.
 
 ## Plugin reference
 
-- Description: Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and badges library cards whose folder-imported file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
+- Description: Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and contributes the Source field (Library.Fields) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister`
-    - `Library.CardMeta` "midi-source-deleted" → `SourceDeletedBadge`
+    - `Library.Fields` "source-missing" → `SourceMissingField`
   - Uses:
     - `apps/sonata/library.Library`
-    - `apps/sonata/sources/midi.useSongMidi`
+    - `apps/sonata/sources/midi.useSongMidiMap`
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
 - Server:

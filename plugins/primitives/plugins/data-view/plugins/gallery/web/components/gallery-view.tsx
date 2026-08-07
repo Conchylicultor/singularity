@@ -9,12 +9,14 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import {
   FieldCell,
   GroupedSections,
   pickPrimaryField,
   resolveBodyFields,
   useDataViewSections,
+  useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -145,6 +147,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const itemActions = props.itemActions as
     | ItemActionsDescriptor<unknown>
     | undefined;
+  // The card HAS a permanent per-row region (its footer), so persistent-zone
+  // actions stay painted at rest there and the rest live in the hover cluster.
+  // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
+  const { persistent, revealed } = useItemActionZones(itemActions, {
+    hasPersistentSlot: true,
+  });
 
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;
@@ -192,66 +200,83 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
     const { row, key } = cell;
 
-    if (options.renderCard) {
-      return <div className="contents">{options.renderCard(row)}</div>;
-    }
-
     const media = renderMedia(options, coverField, row);
     const bodyFields = vis.filter(
       (f) => f.id !== titleField?.id && f.id !== coverField?.id,
     );
+    const actionProps = {
+      row,
+      hasChildren: props.hasChildren?.(key) ?? false,
+    };
 
     // Aggregate representative → a persistent `×N` corner badge. Pinned top-left
     // so it never collides with the hover-revealed actions Pin (top-right).
     const aggregateCount = cell.aggregateCount;
+    // ONE card construction site: a custom body replaces the title + property
+    // rows and nothing else, so every declared affordance is wired either way.
     const card = (
       <DataCard
+        size={options.size}
         selected={key === props.selectedRowId}
         onActivate={() => props.onRowActivate?.(row)}
         media={media}
-        actions={
-          itemActions ? (
-            <itemActions.Row
-              row={row}
-              hasChildren={props.hasChildren?.(key) ?? false}
-            />
+        leading={options.leading?.(row)}
+        actions={revealed?.(actionProps)}
+        footer={
+          persistent ? (
+            // In flow at the card's foot, so the cluster needs no pin and no
+            // scrim — and `alwaysVisible` is what "persistent" means. The
+            // `justify="end"` row puts it on the trailing edge like every other
+            // action cluster; left-aligned, a lone icon under the body reads as
+            // stray content rather than an affordance.
+            <Stack direction="row" gap="none" justify="end">
+              <RowActions pin={null} alwaysVisible>
+                {persistent(actionProps)}
+              </RowActions>
+            </Stack>
           ) : undefined
         }
       >
-        {titleField ? (
-          <Text
-            as="div"
-            variant="label"
-            className="truncate font-semibold text-foreground"
-          >
-            <FieldCell
-              field={titleField}
-              row={row}
-              resolveCell={resolveCell}
-              resolveEditor={resolveEditor}
-            />
-          </Text>
-        ) : null}
-        {bodyFields.length > 0 ? (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the body block from the card title
-          <Stack gap="2xs" className="mt-1">
-            {bodyFields.map((field) => (
+        {options.renderBody ? (
+          options.renderBody(row)
+        ) : (
+          <>
+            {titleField ? (
               <Text
                 as="div"
-                key={field.id}
-                variant="caption"
-                className="truncate text-muted-foreground"
+                variant="label"
+                className="truncate font-semibold text-foreground"
               >
                 <FieldCell
-                  field={field}
+                  field={titleField}
                   row={row}
                   resolveCell={resolveCell}
                   resolveEditor={resolveEditor}
                 />
               </Text>
-            ))}
-          </Stack>
-        ) : null}
+            ) : null}
+            {bodyFields.length > 0 ? (
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the body block from the card title
+              <Stack gap="2xs" className="mt-1">
+                {bodyFields.map((field) => (
+                  <Text
+                    as="div"
+                    key={field.id}
+                    variant="caption"
+                    className="truncate text-muted-foreground"
+                  >
+                    <FieldCell
+                      field={field}
+                      row={row}
+                      resolveCell={resolveCell}
+                      resolveEditor={resolveEditor}
+                    />
+                  </Text>
+                ))}
+              </Stack>
+            ) : null}
+          </>
+        )}
       </DataCard>
     );
     if (!aggregateCount || aggregateCount <= 1) return card;

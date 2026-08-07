@@ -116,6 +116,7 @@ conditional hook.
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.useDataViewSections`
+    - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`

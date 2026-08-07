@@ -12,6 +12,7 @@ import {
   pickPrimaryField,
   resolveBodyFields,
   useDataViewSections,
+  useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
@@ -130,6 +131,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const itemActions = props.itemActions as
     | ItemActionsDescriptor<unknown>
     | undefined;
+  // A list row has no permanent trailing region (a reserved one would take width
+  // from the title in the app's narrowest surfaces), so EVERY action — persistent
+  // zone included — renders in the one hover cluster. Resolved unconditionally
+  // (hooks rules) BEFORE the early empty-state return.
+  const { revealed } = useItemActionZones(itemActions, {
+    hasPersistentSlot: false,
+  });
 
   // The host owns the loading→empty precedence: it renders the skeleton and
   // skips this view while loading, so an empty section set always means empty.
@@ -163,14 +171,10 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       size={options.size ?? "md"}
       onClick={() => props.onRowActivate?.(row)}
       icon={options.leading?.(row)}
-      actions={
-        itemActions ? (
-          <itemActions.Row
-            row={row}
-            hasChildren={props.hasChildren?.(key) ?? false}
-          />
-        ) : undefined
-      }
+      actions={revealed?.({
+        row,
+        hasChildren: props.hasChildren?.(key) ?? false,
+      })}
     >
       {options.renderRow ? (
         options.renderRow(row)

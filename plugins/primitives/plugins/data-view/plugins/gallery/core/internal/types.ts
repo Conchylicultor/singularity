@@ -24,17 +24,26 @@ export type CoverContent =
  */
 export interface GalleryViewOptions<TRow> {
   /**
-   * Compose a `<DataCard>` (filling its regions) OR fully replace the card.
-   * A custom card owns its own click handling — the gallery does NOT wrap it
-   * in `DataCard` or wire `onRowActivate`.
+   * Replace the card's BODY — never the card. The gallery always builds the
+   * `<DataCard>`, so every affordance the surface declared (item actions,
+   * `selectedRowId`, `onRowActivate`, the cover, the aggregate badge) is wired
+   * whether the body is field-driven or custom. Only the title + property rows
+   * are yours.
    */
-  renderCard?: (row: TRow) => ReactNode;
+  renderBody?: (row: TRow) => ReactNode;
   /**
-   * Produce the cover region for the default card from a row. This is the
-   * sanctioned way to get an icon- or preview-covered card WITHOUT a custom
-   * `renderCard` — the body (title + property rows) still comes from the
-   * `FieldDef` schema. Takes precedence over `coverField`. Return `null` for
-   * no cover.
+   * Leading block rendered beside the body (icon / avatar / status dot), the
+   * gallery twin of `ListViewOptions.leading` → `Row`'s `icon` slot. Distinct
+   * from `cover`, which is a full-width region ABOVE the body.
+   */
+  leading?: (row: TRow) => ReactNode;
+  /** Card density, mirroring the list's row density. Default `"md"`. */
+  size?: "sm" | "md";
+  /**
+   * Produce the cover region of the card from a row. This is the sanctioned way
+   * to get an icon- or preview-covered card without touching the body, which
+   * still comes from the `FieldDef` schema (or `renderBody`). Takes precedence
+   * over `coverField`. Return `null` for no cover.
    */
   cover?: (row: TRow) => CoverContent | null;
   /** Override which field is the image cover (else the FieldDef with `cover: true`). */

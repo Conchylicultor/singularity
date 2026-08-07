@@ -8,12 +8,14 @@ import {
   partitionIntoSections,
   pickPrimaryField,
   resolveBodyFields,
+  useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldDef,
   type HierarchyConfig,
+  type ItemActionProps,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
@@ -59,9 +61,10 @@ function DefaultRow<TRow>(props: {
   primaryField: FieldDef<TRow> | undefined;
   secondaryFields: FieldDef<TRow>[];
   options: TreeViewOptions<TRow>;
-  itemActions: ItemActionsDescriptor<TRow> | undefined;
+  /** The tree's single (hover-revealed) action arm — see `useItemActionZones`. */
+  revealedActions: ((p: ItemActionProps<TRow>) => ReactNode) | null;
 }): ReactNode {
-  const { node, depth, primaryField, secondaryFields, options, itemActions } =
+  const { node, depth, primaryField, secondaryFields, options, revealedActions } =
     props;
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
@@ -134,9 +137,9 @@ function DefaultRow<TRow>(props: {
       depth={depth}
       accent={accent}
       actions={
-        itemActions && !isAlias ? (
-          <itemActions.Row row={row} hasChildren={node.children.length > 0} />
-        ) : undefined
+        revealedActions && !isAlias
+          ? revealedActions({ row, hasChildren: node.children.length > 0 })
+          : undefined
       }
       menu={menu}
       // Merge the icon into the chevron slot (Notion style: icon at rest,
@@ -196,6 +199,12 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const itemActions = props.itemActions as
     | ItemActionsDescriptor<unknown>
     | undefined;
+  // A tree row has no permanent trailing region (a reserved one would take width
+  // from the label in the app's narrowest surfaces — the Pages sidebar), so
+  // EVERY action, persistent zone included, renders in the one hover cluster.
+  const { revealed: revealedActions } = useItemActionZones(itemActions, {
+    hasPersistentSlot: false,
+  });
   // Memoized: `?? {}` would mint a fresh object every render and churn the
   // hooks below that depend on `options`.
   const options = useMemo(
@@ -323,8 +332,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {
       if (!hierarchy) return null;
-      if (options.renderRow)
-        return options.renderRow(rowProps.node, rowProps.depth);
       return (
         <DefaultRow
           node={rowProps.node}
@@ -332,11 +339,11 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           primaryField={primaryField}
           secondaryFields={secondaryFields}
           options={options}
-          itemActions={itemActions}
+          revealedActions={revealedActions}
         />
       );
     },
-    [hierarchy, options, primaryField, secondaryFields, itemActions],
+    [hierarchy, options, primaryField, secondaryFields, revealedActions],
   );
 
   const primaryAccessor = useCallback(

@@ -1,15 +1,30 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
+import type { ReactNode } from "react";
+import {
+  PluginProvider,
+  type LoadedPlugin,
+} from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineItemActions,
+  type DataViewRenderProps,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { DataCard } from "../components/data-card";
+import { GalleryView } from "../components/gallery-view";
 
-// The gallery is the one row-action surface the browser e2e cannot reach: no
-// `defineItemActions` consumer ships a gallery view today, so there is nothing
-// to point `row-actions/e2e/cluster-parity.ts` at. This test therefore asserts
-// COMPOSITION only — that `DataCard` routes its `actions` through the shared
-// `RowActions` primitive rather than re-implementing a reveal — by reading the
-// classes the primitive puts on the node it owns. It does not (and in jsdom
-// cannot) prove the reveal actually happens on hover; that is the e2e's job on
-// the surfaces where one exists.
+// The first three cases assert COMPOSITION only — that `DataCard` routes its
+// `actions` through the shared `RowActions` primitive rather than
+// re-implementing a reveal — by reading the classes the primitive puts on the
+// node it owns. They do not (and in jsdom cannot) prove the reveal actually
+// happens on hover; that is the e2e's job.
+//
+// The last two are about the gallery VIEW: every card is built by one
+// construction site, so a custom body cannot drop a declared affordance, and an
+// action's declared zone decides which cluster it lands in.
+
+/** Class selector for the outermost node of a hover-revealed cluster. */
+const REVEALED = ".group-hover\\/row-actions\\:opacity-100";
 
 afterEach(cleanup);
 
@@ -23,7 +38,7 @@ describe("gallery DataCard actions", () => {
 
     // The reveal rides the OUTERMOST node the primitive renders — the masked
     // Pin — so walk up from the action, not down from the card.
-    const revealed = getByTestId("action").closest(".group-hover\\/row-actions\\:opacity-100");
+    const revealed = getByTestId("action").closest(REVEALED);
     expect(revealed).not.toBeNull();
 
     const cls = revealed!.className;
@@ -56,8 +71,101 @@ describe("gallery DataCard actions", () => {
 
   it("renders no cluster at all when there are no actions", () => {
     const { container } = render(<DataCard>body</DataCard>);
-    expect(
-      container.querySelector(".group-hover\\/row-actions\\:opacity-100"),
-    ).toBeNull();
+    expect(container.querySelector(REVEALED)).toBeNull();
+  });
+});
+
+// --- The gallery view: one card construction site, two action zones ---
+
+type Row = { id: string; name: string };
+
+const fields: FieldDef<Row>[] = [
+  { id: "name", label: "Name", type: "text", value: (r) => r.name },
+];
+
+function renderProps(
+  itemActions: DataViewRenderProps<Row>["itemActions"],
+  options: DataViewRenderProps<Row>["options"],
+): DataViewRenderProps<Row> {
+  return {
+    rows: [{ id: "1", name: "alpha" }],
+    fields,
+    rowKey: (r) => r.id,
+    state: { sort: [], query: "", filter: null },
+    setSort: () => {},
+    setFilter: () => {},
+    setExpanded: () => {},
+    itemActions,
+    options,
+  };
+}
+
+function renderGallery(
+  plugins: LoadedPlugin[],
+  props: DataViewRenderProps<Row>,
+) {
+  return render(
+    <PluginProvider plugins={plugins}>
+      <GalleryView {...(props as DataViewRenderProps<unknown>)} />
+    </PluginProvider>,
+  );
+}
+
+describe("gallery view item-action zones", () => {
+  it("keeps the action cluster when the consumer supplies its own card body", () => {
+    // The exact regression the old all-or-nothing `renderCard` caused: a
+    // consumer that had ALREADY declared `itemActions` lost them by supplying an
+    // unrelated option.
+    const Actions = defineItemActions<Row>("gallery-test.body-actions");
+    const plugin = {
+      id: "gallery-body-actions-test",
+      description: "gallery custom-body fixture",
+      contributions: [
+        Actions({
+          id: "act",
+          component: () => <button data-testid="action">act</button>,
+        }),
+      ],
+    } as unknown as LoadedPlugin;
+
+    const { getByTestId, getByText } = renderGallery(
+      [plugin],
+      renderProps(Actions, {
+        renderBody: (r: Row): ReactNode => <div>custom {r.name}</div>,
+      }),
+    );
+
+    getByText("custom alpha");
+    expect(getByTestId("action").closest(REVEALED)).not.toBeNull();
+  });
+
+  it("paints a persistent action at rest in the card footer, revealed ones in the pinned cluster", () => {
+    const Actions = defineItemActions<Row>("gallery-test.zoned-actions");
+    const plugin = {
+      id: "gallery-zoned-actions-test",
+      description: "gallery action-zone fixture",
+      contributions: [
+        Actions({
+          id: "play",
+          zone: "persistent",
+          component: () => <button data-testid="play">play</button>,
+        }),
+        Actions({
+          id: "delete",
+          component: () => <button data-testid="delete">delete</button>,
+        }),
+      ],
+    } as unknown as LoadedPlugin;
+
+    const { getByTestId } = renderGallery([plugin], renderProps(Actions, {}));
+
+    // The persistent action lives in the card's in-flow footer cluster, which
+    // is `alwaysVisible` — so it carries none of the reveal classes.
+    expect(getByTestId("play").closest(REVEALED)).toBeNull();
+    // It also sits in the card's flow (the footer), not in the pinned overlay
+    // the revealed cluster uses.
+    expect(getByTestId("play").closest(".absolute")).toBeNull();
+    // The revealed one is in that pinned, hover-revealed cluster.
+    expect(getByTestId("delete").closest(REVEALED)).not.toBeNull();
   });
 });

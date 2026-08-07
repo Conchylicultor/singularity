@@ -3,7 +3,7 @@ import { MdAccountTree } from "react-icons/md";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { TreeView } from "./components/tree-view";
 
-export type { TreeViewOptions, TreeRowNode } from "./internal/types";
+export type { TreeViewOptions } from "./internal/types";
 
 export default {
   description:

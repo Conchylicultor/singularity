@@ -11,11 +11,11 @@ the shared `FieldDef` schema.
   muted property rows. Wired to `onRowActivate`. The cover supports three kinds
   (see `cover` below) so an icon- or preview-covered card needs **no** custom
   component — just a schema plus a one-line cover accessor.
-- **Custom card** (compose / replace): when `options.renderCard` is set, the
-  gallery renders it as-is. A custom card **owns its own click handling** — it
-  is not wrapped in `DataCard` and `onRowActivate` is not wired. Reserve this
-  for cards with their own affordances (e.g. a play button) the schema can't
-  express.
+- **Custom body** (`options.renderBody`): replaces the title + property rows and
+  **nothing else**. There is exactly ONE `DataCard` construction site, so
+  `media` / `leading` / `selected` / `onRowActivate` / both action zones / the
+  aggregate `×N` badge are wired whether the body is field-driven or custom —
+  a custom body cannot drop an affordance the surface already declared.
 
 ## Grouping + windowing
 
@@ -37,7 +37,11 @@ into its measured `scrollMargin`, so the two compose with no wiring.
 
 `options` (= `viewOptions.gallery`) is a `GalleryViewOptions<TRow>`:
 
-- `renderCard?(row)` — compose a `<DataCard>` or fully replace the card.
+- `renderBody?(row)` — replace the card's BODY (title + property rows) only.
+- `leading?(row)` — block rendered *beside* the body (icon / avatar / status
+  dot), the twin of `ListViewOptions.leading` → `Row`'s `icon`. Distinct from
+  `cover`, which is full-width and sits ABOVE the body.
+- `size?` — card density, `"sm" | "md"` (default `"md"`).
 - `cover?(row)` — produce the default card's cover region as a `CoverContent`:
   `{ kind: "image", src }` | `{ kind: "icon", icon }` | `{ kind: "node", node }`,
   or `null` for none. Each kind renders in a uniform `aspect-video` frame.
@@ -53,11 +57,24 @@ into its measured `scrollMargin`, so the two compose with no wiring.
   creators CTA (one `Button` per creator) below `emptyState` when the data source
   is confirmed-empty (after the loading guard).
 
+## No lint rule guards the card — the structure does, and only that far
+
+One `DataCard` construction site + a body-only hatch makes "a card without its
+declared affordances" unrepresentable, so there is nothing left to detect. What a
+rule would NOT have caught, recorded so nobody re-derives it: a shape rule
+("no `render<Container>` option") is defeated by renaming the key; "`Pin` + a
+hover-reveal class is a row cluster" flags ~12 legitimate media overlays
+(rejected in `research/2026-08-06-global-row-action-cluster-convergence.md`); and
+`row-actions/no-raw-actions-slot` is name-based on props, so a bespoke card
+taking `{song, onOpen}` never trips it. The limit is real: `renderBody` can still
+hand-roll a *button* inside the body. It just has no card to own.
+
 ## Exports
 
-- `DataCard` — composable card chrome with `media` / body / `actions` /
-  `footer` regions, focus, and click→`onActivate`. `actions` renders through the
-  shared `primitives/row-actions` cluster (reveal, pin + scrim, press guards).
+- `DataCard` — composable card chrome with `media` / `leading` / body /
+  `actions` / `footer` regions, focus, and click→`onActivate`. `actions` renders
+  through the shared `primitives/row-actions` cluster (reveal, pin + scrim, press
+  guards); `footer` is where the gallery puts the persistent-zone cluster.
 - `GalleryViewOptions` — the typed options interface. Consumers pass a plain
   `viewOptions={{ gallery: { … } }}` literal (never import this view child),
   mirroring the tree view child, which likewise ships only its options type.
@@ -91,6 +108,7 @@ into its measured `scrollMargin`, so the two compose with no wiring.
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.useDataViewSections`
+    - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`

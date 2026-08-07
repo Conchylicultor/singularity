@@ -184,7 +184,6 @@ fixed raw size escapes per-site via
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`
-    - `apps/sonata/playback-history`
     - `apps/sonata/primitives/jog-wheel`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/progress/sections`

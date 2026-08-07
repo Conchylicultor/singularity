@@ -347,6 +347,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/css/inline`
     - `primitives/css/layout-harness`
     - `primitives/cursor-pagination`
+    - `primitives/data-table`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/gallery`

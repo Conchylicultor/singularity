@@ -1,12 +1,8 @@
 import type { ReactNode } from "react";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type {
   RowChromeMenuHelpers,
   RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
-
-/** The projected tree row: the original `TRow` plus the `TreeItem` id field. */
-export type TreeRowNode<TRow> = TreeNode<TRow & { id: string }>;
 
 /**
  * Per-view options for the tree view, threaded through
@@ -18,12 +14,6 @@ export type TreeRowNode<TRow> = TreeNode<TRow & { id: string }>;
  * are web types of the tree primitive, and `core` may not import `web`.
  */
 export interface TreeViewOptions<TRow> {
-  /**
-   * Fully replace a row's rendering (receives the projected tree node and its
-   * `depth`). `depth` is for composing `RowChrome`, which needs it for the
-   * indentation of nested rows.
-   */
-  renderRow?: (node: TreeRowNode<TRow>, depth: number) => ReactNode;
   /** Leading icon rendered immediately before the primary-field label. */
   leadingIcon?: (row: TRow) => ReactNode;
   /**

@@ -1,6 +1,4 @@
-import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
   defineFieldExtensions,
   defineItemActions,
@@ -22,11 +20,12 @@ import type { Song } from "../core";
  *    runs fully imperatively (no React hooks): create the song, then
  *    `openSongImperative`. Adding a new source = a new contribution here, with
  *    zero library or core-schema changes.
- *  - `CardMeta` — per-card metadata strip. Contributors render a snippet given
- *    the `song` (e.g. play count / last-played, MIDI track count). Headless-friendly.
- *  - `SongActions` — trailing per-row actions for the library TABLE view
- *    (Play/Pause background playback). The gallery uses its own `SongCard` button
- *    (a custom `renderCard` bypasses `itemActions`), so this surfaces in the table.
+ *  - `SongActions` — the ONE per-row action set for the library, rendered by
+ *    BOTH views: the gallery card and the table row. An action declares where it
+ *    belongs with `zone` — `"persistent"` (painted at rest: the card's footer,
+ *    the table's reserved trailing track) or the default `"revealed"` (the
+ *    hover cluster). There is no per-view action list, so an action added here
+ *    can never reach one view and miss the other.
  *  - `Fields` — extra DataView `FieldDef<Song>[]` injected by other plugins. A
  *    field extension is a *component* (not plain data) so its `value` closure can
  *    capture hook-loaded data — e.g. `playback-history` reads its own live
@@ -48,15 +47,11 @@ export const Library = {
      */
     createOption?: CreateOption;
   }>("sonata.library.source", { docLabel: (c) => c.sourceId }),
-  CardMeta: defineRenderSlot<{ component: ComponentType<{ song: Song }> }>(
-    "sonata.library.card-meta",
-    { docLabel: (p) => p.id },
-  ),
   /**
-   * Trailing per-row actions for the library table (Play/Pause). Minted here,
-   * contributed in `web/index.ts`, and passed to the gallery/table `DataView`.
-   * The gallery uses its own `SongCard` button (a custom `renderCard` bypasses
-   * `itemActions`), so this surfaces in the TABLE view's trailing column.
+   * Per-row actions for the library (Play/Pause, Delete). Minted here,
+   * contributed in `web/index.ts`, and passed to the one `DataView` as
+   * `itemActions`, so the gallery card and the table row show the same set —
+   * Play painted at rest (`zone: "persistent"`), Delete on hover.
    */
   SongActions: defineItemActions<Song>("sonata.library.song-actions"),
   Fields: defineFieldExtensions<Song>("sonata.library.fields"),

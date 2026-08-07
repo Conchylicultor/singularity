@@ -1,4 +1,4 @@
-// @hash 7dedebcbe574
+// @hash 4939bff71c65
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.sonata.library:play"
+    "apps.sonata.library:play",
+    "apps.sonata.library:delete"
   ]
 }

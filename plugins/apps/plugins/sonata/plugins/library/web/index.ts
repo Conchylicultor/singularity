@@ -8,6 +8,7 @@ import {
 } from "./components/player-toolbar-items";
 import { SongTitle } from "./components/song-title-field";
 import { PlaySongAction } from "./components/play-song-action";
+import { DeleteSongAction } from "./components/delete-song-action";
 import { Library } from "./slots";
 import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 
@@ -25,7 +26,15 @@ export default {
     SonataToolbar.Start({ id: "back", component: BackToLibrary }),
     SonataToolbar.Start({ id: "title", component: SongTitle }),
     SonataToolbar.Start({ id: "display-picker", component: DisplayPicker }),
-    Library.SongActions({ id: "play", component: PlaySongAction }),
+    // Play is the library's one at-rest affordance: it earns a permanent slot
+    // on every view that has one (the card's footer, the table's trailing
+    // track). Delete keeps the default hover-revealed zone.
+    Library.SongActions({
+      id: "play",
+      component: PlaySongAction,
+      zone: "persistent",
+    }),
+    Library.SongActions({ id: "delete", component: DeleteSongAction }),
     Pane.Register({ pane: sonataLibraryPane }),
     Pane.Register({ pane: sonataPlayerPane }),
   ],

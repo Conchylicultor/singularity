@@ -7,16 +7,16 @@ import { parseMidi } from "../shared/parse";
 import { MIDI_SOURCE_ID } from "./constants";
 import { hydrate } from "./hydrate";
 import { midiCreateOption } from "./components/midi-create-option";
-import { MidiCardMeta } from "./components/midi-card-meta";
+import { MidiFields } from "./components/midi-fields";
 
 // Re-export the source id so consumers can identify this source without
 // depending on its internal layout.
 export { MIDI_SOURCE_ID };
-export { useSongMidi } from "./hooks";
+export { useSongMidi, useSongMidiMap } from "./hooks";
 
 export default {
   description:
-    "MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count.",
+    "MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the Tracks field.",
   contributions: [
     Sonata.Source({
       id: MIDI_SOURCE_ID,
@@ -26,6 +26,6 @@ export default {
       compile: parseMidi,
     }),
     Library.Source({ sourceId: MIDI_SOURCE_ID, hydrate, createOption: midiCreateOption }),
-    Library.CardMeta({ id: "midi-track-count", component: MidiCardMeta }),
+    Library.Fields({ id: "midi", component: MidiFields }),
   ],
 } satisfies PluginDefinition;

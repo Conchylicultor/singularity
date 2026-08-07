@@ -8,10 +8,15 @@ own **placement only** — never a reveal. Placement is a closed set:
 | Host shape | Call |
 |---|---|
 | Row / tree row (overlays trailing edge) | `<RowActions>` (pins `right`) |
-| Gallery card | `<RowActions pin="top-right">` |
-| Table (reserved `auto` grid track) | `<RowActions pin={null}>` |
+| Gallery card (hover cluster) | `<RowActions pin="top-right">` |
+| Gallery card footer (actions that live at rest) | `<RowActions pin={null} alwaysVisible>` |
+| Table (reserved `auto` grid track) | `<RowActions pin={null}>`, persistent twin `pin={null} alwaysVisible` before it |
 | Floating over prose (no row tint to mask) | `<RowActions pin={null} surface>` |
-| Always-visible trailing slot | `<RowActions pin={null} alwaysVisible>` |
+
+`alwaysVisible` is **per-cluster by design** — a cluster either fades or doesn't.
+Which cluster a given action belongs to is the *action's* call, declared once as
+`data-view`'s `ItemActionContribution.zone`; a view then paints at most one
+cluster per zone. Don't reach for a per-action `alwaysVisible` here.
 
 `pin`/`surface` are a discriminated pair: a pinned cluster already paints
 `--scrim` via `Pin mask`, so an overlay surface would double-paint. The
@@ -107,6 +112,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `apps/deploy/servers`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/sonata/library`
     - `apps/studio/compositions`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`

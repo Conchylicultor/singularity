@@ -66,6 +66,14 @@ export interface DataTableProps<TRow> {
   /** Trailing per-row actions, hover-revealed in their own column. */
   rowActions?: (row: TRow, index: number) => ReactNode;
   /**
+   * Trailing per-row actions that stay painted **at rest** (never revealed),
+   * sharing the same reserved trailing track as {@link rowActions} and sitting
+   * immediately before it. For an affordance important enough to be visible
+   * without hovering (a Play button). The track is reserved whenever either is
+   * present.
+   */
+  rowPersistentActions?: (row: TRow, index: number) => ReactNode;
+  /**
    * CSS length the table's own sticky rows pin at, measured from the top of the
    * scroll viewport. Defaults to `"0px"` (flush to the top). Set this when a
    * sticky element sits ABOVE the table in the SAME scroll container (e.g. a

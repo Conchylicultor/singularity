@@ -170,7 +170,6 @@ the outcome too, with no separate code path.
     - `apps/pages/shell`
     - `apps/pages/welcome`
     - `apps/settings/shell`
-    - `apps/sonata/library`
     - `apps/sonata/piano-roll`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/shell`

@@ -94,6 +94,10 @@ export function CommunityBrowserSection({ search }: { search: string }) {
         defaultView="gallery"
         loading={isLoading}
         searchAccessor={(t) => `${t.name} ${t.tags.join(" ")}`}
+        // Activating a card applies its theme. It lives here rather than inside
+        // the card because the card is now only a body — the DataCard the
+        // gallery builds owns the click and the Enter/Space handling.
+        onRowActivate={(t) => applyTheme(t.id)}
         emptyState={
           <Text as="p" variant="body" tone="muted">
             No themes match your search.
@@ -102,12 +106,8 @@ export function CommunityBrowserSection({ search }: { search: string }) {
         viewOptions={{
           gallery: {
             minCardWidth: 220,
-            renderCard: (t: CatalogTheme) => (
-              <CommunityThemeCard
-                theme={t}
-                isPending={applyingId === t.id}
-                onApply={() => applyTheme(t.id)}
-              />
+            renderBody: (t: CatalogTheme) => (
+              <CommunityThemeCard theme={t} isPending={applyingId === t.id} />
             ),
           },
         }}

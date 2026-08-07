@@ -140,12 +140,29 @@ export interface ItemActionProps<TRow> {
 }
 
 /**
+ * Where an action belongs on a view that HAS a permanent per-row slot:
+ *
+ * - `"persistent"` — important enough to be painted at rest (a Play button).
+ * - `"revealed"` — the default: it lives in the hover-revealed cluster.
+ *
+ * It is a property of the ACTION, declared once at the contribution site, so
+ * every view honours the same answer. A view without a permanent slot demotes a
+ * persistent action to its revealed cluster — never drops it. The one rule that
+ * maps a zone onto a view lives in `useItemActionZones` (web barrel).
+ */
+export type ItemActionZone = "persistent" | "revealed";
+
+/**
  * Minimal item-actions surface the views consume. `defineItemActions` (web)
  * returns a value satisfying this PLUS the callable contribution-registrar.
  */
 export interface ItemActionsDescriptor<TRow> {
-  /** Renders ALL contributed actions for one row, each error-boundary-isolated. */
-  Row: ComponentType<ItemActionProps<TRow>>;
+  /** Renders ALL contributed actions for one row, each error-boundary-isolated.
+   *  `zone` omitted ⇒ every contribution, whatever its zone. */
+  Row: ComponentType<ItemActionProps<TRow> & { zone?: ItemActionZone }>;
+  /** Which zones actually have a contribution — so a view never paints an empty
+   *  cluster for a zone nothing contributed to. */
+  useZones: () => Record<ItemActionZone, boolean>;
 }
 
 /**

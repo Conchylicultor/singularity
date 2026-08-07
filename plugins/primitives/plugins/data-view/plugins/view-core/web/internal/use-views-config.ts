@@ -185,7 +185,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
 
   // The RAW view value off the config row (NOT the merged code+config options),
   // so writes never persist code-only `viewOptions` keys (e.g. gallery's
-  // `renderCard`). For an unknown id → undefined; the row always has a `type`
+  // `renderBody`). For an unknown id → undefined; the row always has a `type`
   // (the seed sets `{ type }`), so a merge spread always carries a type.
   const viewFor = useCallback(
     (id: string): VariantValue | undefined => rowById(id)?.view,

@@ -30,6 +30,15 @@ content-sized track is already a stable menu anchor. `rowActionsAnchor` bundles
 `relative` — that is what the decoration overlay pins against, and it is inert on
 undecorated rows (`z-index` stays `auto`).
 
+`rowPersistentActions?(row, index)` is the twin cluster that stays painted **at
+rest** (`alwaysVisible`), for an affordance important enough to be visible
+without hovering. It shares the SAME trailing track, sitting immediately before
+the revealed cluster — which is why, when both are present, the two are wrapped
+in one flow child: a subgrid row has no implicit tracks, so a second direct child
+would be clamped into the last track and paint on top of the first. The track is
+reserved when either is present; with only `rowActions` the row is byte-identical
+to before.
+
 ## Windowing
 
 Above `DATA_TABLE_VIRTUALIZE_THRESHOLD` (100) rows the ungrouped body windows
@@ -66,6 +75,7 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
 - Web:
   - Uses:
     - `primitives/css/center.Center`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/sticky/stack.StickyStack`
     - `primitives/css/sticky/stack.StickyStackItem`

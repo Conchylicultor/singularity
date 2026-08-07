@@ -69,6 +69,7 @@ export type {
   ItemActions,
   ItemActionContribution,
 } from "./internal/define-item-actions";
+export { useItemActionZones } from "./internal/use-item-action-zones";
 export { defineFieldExtensions } from "./internal/field-extensions";
 export type {
   FieldExtensions,
@@ -106,6 +107,7 @@ export type {
   ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
+  ItemActionZone,
   FieldExtensionProps,
   FieldExtensionsDescriptor,
 } from "../core";

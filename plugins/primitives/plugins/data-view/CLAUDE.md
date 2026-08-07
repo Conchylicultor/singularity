@@ -190,7 +190,7 @@ the source axis only decides *which data bundle* feeds the body.
   fields, the actual `hierarchy` accessors, `viewOptions`, `dataSource`, …)
   stays in the bundle; the host dev-warns when a bundle's `hierarchy` presence
   contradicts the declared `hasHierarchy`. Code-only `viewOptions`
-  (`renderRow`, `renderCard`, …) reach the view through the body's options
+  (`renderRow`, `renderBody`, …) reach the view through the body's options
   re-merge (`{ ...bundle.viewOptions[type], ...instance.options }` — idempotent
   on the single-source path).
 - **Only the active source mounts** (plain `renderIsolated`, no recursive
@@ -496,10 +496,45 @@ Each consumer calls `defineItemActions<Row>("<stable-id>")` once. The result is
 `defineRenderSlot`) and carries `.Row` — the `ItemActionsDescriptor`. Pass it to
 `<DataView itemActions={MyActions} />`; the host threads it (plus a derived
 `hasChildren` predicate from `hierarchy.getParentId`) into every view, which
-renders `<itemActions.Row row={…} hasChildren={…} />` in its own affordance. Each
-action component receives `ItemActionProps<Row>` (`{ row, hasChildren }`).
+renders it in its own affordance. Each action component receives
+`ItemActionProps<Row>` (`{ row, hasChildren }`).
+
+### The zone axis: does this action live at rest?
+
+A contribution declares `zone?: ItemActionZone` — `"revealed"` (default, the
+hover cluster) or `"persistent"` (painted at rest where the view has a permanent
+per-row region). It is a property of the **action**, declared once, so every view
+gives the same answer — as opposed to per-view config, which lets an author
+promote Play on the card and forget the table row.
+
+Views never branch on zones themselves: they call the ONE shared rule,
+`useItemActionZones(itemActions, { hasPersistentSlot })` (web barrel), once per
+render and apply the returned `persistent` / `revealed` render functions per row.
+`hasPersistentSlot` is **required**, so a new view type must answer it.
+
+| View | `hasPersistentSlot` | Persistent placement |
+|---|---|---|
+| gallery | `true` | `DataCard.footer` → `<RowActions pin={null} alwaysVisible>` |
+| table | `true` | the reserved trailing `auto` track, before the revealed cluster |
+| list | `false` | — demoted to the hover cluster |
+| tree | `false` | — demoted to the hover cluster |
+
+`false` demotes, **never drops** — a view with no permanent region is still the
+only place that action can appear. List/tree say `false` on purpose: a reserved
+trailing region would take width from the title in the app's narrowest surfaces
+(the Pages sidebar), and no consumer needs one today. It is a one-flag change
+when a surface earns it, so `primitives/css/row` and `primitives/tree` stay
+untouched.
+
+**`primitives/action-presentation` is a different axis — do not merge them.** It
+answers *what form does this action draw as* (ghost icon button vs labelled menu
+row); `zone` answers *is the cluster painted at rest*. They compose.
 
 ## Field extensions
+
+**There is no second per-row render slot — a per-row datum is a `FieldDef`.** The
+field schema is the generic seam (it also buys sort, filter and a table column),
+so a private "extra meta" slot beside it is always a duplicate.
 
 `FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks, so
 a field whose projection must close over **hook-loaded data** owned by another
@@ -952,6 +987,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionProps`
     - `ItemActions`
     - `ItemActionsDescriptor`
+    - `ItemActionZone`
     - `ManualOrderConfig`
     - `MergedDataViewProps`
     - `SelectionConfig`
@@ -995,6 +1031,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useFilterController`
     - `useFlatRows`
     - `useGroupByController`
+    - `useItemActionZones`
     - `useResolveCell`
     - `useResolveCellEditor`
     - `useResolveColumnConfig`
@@ -1147,6 +1184,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `HierarchyConfig`
     - `ItemActionProps`
     - `ItemActionsDescriptor`
+    - `ItemActionZone`
     - `ManualOrderConfig`
     - `SelectionConfig`
     - `ServerDataSourceSpec`

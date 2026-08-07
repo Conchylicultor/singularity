@@ -17,9 +17,9 @@
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
-    - `primitives/css/card.Card`
+    - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
-    - `primitives/css/row.Row`
+    - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -125,7 +125,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // options. Idempotent on the single-source path (the model already merged
   // them into `instance.options`); on the merged path the model built its
   // entries from static metadata only, so this is where code-only options
-  // (`renderRow`, `renderCard`, …) reach the view. Memoized so the `options`
+  // (`renderRow`, `renderBody`, …) reach the view. Memoized so the `options`
   // identity stays stable across renders (as `instance.options` was).
   const mergedOptions = useMemo(
     () => ({

@@ -1,7 +1,26 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "cards", "name": "Cards", "view": { "type": "gallery", "groupBy": "source" } },
+    {
+      "id": "cards",
+      "name": "Cards",
+      "view": {
+        "type": "gallery",
+        "groupBy": "source",
+        // Authored, not defaulted: the schema is 9 fields (6 declared by the
+        // library + Plays / Last played / Tracks / Source from the field
+        // extensions), and the card stacks one caption row per visible field.
+        // These six are the card; the rest stay filter/sort dimensions.
+        "visibleFields": [
+          "title",
+          "composer",
+          "duration",
+          "playCount",
+          "trackCount",
+          "sourceMissing"
+        ]
+      }
+    },
     {
       "id": "all",
       "name": "All",
