@@ -1,11 +1,9 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-// `defineEndpoint` requires the query schema's input and output types to match
-// (and infers cleanly only for effect-free schemas), so `bucket` is modeled as a
-// plain optional string enum — no `.default()`/`.transform()`/`.preprocess()`.
-// An omitted param is dropped client-side and read as undefined; handlers default
-// it to "day".
+// `bucket` is modeled as a plain optional string enum, with the defaulting done
+// in the handler rather than the schema. An omitted param is dropped client-side
+// and read as undefined; handlers default it to "day".
 const bucketQuery = z.enum(["day", "week", "month"]).optional();
 
 export const getPushesWaitTime = defineEndpoint({

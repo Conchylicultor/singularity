@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { type Codec, isCodec, json } from "./codec";
 import type { ExtractParams } from "./route-params";
 import { extractMethod, extractPath } from "./route-params";
@@ -15,7 +15,7 @@ export interface EndpointDef<
   readonly path: string;
   readonly bodyCodec?: Codec<TBody>;
   readonly responseCodec?: Codec<TResponse>;
-  readonly querySchema?: ZodType<TQuery>;
+  readonly querySchema?: ZodParser<TQuery>;
   /**
    * Bound how many handler bodies run concurrently for this route (a per-route
    * semaphore in `implement`). Use for CPU/IO-heavy handlers — e.g. ones that
@@ -43,17 +43,17 @@ export interface EndpointDef<
 }
 
 /** A body/response spec accepts a bare Zod schema (JSON) or an explicit codec. */
-type Spec<T> = ZodType<T> | Codec<T>;
+type Spec<T> = ZodParser<T> | Codec<T>;
 
 /**
  * Extracts the payload type from a spec. Inferring `B`/`R` as the *spec object*
  * type and extracting via this conditional avoids the union-variance inference
- * regression a direct `ZodType<T> | Codec<T>` parameter would cause (`Codec<T>`
+ * regression a direct `ZodParser<T> | Codec<T>` parameter would cause (`Codec<T>`
  * is invariant in `T`).
  */
 type SpecType<S> = S extends Codec<infer U>
   ? U
-  : S extends ZodType<infer U>
+  : S extends ZodParser<infer U>
     ? U
     : void;
 
@@ -66,7 +66,7 @@ export function defineEndpoint<
   route: Route;
   body?: B;
   response?: R;
-  query?: ZodType<TQuery>;
+  query?: ZodParser<TQuery>;
   concurrency?: number;
   dedupe?: boolean;
   slowThresholdMs?: number;
@@ -74,12 +74,12 @@ export function defineEndpoint<
   const bodyCodec = opts.body
     ? isCodec(opts.body)
       ? opts.body
-      : json(opts.body as ZodType)
+      : json(opts.body as ZodParser<unknown>)
     : undefined;
   const responseCodec = opts.response
     ? isCodec(opts.response)
       ? opts.response
-      : json(opts.response as ZodType)
+      : json(opts.response as ZodParser<unknown>)
     : undefined;
   return {
     route: opts.route,

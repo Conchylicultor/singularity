@@ -1,4 +1,5 @@
-import { z, type ZodType } from "zod";
+import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { FilterGroup, FilterNode, FilterRule } from "./types";
 
 /**
@@ -10,7 +11,7 @@ import type { FilterGroup, FilterNode, FilterRule } from "./types";
  * `value` is `unknown` (operands are JSON-safe but otherwise opaque — a rule's
  * operand shape is owned by its field-type operator, not this schema).
  */
-export const FilterRuleSchema: ZodType<FilterRule> = z.object({
+export const FilterRuleSchema: ZodParser<FilterRule> = z.object({
   kind: z.literal("rule"),
   id: z.string(),
   fieldId: z.string(),
@@ -18,11 +19,11 @@ export const FilterRuleSchema: ZodType<FilterRule> = z.object({
   value: z.unknown().optional(),
 });
 
-export const FilterNodeSchema: ZodType<FilterNode> = z.lazy(() =>
+export const FilterNodeSchema: ZodParser<FilterNode> = z.lazy(() =>
   z.union([FilterRuleSchema, FilterGroupSchema]),
 );
 
-export const FilterGroupSchema: ZodType<FilterGroup> = z.lazy(() =>
+export const FilterGroupSchema: ZodParser<FilterGroup> = z.lazy(() =>
   z.object({
     kind: z.literal("group"),
     id: z.string(),

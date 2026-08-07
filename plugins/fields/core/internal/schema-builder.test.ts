@@ -29,3 +29,33 @@ test("fieldsToZodObject returns a STRICT object — unknown keys are NOT passed 
   expect(parsed).toEqual({ name: "x" });
   expect("extra" in parsed).toBe(false);
 });
+
+// The behaviour `ZodParser<T>` exists to permit. `FieldDef.schema` used to be
+// `z.ZodType<T>` — input === output — which made a schema carrying an INNER
+// `.default()` unusable as a field schema at all, because `.default()` is
+// precisely a combinator whose input is wider than its output. Callers worked
+// around it with `.optional()` plus a hand-written normalizer.
+//
+// A field schema parses jsonb / JSON / wire, so its input is `unknown`; this
+// pins that the inner default both type-checks and actually applies once the
+// field is composed into a record. Mirrors `events.date`, the real case.
+const jsonType = defineFieldType<{ freq: string; interval: number }>("__sb_json__");
+
+test("a field schema may carry an INNER .default(), and it applies through composition", () => {
+  const RuleSchema = z.object({
+    freq: z.string(),
+    interval: z.number().int().positive().default(1),
+  });
+  const ruleField: FieldDef<z.infer<typeof RuleSchema>> = Object.freeze({
+    type: jsonType,
+    schema: RuleSchema,
+    defaultValue: { freq: "weekly", interval: 1 },
+    meta: {},
+  });
+
+  // `interval` is absent on the wire — the inner default supplies it.
+  const parsed = fieldsToZodObject({ rule: ruleField }).parse({
+    rule: { freq: "weekly" },
+  });
+  expect(parsed.rule).toEqual({ freq: "weekly", interval: 1 });
+});

@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { createHash, randomUUID } from "node:crypto";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -32,10 +32,10 @@ import {
 //   WS  /ws/notifications  (or /ws/central-notifications)     — single push channel
 // and broadcasts updates when the plugin calls resource.notify().
 //
-// The runtime is acyclic: besides `zod` (ZodType) and `bun` (ServerWebSocket
-// type) it imports only the `packages/inflight` and `packages/semaphore` leaves
-// (globally-allowed utility code, so no cycle — inflight for read-path
-// single-flight coalescing, semaphore for the read-admission gate). It declares
+// The runtime is acyclic: besides `zod` and `bun` (ServerWebSocket type) it
+// imports only the `packages/…` leaves (globally-allowed utility code, so no
+// cycle — inflight for read-path single-flight coalescing, semaphore for the
+// read-admission gate, zod-parser for the `ZodParser` alias). It declares
 // its own local WsData/WsHandler interfaces
 // (byte-identical to server-core/central-core's types.ts) rather than importing
 // them — importing from either facade would create a cycle. The returned
@@ -210,7 +210,7 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * browser re-parses before the value lands in the TanStack cache. See
    * research/2026-06-08-global-mandatory-resource-schema-server-validation.md.
    */
-  schema: ZodType<T>;
+  schema: ZodParser<T>;
   /**
    * Row identity for `mode: "keyed"` resources. Required (and only meaningful)
    * when `mode === "keyed"`: the loader's `T` must be an array, and `keyOf`
@@ -431,7 +431,7 @@ export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
  */
 export interface ResourceContract<T, P extends ResourceParams = ResourceParams> {
   key: string;
-  schema: ZodType<T>;
+  schema: ZodParser<T>;
   keyed?: { keyOf: (row: unknown) => string };
   /**
    * Boot-critical marker, declared once on the shared client descriptor. Threaded
@@ -528,7 +528,7 @@ function contractToDefinition<T, P extends ResourceParams>(
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
-  schema: ZodType<T>;
+  schema: ZodParser<T>;
   /**
    * Boot-critical marker, derived from the shared client descriptor (via the
    * two-arg `defineResource`/`defineExternalResource` form). `Resource.Declare`
@@ -636,7 +636,7 @@ interface RegistryEntry {
    */
   externalSource?: boolean;
   /** Payload schema. The loader output is parsed against it in `timedLoad`. */
-  schema: ZodType<unknown>;
+  schema: ZodParser<unknown>;
   loader: (
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
@@ -1822,7 +1822,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       key: def.key,
       mode,
       externalSource,
-      schema: def.schema as ZodType<unknown>,
+      schema: def.schema as ZodParser<unknown>,
       loader: def.loader as (
         params: ResourceParams,
         ctx?: { affectedIds: readonly string[] },

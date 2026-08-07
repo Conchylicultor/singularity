@@ -1,4 +1,5 @@
-import { z, type ZodType } from "zod";
+import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * A `Resolvable<T>` is a payload that can carry a value OR a first-class
@@ -37,18 +38,20 @@ export type Resolvable<T> =
  * carrying the wrong arm's fields (e.g. `resolved: true` with no `value`) —
  * fails to parse, and `value` is validated by `inner` on the resolved arm.
  *
- * The `as` cast is unavoidable, not laziness: with a bare generic value schema
- * `inner: ZodType<T>`, Zod's object-output inference widens `value` to
- * `T | undefined` (its `addQuestionMarks`/`baseObjectOutputType` cannot prove a
- * generic `T` is never `undefined`), so the discriminated union is not provably
- * assignable to `ZodType<Resolvable<T>>`. The runtime shape is exactly correct;
- * only the type-level generic proof falls short. Mirrors `tolerantEnum`.
+ * The `as` cast is unavoidable, not laziness, and it is an OUTPUT-side problem
+ * that `ZodParser` does not touch: Zod's object-output inference widens `value`
+ * to `T | undefined` (its `addQuestionMarks`/`baseObjectOutputType` cannot prove
+ * a generic `T` is never `undefined`), so the discriminated union is not
+ * provably assignable to `ZodParser<Resolvable<T>>`. The runtime shape is
+ * exactly correct; only the type-level generic proof falls short.
  */
-export function resolvableSchema<T>(inner: ZodType<T>): ZodType<Resolvable<T>> {
+export function resolvableSchema<T>(
+  inner: ZodParser<T>,
+): ZodParser<Resolvable<T>> {
   return z.discriminatedUnion("resolved", [
     z.object({ resolved: z.literal(false), reason: z.string() }),
     z.object({ resolved: z.literal(true), value: inner }),
-  ]) as unknown as ZodType<Resolvable<T>>;
+  ]) as unknown as ZodParser<Resolvable<T>>;
 }
 
 /** The resolved arm: the server vouches for `value`. */

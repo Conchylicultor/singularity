@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { SignalOrigin } from "@plugins/packages/plugins/signal-origin/core";
 
@@ -11,12 +12,12 @@ const SignalOriginProcSchema = z.object({
 
 /**
  * The wire schema for `SignalOrigin`, whose TYPE is owned next door by
- * `signal-origin/core`. The explicit `z.ZodType<SignalOrigin>` annotation is
+ * `signal-origin/core`. The explicit `ZodParser<SignalOrigin>` annotation is
  * load-bearing: it makes a field dropped or renamed on either side a `tsc`
  * error here rather than a silently-narrower payload that the UI would render
  * as a shorter, wrong attribution line.
  */
-const SignalOriginSchema: z.ZodType<SignalOrigin> = z.object({
+const SignalOriginSchema: ZodParser<SignalOrigin> = z.object({
   signal: z.number(),
   siCode: z.number(),
   senderPid: z.number(),

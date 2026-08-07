@@ -16614,6 +16614,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
+    - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
+      - Core:
+        - Exports (types): `ZodParser`
 
 - **`page`** — Block-based page editor.
   - Plugins:

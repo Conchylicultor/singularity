@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { centralResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import type { AuthStateValue, AuthAccountState } from "./internal/lib";
 
@@ -20,12 +21,12 @@ const AuthAccountStateSchema = z.object({
   lastRefreshError: z
     .object({ message: z.string(), at: z.number() })
     .optional(),
-}) satisfies z.ZodType<AuthAccountState>;
+}) satisfies ZodParser<AuthAccountState>;
 
 export const AuthStateValueSchema = z.object({
   mainOffline: z.boolean().optional(),
   providers: z.record(AuthAccountStateSchema),
-}) satisfies z.ZodType<AuthStateValue>;
+}) satisfies ZodParser<AuthStateValue>;
 
 /**
  * Web-facing typed view of the auth state resource. Marked `origin: "central"`

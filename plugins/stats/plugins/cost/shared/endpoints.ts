@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-// `defineEndpoint` requires the query schema's input and output types to match
-// (and infers cleanly only for effect-free schemas), so query params are modeled
-// as plain optional strings/enums — no `.default()`/`.transform()`/`.preprocess()`.
-// The web client serialises each value with String(value), so values arrive
+// Query params are modeled as plain optional strings/enums, with the defaulting
+// done in the handlers rather than the schema. The web client serialises each
+// value with String(value), so values arrive
 // server-side as strings. Handlers default `scope` to "singularity" and parse
 // `limit` (a string) to a number, defaulting to 50.
 const scopeQuery = z.enum(["all", "singularity"]).optional();

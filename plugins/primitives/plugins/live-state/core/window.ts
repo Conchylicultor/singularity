@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { keyedResourceDescriptor, type ResourceDescriptor } from "./resource";
 
 // Bounded-membership selector encodings — the wire params for the two bounded
@@ -81,7 +81,7 @@ export interface PointResourceDescriptor<El>
  */
 export function windowResourceDescriptor<El>(
   key: string,
-  elementSchema: ZodType<El>,
+  elementSchema: ZodParser<El>,
   keyOf: (row: unknown) => string,
   opts: { defaultLimit: number; bootCritical?: true },
 ): WindowResourceDescriptor<El> {
@@ -127,7 +127,7 @@ export function windowResourceDescriptor<El>(
  */
 export function pointResourceDescriptor<El>(
   key: string,
-  elementSchema: ZodType<El>,
+  elementSchema: ZodParser<El>,
   keyOf: (row: unknown) => string,
 ): PointResourceDescriptor<El> {
   const encode = (ids: readonly string[]): PointParams => {

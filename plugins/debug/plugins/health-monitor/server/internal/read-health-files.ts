@@ -1,7 +1,7 @@
 import { listWorktreeDirs, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   HealthSampleSchema,
   HostSampleSchema,
@@ -19,7 +19,7 @@ const MAX_LINES = 1500;
 function parseSamples<T>(
   worktree: string,
   channel: string,
-  schema: ZodType<T>,
+  schema: ZodParser<T>,
   cutoff: number,
   sampledAt: (v: T) => number,
 ): T[] {

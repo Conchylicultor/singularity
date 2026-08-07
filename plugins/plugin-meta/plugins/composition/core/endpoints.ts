@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type {
@@ -12,13 +13,13 @@ const pluginIdSchema = z.custom<PluginId>((v) => typeof v === "string");
 const idList = z.array(pluginIdSchema);
 const adjacency = z.record(z.string(), idList);
 
-const edgeSchema: z.ZodType<Edge> = z.object({
+const edgeSchema: ZodParser<Edge> = z.object({
   from: pluginIdSchema,
   to: pluginIdSchema,
   kind: z.union([z.literal("hard"), z.literal("soft")]),
 });
 
-const serializedEdgeGraphSchema: z.ZodType<SerializedEdgeGraph> = z.object({
+const serializedEdgeGraphSchema: ZodParser<SerializedEdgeGraph> = z.object({
   hardForward: adjacency,
   hardReverse: adjacency,
   softForward: adjacency,
@@ -33,7 +34,7 @@ export interface CompositionData {
   disabledIds: PluginId[];
 }
 
-export const compositionDataSchema: z.ZodType<CompositionData> = z.object({
+export const compositionDataSchema: ZodParser<CompositionData> = z.object({
   graph: serializedEdgeGraphSchema,
   allIds: idList,
   disabledIds: z.array(z.custom<PluginId>((v) => typeof v === "string")),

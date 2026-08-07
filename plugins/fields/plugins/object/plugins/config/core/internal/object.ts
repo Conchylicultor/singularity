@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   fieldSchemaWithDefault,
   type FieldDef,
@@ -48,7 +49,10 @@ export function objectField<const F extends FieldsRecord>(
 
   return Object.freeze({
     type: objectFieldType as FieldType<InferFieldsObject<F>>,
-    schema: schema as unknown as z.ZodType<InferFieldsObject<F>>,
+    // The sub-shape is built as an untyped `z.ZodRawShape`, so zod cannot
+    // prove the object's output equals `InferFieldsObject<F>` — a cast the
+    // input widening does not remove.
+    schema: schema as unknown as ZodParser<InferFieldsObject<F>>,
     defaultValue: defaultValue as InferFieldsObject<F>,
     meta: pickMeta(opts),
     subFields: opts.subFields,

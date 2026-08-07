@@ -3,7 +3,6 @@ import {
   type EventOccurrence,
   type OnceEventDate,
   type RecurrenceRule,
-  ruleInterval,
   type RecurringEventDate,
   type Weekday,
   weekdayIndex,
@@ -271,7 +270,7 @@ function periodStartAt(
   anchorMs: number,
   period: number,
 ): number {
-  const step = ruleInterval(rule) * period;
+  const step = rule.interval * period;
   switch (rule.freq) {
     case "daily":
       return addUtcDays(startOfUtcDay(anchorMs), step);

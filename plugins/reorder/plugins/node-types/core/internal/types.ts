@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { ReorderNode } from "@plugins/fields/plugins/reorder-tree/core";
 
 /**
@@ -32,7 +32,7 @@ export interface ReorderNodeType<P = unknown> {
   /** True when the node holds members (`items[]`) and gets pre-rendered children. */
   container: boolean;
   /** Validates (and shapes) this type's opaque payload. */
-  schema: ZodType<P>;
+  schema: ZodParser<P>;
   render: (props: ReorderNodeRenderProps<P>) => ReactNode;
   /** Optional in-app insert affordance (e.g. "Add Spacer"). */
   insert?: { label: string; create: () => ReorderNode };

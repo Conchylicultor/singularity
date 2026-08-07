@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 // Snapshot of the chosen preprompt avatar (icon key + color + rendered svg
@@ -9,7 +10,7 @@ interface SvgNode {
   attr: Record<string, string>;
   child: SvgNode[];
 }
-const SvgNodeSchema: z.ZodType<SvgNode> = z.lazy(() =>
+const SvgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
   z.object({
     tag: z.string(),
     attr: z.record(z.string()),

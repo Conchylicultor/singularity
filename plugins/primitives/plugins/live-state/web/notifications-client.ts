@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   SharedWebSocket,
   subscribeWsStatus,
@@ -321,7 +321,7 @@ export class NotificationsClient {
    * Last-write-wins is fine: the same key always pairs to the same schema
    * (resources are singletons defined at module scope).
    */
-  private schemas = new Map<string, ZodType<unknown>>();
+  private schemas = new Map<string, ZodParser<unknown>>();
   /**
    * key → row-identity fn for keyed resources. Registered alongside the schema
    * in observe(). Used by applyDelta to key prior cache rows when merging a
@@ -626,7 +626,7 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams = {},
     origin?: ResourceOrigin,
-    schema?: ZodType<unknown>,
+    schema?: ZodParser<unknown>,
     keyOf?: (row: unknown) => string,
   ): void {
     if (schema) this.schemas.set(key, schema);
@@ -794,7 +794,7 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams,
     origin: ResourceOrigin | undefined,
-    schema: ZodType<T>,
+    schema: ZodParser<T>,
     source: "prime" | "fallback",
   ): Promise<T> {
     const channel = this.channels[socketKindFor(origin)];
@@ -1418,7 +1418,7 @@ export class NotificationsClient {
     // Parse each upsert row individually via the array schema's element — never
     // re-parse the whole array (that's the cost this protocol removes).
     // biome-ignore lint/suspicious/noExplicitAny: zod array schemas expose `.element`.
-    const element = (schema as any).element as ZodType<unknown>;
+    const element = (schema as any).element as ZodParser<unknown>;
     const upsertMap = new Map<string, unknown>();
     for (const [rowId, row] of upserts) upsertMap.set(rowId, element.parse(row));
 

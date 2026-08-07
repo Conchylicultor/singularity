@@ -28,17 +28,14 @@ export type RecurrenceFreq = (typeof RECURRENCE_FREQS)[number];
  * The rule half of a recurring date — rich enough for what venue pages actually
  * publish, closed enough that every value has exactly one meaning.
  *
- * `interval` is `.optional()` and NOT `.default(1)`, which would read better
- * here: this schema is also an `events.date` field schema, and `FieldDef.schema`
- * is `z.ZodType<T>` — input === output — so any inner `.default()` makes it
- * unusable as one (see the note on `FieldDef.schema` in `fields/core`). Every
- * read of the value inside this plugin goes through {@link ruleInterval}, and
- * nothing outside this plugin reads it, so the absent case is normalized in one
- * place rather than at each call site.
+ * `interval` defaults to 1 in the schema, so "every week" and "every 1 week"
+ * are the same parsed rule and no reader has to remember to normalize the
+ * absent case. An extractor may omit it; nothing downstream ever sees it
+ * missing.
  */
 export const RecurrenceRuleSchema = z.object({
   freq: z.enum(RECURRENCE_FREQS),
-  interval: z.number().int().positive().optional(),
+  interval: z.number().int().positive().default(1),
   byWeekday: z.array(z.enum(WEEKDAYS)).optional(),
   byMonthDay: z.array(z.number().int().min(1).max(31)).optional(),
   nthWeekday: z
@@ -52,19 +49,6 @@ export const RecurrenceRuleSchema = z.object({
 });
 
 export type RecurrenceRule = z.infer<typeof RecurrenceRuleSchema>;
-
-/**
- * The rule's step, with the absent case normalized — "every week" and "every 1
- * week" are the same rule and must never behave, describe, or IDENTIFY
- * differently.
- *
- * Plugin-internal on purpose: it is the single reader of `rule.interval`, which
- * is what keeps `undefined` from becoming a footgun each consumer has to
- * remember. Always a positive integer, so the expansion loop always advances.
- */
-export function ruleInterval(rule: RecurrenceRule): number {
-  return rule.interval ?? 1;
-}
 
 export const EventDateSchema = z.discriminatedUnion("kind", [
   z.object({

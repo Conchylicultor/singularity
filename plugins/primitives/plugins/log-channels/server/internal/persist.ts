@@ -1,6 +1,6 @@
 import { closeSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
 import { join } from "node:path";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import type { LogStream } from "./registry";
@@ -136,7 +136,7 @@ export function readChannelJson<T>(
   worktree: string,
   channel: string,
   tail: number,
-  schema: ZodType<T>,
+  schema: ZodParser<T>,
 ): T[] {
   const entries = readChannelEntries(worktree, channel, tail);
   if (!entries) return [];

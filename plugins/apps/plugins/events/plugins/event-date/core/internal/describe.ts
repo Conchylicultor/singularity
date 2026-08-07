@@ -1,7 +1,6 @@
 import {
   type EventDate,
   type RecurrenceRule,
-  ruleInterval,
   type Weekday,
 } from "./event-date";
 
@@ -106,7 +105,7 @@ export function eventDateProjection(date: EventDate): EventDateProjection {
 /* ------------------------------------------------------------------ */
 
 function describeRule(rule: RecurrenceRule, anchor: Date): string {
-  const n = ruleInterval(rule);
+  const n = rule.interval;
   switch (rule.freq) {
     case "daily": {
       const base = n === 1 ? "every day" : `every ${n} days`;

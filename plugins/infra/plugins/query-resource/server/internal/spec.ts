@@ -1,6 +1,6 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable, PgView } from "drizzle-orm/pg-core";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type {
   DependsOnEntry,
   Resource,
@@ -17,7 +17,7 @@ export interface EntitySource {
   readonly name: string;
   readonly table: PgTable;
   readonly wireColumns: Record<string, PgColumn>;
-  readonly schema: ZodType<unknown>;
+  readonly schema: ZodParser<unknown>;
 }
 
 /** The three relation kinds a query-resource can read from. */

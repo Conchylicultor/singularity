@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   type FieldDef,
   type FieldMeta,
@@ -18,7 +18,7 @@ export interface JsonFieldDef<T> extends FieldDef<T> {
  * is app-written, not hand-edited; its settings renderer is read-only.
  */
 export function jsonField<T>(
-  opts: FieldMeta & { schema: z.ZodType<T>; default: T },
+  opts: FieldMeta & { schema: ZodParser<T>; default: T },
 ): JsonFieldDef<T> {
   return Object.freeze({
     type: jsonFieldType as FieldType<T>,

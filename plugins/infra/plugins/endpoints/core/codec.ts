@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { HttpError } from "./http-error";
 
 /**
@@ -30,7 +30,7 @@ export function isCodec(x: unknown): x is Codec<unknown> {
  * Internal — callers write a bare Zod schema (or omit it for raw JSON), which
  * `defineEndpoint` normalizes to `json(schema)`.
  */
-export function json<T>(schema?: ZodType<T>): Codec<T> {
+export function json<T>(schema?: ZodParser<T>): Codec<T> {
   return {
     encodeRequest(value) {
       return { body: JSON.stringify(value), contentType: "application/json" };

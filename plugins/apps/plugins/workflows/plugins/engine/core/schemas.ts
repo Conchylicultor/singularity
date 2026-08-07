@@ -5,10 +5,10 @@ export const DefinitionStepSchema = z.object({
   pluginId: z.string(),
   label: z.string(),
   // No zod `.default()` here: this schema is the resource/wire contract, and the
-  // server always serializes complete step objects. Keeping input === output
-  // (every field required, `next`/`nextStepMapping` nullable) means the
-  // live-state resource's data type matches `z.infer` exactly, so consumers can
-  // assign a resource row straight to `WorkflowDefinition`.
+  // server always serializes complete step objects. Every field is required
+  // (`next`/`nextStepMapping` nullable rather than optional), so a payload that
+  // drops one fails loudly instead of healing to a default the server never
+  // sent.
   config: z.record(z.unknown()),
   next: z.string().nullable(),
   nextStepMapping: z.record(z.string()).nullable(),

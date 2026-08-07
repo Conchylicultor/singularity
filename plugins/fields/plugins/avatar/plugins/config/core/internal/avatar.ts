@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   getFieldResolver,
   type FieldDef,
@@ -11,7 +12,7 @@ import {
   type SvgNode,
 } from "@plugins/fields/plugins/avatar/core";
 
-const svgNodeSchema: z.ZodType<SvgNode> = z.lazy(() =>
+const svgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
   z.object({
     tag: z.string(),
     attr: z.record(z.string()),
@@ -27,7 +28,7 @@ const avatarSpecSchema = z.object({
   const resolver = getFieldResolver("avatar");
   if (resolver) return resolver(val) as AvatarSpec;
   return { icon: val.icon, color: val.color, svgNodes: val.svgNodes ?? null };
-}) as z.ZodType<AvatarSpec>;
+}) as ZodParser<AvatarSpec>;
 
 export interface AvatarFieldDef extends FieldDef<AvatarSpec> {
   readonly type: typeof avatarFieldType;

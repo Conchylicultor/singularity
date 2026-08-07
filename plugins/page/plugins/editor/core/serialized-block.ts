@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * A block detached from its document — type, payload, expanded flag, and nested
@@ -33,7 +34,7 @@ export interface SerializedBlock {
   ref?: string;
 }
 
-export const SerializedBlockSchema: z.ZodType<SerializedBlock> = z.lazy(() =>
+export const SerializedBlockSchema: ZodParser<SerializedBlock> = z.lazy(() =>
   z.object({
     type: z.string(),
     data: z.unknown(),
@@ -71,7 +72,7 @@ export interface IdentifiedBlock {
   ref?: string;
 }
 
-export const IdentifiedBlockSchema: z.ZodType<IdentifiedBlock> = z.lazy(() =>
+export const IdentifiedBlockSchema: ZodParser<IdentifiedBlock> = z.lazy(() =>
   z.object({
     id: z.string(),
     type: z.string(),

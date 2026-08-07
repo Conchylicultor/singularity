@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { activeDataBindingsResource, putBinding, deleteBinding } from "@plugins/active-data/core";
@@ -36,7 +36,7 @@ export type ActiveDataBindingHandle<T> =
     });
 
 export function useActiveDataBinding<T>(
-  schema: ZodType<T>,
+  schema: ZodParser<T>,
 ): ActiveDataBindingHandle<T> {
   const identity = useActiveDataIdentity();
   const resource = useResource(

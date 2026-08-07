@@ -18,7 +18,7 @@ export function enumTextField<const T extends readonly [string, ...string[]]>(
 ): FieldDef<T[number]> {
   return Object.freeze({
     type: textFieldType as FieldType<T[number]>,
-    schema: z.enum(values) as unknown as z.ZodType<T[number]>,
+    schema: z.enum(values),
     defaultValue: opts?.default ?? values[0],
     meta: pickMeta(opts),
   });

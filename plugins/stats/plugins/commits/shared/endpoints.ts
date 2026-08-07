@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-// `defineEndpoint` requires the query schema's input and output types to match
-// (and infers cleanly only for effect-free schemas), so query params are modeled
-// as plain string enums — no `.default()`/`.transform()`/`.preprocess()`. The web
+// Query params are modeled as plain string enums, with the conversion and
+// defaulting done in the handlers rather than the schema. The web
 // client serialises each value with String(value), so a boolean becomes the
 // literal "true"/"false" on the wire, which this enum accepts. Handlers convert
 // `dedup === "true"` to a boolean and default `bucket` to "day". Each field is

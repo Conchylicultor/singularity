@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { defineBlock } from "./define-block";
@@ -20,7 +21,7 @@ export type BlockData = Record<string, unknown> & {
 // can render its icon without importing the react-icons bundle. Exported so
 // other page-domain surfaces that surface a page icon (e.g. the backlinks
 // index) validate it the same way.
-export const SvgNodeSchema: z.ZodType<SvgNode> = z.lazy(() =>
+export const SvgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
   z.object({
     tag: z.string(),
     attr: z.record(z.string()),

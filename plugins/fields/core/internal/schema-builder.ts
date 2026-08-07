@@ -6,6 +6,12 @@ import type { FieldDef, FieldsRecord } from "./field-spec";
 // predate the field heal to its default instead of failing validation. Mirrors
 // objectField, which already wraps its sub-fields this way. The single rule
 // every FieldsRecord→z.object composition site shares.
+//
+// `.default()` feeds its value back through the inner parse, so zod wants it
+// input-typed while `defaultValue` is output-typed (deliberately — see
+// FieldDef). `defaultValue: T` still catches a plainly wrong default, but it no
+// longer guarantees the default survives a re-parse. That only bites a field
+// schema carrying a `.transform()`, of which there are none.
 export function fieldSchemaWithDefault(field: FieldDef): z.ZodTypeAny {
   return field.schema.default(field.defaultValue);
 }

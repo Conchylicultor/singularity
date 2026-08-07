@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   fieldSchemaWithDefault,
   type FieldDef,
@@ -66,7 +67,10 @@ export function listField<const F extends FieldsRecord>(
 
   return Object.freeze({
     type: listFieldType as FieldType<ListItem<F>[]>,
-    schema: schema as unknown as z.ZodType<ListItem<F>[]>,
+    // `id` is `.optional()` on the wire (legacy documents predate it) but
+    // required on `ListItem`, so the output types genuinely differ — a cast the
+    // input widening does not remove.
+    schema: schema as unknown as ZodParser<ListItem<F>[]>,
     defaultValue: (opts.default ?? []) as ListItem<F>[],
     meta: pickMeta(opts),
     itemFields: opts.itemFields,

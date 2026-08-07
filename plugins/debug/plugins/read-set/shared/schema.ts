@@ -9,10 +9,8 @@ import { z } from "zod";
 // We model only what this pane reads. `identityTable`, `recompute`, and
 // `loaderStats` are gated defensively (`.optional()`) so the response still
 // parses before the sibling server change that adds them lands. `coveredOrigins`
-// is required (like `readSet`) — the server always emits it, and `.optional()`
-// keeps input and output types identical, whereas a `.default([])` would make
-// the field optional in the endpoint's (input-typed) response and break the
-// consuming `ResourceReadSet` (output-typed) shape.
+// is required (like `readSet`) rather than defaulted, so a response that omits
+// it fails loudly instead of reading as a resource that covers nothing.
 
 export const loaderStatsSchema = z.object({
   count: z.number(),
@@ -46,8 +44,9 @@ export const resourceReadSetSchema = z.object({
   readSet: z.array(z.string()),
   /**
    * Read-set resolved to base-table space (views → their identity base), for
-   * like-for-like comparison with coveredOrigins. Required (server always emits
-   * it); a `.default([])` would break the input/output type parity.
+   * like-for-like comparison with coveredOrigins. Required rather than
+   * defaulted (the server always emits it), so an omission fails loudly
+   * instead of reading as a loader that read no base tables.
    */
   readSetBases: z.array(z.string()),
   /** Declared identity table (intent to be scoped); absent → no scoped intent. */

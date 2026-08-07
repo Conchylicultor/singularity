@@ -1,7 +1,6 @@
 import {
   type EventDate,
   type RecurrenceRule,
-  ruleInterval,
   type Weekday,
   weekdayIndex,
 } from "./event-date";
@@ -72,7 +71,7 @@ export function eventDateIdentityKey(date: EventDate): string {
  * Nothing here can collide with a `once` key: that one is always `YYYY-MM-DD`.
  */
 function recurrenceSignature(rule: RecurrenceRule): string {
-  const parts: string[] = [rule.freq, String(ruleInterval(rule))];
+  const parts: string[] = [rule.freq, String(rule.interval)];
   if (rule.byWeekday?.length) {
     parts.push(`wd=${canonicalWeekdays(rule.byWeekday).join(",")}`);
   }

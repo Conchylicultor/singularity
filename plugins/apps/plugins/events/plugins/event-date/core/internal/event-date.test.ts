@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   EventDateSchema,
   RecurrenceRuleSchema,
-  ruleInterval,
   WEEKDAYS,
 } from "./event-date";
 
@@ -18,14 +17,11 @@ describe("EventDateSchema", () => {
     expect(parsed.endsAt?.toISOString()).toBe("2026-08-13T23:00:00.000Z");
   });
 
-  test("normalizes an absent interval to 1, so the step is always positive", () => {
-    // `.optional()` rather than `.default(1)` because this schema doubles as an
-    // `events.date` field schema, which must have input === output. The absent
-    // case is normalized by `ruleInterval`, the plugin's single reader.
-    const rule = RecurrenceRuleSchema.parse({ freq: "weekly" });
-    expect(rule.interval).toBeUndefined();
-    expect(ruleInterval(rule)).toBe(1);
-    expect(ruleInterval(RecurrenceRuleSchema.parse({ freq: "weekly", interval: 3 }))).toBe(3);
+  test("defaults an absent interval to 1, so the step is always positive", () => {
+    expect(RecurrenceRuleSchema.parse({ freq: "weekly" }).interval).toBe(1);
+    expect(
+      RecurrenceRuleSchema.parse({ freq: "weekly", interval: 3 }).interval,
+    ).toBe(3);
   });
 
   test("rejects a non-positive interval", () => {

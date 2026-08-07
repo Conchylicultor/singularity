@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 // `origin` tells the browser-side NotificationsClient which WS endpoint owns
 // this resource: per-worktree backends serve the default origin, central
@@ -16,7 +16,7 @@ export interface ResourceDescriptor<T, P extends Record<string, string> = Record
    * in — `T` is bound to the schema's parse output, so type and runtime can't
    * drift.
    */
-  schema: ZodType<T>;
+  schema: ZodParser<T>;
   /**
    * Default value used as TanStack Query's `initialData` so `useResource`
    * always returns `DefinedUseQueryResult<T>` (i.e. `data: T`, never
@@ -83,7 +83,7 @@ export function resourceDescriptorByKey(key: string): ResourceDescriptor<unknown
 // policy). Without it, `keyed` is merely optional and neither branch matches.
 export function resourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(
   key: string,
-  schema: ZodType<T>,
+  schema: ZodParser<T>,
   initialData: T,
   opts?: { bootCritical?: true },
 ): ResourceDescriptor<T, P> & { keyed?: never } {
@@ -102,7 +102,7 @@ export function resourceDescriptor<T, P extends Record<string, string> = Record<
 // keyed descriptor and force a scope policy on it.
 export function keyedResourceDescriptor<T extends unknown[], P extends Record<string, string> = Record<string, never>>(
   key: string,
-  schema: ZodType<T>,
+  schema: ZodParser<T>,
   initialData: T,
   keyOf: (row: unknown) => string,
   opts?: { bootCritical?: true },
@@ -119,7 +119,7 @@ export function keyedResourceDescriptor<T extends unknown[], P extends Record<st
 // scope a delta against).
 export function centralResourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(
   key: string,
-  schema: ZodType<T>,
+  schema: ZodParser<T>,
   initialData: T,
   opts?: { bootCritical?: true },
 ): ResourceDescriptor<T, P> & { keyed?: never } {

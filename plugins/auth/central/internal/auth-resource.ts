@@ -1,5 +1,6 @@
 import { defineExternalResource } from "@plugins/framework/plugins/central-core/core";
 import { z } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { AuthStateValue, AuthAccountState } from "@plugins/auth/core";
 import { computeAuthState, warmAuthState } from "./auth-state";
 
@@ -21,12 +22,12 @@ const AuthAccountStateSchema = z.object({
   lastRefreshError: z
     .object({ message: z.string(), at: z.number() })
     .optional(),
-}) satisfies z.ZodType<AuthAccountState>;
+}) satisfies ZodParser<AuthAccountState>;
 
 const AuthStateValueSchema = z.object({
   mainOffline: z.boolean().optional(),
   providers: z.record(AuthAccountStateSchema),
-}) satisfies z.ZodType<AuthStateValue>;
+}) satisfies ZodParser<AuthStateValue>;
 
 export const authStateResource = defineExternalResource<AuthStateValue>({
   key: "auth-state",

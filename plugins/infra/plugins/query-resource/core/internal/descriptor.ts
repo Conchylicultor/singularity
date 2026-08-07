@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   keyedResourceDescriptor,
   type ResourceDescriptor,
@@ -41,7 +41,7 @@ export function queryResourceDescriptor<
   P extends Record<string, string> = Record<string, never>,
 >(
   key: string,
-  rowSchema: ZodType<Row>,
+  rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
   opts?: { bootCritical?: true },
 ): QueryResourceContract<Row, P> {

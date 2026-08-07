@@ -42,7 +42,7 @@ export function variantField(
 
   return Object.freeze({
     type: variantFieldType,
-    schema: schema as unknown as z.ZodType<VariantValue>,
+    schema: schema,
     defaultValue: opts?.default ?? { type: "" },
     meta: pickMeta(opts),
     useVariants: opts?.useVariants,

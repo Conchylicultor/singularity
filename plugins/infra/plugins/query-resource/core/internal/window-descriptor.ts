@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   pointResourceDescriptor,
   windowResourceDescriptor,
@@ -31,7 +31,7 @@ export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
  */
 export function windowQueryResourceDescriptor<Row>(
   key: string,
-  rowSchema: ZodType<Row>,
+  rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
   opts: { defaultLimit: number; bootCritical?: true },
 ): WindowQueryResourceContract<Row> {
@@ -50,7 +50,7 @@ export function windowQueryResourceDescriptor<Row>(
  */
 export function pointQueryResourceDescriptor<Row>(
   key: string,
-  rowSchema: ZodType<Row>,
+  rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
 ): PointQueryResourceContract<Row> {
   const descriptor = pointResourceDescriptor<Row>(
