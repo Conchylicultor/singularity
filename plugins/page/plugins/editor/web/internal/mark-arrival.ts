@@ -39,7 +39,10 @@ import { $markStep } from "./mark-depth";
  * hand back the pre-placement selection, and the boundary read would be of the
  * block the caret just left.
  */
-export function markStepOnArrival(editor: LexicalEditor, dir: "left" | "right"): void {
+export function markStepOnArrival(
+  editor: LexicalEditor,
+  dir: "left" | "right",
+): void {
   editor.update(() => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection) || !selection.isCollapsed()) return;

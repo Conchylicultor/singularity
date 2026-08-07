@@ -69,7 +69,9 @@ export interface BlockTextExtension extends RunsTokenExtension {
 
 const extensions: BlockTextExtension[] = [];
 
-export function registerBlockTextExtension(ext: BlockTextExtension): () => void {
+export function registerBlockTextExtension(
+  ext: BlockTextExtension,
+): () => void {
   extensions.push(ext);
   return () => {
     const idx = extensions.indexOf(ext);
@@ -460,7 +462,10 @@ function offsetOfElementAnchor(
  */
 export function $resolveLinearOffset(
   offset: number,
-): { leaf: LexicalNode; leafStart: number } | { emptyParagraph: ElementNode } | null {
+):
+  | { leaf: LexicalNode; leafStart: number }
+  | { emptyParagraph: ElementNode }
+  | null {
   const total = $paragraphsPlainLength();
   const target = Math.min(Math.max(offset, 0), total);
 
@@ -487,7 +492,8 @@ export function $resolveLinearOffset(
     });
     if (r) break outer;
     // Empty paragraph with target landing here (no leaves consumed it).
-    if (startBefore === cursor && target <= cursor) return { emptyParagraph: para };
+    if (startBefore === cursor && target <= cursor)
+      return { emptyParagraph: para };
   }
 
   if (hit) return hit;
@@ -517,7 +523,11 @@ export function $placeCaretAtLinearOffset(offset: number): void {
     return;
   }
   const total = $paragraphsPlainLength();
-  placeAtLeaf(resolved.leaf, Math.min(Math.max(offset, 0), total), resolved.leafStart);
+  placeAtLeaf(
+    resolved.leaf,
+    Math.min(Math.max(offset, 0), total),
+    resolved.leafStart,
+  );
 }
 
 /** The last leaf descendant of `node` (null when it has none). */
@@ -533,7 +543,11 @@ function lastLeafOf(node: LexicalNode): LexicalNode | null {
  * Collapse the caret onto a single resolved leaf at linear `target`, where the
  * leaf spans `[leafStart, leafStart + nodePlainLength(leaf)]`.
  */
-function placeAtLeaf(leaf: LexicalNode, target: number, leafStart: number): void {
+function placeAtLeaf(
+  leaf: LexicalNode,
+  target: number,
+  leafStart: number,
+): void {
   if ($isTextNode(leaf)) {
     const off = Math.min(target - leafStart, leaf.getTextContentSize());
     const sel = $createRangeSelection();

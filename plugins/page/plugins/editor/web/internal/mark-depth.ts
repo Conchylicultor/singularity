@@ -96,9 +96,13 @@ export function readMarkDepth(editor: LexicalEditor): MarkDepthEntry | null {
  * (`removeMarkSpan` sets it to the boundary's residual marks), and there must be
  * exactly one way the caret's pending marks are written.
  */
-export function $setCaretMarks(selection: RangeSelection, marks: readonly Mark[]): void {
+export function $setCaretMarks(
+  selection: RangeSelection,
+  marks: readonly Mark[],
+): void {
   for (const mark of MARK_ORDER) {
-    if (selection.hasFormat(mark) !== marks.includes(mark)) selection.formatText(mark);
+    if (selection.hasFormat(mark) !== marks.includes(mark))
+      selection.formatText(mark);
   }
 }
 
@@ -117,7 +121,11 @@ export function $setCaretMarks(selection: RangeSelection, marks: readonly Mark[]
  * The store is written from INSIDE the update callback, so the anchor it records
  * is the one the step actually landed on rather than one read a turn earlier.
  */
-export function markStep(editor: LexicalEditor, marks: Mark[], escaped: boolean): void {
+export function markStep(
+  editor: LexicalEditor,
+  marks: Mark[],
+  escaped: boolean,
+): void {
   editor.update(() => $markStep(editor, marks, escaped));
 }
 
@@ -131,7 +139,11 @@ export function markStep(editor: LexicalEditor, marks: Mark[], escaped: boolean)
  * COMMITTED one. Deciding and recording inside one update is the only way the
  * anchor recorded here is the anchor the placement produced.
  */
-export function $markStep(editor: LexicalEditor, marks: Mark[], escaped: boolean): void {
+export function $markStep(
+  editor: LexicalEditor,
+  marks: Mark[],
+  escaped: boolean,
+): void {
   // Any outcome other than a completed escape leaves NO entry: stepping back
   // inside clears it, and so does a selection that drifted out from under the
   // enqueued update (the same drift-abort the content mutations make, and just
@@ -142,7 +154,11 @@ export function $markStep(editor: LexicalEditor, marks: Mark[], escaped: boolean
   $setCaretMarks(selection, marks);
   if (!escaped) return;
   const anchor = selection.anchor;
-  depths.set(editor, { anchorKey: anchor.key, anchorOffset: anchor.offset, marks });
+  depths.set(editor, {
+    anchorKey: anchor.key,
+    anchorOffset: anchor.offset,
+    marks,
+  });
 }
 
 /**

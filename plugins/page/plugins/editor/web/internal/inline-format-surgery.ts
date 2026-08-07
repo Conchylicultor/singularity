@@ -11,7 +11,12 @@ import {
   type LexicalNode,
   type TextNode,
 } from "lexical";
-import { matchInlineFormat, tokenOf, type InlineFormatMatch, type Mark } from "../../core";
+import {
+  matchInlineFormat,
+  tokenOf,
+  type InlineFormatMatch,
+  type Mark,
+} from "../../core";
 import { getBlockTextExtensions } from "./block-text-extensions";
 import { INLINE_FORMAT_TAG } from "./inline-format-tag";
 import type { DelimiterDeletion } from "./mark-boundary";
@@ -120,7 +125,10 @@ export function nextLeafInParagraph(node: LexicalNode): LexicalNode | null {
  * chip genuinely is not a word character, so `_x_` right after one should stay
  * eligible for italics.
  */
-function flankChar(leaf: LexicalNode | null, side: "last" | "first"): string | undefined {
+function flankChar(
+  leaf: LexicalNode | null,
+  side: "last" | "first",
+): string | undefined {
   if (leaf === null) return undefined;
   if ($isLineBreakNode(leaf)) return undefined;
   const text = $isTextNode(leaf)
@@ -193,7 +201,12 @@ export function $scanInlineFormat(): InlineFormatPlan | null {
         : flankChar(nextLeafInParagraph(node), "first"),
   });
   if (match === null) return null;
-  return { nodeKey: node.getKey(), caretOffset: anchor.offset, nodeText, match };
+  return {
+    nodeKey: node.getKey(),
+    caretOffset: anchor.offset,
+    nodeText,
+    match,
+  };
 }
 
 /**
@@ -213,11 +226,17 @@ export function $scanInlineFormat(): InlineFormatPlan | null {
  * running it, and the boundary would be gone by the time it ran. That is not a
  * silent degradation — see the `ran` check below.
  */
-export function applyInlineFormat(editor: LexicalEditor, plan: InlineFormatPlan): boolean {
+export function applyInlineFormat(
+  editor: LexicalEditor,
+  plan: InlineFormatPlan,
+): boolean {
   // One mutable holder rather than two captured `let`s: TypeScript's
   // control-flow analysis does not reset a captured `let`'s narrowing across the
   // call that mutates it, so `if (!ran)` would type as provably dead code.
-  const outcome: { ran: boolean; applied: boolean } = { ran: false, applied: false };
+  const outcome: { ran: boolean; applied: boolean } = {
+    ran: false,
+    applied: false,
+  };
   editor.update(
     () => {
       outcome.ran = true;
@@ -247,7 +266,8 @@ export function applyInlineFormat(editor: LexicalEditor, plan: InlineFormatPlan)
       if (!$isRangeSelection(selection) || !selection.isCollapsed()) return;
       const anchor = selection.anchor;
       if (anchor.type !== "text") return;
-      if (anchor.key !== plan.nodeKey || anchor.offset !== plan.caretOffset) return;
+      if (anchor.key !== plan.nodeKey || anchor.offset !== plan.caretOffset)
+        return;
 
       // The caret's PENDING typing style — what the next typed character would
       // have carried. Restored onto the post-transform caret in the last step.
@@ -362,7 +382,9 @@ export interface MarkSpanPlan {
  * this keystroke IS a delimiter deletion; this only snapshots the live position
  * it will be re-verified against.
  */
-export function $scanMarkSpan(delimiter: DelimiterDeletion): MarkSpanPlan | null {
+export function $scanMarkSpan(
+  delimiter: DelimiterDeletion,
+): MarkSpanPlan | null {
   const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
   const anchor = selection.anchor;
@@ -401,7 +423,9 @@ function $stripMarkSpan(
       // Resolve the neighbour BEFORE mutating, so the walk never reads a sibling
       // relation through a node it has just made writable.
       const next: LexicalNode | null =
-        dir === "before" ? prevLeafInParagraph(cursor) : nextLeafInParagraph(cursor);
+        dir === "before"
+          ? prevLeafInParagraph(cursor)
+          : nextLeafInParagraph(cursor);
       // NODE-level and `hasFormat`-guarded, byte-identically to
       // `applyInlineFormat` above and to `runs-lexical.ts`'s `styleTextNode` —
       // which is why the serializer reads back exactly what is left here.
@@ -446,8 +470,14 @@ function $stripMarkSpan(
  * the residual and the stop's marks coincide), which is why nothing needed it
  * while the stop's mark set was miscomputed as `left ∩ right`.
  */
-export function removeMarkSpan(editor: LexicalEditor, plan: MarkSpanPlan): boolean {
-  const outcome: { ran: boolean; applied: boolean } = { ran: false, applied: false };
+export function removeMarkSpan(
+  editor: LexicalEditor,
+  plan: MarkSpanPlan,
+): boolean {
+  const outcome: { ran: boolean; applied: boolean } = {
+    ran: false,
+    applied: false,
+  };
   editor.update(
     () => {
       outcome.ran = true;
@@ -464,11 +494,13 @@ export function removeMarkSpan(editor: LexicalEditor, plan: MarkSpanPlan): boole
       if (!$isRangeSelection(selection) || !selection.isCollapsed()) return;
       const anchor = selection.anchor;
       if (anchor.type !== "text") return;
-      if (anchor.key !== plan.anchorKey || anchor.offset !== plan.anchorOffset) return;
+      if (anchor.key !== plan.anchorKey || anchor.offset !== plan.anchorOffset)
+        return;
 
       const size = node.getTextContentSize();
       const leftLeaf = plan.anchorOffset > 0 ? node : prevLeafInParagraph(node);
-      const rightLeaf = plan.anchorOffset < size ? node : nextLeafInParagraph(node);
+      const rightLeaf =
+        plan.anchorOffset < size ? node : nextLeafInParagraph(node);
       const before = $stripMarkSpan(leftLeaf, plan.delimiter.before, "before");
       const after = $stripMarkSpan(rightLeaf, plan.delimiter.after, "after");
       outcome.applied = before || after;

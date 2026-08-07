@@ -27,7 +27,11 @@ import {
   type Mark,
 } from "../../core";
 import type { CaretContext } from "./caret-geometry";
-import { delimiterDeletion, virtualStop, type DelimiterDeletion } from "./mark-boundary";
+import {
+  delimiterDeletion,
+  virtualStop,
+  type DelimiterDeletion,
+} from "./mark-boundary";
 
 export type KeystrokeKey =
   | "Enter"
@@ -200,7 +204,10 @@ function isIndented(node: BlockNode): boolean {
  * the anchor's children, so a later child is not one (its Backspace has a visible
  * line above it inside the box and takes the ordinary ladder).
  */
-function firstChildAnchor(ctx: IntentContext, node: BlockNode): BlockNode | null {
+function firstChildAnchor(
+  ctx: IntentContext,
+  node: BlockNode,
+): BlockNode | null {
   if (node.parentId === null) return null;
   const parent = ctx.nodes.find((n) => n.id === node.parentId);
   if (!parent || !ctx.isAnchor(parent)) return null;
@@ -273,12 +280,17 @@ function hasExcessIndentation(ctx: IntentContext, node: BlockNode): boolean {
  * which is what leaves ordinary caret movement — a press of the same key one
  * position earlier, or one press later — completely untouched.
  */
-function markStepFor(caret: CaretContext, dir: "left" | "right"): KeyIntent | null {
+function markStepFor(
+  caret: CaretContext,
+  dir: "left" | "right",
+): KeyIntent | null {
   if (caret.boundary === null) return null;
   const stop = virtualStop(caret.boundary);
   if (stop === null) return null;
   if (dir === stop.direction) {
-    return caret.escaped ? null : { type: "markStep", marks: stop.marks, escaped: true };
+    return caret.escaped
+      ? null
+      : { type: "markStep", marks: stop.marks, escaped: true };
   }
   return caret.escaped
     ? { type: "markStep", marks: caret.boundary.natural, escaped: false }
@@ -307,8 +319,12 @@ function markStepFor(caret: CaretContext, dir: "left" | "right"): KeyIntent | nu
  * Ordered BELOW `markStepFor` at each arrow: a delimiter still to be crossed HERE
  * is nearer than one a step away.
  */
-function markArriveFor(caret: CaretContext, dir: "left" | "right"): KeyIntent | null {
-  const dest = dir === "left" ? caret.stepLeftBoundary : caret.stepRightBoundary;
+function markArriveFor(
+  caret: CaretContext,
+  dir: "left" | "right",
+): KeyIntent | null {
+  const dest =
+    dir === "left" ? caret.stepLeftBoundary : caret.stepRightBoundary;
   if (dest === null) return null;
   const stop = virtualStop(dest);
   if (stop === null) return null;
@@ -346,8 +362,12 @@ function markArriveFor(caret: CaretContext, dir: "left" | "right"): KeyIntent | 
  * `virtualStop` returning non-null already guarantees the deletion is non-empty
  * (the two sides differ), so there is no "nothing to strip" arm to fall through.
  */
-function unmarkFor(caret: CaretContext, side: "before" | "after"): KeyIntent | null {
-  if (!caret.escaped || !caret.collapsed || caret.boundary === null) return null;
+function unmarkFor(
+  caret: CaretContext,
+  side: "before" | "after",
+): KeyIntent | null {
+  if (!caret.escaped || !caret.collapsed || caret.boundary === null)
+    return null;
   const stop = virtualStop(caret.boundary);
   if (stop === null) return null;
   if ((stop.direction === "right" ? "before" : "after") !== side) return null;
@@ -400,10 +420,21 @@ export function resolveKeystroke(
       // split swaps type, else the origin type. Running the origin's transform on a
       // tail validated against a DIFFERENT schema would corrupt it — so apply only
       // when the tail type equals the origin type.
-      const tailType = asChild ? (p?.childType ?? node.type) : (siblingType ?? node.type);
+      const tailType = asChild
+        ? (p?.childType ?? node.type)
+        : (siblingType ?? node.type);
       const tailData =
-        p?.dataOnSplit && tailType === node.type ? p.dataOnSplit(node.data) : undefined;
-      return { type: "split", position, asChild, childType: p?.childType, siblingType, tailData };
+        p?.dataOnSplit && tailType === node.type
+          ? p.dataOnSplit(node.data)
+          : undefined;
+      return {
+        type: "split",
+        position,
+        asChild,
+        childType: p?.childType,
+        siblingType,
+        tailData,
+      };
     }
     case "Backspace": {
       // The nearest thing to the LEFT may be a virtual mark delimiter the caret
@@ -424,7 +455,10 @@ export function resolveKeystroke(
       // outdent one level; then the line break above → merge into the previous
       // visible line; nothing left → step out (same as ArrowLeft).
       const p = ctx.editPolicy;
-      if (p?.resetToOnBackspaceAtStart && node.type !== p.resetToOnBackspaceAtStart)
+      if (
+        p?.resetToOnBackspaceAtStart &&
+        node.type !== p.resetToOnBackspaceAtStart
+      )
         return { type: "convertTo", to: p.resetToOnBackspaceAtStart };
       // "Indentation" that is really a CONTAINER: the first child of an anchor
       // escapes the box by dissolving it, not by outdenting. This rung must sit
@@ -529,7 +563,9 @@ export function resolveKeystroke(
         if (closed) return { type: "expand", blockId: closed.id };
         return isIndented(node) ? { type: "outdent" } : { type: "noop" };
       }
-      return hasPrevSibling(ctx.nodes, node) ? { type: "indent" } : { type: "noop" };
+      return hasPrevSibling(ctx.nodes, node)
+        ? { type: "indent" }
+        : { type: "noop" };
     }
     case "ArrowUp": {
       // Cross blocks only on the true top visual line; otherwise move within.

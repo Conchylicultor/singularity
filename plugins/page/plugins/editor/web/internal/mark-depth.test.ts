@@ -33,7 +33,11 @@ import type { Mark } from "../../core";
 import { markStep, readMarkDepth, registerMarkDepth } from "./mark-depth";
 
 /** A headless editor holding one paragraph: a `{code}` run "zz" and nothing else. */
-function makeEditor(): { editor: LexicalEditor; nodeKey: string; dispose: () => void } {
+function makeEditor(): {
+  editor: LexicalEditor;
+  nodeKey: string;
+  dispose: () => void;
+} {
   const editor = createEditor({
     namespace: "mark-depth-test",
     onError: (e) => {
@@ -97,7 +101,11 @@ describe("markStep records depth", () => {
     placeCaret(editor, nodeKey, 2);
 
     markStep(editor, NO_MARKS, true);
-    expect(readMarkDepth(editor)).toEqual({ anchorKey: nodeKey, anchorOffset: 2, marks: [] });
+    expect(readMarkDepth(editor)).toEqual({
+      anchorKey: nodeKey,
+      anchorOffset: 2,
+      marks: [],
+    });
 
     markStep(editor, ["code"], false);
     expect(readMarkDepth(editor)).toBe(null);
@@ -146,7 +154,11 @@ describe("the entry dies the moment the caret leaves", () => {
 
     fireSelectionChange(editor);
     fireSelectionChange(editor);
-    expect(readMarkDepth(editor)).toEqual({ anchorKey: nodeKey, anchorOffset: 2, marks: [] });
+    expect(readMarkDepth(editor)).toEqual({
+      anchorKey: nodeKey,
+      anchorOffset: 2,
+      marks: [],
+    });
     dispose();
   });
 
@@ -169,7 +181,8 @@ describe("the entry dies the moment the caret leaves", () => {
     editor.update(
       () => {
         const para = $getRoot().getFirstChild();
-        if (!$isElementNode(para)) throw new Error("fixture lost its paragraph");
+        if (!$isElementNode(para))
+          throw new Error("fixture lost its paragraph");
         para.append($createTextNode("x"));
       },
       { discrete: true },
@@ -202,7 +215,8 @@ describe("the re-assert projects the store onto selection.format", () => {
     editor.update(
       () => {
         const selection = $getSelection();
-        if (!$isRangeSelection(selection)) throw new Error("fixture lost its caret");
+        if (!$isRangeSelection(selection))
+          throw new Error("fixture lost its caret");
         selection.formatText("code");
       },
       { discrete: true },
@@ -228,7 +242,8 @@ describe("the re-assert projects the store onto selection.format", () => {
     editor.update(
       () => {
         const selection = $getSelection();
-        if (!$isRangeSelection(selection)) throw new Error("fixture lost its caret");
+        if (!$isRangeSelection(selection))
+          throw new Error("fixture lost its caret");
         selection.formatText("code");
       },
       { discrete: true },

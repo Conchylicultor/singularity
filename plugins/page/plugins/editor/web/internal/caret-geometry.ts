@@ -41,7 +41,10 @@ import {
   $placeCaretAtLinearOffset,
   $resolveLinearOffset,
 } from "./block-text-extensions";
-import { nextLeafInParagraph, prevLeafInParagraph } from "./inline-format-surgery";
+import {
+  nextLeafInParagraph,
+  prevLeafInParagraph,
+} from "./inline-format-surgery";
 import type { MarkBoundary } from "./mark-boundary";
 import type { MarkDepthEntry } from "./mark-depth";
 
@@ -135,7 +138,9 @@ function $leafMarks(leaf: LexicalNode | null): Mark[] {
  * off, and `virtualStop` answers `null` for it: the caret has not
  * stepped out of either run, so there is no delimiter for it to have crossed.
  */
-export function $readMarkBoundary(selection: RangeSelection): MarkBoundary | null {
+export function $readMarkBoundary(
+  selection: RangeSelection,
+): MarkBoundary | null {
   if (!selection.isCollapsed()) return null;
   const anchor = selection.anchor;
   if (anchor.type === "element") {
@@ -154,7 +159,10 @@ export function $readMarkBoundary(selection: RangeSelection): MarkBoundary | nul
 }
 
 /** The boundary at `within` inside the text leaf `node`, or null mid-run. */
-function $boundaryAtTextAnchor(node: TextNode, within: number): MarkBoundary | null {
+function $boundaryAtTextAnchor(
+  node: TextNode,
+  within: number,
+): MarkBoundary | null {
   const size = node.getTextContentSize();
   const atLeafStart = within === 0;
   const atLeafEnd = within === size;
@@ -224,7 +232,13 @@ function pickEdge(rects: DOMRectList, edge: "first" | "last"): DOMRect | null {
   const boxes = [...rects].filter((r) => usable(r));
   if (boxes.length === 0) return null;
   return boxes.reduce((best, r) =>
-    edge === "first" ? (r.top < best.top ? r : best) : (r.bottom > best.bottom ? r : best),
+    edge === "first"
+      ? r.top < best.top
+        ? r
+        : best
+      : r.bottom > best.bottom
+        ? r
+        : best,
   );
 }
 
@@ -241,7 +255,10 @@ function pickEdge(rects: DOMRectList, edge: "first" | "last"): DOMRect | null {
  * Only ever called on LEAVES, so "the node's box" and "the node's line box" are
  * the same thing.
  */
-function nodeLineRect(node: Node | null | undefined, edge: "first" | "last"): DOMRect | null {
+function nodeLineRect(
+  node: Node | null | undefined,
+  edge: "first" | "last",
+): DOMRect | null {
   if (!node) return null;
   const range = document.createRange();
   if (node.nodeType === Node.TEXT_NODE) range.selectNodeContents(node);
@@ -281,7 +298,10 @@ function* leavesFrom(node: Node, edge: "first" | "last"): Generator<Node> {
  * answer a line: an unmeasurable trailing leaf hands off to the leaf before it,
  * still on the same edge, whereas the parent's box spans every line at once.
  */
-function edgeLineRect(root: HTMLElement, edge: "first" | "last"): DOMRect | null {
+function edgeLineRect(
+  root: HTMLElement,
+  edge: "first" | "last",
+): DOMRect | null {
   for (const leaf of leavesFrom(root, edge)) {
     const rect = nodeLineRect(leaf, edge);
     if (rect) return rect;
@@ -361,45 +381,47 @@ export function readCaretContext(
   editor: LexicalEditor,
   depth: MarkDepthEntry | null = null,
 ): CaretContext | null {
-  const structural = editor.getEditorState().read(():
-    | {
-        offset: number;
-        collapsed: boolean;
-        atStart: boolean;
-        atEnd: boolean;
-        boundary: MarkBoundary | null;
-        escaped: boolean;
-        stepLeftBoundary: MarkBoundary | null;
-        stepRightBoundary: MarkBoundary | null;
-      }
-    | null => {
-    const selection = $getSelection();
-    if (!$isRangeSelection(selection)) return null;
-    // One walk each for the offset and the total; derive start/end from them.
-    const off = $linearCaretOffset();
-    if (off === null) return null;
-    const total = $paragraphsPlainLength();
-    const collapsed = selection.isCollapsed();
-    const anchor = selection.anchor;
-    return {
-      offset: off,
-      collapsed,
-      atStart: collapsed && off === 0,
-      atEnd: collapsed && off === total,
-      boundary: $readMarkBoundary(selection),
-      escaped:
-        collapsed &&
-        depth !== null &&
-        anchor.key === depth.anchorKey &&
-        anchor.offset === depth.anchorOffset,
-      // Only INSIDE the block: a step off either edge is a cross-block move, and
-      // clamping would otherwise re-read the caret's own position as its own
-      // destination — which would let a boundary at offset 0 absorb the ArrowLeft
-      // that is supposed to leave the block.
-      stepLeftBoundary: collapsed && off > 0 ? $boundaryAtLinearOffset(off - 1) : null,
-      stepRightBoundary: collapsed && off < total ? $boundaryAtLinearOffset(off + 1) : null,
-    };
-  });
+  const structural = editor.getEditorState().read(
+    (): {
+      offset: number;
+      collapsed: boolean;
+      atStart: boolean;
+      atEnd: boolean;
+      boundary: MarkBoundary | null;
+      escaped: boolean;
+      stepLeftBoundary: MarkBoundary | null;
+      stepRightBoundary: MarkBoundary | null;
+    } | null => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return null;
+      // One walk each for the offset and the total; derive start/end from them.
+      const off = $linearCaretOffset();
+      if (off === null) return null;
+      const total = $paragraphsPlainLength();
+      const collapsed = selection.isCollapsed();
+      const anchor = selection.anchor;
+      return {
+        offset: off,
+        collapsed,
+        atStart: collapsed && off === 0,
+        atEnd: collapsed && off === total,
+        boundary: $readMarkBoundary(selection),
+        escaped:
+          collapsed &&
+          depth !== null &&
+          anchor.key === depth.anchorKey &&
+          anchor.offset === depth.anchorOffset,
+        // Only INSIDE the block: a step off either edge is a cross-block move, and
+        // clamping would otherwise re-read the caret's own position as its own
+        // destination — which would let a boundary at offset 0 absorb the ArrowLeft
+        // that is supposed to leave the block.
+        stepLeftBoundary:
+          collapsed && off > 0 ? $boundaryAtLinearOffset(off - 1) : null,
+        stepRightBoundary:
+          collapsed && off < total ? $boundaryAtLinearOffset(off + 1) : null,
+      };
+    },
+  );
   if (!structural) return null;
 
   const root = editor.getRootElement();
@@ -481,7 +503,10 @@ export function placeCaretAtOffset(
   scroll = false,
 ): void {
   focusEditor(editor, scroll);
-  editor.update(() => $placeCaretAtOffset(offset), scroll ? undefined : { tag: SKIP_SCROLL_TAG });
+  editor.update(
+    () => $placeCaretAtOffset(offset),
+    scroll ? undefined : { tag: SKIP_SCROLL_TAG },
+  );
 }
 
 /**
@@ -621,9 +646,10 @@ export function placeCaretAtColumn(
       // simply vanish. Land beside the decorator instead, preferring the side the
       // point actually fell on.
       if ($isDecoratorNode(node)) {
-        const hitRect = (hit.node.nodeType === Node.ELEMENT_NODE
-          ? (hit.node as Element)
-          : hit.node.parentElement
+        const hitRect = (
+          hit.node.nodeType === Node.ELEMENT_NODE
+            ? (hit.node as Element)
+            : hit.node.parentElement
         )?.getBoundingClientRect();
         const after = !hitRect || clampedX > (hitRect.left + hitRect.right) / 2;
         const landed = after

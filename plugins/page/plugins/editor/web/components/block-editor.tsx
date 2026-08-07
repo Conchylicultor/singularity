@@ -70,7 +70,10 @@ import { resolveRailSeats } from "../internal/rail-seat";
 import { useAnchorTypes, useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
-import { useBlockSelection, type BlockSelectionActions } from "../internal/use-block-selection";
+import {
+  useBlockSelection,
+  type BlockSelectionActions,
+} from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
 import { BLOCK_GUTTER, blockContentLeft } from "../internal/page-column";
 import { FileDropOverlay } from "./file-drop-overlay";
@@ -217,7 +220,10 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
       caretBefore={props.caretBefore}
       caretAfter={props.caretAfter}
     >
-      <BlockEditorInner contentClassName={props.contentClassName} handleRef={ref} />
+      <BlockEditorInner
+        contentClassName={props.contentClassName}
+        handleRef={ref}
+      />
     </BlockEditorProvider>
   );
 }
@@ -270,7 +276,10 @@ function MemoryBlockEditor({
       caretBefore={caretBefore}
       caretAfter={caretAfter}
     >
-      <BlockEditorInner contentClassName={contentClassName} handleRef={handleRef} />
+      <BlockEditorInner
+        contentClassName={contentClassName}
+        handleRef={handleRef}
+      />
     </BlockEditorProvider>
   );
 }
@@ -285,8 +294,15 @@ function BlockEditorInner({
   // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
   // (set by the effect below) tracks optimistic state — required for chained-op
   // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
-  const { setFlatOrder, setRows, blocks, pending, insertFirst, focusBlock, focusBlockBoundary } =
-    useBlockEditor();
+  const {
+    setFlatOrder,
+    setRows,
+    blocks,
+    pending,
+    insertFirst,
+    focusBlock,
+    focusBlockBoundary,
+  } = useBlockEditor();
 
   // The Cmd+Z / Cmd+Shift+Z / Cmd+Y bindings are NOT registered here — they are
   // the tab's (`TabSurface` mounts `useUndoRedoShortcuts()` once per surface, so
@@ -309,7 +325,10 @@ function BlockEditorInner({
       return { rows: [] as Block[], flat: [] as FlatBlock[] };
     }
     const sorted = [...blocks].sort((a, b) => Rank.compare(a.rank, b.rank));
-    return { rows: sorted, flat: flattenVisible(buildTree(sorted), anchorTypes) };
+    return {
+      rows: sorted,
+      flat: flattenVisible(buildTree(sorted), anchorTypes),
+    };
   }, [blocks, pending, anchorTypes]);
 
   useEffect(() => {
@@ -356,14 +375,16 @@ function BlockEditorInner({
   );
 
   if (pending) {
-    return (
-      <Loading variant="rows" />
-    );
+    return <Loading variant="rows" />;
   }
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>
-      <SelectionLayer rows={rows} flat={flat} contentClassName={contentClassName} />
+      <SelectionLayer
+        rows={rows}
+        flat={flat}
+        contentClassName={contentClassName}
+      />
     </MultiSelectProvider>
   );
 }
@@ -407,8 +428,14 @@ function SelectionLayer({
     () => selectionRoots(rows, selectedIds),
     [rows, selectedIds],
   );
-  const indentable = useMemo(() => canIndent(toNodes(rows), roots), [rows, roots]);
-  const outdentable = useMemo(() => canOutdent(toNodes(rows), roots), [rows, roots]);
+  const indentable = useMemo(
+    () => canIndent(toNodes(rows), roots),
+    [rows, roots],
+  );
+  const outdentable = useMemo(
+    () => canOutdent(toNodes(rows), roots),
+    [rows, roots],
+  );
 
   // `contentRef` is the centered block-content wrapper the marquee overlay is
   // positioned within. The full-width interaction surface it sits inside — the
@@ -428,7 +455,9 @@ function SelectionLayer({
     (dir: "up" | "down") => {
       const roots = selectionRoots(rowsRef.current, selectedRef.current);
       if (roots.length === 0) return;
-      const moving = new Set(roots.flatMap((r) => subtreeIds(rowsRef.current, r)));
+      const moving = new Set(
+        roots.flatMap((r) => subtreeIds(rowsRef.current, r)),
+      );
       // Operate within the first root's sibling list (the common case: a
       // contiguous run of same-parent blocks).
       const first = rowsRef.current.find((r) => r.id === roots[0]);
@@ -449,7 +478,9 @@ function SelectionLayer({
         // Place before the sibling currently above the run.
         const above = siblings[top - 1];
         if (!above) return;
-        const aboveIdxInRemaining = remaining.findIndex((s) => s.id === above.id);
+        const aboveIdxInRemaining = remaining.findIndex(
+          (s) => s.id === above.id,
+        );
         afterId = remaining[aboveIdxInRemaining - 1]?.id ?? null;
       } else {
         const below = siblings[bottom + 1];
@@ -472,7 +503,14 @@ function SelectionLayer({
       focusBlock,
       moveSelection,
     }),
-    [indentBlocks, outdentBlocks, bulkDelete, bulkDuplicate, focusBlock, moveSelection],
+    [
+      indentBlocks,
+      outdentBlocks,
+      bulkDelete,
+      bulkDuplicate,
+      focusBlock,
+      moveSelection,
+    ],
   );
 
   const {
@@ -601,15 +639,23 @@ function SelectionLayer({
       // after the current selection — resolved through the generic registry so
       // this consumer never names a specific block type. Skipped entirely in the
       // in-memory (non-persisting) mode: there is no server to store the blob.
-      const picked = allowAttachments ? resolvePastedBlock(e.clipboardData) : null;
+      const picked = allowAttachments
+        ? resolvePastedBlock(e.clipboardData)
+        : null;
       if (picked) {
         e.preventDefault();
         const { file, handler } = picked;
-        const afterId = pasteAnchorId(toNodes(rowsRef.current), selectedRef.current, focusedBlockId);
+        const afterId = pasteAnchorId(
+          toNodes(rowsRef.current),
+          selectedRef.current,
+          focusedBlockId,
+        );
         void (async () => {
           const data = await handler.build(file);
           paste({
-            blocks: [{ type: handler.type, data, expanded: false, children: [] }],
+            blocks: [
+              { type: handler.type, data, expanded: false, children: [] },
+            ],
             afterId,
           });
         })();
@@ -634,7 +680,11 @@ function SelectionLayer({
       }
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();
-      const afterId = pasteAnchorId(toNodes(rowsRef.current), selectedRef.current, focusedBlockId);
+      const afterId = pasteAnchorId(
+        toNodes(rowsRef.current),
+        selectedRef.current,
+        focusedBlockId,
+      );
       paste({ blocks: forest, afterId });
     },
     [handles, paste, focusedBlockId, containerRef, allowAttachments],
@@ -642,9 +692,10 @@ function SelectionLayer({
 
   // ---- Pointer drag-select (background marquee + cross-block text promotion) --
 
-  const [marquee, setMarquee] = useState<{ top: number; height: number } | null>(
-    null,
-  );
+  const [marquee, setMarquee] = useState<{
+    top: number;
+    height: number;
+  } | null>(null);
   /**
    * `background` — the press landed on empty surface (a row's gutter rail, the gap
    * between rows, the area below the last block). Block-selection starts on the
@@ -724,7 +775,11 @@ function SelectionLayer({
         return;
       }
       if (y > lastEl.getBoundingClientRect().bottom) {
-        if (fallback && lastBlock.type === fallback.type && textOf(lastBlock) === "") {
+        if (
+          fallback &&
+          lastBlock.type === fallback.type &&
+          textOf(lastBlock) === ""
+        ) {
           focusBlockBoundary(lastBlock.id, "end");
         } else if (fallback) {
           insert(fallback.type, fallback.empty?.() ?? {});
@@ -913,7 +968,12 @@ function SelectionLayer({
         // block; a drag was a marquee selection and is left alone. A text press
         // needs neither — the browser already placed the caret. A CANCELLED
         // gesture is not a click at all, so it takes the teardown without this.
-        if (commitClick && start && start.mode === "background" && !dragMovedRef.current) {
+        if (
+          commitClick &&
+          start &&
+          start.mode === "background" &&
+          !dragMovedRef.current
+        ) {
           onEmptyClick(start.x, start.y);
         }
         dragStartRef.current = null;
@@ -1053,7 +1113,9 @@ function SelectionLayer({
   // mirroring the bulk-reorder before/after computation. A null target (empty
   // page / no rows) lands at the page's top level.
   const fileDropPosition = useCallback(
-    (target: DropTarget | null): { afterId: string | null; parentId: string | null } => {
+    (
+      target: DropTarget | null,
+    ): { afterId: string | null; parentId: string | null } => {
       if (!target) return { afterId: null, parentId: null };
       const targetRow = rowsRef.current.find((r) => r.id === target.id);
       if (!targetRow) return { afterId: null, parentId: null };
@@ -1064,33 +1126,43 @@ function SelectionLayer({
         .filter((r) => r.parentId === targetRow.parentId)
         .sort((a, b) => Rank.compare(a.rank, b.rank));
       const idx = siblings.findIndex((s) => s.id === target.id);
-      return { afterId: siblings[idx - 1]?.id ?? null, parentId: targetRow.parentId };
+      return {
+        afterId: siblings[idx - 1]?.id ?? null,
+        parentId: targetRow.parentId,
+      };
     },
     [],
   );
 
-  const onFileDragOver = useCallback((e: React.DragEvent) => {
-    // No blob storage in the in-memory (non-persisting) mode, so a dropped file
-    // must never reach an upload: refuse the drag entirely.
-    if (!allowAttachments) return;
-    // Only react to an OS file drag — internal text/element drags carry no Files.
-    if (!e.dataTransfer.types.includes("Files")) return;
-    e.preventDefault(); // required so the drop event fires
-    e.dataTransfer.dropEffect = "copy";
-    setFileDragging(true);
-    const next = rowAtPointer(e.clientY);
-    setFileDropTarget((prev) =>
-      prev?.id === next?.id && prev?.zone === next?.zone ? prev : next,
-    );
-  }, [allowAttachments]);
+  const onFileDragOver = useCallback(
+    (e: React.DragEvent) => {
+      // No blob storage in the in-memory (non-persisting) mode, so a dropped file
+      // must never reach an upload: refuse the drag entirely.
+      if (!allowAttachments) return;
+      // Only react to an OS file drag — internal text/element drags carry no Files.
+      if (!e.dataTransfer.types.includes("Files")) return;
+      e.preventDefault(); // required so the drop event fires
+      e.dataTransfer.dropEffect = "copy";
+      setFileDragging(true);
+      const next = rowAtPointer(e.clientY);
+      setFileDropTarget((prev) =>
+        prev?.id === next?.id && prev?.zone === next?.zone ? prev : next,
+      );
+    },
+    [allowAttachments],
+  );
 
-  const onFileDragLeave = useCallback((e: React.DragEvent) => {
-    // dragleave fires when crossing into a child too; only clear when the pointer
-    // has actually left the container's subtree.
-    if (containerRef.current?.contains(e.relatedTarget as Node | null)) return;
-    setFileDragging(false);
-    setFileDropTarget(null);
-  }, [containerRef]);
+  const onFileDragLeave = useCallback(
+    (e: React.DragEvent) => {
+      // dragleave fires when crossing into a child too; only clear when the pointer
+      // has actually left the container's subtree.
+      if (containerRef.current?.contains(e.relatedTarget as Node | null))
+        return;
+      setFileDragging(false);
+      setFileDropTarget(null);
+    },
+    [containerRef],
+  );
 
   const onFileDrop = useCallback(
     (e: React.DragEvent) => {
@@ -1102,7 +1174,10 @@ function SelectionLayer({
       // this handler returns, before the async uploads below run.
       const picks = Array.from(e.dataTransfer.files)
         .map((file) => ({ file, handler: resolveBlockPasteHandler(file.type) }))
-        .filter((p): p is { file: File; handler: BlockPasteHandler } => p.handler !== null);
+        .filter(
+          (p): p is { file: File; handler: BlockPasteHandler } =>
+            p.handler !== null,
+        );
       const pos = fileDropPosition(rowAtPointer(e.clientY));
       setFileDragging(false);
       setFileDropTarget(null);
@@ -1320,7 +1395,9 @@ function SelectionLayer({
                       (bulkDrag?.subtree.has(f.block.id) ?? false)
                     }
                     dropZone={
-                      activeDropTarget?.id === f.block.id ? activeDropTarget.zone : null
+                      activeDropTarget?.id === f.block.id
+                        ? activeDropTarget.zone
+                        : null
                     }
                   />
                 </div>

@@ -80,7 +80,11 @@ export interface CaretSurface {
   /** Collapse the caret to the surface's very start/end. */
   focusBoundary?: (edge: "start" | "end", opts?: CaretLandOptions) => void;
   /** Place the caret at viewport column `x` on the surface's top/bottom visual line. */
-  focusAtColumn?: (x: number, edge: "top" | "bottom", opts?: CaretLandOptions) => void;
+  focusAtColumn?: (
+    x: number,
+    edge: "top" | "bottom",
+    opts?: CaretLandOptions,
+  ) => void;
 }
 
 /** How a host hands a `CaretSurface` to a component that must land the caret in it. */

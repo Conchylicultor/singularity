@@ -148,7 +148,10 @@ function marksWhere(pred: (mark: Mark) => boolean): Mark[] {
 export function virtualStop(b: MarkBoundary): VirtualStop | null {
   if (sameMarks(b.left, b.right)) return null;
   if (sameMarks(b.natural, b.left)) {
-    return { direction: "right", marks: marksWhere((m) => b.right.includes(m)) };
+    return {
+      direction: "right",
+      marks: marksWhere((m) => b.right.includes(m)),
+    };
   }
   if (sameMarks(b.natural, b.right)) {
     return { direction: "left", marks: marksWhere((m) => b.left.includes(m)) };

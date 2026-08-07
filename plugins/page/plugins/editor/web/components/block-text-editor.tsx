@@ -25,7 +25,12 @@ import {
   type LexicalCommand,
   type LexicalEditor,
 } from "lexical";
-import { runsOf, type Block, type BlockTextVariant, type RichText } from "../../core";
+import {
+  runsOf,
+  type Block,
+  type BlockTextVariant,
+  type RichText,
+} from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import { CollabTextPlugin } from "./collab-text-plugin";
@@ -37,7 +42,11 @@ import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
 import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
-import { blockTextNodes, getBlockTextExtensions, serializeBlockRuns } from "../internal/block-text-extensions";
+import {
+  blockTextNodes,
+  getBlockTextExtensions,
+  serializeBlockRuns,
+} from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
 import { BLOCK_INSET } from "../internal/page-column";
 import {
@@ -95,7 +104,10 @@ const REPLAY_COMMANDS = {
  * event is a harmless no-op), so nothing about the intent resolution knows it
  * was replayed.
  */
-function replayBufferedInput(editor: LexicalEditor, entries: readonly FlightInput[]): void {
+function replayBufferedInput(
+  editor: LexicalEditor,
+  entries: readonly FlightInput[],
+): void {
   for (const entry of entries) {
     if (entry.kind === "text") {
       editor.update(
@@ -163,7 +175,11 @@ function applyDefaultAction(editor: LexicalEditor, entry: FlightInput): void {
     () => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
-      selection.modify(entry.shift ? "extend" : "move", isBackward, "character");
+      selection.modify(
+        entry.shift ? "extend" : "move",
+        isBackward,
+        "character",
+      );
     },
     // Same reason as the text flush: the NEXT replayed key resolves against the
     // committed state, so this move must be committed before it runs.
@@ -171,7 +187,11 @@ function applyDefaultAction(editor: LexicalEditor, entry: FlightInput): void {
   );
 }
 
-function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditor | null> }) {
+function EditorRefPlugin({
+  editorRef,
+}: {
+  editorRef: React.MutableRefObject<LexicalEditor | null>;
+}) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     editorRef.current = editor;
@@ -220,7 +240,8 @@ export function BlockTextEditor({
   const { registerFocusHandle, blockMenuDraftId } = useBlockEditor();
   // While the gutter-`+` draft menu is open on this block, the block's own text
   // is the menu's inline filter — so the placeholder invites that.
-  const effectivePlaceholder = blockMenuDraftId === block.id ? "Type to filter" : placeholder;
+  const effectivePlaceholder =
+    blockMenuDraftId === block.id ? "Type to filter" : placeholder;
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
 
   const initialConfig = useMemo(
@@ -338,13 +359,24 @@ export function BlockTextEditor({
       <RichTextPlugin
         contentEditable={
           <ContentEditable
-            className={cn("outline-none py-xs", insetClass({ r: BLOCK_INSET }), TEXT_VARIANT_CLASS[textVariant], contentClassName)}
+            className={cn(
+              "outline-none py-xs",
+              insetClass({ r: BLOCK_INSET }),
+              TEXT_VARIANT_CLASS[textVariant],
+              contentClassName,
+            )}
             onFocus={() => editor.onFocus()}
           />
         }
         placeholder={
           isEmpty && isFocused && effectivePlaceholder ? (
-            <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), TEXT_VARIANT_CLASS[textVariant])}>
+            <div
+              className={cn(
+                "text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs",
+                insetClass({ r: BLOCK_INSET }),
+                TEXT_VARIANT_CLASS[textVariant],
+              )}
+            >
               {effectivePlaceholder}
             </div>
           ) : null

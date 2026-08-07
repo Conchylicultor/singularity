@@ -14,7 +14,11 @@
 
 import { test, expect, describe } from "bun:test";
 import type { Mark } from "../../core";
-import { delimiterDeletion, virtualStop, type MarkBoundary } from "./mark-boundary";
+import {
+  delimiterDeletion,
+  virtualStop,
+  type MarkBoundary,
+} from "./mark-boundary";
 
 /** A block edge is modelled as an empty unmarked neighbour — hence the `[]` defaults. */
 function boundary(over: Partial<MarkBoundary> = {}): MarkBoundary {
@@ -137,7 +141,11 @@ describe("the rule is a SELECTION between the two sides, not `left ∩ right`", 
     // `**a**|**`b`**` — both sides bold, the right adds code. `L ∩ R = {bold}`,
     // which the anchor already carries, so the old rule synthesized nothing and
     // the caret could not stand inside the code span at its start.
-    const anchoredLeft = boundary({ left: bold, right: ["bold", "code"], natural: bold });
+    const anchoredLeft = boundary({
+      left: bold,
+      right: ["bold", "code"],
+      natural: bold,
+    });
     expect(virtualStop(anchoredLeft)).toEqual({
       direction: "right",
       marks: ["bold", "code"],
@@ -147,14 +155,19 @@ describe("the rule is a SELECTION between the two sides, not `left ∩ right`", 
       right: ["bold", "code"],
       natural: ["bold", "code"],
     });
-    expect(virtualStop(anchoredRight)).toEqual({ direction: "left", marks: ["bold"] });
+    expect(virtualStop(anchoredRight)).toEqual({
+      direction: "left",
+      marks: ["bold"],
+    });
   });
 });
 
 describe("boundaries with no stop", () => {
   test("two runs with the same marks are not a boundary at all", () => {
     // `coalesce` splits on colour and link too, so this pair is reachable.
-    expect(virtualStop(boundary({ left: bold, right: bold, natural: bold }))).toBeNull();
+    expect(
+      virtualStop(boundary({ left: bold, right: bold, natural: bold })),
+    ).toBeNull();
   });
 
   test("plain text mid-run needs no stop", () => {
@@ -165,13 +178,17 @@ describe("boundaries with no stop", () => {
     // `natural` is `[]` for an element-typed anchor (a caret beside an inline
     // decorator) while the runs around it are marked: there is no run the caret
     // has stepped out of, so there is no delimiter it could have crossed.
-    expect(virtualStop(boundary({ left: bold, right: code, natural: [] }))).toBeNull();
+    expect(
+      virtualStop(boundary({ left: bold, right: code, natural: [] })),
+    ).toBeNull();
   });
 });
 
 describe("deleting the delimiter", () => {
   test("a block edge: the marked run's own marks come off, nothing is left", () => {
-    expect(delimiterDeletion(boundary({ left: code, right: [], natural: code }))).toEqual({
+    expect(
+      delimiterDeletion(boundary({ left: code, right: [], natural: code })),
+    ).toEqual({
       before: ["code"],
       after: [],
       residual: [],
@@ -179,7 +196,9 @@ describe("deleting the delimiter", () => {
   });
 
   test("a marked run on the RIGHT strips FORWARD — the side a one-way walk missed", () => {
-    expect(delimiterDeletion(boundary({ left: [], right: code, natural: [] }))).toEqual({
+    expect(
+      delimiterDeletion(boundary({ left: [], right: code, natural: [] })),
+    ).toEqual({
       before: [],
       after: ["code"],
       residual: [],
@@ -187,7 +206,9 @@ describe("deleting the delimiter", () => {
   });
 
   test("a disjoint seam loses BOTH sides' marks — one press deletes the whole boundary", () => {
-    expect(delimiterDeletion(boundary({ left: bold, right: code, natural: bold }))).toEqual({
+    expect(
+      delimiterDeletion(boundary({ left: bold, right: code, natural: bold })),
+    ).toEqual({
       before: ["bold"],
       after: ["code"],
       residual: [],
@@ -204,7 +225,9 @@ describe("deleting the delimiter", () => {
   });
 
   test("two identical runs carry no delimiter", () => {
-    expect(delimiterDeletion(boundary({ left: bold, right: bold, natural: bold }))).toEqual({
+    expect(
+      delimiterDeletion(boundary({ left: bold, right: bold, natural: bold })),
+    ).toEqual({
       before: [],
       after: [],
       residual: ["bold"],

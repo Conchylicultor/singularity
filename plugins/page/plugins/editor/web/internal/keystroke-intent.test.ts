@@ -10,8 +10,17 @@
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { applyBlockOp, nextVisibleLine, type BlockNode, type Mark } from "../../core";
-import { resolveKeystroke, type IntentContext, type KeystrokeKey } from "./keystroke-intent";
+import {
+  applyBlockOp,
+  nextVisibleLine,
+  type BlockNode,
+  type Mark,
+} from "../../core";
+import {
+  resolveKeystroke,
+  type IntentContext,
+  type KeystrokeKey,
+} from "./keystroke-intent";
 import type { CaretContext } from "./caret-geometry";
 import type { MarkBoundary } from "./mark-boundary";
 
@@ -77,7 +86,10 @@ const TYPE_FACTS = {
   isAnchor: (n: BlockNode) => ANCHOR_TYPES.has(n.type),
 };
 
-function ctx(blockId: string, over: Partial<IntentContext> = {}): IntentContext {
+function ctx(
+  blockId: string,
+  over: Partial<IntentContext> = {},
+): IntentContext {
   return { nodes: tree(), blockId, ...TYPE_FACTS, ...over };
 }
 
@@ -114,7 +126,9 @@ describe("Enter", () => {
   });
 
   test("split at the caret offset, asChild false by default", () => {
-    expect(resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2 }), ctx("B"))).toEqual({
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2 }), ctx("B")),
+    ).toEqual({
       type: "split",
       position: 2,
       asChild: false,
@@ -129,7 +143,12 @@ describe("Enter", () => {
     // DOWNSTREAM in the reducer/executor from `position === 0 && afterRuns.length > 0`.
     // The resolver stays oblivious: A has text "hello", caret at the very start
     // (atStart, not atEnd) → an ordinary split at position 0, not asChild.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 0, atStart: true }), ctx("A"));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 0, atStart: true }),
+      ctx("A"),
+    );
     expect(intent).toEqual({
       type: "split",
       position: 0,
@@ -142,7 +161,12 @@ describe("Enter", () => {
 
   test("asChild when splitting at the end of a block with expanded children", () => {
     // A is expanded with child A1; the live caret is at the block end.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 5, atEnd: true }), ctx("A"));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 5, atEnd: true }),
+      ctx("A"),
+    );
     expect(intent).toEqual({
       type: "split",
       position: 5,
@@ -154,7 +178,12 @@ describe("Enter", () => {
   });
 
   test("not asChild when splitting mid-text even with children", () => {
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: false }), ctx("A"));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 2, atEnd: false }),
+      ctx("A"),
+    );
     expect(intent).toMatchObject({ type: "split", asChild: false });
   });
 
@@ -163,14 +192,24 @@ describe("Enter", () => {
     // live editor by one keystroke (node A still reads "hello", len 5), but the
     // live caret is genuinely at the end (atEnd) at a shorter offset. The nest must
     // fire off the live edge, not `offset === textLength`.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: true }), ctx("A"));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 2, atEnd: true }),
+      ctx("A"),
+    );
     expect(intent).toMatchObject({ type: "split", asChild: true });
   });
 
   test("explicit editPolicy.asChild is honored", () => {
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 0 }), ctx("B", {
-      editPolicy: { asChild: true, childType: "to-do" },
-    }));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 0 }),
+      ctx("B", {
+        editPolicy: { asChild: true, childType: "to-do" },
+      }),
+    );
     expect(intent).toEqual({
       type: "split",
       position: 0,
@@ -183,18 +222,36 @@ describe("Enter", () => {
 
   test("splitInto: Enter at the END yields a sibling of that type", () => {
     // Gated on the live caret edge (caret.atEnd), not the reducer node length.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), ctx("B", {
-      editPolicy: { splitInto: "text" },
-    }));
-    expect(intent).toMatchObject({ type: "split", asChild: false, siblingType: "text" });
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atEnd: true }),
+      ctx("B", {
+        editPolicy: { splitInto: "text" },
+      }),
+    );
+    expect(intent).toMatchObject({
+      type: "split",
+      asChild: false,
+      siblingType: "text",
+    });
   });
 
   test("splitInto: Enter MID-text keeps the type (siblingType undefined)", () => {
     // Caret not at the end → no type swap, the after-text stays the same type.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: false }), ctx("A", {
-      editPolicy: { splitInto: "text" },
-    }));
-    expect(intent).toMatchObject({ type: "split", asChild: false, siblingType: undefined });
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 2, atEnd: false }),
+      ctx("A", {
+        editPolicy: { splitInto: "text" },
+      }),
+    );
+    expect(intent).toMatchObject({
+      type: "split",
+      asChild: false,
+      siblingType: undefined,
+    });
   });
 
   test("empty block with breakOutOnEmptyEnter → convertTo (exits the list)", () => {
@@ -204,21 +261,35 @@ describe("Enter", () => {
       { ...mk("B", PAGE, rankB, { text: "" }), type: "bulleted-list" },
     ];
     // Empty == the live caret sits at both the start and the end of the block.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
-      nodes,
-      ...TYPE_FACTS,
-      blockId: "B",
-      editPolicy: { breakOutOnEmptyEnter: "text" },
-    });
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atStart: true, atEnd: true }),
+      {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "B",
+        editPolicy: { breakOutOnEmptyEnter: "text" },
+      },
+    );
     expect(intent).toEqual({ type: "convertTo", to: "text" });
   });
 
   test("non-empty block with breakOutOnEmptyEnter → split (no break-out)", () => {
     // A has text "hello" — Enter still splits despite the break-out policy.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2 }), ctx("A", {
-      editPolicy: { breakOutOnEmptyEnter: "text" },
-    }));
-    expect(intent).toMatchObject({ type: "split", position: 2, asChild: false });
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 2 }),
+      ctx("A", {
+        editPolicy: { breakOutOnEmptyEnter: "text" },
+      }),
+    );
+    expect(intent).toMatchObject({
+      type: "split",
+      position: 2,
+      asChild: false,
+    });
   });
 
   // Empty-Enter escape ladder: indentation first (outdent, keeping the type),
@@ -231,35 +302,55 @@ describe("Enter", () => {
       { ...mk("A1", "A", rankChild, { text: "" }), type: "bulleted-list" },
       mk("B", PAGE, rankB),
     ];
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
-      nodes,
-      ...TYPE_FACTS,
-      blockId: "A1",
-      editPolicy: { breakOutOnEmptyEnter: "text" },
-    });
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atStart: true, atEnd: true }),
+      {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "A1",
+        editPolicy: { breakOutOnEmptyEnter: "text" },
+      },
+    );
     expect(intent).toEqual({ type: "outdent" });
   });
 
   test("empty-Enter: indented block already the target type → still outdent", () => {
     // A1 (default tree) is indented and already "text"; empty-Enter still escapes
     // nesting first — outdent takes precedence over the (satisfied) type escape.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), ctx("A1", {
-      editPolicy: { breakOutOnEmptyEnter: "text" },
-    }));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atStart: true, atEnd: true }),
+      ctx("A1", {
+        editPolicy: { breakOutOnEmptyEnter: "text" },
+      }),
+    );
     expect(intent).toEqual({ type: "outdent" });
   });
 
   test("empty-Enter: top-level, already the target type → falls through to split", () => {
     // B is top-level and already "text"; no level left to escape → ordinary split.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), ctx("B", {
-      editPolicy: { breakOutOnEmptyEnter: "text" },
-    }));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atStart: true, atEnd: true }),
+      ctx("B", {
+        editPolicy: { breakOutOnEmptyEnter: "text" },
+      }),
+    );
     expect(intent).toMatchObject({ type: "split", asChild: false });
   });
 
   test("empty-Enter: indented plain block WITHOUT breakout policy → split", () => {
     // No breakout policy → the empty-Enter ladder never engages; ordinary split.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), ctx("A1"));
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atStart: true, atEnd: true }),
+      ctx("A1"),
+    );
     expect(intent).toMatchObject({ type: "split", asChild: false });
   });
 
@@ -268,80 +359,151 @@ describe("Enter", () => {
   // differing childType) must not run the origin's transform on the other schema.
   test("tailData: applied on a same-type split (mid-text)", () => {
     const nodes: BlockNode[] = [
-      { ...mk("B", PAGE, rankB, { text: "abc" }), type: "to-do", data: { text: "abc", checked: true } },
+      {
+        ...mk("B", PAGE, rankB, { text: "abc" }),
+        type: "to-do",
+        data: { text: "abc", checked: true },
+      },
     ];
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 1, atEnd: false }), {
-      nodes,
-      ...TYPE_FACTS,
-      blockId: "B",
-      editPolicy: { dataOnSplit: (d) => ({ ...(d as object), checked: false }) },
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 1, atEnd: false }),
+      {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "B",
+        editPolicy: {
+          dataOnSplit: (d) => ({ ...(d as object), checked: false }),
+        },
+      },
+    );
+    expect(intent).toMatchObject({
+      type: "split",
+      tailData: { text: "abc", checked: false },
     });
-    expect(intent).toMatchObject({ type: "split", tailData: { text: "abc", checked: false } });
   });
 
   test("tailData: NOT applied when the end-split swaps sibling type", () => {
     const nodes: BlockNode[] = [
-      { ...mk("B", PAGE, rankB, { text: "abc" }), type: "heading-1", data: { text: "abc" } },
+      {
+        ...mk("B", PAGE, rankB, { text: "abc" }),
+        type: "heading-1",
+        data: { text: "abc" },
+      },
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
       ...TYPE_FACTS,
       blockId: "B",
-      editPolicy: { splitInto: "text", dataOnSplit: (d) => ({ ...(d as object), swapped: true }) },
+      editPolicy: {
+        splitInto: "text",
+        dataOnSplit: (d) => ({ ...(d as object), swapped: true }),
+      },
     });
-    expect(intent).toMatchObject({ type: "split", siblingType: "text", tailData: undefined });
+    expect(intent).toMatchObject({
+      type: "split",
+      siblingType: "text",
+      tailData: undefined,
+    });
   });
 
   test("tailData: NOT applied when nesting as a child of a different type", () => {
     const nodes: BlockNode[] = [
-      { ...mk("B", PAGE, rankB, { text: "abc" }), type: "toggle", data: { text: "abc" } },
+      {
+        ...mk("B", PAGE, rankB, { text: "abc" }),
+        type: "toggle",
+        data: { text: "abc" },
+      },
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
       ...TYPE_FACTS,
       blockId: "B",
-      editPolicy: { asChild: true, childType: "text", dataOnSplit: (d) => ({ ...(d as object), swapped: true }) },
+      editPolicy: {
+        asChild: true,
+        childType: "text",
+        dataOnSplit: (d) => ({ ...(d as object), swapped: true }),
+      },
     });
-    expect(intent).toMatchObject({ type: "split", asChild: true, childType: "text", tailData: undefined });
+    expect(intent).toMatchObject({
+      type: "split",
+      asChild: true,
+      childType: "text",
+      tailData: undefined,
+    });
   });
 
   test("tailData: applied when nesting as a child WITHOUT an explicit childType", () => {
     // Tail type defaults to the origin type when childType is absent → applied.
     const nodes: BlockNode[] = [
-      { ...mk("B", PAGE, rankB, { text: "abc" }), type: "to-do", data: { text: "abc", checked: true } },
+      {
+        ...mk("B", PAGE, rankB, { text: "abc" }),
+        type: "to-do",
+        data: { text: "abc", checked: true },
+      },
     ];
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), {
       nodes,
       ...TYPE_FACTS,
       blockId: "B",
-      editPolicy: { asChild: true, dataOnSplit: (d) => ({ ...(d as object), checked: false }) },
+      editPolicy: {
+        asChild: true,
+        dataOnSplit: (d) => ({ ...(d as object), checked: false }),
+      },
     });
-    expect(intent).toMatchObject({ type: "split", asChild: true, tailData: { text: "abc", checked: false } });
+    expect(intent).toMatchObject({
+      type: "split",
+      asChild: true,
+      tailData: { text: "abc", checked: false },
+    });
   });
 });
 
 describe("Backspace", () => {
   test("not at start → passthrough (ordinary deletion)", () => {
-    expect(resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: false }), ctx("B"))).toEqual({
+    expect(
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: false }),
+        ctx("B"),
+      ),
+    ).toEqual({
       type: "passthrough",
     });
   });
 
   test("at start but a range is selected → passthrough", () => {
     expect(
-      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true, collapsed: false }), ctx("B")),
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true, collapsed: false }),
+        ctx("B"),
+      ),
     ).toEqual({ type: "passthrough" });
   });
 
   test("at start, indented → outdent", () => {
     expect(
-      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("A1")),
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        ctx("A1"),
+      ),
     ).toEqual({ type: "outdent" });
   });
 
   test("at start, top-level with a previous sibling → merge", () => {
     expect(
-      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("B")),
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        ctx("B"),
+      ),
     ).toEqual({ type: "merge" });
   });
 
@@ -365,9 +527,14 @@ describe("Backspace", () => {
   test("at start, already the reset target type → merge (no reset)", () => {
     // B is already "text"; the reset policy is a no-op, so Backspace merges.
     expect(
-      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("B", {
-        editPolicy: { resetToOnBackspaceAtStart: "text" },
-      })),
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        ctx("B", {
+          editPolicy: { resetToOnBackspaceAtStart: "text" },
+        }),
+      ),
     ).toEqual({ type: "merge" });
   });
 
@@ -393,29 +560,46 @@ describe("Backspace", () => {
     // A1 (default tree) is indented and already "text": the reset policy is
     // satisfied (type === target), so the ladder falls to outdent.
     expect(
-      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("A1", {
-        editPolicy: { resetToOnBackspaceAtStart: "text" },
-      })),
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        ctx("A1", {
+          editPolicy: { resetToOnBackspaceAtStart: "text" },
+        }),
+      ),
     ).toEqual({ type: "outdent" });
   });
 
   test("at start, first top-level block → nav left (out to the preceding surface)", () => {
     expect(
-      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("A")),
+      resolveKeystroke(
+        "Backspace",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "nav", dir: "left" });
   });
 });
 
 describe("Delete", () => {
   test("not at end → passthrough (ordinary forward deletion)", () => {
-    expect(resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: false }), ctx("A"))).toEqual({
+    expect(
+      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: false }), ctx("A")),
+    ).toEqual({
       type: "passthrough",
     });
   });
 
   test("at end but a range is selected → passthrough", () => {
     expect(
-      resolveKeystroke("Delete", NO_SHIFT, caret({ atEnd: true, collapsed: false }), ctx("A")),
+      resolveKeystroke(
+        "Delete",
+        NO_SHIFT,
+        caret({ atEnd: true, collapsed: false }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "passthrough" });
   });
 
@@ -437,38 +621,62 @@ describe("Delete", () => {
 
 describe("Tab", () => {
   test("with a previous sibling → indent", () => {
-    expect(resolveKeystroke("Tab", NO_SHIFT, caret(), ctx("B"))).toEqual({ type: "indent" });
+    expect(resolveKeystroke("Tab", NO_SHIFT, caret(), ctx("B"))).toEqual({
+      type: "indent",
+    });
   });
 
   test("first sibling (no prev) → noop (never insert a tab / move focus)", () => {
-    expect(resolveKeystroke("Tab", NO_SHIFT, caret(), ctx("A"))).toEqual({ type: "noop" });
+    expect(resolveKeystroke("Tab", NO_SHIFT, caret(), ctx("A"))).toEqual({
+      type: "noop",
+    });
   });
 
   test("shift+Tab when indented → outdent", () => {
-    expect(resolveKeystroke("Tab", SHIFT, caret(), ctx("A1"))).toEqual({ type: "outdent" });
+    expect(resolveKeystroke("Tab", SHIFT, caret(), ctx("A1"))).toEqual({
+      type: "outdent",
+    });
   });
 
   test("shift+Tab at top level → noop", () => {
-    expect(resolveKeystroke("Tab", SHIFT, caret(), ctx("B"))).toEqual({ type: "noop" });
+    expect(resolveKeystroke("Tab", SHIFT, caret(), ctx("B"))).toEqual({
+      type: "noop",
+    });
   });
 });
 
 describe("ArrowUp / ArrowDown", () => {
   test("Up on the top visual line → nav up", () => {
-    expect(resolveKeystroke("ArrowUp", NO_SHIFT, caret({ onTopLine: true }), ctx("B"))).toEqual({
+    expect(
+      resolveKeystroke(
+        "ArrowUp",
+        NO_SHIFT,
+        caret({ onTopLine: true }),
+        ctx("B"),
+      ),
+    ).toEqual({
       type: "nav",
       dir: "up",
     });
   });
 
   test("Up not on the top visual line → passthrough (move within block)", () => {
-    expect(resolveKeystroke("ArrowUp", NO_SHIFT, caret({ onTopLine: false }), ctx("B"))).toEqual({
+    expect(
+      resolveKeystroke(
+        "ArrowUp",
+        NO_SHIFT,
+        caret({ onTopLine: false }),
+        ctx("B"),
+      ),
+    ).toEqual({
       type: "passthrough",
     });
   });
 
   test("shift+Up on the top line → block selection extending up", () => {
-    expect(resolveKeystroke("ArrowUp", SHIFT, caret({ onTopLine: true }), ctx("B"))).toEqual({
+    expect(
+      resolveKeystroke("ArrowUp", SHIFT, caret({ onTopLine: true }), ctx("B")),
+    ).toEqual({
       type: "selectBlock",
       extend: "up",
     });
@@ -476,13 +684,23 @@ describe("ArrowUp / ArrowDown", () => {
 
   test("Down on the bottom visual line → nav down", () => {
     expect(
-      resolveKeystroke("ArrowDown", NO_SHIFT, caret({ onBottomLine: true }), ctx("A")),
+      resolveKeystroke(
+        "ArrowDown",
+        NO_SHIFT,
+        caret({ onBottomLine: true }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "nav", dir: "down" });
   });
 
   test("shift+Down on the bottom line → block selection extending down", () => {
     expect(
-      resolveKeystroke("ArrowDown", SHIFT, caret({ onBottomLine: true }), ctx("A")),
+      resolveKeystroke(
+        "ArrowDown",
+        SHIFT,
+        caret({ onBottomLine: true }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "selectBlock", extend: "down" });
   });
 });
@@ -490,13 +708,23 @@ describe("ArrowUp / ArrowDown", () => {
 describe("ArrowLeft / ArrowRight", () => {
   test("Left at the very start → nav left (to previous block end)", () => {
     expect(
-      resolveKeystroke("ArrowLeft", NO_SHIFT, caret({ atStart: true }), ctx("B")),
+      resolveKeystroke(
+        "ArrowLeft",
+        NO_SHIFT,
+        caret({ atStart: true }),
+        ctx("B"),
+      ),
     ).toEqual({ type: "nav", dir: "left" });
   });
 
   test("Left not at start → passthrough", () => {
     expect(
-      resolveKeystroke("ArrowLeft", NO_SHIFT, caret({ atStart: false }), ctx("B")),
+      resolveKeystroke(
+        "ArrowLeft",
+        NO_SHIFT,
+        caret({ atStart: false }),
+        ctx("B"),
+      ),
     ).toEqual({ type: "passthrough" });
   });
 
@@ -508,13 +736,23 @@ describe("ArrowLeft / ArrowRight", () => {
 
   test("Right at the very end → nav right (to next block start)", () => {
     expect(
-      resolveKeystroke("ArrowRight", NO_SHIFT, caret({ atEnd: true }), ctx("A")),
+      resolveKeystroke(
+        "ArrowRight",
+        NO_SHIFT,
+        caret({ atEnd: true }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "nav", dir: "right" });
   });
 
   test("Right not at end → passthrough", () => {
     expect(
-      resolveKeystroke("ArrowRight", NO_SHIFT, caret({ atEnd: false }), ctx("A")),
+      resolveKeystroke(
+        "ArrowRight",
+        NO_SHIFT,
+        caret({ atEnd: false }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "passthrough" });
   });
 });
@@ -550,20 +788,34 @@ function runTrajectory(
     });
     seq.push(intent.type);
     if (intent.type === "outdent") {
-      nodes = applyBlockOp(nodes, { kind: "outdent", blockIds: [blockId] }, ANCHOR_CTX);
+      nodes = applyBlockOp(
+        nodes,
+        { kind: "outdent", blockIds: [blockId] },
+        ANCHOR_CTX,
+      );
     } else if (intent.type === "unwrap") {
       // The container dissolves and its children are promoted into its slot —
       // the caret's block keeps its id, so the next press re-resolves against it.
-      nodes = applyBlockOp(nodes, { kind: "unwrap", blockId: intent.blockId }, ANCHOR_CTX);
+      nodes = applyBlockOp(
+        nodes,
+        { kind: "unwrap", blockId: intent.blockId },
+        ANCHOR_CTX,
+      );
     } else if (intent.type === "convertTo") {
-      nodes = nodes.map((n) => (n.id === blockId ? { ...n, type: intent.to } : n));
+      nodes = nodes.map((n) =>
+        n.id === blockId ? { ...n, type: intent.to } : n,
+      );
     } else if (intent.type === "mergeNext") {
       // Delete pulls the NEXT visible line up: the executor merges that line into
       // `blockId`, so mirror it here by merging `nextVisibleLine(blockId)` away.
       const node = nodes.find((n) => n.id === blockId)!;
       const next = nextVisibleLine(nodes, node);
       if (!next) break; // unreachable: mergeNext implies a next line exists
-      nodes = applyBlockOp(nodes, { kind: "merge", blockId: next.id }, ANCHOR_CTX);
+      nodes = applyBlockOp(
+        nodes,
+        { kind: "merge", blockId: next.id },
+        ANCHOR_CTX,
+      );
     } else {
       break; // merge / split / nav / noop — a trajectory ends here
     }
@@ -580,7 +832,13 @@ describe("trajectories", () => {
       { ...mk("X", "A", rankChild, { text: "item" }), type: "bulleted-list" },
     ];
     expect(
-      runTrajectory(nodes, "X", "Backspace", { resetToOnBackspaceAtStart: "text" }, { atStart: true }),
+      runTrajectory(
+        nodes,
+        "X",
+        "Backspace",
+        { resetToOnBackspaceAtStart: "text" },
+        { atStart: true },
+      ),
     ).toEqual(["convertTo", "outdent", "merge"]);
   });
 
@@ -593,11 +851,9 @@ describe("trajectories", () => {
       mk("B", "A", rankB2, { text: "b", expanded: true }),
       mk("X", "B", rankChild, { text: "x" }),
     ];
-    expect(runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true })).toEqual([
-      "outdent",
-      "outdent",
-      "merge",
-    ]);
+    expect(
+      runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true }),
+    ).toEqual(["outdent", "outdent", "merge"]);
   });
 
   test("Backspace: nested block peels only its EXCESS indentation → [outdent, merge]", () => {
@@ -614,14 +870,22 @@ describe("trajectories", () => {
       mk("X", "B", rankChild, { text: "bbb" }),
       mk("C", "A", rankC2, { text: "ccc" }),
     ];
-    expect(runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true })).toEqual([
-      "outdent",
-      "merge",
-    ]);
+    expect(
+      runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true }),
+    ).toEqual(["outdent", "merge"]);
     // And the outdent lands X where the caret expects it: level with C, ABOVE it.
-    const after = applyBlockOp(nodes, { kind: "outdent", blockIds: ["X"] }, ANCHOR_CTX);
+    const after = applyBlockOp(
+      nodes,
+      { kind: "outdent", blockIds: ["X"] },
+      ANCHOR_CTX,
+    );
     expect(after.find((n) => n.id === "X")!.parentId).toBe("A");
-    expect(nextVisibleLine(after, after.find((n) => n.id === "X")!)?.id).toBe("C");
+    expect(
+      nextVisibleLine(
+        after,
+        after.find((n) => n.id === "X")!,
+      )?.id,
+    ).toBe("C");
     // C is untouched — the outdent adopted nothing (excess implies no follower).
     expect(after.find((n) => n.id === "C")!.parentId).toBe("A");
   });
@@ -636,7 +900,13 @@ describe("trajectories", () => {
       { ...mk("X", "B", rankChild, { text: "" }), type: "bulleted-list" },
     ];
     expect(
-      runTrajectory(nodes, "X", "Enter", { breakOutOnEmptyEnter: "text" }, { atStart: true, atEnd: true }),
+      runTrajectory(
+        nodes,
+        "X",
+        "Enter",
+        { breakOutOnEmptyEnter: "text" },
+        { atStart: true, atEnd: true },
+      ),
     ).toEqual(["outdent", "outdent", "convertTo", "split"]);
   });
 
@@ -646,9 +916,12 @@ describe("trajectories", () => {
       mk("A", PAGE, rankA, { text: "a", expanded: true }),
       mk("X", "A", rankChild, { text: "" }),
     ];
-    expect(runTrajectory(nodes, "X", "Enter", undefined, { atStart: true, atEnd: true })).toEqual([
-      "split",
-    ]);
+    expect(
+      runTrajectory(nodes, "X", "Enter", undefined, {
+        atStart: true,
+        atEnd: true,
+      }),
+    ).toEqual(["split"]);
   });
 
   test("Backspace: first line of a callout below a text block → [unwrap, merge]", () => {
@@ -664,10 +937,9 @@ describe("trajectories", () => {
       mk("X", "CA", kid1, { text: "x" }),
       mk("Y", "CA", kid2, { text: "y" }),
     ];
-    expect(runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true })).toEqual([
-      "unwrap",
-      "merge",
-    ]);
+    expect(
+      runTrajectory(nodes, "X", "Backspace", undefined, { atStart: true }),
+    ).toEqual(["unwrap", "merge"]);
   });
 
   test("Backspace: formatted first line of a LEADING callout → [convertTo, unwrap, nav]", () => {
@@ -678,7 +950,13 @@ describe("trajectories", () => {
       { ...mk("X", "CA", rankChild, { text: "item" }), type: "bulleted-list" },
     ];
     expect(
-      runTrajectory(nodes, "X", "Backspace", { resetToOnBackspaceAtStart: "text" }, { atStart: true }),
+      runTrajectory(
+        nodes,
+        "X",
+        "Backspace",
+        { resetToOnBackspaceAtStart: "text" },
+        { atStart: true },
+      ),
     ).toEqual(["convertTo", "unwrap", "nav"]);
   });
 
@@ -692,11 +970,9 @@ describe("trajectories", () => {
       mk("C1", "P", c1, { text: "c1" }),
       mk("C2", "P", c2, { text: "c2" }),
     ];
-    expect(runTrajectory(nodes, "P", "Delete", undefined, { atEnd: true })).toEqual([
-      "mergeNext",
-      "mergeNext",
-      "nav",
-    ]);
+    expect(
+      runTrajectory(nodes, "P", "Delete", undefined, { atEnd: true }),
+    ).toEqual(["mergeNext", "mergeNext", "nav"]);
   });
 });
 
@@ -730,7 +1006,9 @@ describe("multi-page union boundaries", () => {
    *   └─ D
    * Collapsed variant drops the inner rows (their feed never mounts).
    */
-  function union({ expanded = true }: { expanded?: boolean } = {}): BlockNode[] {
+  function union({
+    expanded = true,
+  }: { expanded?: boolean } = {}): BlockNode[] {
     const rows: BlockNode[] = [
       mk("A", PAGE, rankA, { text: "aa" }),
       { ...mk("S", PAGE, rankS), type: "page", expanded },
@@ -742,26 +1020,45 @@ describe("multi-page union boundaries", () => {
   }
 
   test("shift+Tab on an inner page's top-level block → noop (not indented, no cross-page outdent)", () => {
-    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes: union(), ...TYPE_FACTS, blockId: "B" })).toEqual({
+    expect(
+      resolveKeystroke("Tab", SHIFT, caret(), {
+        nodes: union(),
+        ...TYPE_FACTS,
+        blockId: "B",
+      }),
+    ).toEqual({
       type: "noop",
     });
   });
 
   test("shift+Tab on a genuinely nested inner block → outdent (within its own page)", () => {
-    const nodes = union().map((n) => (n.id === "B" ? { ...n, expanded: true } : n));
+    const nodes = union().map((n) =>
+      n.id === "B" ? { ...n, expanded: true } : n,
+    );
     nodes.push({ ...mk("E", "B", rankChild, { text: "ee" }), pageId: "S" });
-    expect(resolveKeystroke("Tab", SHIFT, caret(), { nodes, ...TYPE_FACTS, blockId: "E" })).toEqual({
+    expect(
+      resolveKeystroke("Tab", SHIFT, caret(), {
+        nodes,
+        ...TYPE_FACTS,
+        blockId: "E",
+      }),
+    ).toEqual({
       type: "outdent",
     });
   });
 
   test("empty-Enter on an inner page's top-level block → split, not a cross-page outdent", () => {
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
-      nodes: union(),
-      ...TYPE_FACTS,
-      blockId: "B",
-      editPolicy: { breakOutOnEmptyEnter: "text" },
-    });
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atStart: true, atEnd: true }),
+      {
+        nodes: union(),
+        ...TYPE_FACTS,
+        blockId: "B",
+        editPolicy: { breakOutOnEmptyEnter: "text" },
+      },
+    );
     expect(intent).toMatchObject({ type: "split" });
   });
 
@@ -850,7 +1147,10 @@ describe("void lines (acceptsText)", () => {
   const rankVoid = Rank.between(Rank.from(rankA), null).toJSON();
 
   /** page ▸ A ("hello"), V (a void row of `type`), B. */
-  function withVoid(type: string, opts: { expanded?: boolean } = {}): BlockNode[] {
+  function withVoid(
+    type: string,
+    opts: { expanded?: boolean } = {},
+  ): BlockNode[] {
     return [
       mk("A", PAGE, rankA, { text: "hello" }),
       { ...mk("V", PAGE, rankVoid), type, expanded: opts.expanded ?? false },
@@ -951,10 +1251,18 @@ describe("container anchors", () => {
   test("the unwrap rung beats outdent, which would re-nest the box's other lines", () => {
     // Sanity-check the alternative the rung exists to avoid: outdenting X adopts
     // its follower Y as X's own child.
-    const outdented = applyBlockOp(boxed(), { kind: "outdent", blockIds: ["X"] }, ANCHOR_CTX);
+    const outdented = applyBlockOp(
+      boxed(),
+      { kind: "outdent", blockIds: ["X"] },
+      ANCHOR_CTX,
+    );
     expect(outdented.find((n) => n.id === "Y")!.parentId).toBe("X");
     // Unwrapping instead leaves both lines as plain siblings at CA's level.
-    const unwrapped = applyBlockOp(boxed(), { kind: "unwrap", blockId: "CA" }, ANCHOR_CTX);
+    const unwrapped = applyBlockOp(
+      boxed(),
+      { kind: "unwrap", blockId: "CA" },
+      ANCHOR_CTX,
+    );
     expect(unwrapped.find((n) => n.id === "X")!.parentId).toBe(PAGE);
     expect(unwrapped.find((n) => n.id === "Y")!.parentId).toBe(PAGE);
     expect(unwrapped.some((n) => n.id === "CA")).toBe(false);
@@ -1000,7 +1308,9 @@ describe("container anchors", () => {
     // there is nothing to dissolve. X shares its indentation with its follower Y,
     // so the generic ladder merges it into that line rather than outdenting —
     // which is also what keeps `outdentOne` from adopting Y as X's child.
-    const nodes = boxed().map((n) => (n.id === "CA" ? { ...n, type: "toggle" } : n));
+    const nodes = boxed().map((n) =>
+      n.id === "CA" ? { ...n, type: "toggle" } : n,
+    );
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
         nodes,
@@ -1028,7 +1338,9 @@ describe("container anchors", () => {
 
   /** The same fixture with the box folded: only X's line renders. */
   function closed(childType = "text"): BlockNode[] {
-    return boxed(childType).map((n) => (n.id === "CA" ? { ...n, expanded: false } : n));
+    return boxed(childType).map((n) =>
+      n.id === "CA" ? { ...n, expanded: false } : n,
+    );
   }
 
   test("Backspace on a COLLAPSED container's borrowed line opens it instead of unwrapping", () => {
@@ -1091,9 +1403,13 @@ describe("container anchors", () => {
         blockId: "X",
       }),
     ).toEqual({ type: "mergeNext" });
-    expect(nextVisibleLine(nodes, nodes.find((n) => n.id === "X")!, TYPE_FACTS.isAnchor)?.id).toBe(
-      "B",
-    );
+    expect(
+      nextVisibleLine(
+        nodes,
+        nodes.find((n) => n.id === "X")!,
+        TYPE_FACTS.isAnchor,
+      )?.id,
+    ).toBe("B");
   });
 
   test("Backspace on the line AFTER a collapsed box merges into its BORROWED line", () => {
@@ -1170,7 +1486,9 @@ describe("excess indentation (outdent vs merge order)", () => {
     expect(backspaceAt(nodes, "X")).toEqual({ type: "merge" });
     // COLLAPSED, those children are not visible lines, so X is the last visible
     // line of A's subtree again and the excess rung returns.
-    const collapsed = nodes.map((n) => (n.id === "X" ? { ...n, expanded: false } : n));
+    const collapsed = nodes.map((n) =>
+      n.id === "X" ? { ...n, expanded: false } : n,
+    );
     expect(backspaceAt(collapsed, "X")).toEqual({ type: "outdent" });
   });
 
@@ -1219,9 +1537,17 @@ describe("excess indentation (outdent vs merge order)", () => {
 
 describe("mark boundary", () => {
   /** `` `zz`| `` — a code run at the END of the block, caret inside its far edge. */
-  const atBlockEnd: MarkBoundary = { left: ["code"], right: [], natural: ["code"] };
+  const atBlockEnd: MarkBoundary = {
+    left: ["code"],
+    right: [],
+    natural: ["code"],
+  };
   /** `` |`zz` `` — a code run at the START of the block. */
-  const atBlockStart: MarkBoundary = { left: [], right: ["code"], natural: ["code"] };
+  const atBlockStart: MarkBoundary = {
+    left: [],
+    right: ["code"],
+    natural: ["code"],
+  };
   /**
    * `` a|`zz` `` — a marked run on the RIGHT of a seam, the browser anchored on
    * the plain run's end. The stop is the state INSIDE the code run at its start,
@@ -1303,11 +1629,21 @@ describe("mark boundary", () => {
       // already carries `{}`, so no stop was synthesized and the caret could
       // never sit inside the code run at its start.
       expect(
-        resolveKeystroke("ArrowRight", NO_SHIFT, caret({ boundary: markedRight }), ctx("A")),
+        resolveKeystroke(
+          "ArrowRight",
+          NO_SHIFT,
+          caret({ boundary: markedRight }),
+          ctx("A"),
+        ),
       ).toEqual({ type: "markStep", marks: ["code"], escaped: true });
       // ...and the arrow pointing the other way is ordinary movement, as always.
       expect(
-        resolveKeystroke("ArrowLeft", NO_SHIFT, caret({ boundary: markedRight }), ctx("A")),
+        resolveKeystroke(
+          "ArrowLeft",
+          NO_SHIFT,
+          caret({ boundary: markedRight }),
+          ctx("A"),
+        ),
       ).toEqual({ type: "passthrough" });
     });
 
@@ -1324,7 +1660,12 @@ describe("mark boundary", () => {
 
     test("shift+Arrow is native selection, boundary or not", () => {
       expect(
-        resolveKeystroke("ArrowRight", SHIFT, caret({ atEnd: true, boundary: atBlockEnd }), ctx("A")),
+        resolveKeystroke(
+          "ArrowRight",
+          SHIFT,
+          caret({ atEnd: true, boundary: atBlockEnd }),
+          ctx("A"),
+        ),
       ).toEqual({ type: "passthrough" });
     });
   });
@@ -1402,9 +1743,18 @@ describe("mark boundary", () => {
       // Cap-1 applied consistently: the press lands in the RIGHT run's state,
       // not in a third state that neither run carries — and the deletion takes
       // both sides' marks off, leaving the shared residual (here, nothing).
-      const seam: MarkBoundary = { left: ["bold"], right: ["code"], natural: ["bold"] };
+      const seam: MarkBoundary = {
+        left: ["bold"],
+        right: ["code"],
+        natural: ["bold"],
+      };
       expect(
-        resolveKeystroke("ArrowRight", NO_SHIFT, caret({ boundary: seam }), ctx("A")),
+        resolveKeystroke(
+          "ArrowRight",
+          NO_SHIFT,
+          caret({ boundary: seam }),
+          ctx("A"),
+        ),
       ).toEqual({ type: "markStep", marks: ["code"], escaped: true });
       expect(
         resolveKeystroke(
@@ -1428,7 +1778,12 @@ describe("mark boundary", () => {
         natural: ["bold"],
       };
       expect(
-        resolveKeystroke("ArrowRight", NO_SHIFT, caret({ boundary: nested }), ctx("A")),
+        resolveKeystroke(
+          "ArrowRight",
+          NO_SHIFT,
+          caret({ boundary: nested }),
+          ctx("A"),
+        ),
       ).toEqual({ type: "markStep", marks: ["bold", "code"], escaped: true });
       expect(
         resolveKeystroke(
@@ -1481,7 +1836,12 @@ describe("mark boundary", () => {
         resolveKeystroke(
           "Backspace",
           NO_SHIFT,
-          caret({ atEnd: true, collapsed: false, escaped: true, boundary: atBlockEnd }),
+          caret({
+            atEnd: true,
+            collapsed: false,
+            escaped: true,
+            boundary: atBlockEnd,
+          }),
           ctx("A"),
         ),
       ).toEqual({ type: "passthrough" });
@@ -1517,7 +1877,12 @@ describe("mark boundary", () => {
       ),
     ).toMatchObject({ type: "split", position: 5, asChild: true });
     expect(
-      resolveKeystroke("Tab", NO_SHIFT, caret({ escaped: true, boundary: atBlockEnd }), ctx("B")),
+      resolveKeystroke(
+        "Tab",
+        NO_SHIFT,
+        caret({ escaped: true, boundary: atBlockEnd }),
+        ctx("B"),
+      ),
     ).toEqual({ type: "indent" });
   });
 });
@@ -1566,8 +1931,10 @@ const contextIn =
       atEnd: spot.offset === last,
       escaped: spot.escaped,
       boundary: boundaries[spot.offset] ?? null,
-      stepLeftBoundary: spot.offset > 0 ? (boundaries[spot.offset - 1] ?? null) : null,
-      stepRightBoundary: spot.offset < last ? (boundaries[spot.offset + 1] ?? null) : null,
+      stepLeftBoundary:
+        spot.offset > 0 ? (boundaries[spot.offset - 1] ?? null) : null,
+      stepRightBoundary:
+        spot.offset < last ? (boundaries[spot.offset + 1] ?? null) : null,
     });
 
 /**
@@ -1590,8 +1957,10 @@ function walkIn(
   for (let guard = 0; guard < 12; guard++) {
     const intent = resolveKeystroke(key, NO_SHIFT, contextAt(spot), ctx("A"));
     if (intent.type === "markStep") spot = { ...spot, escaped: intent.escaped };
-    else if (intent.type === "markArrive") spot = { offset: intent.offset, escaped: true };
-    else if (intent.type === "passthrough") spot = { offset: spot.offset + step, escaped: false };
+    else if (intent.type === "markArrive")
+      spot = { offset: intent.offset, escaped: true };
+    else if (intent.type === "passthrough")
+      spot = { offset: spot.offset + step, escaped: false };
     else break; // nav — the caret left the block
     seen.push(`${spot.offset}${spot.escaped ? "*" : ""}`);
   }
@@ -1656,11 +2025,21 @@ describe("traversal symmetry", () => {
     // browser's own landing is already correct — the rung must not fire, or the
     // caret would jump the inside state going rightward.
     expect(
-      resolveKeystroke("ArrowRight", NO_SHIFT, contextAt({ offset: 2, escaped: false }), ctx("A")),
+      resolveKeystroke(
+        "ArrowRight",
+        NO_SHIFT,
+        contextAt({ offset: 2, escaped: false }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "passthrough" });
     // The mirror: approaching block start from the right, `natural` is nearer.
     expect(
-      resolveKeystroke("ArrowLeft", NO_SHIFT, contextAt({ offset: 1, escaped: false }), ctx("A")),
+      resolveKeystroke(
+        "ArrowLeft",
+        NO_SHIFT,
+        contextAt({ offset: 1, escaped: false }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "passthrough" });
   });
 
@@ -1668,7 +2047,12 @@ describe("traversal symmetry", () => {
     // At the seam already escaped, ArrowLeft steps back INSIDE rather than
     // arriving somewhere new — `markStepFor` is ordered above `markArriveFor`.
     expect(
-      resolveKeystroke("ArrowLeft", NO_SHIFT, contextAt({ offset: 3, escaped: true }), ctx("A")),
+      resolveKeystroke(
+        "ArrowLeft",
+        NO_SHIFT,
+        contextAt({ offset: 3, escaped: true }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "markStep", marks: CODE, escaped: false });
   });
 
@@ -1677,10 +2061,20 @@ describe("traversal symmetry", () => {
     // the caret can never be re-read as its own destination and absorb the press
     // that is supposed to leave the block.
     expect(
-      resolveKeystroke("ArrowLeft", NO_SHIFT, contextAt({ offset: 0, escaped: true }), ctx("A")),
+      resolveKeystroke(
+        "ArrowLeft",
+        NO_SHIFT,
+        contextAt({ offset: 0, escaped: true }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "nav", dir: "left" });
     expect(
-      resolveKeystroke("ArrowRight", NO_SHIFT, contextAt({ offset: LAST, escaped: false }), ctx("A")),
+      resolveKeystroke(
+        "ArrowRight",
+        NO_SHIFT,
+        contextAt({ offset: LAST, escaped: false }),
+        ctx("A"),
+      ),
     ).toEqual({ type: "nav", dir: "right" });
   });
 });
@@ -1756,8 +2150,12 @@ describe("traversal symmetry, mirrored (the marked run on the RIGHT)", () => {
     // Cap 1: the stop is a single state, not one the caret can be trapped in.
     // Both walks visit 7 states across 5 offsets — the two seams contribute one
     // extra each, and nothing else does.
-    expect(walk({ offset: 0, escaped: false }, "ArrowRight")).toHaveLength(LAST + 3);
-    expect(walk({ offset: LAST, escaped: true }, "ArrowLeft")).toHaveLength(LAST + 3);
+    expect(walk({ offset: 0, escaped: false }, "ArrowRight")).toHaveLength(
+      LAST + 3,
+    );
+    expect(walk({ offset: LAST, escaped: true }, "ArrowLeft")).toHaveLength(
+      LAST + 3,
+    );
   });
 });
 

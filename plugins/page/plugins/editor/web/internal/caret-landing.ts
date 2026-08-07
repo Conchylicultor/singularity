@@ -35,11 +35,13 @@ export function landCaret(
 ): void {
   switch (dir) {
     case "up":
-      if (caret && surface.focusAtColumn) surface.focusAtColumn(caret.caretX, "bottom", opts);
+      if (caret && surface.focusAtColumn)
+        surface.focusAtColumn(caret.caretX, "bottom", opts);
       else landBoundary(surface, "end", opts);
       return;
     case "down":
-      if (caret && surface.focusAtColumn) surface.focusAtColumn(caret.caretX, "top", opts);
+      if (caret && surface.focusAtColumn)
+        surface.focusAtColumn(caret.caretX, "top", opts);
       else landBoundary(surface, "start", opts);
       return;
     case "left":

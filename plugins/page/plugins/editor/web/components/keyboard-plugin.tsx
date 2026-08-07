@@ -24,8 +24,15 @@ import {
   readCaretContext,
   type CaretContext,
 } from "../internal/caret-geometry";
-import { $scanMarkSpan, removeMarkSpan } from "../internal/inline-format-surgery";
-import { markStep, readMarkDepth, registerMarkDepth } from "../internal/mark-depth";
+import {
+  $scanMarkSpan,
+  removeMarkSpan,
+} from "../internal/inline-format-surgery";
+import {
+  markStep,
+  readMarkDepth,
+  registerMarkDepth,
+} from "../internal/mark-depth";
 import { toNodes } from "../internal/optimistic-block-ops";
 import {
   resolveKeystroke,
@@ -49,7 +56,8 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, unwrapBlock, makeBlockAPI, recordDocEdit } = useBlockEditor();
+  const { rowsRef, unwrapBlock, makeBlockAPI, recordDocEdit } =
+    useBlockEditor();
   const recordDocEditRef = useLatestRef(recordDocEdit);
   const unwrapRef = useRef(unwrapBlock);
   unwrapRef.current = unwrapBlock;
@@ -181,9 +189,13 @@ export function KeyboardPlugin({
           queueMicrotask(() => {
             // Its own undo entry, fenced off the 500ms typing run on both sides:
             // ONE Cmd+Z restores the mark and nothing else.
-            recordDocEditRef.current(blockIdRef.current, "Remove formatting", () => {
-              removeMarkSpan(lexicalEditor, plan);
-            });
+            recordDocEditRef.current(
+              blockIdRef.current,
+              "Remove formatting",
+              () => {
+                removeMarkSpan(lexicalEditor, plan);
+              },
+            );
           });
           return true;
         }
@@ -198,7 +210,10 @@ export function KeyboardPlugin({
         case "selectBlock":
           if (!selectionRef.current) return false;
           event.preventDefault();
-          selectionRef.current.enterSelectionMode(blockIdRef.current, intent.extend);
+          selectionRef.current.enterSelectionMode(
+            blockIdRef.current,
+            intent.extend,
+          );
           return true;
       }
     }
@@ -208,7 +223,10 @@ export function KeyboardPlugin({
       // The mark-delimiter depth is passed IN rather than read by the geometry
       // module, which keeps that module free of module state; it is verified
       // against the live anchor inside the same read.
-      const caret = readCaretContext(lexicalEditor, readMarkDepth(lexicalEditor));
+      const caret = readCaretContext(
+        lexicalEditor,
+        readMarkDepth(lexicalEditor),
+      );
       if (!caret) return false;
       const nodes = toNodes(rowsRef.current);
       // Resolve the current block's declarative edit policy from the registry.
@@ -219,7 +237,8 @@ export function KeyboardPlugin({
       const node = nodes.find((b) => b.id === blockIdRef.current);
       const handle = handleOf(node?.type ?? "");
       const editPolicy = {
-        asChild: handle?.splitChildWhenExpanded && node?.expanded ? true : undefined,
+        asChild:
+          handle?.splitChildWhenExpanded && node?.expanded ? true : undefined,
         childType: handle?.splitChildWhenExpanded?.childType,
         splitInto: handle?.splitInto,
         resetToOnBackspaceAtStart: handle?.resetToOnBackspaceAtStart,
@@ -243,8 +262,15 @@ export function KeyboardPlugin({
       return execute(intent, event, caret);
     }
 
-    const reg = (cmd: LexicalCommand<KeyboardEvent | null>, key: KeystrokeKey) =>
-      lexicalEditor.registerCommand(cmd, (e) => handle(key, e), COMMAND_PRIORITY_HIGH);
+    const reg = (
+      cmd: LexicalCommand<KeyboardEvent | null>,
+      key: KeystrokeKey,
+    ) =>
+      lexicalEditor.registerCommand(
+        cmd,
+        (e) => handle(key, e),
+        COMMAND_PRIORITY_HIGH,
+      );
 
     const unregister = [
       // The mark-delimiter depth store's own lifecycle: cleared on any update

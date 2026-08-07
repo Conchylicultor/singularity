@@ -115,7 +115,8 @@ function lineNodes(
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
       const node = ext.createNodeFromMatch(m);
-      if (node) matches.push({ start: m.index, end: m.index + m[0].length, node });
+      if (node)
+        matches.push({ start: m.index, end: m.index + m[0].length, node });
     }
   }
   matches.sort((a, b) => a.start - b.start);
@@ -267,7 +268,8 @@ function walkNode(
   }
   if ($isLinkNode(node)) {
     const url = node.getURL();
-    for (const child of node.getChildren()) walkNode(child, url, out, extensions);
+    for (const child of node.getChildren())
+      walkNode(child, url, out, extensions);
     return;
   }
   // Decorator (e.g. inline page link) → unmarked token run.
@@ -289,7 +291,8 @@ export function serializeBlockRuns(
     const paras = root.getChildren().filter($isElementNode);
     paras.forEach((para, i) => {
       if (i > 0) runs.push({ text: "\n" });
-      for (const child of para.getChildren()) walkNode(child, undefined, runs, extensions);
+      for (const child of para.getChildren())
+        walkNode(child, undefined, runs, extensions);
     });
   });
   return coalesce(runs);

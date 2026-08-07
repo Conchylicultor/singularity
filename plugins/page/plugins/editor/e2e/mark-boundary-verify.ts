@@ -138,7 +138,9 @@ async function fetchRows(pageId: string): Promise<Map<string, BlockRow>> {
   const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
   if (!res.ok) throw new Error(`blocks fetch ${res.status}`);
   const rows = (await res.json()) as BlockRow[];
-  return new Map(rows.filter((row) => row.type !== "page").map((row) => [row.id, row]));
+  return new Map(
+    rows.filter((row) => row.type !== "page").map((row) => [row.id, row]),
+  );
 }
 
 /**
@@ -149,10 +151,17 @@ async function fetchRows(pageId: string): Promise<Map<string, BlockRow>> {
  * `marks: []` an explicit claim rather than a missing key).
  */
 const runsOf = (row: BlockRow | undefined): NormRun[] =>
-  (row?.data?.text ?? []).map((run) => ({ text: run.text, marks: run.marks ?? [] }));
+  (row?.data?.text ?? []).map((run) => ({
+    text: run.text,
+    marks: run.marks ?? [],
+  }));
 
 /** One row's runs, after letting the doc flush and the projection run. */
-async function settledRuns(page: Page, pageId: string, blockId: string): Promise<NormRun[]> {
+async function settledRuns(
+  page: Page,
+  pageId: string,
+  blockId: string,
+): Promise<NormRun[]> {
   await page.waitForTimeout(PROJECTION_MS);
   return runsOf((await fetchRows(pageId)).get(blockId));
 }
@@ -177,11 +186,15 @@ const editableOf = (page: Page, blockId: string) =>
  * `getElementInnerTag`). NBSP is normalized because Chromium renders a model-level
  * space as one at a text-node edge.
  */
-async function markedTexts(page: Page, blockId: string, tag: string): Promise<string[]> {
+async function markedTexts(
+  page: Page,
+  blockId: string,
+  tag: string,
+): Promise<string[]> {
   return page.evaluate(
     ([id, sel]) =>
-      [...document.querySelectorAll(`[data-block-id="${id}"] ${sel}`)].map((el) =>
-        (el.textContent ?? "").replace(/ /g, " "),
+      [...document.querySelectorAll(`[data-block-id="${id}"] ${sel}`)].map(
+        (el) => (el.textContent ?? "").replace(/ /g, " "),
       ),
     [blockId, tag] as [string, string],
   );
@@ -202,7 +215,9 @@ async function caretLinear(page: Page): Promise<number> {
     const anchor = sel.anchorNode;
     const editable =
       anchor.parentElement?.closest?.('[contenteditable="true"]') ??
-      (anchor instanceof Element ? anchor.closest('[contenteditable="true"]') : null);
+      (anchor instanceof Element
+        ? anchor.closest('[contenteditable="true"]')
+        : null);
     if (!editable) return -1;
     const range = document.createRange();
     range.selectNodeContents(editable);
@@ -218,7 +233,9 @@ async function caretBlockId(page: Page): Promise<string | null> {
     if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return null;
     const anchor = sel.anchorNode;
     const el = anchor instanceof Element ? anchor : anchor.parentElement;
-    return el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null;
+    return (
+      el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null
+    );
   });
 }
 
@@ -340,7 +357,8 @@ async function enterNewBlock(page: Page, pageId: string): Promise<string> {
   const deadline = Date.now() + 20_000;
   for (;;) {
     if ((await fetchRows(pageId)).has(id)) break;
-    if (Date.now() > deadline) throw new Error(`block ${id} never reached the server`);
+    if (Date.now() > deadline)
+      throw new Error(`block ${id} never reached the server`);
     await page.waitForTimeout(250);
   }
   // The row is confirmed, so doc-init is now unblocked; give its round trip a beat
@@ -352,7 +370,11 @@ async function enterNewBlock(page: Page, pageId: string): Promise<string> {
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
 
-  const { pageUrl, pageId, blockId: firstId } = await openBlankPage(page, base, {
+  const {
+    pageUrl,
+    pageId,
+    blockId: firstId,
+  } = await openBlankPage(page, base, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);
@@ -382,7 +404,10 @@ await withBrowser(async (h) => {
   // Not an assertion: the caret is at the same linear offset and the same pixel at
   // depth 0 and depth 1. Logged because a caret that MOVED (or left the block)
   // explains a phase-1 failure that the rows alone would not.
-  console.log("P1 caret at the stop:", JSON.stringify(await caretState(editableOf(page, p1))));
+  console.log(
+    "P1 caret at the stop:",
+    JSON.stringify(await caretState(editableOf(page, p1))),
+  );
   console.log("P1 linear offset:", await caretLinear(page));
   await page.keyboard.type("x", { delay: 25 });
   await snap(page, out, "1-step-out");
@@ -415,9 +440,11 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(FORMAT_WINDOW_MS);
   await page.keyboard.type("x", { delay: 25 });
   await snap(page, out, "2-step-back-in");
-  r.eq("P2 ArrowLeft steps back INSIDE the mark", await settledRuns(page, pageId, p2), [
-    { text: "zzx", marks: ["code"] },
-  ]);
+  r.eq(
+    "P2 ArrowLeft steps back INSIDE the mark",
+    await settledRuns(page, pageId, p2),
+    [{ text: "zzx", marks: ["code"] }],
+  );
 
   // --- Phase 3: Backspace at the stop deletes the DELIMITER -------------------
   // Which is what "strip the mark from the span" means in this model — the
@@ -441,14 +468,20 @@ await withBrowser(async (h) => {
   );
   {
     const codes = await markedTexts(page, p3, "code");
-    r.ok("P3 the <code> is gone from the DOM too", codes.length === 0, JSON.stringify(codes));
+    r.ok(
+      "P3 the <code> is gone from the DOM too",
+      codes.length === 0,
+      JSON.stringify(codes),
+    );
   }
 
   await page.keyboard.press(UNDO);
   await snap(page, out, "3-unmark-undone");
   {
     const runs = await settledRuns(page, pageId, p3);
-    r.eq("P3 ONE Cmd+Z restores the {code} mark", runs, [{ text: "zz", marks: ["code"] }]);
+    r.eq("P3 ONE Cmd+Z restores the {code} mark", runs, [
+      { text: "zz", marks: ["code"] },
+    ]);
     // "…and nothing else": had the strip merged into the typing run's undo item,
     // the same press would have taken the autoformat with it and put the literal
     // delimiters back.
@@ -530,8 +563,16 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(OP_MS);
   {
     const ids = await editableIds(page);
-    r.ok("P4c the merge consumed the empty block", !ids.includes(p4c2), JSON.stringify(ids));
-    r.eq("P4c the caret landed at the join, end of the bold run", await caretLinear(page), 4);
+    r.ok(
+      "P4c the merge consumed the empty block",
+      !ids.includes(p4c2),
+      JSON.stringify(ids),
+    );
+    r.eq(
+      "P4c the caret landed at the join, end of the bold run",
+      await caretLinear(page),
+      4,
+    );
   }
   await page.keyboard.press("Backspace"); // the keystroke under test
   await snap(page, out, "4c-merge-landing");
@@ -617,7 +658,11 @@ await withBrowser(async (h) => {
     // so it never presses the absorbed one — the fixture cannot consume the
     // press the phase is about to measure.
     const presses = await pressUntilLinear(page, "ArrowRight", 2);
-    r.ok(`${label} the caret reached the \`zz\`|abc seam`, presses >= 0, `presses=${presses}`);
+    r.ok(
+      `${label} the caret reached the \`zz\`|abc seam`,
+      presses >= 0,
+      `presses=${presses}`,
+    );
     return id;
   };
 
@@ -653,7 +698,11 @@ await withBrowser(async (h) => {
   const p6b = await seamBlock("P6b");
   await page.keyboard.press("ArrowRight");
   await page.waitForTimeout(200);
-  r.eq("P6b the stop absorbs the first ArrowRight (linear stays 2)", await caretLinear(page), 2);
+  r.eq(
+    "P6b the stop absorbs the first ArrowRight (linear stays 2)",
+    await caretLinear(page),
+    2,
+  );
   await page.keyboard.type("X", { delay: 25 });
   await snap(page, out, "6b-seam-stop");
   {
@@ -679,7 +728,11 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(200);
   await page.keyboard.press("ArrowRight"); // crosses
   await page.waitForTimeout(200);
-  r.eq("P6c a SECOND ArrowRight crosses the seam (linear 2 → 3)", await caretLinear(page), 3);
+  r.eq(
+    "P6c a SECOND ArrowRight crosses the seam (linear 2 → 3)",
+    await caretLinear(page),
+    3,
+  );
   await page.keyboard.type("X", { delay: 25 });
   await snap(page, out, "6c-seam-crossed");
   {
@@ -773,11 +826,19 @@ await withBrowser(async (h) => {
   await page.keyboard.press("ArrowLeft");
   await page.waitForTimeout(200);
   const rightward = await walk(p8, "ArrowRight");
-  r.eq("P8 rightward visits every state in order", rightward, [0, 0, 1, 2, 3, 3, 4]);
+  r.eq(
+    "P8 rightward visits every state in order",
+    rightward,
+    [0, 0, 1, 2, 3, 3, 4],
+  );
 
   await caretToEndOf(page, p8);
   const leftward = await walk(p8, "ArrowLeft");
-  r.eq("P8 leftward visits the same states in reverse", leftward, [4, 3, 3, 2, 1, 0, 0]);
+  r.eq(
+    "P8 leftward visits the same states in reverse",
+    leftward,
+    [4, 3, 3, 2, 1, 0, 0],
+  );
   r.eq(
     "P8 the two walks are exact mirror images",
     [...leftward].reverse(),
@@ -836,7 +897,11 @@ await withBrowser(async (h) => {
     // is not the thing under test — but `pressUntilLinear` stops the moment it
     // reads 1 either way, so the fixture never spends the press phase 9b measures.
     const presses = await pressUntilLinear(page, "ArrowRight", 1);
-    r.ok(`${label} the caret reached the a|\`aaa\` seam`, presses >= 0, `presses=${presses}`);
+    r.ok(
+      `${label} the caret reached the a|\`aaa\` seam`,
+      presses >= 0,
+      `presses=${presses}`,
+    );
     return id;
   };
 
@@ -864,7 +929,11 @@ await withBrowser(async (h) => {
   const p9b = await mirroredSeamBlock("P9b");
   await page.keyboard.press("ArrowRight");
   await page.waitForTimeout(200);
-  r.eq("P9b the stop absorbs the first ArrowRight (linear stays 1)", await caretLinear(page), 1);
+  r.eq(
+    "P9b the stop absorbs the first ArrowRight (linear stays 1)",
+    await caretLinear(page),
+    1,
+  );
   await page.waitForTimeout(FORMAT_WINDOW_MS);
   await page.keyboard.type("X", { delay: 25 });
   await snap(page, out, "9b-mirror-stop");
@@ -889,13 +958,21 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(200);
   await page.keyboard.press("ArrowRight"); // crosses
   await page.waitForTimeout(200);
-  r.eq("P9c a SECOND ArrowRight crosses the mirrored seam (linear 1 → 2)", await caretLinear(page), 2);
+  r.eq(
+    "P9c a SECOND ArrowRight crosses the mirrored seam (linear 1 → 2)",
+    await caretLinear(page),
+    2,
+  );
   await page.keyboard.type("X", { delay: 25 });
   await snap(page, out, "9c-mirror-crossed");
-  r.eq("P9c after crossing, the char lands one position INTO the code run", await settledRuns(page, pageId, p9c), [
-    { text: "a", marks: [] },
-    { text: "aXaa", marks: ["code"] },
-  ]);
+  r.eq(
+    "P9c after crossing, the char lands one position INTO the code run",
+    await settledRuns(page, pageId, p9c),
+    [
+      { text: "a", marks: [] },
+      { text: "aXaa", marks: ["code"] },
+    ],
+  );
 
   // (d) Backspace at the mirrored stop deletes the delimiter — which here is the
   //     span's OPENER, so the strip walks FORWARD. The one-directional walk this
@@ -913,7 +990,11 @@ await withBrowser(async (h) => {
   );
   {
     const codes = await markedTexts(page, p9d, "code");
-    r.ok("P9d the <code> is gone from the DOM too", codes.length === 0, JSON.stringify(codes));
+    r.ok(
+      "P9d the <code> is gone from the DOM too",
+      codes.length === 0,
+      JSON.stringify(codes),
+    );
   }
 
   // (e) Traversal symmetry in this orientation. Same claim, same shape, and the
@@ -928,7 +1009,11 @@ await withBrowser(async (h) => {
   await enterNewBlock(page, pageId); // the rightward walk's exit block
   await caretToStartOf(page, p9e);
   const mirrorRight = await walk(p9e, "ArrowRight");
-  r.eq("P9e rightward visits every state in order", mirrorRight, [0, 1, 1, 2, 3, 4, 4]);
+  r.eq(
+    "P9e rightward visits every state in order",
+    mirrorRight,
+    [0, 1, 1, 2, 3, 4, 4],
+  );
   // The rightward walk exited into the block below, so ONE ArrowLeft crosses back
   // — and phase 10's rule lands it on the block-END stop, the rightmost state of
   // all, which is where the leftward walk has to begin.
@@ -941,10 +1026,22 @@ await withBrowser(async (h) => {
   // in goes through `placeCaretAtBoundary`, whose anchor is not a hit test.
   await page.keyboard.press("ArrowLeft");
   await page.waitForTimeout(200);
-  r.eq("P9e the crossing back in landed on the block-end stop", await caretBlockId(page), p9e);
+  r.eq(
+    "P9e the crossing back in landed on the block-end stop",
+    await caretBlockId(page),
+    p9e,
+  );
   const mirrorLeft = await walk(p9e, "ArrowLeft");
-  r.eq("P9e leftward visits the same states in reverse", mirrorLeft, [4, 4, 3, 2, 1, 1, 0]);
-  r.eq("P9e the two walks are exact mirror images", [...mirrorLeft].reverse(), mirrorRight);
+  r.eq(
+    "P9e leftward visits the same states in reverse",
+    mirrorLeft,
+    [4, 4, 3, 2, 1, 1, 0],
+  );
+  r.eq(
+    "P9e the two walks are exact mirror images",
+    [...mirrorLeft].reverse(),
+    mirrorRight,
+  );
 
   // --- Phase 10: CROSS-BLOCK ARRIVAL -----------------------------------------
   //
@@ -968,7 +1065,11 @@ await withBrowser(async (h) => {
   await caretToStartOf(page, p10b);
   await page.keyboard.press("ArrowLeft"); // crosses into p10a's end
   await page.waitForTimeout(FORMAT_WINDOW_MS);
-  r.eq("P10 the crossing landed in the previous block", await caretBlockId(page), p10a);
+  r.eq(
+    "P10 the crossing landed in the previous block",
+    await caretBlockId(page),
+    p10a,
+  );
   r.eq("P10 ...at its very end", await caretLinear(page), 10);
   await page.keyboard.type("X", { delay: 25 });
   await snap(page, out, "10-cross-block-arrival");
@@ -994,7 +1095,11 @@ await withBrowser(async (h) => {
   await caretToEndOf(page, p10c);
   await page.keyboard.press("ArrowRight"); // crosses into p10d's start
   await page.waitForTimeout(FORMAT_WINDOW_MS);
-  r.eq("P10 the rightward crossing landed in the next block", await caretBlockId(page), p10d);
+  r.eq(
+    "P10 the rightward crossing landed in the next block",
+    await caretBlockId(page),
+    p10d,
+  );
   r.eq("P10 ...at its very start", await caretLinear(page), 0);
   await page.keyboard.type("x", { delay: 25 });
   await snap(page, out, "10-cross-block-arrival-right");
@@ -1055,13 +1160,30 @@ await withBrowser(async (h) => {
       await markedTexts(pageB, p5, "strong"),
       ["bb"],
     );
-    r.ok("P7 context B shows 'xbb tail'", p5Text === "xbb tail", JSON.stringify(p5Text));
+    r.ok(
+      "P7 context B shows 'xbb tail'",
+      p5Text === "xbb tail",
+      JSON.stringify(p5Text),
+    );
   }
 
   console.log("PAGE_URL:", pageUrl);
   console.log(
     "IDS:",
-    JSON.stringify({ p1, p2, p3, p4a, p4b, p4c: p4c1, p5, p6a, p6b, p6c, p8, p8b }),
+    JSON.stringify({
+      p1,
+      p2,
+      p3,
+      p4a,
+      p4b,
+      p4c: p4c1,
+      p5,
+      p6a,
+      p6b,
+      p6c,
+      p8,
+      p8b,
+    }),
   );
 
   r.finish();
