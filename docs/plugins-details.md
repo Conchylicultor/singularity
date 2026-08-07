@@ -17168,6 +17168,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/turn-into-page`
           - `page/url-paste`
           - `page/video`
+          - `primitives/css/ui-kit`
           - `reports/caret-flight`
           - `reports/collab-hydration`
         - Extended by:
@@ -20667,6 +20668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `primitives/css/ui-kit.SurfaceLevel`
+              - `primitives/select-scope.scopeSelectAllKeyDown`
               - `primitives/select-scope.selectScopeProps`
             - Exports (types): `SurfaceProps`
             - Exports (values): `Surface`
@@ -20692,7 +20694,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
               - `primitives/data-view`
-              - `primitives/floating-surface`
               - `primitives/row-actions`
               - `stats`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
@@ -21105,13 +21106,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
             - Uses:
+              - `primitives/element-size.useResizeObserver`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay-boundary.OverlayBoundary`
               - `primitives/popup-open.useReportPopupOpen`
               - `primitives/select-scope.ContentScope`
+              - `primitives/select-scope.scopeSelectAllKeyDown`
             - Exports (types):
               - `ButtonIconSize`
               - `ControlSize`
               - `DensityControlled`
+              - `OverlayPanelProps`
               - `PopoverMaxHeight`
               - `PopoverPadding`
               - `PopoverWidth`
@@ -21151,6 +21156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DropdownMenuTrigger`
               - `iconSizeFor`
               - `Input`
+              - `OverlayPanel`
               - `Popover`
               - `POPOVER_MAX_HEIGHT`
               - `POPOVER_PADDING`
@@ -22509,6 +22515,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/piano-roll`
           - `primitives/collapsible-wrap`
           - `primitives/css/sticky/stack`
+          - `primitives/css/ui-kit`
           - `primitives/data-table`
           - `primitives/data-view`
           - `primitives/data-view/gallery`
@@ -22616,19 +22623,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/message-toc`
           - `conversations/conversation-view/prompt-templates`
           - `shell/global-action-bar`
-    - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), reusing ViewportOverlay + Surface, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+    - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
       - Web:
         - Uses:
-          - `primitives/css/surface.Surface`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.POPOVER_MAX_HEIGHT`
-          - `primitives/css/ui-kit.POPOVER_PADDING`
-          - `primitives/css/ui-kit.POPOVER_WIDTH`
+          - `primitives/css/ui-kit.OverlayPanel`
           - `primitives/css/ui-kit.PopoverMaxHeight`
           - `primitives/css/ui-kit.PopoverPadding`
           - `primitives/css/ui-kit.PopoverWidth`
           - `primitives/css/viewport-overlay.ViewportOverlay`
-          - `primitives/overlay-boundary.OverlayBoundary`
         - Exports (types): `FloatingSurfaceProps`
         - Exports (values): `FloatingSurface`
       - Cross-plugin:
@@ -22968,6 +22970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `primitives/auto-scroll`
           - `primitives/css/color-picker`
+          - `primitives/css/ui-kit`
           - `primitives/data-view`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/tree`
@@ -23669,7 +23672,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `primitives/css/ui-kit`
           - `primitives/error-boundary`
-          - `primitives/floating-surface`
       - Web:
         - Exports (types): `OverlayFallbackProps`
         - Exports (values):
@@ -24361,6 +24363,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Exports (values):
           - `ContentScope`
+          - `scopeSelectAllKeyDown`
           - `selectScopeProps`
     - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external), StepDone (success line), StepNote (muted hint) and StepCommand (copyable command row) affordances.
       - Web:
