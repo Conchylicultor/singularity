@@ -1,4 +1,9 @@
-import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ButtonGroup,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { MdEdit, MdSend } from "react-icons/md";
 import {
@@ -56,7 +61,10 @@ function TemplateChip({
   canSend: boolean;
 }) {
   return (
-    <ButtonGroup className={cn("text-caption", !pinned && "[&>*]:border-dashed")}>
+    // No text class here: `Button` writes its own rung from the ambient density
+    // (`buttonTextClassFor`), so a font-size on this wrapper never reaches the
+    // labels — it only looked like it was doing something.
+    <ButtonGroup className={cn(!pinned && "[&>*]:border-dashed")}>
       <Button
         variant="outline"
         onMouseDown={(e) => e.preventDefault()}
@@ -136,56 +144,66 @@ export function FloatingTemplateChips({
 
   if (templates.length === 0) return null;
 
+  // The chips are a sub-region of the prompt bar, not lone controls, so THIS is
+  // where their density is declared — one step below the bar's own, matching how
+  // a table or a card sets the size for everything it holds. Individual chips
+  // still never name a height; they read this. The pinned strip and the panel
+  // sit inside the same provider so the two surfaces can't drift apart.
   return (
-    <Stack direction="row" gap="xs" align="center">
-      {pinnedTemplates.length > 0 && (
-        // eslint-disable-next-line layout/no-adhoc-layout -- items-center cross-aligns chips on ResponsiveOverflow's internal flex container; the primitive exposes no align prop
-        <ResponsiveOverflow gap={4} className="items-center">
-          {pinnedTemplates.map((t) => (
-            <TemplateChip
-              key={t.id}
-              template={t}
-              insertText={insertText}
-              pinned
-              onSend={sendTemplate}
-              canSend={canSend}
-            />
-          ))}
-        </ResponsiveOverflow>
-      )}
-      <FloatingAction
-        className="relative size-7 z-popover"
-        variant="ghost"
-        panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-open/fa:px-xs max-w-7 group-data-open/fa:max-w-sm max-h-7 group-data-open/fa:max-h-56"
-        trigger={
-          <MdEdit className="size-3.5 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
-        }
-      >
-        <FloatingActionFadeIn>
-          <Stack gap="xs" align="start">
-            {/* eslint-disable-next-line layout/no-adhoc-layout -- per-child self-alignment (right-align the gear within the start-aligned column); no container primitive owns one child's cross-axis override */}
-            <div className="self-end">
-              <ConfigGearButton
-                descriptor={promptTemplatesConfig}
-                label="Configure: Prompt templates"
+    <ControlSizeProvider size="xs">
+      <Stack direction="row" gap="xs" align="center">
+        {pinnedTemplates.length > 0 && (
+          // eslint-disable-next-line layout/no-adhoc-layout -- items-center cross-aligns chips on ResponsiveOverflow's internal flex container; the primitive exposes no align prop
+          <ResponsiveOverflow gap={4} className="items-center">
+            {pinnedTemplates.map((t) => (
+              <TemplateChip
+                key={t.id}
+                template={t}
+                insertText={insertText}
+                pinned
+                onSend={sendTemplate}
+                canSend={canSend}
               />
-            </div>
-            <Scroll className="max-h-40">
-              <Cluster gap="xs" align="center">
-                {ordered.map((t) => (
-                  <TemplateChip
-                    key={t.id}
-                    template={t}
-                    insertText={insertText}
-                    onSend={sendTemplate}
-                    canSend={canSend}
-                  />
-                ))}
-              </Cluster>
-            </Scroll>
-          </Stack>
-        </FloatingActionFadeIn>
-      </FloatingAction>
-    </Stack>
+            ))}
+          </ResponsiveOverflow>
+        )}
+        {/* `FloatingAction` is not density-participating, so its collapsed box
+            can't read the provider above — these numbers are hand-matched to the
+            xs chip height (1.5rem) it sits beside. */}
+        <FloatingAction
+          className="relative size-6 z-popover"
+          variant="ghost"
+          panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-open/fa:px-xs max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56"
+          trigger={
+            <MdEdit className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
+          }
+        >
+          <FloatingActionFadeIn>
+            <Stack gap="xs" align="start">
+              {/* eslint-disable-next-line layout/no-adhoc-layout -- per-child self-alignment (right-align the gear within the start-aligned column); no container primitive owns one child's cross-axis override */}
+              <div className="self-end">
+                <ConfigGearButton
+                  descriptor={promptTemplatesConfig}
+                  label="Configure: Prompt templates"
+                />
+              </div>
+              <Scroll className="max-h-40">
+                <Cluster gap="xs" align="center">
+                  {ordered.map((t) => (
+                    <TemplateChip
+                      key={t.id}
+                      template={t}
+                      insertText={insertText}
+                      onSend={sendTemplate}
+                      canSend={canSend}
+                    />
+                  ))}
+                </Cluster>
+              </Scroll>
+            </Stack>
+          </FloatingActionFadeIn>
+        </FloatingAction>
+      </Stack>
+    </ControlSizeProvider>
   );
 }

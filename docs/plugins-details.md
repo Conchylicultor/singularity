@@ -9611,6 +9611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ButtonGroup`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/floating-action.FloatingAction`
               - `primitives/floating-action.FloatingActionFadeIn`
               - `primitives/prompt-editor.PromptEditorSlots`
