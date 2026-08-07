@@ -1,45 +1,65 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   applyMarkdownToBlock,
   loadBlockScope,
   readBlockAsMarkdown,
+  serverMarkdownContext,
   type ApplyReport,
 } from "@plugins/page/plugins/markdown-apply/server";
+import { pageTitleBanner } from "@plugins/page/plugins/markdown-apply/core";
 import { recordAgentNotesAuthor } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server";
-import { appendAgentNotes } from "./append";
 import {
   assertAgentAddressable,
-  assertMarkdownWritable,
-  assertWritableNote,
+  assertNoteCard,
+  assertNotesOnlyPlan,
   redactHumanAudience,
 } from "./policy";
 
 /**
- * The agent-facing face of a page: read it as markdown, write back only into
- * agent-notes cards.
+ * The agent-facing face of a page, as the file triple an agent already knows:
+ *
+ * ```
+ * Read   → read_page(block_id)
+ * Write  → write_agent_note(block_id, content)
+ * Edit   → edit_page(block_id, old_string, new_string, replace_all)
+ * ```
  *
  * `page/markdown-apply` is the engine and stays audience-agnostic — it takes a
- * root and a row filter and knows nothing about who anything is for. These four
- * tools are the POLICY over it (see `./policy.ts`), which is why they live under
- * `annotations`: withholding `/private-notes` and owning `<agent-notes>` are
- * both statements about that family, not about markdown.
+ * root, a row filter and a boundary predicate, and knows nothing about who
+ * anything is for. These three tools are the POLICY over it (see `./policy.ts`),
+ * which is why they live under `annotations`: withholding `/private` and owning
+ * `<agent-note>` are both statements about that family, not about markdown.
  *
- * `write_page` / `edit_page` — whole-page markdown editing, which shipped with
- * the engine — are deliberately GONE. Nothing an agent can name reaches the
- * page's prose any more. The engine that made them possible is untouched, so
- * they could return behind a per-page, human-set opt-in if that is ever wanted.
+ * **One parameter name — `block_id` — in all three.** The old
+ * `blockId`-means-scope / `noteId`-means-target split dissolved with
+ * `append_agent_notes`: a tagless `<agent-note>` in the document is now how a
+ * card is minted. What the three tools differ in is what they ACCEPT, and that
+ * difference is carried by the refusals, which name the tool to use instead.
+ *
+ * snake_case, matching the file tools (`file_path`, `old_string`, `replace_all`)
+ * — and this plugin's results, which were already snake_case.
  */
 
 const jsonResult = (value: unknown): { content: [{ type: "text"; text: string }] } => ({
   content: [{ type: "text", text: JSON.stringify(value) }],
 });
 
-/** The part of an {@link ApplyReport} an agent needs to see. */
-function applySummary(report: ApplyReport): unknown {
+/**
+ * The part of an {@link ApplyReport} an agent needs to see.
+ *
+ * `scope_id` is the root the apply was made at — the id the agent passed, which
+ * for `edit_page` is routinely a whole page. It was called `note_id` when the
+ * only writable root WAS a card; keeping that name would now claim a page is a
+ * note. The cards a write actually touched are `note_ids`, plural, because one
+ * edit may create and revise several of them.
+ */
+function applySummary(report: ApplyReport, noteIds: readonly string[]): unknown {
   return {
-    note_id: report.rootId,
+    scope_id: report.rootId,
     page_id: report.pageId,
+    note_ids: noteIds,
     survived: report.stats.survived,
     created: report.stats.created,
     deleted: report.stats.deleted,
@@ -61,36 +81,59 @@ function countOccurrences(haystack: string, needle: string): number {
   }
 }
 
+/**
+ * Stamp this conversation onto every card a write touched.
+ *
+ * AFTER the patch commits, always: `page_blocks_agent_authors.block_id` FKs onto
+ * the card's row, so stamping a card the same call just created is a foreign-key
+ * violation until then. `recordAgentNotesAuthor` is `onConflictDoNothing`, so
+ * re-stamping a card this conversation already wrote is free.
+ *
+ * The tool layer is where `conversationId` exists at all — neither the engine nor
+ * the policy ever learns one.
+ */
+async function stampAuthors(cardIds: Iterable<string>, conversationId: string): Promise<void> {
+  for (const id of new Set(cardIds)) await recordAgentNotesAuthor(id, conversationId);
+}
+
 export const readPageTool = Mcp.tool({
   name: "read_page",
   description: `Read a Singularity page — or any block within one — as markdown.
 
-\`blockId\` is the SCOPE, not a line in the output: you get that block's
-sub-blocks. A page's id gives the whole page.
+\`block_id\` is the SCOPE, not a line in the output: you get that block's
+sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
+
+Two things in the output are ADDRESSES, and both matter when you write back:
+
+- \`<agent-note id="…">\` — an agent-note card. Everything an agent writes to a
+  page lives inside one of these, and that id is what \`write_agent_note\` takes.
+- \`<page id="…"/>\` — a sub-page pointer. Leave the id alone: it is how a later
+  write reconciles the tag against the existing sub-page instead of destroying it.
 
 The markdown is a LOSSLESS projection of the block forest: what this returns
-re-parses to the same blocks. Sub-pages appear as \`<page id="…"/>\` pointers —
-leave the id alone; it is how a later write reconciles the tag against the
-existing sub-page instead of destroying it.
+re-parses to the same blocks, so feeding it straight back changes nothing.
 
 **Content may be missing, with nothing marking where.** Cards the page's author
-addressed to themselves (\`/private-notes\`) are removed from this output
-entirely, along with everything inside them. So a gap in the prose may be a note
-you are not meant to see rather than something missing: do not "restore" it, and
-do not read this text as proof of what the author has or has not already
-written down.
+addressed to themselves (\`/private\`) are removed from this output entirely,
+along with everything inside them. So a gap in the prose may be a note you are
+not meant to see rather than something missing: do not "restore" it, and do not
+read this text as proof of what the author has or has not already written down.
 
-Writes are notes-only. Use \`append_agent_notes\` to add a new note card, and
-\`write_agent_notes\` / \`edit_agent_notes\` to revise one. There is no tool that
-edits the page's own prose.`,
+There is no offset/limit, deliberately — a line window can open a tag it never
+closes. To read less, pass the id of the block you care about; that is what the
+ids in the output are for.
+
+To write: \`write_agent_note\` replaces one card's contents; \`edit_page\`
+changes anything, as long as every block it touches sits inside an
+\`<agent-note>\` card.`,
   inputSchema: {
-    blockId: z
+    block_id: z
       .string()
       .min(1)
       .describe("The page's block id, or any block within it to scope the read to."),
   },
-  async handler({ blockId }) {
-    // The scope is loaded here to decide ABOUT the block (rule 3) and again
+  async handler({ block_id: blockId }) {
+    // The scope is loaded here to decide ABOUT the block (rule 2) and again
     // inside the engine to serialize it. Two reads, deliberately: the policy
     // question is "may this id be addressed at all", which has to be answered
     // before the id is handed over as a root, and the engine's own read is what
@@ -101,149 +144,169 @@ edits the page's own prose.`,
   },
 });
 
-export const appendAgentNotesTool = Mcp.tool({
-  name: "append_agent_notes",
-  description: `Append a new \`<agent-notes>\` card to a page (or to any block in one).
+export const writeAgentNoteTool = Mcp.tool({
+  name: "write_agent_note",
+  description: `Replace ONE \`<agent-note>\` card's contents with a markdown document.
 
-This is how an agent writes back to a page: what it found, what it assumed, what
-it left undone. The card lands as the LAST child of \`blockId\`, and nothing
-already on the page is moved, rewritten or deleted — this tool only creates.
+\`block_id\` must name an \`<agent-note>\` card — copy the id off the opening tag
+\`read_page\` emits. To CREATE a card, use \`edit_page\` and put a tagless
+\`<agent-note>\` … \`</agent-note>\` where you want it; there is no separate
+append tool.
 
-\`markdown\` is the card's CONTENTS, not the card. Write ordinary markdown
+\`content\` is the card's CONTENTS, not the card. Write ordinary markdown
 (paragraphs, lists, headings) and it becomes the card's children; do not wrap it
-in an \`<agent-notes>\` tag yourself.
-
-Keep the returned \`note_id\`. It is the only handle for revising this card later
-(\`write_agent_notes\` / \`edit_agent_notes\`), and the card records that THIS
-conversation wrote it, so a human reading the page can open the run that produced
-the note.
-
-Refused when \`blockId\` is, or sits inside, an agent-notes card (notes do not
-nest) or a card the author addressed to themselves.`,
-  inputSchema: {
-    blockId: z
-      .string()
-      .min(1)
-      .describe("The block the new card is appended under — a page id for the page itself."),
-    markdown: z
-      .string()
-      .min(1)
-      .describe("The card's contents, in the same dialect `read_page` emits."),
-  },
-  async handler({ blockId, markdown }, ctx) {
-    const result = await appendAgentNotes(blockId, markdown);
-    // AFTER the patch commits: `page_blocks_agent_authors.block_id` FKs onto the
-    // card's row, so stamping a card that does not exist yet is a foreign-key
-    // violation. The tool layer is where `conversationId` lives at all — the
-    // engine never learns one.
-    await recordAgentNotesAuthor(result.noteId, ctx.conversationId);
-    return jsonResult({
-      note_id: result.noteId,
-      page_id: result.pageId,
-      created: result.createdIds.length,
-    });
-  },
-});
-
-export const writeAgentNotesTool = Mcp.tool({
-  name: "write_agent_notes",
-  description: `Replace one agent-notes card's contents with a markdown document.
-
-\`noteId\` must name an \`<agent-notes>\` card — one \`append_agent_notes\`
-returned, or one an earlier agent wrote. **That restriction is the whole
-permission model**: an agent may add notes to a page and revise its own, and can
-never touch the page's prose because no tool accepts a prose block's id.
+in an \`<agent-note>\` tag yourself — nesting a card inside a card is refused.
 
 This is a MERGE, not an overwrite: the incoming document is aligned against the
 card's existing blocks, so unchanged blocks keep their identity (and with it
 their edit history, stars, backlinks and any task launched from them). Only what
 really changed is written.
 
-Prefer \`edit_agent_notes\` for a localized change — same machinery, far smaller
-chance of accidentally rewriting the whole card. Use this one when you are
-producing the card's contents wholesale.
-
 Always \`read_page\` the card first (\`read_page\` with the card's id returns
 exactly this document) and edit THAT text: a document written from memory loses
 every block the projection encoded and re-mints the blocks it fails to reproduce
-byte-for-byte.
+byte-for-byte. Prefer \`edit_page\` for a localized change — same machinery, far
+smaller chance of rewriting the whole card by accident.
 
-Returns what the write actually did (survived / created / deleted / moved).`,
+The card records that THIS conversation wrote it, so a human reading the page can
+open the run that produced the note. Returns what the write actually did
+(survived / created / deleted / moved).`,
   inputSchema: {
-    noteId: z
+    block_id: z
       .string()
       .min(1)
-      .describe("The `<agent-notes>` card's block id."),
-    markdown: z
+      .describe("The `<agent-note>` card's block id, as read_page emits it."),
+    content: z
       .string()
       .describe("The card's full new contents, in the same dialect `read_page` emits."),
   },
-  async handler({ noteId, markdown }, ctx) {
-    assertWritableNote(await loadBlockScope(noteId), noteId);
-    // The incoming document, not just the target: rules 1-4 reason about rows
-    // that already exist and cannot see a card the agent is about to MINT.
-    assertMarkdownWritable(markdown);
-    const report = await applyMarkdownToBlock(noteId, markdown);
-    await recordAgentNotesAuthor(noteId, ctx.conversationId);
-    return jsonResult(applySummary(report));
+  async handler({ block_id: blockId, content }, ctx) {
+    assertNoteCard(await loadBlockScope(blockId), blockId);
+    // The card set the acceptance predicate resolved, carried out of the hook.
+    // `assertAcceptable` returns void by design — its only verdict is throwing —
+    // so the answer it computes on the way rides out on a closure rather than
+    // being walked a second time here.
+    let cards: string[] = [];
+    const report = await applyMarkdownToBlock(blockId, content, {
+      // The SAME filter the read used, which is what makes the apply a diff
+      // against the document the agent actually saw.
+      redact: redactHumanAudience,
+      assertAcceptable: (plan, rows) => {
+        cards = assertNotesOnlyPlan({ plan, rows, rootId: blockId });
+      },
+    });
+    // The target card is stamped even when the diff was empty: "I wrote this
+    // card" is true either way, and an agent that re-sends an unchanged document
+    // has still taken authorship of what it says.
+    await stampAuthors([blockId, ...cards], ctx.conversationId);
+    return jsonResult(applySummary(report, [blockId, ...cards.filter((c) => c !== blockId)]));
   },
 });
 
-export const editAgentNotesTool = Mcp.tool({
-  name: "edit_agent_notes",
-  description: `Replace an exact string inside one agent-notes card.
+export const editPageTool = Mcp.tool({
+  name: "edit_page",
+  description: `Replace an exact string in a page, the way \`Edit\` replaces one in a file.
 
-The card is read as markdown, \`oldString\` is replaced with \`newString\`, and
-the result is merged back — so a one-word change touches exactly one block and
-every other block keeps its identity.
+THE ONE RULE: **every block this edit creates, rewrites, moves or deletes must
+sit inside an \`<agent-note>\` card.** The page's own prose is read-only to an
+agent — you annotate it, you do not rewrite it. \`block_id\` is only the SCOPE
+the edit applies to (a page id for the whole page); what is allowed is judged by
+what the resulting diff TOUCHED, not by which id you passed.
 
-\`noteId\` must name an \`<agent-notes>\` card, for the reason
-\`write_agent_notes\` states: addressing IS the permission model.
+A worked round trip:
 
-Contract, matching the Edit file tool:
-- \`oldString\` must appear at least once; zero matches is an error.
-- It must be UNIQUE unless \`replaceAll\` is true; a non-unique match is an
+1. \`read_page(block_id: "<page id>")\` →
+
+       # Parser notes
+
+       The parser handles UTF-8.
+
+       <agent-note id="block-77">
+       Checked the writer.
+       </agent-note>
+
+2. Annotate that prose line — the line itself comes back byte-identical, and the
+   only new block sits in a new, TAGLESS card (a tagless \`<agent-note>\` mints
+   one; a tagged one names the card that already exists):
+
+       edit_page(
+         block_id:   "<page id>",
+         old_string: "The parser handles UTF-8.",
+         new_string: "The parser handles UTF-8.\\n\\n<agent-note>\\nUTF-16 input is rejected in decode.ts.\\n</agent-note>",
+       )
+
+3. Revise what you wrote earlier — inside the existing card, so it is yours:
+
+       edit_page(block_id: "<page id>",
+                 old_string: "Checked the writer.",
+                 new_string: "Checked the writer and the reader.")
+
+4. REFUSED — this rewrites a prose block that is inside no card:
+
+       edit_page(block_id: "<page id>",
+                 old_string: "The parser handles UTF-8.",
+                 new_string: "The parser handles UTF-16.")
+
+       403: block block-12 was edited outside every "agent-note" card. …
+
+Contract, matching the \`Edit\` file tool:
+- \`old_string\` must appear at least once; zero matches is an error.
+- It must be UNIQUE unless \`replace_all\` is true; a non-unique match is an
   error naming how many were found. Include surrounding lines to disambiguate.
-- \`oldString\` and \`newString\` must differ.
+- \`old_string\` and \`new_string\` must differ.
 
-Match against what \`read_page\` returns for this card, not against what you
-imagine it says.`,
+Match against what \`read_page\` returns for this \`block_id\`, not against what
+you imagine it says. Everything outside a card must come back byte-identical —
+including the \`# Title\` line and every \`<page id="…"/>\` pointer.`,
   inputSchema: {
-    noteId: z
+    block_id: z
       .string()
       .min(1)
-      .describe("The `<agent-notes>` card's block id."),
-    oldString: z
+      .describe("The page id, or any block within it, to scope the edit to."),
+    old_string: z
       .string()
       .min(1)
       .describe("Exact text to replace, as it appears in `read_page`'s output."),
-    newString: z.string().describe("Replacement text."),
-    replaceAll: z
+    new_string: z.string().describe("Replacement text."),
+    replace_all: z
       .boolean()
       .default(false)
       .describe("Replace every occurrence instead of requiring a unique match."),
   },
-  async handler({ noteId, oldString, newString, replaceAll }, ctx) {
+  async handler(
+    { block_id: blockId, old_string: oldString, new_string: newString, replace_all: replaceAll },
+    ctx,
+  ) {
     if (oldString === newString) {
-      throw new Error("edit_agent_notes: oldString and newString are identical.");
+      throw new HttpError(
+        400,
+        `edit_page: old_string and new_string are identical, so this edit asks for ` +
+          `no change. Pass the text you want instead as new_string.`,
+      );
     }
-    assertWritableNote(await loadBlockScope(noteId), noteId);
-    // NOT redacted, deliberately. The card was just proved to hold no
-    // human-audience content, so redaction here would be a no-op — and if it
-    // ever were not, stripping rows out of the text a write is diffed against is
-    // exactly how a hidden card becomes a deletion.
-    const markdown = await readBlockAsMarkdown(noteId);
+    const scope = await loadBlockScope(blockId);
+    // The READ door, not the write one: this tool reads the scope as markdown
+    // before it edits, so a block inside a private card is refused here for the
+    // same reason `read_page` refuses it. What may be WRITTEN is judged on the
+    // plan, below.
+    assertAgentAddressable(scope, blockId);
+    const markdown = await readBlockAsMarkdown(blockId, { redact: redactHumanAudience });
+
     const matches = countOccurrences(markdown, oldString);
     if (matches === 0) {
-      throw new Error(
-        `edit_agent_notes: oldString was not found in card ${noteId}. ` +
-          `Call read_page on that id and copy the text to replace out of its output.`,
+      throw new HttpError(
+        400,
+        `edit_page: old_string was not found in ${blockId}. Call read_page on that ` +
+          `id and copy the text to replace out of its output verbatim — a card the ` +
+          `page's author addressed to themselves is not in it, so text you remember ` +
+          `from elsewhere may not be there.`,
       );
     }
     if (matches > 1 && !replaceAll) {
-      throw new Error(
-        `edit_agent_notes: oldString matches ${matches} times in card ${noteId}. ` +
-          `Include more surrounding text to make it unique, or pass replaceAll: true.`,
+      throw new HttpError(
+        400,
+        `edit_page: old_string matches ${matches} times in ${blockId}. Include more ` +
+          `surrounding text to make it unique, or pass replace_all: true.`,
       );
     }
     // `split`/`join` rather than `String.replace`, whose replacement string
@@ -252,14 +315,40 @@ imagine it says.`,
     const next = replaceAll
       ? markdown.split(oldString).join(newString)
       : markdown.slice(0, at) + newString + markdown.slice(at + oldString.length);
-    // The SPLICED document, not `newString` alone: a tag can be opened in one
-    // replacement and closed by text that was already there, so only the whole
-    // result is meaningful to parse.
-    assertMarkdownWritable(next);
-    const report = await applyMarkdownToBlock(noteId, next);
-    await recordAgentNotesAuthor(noteId, ctx.conversationId);
+
+    // The `# Title` banner is a READER-SIDE PREFIX, not a block: a page-rooted
+    // read prepends it and the apply strips it back off by BYTE-IDENTITY. An edit
+    // that rewrote it would therefore fail that test, fall through to the planner
+    // as a created heading, and be refused as a block outside every card — true,
+    // but an answer that names neither the title nor the fix. So it is caught
+    // here, where the two documents are both in hand and the diagnosis is exact.
+    if (blockId === scope.pageId) {
+      const banner = pageTitleBanner(scope.title, serverMarkdownContext());
+      if (markdown.startsWith(banner) && !next.startsWith(banner)) {
+        throw new HttpError(
+          400,
+          `edit_page: this edit changes the document's first line, which is page ` +
+            `${scope.pageId}'s TITLE and not a block of the page — read_page ` +
+            `prepends it, and no edit can write it. Anchor old_string below the ` +
+            `blank line that follows the title, or scope the edit to a block ` +
+            `inside the page instead of the page itself.`,
+        );
+      }
+    }
+
+    let cards: string[] = [];
+    const report = await applyMarkdownToBlock(blockId, next, {
+      redact: redactHumanAudience,
+      assertAcceptable: (plan, rows) => {
+        cards = assertNotesOnlyPlan({ plan, rows, rootId: blockId });
+      },
+    });
+    // Nothing is stamped when nothing changed: unlike `write_agent_note`, this
+    // tool names no card of its own, so an edit that touched no card has no
+    // authorship to claim.
+    await stampAuthors(cards, ctx.conversationId);
     return jsonResult({
-      ...(applySummary(report) as object),
+      ...(applySummary(report, cards) as object),
       replaced: replaceAll ? matches : 1,
     });
   },

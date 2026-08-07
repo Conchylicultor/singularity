@@ -8,13 +8,24 @@ import {
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
 import { serializeForestToMarkdown } from "@plugins/page/plugins/editor/core";
-import { markdownNodesOfRows } from "../../core";
+import { markdownNodesOfRows, pageTitleBanner } from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
 
 /** The page a block lives in, plus every live row of that page's partition. */
 export interface BlockScope {
   /** The `page_id` partition `rows` came from — the page any created row joins. */
   pageId: string;
+  /**
+   * That page's stored title — the banner a page-rooted read prepends and a
+   * page-rooted apply strips (`core/page-title.ts`).
+   *
+   * It rides on the scope because this is the ONE place it is available without
+   * a second query: a page's own row is NOT in its content partition (`rows` is
+   * the page's children and below), so nothing downstream of the walk can see
+   * it. `serializePageContent` already returns it on `page: PageData` and this
+   * function used to throw that half away.
+   */
+  title: string;
   /** Every LIVE row of that partition (sub-page shells included). */
   rows: StoredBlock[];
 }
@@ -61,7 +72,7 @@ export async function loadBlockScope(blockId: string): Promise<BlockScope> {
   if (blockId !== pageId && !snapshot.blocks.some((b) => b.id === blockId)) {
     throw new HttpError(404, `block ${blockId} is not part of page ${pageId}`);
   }
-  return { pageId, rows: snapshot.blocks };
+  return { pageId, title: snapshot.page.title, rows: snapshot.blocks };
 }
 
 /**
@@ -78,6 +89,20 @@ function serializeRoot(rows: readonly StoredBlock[], rootId: string): string {
     markdownNodesOfRows(rows, rootId),
     serverMarkdownContext(),
   );
+}
+
+/**
+ * The document a PAGE-rooted read returns: the banner, then the page's content.
+ *
+ * A page's own row has no line in its document (the walk starts at the root's
+ * children), so without this a read of a page opens at its first block and the
+ * page's title — the thing every other reader of a page sees first — is simply
+ * absent. The banner is a reader-side prefix, not a node: it is prepended to the
+ * finished string, and `stripPageTitleBanner` takes it back off before an apply
+ * parses one. See `core/page-title.ts` for why both halves live in one module.
+ */
+function withTitleBanner(markdown: string, title: string): string {
+  return pageTitleBanner(title, serverMarkdownContext()) + markdown;
 }
 
 export interface ReadBlockOptions {
@@ -99,13 +124,21 @@ export interface ReadBlockOptions {
  *
  * The block id is resolved to its page (see {@link loadBlockScope}), so a page
  * id and a block id are the same call at different depths.
+ *
+ * The `# Title` banner is the ONE thing those two depths do not share, and the
+ * condition is exactly `blockId === pageId`: a page's title belongs to the
+ * document its own read returns, and to no other. A card-scoped read must not
+ * carry one — the string it returns is that card's content, so a banner there
+ * would come back through `applyMarkdownToBlock(card, …)` as an `# H1` minted
+ * INSIDE the card, which nobody asked for and nothing else would have caught.
  */
 export async function readBlockAsMarkdown(
   blockId: string,
   opts?: ReadBlockOptions,
 ): Promise<string> {
-  const { rows } = await loadBlockScope(blockId);
-  return serializeRoot(opts?.redact ? opts.redact(rows) : rows, blockId);
+  const { pageId, title, rows } = await loadBlockScope(blockId);
+  const markdown = serializeRoot(opts?.redact ? opts.redact(rows) : rows, blockId);
+  return blockId === pageId ? withTitleBanner(markdown, title) : markdown;
 }
 
 /**
@@ -121,5 +154,7 @@ export async function readPageAsMarkdown(pageId: string): Promise<string> {
   if (!snapshot) {
     throw new HttpError(404, `page ${pageId} does not exist`);
   }
-  return serializeRoot(snapshot.blocks, pageId);
+  // Unconditionally banner-ed, where {@link readBlockAsMarkdown} tests its id:
+  // this entry point has already ASSERTED that the root is a page.
+  return withTitleBanner(serializeRoot(snapshot.blocks, pageId), snapshot.page.title);
 }

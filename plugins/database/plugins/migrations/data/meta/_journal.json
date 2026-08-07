@@ -1583,6 +1583,13 @@
       "tag": "20260806_222943_2caba39d__merged_20260806_2229",
       "hash": "2caba39d",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1786063937000,
+      "tag": "20260807_005217_4ff1ca12__rename_agent_notes_block_type",
+      "hash": "4ff1ca12",
+      "breakpoints": true
     }
   ]
 }

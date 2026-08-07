@@ -9,7 +9,13 @@ import {
   type Block,
   type BlockUpdate,
 } from "@plugins/page/plugins/editor/core";
-import { documentOrderRows, planMarkdownApply } from "../../core";
+import {
+  documentOrderRows,
+  pageTitleBanner,
+  planMarkdownApply,
+  stripPageTitleBanner,
+  type MarkdownApplyPlan,
+} from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
 import { loadBlockScope } from "./read";
 import { writeBlockText } from "./block-doc-text";
@@ -84,6 +90,49 @@ import { writeBlockText } from "./block-doc-text";
  * it to the 24h retention sweep.
  */
 
+export interface ApplyBlockOptions {
+  /**
+   * The row filter that produced the document being applied — the SAME function
+   * the read was given (`ReadBlockOptions.redact`), which is why both options
+   * take the same shape: a caller passes ONE function to both halves, and a read
+   * and the apply that answers it cannot drift into diffing against a document
+   * nobody ever saw.
+   *
+   * It prunes the planner's WALK only. The whole partition is still loaded and
+   * still handed to the planner, so a hidden row keeps its `(parent_id, rank)`
+   * key reserved and stays distinguishable from an id that names nothing —
+   * see `core/plan.ts`'s `redact`.
+   */
+  redact?: (rows: StoredBlock[]) => readonly StoredBlock[];
+  /**
+   * Judge the plan BEFORE a row is written. **Throwing refuses the whole apply**,
+   * and is the only way to refuse one: there is no return value, because a
+   * boolean would need this module to invent the wording and the status of a
+   * refusal it cannot describe.
+   *
+   * The engine's second caller-supplied predicate, and the exact DUAL of
+   * {@link redact}: `redact` decides what a write may SEE, this decides what it
+   * may DO. Both keep the engine audience-agnostic — one takes rows and returns
+   * rows, the other takes a plan and either returns or throws, and neither
+   * teaches this plugin what a policy is. `core/touched.ts` is the vocabulary a
+   * caller normally judges with (`touchedBlocks`, `boundaryViolations`), and it
+   * names no block type either.
+   *
+   * Called **exactly once, synchronously**, after planning and strictly before
+   * the first `applyPageBlockPatch` — so a refusal has provably written nothing,
+   * exactly like the planner's own refusals above it. `rows` is the same
+   * whole-partition, UNREDACTED row set the plan was built over, which is what a
+   * chain walk needs: an ancestor may be a row the document never showed.
+   *
+   * There is deliberately no exported `plan`/`commit` pair doing the same job
+   * from outside. A caller holding a plan could commit it against rows it re-read
+   * — a different forest from the one the plan diffs — and no type can express
+   * "these two came from the same read". Keeping the hook inside the one function
+   * that owns both halves makes that unreachable rather than merely discouraged.
+   */
+  assertAcceptable?(plan: MarkdownApplyPlan, rows: readonly StoredBlock[]): void;
+}
+
 export interface ApplyReport {
   /** The block this apply was rooted at — the page row for a whole-page apply. */
   rootId: string;
@@ -114,18 +163,36 @@ function projectedData(row: Block, text: unknown): unknown {
 async function applyToScope(scope: {
   rootId: string;
   pageId: string;
+  /** The page's STORED title — the banner this apply may have to strip. */
+  title: string;
   rows: readonly StoredBlock[];
   markdown: string;
+  redact?: ApplyBlockOptions["redact"];
+  assertAcceptable?: ApplyBlockOptions["assertAcceptable"];
 }): Promise<ApplyReport> {
-  const { rootId, pageId, rows, markdown } = scope;
+  const { rootId, pageId, title, rows, markdown, redact, assertAcceptable } = scope;
   const ctx = serverMarkdownContext();
-  const incoming = parseMarkdownToForest(markdown, ctx);
+  // The banner comes off BEFORE the parse and only for a page ROOT — the exact
+  // mirror of where `readBlockAsMarkdown` puts it on, so what a read emitted is
+  // what an apply takes back. Built from the STORED title, never from anything
+  // in the incoming document: the test is "is this line still the one this
+  // page's own read produced", and a document cannot answer that about itself.
+  // Anything that fails the test falls through to the planner and is judged
+  // there — see `core/page-title.ts` for the four arms and why they are right.
+  const document =
+    rootId === pageId
+      ? stripPageTitleBanner(markdown, pageTitleBanner(title, ctx))
+      : markdown;
+  const incoming = parseMarkdownToForest(document, ctx);
   const result = planMarkdownApply({
     rootId,
     pageId,
+    // The WHOLE partition, redacted or not: the filter below prunes the planner's
+    // walk, which is the entire mechanism — see `core/plan.ts`.
     existing: rows,
     incoming,
     handles: ctx.handles,
+    redact,
   });
   // A refusal returns BEFORE any write: the planner cannot verify what it was
   // asked to do, and half-applying it would be worse than refusing it.
@@ -136,6 +203,14 @@ async function applyToScope(scope: {
         `(${result.reason}): ${result.detail}`,
     );
   }
+  // The caller's own verdict on the plan, between "what would this write" and
+  // "write it". It is handed the UNREDACTED rows the plan was built over, since
+  // a policy reasoning about ancestry needs rows the document never showed.
+  // Throwing here refuses the whole apply with nothing written — the same
+  // guarantee the planner's refusal above has, and the reason this cannot be a
+  // check the caller performs afterwards.
+  assertAcceptable?.(result.plan, rows);
+
   const { patch, textEdits, stats } = result.plan;
 
   // --- 1. Structure, atomically --------------------------------------------
@@ -209,9 +284,18 @@ async function applyToScope(scope: {
 export async function applyMarkdownToBlock(
   blockId: string,
   markdown: string,
+  opts?: ApplyBlockOptions,
 ): Promise<ApplyReport> {
-  const { pageId, rows } = await loadBlockScope(blockId);
-  return applyToScope({ rootId: blockId, pageId, rows, markdown });
+  const { pageId, title, rows } = await loadBlockScope(blockId);
+  return applyToScope({
+    rootId: blockId,
+    pageId,
+    title,
+    rows,
+    markdown,
+    redact: opts?.redact,
+    assertAcceptable: opts?.assertAcceptable,
+  });
 }
 
 /**
@@ -225,10 +309,19 @@ export async function applyMarkdownToBlock(
 export async function applyMarkdownToPage(
   pageId: string,
   markdown: string,
+  opts?: ApplyBlockOptions,
 ): Promise<ApplyReport> {
   const snapshot = await serializePageContent(pageId);
   if (!snapshot) {
     throw new HttpError(404, `page ${pageId} does not exist`);
   }
-  return applyToScope({ rootId: pageId, pageId, rows: snapshot.blocks, markdown });
+  return applyToScope({
+    rootId: pageId,
+    pageId,
+    title: snapshot.page.title,
+    rows: snapshot.blocks,
+    markdown,
+    redact: opts?.redact,
+    assertAcceptable: opts?.assertAcceptable,
+  });
 }

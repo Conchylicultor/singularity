@@ -44,11 +44,29 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     expect(agentNotesBlock.splitChildWhenExpanded).toBeUndefined();
   });
 
-  it("maps to a round-tripping <agent-notes> tag, not a one-way marker", () => {
+  it("is typed SINGULAR, and the former plural survives as a menu alias", () => {
+    // The type is the markdown tag an agent reads and writes (`<agent-note>`),
+    // and one card is one note. The symbol, directory, package and
+    // `agent-notes-authors` resource stay plural — they name a feature area.
+    expect(agentNotesBlock.type).toBe("agent-note");
+    expect(agentNotesBlock.aliases).toContain("agent-notes");
+  });
+
+  it("maps to a round-tripping <agent-note> tag, not a one-way marker", () => {
     // A void container has no text of its own, so its markdown mapping is the
     // generic TAG: the children go inside it and it comes back as a container.
     // The retired `**[…]**` marker could only ever go one way.
     expect(agentNotesBlock.markdown?.serialize).toBeUndefined();
-    expect(agentNotesBlock.markdown?.tag).toEqual({ body: "children" });
+    expect(agentNotesBlock.markdown?.tag).toEqual({ body: "children", identified: true });
+  });
+
+  it("is ADDRESSABLE: the tag carries the row id, and `data` still carries none", () => {
+    // The two halves of the reserved attribute, pinned together because they are
+    // only safe together. `identified` puts the row id on the tag as `id`, and
+    // the schema must therefore NOT have an `id` field of its own — otherwise
+    // the derived attribute projection emits `data.id` under the same name and
+    // the row ref and the payload field fight (`resolveTag` throws on it).
+    expect(agentNotesBlock.markdown?.tag?.identified).toBe(true);
+    expect("id" in agentNotesBlock.schema.shape).toBe(false);
   });
 });

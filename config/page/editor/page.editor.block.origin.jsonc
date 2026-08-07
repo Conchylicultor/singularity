@@ -1,4 +1,4 @@
-// @hash c821f7fc8194
+// @hash 96c8493f6b9e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,9 +6,9 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "page.annotations.agent-notes:agent-notes",
+    "page.annotations.agent-notes:agent-note",
     "page.annotations.context:context",
-    "page.annotations.private-notes:private-notes",
+    "page.annotations.private-notes:private-note",
     "page.annotations.todo:todo",
     "page.audio:audio",
     "page.bookmark:bookmark",

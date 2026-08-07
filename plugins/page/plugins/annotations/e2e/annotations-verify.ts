@@ -1,6 +1,6 @@
 // Executable spec for the ANNOTATION FAMILY as a family — the four blocks that
-// carry a page's human↔agent side-channel (`context`, `todo`, `agent-notes`,
-// `private-notes`).
+// carry a page's human↔agent side-channel (`context`, `todo`, `agent-note`,
+// `private-note`).
 //
 // Per-container behaviour (wrap, unwrap, Enter-in-a-child, nesting, the void
 // write boundary) is already pinned by
@@ -54,8 +54,8 @@ function bail(name: string, detail: string): never {
 const MEMBERS = [
   { type: "context", label: "Context", child: "conventions live here" },
   { type: "todo", label: "TODO", child: "wire the delivery filter" },
-  { type: "agent-notes", label: "Agent notes", child: "found two call sites" },
-  { type: "private-notes", label: "Private note", child: "ask before shipping" },
+  { type: "agent-note", label: "Agent notes", child: "found two call sites" },
+  { type: "private-note", label: "Private note", child: "ask before shipping" },
 ] as const;
 
 interface Box {

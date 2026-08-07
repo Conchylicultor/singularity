@@ -27,8 +27,14 @@ export const privateNotesDataSchema = z.object({});
  * together. It declares no `collapsible`: a container folds to its BORROWED line
  * (its first child's), so its stored `expanded` is live. This file declares nothing but identity.
  */
+/**
+ * `privateNotesBlock.type === "private-note"` — singular for the same reason
+ * `agent-note` is, and renamed WITH it so the family reads as one rule rather
+ * than one renamed member and three exceptions. The symbol, directory and
+ * package stay plural: they name a feature area, not an instance.
+ */
 export const privateNotesBlock = defineAnnotationBlock({
-  type: "private-notes",
+  type: "private-note",
   schema: privateNotesDataSchema,
   label: "Private note",
   icon: MdVisibilityOff,
@@ -41,9 +47,12 @@ export const privateNotesBlock = defineAnnotationBlock({
   // forget to update. What it does NOT do yet is redact — that consumer lands
   // with the agent-facing markdown tools; see `page/annotations/CLAUDE.md`.
   audience: "human",
-  aliases: ["private", "hidden", "secret", "personal", "invisible", "draft"],
+  // `"private-notes"` is the former type, kept as a menu alias so the habit (and
+  // the older docs) still find the card. Aliases are menu-search only — never a
+  // markdown tag, never a stored value.
+  aliases: ["private-notes", "private", "hidden", "secret", "personal", "invisible", "draft"],
   empty: () => ({}),
-  // `<private-notes>…</private-notes>` — a real round-tripping syntax, replacing
+  // `<private-note>…</private-note>` — a real round-tripping syntax, replacing
   // the one-way `**[Private]**` marker.
   //
   // The children ARE serialized here, and that is correct: this serializer runs

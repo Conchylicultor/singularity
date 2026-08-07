@@ -13,6 +13,24 @@ export interface SerializedBlock {
   data?: unknown;
   expanded: boolean;
   children: SerializedBlock[];
+  /**
+   * The row this node ADDRESSES — never its own identity.
+   *
+   * Set only by the markdown parse, and only for a tag declaring
+   * `markdown.tag.identified` (`<agent-note id="…">`): it is an id the AUTHOR
+   * of the document wrote down, i.e. a *claim* about which existing row this
+   * node corresponds to. Only a RECONCILING apply may honour it, and only after
+   * proving the row exists and is in scope; every other consumer ignores it. A
+   * node with no `ref` is a node the document asked to CREATE.
+   *
+   * It is deliberately not called `id`, and that is a safety property rather
+   * than taste. {@link withMintedIds} is the sole id-minting site and is SHARED
+   * WITH CLIPBOARD PASTE, where it spreads `...node`: under the name `id` a
+   * pasted copy of a card would silently carry — and therefore reuse — a LIVE
+   * row's identity. Under `ref` the spread carries it through inert and the
+   * mint stays unconditional.
+   */
+  ref?: string;
 }
 
 export const SerializedBlockSchema: z.ZodType<SerializedBlock> = z.lazy(() =>
@@ -21,6 +39,7 @@ export const SerializedBlockSchema: z.ZodType<SerializedBlock> = z.lazy(() =>
     data: z.unknown(),
     expanded: z.boolean(),
     children: z.array(SerializedBlockSchema),
+    ref: z.string().optional(),
   }),
 );
 
@@ -42,6 +61,14 @@ export interface IdentifiedBlock {
   data?: unknown;
   expanded: boolean;
   children: IdentifiedBlock[];
+  /**
+   * The row this node ADDRESSES, carried through the mint untouched — see
+   * {@link SerializedBlock.ref}. `id` and `ref` are two different questions
+   * about the same node: `id` is the row this node WILL BE, `ref` is the row it
+   * claims to correspond to, and only a reconciling apply is allowed to notice
+   * that they disagree.
+   */
+  ref?: string;
 }
 
 export const IdentifiedBlockSchema: z.ZodType<IdentifiedBlock> = z.lazy(() =>
@@ -51,6 +78,7 @@ export const IdentifiedBlockSchema: z.ZodType<IdentifiedBlock> = z.lazy(() =>
     data: z.unknown(),
     expanded: z.boolean(),
     children: z.array(IdentifiedBlockSchema),
+    ref: z.string().optional(),
   }),
 );
 
@@ -58,6 +86,13 @@ export const IdentifiedBlockSchema: z.ZodType<IdentifiedBlock> = z.lazy(() =>
  * Stamp a fresh id onto every node of an id-less forest. The one minting site:
  * a caller that holds `IdentifiedBlock`s got them from here, and everything
  * downstream (reducer, overlay effect, server insert) merely carries them.
+ *
+ * **The mint is unconditional, and a node's `ref` never enters it.** The spread
+ * carries `ref` through as inert cargo for whoever asked for the mint; honouring
+ * it here would reach clipboard paste too, where the node's ref is a copy of a
+ * LIVE row's id — so pasting a copied card would duplicate that row's identity
+ * instead of creating a new card. Resolving a ref against real rows belongs to
+ * the one caller that can check it (the markdown-apply planner), never here.
  */
 export function withMintedIds(forest: SerializedBlock[]): IdentifiedBlock[] {
   return forest.map((node) => ({

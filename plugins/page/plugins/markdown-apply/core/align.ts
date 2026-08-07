@@ -21,7 +21,8 @@
 //     construction) can never pair — and losing identity on a move is exactly
 //     the loss this plugin exists to prevent.
 //
-// Pinned nodes (sub-page shells) sit outside all of this — see `PINS` below.
+// Pinned nodes — the ones whose identity is ASSERTED rather than inferred — sit
+// outside all of this; see {@link forcePins}.
 
 import { diffArrays } from "diff";
 
@@ -33,7 +34,8 @@ export interface AlignItem {
   plain: string;
   type: string;
   /**
-   * Pinned identity, or null. Two pinned items pair IFF their pins are equal,
+   * Asserted identity (a row id), or null when this node's identity can only be
+   * inferred from its content. Two pinned items pair IFF their pins are equal,
    * and never pair with anything else — see {@link forcePins}.
    */
   pin: string | null;
@@ -224,8 +226,10 @@ function pairRegion(
  * pairing — a pinned key can only ever have been matched against its own twin.
  *
  * It has to be a separate pass rather than a special case inside pass 1: an
- * exact-key LCS drops a match whose ORDER crossed, and a sub-page shell that
- * merely moved must not thereby become "delete this page and mint a link".
+ * exact-key LCS drops a match whose ORDER crossed, and a node that merely MOVED
+ * must not thereby become "delete this row and mint a fresh one" — which for a
+ * sub-page shell would read as "delete this page and mint a link", and for an
+ * identified card would detach the card's authorship from its content.
  */
 function forcePins(
   oldItems: readonly AlignItem[],

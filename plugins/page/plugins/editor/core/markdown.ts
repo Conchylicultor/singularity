@@ -77,8 +77,10 @@ export interface MdSerializeCtx {
   ordinal: number;
   /**
    * The node's row id, when the walk's input carried one (`MarkdownNode.id`).
-   * Undefined for an id-less `SerializedBlock` forest — a tag that NEEDS the id
-   * (`page`) throws rather than emitting an identity-less tag.
+   * Undefined for an id-less `SerializedBlock` forest, and the two tag kinds
+   * that read it answer that differently ON PURPOSE: a tag that NEEDS the id
+   * (`page`) throws rather than emitting an identity-less pointer, while an
+   * {@link BlockTag.identified} tag simply omits the attribute — see there.
    */
   id?: string;
 }
@@ -146,6 +148,28 @@ export interface BlockTag<T> {
   parseAttrs?(attrs: Record<string, string>, ctx: MdParseCtx): T;
   /** Defaults to `"children"` — which is also what the derived void fallback uses. */
   body?: BlockTagBody;
+  /**
+   * This tag carries its row id as the reserved `id` attribute, in BOTH
+   * directions: serialize emits `ctx.id` as the FIRST attribute, and parse lifts
+   * it back OFF the attribute record onto `SerializedBlock.ref` — never into
+   * `data`. That is what "reserved" means, and why `resolveTag` refuses a handle
+   * that declares this alongside an `id` field of its own: the derived
+   * projection would emit `data.id` under the same name and the two meanings
+   * would fight.
+   *
+   * What it buys is an ADDRESSABLE region. A reader of the emitted markdown
+   * (a human, or an agent through `read_page`) gets an anchor it can hand back
+   * in an edit, and the applier resolves that anchor to the row it names
+   * instead of inferring identity from content similarity.
+   *
+   * **An id-less forest omits the attribute and is not an error.** That is the
+   * deliberate difference from `page`, whose own `attrs` throws without an id: a
+   * sub-page's identity IS its row, so an id-less `<page/>` would point at
+   * nothing, whereas an id-less `<agent-note>` is the ordinary clipboard case
+   * (copying a card out of a page must stay portable markdown) and also what a
+   * document says when it wants a card MINTED.
+   */
+  identified?: true;
   /**
    * This tag is emitted but never CLAIMED on parse: another handle owns the name
    * on the parse side. The one case is `page` — minting a sub-page means minting
@@ -254,6 +278,8 @@ interface ResolvedTag {
   /** `inner` is the tag's body text — only ever supplied for `body: "text"`. */
   dataOf(attrs: Record<string, string>, inner: string | null, ctx: MdParseCtx): unknown;
   serializeOnly: boolean;
+  /** The reserved `id` attribute is this tag's row ref — see {@link BlockTag.identified}. */
+  identified: boolean;
 }
 
 /** Attribute names that survive as PLAIN attributes; anything else is JSON'd. */
@@ -319,6 +345,15 @@ function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
         "this block type's schema declares no `text`, so there is no body to emit.",
     );
   }
+  if (spec.identified === true && "id" in h.schema.shape) {
+    throw new Error(
+      `defineBlock("${h.type}"): markdown.tag.identified reserves the \`id\` attribute for the ` +
+        "block's ROW id, but this type's schema declares an `id` field of its own. The derived " +
+        "attribute projection would emit `data.id` under that same name, so the two meanings " +
+        "would fight — a parse would either lift a payload id into the row ref or overwrite the " +
+        "row ref with the payload's. Rename the schema field; the attribute name is reserved.",
+    );
+  }
   const attrs = spec.attrs;
   const parseAttrs = spec.parseAttrs;
   return {
@@ -336,6 +371,7 @@ function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
         }
       : (a, inner, ctx) => derivedTagData(h, a, inner, ctx, body),
     serializeOnly: spec.serializeOnly === true,
+    identified: spec.identified === true,
   };
 }
 
@@ -377,6 +413,22 @@ function tagFor(h: Handle): ResolvedTag | null {
 export function markdownParseTagName(h: BlockHandle<unknown>): string | null {
   const tag = tagFor(h);
   return tag && !tag.serializeOnly ? tag.name : null;
+}
+
+/**
+ * Whether this handle's markdown tag carries its row id — see
+ * {@link BlockTag.identified}.
+ *
+ * Exported so a consumer can derive the identified TYPE SET from the handle
+ * registry it already holds. The one consumer is the markdown-apply planner,
+ * which honours a node's `ref` as a pin only for a type that really round-trips
+ * an id; naming the type there instead would be the collection-consumer leak
+ * this codebase bans, and would silently stop pinning the day the type is
+ * renamed. Same resolution the serializer and parser run, for the same reason
+ * `markdownParseTagName` is shared with the uniqueness check.
+ */
+export function markdownTagIsIdentified(h: BlockHandle<unknown>): boolean {
+  return tagFor(h)?.identified === true;
 }
 
 /** How one block type turns into markdown: flat line(s), or a tag region. */
@@ -502,12 +554,16 @@ function matchOpenTag(line: string): OpenTag | null {
  * `children` is present only for a tag token: a tag's body is parsed
  * RECURSIVELY, so those children come from the body rather than from the
  * indentation stack `tokensToTree` walks.
+ *
+ * `ref` likewise only ever comes from a tag — the reserved `id` attribute of an
+ * {@link BlockTag.identified} one, lifted off before any data parsing.
  */
 type FlatToken = {
   indent: number;
   type: string;
   data: unknown;
   children?: SerializedBlock[];
+  ref?: string;
 };
 
 /**
@@ -731,15 +787,27 @@ function claimTag(
   const rest = content.slice(open.end);
   const close = `</${open.name}>`;
 
+  // The reserved `id` of an `identified` tag is the ROW this node addresses, not
+  // a field of its payload — so it comes off the attribute record here, before
+  // `dataOf` (and through it the handle's own `schema.parse`) ever sees it.
+  // Leaving it in place is exactly the failure this is written against: a void
+  // `z.object({})` STRIPS the unknown key, which would make the attribute
+  // decorative — the document says which card it is editing and the applier
+  // never hears it, so alignment is free to re-pair a card with another card's
+  // row and detach its authorship.
+  const ref = tag.identified ? takeRef(open.attrs) : undefined;
+  const withRef = (token: FlatToken): FlatToken =>
+    ref === undefined ? token : { ...token, ref };
+
   if (open.selfClosing) {
     if (rest.trim() !== "") return null;
     return {
-      token: {
+      token: withRef({
         indent,
         type: tag.handle.type,
         data: tag.dataOf(open.attrs, null, parseCtx),
         children: [],
-      },
+      }),
       next: start + 1,
     };
   }
@@ -748,7 +816,7 @@ function claimTag(
   if (rest.endsWith(close)) {
     const inner = rest.slice(0, rest.length - close.length);
     return {
-      token: tagToken(tag, indent, open.attrs, [inner], parseCtx, ctx),
+      token: withRef(tagToken(tag, indent, open.attrs, [inner], parseCtx, ctx)),
       next: start + 1,
     };
   }
@@ -787,9 +855,27 @@ function claimTag(
   // than swallowing the rest of the document into a block it never closed.
   if (depth !== 0) return null;
   return {
-    token: tagToken(tag, indent, open.attrs, dedentBlock(body), parseCtx, ctx),
+    token: withRef(tagToken(tag, indent, open.attrs, dedentBlock(body), parseCtx, ctx)),
     next: j + 1,
   };
+}
+
+/**
+ * Take the reserved `id` attribute OFF `attrs` and hand it back as the node's
+ * row ref. Mutating is safe and deliberate: `matchOpenTag` built this record for
+ * this one claim, and removing the key is what keeps the attribute out of every
+ * downstream `dataOf` path (derived projection and a declared `parseAttrs`
+ * alike) rather than each of them having to remember to skip it.
+ *
+ * An absent or EMPTY value yields `undefined`, and the caller then sets no `ref`
+ * field at all — never `ref: undefined`. A tagless `<agent-note>` is a
+ * legitimate document ("mint me a card"), and it must be structurally identical
+ * to the same card parsed off the clipboard, not merely equal modulo undefined.
+ */
+function takeRef(attrs: Record<string, string>): string | undefined {
+  const raw = attrs.id;
+  delete attrs.id;
+  return raw === undefined || raw === "" ? undefined : raw;
 }
 
 function tokensToTree(tokens: FlatToken[]): SerializedBlock[] {
@@ -805,6 +891,8 @@ function tokensToTree(tokens: FlatToken[]): SerializedBlock[] {
       // it has always been.
       expanded: true,
       children: tok.children ?? [],
+      // Spread, so a node with no ref carries no `ref` KEY — see `takeRef`.
+      ...(tok.ref === undefined ? {} : { ref: tok.ref }),
     };
     while (stack.length && stack[stack.length - 1]!.indent >= tok.indent) {
       stack.pop();
@@ -823,6 +911,39 @@ function tokensToTree(tokens: FlatToken[]): SerializedBlock[] {
 /** Nest one rendered sibling list under its parent (two columns per level). */
 function indentLines(lines: string[]): string[] {
   return lines.map((line) => "  " + line);
+}
+
+/**
+ * The open tag's attributes, with the reserved `id` of an
+ * {@link BlockTag.identified} tag lifted in FRONT of the type's own — so the
+ * address is the first thing anything reading the line sees, and stays in one
+ * place across types.
+ *
+ * **An absent `ctx.id` omits it rather than throwing.** An id-less forest is the
+ * clipboard (copy/paste, a fuzz round trip) and it must still serialize: the
+ * bare `<agent-note>` it produces is portable markdown that mints a fresh card
+ * wherever it is pasted. `page` is the type that throws instead, and the
+ * difference is not an inconsistency — a sub-page's identity IS its row, so an
+ * id-less pointer would point at nothing.
+ *
+ * A declared `attrs` that emits its own `id` is a LOUD failure here rather than
+ * a silent overwrite. `resolveTag` catches the schema-shaped half of that
+ * collision at resolution time; this catches the half only a function body knows.
+ */
+function tagAttrs(
+  tag: ResolvedTag,
+  data: unknown,
+  ctx: MdSerializeCtx,
+): Record<string, string> {
+  const attrs = tag.attrsOf(data, ctx);
+  if (!tag.identified || ctx.id === undefined) return attrs;
+  if ("id" in attrs) {
+    throw new Error(
+      `markdown: <${tag.name}> declares \`identified\`, which reserves the \`id\` attribute for ` +
+        "the block's ROW id, but its own `attrs` emitted an `id` too. One of the two must go.",
+    );
+  }
+  return { id: ctx.id, ...attrs };
 }
 
 export function serializeForestToMarkdown(
@@ -859,7 +980,7 @@ export function serializeForestToMarkdown(
       }
 
       const tag = resolved.tag;
-      const prefix = openTagPrefix(tag.name, tag.attrsOf(n.data, serializeCtx));
+      const prefix = openTagPrefix(tag.name, tagAttrs(tag, n.data, serializeCtx));
       if (tag.body === "text") {
         // The block's OWN text between the tags; children still nest below, as
         // for any text block.

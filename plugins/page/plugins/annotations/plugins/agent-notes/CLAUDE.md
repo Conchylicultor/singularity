@@ -8,7 +8,20 @@ A void container (`z.object({})`, content IS its children), built on
 [`page/container`](../../../container/CLAUDE.md) exactly like its
 [siblings](../../CLAUDE.md) — read those two for the shape and the family's
 visual language. This plugin declares only identity: a fixed `MdAutoAwesome` glyph,
-the `info` dashed tint, and the `**[Agent notes]**` markdown marker.
+the `info` dashed tint, and the `<agent-note>` markdown tag.
+
+## The type is `agent-note`; the directory is `agent-notes`
+
+`agentNotesBlock.type === "agent-note"` — a type names ONE card, and the type IS
+the markdown tag. Everything naming the feature AREA stays plural and is
+deliberately not renamed: this directory, `authorship`, the packages, the
+exported `agentNotesBlock`, the `agent-notes-authors` resource. `"agent-notes"`
+survives as a `/` menu alias.
+
+Uniquely in this family the tag is `identified` (`<agent-note id="…">`): it
+carries the row it addresses, which is what makes the card writable by id. See
+`page/editor/core/markdown.ts` and
+[`markdown-apply`](../../../markdown-apply/CLAUDE.md).
 
 ## Who wrote it is a sub-plugin, not a field
 
@@ -30,8 +43,8 @@ without being in it.
 - Description: Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
   - Contributes:
-    - `Editor.Block` "agent-notes" → `ContainerNoRow`
-    - `Editor.BlockFrame` "agent-notes" → `AgentNotesFrame`
+    - `Editor.Block` "agent-note" → `ContainerNoRow`
+    - `Editor.BlockFrame` "agent-note" → `AgentNotesFrame`
   - Uses:
     - `page/annotations/agent-notes/authorship.AgentNotesAuthors`
     - `page/annotations/agent-notes/authorship.useAgentNotesAuthors`
@@ -41,7 +54,7 @@ without being in it.
     - `page/editor.Editor`
   - Exports (values): `agentNotesBlock`
 - Server:
-  - Contributes: `page.block-data` "agent-notes"
+  - Contributes: `page.block-data` "agent-note"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/annotations.defineAnnotationBlock`

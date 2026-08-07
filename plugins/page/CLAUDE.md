@@ -8,7 +8,7 @@
 - Sub-plugins:
   - **`annotations`** — Umbrella for the page editor's annotation containers — the audience-scoped boxes that carry the human↔agent side-channel of a page: context, agent notes, private notes, TODO.
     - Plugins:
-      - **`agent-access`** — The agent-facing tool surface over a page: read_page (human-audience subtrees pruned) plus append/write/edit_agent_notes, which can address nothing but an <agent-notes> card. The policy over page/markdown-apply's audience-agnostic engine.
+      - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must land inside an <agent-note> card). The policy over page/markdown-apply's audience-agnostic engine.
       - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
         - Plugins:
           - **`authorship`** — Reads an agent-notes card's authorship (useAgentNotesAuthors) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.

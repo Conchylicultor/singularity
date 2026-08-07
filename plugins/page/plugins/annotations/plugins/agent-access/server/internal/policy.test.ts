@@ -2,40 +2,40 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { Editor, type StoredBlock } from "@plugins/page/plugins/editor/server";
-import type { SerializedBlock } from "@plugins/page/plugins/editor/core";
+import type { Block, BlockUpdate } from "@plugins/page/plugins/editor/core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
+import type {
+  MarkdownApplyPlan,
+  MarkdownTextEdit,
+} from "@plugins/page/plugins/markdown-apply/core";
 import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
 import {
   assertAgentAddressable,
-  assertAppendTarget,
-  assertForestWritable,
-  assertMarkdownWritable,
-  assertWritableNote,
+  assertNoteCard,
+  assertNotesOnlyPlan,
   redactHumanAudience,
 } from "./policy";
 
 /**
- * The four policy rules, over a fixture forest.
+ * The policy rules, over a fixture forest and hand-built plans.
  *
- * The handles are THROWAWAY annotations registered through the real
+ * The annotation handles are THROWAWAY, registered through the real
  * `defineAnnotationBlock` — the point being that nothing here names a concrete
  * plugin's type: the rules enumerate `audience === "human"` off the registry, so
- * a type invented in this file is treated exactly like `/private-notes`. A test
- * that seeded the real four would prove the rules work for the four we have,
- * which is the weaker claim.
+ * a type invented in this file is treated exactly like `/private`. A test that
+ * seeded the real four would prove the rules work for the four we have, which is
+ * the weaker claim.
  *
- * `agent-notes` is the one exception, on both sides: rule 2 is ABOUT that type,
- * so the fixture uses its real id.
+ * `agent-note` is the one exception, on both sides: rules 3 and 4 are ABOUT that
+ * type, so the fixture uses its real id.
  */
 const privateish = defineAnnotationBlock({
   type: "zz-withheld",
   schema: z.object({}),
   audience: "human",
-  // A round-tripping tag, so the `assertMarkdownWritable` cases below can WRITE
-  // one. The rules themselves never parse; this is what lets the regression
-  // test express its case as the markdown an agent would actually send.
   markdown: { tag: { body: "children" } },
 });
 const contextish = defineAnnotationBlock({
@@ -46,12 +46,6 @@ const contextish = defineAnnotationBlock({
 });
 
 beforeEach(() => {
-  // The throwaway pair proves the rules are generic. The REAL `text` and
-  // `agent-notes` handles ride along because `assertMarkdownWritable` parses:
-  // without a `defaultText` handle an ordinary line has no type to become, and
-  // without the real `agent-notes` handle its tag is not a tag at all — the
-  // parse would silently yield something else and the test would pass for the
-  // wrong reason.
   collectContributions([
     {
       id: "agent-access-policy-fixture",
@@ -74,9 +68,9 @@ beforeEach(() => {
  * │       └── deeper
  * ├── shared              (audience: agent)
  * │   └── open
- * ├── notes               (agent-notes)
+ * ├── notes               (agent-note)
  * │   └── note-line
- * └── tainted             (agent-notes, holding a withheld card — the drag case)
+ * └── tainted             (agent-note, holding a withheld card — the drag case)
  *     └── smuggled        (audience: human)
  * ```
  */
@@ -88,6 +82,9 @@ function row(id: string, parentId: string, type: string): StoredBlock {
 }
 const scope: BlockScope = {
   pageId: PAGE,
+  // Carried by the scope for the page-title banner (`markdown-apply`'s
+  // `core/page-title.ts`); nothing this policy asserts on reads it.
+  title: "Test page",
   rows: [
     row("prose", PAGE, "text"),
     row("withheld", PAGE, privateish.type),
@@ -95,9 +92,9 @@ const scope: BlockScope = {
     row("deeper", "secret", "text"),
     row("shared", PAGE, contextish.type),
     row("open", "shared", "text"),
-    row("notes", PAGE, "agent-notes"),
+    row("notes", PAGE, agentNotesBlock.type),
     row("note-line", "notes", "text"),
-    row("tainted", PAGE, "agent-notes"),
+    row("tainted", PAGE, agentNotesBlock.type),
     row("smuggled", "tainted", privateish.type),
   ],
 };
@@ -119,9 +116,21 @@ describe("redactHumanAudience (rule 1)", () => {
   test("an agent-audience annotation is ordinary content to it", () => {
     expect(redactHumanAudience(scope.rows).map((r) => r.id)).toContain("open");
   });
+
+  test("is generic in the row type — ONE function serves the read and the apply", () => {
+    // `ReadBlockOptions.redact` and `ApplyBlockOptions.redact` want different row
+    // types; a second copy typed for the write is exactly the drift that would
+    // make an apply diff against a document nobody saw. Compiling against a row
+    // shape that is not `StoredBlock` is the assertion.
+    const lean: { id: string; type: string }[] = [
+      { id: "a", type: "text" },
+      { id: "b", type: privateish.type },
+    ];
+    expect(redactHumanAudience(lean).map((r) => r.id)).toEqual(["a"]);
+  });
 });
 
-describe("assertAgentAddressable (rule 3)", () => {
+describe("assertAgentAddressable (rule 2)", () => {
   test("allows the page, ordinary prose, and an agent-audience card's contents", () => {
     for (const id of [PAGE, "prose", "shared", "open", "notes", "note-line"]) {
       expect(() => {
@@ -148,127 +157,265 @@ describe("assertAgentAddressable (rule 3)", () => {
   });
 });
 
-describe("assertWritableNote (rules 2 + 4)", () => {
-  test("accepts an agent-notes card", () => {
+describe("assertNoteCard (rule 3 — write_agent_note's door)", () => {
+  test("accepts an agent-note card", () => {
     expect(() => {
-      assertWritableNote(scope, "notes");
+      assertNoteCard(scope, "notes");
     }).not.toThrow();
   });
 
-  test("refuses prose, an agent-audience card, and the page itself", () => {
+  test("refuses prose, an agent-audience card, and the page — naming edit_page", () => {
     for (const id of ["prose", "note-line", "shared", PAGE]) {
       expect(() => {
-        assertWritableNote(scope, id);
-      }).toThrow(/not an "agent-notes" card/);
+        assertNoteCard(scope, id);
+      }).toThrow(/is not an "agent-note" card|is the page itself, not an "agent-note"/);
     }
+    // The primary error is a page id sent to Write, so its message points at the
+    // tool that does take one — not at the deleted append tool.
+    expect(() => {
+      assertNoteCard(scope, PAGE);
+    }).toThrow(/edit_page/);
   });
 
-  test("refuses an agent-notes card that sits inside a withheld one", () => {
+  test("refuses an agent-note card that sits inside a withheld one", () => {
     const nested: BlockScope = {
       pageId: PAGE,
-      rows: [...scope.rows, row("buried", "withheld", "agent-notes")],
+      title: scope.title,
+      rows: [...scope.rows, row("buried", "withheld", agentNotesBlock.type)],
     };
     expect(() => {
-      assertWritableNote(nested, "buried");
+      assertNoteCard(nested, "buried");
     }).toThrow(/withheld from agents/);
   });
 
-  test("refuses a card holding withheld content — the drag case", () => {
-    // This is what keeps redaction a READ-only concern: a write here would diff
-    // against a document that does not show the smuggled card and delete it.
+  test("ACCEPTS a card holding withheld content — the retired rule 4", () => {
+    // This used to be a refusal, because the write diffed against the FULL stored
+    // forest while the read was redacted, so the smuggled card arrived as a
+    // deletion. The apply now redacts through the same filter as the read: the
+    // card is invisible to the walk AND preserved by it (its `(parent_id, rank)`
+    // key stays reserved), so there is nothing left to refuse.
     expect(() => {
-      assertWritableNote(scope, "tainted");
-    }).toThrow(/would diff against a document that does not show it/);
-  });
-});
-
-describe("assertAppendTarget", () => {
-  test("allows the page and ordinary blocks", () => {
-    for (const id of [PAGE, "prose", "shared", "open"]) {
-      expect(() => {
-        assertAppendTarget(scope, id);
-      }).not.toThrow();
-    }
-  });
-
-  test("refuses a notes card and anything inside one — notes do not nest", () => {
-    for (const id of ["notes", "note-line"]) {
-      expect(() => {
-        assertAppendTarget(scope, id);
-      }).toThrow(/do not nest/);
-    }
-  });
-
-  test("refuses a withheld card's subtree", () => {
-    expect(() => {
-      assertAppendTarget(scope, "secret");
-    }).toThrow(/withheld from agents/);
-  });
-
-  test("does NOT mind withheld content elsewhere in the target's subtree", () => {
-    // Appending only ever CREATES rows under the target, so a private card
-    // sitting further down is neither read nor touched. Rule 4 is about
-    // diff-based writes.
-    expect(() => {
-      assertAppendTarget(scope, PAGE);
+      assertNoteCard(scope, "tainted");
     }).not.toThrow();
   });
 });
 
-describe("assertForestWritable", () => {
-  const node = (type: string, children: SerializedBlock[] = []): SerializedBlock => ({
-    type,
-    data: {},
-    expanded: true,
-    children,
-  });
+// ---------------------------------------------------------------------------
+// assertNotesOnlyPlan (rule 4)
+// ---------------------------------------------------------------------------
 
-  test("accepts an ordinary parsed forest", () => {
-    expect(() => {
-      assertForestWritable([node("text"), node("bulleted-list"), node("heading-2")]);
-    }).not.toThrow();
-  });
+const NOW = new Date("2026-08-07T00:00:00.000Z");
 
-  test("refuses minting a withheld card, at any depth", () => {
-    expect(() => {
-      assertForestWritable([node("text", [node(privateish.type)])]);
-    }).toThrow(/addressed to the page's author only/);
-  });
-
-  test("refuses a nested agent-notes card", () => {
-    expect(() => {
-      assertForestWritable([node("agent-notes")]);
-    }).toThrow(/nested "agent-notes" card/);
-  });
+/** A created row, as `planMarkdownApply` mints one. */
+const create = (id: string, parentId: string, type: string): Block => ({
+  id,
+  pageId: PAGE,
+  parentId,
+  type,
+  data: {},
+  rank: Rank.between(null, null),
+  expanded: true,
+  createdAt: NOW,
+  updatedAt: NOW,
 });
 
 /**
- * Regression: every tool that accepts markdown must run the forest rules over
- * it, not just the one that creates rows.
- *
- * `write_agent_notes` / `edit_agent_notes` originally passed their string
- * straight to `applyMarkdownToBlock`. Rules 1-4 all reason about rows that
- * ALREADY EXIST, so none of them could see a card the agent was about to mint —
- * and the merge path would happily create a withheld card inside the one
- * container the human trusts as agent-written. It compounds: rule 4 then refuses
- * every LATER write to that card, so the agent bricks the card it was writing to.
+ * A plan, hand-built. The predicate reads a plan and rows and nothing else, so
+ * stating the patch directly is the most direct statement of each case — and it
+ * is what lets a RETYPED SURVIVOR (the shape a parsed-forest walk could never
+ * see) be expressed at all.
  */
-describe("assertMarkdownWritable", () => {
-  test("accepts ordinary prose", () => {
-    expect(() => {
-      assertMarkdownWritable("# Findings\n\nA paragraph.\n\n- one\n- two\n");
-    }).not.toThrow();
+function planOf(patch: {
+  creates?: Block[];
+  updates?: BlockUpdate[];
+  deleteIds?: string[];
+  textEdits?: MarkdownTextEdit[];
+}): MarkdownApplyPlan {
+  return {
+    patch: {
+      creates: patch.creates ?? [],
+      updates: patch.updates ?? [],
+      deleteIds: patch.deleteIds ?? [],
+    },
+    textEdits: patch.textEdits ?? [],
+    stats: { survived: 0, created: 0, deleted: 0, moved: 0 },
+  };
+}
+
+/** The page-rooted call `edit_page` makes. */
+const judgePage = (plan: MarkdownApplyPlan): string[] =>
+  assertNotesOnlyPlan({ plan, rows: scope.rows, rootId: PAGE });
+
+describe("assertNotesOnlyPlan — every write inside a card", () => {
+  test("accepts writes inside an existing card", () => {
+    expect(
+      judgePage(
+        planOf({
+          creates: [create("new-line", "notes", "text")],
+          textEdits: [{ blockId: "note-line", runs: [{ text: "revised" }] }],
+        }),
+      ),
+    ).toEqual(["notes"]);
   });
 
-  test("refuses markdown that mints a withheld card", () => {
+  test("accepts a new card at page level, and reports it as the card to stamp", () => {
+    expect(
+      judgePage(
+        planOf({
+          creates: [
+            create("fresh", PAGE, agentNotesBlock.type),
+            create("fresh-line", "fresh", "text"),
+          ],
+        }),
+      ),
+    ).toEqual(["fresh"]);
+  });
+
+  test("T4: a rank-only update to prose is exempt — minting a card re-ranks siblings", () => {
+    // The carve-out the feature depends on: without it the predicate refuses the
+    // ordinary case (a new card beside the prose it annotates).
+    const cards = judgePage(
+      planOf({
+        creates: [create("fresh", PAGE, agentNotesBlock.type)],
+        updates: [{ id: "prose", changes: { rank: Rank.between(null, null) } }],
+      }),
+    );
+    expect(cards).toEqual(["fresh"]);
+  });
+
+  test("refuses a text edit of prose — the page's own body is read-only", () => {
     expect(() => {
-      assertMarkdownWritable(`<${privateish.type}>\n  secret\n</${privateish.type}>\n`);
+      judgePage(planOf({ textEdits: [{ blockId: "prose", runs: [{ text: "hijacked" }] }] }));
+    }).toThrow(/was edited outside every "agent-note" card/);
+  });
+
+  test("refuses deleting prose", () => {
+    expect(() => {
+      judgePage(planOf({ deleteIds: ["prose"] }));
+    }).toThrow(/was deleted outside every "agent-note" card/);
+  });
+
+  test("refuses creating an ordinary block outside every card", () => {
+    expect(() => {
+      judgePage(planOf({ creates: [create("loose", PAGE, "text")] }));
+    }).toThrow(/was created outside every "agent-note" card/);
+  });
+
+  test("T3: refuses MOVING prose into a card — the new chain is not enough", () => {
+    // The attack the both-chains rule exists for: the whole page annexed into the
+    // agent's own card, attributed to the agent, without deleting a character.
+    expect(() => {
+      judgePage(planOf({ updates: [{ id: "prose", changes: { parentId: "notes" } }] }));
+    }).toThrow(/did not COME from inside an "agent-note" card/);
+  });
+
+  test("reports only the FIRST violation, and says how many there were", () => {
+    // A page-rooted edit against a garbled document produces one violation per
+    // block; three hundred copies of one sentence is not more informative.
+    expect(() => {
+      judgePage(
+        planOf({
+          deleteIds: ["prose", "shared"],
+          textEdits: [{ blockId: "open", runs: [{ text: "x" }] }],
+        }),
+      );
+    }).toThrow(/block prose was deleted[\s\S]*2 other writes in this edit/);
+  });
+
+  test("a card-rooted apply may write anywhere inside its own card", () => {
+    // `write_agent_note`'s shape: the root IS the boundary, so everything under
+    // it passes — including a delete of the card's own line.
+    expect(
+      assertNotesOnlyPlan({
+        plan: planOf({
+          creates: [create("added", "notes", "text")],
+          deleteIds: ["note-line"],
+        }),
+        rows: scope.rows,
+        rootId: "notes",
+      }),
+    ).toEqual(["notes"]);
+  });
+});
+
+describe("assertNotesOnlyPlan — the two minting invariants", () => {
+  test("refuses minting a human-audience card, even INSIDE a card", () => {
+    // Rules 1-3 all reason about rows that already exist and cannot see a card
+    // the agent is about to create. Inside its own card is where it would
+    // otherwise pass every other rule.
+    expect(() => {
+      judgePage(planOf({ creates: [create("mine", "notes", privateish.type)] }));
     }).toThrow(/addressed to the page's author only/);
   });
 
-  test("refuses markdown that nests an agent-notes card", () => {
+  test("refuses RETYPING a survivor into a human-audience card", () => {
+    // The strictly-stronger half of moving these onto the plan: a walk over the
+    // incoming parsed forest sees a retyped survivor only as an ordinary node it
+    // cannot tell from a create, so it could not judge this at all.
     expect(() => {
-      assertMarkdownWritable("<agent-notes>\n  nested\n</agent-notes>\n");
-    }).toThrow(/nested "agent-notes" card/);
+      judgePage(planOf({ updates: [{ id: "note-line", changes: { type: privateish.type } }] }));
+    }).toThrow(/turns block note-line into a "zz-withheld" card/);
+  });
+
+  test("refuses a card created inside a card — notes do not nest", () => {
+    expect(() => {
+      judgePage(planOf({ creates: [create("nested", "notes", agentNotesBlock.type)] }));
+    }).toThrow(/notes cards do not nest/);
+  });
+
+  test("refuses a card created under a LINE that is inside a card", () => {
+    // Nesting is a question about the whole chain, not about the direct parent:
+    // a card under a paragraph that lives in a card is nested just as surely.
+    expect(() => {
+      judgePage(planOf({ creates: [create("nested", "note-line", agentNotesBlock.type)] }));
+    }).toThrow(/notes cards do not nest/);
+  });
+
+  test("refuses a card created inside a card this same plan created", () => {
+    // The after-forest is what makes this visible: the enclosing card does not
+    // exist in the stored rows at all.
+    expect(() => {
+      judgePage(
+        planOf({
+          creates: [
+            create("outer", PAGE, agentNotesBlock.type),
+            create("inner", "outer", agentNotesBlock.type),
+          ],
+        }),
+      );
+    }).toThrow(/notes cards do not nest/);
+  });
+
+  test("the minting verdict wins over the boundary one", () => {
+    // A private card minted in open page body breaks both rules. The type answer
+    // is the actionable one — it holds wherever the block landed.
+    expect(() => {
+      judgePage(planOf({ creates: [create("mine", PAGE, privateish.type)] }));
+    }).toThrow(/addressed to the page's author only/);
+  });
+});
+
+describe("assertNotesOnlyPlan — the cards to stamp", () => {
+  test("names every card a single edit touched", () => {
+    const cards = judgePage(
+      planOf({
+        creates: [create("fresh", PAGE, agentNotesBlock.type)],
+        textEdits: [{ blockId: "note-line", runs: [{ text: "revised" }] }],
+      }),
+    );
+    expect(new Set(cards)).toEqual(new Set(["fresh", "notes"]));
+  });
+
+  test("never names a card the plan DELETED — the authorship FK needs the row", () => {
+    // Deleting a card is a legal write inside it (its chain reaches itself), but
+    // `page_blocks_agent_authors.block_id` FKs onto a row that is about to stop
+    // existing.
+    expect(judgePage(planOf({ deleteIds: ["tainted"] }))).toEqual([]);
+  });
+
+  test("a rank-only update to prose attributes authorship to nobody", () => {
+    expect(judgePage(planOf({ updates: [{ id: "prose", changes: { rank: Rank.between(null, null) } }] }))).toEqual(
+      [],
+    );
   });
 });

@@ -32,10 +32,17 @@
 //
 // `rootId` is where the walk starts, and it is the ONLY thing bounding what this
 // plan may touch. `existing` is deliberately the page's whole `page_id`
-// partition (a rank floor and a sub-page pin both need rows the walk may not
-// reach), but `oldRows` — the walk's output — is what survivors, updates and
-// `deleteIds` are all derived from, so a row outside the root's subtree can
-// never be updated, moved or deleted however the document was edited.
+// partition (a rank floor, a sub-page pin and a `ref`'s "does this id name a row
+// of this page at all" all need rows the walk may not reach), but `oldRows` —
+// the walk's output — is what survivors, updates and `deleteIds` are all derived
+// from, so a row outside the root's subtree can never be updated, moved or
+// deleted however the document was edited.
+//
+// `redact` narrows the WALK and nothing else, which is why redaction needs no
+// second rule anywhere downstream: a pruned row is not a survivor, not an
+// update, not a delete — and, because it is still in `existing`, still holds a
+// rank nothing may mint over and still answers a `ref` with `ref-out-of-scope`
+// rather than `unknown-ref`.
 //
 // `pageId` is a SECOND, independent fact: which partition created rows join, and
 // whether the root is the page itself. It is required rather than inferred
@@ -57,6 +64,7 @@ import {
   coalesce,
   dataEqual,
   markdownParseTagName,
+  markdownTagIsIdentified,
   pageBlockMarkdown,
   runsOf,
   serializeForestToMarkdown,
@@ -76,7 +84,7 @@ import { alignItems, type AlignItem } from "./align";
 import {
   documentOrderRows,
   identityKeyOf,
-  pinnedShellKey,
+  pinnedRowKey,
   plainTextOf,
   stableJson,
 } from "./flatten";
@@ -103,11 +111,20 @@ export type MarkdownApplyResult =
   | { ok: true; plan: MarkdownApplyPlan }
   | {
       ok: false;
-      reason: "unknown-page-ref" | "subpage-reparented" | "subpage-removed";
+      /**
+       * One vocabulary for one mechanism. Every asserted identity — a
+       * `<page id="…"/>` pointer, an identified card's `ref` — resolves through
+       * the same three questions, so the reasons are named after the CLAIM
+       * rather than after the block type that happened to make it.
+       * `subpage-removed` keeps its name because it really is page-specific:
+       * only a shell owns a whole other partition that an omission must not
+       * destroy.
+       */
+      reason: "unknown-ref" | "ref-duplicated" | "ref-out-of-scope" | "subpage-removed";
       detail: string;
     };
 
-export interface MarkdownApplyArgs {
+export interface MarkdownApplyArgs<R extends StoredRow = StoredRow> {
   /**
    * The root of the SCOPE. The walk starts at its CHILDREN, so the root row
    * itself is never touched and nothing outside its subtree is ever updated,
@@ -123,11 +140,33 @@ export interface MarkdownApplyArgs {
    */
   pageId: string;
   /** Every LIVE row of the page's own `page_id` partition (sub-page shells included). */
-  existing: readonly StoredRow[];
+  existing: readonly R[];
   /** The edited document, as `parseMarkdownToForest` produced it. */
   incoming: readonly SerializedBlock[];
   /** The same handle set the parse ran with. */
   handles: readonly BlockHandle<unknown>[];
+  /**
+   * A row filter applied to {@link existing} BEFORE the walk — the SAME filter
+   * the read that produced this document was given, so the plan is a diff
+   * against exactly what the author saw. Pruning a row prunes its whole subtree
+   * for free (the walk never reaches a child whose parent is gone).
+   *
+   * **It filters the WALK, and nothing else.** `existing` stays the whole
+   * partition: a redacted row still holds a `(parent_id, rank)` key nothing may
+   * mint over, and still answers "does this id name a row of this page" for a
+   * `ref` the walk cannot reach (which is `ref-out-of-scope` rather than
+   * `unknown-ref`). Everything a plan may WRITE — survivors, updates,
+   * `deleteIds` — already derives from `oldRows`, so pruning the walk IS the
+   * entire mechanism and there is no second filter to keep in sync.
+   *
+   * The engine never learns what a redaction IS: this is a row filter, and
+   * whatever policy chose it lives with the caller. The parameter is mutable and
+   * the result is not, so ONE concrete filter (`(rows: StoredBlock[]) =>
+   * StoredBlock[]`) satisfies both this and the read's own `redact` option —
+   * which is the point, since a read and the apply that answers it must redact
+   * identically or the apply diffs against a document nobody saw.
+   */
+  redact?: (rows: R[]) => readonly R[];
 }
 
 /** One incoming node, flattened to document order with its structural parent. */
@@ -182,8 +221,10 @@ function survivorData(
   return { ...base, text: currentRuns };
 }
 
-export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult {
-  const { rootId, pageId, existing, incoming, handles } = args;
+export function planMarkdownApply<R extends StoredRow>(
+  args: MarkdownApplyArgs<R>,
+): MarkdownApplyResult {
+  const { rootId, pageId, existing, incoming, handles, redact } = args;
   const byType = new Map(handles.map((h) => [h.type, h] as const));
 
   // The only markdown this module emits is a single `<page …/>` POINTER tag,
@@ -192,8 +233,31 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
   // and an empty list is the honest answer rather than a forgotten parameter.
   const ctx: MarkdownContext = { handles: [...handles], protectedSpans: [] };
 
-  // Everything below reads `oldRows`, never `existing`: the walk is the scope.
-  const oldRows = documentOrderRows(existing, rootId);
+  // Everything a plan may WRITE reads `oldRows`, never `existing`: the walk is
+  // the scope, and a redaction is a filter on that walk (see `args.redact`).
+  const oldRows = documentOrderRows(redact ? redact([...existing]) : existing, rootId);
+  // The two questions only `existing` can answer, both about rows the walk
+  // cannot reach: does this id name a row of this page at all (`ref` resolution
+  // below), and which `(parent_id, rank)` keys are held by a live row this plan
+  // will never write (the rank obstacles further down).
+  const existingIds = new Set(existing.map((row) => row.id));
+  const reachedIds = new Set(oldRows.map((row) => row.id));
+
+  // --- Asserted identity ----------------------------------------------------
+  // Two kinds of node carry a row id rather than earning one from its content: a
+  // sub-page shell, whose `<page id="…"/>` pointer is its only identity, and a
+  // card of an IDENTIFIED type, which round-trips `id="…"` on its own tag so an
+  // agent reading the document gets an anchor it can hand back. Both resolve to
+  // the same thing — a `pin` (see `align.ts`) — and share one refusal
+  // vocabulary, because they are one mechanism.
+  //
+  // The identified TYPE SET is derived from the handle registry, never named
+  // here: this module knows what a tag DECLARES, not which plugin declares it.
+  // Naming `agent-note` would be the collection-consumer leak this codebase
+  // bans, and would silently stop pinning the day the type is renamed.
+  const identifiedTypes = new Set(
+    handles.filter((h) => markdownTagIsIdentified(h)).map((h) => h.type),
+  );
 
   // --- Sub-page identity ----------------------------------------------------
   // A shell's identity is its ROW ID, which `<page id="…"/>` carries and no
@@ -216,14 +280,24 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     }
   }
 
+  // The stored rows whose identity is ASSERTED rather than inferred. An
+  // identified card is pinned even when the incoming document never names it —
+  // that is what stops a tagless `<agent-note>` written next to an existing one
+  // from absorbing the existing card's row id through an LCS ambiguity (both
+  // cards are void and carry the byte-identical content key `agent-note ␀ {}`),
+  // which would silently detach that card's authorship. A card the document did
+  // not address is simply unmatched, i.e. deleted — see the note on why there is
+  // no `note-removed` twin below.
+  const pinnedOldRows = new Map<string, StoredRow>();
   const oldItems: AlignItem[] = oldRows.map((row) => {
     const handle = byType.get(row.type);
-    const shell = row.type === PAGE_BLOCK_TYPE;
+    const pinned = row.type === PAGE_BLOCK_TYPE || identifiedTypes.has(row.type);
+    if (pinned) pinnedOldRows.set(row.id, row);
     return {
-      key: shell ? pinnedShellKey(row.id) : identityKeyOf(row.type, row.data, handle),
+      key: pinned ? pinnedRowKey(row.id) : identityKeyOf(row.type, row.data, handle),
       plain: plainTextOf(row.data, handle),
       type: row.type,
-      pin: shell ? row.id : null,
+      pin: pinned ? row.id : null,
     };
   });
   // The page references this document ALREADY holds. A markdown apply may keep,
@@ -239,7 +313,10 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
   const incomingNodes = flattenIncoming(identified);
 
   const newItems: AlignItem[] = [];
-  const shellRefs = new Set<string>();
+  // Every row id this document has already claimed, whatever claimed it. One set
+  // for one namespace (see `pinnedRowKey`): a row can occupy one position, so a
+  // second claim on it is impossible to honour however it was written.
+  const claimedRefs = new Set<string>();
   for (const entry of incomingNodes) {
     if (entry.type === PAGE_BLOCK_TYPE) {
       // Not a refusal but a programming error: markdown parse alone can never
@@ -254,13 +331,68 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     const handle = byType.get(entry.type);
     const contentKey = identityKeyOf(entry.type, entry.data, handle);
     let pin: string | null = null;
+
+    // --- An identified card's `ref` ----------------------------------------
+    // `ref` is a CLAIM the document's author wrote down — "this node is the row
+    // you showed me as `…`" — so it is honoured only after proving the row
+    // exists AND is inside this apply's scope. A `ref` on a type that does not
+    // round-trip an id is ignored rather than refused: `SerializedBlock.ref` is
+    // only ever set by the parse of an identified tag, so one on anything else
+    // came from a hand-built forest and means nothing here.
+    const ref = entry.node.ref;
+    if (ref !== undefined && identifiedTypes.has(entry.type)) {
+      const target = pinnedOldRows.get(ref);
+      if (claimedRefs.has(ref)) {
+        return {
+          ok: false,
+          reason: "ref-duplicated",
+          detail:
+            `The document claims row ${ref} more than once. One row is one ` +
+            "position, so honouring this would require it to be in two places at once.",
+        };
+      }
+      if (target !== undefined && identifiedTypes.has(target.type)) {
+        claimedRefs.add(ref);
+        pin = ref;
+      } else if (existingIds.has(ref) && !reachedIds.has(ref)) {
+        // The row is real, and this apply still may not touch it: it is on
+        // another branch of the page, or the read this document came from
+        // redacted it away. Either way the document is asking to MOVE a row its
+        // author never saw into the scope it did see — which is precisely what a
+        // page-rooted edit must not be able to do to a redacted card.
+        return {
+          ok: false,
+          reason: "ref-out-of-scope",
+          detail:
+            `The document claims row ${ref}, which is not inside ${rootId}. A block ` +
+            "outside the scope of this apply — on another branch of the page, or " +
+            "hidden from the document this edit was written against — cannot be " +
+            "moved into it by naming its id.",
+        };
+      } else {
+        // Deliberately NO "already in this document" escape hatch, which is what
+        // `<page id="…"/>` gets below. That hatch exists only because the page
+        // tag DOUBLES as an ordinary link-to-page block, so an id there is not
+        // necessarily an identity claim. An id on an identified tag is *only*
+        // ever an identity claim, so a typo must never quietly become a create.
+        return {
+          ok: false,
+          reason: "unknown-ref",
+          detail:
+            `The document claims row ${ref}, which names no addressable ${entry.type} ` +
+            "on this page. An id is only ever an identity claim — drop it to create a " +
+            "new one, or re-read the block and copy the id back verbatim.",
+        };
+      }
+    }
+
     if (pageRefType !== null && entry.type === pageRefType) {
       const shell = shellByLine.get(pointerLine(entry.type, entry.data));
       if (shell !== undefined) {
-        if (shellRefs.has(shell.id)) {
+        if (claimedRefs.has(shell.id)) {
           return {
             ok: false,
-            reason: "subpage-reparented",
+            reason: "ref-duplicated",
             detail:
               `The document references sub-page ${shell.id} more than once. ` +
               "A sub-page shell is one row and can occupy one position; honouring " +
@@ -273,12 +405,12 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
               "lives in its own page_id partition and cannot be authored through the pointer.",
           );
         }
-        shellRefs.add(shell.id);
+        claimedRefs.add(shell.id);
         pin = shell.id;
       } else if (!existingKeys.has(contentKey)) {
         return {
           ok: false,
-          reason: "unknown-page-ref",
+          reason: "unknown-ref",
           detail:
             `The document references a page that is neither a sub-page inside ${rootId} ` +
             "nor a page this document already links to. A markdown apply cannot mint " +
@@ -287,7 +419,7 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
       }
     }
     newItems.push({
-      key: pin === null ? contentKey : pinnedShellKey(pin),
+      key: pin === null ? contentKey : pinnedRowKey(pin),
       plain: plainTextOf(entry.data, handle),
       type: entry.type,
       pin,
@@ -320,6 +452,38 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     if (list) list.push(j);
     else groups.set(parent, [j]);
   }
+
+  /**
+   * The ranks under `parent` that a live row still holds AFTER this plan lands
+   * and that the plan itself never writes — i.e. exactly the rows the WALK could
+   * not reach: a redacted card, or a row that does not connect to `rootId`.
+   *
+   * They are obstacles rather than merely invisible because `Rank.nBetween` is
+   * DETERMINISTIC: minting the midpoint of `(rankA, rankB)` reproduces, byte for
+   * byte, the key of a hidden row that was itself inserted between A and B — and
+   * `page_blocks_parent_rank_live_uq` then fails the whole apply. It fires on the
+   * most ordinary edit there is (insert a line between two visible ones), so it
+   * is a correctness obstacle, not a tidiness one.
+   *
+   * A survivor LEAVING this sibling list is deliberately not an obstacle: its own
+   * update vacates the key in the same transaction (the forest writer parks ranks
+   * unconditionally, so the transient duplicate is already handled), and
+   * reserving it would push minted keys around for no safety at all.
+   *
+   * With no `redact`, every row under an in-scope parent is reachable, so this is
+   * empty and rank planning is byte-identical to what it was before redaction
+   * existed.
+   */
+  const reservedByParent = new Map<string, string[]>();
+  for (const row of existing) {
+    if (row.parentId === null || reachedIds.has(row.id)) continue;
+    const list = reservedByParent.get(row.parentId);
+    if (list) list.push(row.rank);
+    else reservedByParent.set(row.parentId, [row.rank]);
+  }
+  const reservedRanksUnder = (parent: string): string[] =>
+    reservedByParent.get(parent) ?? [];
+
   const finalRank = new Array<string>(incomingNodes.length);
   for (const [parent, indices] of groups) {
     const ranks = planSiblingRanks(
@@ -331,6 +495,7 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
         // survivor arriving from a different parent has no rank HERE.
         return row.parentId === parent ? row.rank : null;
       }),
+      reservedRanksUnder(parent),
     );
     indices.forEach((j, k) => {
       finalRank[j] = ranks[k]!;
@@ -404,6 +569,14 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
   // page tree. A shell the document did not mention is PRESERVED — kept at the
   // top level, after everything the document did say. Removing a sub-page stays
   // an explicit act, never an inferred one.
+  //
+  // **An identified card gets NO twin of this, deliberately.** The asymmetry is
+  // in what the row OWNS: a shell owns another partition that is not in `rows` at
+  // all, so an omission there destroys content the document could not even see,
+  // whereas an identified card owns only children that are inside this very
+  // scope — every one of them is a line of the document. Omitting a card is
+  // therefore an ordinary, fully-informed delete, and preserving it would make
+  // "remove this card" unexpressible.
   const preservedShells = oldRows.filter(
     (row, i) => row.type === PAGE_BLOCK_TYPE && !usedOld.has(i),
   );
@@ -428,7 +601,17 @@ export function planMarkdownApply(args: MarkdownApplyArgs): MarkdownApplyResult 
     };
   }
 
-  let floor = maxRank((groups.get(rootId) ?? []).map((j) => finalRank[j]!));
+  // The floor a preserved shell is re-homed above: everything the document
+  // placed at the top level, AND every top-level rank held by a row the walk
+  // could not reach. The second half is the same obstacle rule as above, in the
+  // one place that does not go through `planSiblingRanks` — `Rank.nBetween(floor,
+  // null, n)` below would otherwise be free to mint straight onto a hidden
+  // top-level row's key. Same failure, same unique index, and easy to forget
+  // precisely because this call site looks like it is minting into open space.
+  let floor = maxRank([
+    ...(groups.get(rootId) ?? []).map((j) => finalRank[j]!),
+    ...reservedRanksUnder(rootId),
+  ]);
   const appended: StoredRow[] = [];
   for (const shell of preservedShells) {
     const rank = Rank.from(shell.rank);

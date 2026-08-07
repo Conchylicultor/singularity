@@ -2006,6 +2006,7 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
     - `listPages`
     - `MARK_ORDER`
     - `markdownParseTagName`
+    - `markdownTagIsIdentified`
     - `matchInlineFormat`
     - `mergeRuns`
     - `moveBlock`

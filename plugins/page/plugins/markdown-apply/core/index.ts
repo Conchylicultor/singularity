@@ -8,4 +8,9 @@ export type {
 
 export { documentOrderRows, markdownNodesOfRows } from "./flatten";
 
+export { boundaryViolations, touchedBlocks } from "./touched";
+export type { BoundaryViolation, TouchedBlocks, TouchedHow } from "./touched";
+
+export { pageTitleBanner, stripPageTitleBanner } from "./page-title";
+
 export type { StoredRow } from "./stored-row";

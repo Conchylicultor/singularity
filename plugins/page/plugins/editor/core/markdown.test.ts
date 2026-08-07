@@ -4,10 +4,12 @@ import { conversionPrefixesOf, defineBlock, type BlockHandle } from "./define-bl
 import { textBlockSchema, textDataSchema } from "./text-data";
 import { plainOf, runsLength, type RichText } from "./rich-text";
 import type { SerializedBlock } from "./serialized-block";
+import { withMintedIds } from "./serialized-block";
 import {
   parseMarkdownToForest,
   serializeForestToMarkdown,
   defaultTextHandle,
+  markdownTagIsIdentified,
   type MarkdownContext,
   type MarkdownNode,
 } from "./markdown";
@@ -124,6 +126,8 @@ const callout = defineBlock({
 });
 
 // The four annotation containers' shape: a void container with an explicit tag.
+// All four are present, because they are what the identified-tag property below
+// runs over — three plain, one `identified`, so every assertion has both arms.
 const context = defineBlock({
   type: "context",
   schema: z.object({}),
@@ -131,6 +135,35 @@ const context = defineBlock({
   anchor: true,
   typingPrefixes: ["TODO "],
   markdown: { tag: { body: "children" } },
+});
+
+const privateNotes = defineBlock({
+  type: "private-notes",
+  schema: z.object({}),
+  empty: () => ({}),
+  anchor: true,
+  markdown: { tag: { body: "children" } },
+});
+
+const todo = defineBlock({
+  type: "todo",
+  schema: z.object({}),
+  empty: () => ({}),
+  anchor: true,
+  markdown: { tag: { body: "children" } },
+});
+
+// The ONE identified type: `<agent-notes id="…">` carries the row it addresses,
+// because it is the one card an agent may write back to and an edit therefore
+// has to be able to NAME it. Everything else in this file — its sibling
+// annotations included — is content-addressed, which is exactly the contrast the
+// property test needs.
+const agentNotes = defineBlock({
+  type: "agent-notes",
+  schema: z.object({}),
+  empty: () => ({}),
+  anchor: true,
+  markdown: { tag: { body: "children", identified: true } },
 });
 
 // The media/void family — no markdown declaration anywhere, all covered by the
@@ -275,6 +308,9 @@ const handles: BlockHandle<unknown>[] = [
   prompt,
   callout,
   context,
+  privateNotes,
+  todo,
+  agentNotes,
   codeBlock,
   equation,
   divider,
@@ -715,6 +751,120 @@ describe("annotation containers (a real syntax, not a one-way marker)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The identified tag: an ADDRESSABLE region
+// ---------------------------------------------------------------------------
+//
+// `markdown.tag.identified` carries the block's ROW id as the reserved `id`
+// attribute, both ways: out of `ctx.id`, back onto `SerializedBlock.ref`. What
+// it buys is a document whose reader can point at a card and be understood. What
+// it must never do is let that id reach `data`, or reach the clipboard's
+// id-minting path — the two failure modes each case below pins.
+
+describe("identified tags (the row id, both ways)", () => {
+  const withId = (
+    id: string,
+    type: string,
+    data: unknown,
+    children: MarkdownNode[] = [],
+  ): MarkdownNode => ({ id, type, data, expanded: true, children });
+
+  test("the row id is emitted as the FIRST attribute and comes back as `ref`", () => {
+    const md = serializeForestToMarkdown(
+      [withId("block-card", "agent-notes", {}, [withId("c1", "text", { text: runs("found it") })])],
+      mdCtx,
+    );
+    expect(md).toBe(
+      ['<agent-notes id="block-card">', "  found it", "</agent-notes>"].join("\n"),
+    );
+    expect(parse(md)).toEqual([
+      {
+        type: "agent-notes",
+        data: {},
+        expanded: true,
+        ref: "block-card",
+        children: [node("text", { text: runs("found it") })],
+      },
+    ]);
+  });
+
+  test("the id never lands in `data` — the card's payload stays void", () => {
+    // The whole reason the attribute is lifted OFF the record before `dataOf`.
+    // `z.object({})` would have STRIPPED it, leaving the tag decorative: the
+    // document would say which card it means and nothing downstream would hear.
+    const parsed = parse('<agent-notes id="block-card"/>')[0]!;
+    expect(parsed.data).toEqual({});
+    expect(parsed.ref).toBe("block-card");
+  });
+
+  test("an id-less card serializes BARE and parses with no `ref` key at all", () => {
+    // The clipboard case, and the "mint me a card" case — one syntax, and it is
+    // deliberately not an error the way an id-less `<page/>` is.
+    const forest: SerializedBlock[] = [
+      {
+        type: "agent-notes",
+        data: {},
+        expanded: true,
+        children: [node("text", { text: runs("fresh") })],
+      },
+    ];
+    const md = serialize(forest);
+    expect(md).toBe(["<agent-notes>", "  fresh", "</agent-notes>"].join("\n"));
+    const parsed = parse(md);
+    expect(parsed).toEqual(forest);
+    // Structurally absent, not `ref: undefined` — `toEqual` would accept either.
+    expect("ref" in parsed[0]!).toBe(false);
+  });
+
+  test("an EMPTY id is the same as no id", () => {
+    const parsed = parse('<agent-notes id=""/>')[0]!;
+    expect("ref" in parsed).toBe(false);
+  });
+
+  test("a non-identified sibling annotation carries no id, in or out", () => {
+    // `identified` is opt-in per type, so `<context>` / `<todo>` /
+    // `<private-notes>` stay content-addressed: the row id is not emitted…
+    expect(serializeForestToMarkdown([withId("block-x", "context", {})], mdCtx)).toBe(
+      "<context/>",
+    );
+    // …and one written by hand is SILENTLY DROPPED by the void schema, yielding
+    // no `ref`. That is exactly the failure `identified` exists to close, stated
+    // as a fact rather than left to be rediscovered: without the opt-in the
+    // attribute is decorative, and a card would be re-paired by content alone.
+    const parsed = parse('<context id="block-x"/>')[0]!;
+    expect(parsed.data).toEqual({});
+    expect("ref" in parsed).toBe(false);
+  });
+
+  test("the identified type set is derivable from the registry, never named", () => {
+    // What the markdown-apply planner reads, so it can pin a `ref` without ever
+    // naming a block type (and so a rename cannot silently stop the pinning).
+    expect(handles.filter(markdownTagIsIdentified).map((h) => h.type)).toEqual(["agent-notes"]);
+  });
+
+  test("a handle declaring `identified` beside an `id` field is a LOUD failure", () => {
+    // The derived projection would emit `data.id` under the reserved name, and
+    // the row ref and the payload field would fight. Caught at resolution, which
+    // is the first time anything serializes or parses this type.
+    const clashing = defineBlock({
+      type: "clashing",
+      schema: z.object({ id: z.string() }),
+      empty: () => ({ id: "" }),
+      markdown: { tag: { body: "children", identified: true } },
+    }) as BlockHandle<unknown>;
+    expect(() => markdownTagIsIdentified(clashing)).toThrow(/reserves the `id` attribute/);
+  });
+
+  test("minting ids ignores a node's `ref` — paste can never reuse a live row", () => {
+    // `withMintedIds` is shared with clipboard paste. A card copied out of a page
+    // and pasted back arrives carrying the ORIGINAL card's row id in `ref`; the
+    // mint must still produce a fresh identity, and merely carry the ref through.
+    const [minted] = withMintedIds(parse('<agent-notes id="block-card"/>'));
+    expect(minted!.id).not.toBe("block-card");
+    expect(minted!.ref).toBe("block-card");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // A typing shortcut is NOT markdown line syntax
 // ---------------------------------------------------------------------------
 //
@@ -933,6 +1083,12 @@ describe("round-trip property (fuzzed forest)", () => {
       children: true,
     },
     { type: "context", data: () => ({}), children: true },
+    { type: "private-notes", data: () => ({}), children: true },
+    { type: "todo", data: () => ({}), children: true },
+    // Id-less here, which is the point: the fuzz forest exercises the OMIT
+    // branch of the identified tag — a card with no row id still serializes,
+    // and comes back with no `ref` key at all.
+    { type: "agent-notes", data: () => ({}), children: true },
     {
       type: "image",
       data: (r) => ({
@@ -994,6 +1150,60 @@ describe("round-trip property (fuzzed forest)", () => {
       // Idempotence: the emitted document is CANONICAL, so a second cycle is a
       // fixed point (the property the fence-indent bug broke).
       expect({ seed, md: serialize(parse(md)) }).toEqual({ seed, md });
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // The identified-tag property: every id survives, and ONLY as a `ref`
+  // -------------------------------------------------------------------------
+  //
+  // The property above runs over an id-less forest, which proves the OMIT
+  // branch. This one stamps a distinct id onto every node — the shape a real
+  // read hands the serializer — and asserts the round trip is the identity map
+  // plus exactly one thing: each identified node's `ref` is the id it was
+  // serialized from. Everything else, identified nodes' own `data` and children
+  // included, is byte-for-byte the same forest.
+  //
+  // The identified TYPE SET comes from the registry, never a literal — the same
+  // derivation `markdown-apply` makes, so this property keeps holding when a new
+  // type opts in.
+
+  test("a stamped forest round-trips its ids as `ref` on identified nodes, over 200 seeds", () => {
+    const identifiedTypes = new Set(
+      handles.filter(markdownTagIsIdentified).map((h) => h.type),
+    );
+    // Non-vacuity: an empty set would make every assertion below trivially true.
+    expect(identifiedTypes.size).toBeGreaterThan(0);
+
+    /** Stamp a distinct id onto every node — path-derived, so it is readable. */
+    const stamp = (nodes: SerializedBlock[], prefix: string): MarkdownNode[] =>
+      nodes.map((n, i) => ({
+        ...n,
+        id: `block-${prefix}${i}`,
+        children: stamp(n.children, `${prefix}${i}.`),
+      }));
+
+    /** The same forest, with a `ref` exactly where an identified tag carried one. */
+    const expected = (nodes: MarkdownNode[]): SerializedBlock[] =>
+      nodes.map((n) => ({
+        type: n.type,
+        data: n.data,
+        expanded: true,
+        children: expected(n.children),
+        ...(identifiedTypes.has(n.type) ? { ref: n.id } : {}),
+      }));
+
+    for (let seed = 1; seed <= 200; seed++) {
+      const r = rng(seed);
+      const forest: SerializedBlock[] = [];
+      const roots = 1 + Math.floor(r() * 4);
+      for (let i = 0; i < roots; i++) forest.push(build(r, 0));
+      const stamped = stamp(forest, "");
+      const parsed = parseMarkdownToForest(
+        serializeForestToMarkdown(stamped, mdCtx),
+        mdCtx,
+      );
+      expect({ seed, forest: parsed }).toEqual({ seed, forest: expected(stamped) });
     }
   });
 });

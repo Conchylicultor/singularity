@@ -31,9 +31,13 @@ has no line in the document and no write can name it.
   tree INTO the addressed block when it is not. So under a nested root it
   refuses. Unreachable in practice (a scoped read emits every shell in scope),
   which is why it is loud.
-- **`redact` is a row filter applied BEFORE the walk**, so pruning a row prunes
-  its subtree for free. The engine never learns what a redaction *is* —
-  audience/policy lives with the caller.
+- **`redact` filters the WALK and nothing else.** Pruning a row prunes its
+  subtree for free; `existing` stays the whole partition, so a hidden row is
+  invisible without being absent — it still reserves its rank against a
+  collision, and still makes a `ref` naming it `ref-out-of-scope` rather than
+  `unknown-ref`. Read and apply take the SAME-shaped option so one function
+  serves both; redacting differently would diff against a document nobody saw.
+  The engine never learns what a redaction *is*.
 - The WRITE is still whole-page: `applyPageBlockPatch` locks the entire forest
   either way, because `(parent_id, rank)` is one ordering space.
 
@@ -59,6 +63,31 @@ The plan is a pure function of current state, so re-running an apply converges.
 That is the recovery story for a write that fails between the two channels; do
 not add a retry that assumes it saw the previous attempt.
 
+## The page title is a READER-SIDE PREFIX, not a node (`core/page-title.ts`)
+
+A PAGE-rooted read opens with `# <title>` — a string prepended AFTER the
+serialize walk and stripped BEFORE the parse. The root stays scope, not content,
+and the title handling adds **zero authority of its own**.
+
+- **Emit and strip in ONE module**, for `flatten.ts`'s reason: disagree by a byte
+  and the apply is a diff against a document nobody saw.
+- **Only `rootId === pageId`.** A banner on a card-scoped read would come back as
+  an `# H1` minted INSIDE the card.
+- The title goes through the **same inline serializer** as every other line and
+  its line terminators collapse to a space, so it cannot forge structure in the
+  document the agent acts on.
+- **The strip's only test is byte-identity** with the banner built from the
+  page's CURRENT STORED title. A rename, a spliced-into banner and the page's own
+  first heading are indistinguishable from here, so all of them fall through to
+  the planner as a created heading and are refused. A deleted banner strips
+  nothing and deletes nothing — it was never a row.
+- **Known bound:** deleting ONLY the banner line, on a page whose first block is
+  an H1 reading exactly the title, strips that H1 block instead. Telling the two
+  apart needs the banner to be a node, which is what this refuses to make it.
+
+`BlockScope` carries `title` because `loadBlockScope` is the only place it exists
+without a second query — a page's own row is not in its content partition.
+
 ## Alignment: three passes, weakest evidence last
 
 1. **LCS over identity keys** (`diffArrays`). This is why the engine exists in
@@ -82,7 +111,35 @@ plugin exists to prevent. Stated bound: replacing a paragraph with an unrelated
 one of the same type reads as an EDIT, so per-block metadata follows the
 position rather than the words — the call every line-oriented diff makes.
 
-## Sub-pages are pinned, and never deleted
+## Asserted identity: pins
+
+A node whose identity is **asserted** (a row id in the document) rather than
+inferred (content similarity) is a `pin`, settled in its own pass after the three
+content passes. Two sources, one mechanism, one refusal vocabulary:
+
+- a **sub-page shell**, whose `<page id="…"/>` pointer is its only identity;
+- an **identified card** — a tag declaring `markdown.tag.identified`, which
+  round-trips its row id as the reserved `id` attribute. The type set is derived
+  from the handle registry via `markdownTagIsIdentified`, **never named here**.
+
+A stored identified card is pinned even when the document does not name it —
+otherwise a tagless `<agent-note>` written beside it shares its byte-identical
+void content key and can absorb its row id (and its authorship) through an LCS
+ambiguity.
+
+Three refusals, resolved in this order: **`ref-duplicated`** (one row, two
+positions), **`ref-out-of-scope`** (a real row the walk cannot reach — another
+branch, or redacted; this is what stops a page-rooted edit dragging a hidden card
+into scope and MOVING it), **`unknown-ref`**. `unknown-ref` gets no "already in
+this document" hatch, unlike `<page>` below: an id on an identified tag is *only*
+ever an identity claim, so a typo must never quietly become a create.
+
+**There is no `note-removed` twin of `subpage-removed`, deliberately.** A shell
+owns another partition the document cannot see, so an omission there destroys
+invisible content; a card owns only lines the document shows, so omitting one is
+an ordinary, fully-informed delete.
+
+## Sub-pages are never deleted
 
 A shell owns an entire other `page_id` partition. Its identity is its ROW ID,
 which `<page id="…"/>` carries and no `data` field does — and the engine reads
@@ -90,9 +147,6 @@ that id back **by serializing the incoming pointer node and comparing the line**
 never by naming a block type or a `data` field. The tag is the contract; the
 serializer is the only thing that knows how a type encodes its identity into one.
 
-- A pin is settled in a pass of its own, AFTER the content passes and
-  unconditionally. An exact-key LCS drops a match whose order crossed, and a
-  shell that merely moved must not thereby become "delete this page".
 - A shell **absent** from the incoming markdown is preserved, re-homed to the top
   level after everything the document did place (the `replacePageContent`
   rank-floor idiom). It stays exactly put only when it already sits above that
@@ -100,16 +154,13 @@ serializer is the only thing that knows how a type encodes its identity into one
   without it and the only interval provably free of a `(parent_id, rank)`
   collision is above the floor. Under a **nested root** this is
   `subpage-removed` instead — see *The root is the scope* above.
-- **`unknown-page-ref`** — a `<page id="…"/>` that is neither a live sub-page of
-  this page nor a reference this document ALREADY holds. The second half of that
-  rule is not a softening: `<page id="…"/>` is also how an ordinary
-  link-to-page block serializes, so refusing every id that is not a sub-page
-  would break every such block on every apply. What is refused is *inventing* a
-  page reference, which a pure planner cannot verify.
-- **`subpage-reparented`** — one shell referenced twice. (The plan named this
-  reason for a repositioned shell; repositioning within a page is legal and
-  supported, so the name is bound to the one placement that is genuinely
-  impossible: one row cannot occupy two positions.)
+- A `<page id="…"/>` that is neither a live sub-page here nor a reference the
+  document ALREADY holds is `unknown-ref`. That second half is not a softening:
+  the same tag is how an ordinary link-to-page block serializes, so refusing
+  every id that is not a sub-page would break every such block on every apply.
+  What is refused is *inventing* a page reference, which a pure planner cannot
+  verify. Repositioning a shell within its page is legal; naming it twice is
+  `ref-duplicated`.
 
 A `page` node in the incoming forest **throws** rather than refusing — markdown
 parse can never produce one, so it is a programming error, and minting a
@@ -125,12 +176,67 @@ subsequences are equally long the choice is arbitrary — the tests assert the
 COST (one write) and that applying the plan reproduces the asked-for document,
 never which of two equally-minimal answers came out.
 
+**A rank held by a row the walk could not reach is an OBSTACLE, at BOTH mint
+sites** (`planSiblingRanks`' `reserved`, and the preserved-shell floor).
+`Rank.nBetween` is deterministic, so the midpoint of `(A, B)` reproduces the key
+of a hidden row inserted between A and B, byte for byte — the live unique index
+then fails the whole apply, on the most ordinary edit there is. A survivor
+*leaving* a sibling list is deliberately not an obstacle: its own update vacates
+the key in the same transaction. Without `redact` the obstacle set is empty.
+
+An obstacle only picks a run's FLOOR, which is the whole of the resulting
+guarantee:
+
+> **Stated bound, unconditional: blocks inserted where a hidden row sits land
+> AFTER it, contiguously.**
+
+Either side satisfies the author's intent equally — they could not see the row —
+so the tie-break is decided by what else is at stake, and that is CONTIGUITY.
+The movers are consecutive in the incoming document; interleaving them around
+the obstacles would wedge a human's hidden card inside a sequence the agent
+authored as a unit and break the authored order, while buying nothing: the
+hidden row sits strictly between the same two visible survivors either way,
+which is the only position it can be said to have.
+
 ## `StoredRow` is a local structural type
 
 `page/editor`'s `StoredBlock` lives behind its SERVER barrel, which a `core`
 module may not import. `core/stored-row.ts` declares the five columns this
 engine reads; the server-side caller passes `StoredBlock[]` straight in and tsc
 proves the two agree at that one call site.
+
+## The acceptance predicate: what a write may DO (`core/touched.ts`)
+
+`redact` decides what a write may **see**. `assertAcceptable` decides what it may
+**do**. They are duals, and both are caller-supplied, so the engine still never
+learns what an audience is: one takes rows and returns rows, the other takes a
+plan and either returns or throws.
+
+- `touchedBlocks(plan)` flattens the plan to four ids-by-channel lists;
+  `boundaryViolations({plan, existing, rootId, isBoundary})` judges them against
+  a caller-supplied ROW PREDICATE. **No block type is named here** — naming one
+  inverts `agent-access` → `markdown-apply` into a cycle. It returns violations
+  rather than throwing (status and wording are the caller's), and throws for
+  exactly one thing: a non-terminating ancestor chain, bounded by
+  `existing.length + creates.length`, as `chainToPageRoot` does.
+- **Both chains, not just the new one.** created → new, deleted → old,
+  updated / text-edited → **BOTH**. A block whose new chain reaches a boundary is
+  not thereby legal: re-indenting the page's prose into a card is a MOVE, and
+  since the aligner preserves the id of byte-identical text it arrives as an
+  `update` naming `parentId` — so an after-only test lets an agent annex the whole
+  page into its own card without deleting a character (`escaped-origin`). The old
+  chain resolves against PRE-plan maps, so moving a block's ancestor in the same
+  plan cannot launder the block through it.
+- **Field-level, not row-level.** Minting a card re-ranks its prose siblings, so
+  `updates` names prose rows in the ORDINARY case: a rank-only (or
+  `expanded`-only) update is exempt; `type`, `data`, `parentId`, `deleteIds` and
+  text edits are judged. Without the carve-out the predicate refuses the feature.
+- **`ApplyBlockOptions.assertAcceptable` runs once, synchronously, after planning
+  and strictly before the first `applyPageBlockPatch`**, so a refusal has provably
+  written nothing. It gets the UNREDACTED partition — a chain walk needs ancestors
+  the document never showed. Deliberately **no exported `plan`/`commit` pair**: a
+  caller could commit a plan against rows it re-read, and no type can express
+  "these two came from one read".
 
 ## The write order (`server/internal/apply.ts`)
 
@@ -189,14 +295,23 @@ only an EDIT to a block containing a token is refused.
 
 ## No MCP tools here: this plugin is the ENGINE
 
-`read_page` moved to
-[`page/annotations/agent-access`](../annotations/plugins/agent-access/CLAUDE.md)
-with the notes-only writers; `write_page` / `edit_page` are **gone** — no agent
-reaches a page's prose any more. The split is not filing: `append_agent_notes`
-names a concrete block type, which a generic engine must not, and the redaction
-predicate is POLICY, not projection. What is left takes a root and a row filter
-and never learns what an audience is, so a second policy (export, share link)
-reuses it without adding a branch here.
+The agent-facing triple — `read_page`, `write_agent_note`, `edit_page` — lives in
+[`page/annotations/agent-access`](../annotations/plugins/agent-access/CLAUDE.md),
+which is the POLICY over this engine. (`edit_page` was once an export of this
+plugin, then deleted; it came back over there under a contract that judges the
+diff. That reversal is argued in the policy's own doc — the engine's shape is
+unchanged either way.)
+
+The split is not filing. A tool names a concrete block type, which a generic
+engine must not, and the two predicates it hands in are POLICY, not projection:
+
+> `redact` decides what a write may **SEE**. `assertAcceptable` decides what it
+> may **DO**.
+
+Both are caller-supplied, and neither teaches the engine what an audience is: one
+takes rows and returns rows, the other takes a plan and either returns or throws.
+So what is left here takes a root, a row filter and a boundary predicate, and a
+second policy (export, share link) reuses it without adding a branch.
 
 The end-to-end spec moved too — `agent-access/e2e/agent-access-verify.ts`.
 
@@ -234,6 +349,7 @@ handed to the walk, never to the emitted markdown.
     - `page/editor.serializePageContent`
     - `page/editor.StoredBlock`
   - Exports (types):
+    - `ApplyBlockOptions`
     - `ApplyReport`
     - `BlockScope`
     - `ReadBlockOptions`
@@ -257,6 +373,8 @@ handed to the walk, never to the emitted markdown.
     - `page/editor.MarkdownContext`
     - `page/editor.MarkdownNode`
     - `page/editor.markdownParseTagName`
+    - `page/editor.markdownTagIsIdentified`
+    - `page/editor.namesField`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.pageBlockMarkdown`
     - `page/editor.plainOf`
@@ -264,18 +382,26 @@ handed to the walk, never to the emitted markdown.
     - `page/editor.runsOf`
     - `page/editor.SerializedBlock`
     - `page/editor.serializeForestToMarkdown`
+    - `page/editor.serializeInlineMarkdown`
     - `page/editor.withMintedIds`
     - `primitives/rank.Rank`
   - Exports (types):
+    - `BoundaryViolation`
     - `MarkdownApplyArgs`
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`
     - `MarkdownTextEdit`
     - `StoredRow`
+    - `TouchedBlocks`
+    - `TouchedHow`
   - Exports (values):
+    - `boundaryViolations`
     - `documentOrderRows`
     - `markdownNodesOfRows`
+    - `pageTitleBanner`
     - `planMarkdownApply`
+    - `stripPageTitleBanner`
+    - `touchedBlocks`
 - Cross-plugin:
   - Imported by: `page/annotations/agent-access`
 

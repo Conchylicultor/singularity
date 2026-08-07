@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { applyMarkdownToBlock, applyMarkdownToPage } from "./internal/apply";
-export type { ApplyReport } from "./internal/apply";
+export type { ApplyBlockOptions, ApplyReport } from "./internal/apply";
 export { readBlockAsMarkdown, readPageAsMarkdown } from "./internal/read";
 export type { ReadBlockOptions } from "./internal/read";
 // The block→page resolution + row load the two entry points above begin with,

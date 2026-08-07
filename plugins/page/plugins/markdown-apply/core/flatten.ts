@@ -153,9 +153,9 @@ export function plainTextOf(data: unknown, handle?: BlockHandle<unknown>): strin
  *   several such lines is which is then decided by POSITION, which is exactly
  *   what the LCS over these keys answers.
  * - void → `type ␀ stableJson(data)`. A void block's payload is its content.
- * - sub-page shell → pinned to the row id (see {@link pinnedShellKey}). A shell
- *   owns a whole other page partition, so its identity can never be inferred
- *   from content.
+ * - a node whose identity is ASSERTED — a sub-page shell, or an identified card
+ *   the document addressed by id — → pinned to the row id (see
+ *   {@link pinnedRowKey}), never inferred from content.
  */
 export function identityKeyOf(
   type: string,
@@ -168,11 +168,18 @@ export function identityKeyOf(
 }
 
 /**
- * The key both halves of a sub-page reference share: the shell ROW on the stored
- * side, and the pointer block the tag parses back into on the incoming side. The
- * leading separator makes it unreachable from {@link identityKeyOf}, whose keys
- * all start with a block type name.
+ * The key both halves of an ASSERTED identity share: the stored ROW on one side,
+ * and whatever names it on the other — the `<page id="…"/>` pointer a shell
+ * parses back into, or an identified card's `ref`. The leading separator makes
+ * it unreachable from {@link identityKeyOf}, whose keys all start with a block
+ * type name.
+ *
+ * **One namespace, deliberately, for every kind of pin.** A pin's value is a ROW
+ * ID, which is unique across the whole forest whatever the row's type is, so
+ * per-kind namespacing would buy nothing and cost the one property that makes
+ * the aligner's pin pass total: two nodes claiming the same row are the same
+ * claim, and are caught as a duplicate, whichever tag they arrived under.
  */
-export function pinnedShellKey(rowId: string): string {
-  return `${SEP}page-shell${SEP}${rowId}`;
+export function pinnedRowKey(rowId: string): string {
+  return `${SEP}pinned${SEP}${rowId}`;
 }

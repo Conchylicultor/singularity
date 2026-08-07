@@ -16567,31 +16567,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/private-notes`
           - `page/annotations/todo`
       - Plugins:
-        - **`agent-access`** — The agent-facing tool surface over a page: read_page (human-audience subtrees pruned) plus append/write/edit_agent_notes, which can address nothing but an <agent-notes> card. The policy over page/markdown-apply's audience-agnostic engine.
+        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must land inside an <agent-note> card). The policy over page/markdown-apply's audience-agnostic engine.
           - Server:
             - Uses:
               - `infra/endpoints.HttpError`
               - `infra/mcp.Mcp`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
-              - `page/editor.applyPageBlockPatch`
               - `page/editor.Editor`
               - `page/editor.StoredBlock`
               - `page/markdown-apply.applyMarkdownToBlock`
               - `page/markdown-apply.ApplyReport`
-              - `page/markdown-apply.BlockScope`
               - `page/markdown-apply.loadBlockScope`
               - `page/markdown-apply.readBlockAsMarkdown`
               - `page/markdown-apply.serverMarkdownContext`
             - Register:
               - `mcpTool('read_page')`
-              - `mcpTool('append_agent_notes')`
-              - `mcpTool('write_agent_notes')`
-              - `mcpTool('edit_agent_notes')`
+              - `mcpTool('write_agent_note')`
+              - `mcpTool('edit_page')`
         - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
-              - `Editor.Block` "agent-notes" → `ContainerNoRow`
-              - `Editor.BlockFrame` "agent-notes" → `AgentNotesFrame`
+              - `Editor.Block` "agent-note" → `ContainerNoRow`
+              - `Editor.BlockFrame` "agent-note" → `AgentNotesFrame`
             - Uses:
               - `page/annotations/agent-notes/authorship.AgentNotesAuthors`
               - `page/annotations/agent-notes/authorship.useAgentNotesAuthors`
@@ -16601,7 +16598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor.Editor`
             - Exports (values): `agentNotesBlock`
           - Server:
-            - Contributes: `page.block-data` "agent-notes"
+            - Contributes: `page.block-data` "agent-note"
             - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/annotations.defineAnnotationBlock`
@@ -16669,8 +16666,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`private-notes`** — Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
-              - `Editor.Block` "private-notes" → `ContainerNoRow`
-              - `Editor.BlockFrame` "private-notes" → `PrivateNotesFrame`
+              - `Editor.Block` "private-note" → `ContainerNoRow`
+              - `Editor.BlockFrame` "private-note" → `PrivateNotesFrame`
             - Uses:
               - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
@@ -16678,7 +16675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor.Editor`
             - Exports (values): `privateNotesBlock`
           - Server:
-            - Contributes: `page.block-data` "private-notes"
+            - Contributes: `page.block-data` "private-note"
             - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/annotations.defineAnnotationBlock`
@@ -17215,6 +17212,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listPages`
           - `MARK_ORDER`
           - `markdownParseTagName`
+          - `markdownTagIsIdentified`
           - `matchInlineFormat`
           - `mergeRuns`
           - `moveBlock`
@@ -17709,6 +17707,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.serializePageContent`
           - `page/editor.StoredBlock`
         - Exports (types):
+          - `ApplyBlockOptions`
           - `ApplyReport`
           - `BlockScope`
           - `ReadBlockOptions`
@@ -17732,6 +17731,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.MarkdownContext`
           - `page/editor.MarkdownNode`
           - `page/editor.markdownParseTagName`
+          - `page/editor.markdownTagIsIdentified`
+          - `page/editor.namesField`
           - `page/editor.PAGE_BLOCK_TYPE`
           - `page/editor.pageBlockMarkdown`
           - `page/editor.plainOf`
@@ -17739,18 +17740,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.runsOf`
           - `page/editor.SerializedBlock`
           - `page/editor.serializeForestToMarkdown`
+          - `page/editor.serializeInlineMarkdown`
           - `page/editor.withMintedIds`
           - `primitives/rank.Rank`
         - Exports (types):
+          - `BoundaryViolation`
           - `MarkdownApplyArgs`
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
           - `MarkdownTextEdit`
           - `StoredRow`
+          - `TouchedBlocks`
+          - `TouchedHow`
         - Exports (values):
+          - `boundaryViolations`
           - `documentOrderRows`
           - `markdownNodesOfRows`
+          - `pageTitleBanner`
           - `planMarkdownApply`
+          - `stripPageTitleBanner`
+          - `touchedBlocks`
       - Cross-plugin:
         - Imported by: `page/annotations/agent-access`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.

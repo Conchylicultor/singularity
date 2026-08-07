@@ -110,6 +110,7 @@ export {
   parseMarkdownToForest,
   defaultTextHandle,
   markdownParseTagName,
+  markdownTagIsIdentified,
 } from "./markdown";
 export type {
   BlockMarkdown,

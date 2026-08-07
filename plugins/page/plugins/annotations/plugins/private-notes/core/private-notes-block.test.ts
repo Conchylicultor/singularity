@@ -36,7 +36,7 @@ describe("privateNotesBlock (derived + forced facts)", () => {
   it("declares the human audience — the fact that withholds it from agents", () => {
     // The `audience` is what a delivery/read path filters on, GENERICALLY. It
     // must stay on the handle, because the handle is what the server resolves
-    // from `Editor.BlockData`; a consumer that had to name "private-notes" is
+    // from `Editor.BlockData`; a consumer that had to name "private-note" is
     // one that a fifth annotation would silently slip past.
     expect(privateNotesBlock.audience).toBe("human");
     // And it is the TYPE's, not the instance's: an empty payload has nowhere to
@@ -55,7 +55,14 @@ describe("privateNotesBlock (derived + forced facts)", () => {
     expect(privateNotesBlock.splitChildWhenExpanded).toBeUndefined();
   });
 
-  it("maps to a round-tripping <private-notes> tag, not a one-way marker", () => {
+  it("is typed SINGULAR, and the former plural survives as a menu alias", () => {
+    // Renamed WITH `agent-note` so the family is one rule rather than one
+    // renamed member and three exceptions.
+    expect(privateNotesBlock.type).toBe("private-note");
+    expect(privateNotesBlock.aliases).toContain("private-notes");
+  });
+
+  it("maps to a round-tripping <private-note> tag, not a one-way marker", () => {
     // A void container has no text of its own, so its markdown mapping is the
     // generic TAG: the children go inside it and it comes back as a container.
     // The retired `**[…]**` marker could only ever go one way.

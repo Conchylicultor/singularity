@@ -7,7 +7,9 @@ A void container (`z.object({})`, content IS its children), built on
 [`page/container`](../../../container/CLAUDE.md) exactly like its
 [siblings](../../CLAUDE.md). This plugin declares only identity: a fixed
 `MdVisibilityOff` glyph, the low-alpha `destructive` dashed tint, and the
-`**[Private]**` markdown marker.
+`<private-note>` markdown tag. The TYPE is `private-note` (singular, like
+`agent-note`); the directory, package and `privateNotesBlock` symbol stay plural,
+and `"private-notes"` survives as a `/` menu alias.
 
 ## It does not hide anything yet — say so before relying on it
 
@@ -34,8 +36,8 @@ Two invariants for whoever builds that:
 - Description: Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
   - Contributes:
-    - `Editor.Block` "private-notes" → `ContainerNoRow`
-    - `Editor.BlockFrame` "private-notes" → `PrivateNotesFrame`
+    - `Editor.Block` "private-note" → `ContainerNoRow`
+    - `Editor.BlockFrame` "private-note" → `PrivateNotesFrame`
   - Uses:
     - `page/container.ContainerAnchor`
     - `page/container.ContainerBackdrop`
@@ -43,7 +45,7 @@ Two invariants for whoever builds that:
     - `page/editor.Editor`
   - Exports (values): `privateNotesBlock`
 - Server:
-  - Contributes: `page.block-data` "private-notes"
+  - Contributes: `page.block-data` "private-note"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/annotations.defineAnnotationBlock`

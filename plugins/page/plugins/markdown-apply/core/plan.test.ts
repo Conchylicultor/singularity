@@ -93,6 +93,25 @@ const callout = defineBlock({
   anchor: true,
 });
 
+// The three IDENTIFIED containers: void cards that round-trip their ROW ID as
+// the reserved `id` attribute, which is what makes them addressable — an agent
+// reading the document gets an anchor it can hand straight back. Mirrors the
+// real `agent-notes` / `private-notes` / `todo` declarations (a container is
+// `anchor: true`, void, with a `children` body); three rather than one so a
+// document holding several identified TYPES is covered, not just several cards.
+const identifiedContainer = (type: string): BlockHandle<unknown> =>
+  defineBlock({
+    type,
+    schema: z.object({}),
+    empty: () => ({}),
+    anchor: true,
+    markdown: { tag: { body: "children", identified: true } },
+  }) as BlockHandle<unknown>;
+
+const agentNotes = identifiedContainer("agent-notes");
+const privateNotes = identifiedContainer("private-notes");
+const todo = identifiedContainer("todo");
+
 const image = defineBlock({
   type: "image",
   schema: z.object({
@@ -172,6 +191,9 @@ const handles: BlockHandle<unknown>[] = [
   toggle,
   quote,
   callout,
+  agentNotes,
+  privateNotes,
+  todo,
   image,
   divider,
   codeBlock,
@@ -232,18 +254,27 @@ function rowsOf(forest: RawNode[], pageId = PAGE_ID): StoredRow[] {
 const markdownOf = (rows: StoredRow[], rootId = PAGE_ID): string =>
   serializeForestToMarkdown(markdownNodesOfRows(rows, rootId), ctx);
 
+/** A row filter, as a redacting caller passes one in. */
+type Redact = (rows: StoredRow[]) => StoredRow[];
+
 /** `pageId` stays `PAGE_ID` throughout: these fixtures are all one page. */
-const planResult = (rows: StoredRow[], md: string, rootId = PAGE_ID) =>
+const planResult = (rows: StoredRow[], md: string, rootId = PAGE_ID, redact?: Redact) =>
   planMarkdownApply({
     rootId,
     pageId: PAGE_ID,
     existing: rows,
     incoming: parseMarkdownToForest(md, ctx),
     handles,
+    redact,
   });
 
-function planOf(rows: StoredRow[], md: string, rootId = PAGE_ID): MarkdownApplyPlan {
-  const result = planResult(rows, md, rootId);
+function planOf(
+  rows: StoredRow[],
+  md: string,
+  rootId = PAGE_ID,
+  redact?: Redact,
+): MarkdownApplyPlan {
+  const result = planResult(rows, md, rootId, redact);
   if (!result.ok) throw new Error(`refused: ${result.reason} — ${result.detail}`);
   return result.plan;
 }
@@ -456,7 +487,7 @@ describe("sub-pages", () => {
     const md = ["before", `<page id="ghost"/>`, "after", `<page id="b2"/>`].join("\n");
     const result = planResult(rows, md);
     expect(result.ok).toBe(false);
-    expect(result.ok === false && result.reason).toBe("unknown-page-ref");
+    expect(result.ok === false && result.reason).toBe("unknown-ref");
   });
 
   test("a page-link the document ALREADY holds round-trips (it vouches for itself)", () => {
@@ -476,7 +507,7 @@ describe("sub-pages", () => {
     const md = ["before", `<page id="b2"/>`, "after", `<page id="b2"/>`].join("\n");
     const result = planResult(rows, md);
     expect(result.ok).toBe(false);
-    expect(result.ok === false && result.reason).toBe("subpage-reparented");
+    expect(result.ok === false && result.reason).toBe("ref-duplicated");
   });
 
   test("a shell whose PARENT is deleted survives at the top level", () => {
@@ -490,6 +521,270 @@ describe("sub-pages", () => {
     expect(plan.patch.deleteIds).toEqual(["b1"]);
     const shellUpdate = plan.patch.updates.find((u) => u.id === "b2")!;
     expect(shellUpdate.changes.parentId).toBe(PAGE_ID);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Identified cards: the id is a CLAIM, and every claim is checked
+// ---------------------------------------------------------------------------
+//
+// A sub-page's identity is asserted by the `<page id="…"/>` pointer; an
+// identified card's by the reserved `id` on its own tag. One mechanism, one
+// refusal vocabulary — these tests are the card half of the sub-page tests
+// above, deliberately shaped the same way.
+
+describe("identified cards", () => {
+  // b1 "before" | b2 <agent-notes> > b3 "noted" | b4 "after"
+  const withCard = (): StoredRow[] =>
+    rowsOf([
+      raw("text", { text: runs("before") }),
+      raw("agent-notes", {}, [raw("text", { text: runs("noted") })]),
+      raw("text", { text: runs("after") }),
+    ]);
+
+  test("the card carries its ROW ID into the document, and back out", () => {
+    const rows = withCard();
+    expect(markdownOf(rows)).toContain(`<agent-notes id="b2">`);
+    const plan = replan(rows);
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+    expect(plan.textEdits).toEqual([]);
+  });
+
+  test("a card MOVED in the document is repositioned, keeping its id", () => {
+    // The pin pass exists for exactly this: an exact-key LCS drops a match whose
+    // order crossed, so without it a card that merely moved would arrive as
+    // "delete this card and mint another" — detaching its authorship.
+    const rows = withCard();
+    const md = ["before", "after", `<agent-notes id="b2">`, "  noted", "</agent-notes>"].join(
+      "\n",
+    );
+    const plan = planOf(rows, md);
+    expect(plan.patch.creates).toEqual([]);
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(markdownOf(applyPlan(rows, plan))).toBe(md);
+  });
+
+  test("a TAGLESS card beside an existing one CREATES — it never steals the id", () => {
+    // Both cards are void and carry the byte-identical content key
+    // `agent-notes ␀ {}`, so a content-keyed alignment is free to pair the new
+    // one with the stored row. Pinning the STORED card unconditionally — even
+    // though this document names it — is what makes that impossible.
+    const rows = withCard();
+    const md = [
+      "before",
+      `<agent-notes id="b2">`,
+      "  noted",
+      "</agent-notes>",
+      "<agent-notes>",
+      "  fresh",
+      "</agent-notes>",
+      "after",
+    ].join("\n");
+    const plan = planOf(rows, md);
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(plan.patch.creates.map((b) => b.type)).toEqual(["agent-notes", "text"]);
+    // The stored card keeps its row, and the new one is a genuinely new id.
+    for (const created of plan.patch.creates) expect(created.id).not.toBe("b2");
+    // The document comes back with the minted id filled in — which is the whole
+    // point of an identified tag: the card the author asked to CREATE is
+    // addressable on the very next read.
+    const minted = plan.patch.creates.find((b) => b.type === "agent-notes")!.id;
+    expect(markdownOf(applyPlan(rows, plan))).toBe(
+      md.replace("<agent-notes>", `<agent-notes id="${minted}">`),
+    );
+  });
+
+  test("a card the document DROPPED is deleted — there is no shell-style rescue", () => {
+    // The asymmetry with a sub-page, stated as a test: a shell owns another
+    // partition the document cannot see, a card owns only lines the document
+    // shows. So omitting a card is an ordinary, fully-informed delete.
+    const rows = withCard();
+    const plan = planOf(rows, ["before", "after"].join("\n"));
+    expect([...plan.patch.deleteIds].sort()).toEqual(["b2", "b3"]);
+  });
+
+  test("an id naming NOTHING is refused — no `create it instead` hatch", () => {
+    // `<page id="…"/>` has one, because that tag doubles as an ordinary
+    // link-to-page block. An id on an identified tag is only ever an identity
+    // claim, so a typo must never quietly become a create.
+    const result = planResult(withCard(), `<agent-notes id="typo">\n  noted\n</agent-notes>`);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe("unknown-ref");
+  });
+
+  test("an id naming a row that carries no id of its own is refused", () => {
+    // `b1` is a paragraph: real, in scope, and not addressable — no read ever
+    // handed that id out, so claiming it is the same invention as a typo.
+    const result = planResult(withCard(), `<agent-notes id="b1">\n  noted\n</agent-notes>`);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe("unknown-ref");
+  });
+
+  test("claiming one card TWICE is refused rather than duplicated", () => {
+    const md = [
+      `<agent-notes id="b2">`,
+      "  noted",
+      "</agent-notes>",
+      `<agent-notes id="b2">`,
+      "  again",
+      "</agent-notes>",
+    ].join("\n");
+    const result = planResult(withCard(), md);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe("ref-duplicated");
+  });
+
+  test("a card on ANOTHER branch cannot be dragged into a scoped apply", () => {
+    // b1 "host" > b2 "inside" | b3 <agent-notes> > b4 "noted"
+    const rows = rowsOf([
+      raw("text", { text: runs("host") }, [raw("text", { text: runs("inside") })]),
+      raw("agent-notes", {}, [raw("text", { text: runs("noted") })]),
+    ]);
+    const md = [`<agent-notes id="b3">`, "  noted", "</agent-notes>"].join("\n");
+    const result = planResult(rows, md, "b1");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe("ref-out-of-scope");
+  });
+
+  test("a `ref` on a NON-identified type is ignored, not refused", () => {
+    // Only the parse of an identified tag ever sets `ref`, so one anywhere else
+    // came from a hand-built forest and means nothing to this plan.
+    const rows = rowsOf([raw("text", { text: runs("alpha") })]);
+    const result = planMarkdownApply({
+      rootId: PAGE_ID,
+      pageId: PAGE_ID,
+      existing: rows,
+      incoming: [
+        { type: "text", data: { text: runs("alpha") }, expanded: true, children: [], ref: "b1" },
+      ],
+      handles,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.ok && isEmptyPatch(result.plan.patch)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Redaction: invisible to the document, immovable to the plan
+// ---------------------------------------------------------------------------
+
+/** The human-audience analogue: a card the read pruned and the agent never saw. */
+const redactPrivate: Redact = (rows) => rows.filter((row) => row.type !== "private-notes");
+
+describe("redaction", () => {
+  // A / P(hidden) / B, where P's rank is EXACTLY the midpoint of A's and B's —
+  // which is what an insertion between A and B mints, byte for byte.
+  const withHiddenSibling = (): StoredRow[] => {
+    const rows = rowsOf([
+      raw("text", { text: runs("alpha") }),
+      raw("text", { text: runs("bravo") }),
+    ]);
+    rows.splice(1, 0, {
+      id: "hidden",
+      parentId: PAGE_ID,
+      type: "private-notes",
+      data: {},
+      rank: Rank.between(Rank.from(rows[0]!.rank), Rank.from(rows[1]!.rank)).toJSON(),
+      expanded: true,
+    });
+    return rows;
+  };
+
+  test("the hidden row is neither emitted nor deleted", () => {
+    const rows = withHiddenSibling();
+    const md = markdownOf(redactPrivate(rows));
+    expect(md).toBe(["alpha", "bravo"].join("\n"));
+    const plan = planOf(rows, md, PAGE_ID, redactPrivate);
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+  });
+
+  test("T1 — an insert where a hidden row sits does NOT mint its rank", () => {
+    // The whole reason `planSiblingRanks` takes obstacles. `Rank.nBetween` is
+    // deterministic, so the midpoint of (alpha, bravo) IS the hidden row's key;
+    // minting it violates `page_blocks_parent_rank_live_uq` and 500s the apply.
+    const rows = withHiddenSibling();
+    const hiddenRank = rows.find((row) => row.id === "hidden")!.rank;
+    const plan = planOf(
+      rows,
+      ["alpha", "inserted", "bravo"].join("\n"),
+      PAGE_ID,
+      redactPrivate,
+    );
+    expect(plan.patch.creates).toHaveLength(1);
+    const minted = String(plan.patch.creates[0]!.rank);
+    expect(minted).not.toBe(hiddenRank);
+    // The stated bound: it lands AFTER the hidden row, and still before `bravo`.
+    expect(Rank.compare(Rank.from(minted), Rank.from(hiddenRank))).toBe(1);
+    const bravo = rows.find((row) => row.id === "b2")!;
+    expect(Rank.compare(Rank.from(minted), Rank.from(bravo.rank))).toBe(-1);
+    // Nothing the document could not see is written, in either channel.
+    for (const update of plan.patch.updates) expect(update.id).not.toBe("hidden");
+    expect(plan.patch.deleteIds).toEqual([]);
+  });
+
+  test("the preserved-shell floor clears a hidden TOP-LEVEL row too", () => {
+    // The one rank site that does not go through `planSiblingRanks`: a dropped
+    // shell is re-homed with `Rank.nBetween(floor, null, n)`, which is just as
+    // free to land on a hidden row's key as the midpoint above.
+    const rows = rowsOf([
+      raw("text", { text: runs("alpha") }),
+      raw("page", { title: "Sub", icon: null }),
+    ]);
+    // The hidden card sits LAST, above everything the document places.
+    rows.push({
+      id: "hidden",
+      parentId: PAGE_ID,
+      type: "private-notes",
+      data: {},
+      rank: Rank.nBetween(Rank.from(rows[1]!.rank), null, 1)[0]!.toJSON(),
+      expanded: true,
+    });
+    const hiddenRank = rows.find((row) => row.id === "hidden")!.rank;
+    // The shell is dropped from the document, so it is re-homed above the floor.
+    const plan = planOf(rows, "alpha", PAGE_ID, redactPrivate);
+    const shellUpdate = plan.patch.updates.find((u) => u.id === "b2")!;
+    expect(shellUpdate).toBeDefined();
+    expect(String(shellUpdate.changes.rank)).not.toBe(hiddenRank);
+    expect(
+      Rank.compare(Rank.from(String(shellUpdate.changes.rank)), Rank.from(hiddenRank)),
+    ).toBe(1);
+  });
+
+  test("a redaction-pruned card cannot be dragged back in by naming its id", () => {
+    // The load-bearing half of `ref-out-of-scope`: the row is real, so it is not
+    // `unknown-ref`, and it is invisible to the document's author, so a claim on
+    // it is never something they wrote knowingly.
+    const rows = rowsOf([
+      raw("text", { text: runs("alpha") }),
+      raw("private-notes", {}, [raw("text", { text: runs("secret") })]),
+    ]);
+    const md = ["alpha", `<private-notes id="b2">`, "  secret", "</private-notes>"].join("\n");
+    const result = planResult(rows, md, PAGE_ID, redactPrivate);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toBe("ref-out-of-scope");
+  });
+});
+
+describe("fuzz: a redacted read round-trips to no writes at all", () => {
+  test("plan(rows, parse(serialize(redact(rows)))) is empty, over 400 seeds", () => {
+    // The new law. "Deletes nothing" is the property that matters — a redacted
+    // card must never read as a deletion — but the honest assertion is the
+    // stronger one: a faithfully round-tripped redacted read is a NO-OP, so
+    // reading a page and writing it straight back cannot cost the human a single
+    // row, rank or character of what the agent could not see.
+    let exercised = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const rows = fuzzRows(seed);
+      if (rows.some((row) => row.type === "private-notes")) exercised += 1;
+      const md = markdownOf(redactPrivate(rows));
+      const plan = planOf(rows, md, PAGE_ID, redactPrivate);
+      expect({ seed, patch: plan.patch }).toEqual({
+        seed,
+        patch: { creates: [], updates: [], deleteIds: [] },
+      });
+      expect({ seed, textEdits: plan.textEdits }).toEqual({ seed, textEdits: [] });
+    }
+    expect(exercised).toBeGreaterThan(100);
   });
 });
 
@@ -625,6 +920,14 @@ const gens: { type: string; data(r: () => number): unknown; children: boolean }[
     }),
     children: true,
   },
+  // The identified cards, WITH children — so `fuzzRows` builds real rows whose
+  // ids the serialized document carries, and the two properties below (identity
+  // ⇒ no writes; one edit at a time) automatically become the strongest
+  // available proof that id-pinning round-trips: the pin has to resolve back to
+  // the very row it was minted from, in every position the fuzz puts it in.
+  { type: "agent-notes", data: () => ({}), children: true },
+  { type: "private-notes", data: () => ({}), children: true },
+  { type: "todo", data: () => ({}), children: true },
   {
     type: "image",
     data: (r) => ({
@@ -1062,6 +1365,24 @@ describe("a non-page root bounds every authority", () => {
     const rows = withNestedShell();
     const plan = planOf(rows, markdownOf(rows, "b2"), "b2");
     expect(isEmptyPatch(plan.patch)).toBe(true);
+  });
+
+  test("an identified card INSIDE the root round-trips the same way", () => {
+    // The card twin of the test above: a pin resolves against the WALK, so a
+    // card the scoped read emitted must pin back to its own row at that depth —
+    // an id is not a page-level address that only works from the page root.
+    const rows = rowsOf([
+      raw("text", { text: runs("before") }),
+      raw("callout", { icon: null, color: "default" }, [
+        raw("text", { text: runs("inside one") }),
+        raw("agent-notes", {}, [raw("text", { text: runs("noted") })]),
+      ]),
+      raw("text", { text: runs("after") }),
+    ]);
+    expect(markdownOf(rows, "b2")).toContain(`<agent-notes id="b4">`);
+    const plan = planOf(rows, markdownOf(rows, "b2"), "b2");
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+    expect(plan.textEdits).toEqual([]);
   });
 
   test("a shell the scoped document DROPPED is refused, never re-homed", () => {
