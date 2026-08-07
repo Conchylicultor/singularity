@@ -100,6 +100,10 @@ export const readPageTool = Mcp.tool({
   name: "read_page",
   description: `Read a Singularity page — or any block within one — as markdown.
 
+**This tool reads the SHARED instance (normally main), not your worktree** — the
+opposite default from \`query_db\`, because pages are prod documents you edit
+collaboratively with the user, not something to test on.
+
 \`block_id\` is the SCOPE, not a line in the output: you get that block's
 sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
 
@@ -147,6 +151,11 @@ changes anything, as long as every block it touches sits inside an
 export const writeAgentNoteTool = Mcp.tool({
   name: "write_agent_note",
   description: `Replace ONE \`<agent-note>\` card's contents with a markdown document.
+
+**This writes to the SHARED instance (normally main), not your worktree** — the
+opposite default from \`query_db\`, because pages are prod documents you edit
+collaboratively with the user, not something to test on. What you write is live
+for them at once and outlives your worktree.
 
 \`block_id\` must name an \`<agent-note>\` card — copy the id off the opening tag
 \`read_page\` emits. To CREATE a card, use \`edit_page\` and put a tagless
@@ -206,6 +215,11 @@ open the run that produced the note. Returns what the write actually did
 export const editPageTool = Mcp.tool({
   name: "edit_page",
   description: `Replace an exact string in a page, the way \`Edit\` replaces one in a file.
+
+**This writes to the SHARED instance (normally main), not your worktree** — the
+opposite default from \`query_db\`, because pages are prod documents you edit
+collaboratively with the user, not something to test on. Your edit is live for
+them at once and outlives your worktree.
 
 THE ONE RULE: **every block this edit creates, rewrites, moves or deletes must
 sit inside an \`<agent-note>\` card.** The page's own prose is read-only to an

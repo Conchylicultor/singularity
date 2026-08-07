@@ -25,6 +25,18 @@ gives the read an output the write tools take as input, which is the whole reaso
 the two sections below reverse what they reverse. Design:
 [`research/2026-08-07-page-agent-note-file-like-tools.md`](../../../../../../research/2026-08-07-page-agent-note-file-like-tools.md).
 
+## The database is the SHARED one, and that is the point
+
+These tools touch `db` directly, and the MCP server runs in the instance that
+**launched** the conversation (`.mcp.json` dials `SINGULARITY_PARENT_HOST`) —
+normally main. So a page write lands in main's store, never the agent's fork.
+
+Intended: pages are **prod documents an agent edits collaboratively with the
+user**, not fixtures to test on. A worktree-local copy would be one nobody reads.
+`query_db` defaults the other way (the agent's own fork) because it inspects what
+the agent is building — same server, opposite default, which is why all three
+descriptions open by saying so.
+
 ## Addressing is NO LONGER the authorization — for WRITES. Deliberately
 
 > **This section reverses a recorded decision.** It used to read: *"Writes are
