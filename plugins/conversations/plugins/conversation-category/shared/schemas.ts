@@ -2,8 +2,14 @@ import { z } from "zod";
 import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 export const ConversationCategorySchema = z.object({
+  // `categoryRowId(conversationId, categoryId)` — see shared/row-id.ts.
+  id: z.string(),
   conversationId: z.string(),
-  category: z.string(),
+  categoryId: z.string(),
+  // The ITEM's name (e.g. "P0"), stored verbatim so a row is readable on its own
+  // and survives config edits. Renaming an item in config orphans its rows — the
+  // stale label keeps rendering, which beats losing the classification.
+  item: z.string(),
   source: z.enum(["haiku", "manual"]),
   classifiedAt: z.coerce.date(),
 });
@@ -16,16 +22,23 @@ export type ConversationCategoriesPayload = z.infer<
   typeof ConversationCategoriesPayloadSchema
 >;
 
-// Bounded POINT resource: a consumer subscribes by an explicit conversation-id
-// set (`usePointResource(resource, convId)` → one row-or-null), so a category
-// read costs O(1) instead of an O(n) `.find()` over the whole collection. Rows
-// key on `conversationId` — the ALIAS the server projection exposes the
-// side-table's `parent_id` PK under (which IS the point identity). NOT
-// bootCritical: point resources hydrate post-mount (the recorded decision), and
-// the CategoryAvatarRow keeps its title-glyph fallback for the one round-trip.
+// Bounded POINT resource. A conversation now holds one row per configured
+// category, so the point identity is the (conversation, category) pair folded
+// into the `id` primary key — `point.by` must BE the identity pk, because the
+// change feed routes a write by intersecting changed row ids with each tuple's
+// id set.
+//
+// Subscribers name the exact rows they render: a sidebar row asks for the ONE
+// avatar-category id (same per-row budget as before), the conversation header
+// asks for every configured category of the one open conversation. A row whose
+// category was deleted from config is therefore structurally invisible — no
+// subscribed id set can contain it — which is why nothing sweeps orphans.
+//
+// NOT bootCritical: point resources hydrate post-mount (the recorded decision),
+// and CategoryAvatarRow keeps its title-glyph fallback for the one round-trip.
 export const conversationCategoriesResource =
   pointQueryResourceDescriptor<ConversationCategory>(
     "conversation-categories",
     ConversationCategorySchema,
-    "conversationId",
+    "id",
   );

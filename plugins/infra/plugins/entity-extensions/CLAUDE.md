@@ -115,7 +115,6 @@ If no data needs preserving, accept the auto-generated migration as-is.
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/transpose`
     - `apps/story/marker`
-    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversation-view/notes`

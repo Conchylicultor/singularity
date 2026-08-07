@@ -1,4 +1,5 @@
 export { conversationCategoryConfig } from "./config";
+export { categoryRowId } from "./row-id";
 export {
   ConversationCategorySchema,
   ConversationCategoriesPayloadSchema,
@@ -12,6 +13,7 @@ export {
   classifyConversation,
   setConversationCategory,
   clearConversationCategory,
-  SetCategoryBodySchema,
+  SetCategoryItemBodySchema,
+  ClassifyBodySchema,
 } from "./endpoints";
-export type { SetCategoryBody } from "./endpoints";
+export type { SetCategoryItemBody, ClassifyBody } from "./endpoints";

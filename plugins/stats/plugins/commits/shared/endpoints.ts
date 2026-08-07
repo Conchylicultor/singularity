@@ -14,22 +14,26 @@ const bucketQuery = z.enum(["hour", "day", "week", "month", "year"]).optional();
 // --- Commits (counts) ---
 
 const commitsPlainPoint = z.object({ date: z.string(), count: z.number() });
+// `byItem` is keyed by the ITEM name within the requested category (P0, sonata,
+// …) — a conversation carries one item per category, so a breakdown only means
+// something once a category is named. `categoryId` says which.
 const commitsCategoryPoint = z.object({
   date: z.string(),
-  byCategory: z.record(z.string(), z.number()),
+  byItem: z.record(z.string(), z.number()),
 });
 
 export const getCommitsCumulative = defineEndpoint({
   route: "GET /api/stats/commits/cumulative",
   query: z.object({
     breakdown: z.literal("category").optional(),
+    categoryId: z.string().optional(),
     dedup: dedupQuery,
   }),
   response: z.union([
     z.object({ points: z.array(commitsPlainPoint) }),
     z.object({
       points: z.array(commitsCategoryPoint),
-      categories: z.array(z.string()),
+      items: z.array(z.string()),
     }),
   ]),
 });
@@ -37,7 +41,7 @@ export const getCommitsCumulative = defineEndpoint({
 const ratePlainPoint = z.object({ bucket: z.string(), count: z.number() });
 const rateCategoryPoint = z.object({
   bucket: z.string(),
-  byCategory: z.record(z.string(), z.number()),
+  byItem: z.record(z.string(), z.number()),
 });
 
 export const getCommitsRate = defineEndpoint({
@@ -45,6 +49,7 @@ export const getCommitsRate = defineEndpoint({
   query: z.object({
     bucket: bucketQuery,
     breakdown: z.literal("category").optional(),
+    categoryId: z.string().optional(),
     dedup: dedupQuery,
   }),
   response: z.union([
@@ -52,7 +57,7 @@ export const getCommitsRate = defineEndpoint({
     z.object({
       bucket: z.string(),
       points: z.array(rateCategoryPoint),
-      categories: z.array(z.string()),
+      items: z.array(z.string()),
     }),
   ]),
 });

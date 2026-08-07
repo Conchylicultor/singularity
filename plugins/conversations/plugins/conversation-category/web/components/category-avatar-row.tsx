@@ -1,15 +1,26 @@
+import { useMemo } from "react";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { useCategoryFor } from "../internal/use-category";
-import { useCategoryAvatars } from "../internal/use-category-avatars";
+import { useAvatarCategoryId, useCategoryAvatars } from "../internal/use-categories";
+import { useCategoryRows } from "../internal/use-conversation-categories";
 
 export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
-  const category = useCategoryFor(conv.id);
-  const avatars = useCategoryAvatars();
-  const avatar = category ? avatars[category] : undefined;
+  // Exactly ONE category paints the avatar, so a sidebar row subscribes to one
+  // id — the same per-row budget as before multiple categories existed. With no
+  // avatar category chosen the id set is empty and costs no query at all.
+  const avatarCategoryId = useAvatarCategoryId();
+  const categoryIds = useMemo(
+    () => (avatarCategoryId ? [avatarCategoryId] : []),
+    [avatarCategoryId],
+  );
+  const rows = useCategoryRows(conv.id, categoryIds);
+  const avatars = useCategoryAvatars(avatarCategoryId);
+
+  const item = avatarCategoryId ? rows.get(avatarCategoryId)?.item : undefined;
+  const avatar = item ? avatars[item] : undefined;
   const hasIcon =
     avatar?.icon != null || (avatar?.svgNodes != null && avatar.svgNodes.length > 0);
 

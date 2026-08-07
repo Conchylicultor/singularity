@@ -1,0 +1,1 @@
+DROP TABLE "conversations_ext_category" CASCADE;

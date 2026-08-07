@@ -1,22 +1,29 @@
 import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
 import { conversationCategoriesResource as conversationCategoriesDescriptor } from "../../shared";
-import { conversationCategory } from "./tables";
+import { _conversationCategories } from "./tables";
 
-const t = conversationCategory.table;
+const t = _conversationCategories;
 
 // Compiled bounded POINT resource: the loader reads only the subscribed id set
-// (`WHERE parent_id IN (ids)`), and the change-feed routes a category
-// insert/reclassify to a tuple iff the changed conversation ids intersect its
-// set — so a classification never sweeps the whole table. The PK column
-// `parent_id` is projected under the ALIAS `conversationId` (the point identity);
-// `point.by` IS that identity pk. No orderBy — point sets are unordered.
-export const conversationCategoriesResource = windowQueryResource(conversationCategoriesDescriptor, {
-  from: t,
-  select: {
-    conversationId: t.parentId,
-    category: t.category,
-    source: t.source,
-    classifiedAt: t.updatedAt,
+// (`WHERE id IN (ids)`), and the change feed routes an assignment write to a
+// tuple iff the changed row ids intersect its set — so classifying one
+// conversation never sweeps the table.
+//
+// `point.by` IS the identity pk: `id` is `categoryRowId(conversationId,
+// categoryId)`, so one subscribed id names exactly one (conversation, category)
+// assignment. No orderBy — point sets are unordered; callers index by categoryId.
+export const conversationCategoriesResource = windowQueryResource(
+  conversationCategoriesDescriptor,
+  {
+    from: t,
+    select: {
+      id: t.id,
+      conversationId: t.conversationId,
+      categoryId: t.categoryId,
+      item: t.item,
+      source: t.source,
+      classifiedAt: t.updatedAt,
+    },
+    point: { by: t.id },
   },
-  point: { by: t.parentId },
-});
+);

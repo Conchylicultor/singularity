@@ -18,13 +18,17 @@ import {
 } from "../shared/endpoints";
 
 export { conversationCategoryConfig } from "../shared/config";
-export { conversationCategory } from "./internal/tables";
 export { conversationCategoriesResource } from "./internal/resource";
 export { classifyConversationJob } from "./internal/classify-job";
+// The generic category API. Consumers (stats) enumerate categories through it
+// and never name one, so adding or removing a category needs no edit there.
+export { getCategories, getItemOrder, getAvatarCategoryId } from "./internal/categories";
+export type { CategoryDescriptor } from "./internal/categories";
+export { getItemMap } from "./internal/store";
 
 export default {
   description:
-    "Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.",
+    "Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Surfaces one chip per category in the conversation header, and paints the sidebar avatar from the category chosen for it.",
   contributions: [
     ConfigV2.Register({ descriptor: conversationCategoryConfig }),
     Resource.Declare(conversationCategoriesResource),

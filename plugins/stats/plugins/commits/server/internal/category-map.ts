@@ -1,20 +1,24 @@
-import { db } from "@plugins/database/server";
-import { getConfig } from "@plugins/config_v2/server";
-import { conversationCategory, conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/server";
+import {
+  getItemMap,
+  getItemOrder,
+} from "@plugins/conversations/plugins/conversation-category/server";
 
 const UNKNOWN = "Unknown";
-const t = conversationCategory.table;
 
-export async function buildCategoryMap(): Promise<Map<string, string>> {
-  const rows = await db
-    .select({ conversationId: t.parentId, category: t.category })
-    .from(t);
-  const map = new Map<string, string>();
-  for (const r of rows) map.set(r.conversationId, r.category);
-  return map;
+/**
+ * Which item each conversation carries within ONE category.
+ *
+ * A conversation is classified along every configured category now, so a
+ * breakdown only means something once a category is named — the caller picks it,
+ * and this plugin never names one itself.
+ */
+export async function buildItemMap(
+  categoryId: string,
+): Promise<Map<string, string>> {
+  return getItemMap(categoryId);
 }
 
-export function categoryFor(
+export function itemFor(
   map: Map<string, string>,
   conversationId: string | null,
 ): string {
@@ -22,7 +26,7 @@ export function categoryFor(
   return map.get(conversationId) ?? UNKNOWN;
 }
 
-export function getConfigCategoryOrder(): string[] {
-  const { categories } = getConfig(conversationCategoryConfig);
-  return categories.map((c) => c.name);
+/** The category's configured item names, in config order — the series order. */
+export function getConfigItemOrder(categoryId: string): string[] {
+  return getItemOrder(categoryId);
 }

@@ -1,14 +1,22 @@
-// @hash 2ce0036aa76c
+// @hash a5d932d95894
 {
   "autoClassify": true,
+  "avatarCategory": "type",
   "categories": [
-    { "name": "General question", "avatar": { "icon": "question_mark", "color": "sky" } },
-    { "name": "Feature (small)", "avatar": { "icon": "star_outline", "color": "amber" } },
-    { "name": "Feature (big)", "avatar": { "icon": "star_rate", "color": "amber" } },
-    { "name": "Infra (small)", "avatar": { "icon": "factory", "color": "emerald" } },
-    { "name": "Infra (load bearing)", "avatar": { "icon": "factory", "color": "emerald" } },
-    { "name": "Bug (small)", "avatar": { "icon": "bug_report", "color": "rose" } },
-    { "name": "Bug (critical)", "avatar": { "icon": "bug_report", "color": "rose" } },
-    { "name": "Other", "avatar": { "icon": "question_mark", "color": "sky" } }
+    {
+      "id": "type",
+      "name": "Type",
+      "hint": "What kind of work this conversation is. If nothing else clearly fits, pick \"Other\".",
+      "items": [
+        { "id": "type-general", "name": "General question", "hint": "", "avatar": { "icon": "question_mark", "color": "sky" } },
+        { "id": "type-feature-small", "name": "Feature (small)", "hint": "", "avatar": { "icon": "star_outline", "color": "amber" } },
+        { "id": "type-feature-big", "name": "Feature (big)", "hint": "", "avatar": { "icon": "star_rate", "color": "amber" } },
+        { "id": "type-infra-small", "name": "Infra (small)", "hint": "", "avatar": { "icon": "factory", "color": "emerald" } },
+        { "id": "type-infra-load-bearing", "name": "Infra (load bearing)", "hint": "", "avatar": { "icon": "factory", "color": "emerald" } },
+        { "id": "type-bug-small", "name": "Bug (small)", "hint": "", "avatar": { "icon": "bug_report", "color": "rose" } },
+        { "id": "type-bug-critical", "name": "Bug (critical)", "hint": "", "avatar": { "icon": "bug_report", "color": "rose" } },
+        { "id": "type-other", "name": "Other", "hint": "", "avatar": { "icon": "question_mark", "color": "sky" } }
+      ]
+    }
   ]
 }

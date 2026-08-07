@@ -3,7 +3,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { commitsConfig } from "../../shared/config";
 import { getCommitsRate, getCommitsLinesRate } from "../../shared/endpoints";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
-import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
+import { buildItemMap, itemFor, getConfigItemOrder } from "./category-map";
 
 async function resolveCommits(dedup: boolean): Promise<Awaited<ReturnType<typeof getCommits>>> {
   const { excludedPaths } = getConfig(commitsConfig);
@@ -47,20 +47,20 @@ export const handleRate = implement(getCommitsRate, async ({ query }) => {
   let commits = await getCommits();
   if (query.dedup === "true") commits = deduplicateByPushId(commits);
 
-  if (query.breakdown === "category") {
-    const catMap = await buildCategoryMap();
+  if (query.breakdown === "category" && query.categoryId) {
+    const itemMap = await buildItemMap(query.categoryId);
     const counts = new Map<string, Record<string, number>>();
     for (const c of commits) {
       const k = keyFor(c.iso, bucket);
-      const cat = categoryFor(catMap, c.conversationId);
+      const item = itemFor(itemMap, c.conversationId);
       const existing = counts.get(k) ?? {};
-      existing[cat] = (existing[cat] ?? 0) + 1;
+      existing[item] = (existing[item] ?? 0) + 1;
       counts.set(k, existing);
     }
     const points = [...counts.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(([k, v]) => ({ bucket: k, byCategory: v }));
-    return { bucket, points, categories: getConfigCategoryOrder() };
+      .map(([k, v]) => ({ bucket: k, byItem: v }));
+    return { bucket, points, items: getConfigItemOrder(query.categoryId) };
   }
 
   const counts = new Map<string, number>();

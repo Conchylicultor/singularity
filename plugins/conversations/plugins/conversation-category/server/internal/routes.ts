@@ -1,16 +1,16 @@
-import { getConfig } from "@plugins/config_v2/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { HttpHandler } from "@plugins/framework/plugins/server-core/core";
-import { conversationCategoryConfig } from "../../shared/config";
 import {
+  ClassifyBodySchema,
   setConversationCategory,
   clearConversationCategory,
 } from "../../shared/endpoints";
-import { conversationCategory } from "./tables";
+import { findCategory } from "./categories";
+import { deleteCategoryRow, upsertCategoryRows } from "./store";
 import { classifyConversationJob } from "./classify-job";
 
 // Returns 202 Accepted — implement() always returns 200, so use a raw handler here.
-export const handleClassify: HttpHandler = async (_req, params) => {
+export const handleClassify: HttpHandler = async (req, params) => {
   const conversationId = params.conversationId;
   if (!conversationId) {
     return Response.json(
@@ -18,29 +18,65 @@ export const handleClassify: HttpHandler = async (_req, params) => {
       { status: 400 },
     );
   }
+
+  // An absent body means "every category"; a `categoryIds` list restricts the
+  // run to those, which is how one chip re-classifies only its own category.
+  const text = await req.text();
+  let body: unknown = {};
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+      return Response.json({ error: `Body is not valid JSON: ${err.message}` }, { status: 400 });
+    }
+  }
+  const parsed = ClassifyBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return Response.json({ error: parsed.error.message }, { status: 400 });
+  }
+
   await classifyConversationJob.enqueue({
     conversationId,
+    categoryIds: parsed.data.categoryIds,
     force: true,
   });
   return Response.json({ ok: true }, { status: 202 });
 };
 
-export const handleSetCategory = implement(setConversationCategory, async ({ params, body }) => {
-  // Validate against the configured list — the UI offers these as choices,
-  // but a stale tab or direct API caller could pass anything; reject early
-  // so the chip never displays a label that's not in the picker.
-  const { categories } = getConfig(conversationCategoryConfig);
-  const categoryNames = categories.map((c) => c.name);
-  if (!categoryNames.includes(body.category)) {
-    throw new HttpError(400, `category "${body.category}" is not in the configured list`);
-  }
+export const handleSetCategory = implement(
+  setConversationCategory,
+  async ({ params, body }) => {
+    // Validate against the configured categories — the UI offers these as
+    // choices, but a stale tab or a direct API caller could pass anything, and
+    // the chip must never display an item the picker no longer offers.
+    const category = findCategory(body.categoryId);
+    if (!category) {
+      throw new HttpError(
+        400,
+        `category "${body.categoryId}" is not in the configured list`,
+      );
+    }
+    if (!category.items.some((i) => i.name === body.item)) {
+      throw new HttpError(
+        400,
+        `item "${body.item}" is not in category "${category.name}"`,
+      );
+    }
 
-  await conversationCategory.upsert(params.conversationId, {
-    category: body.category,
-    source: "manual",
-  });
-});
+    await upsertCategoryRows(
+      params.conversationId,
+      [{ categoryId: body.categoryId, item: body.item }],
+      "manual",
+    );
+  },
+);
 
-export const handleClearCategory = implement(clearConversationCategory, async ({ params }) => {
-  await conversationCategory.delete(params.conversationId);
-});
+// Deliberately does NOT validate the category against config: clearing a row
+// whose category was deleted from config is exactly when you need this to work.
+export const handleClearCategory = implement(
+  clearConversationCategory,
+  async ({ params }) => {
+    await deleteCategoryRow(params.conversationId, params.categoryId);
+  },
+);

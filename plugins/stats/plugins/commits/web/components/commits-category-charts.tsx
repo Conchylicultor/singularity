@@ -49,12 +49,14 @@ const COLOR_KEY_HEX: Record<string, string> = {
 const UNKNOWN_KEY = "Unknown";
 const UNKNOWN_COLOR = "#94a3b8";
 
-function useCategoryColorFn(): (cat: string) => string {
-  const avatars = useCategoryAvatars();
+// Colors come from the ITEM's own configured avatar within this category, so
+// two categories can reuse the same item name without sharing a color.
+function useItemColorFn(categoryId: string): (item: string) => string {
+  const avatars = useCategoryAvatars(categoryId);
   return useCallback(
-    (cat: string): string => {
-      if (cat === UNKNOWN_KEY) return UNKNOWN_COLOR;
-      const colorKey = avatars[cat]?.color ?? autoColorKey(cat);
+    (item: string): string => {
+      if (item === UNKNOWN_KEY) return UNKNOWN_COLOR;
+      const colorKey = avatars[item]?.color ?? autoColorKey(item);
       return COLOR_KEY_HEX[colorKey] ?? UNKNOWN_COLOR;
     },
     [avatars],
@@ -85,59 +87,67 @@ function useToggleable() {
   return { hidden, onLegendClick, legendFormatter };
 }
 
-interface ByCategoryPoint {
+interface ByItemPoint {
   date?: string;
   bucket?: string;
-  byCategory: Record<string, number>;
+  byItem: Record<string, number>;
 }
 
 interface CategoryResponse {
-  points: ByCategoryPoint[];
-  categories: string[];
+  points: ByItemPoint[];
+  items: string[];
 }
 
 function useOrderedKeys(data: CategoryResponse | undefined): string[] {
   return useMemo(() => {
     if (!data) return [];
-    const { points, categories } = data;
+    const { points, items } = data;
     const present = new Set<string>();
     for (const p of points) {
-      for (const cat of Object.keys(p.byCategory)) present.add(cat);
+      for (const item of Object.keys(p.byItem)) present.add(item);
     }
     const ordered: string[] = [];
-    for (const cat of categories) {
-      if (present.has(cat)) ordered.push(cat);
+    for (const item of items) {
+      if (present.has(item)) ordered.push(item);
     }
-    for (const cat of present) {
-      if (!ordered.includes(cat)) ordered.push(cat);
+    // Items dropped from config but still stored on old conversations keep their
+    // series rather than vanishing from the history.
+    for (const item of present) {
+      if (!ordered.includes(item)) ordered.push(item);
     }
     return ordered;
   }, [data]);
 }
 
-function flattenByCategory(
-  points: ByCategoryPoint[],
-  cats: string[],
+function flattenByItem(
+  points: ByItemPoint[],
+  items: string[],
   xKey: "date" | "bucket",
 ): Record<string, number>[] {
   return points.map((p) => {
     const row: Record<string, number> = { [xKey]: (p as any)[xKey] };
-    for (const cat of cats) {
-      row[cat] = p.byCategory[cat] ?? 0;
+    for (const item of items) {
+      row[item] = p.byItem[item] ?? 0;
     }
     return row;
   });
 }
 
-export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
+export function CumulativeCommitsCategoryChart({
+  dedup,
+  categoryId,
+}: {
+  dedup?: boolean;
+  categoryId: string;
+}) {
   const { showEmptyDays } = useShowEmptyDays();
-  const colorFor = useCategoryColorFn();
+  const colorFor = useItemColorFn(categoryId);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data: raw, error } = useEndpoint(getCommitsCumulative, {}, { query: { breakdown: "category", dedup: dedup ? "true" : "false" } });
-  // breakdown=category call site — response is always the byCategory branch.
+  const { data: raw, error } = useEndpoint(getCommitsCumulative, {}, { query: { breakdown: "category", categoryId, dedup: dedup ? "true" : "false" } });
+  // breakdown=category call site — response is always the byItem branch.
   const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
-  const rawFlat = flattenByCategory(data?.points ?? [], allKeys, "date");
+  const rawFlat = flattenByItem(data?.points ?? [], allKeys, "date");
   const flatPoints = useMemo(
     () => (showEmptyDays && rawFlat.length >= 2 ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
     [rawFlat, showEmptyDays],
@@ -178,21 +188,21 @@ export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
               onClick={onLegendClick}
               formatter={legendFormatter}
             />
-            {allKeys.map((cat) => (
+            {allKeys.map((item) => (
               <Area
-                key={cat}
+                key={item}
                 type="monotone"
-                dataKey={cat}
-                name={cat}
-                stackId="cat"
-                stroke={colorFor(cat)}
-                fill={colorFor(cat)}
+                dataKey={item}
+                name={item}
+                stackId="item"
+                stroke={colorFor(item)}
+                fill={colorFor(item)}
                 fillOpacity={0.7}
                 strokeWidth={1}
                 dot={false}
                 activeDot={{ r: 3 }}
                 isAnimationActive={false}
-                hide={!!hidden[cat]}
+                hide={!!hidden[item]}
               />
             ))}
           </ComposedChart>
@@ -211,16 +221,22 @@ const BUCKETS: { id: Bucket; label: string }[] = [
   { id: "year", label: "Year" },
 ];
 
-export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
+export function CommitsRateCategoryChart({
+  dedup,
+  categoryId,
+}: {
+  dedup?: boolean;
+  categoryId: string;
+}) {
   const [bucket, setBucket] = useState<Bucket>("day");
   const { showEmptyDays } = useShowEmptyDays();
-  const colorFor = useCategoryColorFn();
+  const colorFor = useItemColorFn(categoryId);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data: raw, error } = useEndpoint(getCommitsRate, {}, { query: { bucket, breakdown: "category", dedup: dedup ? "true" : "false" } });
-  // breakdown=category call site — response is always the byCategory branch.
+  const { data: raw, error } = useEndpoint(getCommitsRate, {}, { query: { bucket, breakdown: "category", categoryId, dedup: dedup ? "true" : "false" } });
+  // breakdown=category call site — response is always the byItem branch.
   const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
-  const rawFlat = flattenByCategory(data?.points ?? [], allKeys, "bucket");
+  const rawFlat = flattenByItem(data?.points ?? [], allKeys, "bucket");
   const flatPoints = useMemo(
     () => (showEmptyDays && rawFlat.length >= 2 ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
     [rawFlat, showEmptyDays, bucket],
@@ -262,15 +278,15 @@ export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
                 onClick={onLegendClick}
                 formatter={legendFormatter}
               />
-              {allKeys.map((cat) => (
+              {allKeys.map((item) => (
                 <Bar
-                  key={cat}
-                  dataKey={cat}
-                  name={cat}
-                  stackId="cat"
-                  fill={colorFor(cat)}
+                  key={item}
+                  dataKey={item}
+                  name={item}
+                  stackId="item"
+                  fill={colorFor(item)}
                   isAnimationActive={false}
-                  hide={!!hidden[cat]}
+                  hide={!!hidden[item]}
                 />
               ))}
             </BarChart>

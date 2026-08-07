@@ -3,7 +3,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { commitsConfig } from "../../shared/config";
 import { getCommitsCumulative, getCommitsLinesCumulative } from "../../shared/endpoints";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
-import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
+import { buildItemMap, itemFor, getConfigItemOrder } from "./category-map";
 
 async function resolveCommits(dedup: boolean): Promise<Awaited<ReturnType<typeof getCommits>>> {
   const { excludedPaths } = getConfig(commitsConfig);
@@ -17,25 +17,25 @@ export const handleCumulative = implement(getCommitsCumulative, async ({ query }
   let commits = await getCommits();
   if (query.dedup === "true") commits = deduplicateByPushId(commits);
 
-  if (query.breakdown === "category") {
-    const catMap = await buildCategoryMap();
+  if (query.breakdown === "category" && query.categoryId) {
+    const itemMap = await buildItemMap(query.categoryId);
     const perDay = new Map<string, Record<string, number>>();
     for (const c of commits) {
       const day = c.iso.slice(0, 10);
-      const cat = categoryFor(catMap, c.conversationId);
+      const item = itemFor(itemMap, c.conversationId);
       const existing = perDay.get(day) ?? {};
-      existing[cat] = (existing[cat] ?? 0) + 1;
+      existing[item] = (existing[item] ?? 0) + 1;
       perDay.set(day, existing);
     }
     const days = [...perDay.keys()].sort();
     const running: Record<string, number> = {};
     const points = days.map((date) => {
-      for (const [cat, count] of Object.entries(perDay.get(date)!)) {
-        running[cat] = (running[cat] ?? 0) + count;
+      for (const [item, count] of Object.entries(perDay.get(date)!)) {
+        running[item] = (running[item] ?? 0) + count;
       }
-      return { date, byCategory: { ...running } };
+      return { date, byItem: { ...running } };
     });
-    return { points, categories: getConfigCategoryOrder() };
+    return { points, items: getConfigItemOrder(query.categoryId) };
   }
 
   const perDay = new Map<string, number>();

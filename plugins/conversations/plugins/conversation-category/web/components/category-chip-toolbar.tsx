@@ -1,134 +1,42 @@
-import { useState } from "react";
-import { MdAutoAwesome, MdCheck } from "react-icons/md";
-import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { useMemo } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useConfig } from "@plugins/config_v2/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { conversationCategoryConfig } from "../../shared";
-import { useCategoryFor } from "../internal/use-category";
-import { colorClassFor } from "../internal/colors";
-import { reclassify, setCategory } from "../internal/api";
+import { useCategories } from "../internal/use-categories";
+import { useCategoryRows } from "../internal/use-conversation-categories";
+import { CategoryChip } from "./category-chip";
 
+/**
+ * Every configured category as its own chip in the conversation header.
+ *
+ * ONE contribution renders all of them: the categories are user config, so their
+ * count is only known at runtime and there is no set of contribution ids to
+ * register. One subscription covers the lot, and each chip gets its assignment
+ * as a prop.
+ *
+ * Returns a fragment, not a wrapper element — `CollapsibleWrap` in the header
+ * walks through `display: contents` but not through a `div`, so a wrapper would
+ * become one wide child it cannot wrap.
+ */
 export function CategoryChipToolbar() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const category = useCategoryFor(convId);
-  const config = useConfig(conversationCategoryConfig);
-  const categories = config.categories.map((c) => c.name);
-  const [busy, setBusy] = useState<"classify" | "set" | null>(null);
-  const [open, setOpen] = useState(false);
+  const categories = useCategories();
+  const categoryIds = useMemo(() => categories.map((c) => c.id), [categories]);
+  const rows = useCategoryRows(convId, categoryIds);
+
   if (!conversation) return null;
   if (conversation.kind === "agent") return null;
 
-  const onPick = async (next: string) => {
-    if (busy) return;
-    setBusy("set");
-    try {
-      await setCategory(conversation.id, next);
-      setOpen(false);
-    } catch (err) {
-      toast({
-        type: "conversation",
-        title: "Failed to set category",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const onReclassify = async () => {
-    if (busy) return;
-    setBusy("classify");
-    try {
-      await reclassify(conversation.id);
-      setOpen(false);
-    } catch (err) {
-      toast({
-        type: "conversation",
-        title: "Re-classify failed",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const label = category ?? "Uncategorized";
-  const colorClass = colorClassFor(category ?? "");
-
   return (
-    <InlinePopover
-      open={open}
-      onOpenChange={setOpen}
-      trigger={
-        <Badge
-          as="button"
-          className="hover:opacity-80"
-          colorClass={colorClass}
-          aria-label={`Conversation category: ${label}`}
-          icon={
-            busy === "classify" ? (
-              <MdAutoAwesome className="size-3 animate-pulse" />
-            ) : undefined
-          }
-        >
-          {label}
-        </Badge>
-      }
-      width="sm"
-      padding="xs"
-    >
-        <ConfigPopoverHeader
-          label="Set category"
-          descriptor={conversationCategoryConfig}
+    <>
+      {categories.map((category) => (
+        <CategoryChip
+          key={category.id}
+          conversationId={conversation.id}
+          category={category}
+          item={rows.get(category.id)?.item ?? null}
         />
-        <ul className="space-y-px">
-          {categories.map((c) => {
-            const selected = c === category;
-            return (
-              <li key={c}>
-                <Row
-                  size="sm"
-                  hover="accent"
-                  onClick={() => onPick(c)}
-                  disabled={busy !== null}
-                  icon={
-                    <Center as="span" className={`size-3 ${selected ? "opacity-100" : "opacity-0"}`}>
-                      <MdCheck className="size-3" />
-                    </Center>
-                  }
-                >
-                  <Badge colorClass={colorClassFor(c)}>
-                    {c}
-                  </Badge>
-                </Row>
-              </li>
-            );
-          })}
-        </ul>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical offset on a 1px divider between list and re-classify row */}
-        <div className="my-1 h-px bg-border" />
-        <Row
-          size="sm"
-          hover="accent"
-          onClick={onReclassify}
-          disabled={busy !== null}
-          icon={
-            <MdAutoAwesome
-              className={busy === "classify" ? "animate-pulse" : undefined}
-            />
-          }
-        >
-          {busy === "classify" ? "Re-classifying…" : "Re-classify with Haiku"}
-        </Row>
-    </InlinePopover>
+      ))}
+    </>
   );
 }

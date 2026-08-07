@@ -16,10 +16,12 @@
     - `config_v2.useSetConfig`
     - `config_v2/config-link.ConfigGearButton`
     - `conversations/conversation-category.autoColorKey`
+    - `conversations/conversation-category.useCategories`
     - `conversations/conversation-category.useCategoryAvatars`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
@@ -44,9 +46,8 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
-    - `conversations/conversation-category.conversationCategory`
-    - `conversations/conversation-category.conversationCategoryConfig`
-    - `database.db`
+    - `conversations/conversation-category.getItemMap`
+    - `conversations/conversation-category.getItemOrder`
     - `infra/endpoints.implement`
     - `infra/paths.GIT`
     - `infra/worktree.ensureMainWorktreeRoot`

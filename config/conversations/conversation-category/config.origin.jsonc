@@ -1,7 +1,9 @@
-// @hash 2ce0036aa76c
+// @hash a5d932d95894
 {
-  // Automatically classify conversations into categories after each assistant turn. Manual re-classify is always available from the toolbar chip.
+  // Automatically classify conversations after each assistant turn, one item per category. Manual re-classify is always available from the category chips in the conversation header.
   "autoClassify": true,
-  // Labels Haiku can pick from when classifying a conversation. Reorder freely; the last label is also the fallback when Haiku's reply doesn't match any entry, so a catch-all (e.g. "Other") at the end is recommended.
+  // Which category paints the avatar on sidebar conversation rows. Only one category can, so two categories never fight over the same disc. The commits-by-category charts in Stats break down by every category, independently of this choice.
+  "avatarCategory": "",
+  // One entry per axis you want conversations classified along — e.g. "Priority" with items P0/P1/P2, or "App" with one item per app. Each category is classified independently. A category with no items is skipped.
   "categories": []
 }

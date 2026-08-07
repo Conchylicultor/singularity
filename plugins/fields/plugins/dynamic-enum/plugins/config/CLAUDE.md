@@ -20,7 +20,7 @@ text input when no contribution matches.
 
 - Description: Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
 - Web:
-  - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+  - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
   - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
   - Uses:
     - `config_v2/fields.Fields`
@@ -44,6 +44,7 @@ text input when no contribution matches.
   - Exports (values): `dynamicEnumField`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-category`
     - `ui/segmented-progress-bar`
     - `ui/tab-bar`
     - `ui/theme-engine`

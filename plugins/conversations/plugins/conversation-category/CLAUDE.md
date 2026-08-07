@@ -1,46 +1,95 @@
 # conversation-category
 
-Auto-classifies each conversation into a configurable category (default
-`General question` / `Small feature` / `Load bearing infra` / `Bug` /
-`Other`) and surfaces the result as a small chip in the sidebar row and a
-larger pill in the conversation toolbar. The toolbar chip's popover lets
-the user pick a category manually or trigger a Haiku re-classify.
+Classifies each conversation along a **user-defined set of categories** and
+surfaces one chip per category in the conversation header. One category is
+chosen to paint the avatar on sidebar conversation rows.
 
-The category list is a plain `string-list` config (`Settings →
-Conversation categories`). Edit freely; the **last** entry is the
-fallback when Haiku's reply doesn't match any configured label, so keep
-a catch-all there.
+Two words, used consistently everywhere:
+
+- **Category** — one axis. `Priority`, `App`, `Type`. User-defined in
+  `Settings → Conversation categories`; nothing is hardcoded.
+- **Item** — one value inside a category. `P0`, `sonata`.
+
+Every category is classified independently, so a conversation is a *bug* **and**
+a *P0* **and** about *sonata* at the same time — the flat single-list version
+had to cram those into combinatorial labels ("Bug (critical)") and still could
+not say which app.
+
+Each item carries a **hint**: free text handed to the classifier, so the model
+uses the user's own definition of the item instead of guessing from its label
+(`Name: "P0"`, `Hint: "Only use this if it impacts user revenue"`). Categories
+carry a hint of their own for guidance about the axis as a whole.
+
+## Avatar category
+
+`avatarCategory` (a `dynamicEnumField` whose options are resolved at
+config-render time from the user's own categories, via this plugin's
+`DynamicEnum.Options` contribution) names the one category allowed to paint the
+sidebar avatar. `Item.Avatar` is a first-match-wins dispatch slot — exactly one
+disc per row — so making the choice explicit is what stops two categories from
+fighting over it. Unset is legal: rows fall back to the title glyph.
+
+The other categories are visible in the conversation header, not on the list
+rows.
 
 ## How classification fires
 
-A persistent global trigger on `conversationTurnCompleted` (installed
-in this plugin's `onReady`) enqueues `conversation-category.classify`
-for every assistant turn. The job is idempotent — it skips if a row
-exists with `source: "haiku"` (re-classify only on explicit `force:
-true`) or `source: "manual"` (user override always wins). So in
-practice Haiku runs once, on the first turn, and then never again
-unless the user clicks "Re-classify with Haiku".
+A persistent global trigger on `conversationTurnCompleted` (installed in this
+plugin's `onReady`) enqueues `conversation-category.classify` for every
+assistant turn. The job makes **one** Haiku call covering every category that
+still needs an answer, and asks for a JSON object keyed by category id —
+`runClaudePrint` spawns a `claude` process per call, so one call per category
+would multiply that by N for no accuracy gain.
+
+Each category then resolves **independently**: a missing key or an unmatched
+answer costs that one category, never the run. Whatever resolved is written; the
+rest is retried on the next turn.
+
+That "still needs an answer" predicate is what makes the job incremental — add a
+category to config and only that category is asked about next turn, and the
+steady state costs one indexed query and no model call at all. A **manual**
+assignment is only ever replaced when the user re-classifies that specific
+category, so "Re-classify all" can never stomp something set by hand.
+
+**An unmatched answer writes nothing.** The single-category version fell back to
+the last configured label ("keep a catch-all at the end"); per-category that is
+a fabricated classification — `Priority: P0/P1/P2` has no catch-all, and
+stamping `P2` on an unmatched reply invents data the user reads as the model's
+judgement (and is exactly what `no-absorbed-failure` prohibits). Users who want
+a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 
 ## Boundary notes
 
-- Storage is plugin-owned (`conversation_categories` table, FK to
-  `_conversations` with cascade-delete). We do **not** add a column to
-  the load-bearing `_conversations` schema — keeping classification
-  decoupled means the chip is opt-in and removable.
-- The sidebar chip is contributed via the `Item.Chips` slot (defined
-  in the `item` primitive plugin), not by editing `ConversationItem`
-  directly. Future per-row chips (priority, area, …) plug into the
-  same slot.
+- Storage is plugin-owned: `conversation_categories`, one row per
+  (conversation, category), FK to `_conversations` with cascade-delete. NOT a
+  1:1 `defineExtension` — that primitive's sole primary key is the parent id.
+- The primary key is the derived `categoryRowId(conversationId, categoryId)`
+  rather than a composite, because the live-state **point** resource requires its
+  subscription key to be a single-column pk. That keeps reads bounded: a sidebar
+  row subscribes to the ONE avatar-category id, the header to the open
+  conversation's whole set.
+- A row whose category was deleted from config is **structurally invisible** —
+  no subscribed id set can contain it. That is why nothing sweeps orphans: a
+  config write fires on every debounce in the settings form, so an automatic
+  sweep would let "delete a category to retype its name" destroy every
+  classification irrecoverably.
+- The `item` column stores the item's **name**. Renaming an item in config
+  orphans its rows and the stale label keeps rendering — losing a classification
+  to a rename would be worse.
+- Consumers (`stats/commits`) enumerate categories through the generic
+  `getCategories` / `getItemOrder` / `getItemMap` API and never name one, so
+  adding or removing a category needs no edit there.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
+- Description: Per-conversation categories: one chip per user-defined category in the conversation header, and the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn; manual override from each chip's popover. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Surfaces one chip per category in the conversation header, and paints the sidebar avatar from the category chosen for it.
 - Web:
   - Contributes:
     - `Conversation.Header` → `CategoryChipToolbar`
     - `ConfigV2.WebRegister`
+    - `DynamicEnum.Options` "Avatar category"
     - `Item.Avatar` → `CategoryAvatarRow`
   - Uses:
     - `config_v2.ConfigV2`
@@ -52,17 +101,23 @@ unless the user clicks "Re-classify with Haiku".
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.Conversation`
+    - `fields/dynamic-enum/config.DynamicEnum`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/row.Row`
-    - `primitives/live-state.usePointResource`
+    - `primitives/live-state.usePointResources`
     - `primitives/popover.InlinePopover`
     - `shell/notifications.toast`
-  - Exports (types): `ColorKey`
+  - Exports (types):
+    - `Category`
+    - `CategoryItem`
+    - `ColorKey`
   - Exports (values):
     - `autoColorKey`
+    - `useAvatarCategoryId`
+    - `useCategories`
     - `useCategoryAvatars`
 - Server:
   - Contributes:
@@ -74,44 +129,49 @@ unless the user clicks "Re-classify with Haiku".
     - `config_v2.getConfig`
     - `conversations.conversationTurnCompleted`
     - `conversations.readConversationTurns`
-    - `conversations.Turn`
+    - `database.db`
     - `infra/claude-cli.ClaudeCliError`
     - `infra/claude-cli.runClaudePrint`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/query-resource.windowQueryResource`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
+  - Exports (types): `CategoryDescriptor`
   - Exports (values):
     - `classifyConversationJob`
     - `conversationCategoriesResource`
-    - `conversationCategory`
     - `conversationCategoryConfig`
+    - `getAvatarCategoryId`
+    - `getCategories`
+    - `getItemMap`
+    - `getItemOrder`
   - Register: `defineJob('conversation-category.classify')`
   - Routes:
     - `POST /api/conversation-category/:conversationId/classify`
     - `POST /api/conversation-category/:conversationId`
-    - `DELETE /api/conversation-category/:conversationId`
+    - `DELETE /api/conversation-category/:conversationId/:categoryId`
 - Cross-plugin:
   - Imported by: `stats/commits`
 - Shared:
   - Exports (types):
+    - `ClassifyBody`
     - `ConversationCategoriesPayload`
     - `ConversationCategory`
-    - `SetCategoryBody`
+    - `SetCategoryItemBody`
   - Exports (values):
+    - `categoryRowId`
+    - `ClassifyBodySchema`
     - `classifyConversation`
     - `clearConversationCategory`
     - `ConversationCategoriesPayloadSchema`
     - `conversationCategoriesResource`
     - `conversationCategoryConfig`
     - `ConversationCategorySchema`
-    - `SetCategoryBodySchema`
+    - `SetCategoryItemBodySchema`
     - `setConversationCategory`
 
 <!-- AUTOGENERATED:END -->
