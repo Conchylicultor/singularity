@@ -232,6 +232,24 @@ Independent projects that live in `sidequests/`, not directly related to Singula
      - `flag_raise({ reason })` — something needs my attention (caveats, partial outcomes, follow-ups, skipped work, or the push didn't land). Use `reason` for short bullets describing what I should know.
   2. Write your final wrap up message, including things like summary, issues encountered, existing caveats, follow ups.
 
+### Communication
+
+Write in plain language. Describe what the user sees, clicks, or gets — in concrete terms — before naming any component, hook, or class. One idea per sentence, rather than three packed behind dashes and colons. Dense phrasing reads as precise but costs a re-read; aim to be understood on the first pass, not to sound authoritative. No metaphors for mechanisms, no abstract noun where a verb works ("a stuck control" → "the buttons stay on screen"). Identifiers are fine *after* the plain description, not instead of it.
+
+```
+Bad:  The symptom is a stuck control: one row stays "lit up" with its actions
+      showing and follows your clicks around the surface. CollapsibleCard's
+      full-bleed toggle takes focus, so that turn's cluster never clears.
+
+Good: Normally a row's buttons appear when your mouse is over it, and vanish
+      when it leaves.
+      The bug: if you clicked the row, its buttons stay after the mouse leaves
+      — until you click another row, whose buttons then stay instead. So one
+      row is always showing its buttons.
+      (Cause: clicking moves focus into the row, and the reveal keys on focus
+      as well as hover.)
+```
+
 ### Testing
 
 Optional and manual — nothing runs them automatically. Requires `node_modules`,
