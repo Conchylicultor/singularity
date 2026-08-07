@@ -1,9 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import {
-  songMidiResource,
-  type SongMidiRow,
-} from "../shared/resources";
+import { songMidiResource, type SongMidiRow } from "../shared/resources";
 
 /**
  * Every song's MIDI row indexed by song id — the batch twin of

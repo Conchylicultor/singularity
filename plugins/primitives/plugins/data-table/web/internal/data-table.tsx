@@ -15,11 +15,7 @@ import {
   StickyStackItem,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
-import {
-  MdArrowDownward,
-  MdArrowUpward,
-  MdUnfoldMore,
-} from "react-icons/md";
+import { MdArrowDownward, MdArrowUpward, MdUnfoldMore } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -159,58 +155,61 @@ export function DataTable<TRow>({
     <ControlSizeProvider size={controlSize}>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent) */}
       <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
-      {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
+        {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
           (0 by default; a DataView passes its toolbar height so the header stacks
           BELOW the toolbar instead of hiding behind it). `mask` follows the
           embedding surface so rows never show through the pinned bar. */}
-      <Sticky
-        as="div"
-        ref={headerRef}
-        edge="top"
-        mask
-        layer="raised"
-        // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
-        className={cn(
-          "col-span-full grid grid-cols-subgrid border-b text-3xs font-medium uppercase tracking-wider text-muted-foreground",
-          gutter ? "py-control px-pane-gutter" : "p-control",
-        )}
-        style={{ top: stickyHeaderOffset }}
-      >
-        {columns.map((col) => {
-          const sortable = !!col.value;
-          const active = sortState?.columnId === col.id;
-          return (
-            <Text
-              as="span"
-              key={col.id}
-              className={cn(
-                alignClass(col.align),
-                sortable && "cursor-pointer select-none",
-              )}
-              onClick={sortable ? () => toggleSort(col.id) : undefined}
-            >
-              {col.header}
-              {sortable && (
-                <SortIcon active={active} direction={active ? sortState!.direction : null} />
-              )}
-            </Text>
-          );
-        })}
-        {hasActionsTrack && <span aria-hidden />}
-      </Sticky>
-      {groups
-        ? renderGroupedBody(groups, renderRow, groupHeaderTop, gutter)
-        : rows.length > VIRTUALIZE_THRESHOLD ? (
-            <VirtualTableBody
-              rows={rows}
-              rowKey={rowKey}
-              selectedRowId={selectedRowId}
-              renderRow={renderRow}
-              keepMounted={keepMountedRowKeys}
-            />
-          ) : (
-            rows.map((row, i) => renderRow(row, i))
+        <Sticky
+          as="div"
+          ref={headerRef}
+          edge="top"
+          mask
+          layer="raised"
+          // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
+          className={cn(
+            "col-span-full grid grid-cols-subgrid border-b text-3xs font-medium uppercase tracking-wider text-muted-foreground",
+            gutter ? "py-control px-pane-gutter" : "p-control",
           )}
+          style={{ top: stickyHeaderOffset }}
+        >
+          {columns.map((col) => {
+            const sortable = !!col.value;
+            const active = sortState?.columnId === col.id;
+            return (
+              <Text
+                as="span"
+                key={col.id}
+                className={cn(
+                  alignClass(col.align),
+                  sortable && "cursor-pointer select-none",
+                )}
+                onClick={sortable ? () => toggleSort(col.id) : undefined}
+              >
+                {col.header}
+                {sortable && (
+                  <SortIcon
+                    active={active}
+                    direction={active ? sortState!.direction : null}
+                  />
+                )}
+              </Text>
+            );
+          })}
+          {hasActionsTrack && <span aria-hidden />}
+        </Sticky>
+        {groups ? (
+          renderGroupedBody(groups, renderRow, groupHeaderTop, gutter)
+        ) : rows.length > VIRTUALIZE_THRESHOLD ? (
+          <VirtualTableBody
+            rows={rows}
+            rowKey={rowKey}
+            selectedRowId={selectedRowId}
+            renderRow={renderRow}
+            keepMounted={keepMountedRowKeys}
+          />
+        ) : (
+          rows.map((row, i) => renderRow(row, i))
+        )}
       </div>
     </ControlSizeProvider>
   );
@@ -244,7 +243,10 @@ function DataTableRow<TRow>({
   onRowClick: ((row: TRow) => void) | undefined;
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
   rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
-  useRowDecoration: (row: TRow, index: number) => DataTableRowDecoration | undefined;
+  useRowDecoration: (
+    row: TRow,
+    index: number,
+  ) => DataTableRowDecoration | undefined;
   measure?: { ref: (el: Element | null) => void; index: number };
   gutter: boolean;
 }): ReactNode {
@@ -390,15 +392,21 @@ function VirtualTableBody<TRow>({
 
   // The marker sits at the start of the row region (right after the sticky
   // header); scrollMargin is measured from it.
-  // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer in the subgrid table that reserves the off-screen windowed height
-  const marker = <div ref={measureRef} aria-hidden className="col-span-full h-0" />;
+  const marker = (
+    // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer in the subgrid table that reserves the off-screen windowed height
+    <div ref={measureRef} aria-hidden className="col-span-full h-0" />
+  );
 
   if (virtualItems.length === 0) {
     return (
       <>
         {marker}
         {/* eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the windowed table's total height */}
-        <div aria-hidden className="col-span-full" style={{ height: totalSize }} />
+        <div
+          aria-hidden
+          className="col-span-full"
+          style={{ height: totalSize }}
+        />
       </>
     );
   }
@@ -416,7 +424,11 @@ function VirtualTableBody<TRow>({
       {marker}
       {paddingTop > 0 && (
         // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows above the window
-        <div aria-hidden className="col-span-full" style={{ height: paddingTop }} />
+        <div
+          aria-hidden
+          className="col-span-full"
+          style={{ height: paddingTop }}
+        />
       )}
       {virtualItems.map((vi, i) => {
         // Interior gap: nonzero only where the range skips indexes — i.e. between
@@ -427,7 +439,11 @@ function VirtualTableBody<TRow>({
           <Fragment key={vi.key}>
             {gap > 0 && (
               // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the rows skipped between a pinned row and the window
-              <div aria-hidden className="col-span-full" style={{ height: gap }} />
+              <div
+                aria-hidden
+                className="col-span-full"
+                style={{ height: gap }}
+              />
             )}
             {renderRow(rows[vi.index]!, vi.index, {
               ref: virtualizer.measureElement,
@@ -438,7 +454,11 @@ function VirtualTableBody<TRow>({
       })}
       {paddingBottom > 0 && (
         // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows below the window
-        <div aria-hidden className="col-span-full" style={{ height: paddingBottom }} />
+        <div
+          aria-hidden
+          className="col-span-full"
+          style={{ height: paddingBottom }}
+        />
       )}
     </>
   );
@@ -482,7 +502,9 @@ function renderGroupedBody<TRow>(
           >
             {group.header}
           </StickyStackItem>
-          {group.collapsed ? null : group.rows.map((row) => renderRow(row, i++))}
+          {group.collapsed
+            ? null
+            : group.rows.map((row) => renderRow(row, i++))}
         </Fragment>
       ))}
     </StickyStack>
@@ -490,7 +512,11 @@ function renderGroupedBody<TRow>(
 }
 
 function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {
-  return align === "end" ? "text-right" : align === "center" ? "text-center" : undefined;
+  return align === "end"
+    ? "text-right"
+    : align === "center"
+      ? "text-center"
+      : undefined;
 }
 
 function SortIcon({

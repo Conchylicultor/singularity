@@ -16,7 +16,12 @@ import { ImportByUrl } from "./import-by-url";
 const COMMUNITY_BROWSER_VIEW = defineDataView("tweakcn.community-browser");
 
 /** The terms that make this section answer the customizer's search box. */
-const SECTION_TERMS = ["community themes", "community", "import by url", "tweakcn"];
+const SECTION_TERMS = [
+  "community themes",
+  "community",
+  "import by url",
+  "tweakcn",
+];
 
 /**
  * Declared as the contribution's `useAvailable` rather than a `return null` in
@@ -59,7 +64,13 @@ export function CommunityBrowserSection({ search }: { search: string }) {
 
   const fields = useMemo<FieldDef<CatalogTheme>[]>(
     () => [
-      { id: "name", label: "Name", type: "text", primary: true, value: (t) => t.name },
+      {
+        id: "name",
+        label: "Name",
+        type: "text",
+        primary: true,
+        value: (t) => t.name,
+      },
       {
         id: "tags",
         label: "Tags",

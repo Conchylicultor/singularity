@@ -1,14 +1,26 @@
 import { useMemo } from "react";
 import { MdMusicNote } from "react-icons/md";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
-import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
+import type {
+  CreateOption,
+  FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
@@ -94,7 +106,10 @@ export function SongLibrary() {
         value: (s) => s.composer,
         onEdit: (s, next) => {
           const composer = String(next ?? "").trim();
-          saveSong({ params: { id: s.id }, body: { composer: composer || null } });
+          saveSong({
+            params: { id: s.id },
+            body: { composer: composer || null },
+          });
         },
         sortable: true,
         filterable: true,
@@ -191,7 +206,12 @@ export function SongLibrary() {
       className="h-full"
       header={
         songs.pending && songs.error ? (
-          <Text as="div" variant="body" tone="destructive" className="px-xl py-lg">
+          <Text
+            as="div"
+            variant="body"
+            tone="destructive"
+            className="px-xl py-lg"
+          >
             Failed to load songs: {songs.error.message}
           </Text>
         ) : null

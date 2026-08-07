@@ -139,7 +139,8 @@ export default {
       scope: "view",
       order: 1,
       isApplicable: (ctx) =>
-        ctx.activeSupportsGroupBy && ctx.fields.some((f) => isGroupableField(f)),
+        ctx.activeSupportsGroupBy &&
+        ctx.fields.some((f) => isGroupableField(f)),
       component: GroupByControl,
     }),
   ],

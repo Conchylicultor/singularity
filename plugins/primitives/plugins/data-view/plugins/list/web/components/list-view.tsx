@@ -52,13 +52,22 @@ function ManualOrderRow({
   group: string | null;
   children: ReactNode;
 }): ReactNode {
-  const { dragSource, isDragging, beforeRef, afterRef, isOverBefore, isOverAfter } =
-    useRankReorderItem(id, rank, group);
+  const {
+    dragSource,
+    isDragging,
+    beforeRef,
+    afterRef,
+    isOverBefore,
+    isOverAfter,
+  } = useRankReorderItem(id, rank, group);
   // Destructure-and-rename at the top so render never does inline `dragSource.ref`
   // member access — react-hooks/refs flags member access on the hook output in
   // render, but not destructuring (mirrors the tree's RowChrome precedent).
-  const { ref: dragRef, attributes: dragAttributes, listeners: dragListeners } =
-    dragSource;
+  const {
+    ref: dragRef,
+    attributes: dragAttributes,
+    listeners: dragListeners,
+  } = dragSource;
   return (
     <div
       ref={dragRef}
@@ -106,14 +115,14 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveEditor = useResolveCellEditor();
   const resolveOperatorSet = useResolveOperatorSet();
   // Manual order arrives type-erased; present only when the host activated it.
-  const manualOrder = props.manualOrder as ManualOrderConfig<unknown> | undefined;
+  const manualOrder = props.manualOrder as
+    ManualOrderConfig<unknown> | undefined;
   // Cross-section capability: present ⇒ a drop into another section is offered
   // and reported; absent ⇒ the primitive refuses those drops visibly.
   const onReseat = manualOrder?.onReseat;
   // Aggregate arrives type-erased; present only when the consumer supplied it.
   const aggregate = props.aggregate as
-    | DataViewAggregateConfig<unknown>
-    | undefined;
+    DataViewAggregateConfig<unknown> | undefined;
   const sections = useDataViewSections(
     props.rows,
     props.fields,
@@ -129,8 +138,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const options = (props.options ?? {}) as ListViewOptions<unknown>;
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
-    | ItemActionsDescriptor<unknown>
-    | undefined;
+    ItemActionsDescriptor<unknown> | undefined;
   // A list row has no permanent trailing region (a reserved one would take width
   // from the title in the app's narrowest surfaces), so EVERY action — persistent
   // zone included — renders in the one hover cluster. Resolved unconditionally
@@ -182,7 +190,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         <>
           <div className="flex min-w-0 flex-col overflow-hidden">
             {titleField ? (
-              <Text as="div" variant="label" className="truncate text-foreground">
+              <Text
+                as="div"
+                variant="label"
+                className="truncate text-foreground"
+              >
                 <FieldCell
                   field={titleField}
                   row={row}
@@ -213,7 +225,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
               </Text>
             ) : null}
           </div>
-          {trailingFields.length > 0 || (aggregateCount && aggregateCount > 1) ? (
+          {trailingFields.length > 0 ||
+          (aggregateCount && aggregateCount > 1) ? (
             <div className="ml-auto flex shrink-0 items-center gap-xs">
               {trailingFields.map((field) => (
                 <span key={field.id}>
@@ -370,9 +383,7 @@ function manualOrderItems(
   return sections.flatMap((section) =>
     section.entries.flatMap((entry) => {
       const rank = manualOrder.getRank(entry.row);
-      return rank != null
-        ? [{ id: entry.key, rank, group: section.key }]
-        : [];
+      return rank != null ? [{ id: entry.key, rank, group: section.key }] : [];
     }),
   );
 }

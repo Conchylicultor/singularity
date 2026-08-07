@@ -25,7 +25,11 @@ export default {
       LoaderComponent: MidiLoader,
       compile: parseMidi,
     }),
-    Library.Source({ sourceId: MIDI_SOURCE_ID, hydrate, createOption: midiCreateOption }),
+    Library.Source({
+      sourceId: MIDI_SOURCE_ID,
+      hydrate,
+      createOption: midiCreateOption,
+    }),
     Library.Fields({ id: "midi", component: MidiFields }),
   ],
 } satisfies PluginDefinition;

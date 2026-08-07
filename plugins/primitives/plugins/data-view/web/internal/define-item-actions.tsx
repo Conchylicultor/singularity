@@ -25,7 +25,8 @@ export interface ItemActionContribution<TRow> {
 }
 
 export interface ItemActions<TRow>
-  extends RenderSlot<ItemActionContribution<TRow>>,
+  extends
+    RenderSlot<ItemActionContribution<TRow>>,
     ItemActionsDescriptor<TRow> {}
 
 /**
@@ -51,7 +52,8 @@ export function defineItemActions<TRow>(id: string): ItemActions<TRow> {
         // a pre-filtered contribution list) so the slot keeps owning ordering and
         // per-item isolation. `zone` omitted on `<Row>` ⇒ no filter at all, which
         // is what keeps a view that hasn't opted into zones unchanged.
-        if (zone !== undefined && (item.zone ?? "revealed") !== zone) return null;
+        if (zone !== undefined && (item.zone ?? "revealed") !== zone)
+          return null;
         const C = item.component;
         return <C row={row} hasChildren={hasChildren} />;
       }}

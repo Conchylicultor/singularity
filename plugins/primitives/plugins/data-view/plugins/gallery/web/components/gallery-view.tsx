@@ -44,7 +44,8 @@ type GalleryCell =
 /** Split a flat list into rows of `size` (the lane count). */
 function chunkRows<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  for (let i = 0; i < items.length; i += size)
+    out.push(items.slice(i, i + size));
   return out;
 }
 
@@ -125,8 +126,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveOperatorSet = useResolveOperatorSet();
   // Aggregate arrives type-erased; present only when the consumer supplied it.
   const aggregate = props.aggregate as
-    | DataViewAggregateConfig<unknown>
-    | undefined;
+    DataViewAggregateConfig<unknown> | undefined;
   const sections = useDataViewSections(
     props.rows,
     props.fields,
@@ -145,8 +145,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const { probeRef, columns } = useGridColumns(minCardWidth);
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
-    | ItemActionsDescriptor<unknown>
-    | undefined;
+    ItemActionsDescriptor<unknown> | undefined;
   // The card HAS a permanent per-row region (its footer), so persistent-zone
   // actions stay painted at rest there and the rest live in the hover cluster.
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
@@ -299,7 +298,11 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const renderGrid = (cells: GalleryCell[]): ReactNode => {
     if (cells.length <= VIRTUALIZE_THRESHOLD) {
       return (
-        <Grid minCellWidth={`${minCardWidth}px`} gap="lg" className="px-pane-gutter py-sm">
+        <Grid
+          minCellWidth={`${minCardWidth}px`}
+          gap="lg"
+          className="px-pane-gutter py-sm"
+        >
           {cells.map((cell) => (
             <div key={cellKey(cell)} className="contents">
               {renderCell(cell)}

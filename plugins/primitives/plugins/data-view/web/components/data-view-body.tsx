@@ -274,12 +274,16 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
         // rule stays untouched — the host simply withholds the config while a sort
         // is set.
         const manualOrderActive =
-          cfg != null && activeSupportsManualOrder && activeState.sort.length === 0;
+          cfg != null &&
+          activeSupportsManualOrder &&
+          activeState.sort.length === 0;
         // The mirror image: an order EXISTS for this view but a sort is
         // shadowing it. After grouping stopped suspending drag, this is the last
         // silent cause of "dragging stopped working", so the sort popover says so.
         const manualOrderOverridden =
-          cfg != null && activeSupportsManualOrder && activeState.sort.length > 0;
+          cfg != null &&
+          activeSupportsManualOrder &&
+          activeState.sort.length > 0;
 
         // The host passes RAW rows; each view applies the processing matching its own
         // semantics (gallery/table call `useFlatRows`, the tree feeds `TreeList`).
@@ -308,12 +312,14 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           aggregate: aggregate as DataViewRenderProps<unknown>["aggregate"],
           selection,
           expanded: activeState.expanded,
-          setExpanded: (changes) => viewModel.setExpanded(activeViewId, changes),
+          setExpanded: (changes) =>
+            viewModel.setExpanded(activeViewId, changes),
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
             viewModel.setSectionCollapsed(activeViewId, key, collapsed),
           emptyState,
-          itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
+          itemActions:
+            itemActions as DataViewRenderProps<unknown>["itemActions"],
           hasChildren,
           creators,
         };

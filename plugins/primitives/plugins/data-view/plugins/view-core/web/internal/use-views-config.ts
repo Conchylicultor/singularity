@@ -24,7 +24,11 @@ export interface ViewsConfigHandle {
   /** Write a new `view` value for one instance. `{ merge: true }` shallow-merges
    *  over the existing raw view (`{ ...prev, ...view }`), preserving any
    *  host-injected keys the caller didn't carry; default replaces wholesale. */
-  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
+  updateView: (
+    id: string,
+    view: VariantValue,
+    opts?: { merge?: boolean },
+  ) => void;
   /** Append a new instance of `type`, bound to `sourceId` when given (the seed
    *  row is stamped with `source: sourceId`; absent = the implicit sole source). */
   addView: (type: string, sourceId?: string) => string;
@@ -142,7 +146,9 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     if (pendingRef.current !== null) return;
     setMirror((prev) => {
       const incoming = normalizeRows(JSON.parse(configJson) as RawViewRow[]);
-      return JSON.stringify(prev) === JSON.stringify(incoming) ? prev : incoming;
+      return JSON.stringify(prev) === JSON.stringify(incoming)
+        ? prev
+        : incoming;
     });
     // configRows is derived from configJson; depend on the string only.
     // eslint-disable-next-line react-hooks/exhaustive-deps

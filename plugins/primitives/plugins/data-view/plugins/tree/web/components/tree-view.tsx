@@ -64,8 +64,14 @@ function DefaultRow<TRow>(props: {
   /** The tree's single (hover-revealed) action arm — see `useItemActionZones`. */
   revealedActions: ((p: ItemActionProps<TRow>) => ReactNode) | null;
 }): ReactNode {
-  const { node, depth, primaryField, secondaryFields, options, revealedActions } =
-    props;
+  const {
+    node,
+    depth,
+    primaryField,
+    secondaryFields,
+    options,
+    revealedActions,
+  } = props;
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
   const row = node.__row;
@@ -85,8 +91,11 @@ function DefaultRow<TRow>(props: {
   const primaryRead: ReactNode = primaryField
     ? primaryField.cell
       ? primaryField.cell(row)
-      : (resolveCell(primaryField as FieldDef<unknown>, primaryValue ?? null, row) ??
-        primaryString)
+      : (resolveCell(
+          primaryField as FieldDef<unknown>,
+          primaryValue ?? null,
+          row,
+        ) ?? primaryString)
     : null;
 
   let label: ReactNode;
@@ -197,8 +206,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const hierarchy = props.hierarchy as HierarchyConfig<unknown> | undefined;
   const fields = props.fields as FieldDef<unknown>[];
   const itemActions = props.itemActions as
-    | ItemActionsDescriptor<unknown>
-    | undefined;
+    ItemActionsDescriptor<unknown> | undefined;
   // A tree row has no permanent trailing region (a reserved one would take width
   // from the label in the app's narrowest surfaces — the Pages sidebar), so
   // EVERY action, persistent zone included, renders in the one hover cluster.
@@ -347,8 +355,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   );
 
   const primaryAccessor = useCallback(
-    (row: Projected<unknown>) =>
-      String(primaryField?.value?.(row.__row) ?? ""),
+    (row: Projected<unknown>) => String(primaryField?.value?.(row.__row) ?? ""),
     [primaryField],
   );
 
@@ -501,7 +508,11 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       toolbar={
         sectioned
           ? { search }
-          : { search, expandAll: options.expandAll, start: options.toolbarStart }
+          : {
+              search,
+              expandAll: options.expandAll,
+              start: options.toolbarStart,
+            }
       }
     />
   );
@@ -519,7 +530,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     );
     const showExpandAll = !!options.expandAll && nodesWithChildren.length > 0;
     const allExpanded =
-      nodesWithChildren.length > 0 && nodesWithChildren.every((p) => p.expanded);
+      nodesWithChildren.length > 0 &&
+      nodesWithChildren.every((p) => p.expanded);
     // The grouped path renders one TreeList per section, so expand-all is hoisted
     // here and bypasses TreeList entirely — it still writes the FULL projected
     // set (every section) in a single batched call.
@@ -584,6 +596,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   return (
-    <div className="px-pane-gutter">{renderTreeList(sortedProjected, false)}</div>
+    <div className="px-pane-gutter">
+      {renderTreeList(sortedProjected, false)}
+    </div>
   );
 }

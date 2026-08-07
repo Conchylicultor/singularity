@@ -61,18 +61,17 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   // group-by partitioning.
   const resolveOperatorSet = useResolveOperatorSet();
   // Manual order arrives type-erased; present only when the host activated it.
-  const manualOrder = props.manualOrder as ManualOrderConfig<unknown> | undefined;
+  const manualOrder = props.manualOrder as
+    ManualOrderConfig<unknown> | undefined;
   // Cross-section capability: present ⇒ a drop into another section is offered
   // and reported; absent ⇒ the primitive refuses those drops visibly.
   const onReseat = manualOrder?.onReseat;
   // Aggregate arrives type-erased; present only when the consumer supplied it.
   const aggregate = props.aggregate as
-    | DataViewAggregateConfig<unknown>
-    | undefined;
+    DataViewAggregateConfig<unknown> | undefined;
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
-    | ItemActionsDescriptor<unknown>
-    | undefined;
+    ItemActionsDescriptor<unknown> | undefined;
   // A table row HAS a permanent per-row region — the reserved trailing track —
   // so persistent-zone actions stay painted at rest there, ahead of the
   // hover-revealed cluster. Resolved before the early empty-state return.
@@ -108,8 +107,14 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   ): DataTableRowDecoration | undefined {
     const id = props.rowKey(row, i);
     const rank = manualOrder!.getRank(row);
-    const { dragSource, isDragging, beforeRef, afterRef, isOverBefore, isOverAfter } =
-      useRankReorderItem(id, rank, sectionKeyByRowKey.get(id) ?? null);
+    const {
+      dragSource,
+      isDragging,
+      beforeRef,
+      afterRef,
+      isOverBefore,
+      isOverAfter,
+    } = useRankReorderItem(id, rank, sectionKeyByRowKey.get(id) ?? null);
     // A null rank marks the row non-orderable: the hook still runs (hooks rule),
     // but we return no decoration so its refs attach to nothing — the row is
     // neither a drag source nor a drop target.
@@ -117,8 +122,11 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // Destructure-and-rename so we never do inline `dragSource.ref` member access
     // (react-hooks/refs flags member access on the hook output; destructuring is
     // fine — mirrors the tree's RowChrome precedent).
-    const { ref: dragRef, attributes: dragAttributes, listeners: dragListeners } =
-      dragSource;
+    const {
+      ref: dragRef,
+      attributes: dragAttributes,
+      listeners: dragListeners,
+    } = dragSource;
     return {
       ref: dragRef,
       props: { ...dragAttributes, ...dragListeners },
@@ -131,7 +139,13 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
               <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
             )}
           </Pin>
-          <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
+          <Pin
+            ref={afterRef}
+            to="bottom"
+            stretch
+            decorative
+            className="h-[6px]"
+          >
             {isOverAfter && (
               // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
               <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
@@ -330,9 +344,7 @@ function manualOrderItems(
   return sections.flatMap((section) =>
     section.entries.flatMap((entry) => {
       const rank = manualOrder.getRank(entry.row);
-      return rank != null
-        ? [{ id: entry.key, rank, group: section.key }]
-        : [];
+      return rank != null ? [{ id: entry.key, rank, group: section.key }] : [];
     }),
   );
 }

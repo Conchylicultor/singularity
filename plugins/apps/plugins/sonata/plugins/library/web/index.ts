@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Sonata, SonataToolbar } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  SonataToolbar,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SongLibrary } from "./components/song-library";
 import {
   BackToLibrary,

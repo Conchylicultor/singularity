@@ -30,7 +30,10 @@ export function QuickThemeSwatch({
   const vars = dark ? theme.cssVars.dark : theme.cssVars.light;
 
   return (
-    <Line className={cn("gap-sm", isPending && "opacity-50")} title={theme.name}>
+    <Line
+      className={cn("gap-sm", isPending && "opacity-50")}
+      title={theme.name}
+    >
       <Stack as="span" direction="row" gap="2xs" align="center">
         {SWATCH_KEYS.map((key) => (
           <span
