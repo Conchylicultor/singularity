@@ -61,6 +61,31 @@ const hookErrorLine = (uuid: string, parentUuid: string | null) => ({
   },
 });
 
+const hookSuccessLine = (uuid: string, parentUuid: string | null) => ({
+  type: "attachment",
+  uuid,
+  parentUuid,
+  timestamp: TS,
+  attachment: {
+    type: "hook_success",
+    hookName: "PreToolUse:Edit",
+    exitCode: 0,
+    stdout: "{}",
+  },
+});
+
+const hookContextLine = (uuid: string, parentUuid: string | null) => ({
+  type: "attachment",
+  uuid,
+  parentUuid,
+  timestamp: TS,
+  attachment: {
+    type: "hook_additional_context",
+    hookName: "PreToolUse:Edit",
+    content: ["keep CLAUDE.md terse"],
+  },
+});
+
 afterAll(async () => {
   await Promise.all(tmpFiles.map((p) => Bun.file(p).delete()));
 });
@@ -97,6 +122,42 @@ describe("readJsonlEvents — off-spine attachment rescue", () => {
       assistantLine("spine1", "root", "working"),
       assistantLine("abandoned", "root", "abandoned attempt"),
       hookErrorLine("att", "abandoned"),
+      userLine("spine2", "spine1", "continue"),
+    ]);
+
+    const events = await readJsonlEvents(path);
+    expect(events.filter((e) => e.kind === "attachment")).toHaveLength(0);
+  });
+
+  test("rescues an attachment chained off another rescued attachment", async () => {
+    // Claude threads the context a hook injected as a CHILD of the hook_success
+    // it came from, and both hang off the spine as a dead-end branch. Rescuing
+    // only the first link would drop the context — the payload the card exists
+    // to show — while keeping the "exit 0" telemetry that announced it.
+    const path = await writeFixture([
+      userLine("root", null, "hello"),
+      assistantLine("spine1", "root", "working"),
+      hookSuccessLine("hook", "spine1"),
+      hookContextLine("ctx", "hook"),
+      userLine("spine2", "spine1", "continue"),
+    ]);
+
+    const events = await readJsonlEvents(path);
+    const attachments = events.filter((e) => e.kind === "attachment");
+    expect(attachments).toHaveLength(2);
+    expect(attachments[0]).toMatchObject({ subtype: "hook_success" });
+    expect(attachments[1]).toMatchObject({
+      subtype: "hook_additional_context",
+    });
+  });
+
+  test("a chained attachment off an abandoned branch stays dropped", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "hello"),
+      assistantLine("spine1", "root", "working"),
+      assistantLine("abandoned", "root", "abandoned attempt"),
+      hookSuccessLine("hook", "abandoned"),
+      hookContextLine("ctx", "hook"),
       userLine("spine2", "spine1", "continue"),
     ]);
 

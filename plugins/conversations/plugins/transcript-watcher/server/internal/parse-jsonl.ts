@@ -274,6 +274,12 @@ async function buildEvents(
   // rather than abandoned attempts inline. Run once over the whole chain — a
   // per-file pass would keep each file's own abandoned leaf.
   const keptUuids = activeLineUuids(parsed);
+  // Attachments chain off one another (Claude threads `hook_additional_context`
+  // as a child of the `hook_success` it was extracted from), so a rescued
+  // attachment has to become an anchor in turn — otherwise every link past the
+  // first is dropped. File order is append order, so parents are always seen
+  // before their children and one forward pass closes the chain.
+  const rescuedAttachmentUuids = new Set<string>();
 
   const events: JsonlEvent[] = [];
   const assistantTextByMsgId = new Map<
@@ -346,8 +352,11 @@ async function buildEvents(
       // still drops attachments belonging to abandoned rewind branches.
       const parentUuid = typeof obj.parentUuid === "string" ? obj.parentUuid : null;
       const rescuable =
-        obj.type === "attachment" && parentUuid !== null && keptUuids.has(parentUuid);
+        obj.type === "attachment" &&
+        parentUuid !== null &&
+        (keptUuids.has(parentUuid) || rescuedAttachmentUuids.has(parentUuid));
       if (!rescuable) continue;
+      rescuedAttachmentUuids.add(uuid);
     }
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;
     if (!ts) continue;
