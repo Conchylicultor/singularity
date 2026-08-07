@@ -58,13 +58,32 @@ interface RecordBase {
  * never learns them, and must still have announced itself.
  */
 export type ProgressRecord =
-  | (RecordBase & { phase: "run"; scope: string | null; requested: string[] | null })
+  | (RecordBase & {
+      phase: "run";
+      scope: string | null;
+      requested: string[] | null;
+    })
   | (RecordBase & { phase: "bootstrap-start"; step: string })
   | (RecordBase & { phase: "bootstrap-end"; step: string; durationMs: number })
-  | (RecordBase & { phase: "selected"; treeHash: string | null; selected: string[] })
+  | (RecordBase & {
+      phase: "selected";
+      treeHash: string | null;
+      selected: string[];
+    })
   | (RecordBase & { phase: "start"; checkId: string })
-  | (RecordBase & { phase: "end"; checkId: string; durationMs: number; ok: boolean; cached: boolean })
-  | (RecordBase & { phase: "pending"; elapsedMs: number; pending: string[]; bootstrap: string[] })
+  | (RecordBase & {
+      phase: "end";
+      checkId: string;
+      durationMs: number;
+      ok: boolean;
+      cached: boolean;
+    })
+  | (RecordBase & {
+      phase: "pending";
+      elapsedMs: number;
+      pending: string[];
+      bootstrap: string[];
+    })
   | (RecordBase & { phase: "done"; elapsedMs: number; allOk: boolean });
 
 /**
@@ -117,7 +136,12 @@ export interface ProgressRun {
   /** Record a check entering its body. Written BEFORE the body runs. */
   checkStarted(checkId: string): void;
   /** Record a check settling. Written from a `finally`, so a throw still lands. */
-  checkEnded(checkId: string, durationMs: number, ok: boolean, cached: boolean): void;
+  checkEnded(
+    checkId: string,
+    durationMs: number,
+    ok: boolean,
+    cached: boolean,
+  ): void;
   /** Write the terminal `done` record and stop the heartbeat. Idempotent-safe. */
   finish(allOk: boolean): void;
 }
@@ -159,14 +183,24 @@ export function openProgressRun(args: {
   const pid = process.pid;
   const worktree = worktreeName();
   const startedAt = performance.now();
-  const stamp = (): { t: string; runId: string; pid: number; worktree: string } => ({
+  const stamp = (): {
+    t: string;
+    runId: string;
+    pid: number;
+    worktree: string;
+  } => ({
     t: new Date().toISOString(),
     runId,
     pid,
     worktree,
   });
 
-  writeRecord({ ...stamp(), phase: "run", scope: args.scope, requested: args.requested });
+  writeRecord({
+    ...stamp(),
+    phase: "run",
+    scope: args.scope,
+    requested: args.requested,
+  });
 
   const inFlight = new Set<string>();
   const inBootstrap = new Set<string>();
@@ -213,7 +247,14 @@ export function openProgressRun(args: {
     },
     checkEnded(checkId, durationMs, ok, cached) {
       inFlight.delete(checkId);
-      writeRecord({ ...stamp(), phase: "end", checkId, durationMs, ok, cached });
+      writeRecord({
+        ...stamp(),
+        phase: "end",
+        checkId,
+        durationMs,
+        ok,
+        cached,
+      });
     },
     finish(allOk) {
       clearInterval(heartbeat);
@@ -335,13 +376,19 @@ export function readCheckProgress(): CheckRunProgress[] {
       run.endedCount += 1;
       starts.delete(record.checkId);
     } else if (record.phase === "done") {
-      run.done = { at: record.t, elapsedMs: record.elapsedMs, allOk: record.allOk };
+      run.done = {
+        at: record.t,
+        elapsedMs: record.elapsedMs,
+        allOk: record.allOk,
+      };
     }
   }
 
   for (const run of runs.values()) {
     const last = Date.parse(run.lastActivityAt);
-    const outstandingFrom = (m: Map<string, string> | undefined): OutstandingCheck[] =>
+    const outstandingFrom = (
+      m: Map<string, string> | undefined,
+    ): OutstandingCheck[] =>
       [...(m ?? [])].map(([checkId, startedAt]) => ({
         checkId,
         startedAt,

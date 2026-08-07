@@ -111,7 +111,10 @@ const CHECK_FAMILY: ArtifactFamily = {
 const LEGACY_CHECK_LOG = "check.log";
 
 /** The run id an id-keyed artifact filename belongs to, or null if it is not one. */
-function runIdOf(filename: string, patterns: ArtifactFamily["patterns"]): string | null {
+function runIdOf(
+  filename: string,
+  patterns: ArtifactFamily["patterns"],
+): string | null {
   for (const { prefix, suffix } of patterns) {
     if (
       filename.length > prefix.length + suffix.length &&
@@ -126,8 +129,14 @@ function runIdOf(filename: string, patterns: ArtifactFamily["patterns"]): string
 }
 
 /** A `<path>.tmp.<pid>` leftover from a crashed atomic write in this family. */
-function isCrashedWriteTemp(filename: string, tmpPrefixes: ArtifactFamily["tmpPrefixes"]): boolean {
-  return filename.includes(".tmp.") && tmpPrefixes.some((p) => filename.startsWith(p));
+function isCrashedWriteTemp(
+  filename: string,
+  tmpPrefixes: ArtifactFamily["tmpPrefixes"],
+): boolean {
+  return (
+    filename.includes(".tmp.") &&
+    tmpPrefixes.some((p) => filename.startsWith(p))
+  );
 }
 
 /**
@@ -156,7 +165,11 @@ function unlinkQuiet(dir: string, entry: string): void {
  * Fails soft on the races inherent to concurrent readers (a file vanishing mid-scan
  * → skip) but loud on any other fs error, so a real problem still surfaces.
  */
-function pruneArtifactsInDir(dir: string, family: ArtifactFamily, keep: number): void {
+function pruneArtifactsInDir(
+  dir: string,
+  family: ArtifactFamily,
+  keep: number,
+): void {
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -189,7 +202,9 @@ function pruneArtifactsInDir(dir: string, family: ArtifactFamily, keep: number):
   }
 
   if (groups.size <= keep) return;
-  const stale = [...groups.values()].sort((a, b) => b.mtimeMs - a.mtimeMs).slice(keep);
+  const stale = [...groups.values()]
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    .slice(keep);
   for (const group of stale) {
     for (const entry of group.files) unlinkQuiet(dir, entry);
   }

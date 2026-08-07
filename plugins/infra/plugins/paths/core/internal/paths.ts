@@ -1,25 +1,34 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const REPO_ROOT           = resolve(import.meta.dir, "..", "..", "..", "..", "..", "..");
-export const PLUGINS_DIR         = join(REPO_ROOT, "plugins");
+export const REPO_ROOT = resolve(
+  import.meta.dir,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+);
+export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
 
 // The git-layer config tree (`config/<hier>/<name>.origin.jsonc`, overrides, and
 // `@app/<id>` scopes). Read directly at runtime by config_v2's raw-diff panel and
 // per-app un-fork check. In a release `REPO_ROOT` resolves into the compiled
 // binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
 // vendored tree via `SINGULARITY_REPO_CONFIG_DIR`; in dev it falls back to the repo.
-export const REPO_CONFIG_DIR     = process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
+export const REPO_CONFIG_DIR =
+  process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
 
 // Canonical location of the built frontend. `./singularity build` publishes the
 // Vite output here and the gateway serves it. This is the ONE source of truth:
 // the build CLI, the frontend-hash stale-tab signal, and the git-status
 // build-commit marker all derive from these constants so the path can never
 // silently diverge again (it previously pointed at a dead `web/dist`).
-export const WEB_CORE_RELATIVE   = "plugins/framework/plugins/web-core";
-export const WEB_DIST_DIR        = join(REPO_ROOT, WEB_CORE_RELATIVE, "dist");
+export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
+export const WEB_DIST_DIR = join(REPO_ROOT, WEB_CORE_RELATIVE, "dist");
 
-export const MAIN_WORKTREE_NAME  = "singularity";
+export const MAIN_WORKTREE_NAME = "singularity";
 
 export function isMain(): boolean {
   return process.env.SINGULARITY_WORKTREE === MAIN_WORKTREE_NAME;
@@ -110,28 +119,29 @@ export function currentWorktreeName(): string {
   return process.env.SINGULARITY_WORKTREE ?? MAIN_WORKTREE_NAME;
 }
 
-export const HOME_DIR             = homedir();
-export const SINGULARITY_DIR     = process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
-export const BACKUPS_DIR         = join(HOME_DIR, ".backups/singularity");
-export const SECRETS_DIR         = join(SINGULARITY_DIR, "secrets");
-export const STORE_PATH          = join(SINGULARITY_DIR, "secrets.json.enc");
-export const KEY_PATH            = join(SECRETS_DIR, ".key");
-export const LEGACY_AUTH_DIR     = join(SINGULARITY_DIR, "auth");
-export const LEGACY_AUTH_BLOB    = join(LEGACY_AUTH_DIR, "tokens.json.enc");
-export const LEGACY_AUTH_KEY     = join(LEGACY_AUTH_DIR, ".key");
-export const ATTACHMENTS_DIR     = join(SINGULARITY_DIR, "attachments");
-export const REPORTS_DIR         = join(SINGULARITY_DIR, "reports");
+export const HOME_DIR = homedir();
+export const SINGULARITY_DIR =
+  process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
+export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
+export const SECRETS_DIR = join(SINGULARITY_DIR, "secrets");
+export const STORE_PATH = join(SINGULARITY_DIR, "secrets.json.enc");
+export const KEY_PATH = join(SECRETS_DIR, ".key");
+export const LEGACY_AUTH_DIR = join(SINGULARITY_DIR, "auth");
+export const LEGACY_AUTH_BLOB = join(LEGACY_AUTH_DIR, "tokens.json.enc");
+export const LEGACY_AUTH_KEY = join(LEGACY_AUTH_DIR, ".key");
+export const ATTACHMENTS_DIR = join(SINGULARITY_DIR, "attachments");
+export const REPORTS_DIR = join(SINGULARITY_DIR, "reports");
 // Host-global incremental usage index for stats/cost. The `~/.claude/projects`
 // corpus is shared by every backend, so its aggregate is identical across
 // worktrees — the cache lives under the host-global root, not a per-worktree DB.
-export const COST_USAGE_DIR      = join(SINGULARITY_DIR, "cost-usage");
+export const COST_USAGE_DIR = join(SINGULARITY_DIR, "cost-usage");
 
 // Root dir holding every worktree's per-worktree singularity state. Each
 // worktree owns `<WORKTREES_DIR>/<name>/` (build/release artifacts, logs,
 // ops markers, the zero replica, …). THE single source of truth for the
 // `worktrees/<name>` layout — server plugins and the CLI both derive from it
 // so the base path can never diverge.
-export const WORKTREES_DIR       = join(SINGULARITY_DIR, "worktrees");
+export const WORKTREES_DIR = join(SINGULARITY_DIR, "worktrees");
 
 /** The per-worktree data dir: `<WORKTREES_DIR>/<name>/`. */
 export function worktreeDataDir(name: string): string {
@@ -176,7 +186,8 @@ export const worktreeArtifacts = {
    * `status: "running"` with a dead pid, and there is no older success for it to
    * be confused with. Do not add a `buildId` parameter.
    */
-  buildStatus: (name: string): string => join(worktreeDataDir(name), "build-status.json"),
+  buildStatus: (name: string): string =>
+    join(worktreeDataDir(name), "build-status.json"),
   /**
    * One check run's full, untruncated transcript. ALWAYS id-keyed (like
    * `releaseLogs`, unlike `buildStatus` directly above), and for a reason that
@@ -200,6 +211,6 @@ export const worktreeArtifacts = {
   releaseLogs: (name: string, releaseId: string): string =>
     join(worktreeDataDir(name), `release-logs-${releaseId}.json`),
 } as const;
-export const CLAUDE_DIR          = join(HOME_DIR, ".claude");
+export const CLAUDE_DIR = join(HOME_DIR, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(HOME_DIR, ".claude", "projects");
 export const CLAUDE_SESSIONS_DIR = join(HOME_DIR, ".claude", "sessions");

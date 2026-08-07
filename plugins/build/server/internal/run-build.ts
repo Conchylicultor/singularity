@@ -1,12 +1,29 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { REPO_ROOT, currentWorktreeName, isMain, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  currentWorktreeName,
+  isMain,
+  worktreeDataDir,
+  worktreeArtifacts,
+  pruneWorktreeBuildArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { buildDetailRoute } from "@plugins/build/core";
-import { BUILD_EXIT_SUPERSEDED, buildStatusOf, killedSignalName } from "@plugins/build/plugins/build-status/core";
+import {
+  BUILD_EXIT_SUPERSEDED,
+  buildStatusOf,
+  killedSignalName,
+} from "@plugins/build/plugins/build-status/core";
 import { buildConfig } from "../../shared";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
@@ -49,7 +66,12 @@ export async function hasLiveInflightBuild(): Promise<boolean> {
   const rows = await db
     .select({ pid: _buildRuns.pid })
     .from(_buildRuns)
-    .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
+    .where(
+      and(
+        isNull(_buildRuns.finishedAt),
+        eq(_buildRuns.namespace, currentWorktreeName()),
+      ),
+    );
   return rows.some((r) => isPidAlive(r.pid));
 }
 
@@ -64,7 +86,12 @@ export async function liveInflightBuildCommit(): Promise<string | null> {
   const rows = await db
     .select({ pid: _buildRuns.pid, commitHash: _buildRuns.commitHash })
     .from(_buildRuns)
-    .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
+    .where(
+      and(
+        isNull(_buildRuns.finishedAt),
+        eq(_buildRuns.namespace, currentWorktreeName()),
+      ),
+    );
   return rows.find((r) => isPidAlive(r.pid))?.commitHash ?? null;
 }
 
@@ -178,13 +205,15 @@ export function recoverBuildArtifacts(opts: {
   // structure died with it, and inventing a shape it never reported would be
   // worse than a single honest block.
   const logs = {
-    steps: [{
-      id: "raw",
-      label: "Build Output",
-      lines,
-      durationMs,
-      success: exitCode === 0,
-    }],
+    steps: [
+      {
+        id: "raw",
+        label: "Build Output",
+        lines,
+        durationMs,
+        success: exitCode === 0,
+      },
+    ],
     // Terminal instant, so a later reconcile pass reading this fallback artifact
     // recovers the real finish rather than its own `now`.
     finishedAt: finishedAt.getTime(),
@@ -224,7 +253,12 @@ export async function reconcileOrphanBuilds(): Promise<void> {
   const unfinished = await db
     .select({ id: _buildRuns.id, pid: _buildRuns.pid })
     .from(_buildRuns)
-    .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
+    .where(
+      and(
+        isNull(_buildRuns.finishedAt),
+        eq(_buildRuns.namespace, currentWorktreeName()),
+      ),
+    );
   if (unfinished.length === 0) return;
   const now = new Date();
   for (const row of unfinished) {
@@ -232,7 +266,10 @@ export async function reconcileOrphanBuilds(): Promise<void> {
     // Leave a genuinely-running build open: no terminal artifact yet AND its
     // owner is still alive.
     if (terminal == null && isPidAlive(row.pid)) continue;
-    const { exitCode, finishedAt } = terminal ?? { exitCode: -1, finishedAt: now };
+    const { exitCode, finishedAt } = terminal ?? {
+      exitCode: -1,
+      finishedAt: now,
+    };
     // `isNull(finishedAt)` re-checks the row is still open: the CLI stamps its own
     // rows authoritatively at deploy/compose-serve, so a row it closed between the
     // scan above and this write must not be overwritten here. This reconcile is
@@ -284,7 +321,9 @@ export function triggerBuild(
 }
 
 export function getHeadCommit(): string | null {
-  const proc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT });
+  const proc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
+    cwd: REPO_ROOT,
+  });
   if (proc.exitCode !== 0) return null;
   return proc.stdout.toString().trim() || null;
 }
@@ -329,7 +368,10 @@ export async function convergeMain(builtCommit: string | null): Promise<void> {
  * converged: manufacturing a difference from a missing value would mint builds
  * for ever on a checkout where git cannot answer.
  */
-export function needsRebuild(builtCommit: string | null, head: string | null): boolean {
+export function needsRebuild(
+  builtCommit: string | null,
+  head: string | null,
+): boolean {
   if (builtCommit === null || head === null) return false;
   return head !== builtCommit;
 }
@@ -369,16 +411,24 @@ async function doRunBuild(
   }
 
   const args = ["./singularity", "build", "--allow-main"];
-  if (opts?.serveComposition) args.push("--serve-composition", opts.serveComposition);
+  if (opts?.serveComposition)
+    args.push("--serve-composition", opts.serveComposition);
   const proc = Bun.spawn(args, {
     cwd: REPO_ROOT,
     stdout: "pipe",
     stderr: "pipe",
     detached: true,
-    env: { ...process.env, SINGULARITY_BUILD_ID: buildId, SINGULARITY_BUILD_DETACHED: "1" },
+    env: {
+      ...process.env,
+      SINGULARITY_BUILD_ID: buildId,
+      SINGULARITY_BUILD_DETACHED: "1",
+    },
   });
 
-  await db.update(_buildRuns).set({ pid: proc.pid }).where(eq(_buildRuns.id, buildId));
+  await db
+    .update(_buildRuns)
+    .set({ pid: proc.pid })
+    .where(eq(_buildRuns.id, buildId));
   if (trigger === "auto") {
     await recordNotification({
       type: "build",
@@ -413,7 +463,9 @@ async function doRunBuild(
   ]);
 
   const exitCode = await proc.exited;
-  buildLog.publish(exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`);
+  buildLog.publish(
+    exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`,
+  );
   // On a main deploy the CLI now stamps main's row itself right after the health
   // probe (before the ~100s compose-serve tail), so by the time this backend
   // observes proc.exited the row is usually already closed. This UPDATE is the

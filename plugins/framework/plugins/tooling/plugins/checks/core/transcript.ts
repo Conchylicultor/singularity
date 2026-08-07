@@ -1,7 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { CheckResult } from "@plugins/framework/plugins/tooling/core";
-import { pruneWorktreeCheckArtifacts, worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import {
+  pruneWorktreeCheckArtifacts,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/core";
 
 /**
  * One settled check, as the transcript renders it. The runner's own outcome type
@@ -35,7 +38,9 @@ export function renderOutcomeBlock(outcome: TranscriptOutcome): string[] {
   if (result.ok) {
     lines.push(`• ${checkId} ... ok${cached ? " (cached)" : ""}`);
   } else if (result.inconclusive) {
-    lines.push(`⚠ ${checkId} ... inconclusive — ${result.message.split("\n")[0]}`);
+    lines.push(
+      `⚠ ${checkId} ... inconclusive — ${result.message.split("\n")[0]}`,
+    );
   } else {
     lines.push(`• ${checkId} ... FAIL`);
   }

@@ -11,7 +11,10 @@ import type { SignalTermination } from "./fatal-signals";
 
 const URL = "http://att-x.localhost:9000";
 
-const sigterm: SignalTermination = { signal: "SIGTERM", at: "2026-08-06T15:18:25.236Z" };
+const sigterm: SignalTermination = {
+  signal: "SIGTERM",
+  at: "2026-08-06T15:18:25.236Z",
+};
 
 function failureVerdict(steps: Verdict["steps"], viteOnly = false): Verdict {
   return {
@@ -37,7 +40,12 @@ describe("orderStepsForDisplay", () => {
       { label: "c", success: true },
       { label: "d", success: false },
     ];
-    expect(orderStepsForDisplay(steps).map((s) => s.label)).toEqual(["a", "c", "b", "d"]);
+    expect(orderStepsForDisplay(steps).map((s) => s.label)).toEqual([
+      "a",
+      "c",
+      "b",
+      "d",
+    ]);
   });
 
   test("does not mutate its input", () => {
@@ -72,7 +80,9 @@ describe("renderStepBlock", () => {
     for (const line of replay) expect(line.text.startsWith("│ ")).toBe(true);
     // The borrowed `✓ built` line is quoted, not a bare success line.
     expect(replay.some((l) => l.text === "│ ✓ built in 72.2s")).toBe(true);
-    expect(replay.find((l) => l.text.includes("a warning"))?.stream).toBe("stderr");
+    expect(replay.find((l) => l.text.includes("a warning"))?.stream).toBe(
+      "stderr",
+    );
   });
 });
 
@@ -83,7 +93,9 @@ describe("renderVerdict — failure", () => {
       { label: "vite build", success: true },
     ]);
     const lines = renderVerdict(v).split("\n");
-    expect(lines.slice(-v.pointers.length)).toEqual(v.pointers.map((p) => `  ${p}`));
+    expect(lines.slice(-v.pointers.length)).toEqual(
+      v.pointers.map((p) => `  ${p}`),
+    );
   });
 
   test("contains NOT DEPLOYED, the worktree URL, and a roster entry per step", () => {
@@ -126,7 +138,8 @@ describe("renderVerdict — box width", () => {
     const boxRow = out.split("\n").find((l) => l.startsWith("║"))!;
     expect(boxRow).toContain(headline);
     const topBorder = out.split("\n")[0];
-    if (topBorder === undefined) throw new Error("renderVerdict produced no output");
+    if (topBorder === undefined)
+      throw new Error("renderVerdict produced no output");
     expect(topBorder.length).toBeGreaterThanOrEqual(headline.length);
   });
 });
@@ -149,7 +162,10 @@ describe("renderVerdict — success", () => {
 });
 
 describe("fallbackVerdict", () => {
-  const ctx = { url: URL, buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log" };
+  const ctx = {
+    url: URL,
+    buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
+  };
 
   // Narrows Verdict | null and fails loudly instead of papering over with `!`.
   function requireVerdict(v: Verdict | null): Verdict {
@@ -200,7 +216,9 @@ describe("fallbackVerdict", () => {
       { emitted: null, code: 143, termination: sigterm },
     ];
     for (const { emitted, code, termination } of cases) {
-      const v = requireVerdict(fallbackVerdict(emitted, code, ctx, termination));
+      const v = requireVerdict(
+        fallbackVerdict(emitted, code, ctx, termination),
+      );
       const lines = renderVerdict(v).split("\n");
       expect(lines.at(-1)).toBe(`  Full output: ${ctx.buildLogPath}`);
     }
@@ -211,7 +229,10 @@ describe("fallbackVerdict", () => {
 // the guard's other half, so it is asserted against the SAME set of arms: a
 // pointer and a write, bound in one test.
 describe("runVerdictGuard — the pointer and the file it names", () => {
-  const ctx = { url: URL, buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log" };
+  const ctx = {
+    url: URL,
+    buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
+  };
 
   test("every fallback carrying the pointer has a write behind it", () => {
     const cases: Array<{
@@ -233,7 +254,9 @@ describe("runVerdictGuard — the pointer and the file it names", () => {
         onFallback: (verdict, c) => wrote.push({ verdict, code: c }),
       });
       if (v === null) throw new Error("expected a non-null fallback verdict");
-      expect(renderVerdict(v).split("\n").at(-1)).toBe(`  Full output: ${ctx.buildLogPath}`);
+      expect(renderVerdict(v).split("\n").at(-1)).toBe(
+        `  Full output: ${ctx.buildLogPath}`,
+      );
       // Nothing emitted ⇒ the build reached neither of build.ts's own
       // writeBuildLogs calls ⇒ the guard is the only thing that can write the
       // file, and must. Something emitted ⇒ that path already wrote it, and a
@@ -246,7 +269,9 @@ describe("runVerdictGuard — the pointer and the file it names", () => {
     const wrote: Verdict[] = [];
     const onFallback = (v: Verdict): number => wrote.push(v);
     expect(runVerdictGuard({ ok: true }, 0, { ...ctx, onFallback })).toBeNull();
-    expect(runVerdictGuard({ ok: false }, 1, { ...ctx, onFallback })).toBeNull();
+    expect(
+      runVerdictGuard({ ok: false }, 1, { ...ctx, onFallback }),
+    ).toBeNull();
     expect(wrote).toEqual([]);
   });
 
@@ -267,7 +292,10 @@ describe("runVerdictGuard — the pointer and the file it names", () => {
 // The incident shape: SIGTERM at 19 minutes, exit 143, no verdict of its own.
 // It must never read as a code defect.
 describe("fallbackVerdict — terminated from outside", () => {
-  const ctx = { url: URL, buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log" };
+  const ctx = {
+    url: URL,
+    buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
+  };
 
   test("(no verdict, exit 143, SIGTERM) → BUILD ABORTED, not BUILD FAILED", () => {
     const v = fallbackVerdict(null, 143, ctx, sigterm);
@@ -286,7 +314,9 @@ describe("fallbackVerdict — terminated from outside", () => {
   test("no attribution yet ⇒ says the sender is unknown, invents nothing", () => {
     const v = fallbackVerdict(null, 143, ctx, sigterm);
     if (v === null) throw new Error("expected a non-null fallback verdict");
-    expect((v.ok ? v.notes : v.reason).join("\n")).toContain("sender is unknown");
+    expect((v.ok ? v.notes : v.reason).join("\n")).toContain(
+      "sender is unknown",
+    );
   });
 
   test("an attribution, once recorded, is named", () => {
@@ -314,7 +344,8 @@ describe("fallbackVerdict — terminated from outside", () => {
       expect(v.headline).toContain("This is a bug");
     }
     const reportedOk = fallbackVerdict({ ok: true }, 143, ctx, sigterm);
-    if (reportedOk === null) throw new Error("expected a non-null fallback verdict");
+    if (reportedOk === null)
+      throw new Error("expected a non-null fallback verdict");
     expect(reportedOk.headline).toContain("This is a bug");
   });
 

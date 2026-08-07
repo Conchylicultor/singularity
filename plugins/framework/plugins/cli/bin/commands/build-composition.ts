@@ -133,10 +133,13 @@ export function registerBuildComposition(program: Command) {
         // every child. The id exists only to be baked into the bundle
         // (VITE_BUILD_ID) and written to `dist/.build-id`, so bundle and server
         // agree by construction.
-        const shortCommitProc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
-          cwd: root,
-          stdout: "pipe",
-        });
+        const shortCommitProc = Bun.spawnSync(
+          ["git", "rev-parse", "--short", "HEAD"],
+          {
+            cwd: root,
+            stdout: "pipe",
+          },
+        );
         const shortCommit = shortCommitProc.stdout.toString().trim();
         const buildId = `${shortCommit || "nocommit"}-${Date.now()}`;
 
@@ -165,7 +168,11 @@ export function registerBuildComposition(program: Command) {
 
         // Stage 1 — dependencies + registry-level codegen + the filtered
         // composition registries.
-        await prepareCompositionSources({ root, composition: opts.composition, hooks });
+        await prepareCompositionSources({
+          root,
+          composition: opts.composition,
+          hooks,
+        });
 
         // Stage 2 — migrations + manifest-level codegen + the mandatory
         // config-override seed. MAY TERMINATE THE PROCESS on a migration prompt

@@ -10,15 +10,29 @@ export interface StepStatus {
 }
 
 export type Verdict =
-  | { ok: true; headline: string; notes: string[]; pointers: string[]; steps: StepStatus[] }
-  | { ok: false; headline: string; reason: string[]; pointers: string[]; steps: StepStatus[] };
+  | {
+      ok: true;
+      headline: string;
+      notes: string[];
+      pointers: string[];
+      steps: StepStatus[];
+    }
+  | {
+      ok: false;
+      headline: string;
+      reason: string[];
+      pointers: string[];
+      steps: StepStatus[];
+    };
 
 // The single renderer for one step's transcript, shared by the console
 // (build.ts:printStepResults) and by build.log (build-logs-writer.ts). Every
 // replayed line is prefixed with `│ ` so a borrowed `✓ built` reads as a quoted
 // `│ ✓ built`, never mistakable for the build's own verdict. Each line keeps its
 // own stream tag so stderr still routes to stderr on the console.
-export function renderStepBlock(step: BuildStepLog): Array<{ text: string; stream: Stream }> {
+export function renderStepBlock(
+  step: BuildStepLog,
+): Array<{ text: string; stream: Stream }> {
   const icon = step.success ? "✓" : "✗";
   const duration = (step.durationMs / 1000).toFixed(1);
   const header = `── ${step.label} ${icon} (${duration}s) `;
@@ -35,8 +49,13 @@ export function renderStepBlock(step: BuildStepLog): Array<{ text: string; strea
 // Successes first, failures last, stable within each group so the failing step
 // is the last quoted block a reader sees. Display-only — never applied to the
 // JSON `steps` array, which stays in push order for its downstream consumers.
-export function orderStepsForDisplay<T extends { success: boolean }>(steps: readonly T[]): T[] {
-  return [...steps.filter((s) => s.success), ...steps.filter((s) => !s.success)];
+export function orderStepsForDisplay<T extends { success: boolean }>(
+  steps: readonly T[],
+): T[] {
+  return [
+    ...steps.filter((s) => s.success),
+    ...steps.filter((s) => !s.success),
+  ];
 }
 
 // The console half of the two renderers above, so every command that runs the
@@ -60,7 +79,9 @@ export function renderVerdict(v: Verdict): string {
 
   const headlineLine = indent(v.headline);
   const bodyLines = body.map(indent);
-  const rosterLine = indent(v.steps.map((s) => `${s.label} ${s.success ? "✓" : "✗"}`).join("   "));
+  const rosterLine = indent(
+    v.steps.map((s) => `${s.label} ${s.success ? "✓" : "✗"}`).join("   "),
+  );
   const pointerLines = v.pointers.map(indent);
 
   const width = Math.max(
@@ -129,7 +150,9 @@ export function fallbackVerdict(
         `at ${termination.at} (exit ${code}).`,
       // Unset until the SA_SIGINFO tap lands; `process.on(sig)` names no sender.
       ...(termination.attribution === undefined
-        ? [`The sender is unknown — nothing in this process can see who signalled it.`]
+        ? [
+            `The sender is unknown — nothing in this process can see who signalled it.`,
+          ]
         : [`Sent by ${termination.attribution}.`]),
     ];
   } else if (emitted === null && code !== 0) {

@@ -20,9 +20,24 @@
  * Run: `bun test plugins/build/server/internal/run-build.test.ts`
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { currentWorktreeName, worktreeArtifacts, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
-import { isPidAlive, needsRebuild, readBuildTerminal, recoverBuildArtifacts } from "./run-build";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import {
+  currentWorktreeName,
+  worktreeArtifacts,
+  worktreeDataDir,
+} from "@plugins/infra/plugins/paths/server";
+import {
+  isPidAlive,
+  needsRebuild,
+  readBuildTerminal,
+  recoverBuildArtifacts,
+} from "./run-build";
 
 const name = currentWorktreeName();
 const created: string[] = [];
@@ -105,7 +120,10 @@ describe("readBuildTerminal", () => {
       finishedAt,
       exitCode: 2,
     });
-    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 2, finishedAt: new Date(finishedAt) });
+    expect(readBuildTerminal(buildId)).toEqual({
+      exitCode: 2,
+      finishedAt: new Date(finishedAt),
+    });
   });
 
   test("a partial ALL-GREEN step list with exitCode 143 reads as killed, not success", () => {
@@ -120,7 +138,10 @@ describe("readBuildTerminal", () => {
       finishedAt,
       exitCode: 143,
     });
-    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 143, finishedAt: new Date(finishedAt) });
+    expect(readBuildTerminal(buildId)).toEqual({
+      exitCode: 143,
+      finishedAt: new Date(finishedAt),
+    });
   });
 
   test("a zero-step abort is terminal once it carries an exitCode", () => {
@@ -130,7 +151,10 @@ describe("readBuildTerminal", () => {
     const finishedAt = Date.now() - 3;
     const buildId = uniqueBuildId("zerostep");
     writeArtifact(buildId, { steps: [], finishedAt, exitCode: 143 });
-    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 143, finishedAt: new Date(finishedAt) });
+    expect(readBuildTerminal(buildId)).toEqual({
+      exitCode: 143,
+      finishedAt: new Date(finishedAt),
+    });
   });
 });
 
@@ -145,18 +169,33 @@ describe("recoverBuildArtifacts", () => {
     { text: "boom", stream: "stderr" },
   ];
 
-  function recover(buildId: string, exitCode: number, finishedAt: Date): [string, string] {
+  function recover(
+    buildId: string,
+    exitCode: number,
+    finishedAt: Date,
+  ): [string, string] {
     const paths: [string, string] = [
       worktreeArtifacts.buildLogs(name, buildId),
       worktreeArtifacts.buildLogText(name, buildId),
     ];
     created.push(...paths);
-    recoverBuildArtifacts({ worktree: name, buildId, lines, durationMs: 4_000, finishedAt, exitCode });
+    recoverBuildArtifacts({
+      worktree: name,
+      buildId,
+      lines,
+      durationMs: 4_000,
+      finishedAt,
+      exitCode,
+    });
     return paths;
   }
 
   test("writes BOTH artifacts — the json AND the text log a verdict points at", () => {
-    const [jsonPath, textPath] = recover(uniqueBuildId("both"), 137, new Date());
+    const [jsonPath, textPath] = recover(
+      uniqueBuildId("both"),
+      137,
+      new Date(),
+    );
     expect(existsSync(jsonPath)).toBe(true);
     expect(existsSync(textPath)).toBe(true);
   });
@@ -182,7 +221,10 @@ describe("recoverBuildArtifacts", () => {
     mkdirSync(worktreeDataDir(name), { recursive: true });
     const jsonPath = worktreeArtifacts.buildLogs(name, buildId);
     const textPath = worktreeArtifacts.buildLogText(name, buildId);
-    writeFileSync(jsonPath, JSON.stringify({ steps: [], finishedAt: 1, exitCode: 0 }) + "\n");
+    writeFileSync(
+      jsonPath,
+      JSON.stringify({ steps: [], finishedAt: 1, exitCode: 0 }) + "\n",
+    );
     writeFileSync(textPath, "the CLI's own transcript\n");
     created.push(jsonPath, textPath);
     recoverBuildArtifacts({
@@ -193,7 +235,10 @@ describe("recoverBuildArtifacts", () => {
       finishedAt: new Date(),
       exitCode: 137,
     });
-    expect(readBuildTerminal(buildId)).toEqual({ exitCode: 0, finishedAt: new Date(1) });
+    expect(readBuildTerminal(buildId)).toEqual({
+      exitCode: 0,
+      finishedAt: new Date(1),
+    });
     expect(readFileSync(textPath, "utf-8")).toBe("the CLI's own transcript\n");
   });
 });
@@ -220,7 +265,10 @@ describe("reconcile close condition (composition)", () => {
   // readBuildTerminal / isPidAlive outputs, so the three plan scenarios are
   // asserted end-to-end without a fixture DB.
   const now = new Date();
-  function decide(buildId: string, pid: number | null): { exitCode: number; finishedAt: Date } | "leave-open" {
+  function decide(
+    buildId: string,
+    pid: number | null,
+  ): { exitCode: number; finishedAt: Date } | "leave-open" {
     const terminal = readBuildTerminal(buildId);
     if (terminal == null && isPidAlive(pid)) return "leave-open";
     return terminal ?? { exitCode: -1, finishedAt: now };

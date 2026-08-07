@@ -1,5 +1,9 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "./paths";
+import {
+  worktreeDataDir,
+  worktreeArtifacts,
+  pruneWorktreeBuildArtifacts,
+} from "./paths";
 import { renderStepBlock, orderStepsForDisplay } from "./build-output";
 
 export interface BuildStepLog {
@@ -110,7 +114,9 @@ function makeStepLogCollector(): StepLogCollectorInternal {
     // resolveOrphanExitCode and build-fix-section.tsx both read `steps[].success`.
     writeAtomic(jsonPath, JSON.stringify(logs, null, 2) + "\n");
     const textPath = worktreeArtifacts.buildLogText(name, buildId);
-    const text = trailer ? `${renderStepsText(steps)}\n${trailer}\n` : renderStepsText(steps);
+    const text = trailer
+      ? `${renderStepsText(steps)}\n${trailer}\n`
+      : renderStepsText(steps);
     writeAtomic(textPath, text);
     // Writing a new set trims the old ones — the leak fix. Safe for the just-written
     // files (newest mtime ⇒ always retained) and idempotent with writeBuildProfile's
@@ -122,7 +128,13 @@ function makeStepLogCollector(): StepLogCollectorInternal {
   return {
     beginStep(id, label) {
       const start = performance.now();
-      const step: BuildStepLog = { id, label, lines: [], durationMs: 0, success: false };
+      const step: BuildStepLog = {
+        id,
+        label,
+        lines: [],
+        durationMs: 0,
+        success: false,
+      };
       steps.push(step);
       currentStep = step;
       return (success: boolean) => {
@@ -133,7 +145,13 @@ function makeStepLogCollector(): StepLogCollectorInternal {
     },
     line(text, stream) {
       if (!currentStep) {
-        currentStep = { id: "output", label: "output", lines: [], durationMs: 0, success: true };
+        currentStep = {
+          id: "output",
+          label: "output",
+          lines: [],
+          durationMs: 0,
+          success: true,
+        };
         steps.push(currentStep);
       }
       currentStep.lines.push({ text, stream });
@@ -170,6 +188,15 @@ export function pushBuildStepLog(step: BuildStepLog): void {
  * Fully synchronous (writeFileSync + renameSync), so the exit-time verdict guard
  * — which prints the pointer at that path — can call it from its exit handler.
  */
-export function writeBuildLogs(name: string, trailer: string, exitCode: number): string {
-  return defaultCollector.writeLogs(name, process.env.SINGULARITY_BUILD_ID, exitCode, trailer);
+export function writeBuildLogs(
+  name: string,
+  trailer: string,
+  exitCode: number,
+): string {
+  return defaultCollector.writeLogs(
+    name,
+    process.env.SINGULARITY_BUILD_ID,
+    exitCode,
+    trailer,
+  );
 }

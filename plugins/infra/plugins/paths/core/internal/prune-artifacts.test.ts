@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -10,7 +16,8 @@ import {
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0))
+    rmSync(dir, { recursive: true, force: true });
 });
 
 function seed(files: Array<{ name: string; ageMs: number }>): string {
@@ -110,7 +117,9 @@ describe("pruneBuildArtifactsInDir", () => {
   });
 
   test("no-ops on a missing dir", () => {
-    expect(() => pruneBuildArtifactsInDir(join(tmpdir(), "nope-xyz-123"), 5)).not.toThrow();
+    expect(() =>
+      pruneBuildArtifactsInDir(join(tmpdir(), "nope-xyz-123"), 5),
+    ).not.toThrow();
   });
 
   test("never touches release-family files", () => {
@@ -216,7 +225,9 @@ describe("pruneCheckArtifactsInDir", () => {
   });
 
   test("no-ops on a missing dir", () => {
-    expect(() => pruneCheckArtifactsInDir(join(tmpdir(), "nope-xyz-789"), 5)).not.toThrow();
+    expect(() =>
+      pruneCheckArtifactsInDir(join(tmpdir(), "nope-xyz-789"), 5),
+    ).not.toThrow();
   });
 });
 
@@ -234,10 +245,14 @@ describe("pruneReleaseArtifactsInDir", () => {
 
     const remaining = new Set(readdirSync(dir));
     for (const i of [3, 4]) {
-      expect(remaining.has(`release-logs-release-${1000 + i}-${i}.json`)).toBe(true);
+      expect(remaining.has(`release-logs-release-${1000 + i}-${i}.json`)).toBe(
+        true,
+      );
     }
     for (const i of [0, 1, 2]) {
-      expect(remaining.has(`release-logs-release-${1000 + i}-${i}.json`)).toBe(false);
+      expect(remaining.has(`release-logs-release-${1000 + i}-${i}.json`)).toBe(
+        false,
+      );
     }
     expect(remaining.size).toBe(2);
   });
@@ -273,6 +288,8 @@ describe("pruneReleaseArtifactsInDir", () => {
   });
 
   test("no-ops on a missing dir", () => {
-    expect(() => pruneReleaseArtifactsInDir(join(tmpdir(), "nope-xyz-456"), 5)).not.toThrow();
+    expect(() =>
+      pruneReleaseArtifactsInDir(join(tmpdir(), "nope-xyz-456"), 5),
+    ).not.toThrow();
   });
 });

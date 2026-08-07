@@ -1,11 +1,22 @@
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import type { Check, CheckContext, CheckResult, CheckScope } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Check,
+  CheckContext,
+  CheckResult,
+  CheckScope,
+} from "@plugins/framework/plugins/tooling/core";
 import type { Grant } from "@plugins/infra/plugins/host-admission/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
 import { withScanView } from "./scan-context";
-import { loadTreeSnapshot, validate, type TreeSnapshot, type QueryFact, type ValidateResult } from "./read-set";
+import {
+  loadTreeSnapshot,
+  validate,
+  type TreeSnapshot,
+  type QueryFact,
+  type ValidateResult,
+} from "./read-set";
 import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
 import { openCheckTranscript } from "./transcript";
@@ -108,7 +119,10 @@ export interface RunChecksOptions {
   logRun?: { worktree: string; runId: string };
 }
 
-export async function runChecks(ids: string[] | undefined, options: RunChecksOptions): Promise<boolean> {
+export async function runChecks(
+  ids: string[] | undefined,
+  options: RunChecksOptions,
+): Promise<boolean> {
   // Durable, per-run progress records (~/.singularity/check-progress.jsonl).
   // These exist because a single hung check makes the whole run report NOTHING:
   // the print loop far below only reaches the console after `Promise.all` fully
@@ -134,14 +148,17 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // mid-checks leaves a partial transcript OF ITSELF rather than its
   // predecessor's complete one.
   const transcript = options.logRun
-    ? openCheckTranscript({ ...options.logRun, scope: options.scope ?? null, requested })
+    ? openCheckTranscript({
+        ...options.logRun,
+        scope: options.scope ?? null,
+        requested,
+      })
     : null;
 
   const all = await progress.bootstrap("load-checks", () => listAllChecks());
 
-  const named = ids && ids.length > 0
-    ? all.filter((c) => ids.includes(c.id))
-    : all;
+  const named =
+    ids && ids.length > 0 ? all.filter((c) => ids.includes(c.id)) : all;
 
   if (ids && named.length !== ids.length) {
     const known = new Set(all.map((c) => c.id));
@@ -163,14 +180,14 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // a single named id, an empty selection reaches `Promise.all([])` and passes
   // vacuously. Fail loudly instead.
   const scope = options.scope;
-  const selected = scope === undefined ? named : named.filter((c) => scopeOf(c) === scope);
+  const selected =
+    scope === undefined ? named : named.filter((c) => scopeOf(c) === scope);
   if (scope !== undefined && ids && ids.length > 0) {
     const excluded = named.filter((c) => scopeOf(c) !== scope);
     if (excluded.length > 0) {
-      const message =
-        `Excluded by --scope ${scope}: ${excluded
-          .map((c) => `${c.id} is ${scopeOf(c)}-scoped`)
-          .join(", ")}. Drop the --scope flag, or run only checks of that scope.`;
+      const message = `Excluded by --scope ${scope}: ${excluded
+        .map((c) => `${c.id} is ${scopeOf(c)}-scoped`)
+        .join(", ")}. Drop the --scope flag, or run only checks of that scope.`;
       console.error(message);
       transcript?.finish([message], false);
       progress.finish(false);
@@ -178,16 +195,23 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
     }
   }
 
-  const noCache = options?.noCache || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
+  const noCache =
+    options?.noCache || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
   // Root is only needed when caching (tree hash + snapshot); skipping it in
   // no-cache mode preserves today's behaviour of not touching git at all.
   // Each of the four is wrapped in its own progress phase. They all spawn git
   // or walk the cache dir, so any one of them can be where a run wedges — and
   // the diagnostic has to name WHICH, exactly as it names a hung check. Wrapping
   // costs one appended line per phase.
-  const root = noCache ? null : await progress.bootstrap("root", () => getWorktreeRoot());
-  const treeHash = root ? await progress.bootstrap("tree-hash", () => computeTreeHash(root)) : null;
-  const cache = treeHash ? await progress.bootstrap("open-cache", () => openCheckCache()) : null;
+  const root = noCache
+    ? null
+    : await progress.bootstrap("root", () => getWorktreeRoot());
+  const treeHash = root
+    ? await progress.bootstrap("tree-hash", () => computeTreeHash(root))
+    : null;
+  const cache = treeHash
+    ? await progress.bootstrap("open-cache", () => openCheckCache())
+    : null;
   // The shared, content-addressed tree snapshot — loaded ONCE per run (one
   // `git ls-tree -r`) and reused by every input-keyed check's validate/record.
   // Loaded ONLY when some selected check is actually input-keyed, so the extra
@@ -197,12 +221,17 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   const anyInputKeyed = selected.some((c) => c.inputKeyed === true);
   const snapshot: TreeSnapshot | null =
     anyInputKeyed && root && treeHash
-      ? await progress.bootstrap("tree-snapshot", () => loadTreeSnapshot(root, treeHash))
+      ? await progress.bootstrap("tree-snapshot", () =>
+          loadTreeSnapshot(root, treeHash),
+        )
       : null;
 
   // Bootstrap is over: the facts that cost work to learn are now known, so they
   // reach the log as a follow-up record under the same `runId`.
-  progress.resolved(treeHash, selected.map((c) => c.id));
+  progress.resolved(
+    treeHash,
+    selected.map((c) => c.id),
+  );
 
   // Shadow-mode scaffold (dormant): when enabled, an input-keyed check logs the
   // old-vs-new decision so a divergence (old MISS/new HIT, or the validate
@@ -222,14 +251,17 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // One check, start to settle. Extracted from the `Promise.all` callback ONLY
   // so the progress log can wrap it in a try/finally — a `finally` cannot see a
   // return value, and the callback has four return sites.
-  const runOne = async (check: Check, wallStart: number): Promise<CheckOutcome> => {
+  const runOne = async (
+    check: Check,
+    wallStart: number,
+  ): Promise<CheckOutcome> => {
     // A check opts out of caching by returning null from cacheSignature();
     // absent → "" (keyed on tree hash alone). The runner never names checks.
     let sig: string | null = "";
     if (check.cacheSignature) {
       try {
         sig = check.cacheSignature();
-      // eslint-disable-next-line promise-safety/no-bare-catch -- cacheSignature() failure of any kind safely degrades to uncached; propagating would abort the check run, which is a worse outcome than skipping the cache
+        // eslint-disable-next-line promise-safety/no-bare-catch -- cacheSignature() failure of any kind safely degrades to uncached; propagating would abort the check run, which is a worse outcome than skipping the cache
       } catch {
         sig = null;
       }
@@ -280,31 +312,74 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
         try {
           verdict = await validate(stored, snapshot, {
             replayQuery: (q: QueryFact) =>
-              gitGrepList(snapshot.root, q.grepArg, q.fixed, q.pathspecs, snapshot.treeHash),
+              gitGrepList(
+                snapshot.root,
+                q.grepArg,
+                q.fixed,
+                q.pathspecs,
+                snapshot.treeHash,
+              ),
           });
-        // eslint-disable-next-line promise-safety/no-bare-catch -- fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
+          // eslint-disable-next-line promise-safety/no-bare-catch -- fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
         } catch (err) {
-          verdict = { hit: false, reason: `validate threw (fail-open → run): ${String(err)}` };
+          verdict = {
+            hit: false,
+            reason: `validate threw (fail-open → run): ${String(err)}`,
+          };
         }
         if (verdict.hit) {
-          if (shadow) observations.push({ line: `shadow: ${check.id} input-keyed HIT`, stream: "stdout" });
-          return { check, result: { ok: true } as CheckResult, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true, observations };
+          if (shadow)
+            observations.push({
+              line: `shadow: ${check.id} input-keyed HIT`,
+              stream: "stdout",
+            });
+          return {
+            check,
+            result: { ok: true } as CheckResult,
+            durationMs: Math.round(performance.now() - wallStart),
+            wallStart,
+            cached: true,
+            observations,
+          };
         }
-        if (shadow) observations.push({ line: `shadow: ${check.id} input-keyed MISS — ${verdict.reason}`, stream: "stdout" });
+        if (shadow)
+          observations.push({
+            line: `shadow: ${check.id} input-keyed MISS — ${verdict.reason}`,
+            stream: "stdout",
+          });
       }
       // MISS → run under a fresh recording view, capturing the read-set.
       const view = snapshot.createRecordingView();
       const result = await withScanView(treeHash, view, () => check.run(ctx));
       const durationMs = Math.round(performance.now() - wallStart);
       if (result.ok) cache.recordReadSet(check.id, sig, view.readSet());
-      return { check, result, durationMs, wallStart, cached: false, observations };
+      return {
+        check,
+        result,
+        durationMs,
+        wallStart,
+        cached: false,
+        observations,
+      };
     }
 
     // LEGACY whole-tree path (unchanged). Narrow inline (not via a stored
     // boolean) so TS sees cache/treeHash/sig as non-null in the guarded branch.
-    if (cache !== null && treeHash !== null && sig !== null && cache.has(check.id, treeHash, sig)) {
+    if (
+      cache !== null &&
+      treeHash !== null &&
+      sig !== null &&
+      cache.has(check.id, treeHash, sig)
+    ) {
       // A cache hit runs nothing, so it observes nothing.
-      return { check, result: { ok: true } as CheckResult, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true, observations };
+      return {
+        check,
+        result: { ok: true } as CheckResult,
+        durationMs: Math.round(performance.now() - wallStart),
+        wallStart,
+        cached: true,
+        observations,
+      };
     }
     const result = await withScanView(treeHash, null, () => check.run(ctx));
     const durationMs = Math.round(performance.now() - wallStart);
@@ -312,7 +387,14 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
     if (cache !== null && treeHash !== null && sig !== null && result.ok) {
       cache.record(check.id, treeHash, sig);
     }
-    return { check, result, durationMs, wallStart, cached: false, observations };
+    return {
+      check,
+      result,
+      durationMs,
+      wallStart,
+      cached: false,
+      observations,
+    };
   };
 
   let results: CheckOutcome[];
@@ -369,7 +451,10 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // context window, which is why it is a console concern and the transcript
   // keeps the full text. Shared by the fatal-FAIL and the non-fatal inconclusive
   // branches so the two can't drift in truncation behaviour.
-  const emitDetail = (check: Check, result: { message: string; hint?: string }) => {
+  const emitDetail = (
+    check: Check,
+    result: { message: string; hint?: string },
+  ) => {
     const lines = result.message.split("\n");
     if (lines.length > MAX_MESSAGE_LINES) {
       const head = lines.slice(0, 50).join("\n");
@@ -378,7 +463,10 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       const moreHint = transcript
         ? `see ${transcript.path} for full output`
         : `re-run \`./singularity check ${check.id}\` for full output`;
-      log(`  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`, "stderr");
+      log(
+        `  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`,
+        "stderr",
+      );
     } else {
       log(`  ${result.message}`, "stderr");
     }
@@ -388,7 +476,9 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // Flush a check's `ctx.log` observations to the console, indented under the
   // check's result line exactly like `emitDetail` (and like the transcript's own
   // block). Purely informational: the verdict is already decided.
-  const emitObservations = (observations: { line: string; stream: "stdout" | "stderr" }[]) => {
+  const emitObservations = (
+    observations: { line: string; stream: "stdout" | "stderr" }[],
+  ) => {
     for (const { line, stream } of observations) {
       log(`  ${line.split("\n").join("\n  ")}`, stream);
     }
@@ -399,7 +489,14 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   // Selection-ordered, deliberately unlike the transcript's completion order: a
   // terminal summary printed once is easier to read (and to diff across runs) in
   // the order the checks were named.
-  for (const { check, result, durationMs, wallStart, cached, observations } of results) {
+  for (const {
+    check,
+    result,
+    durationMs,
+    wallStart,
+    cached,
+    observations,
+  } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
       log(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
@@ -410,7 +507,10 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       // it re-runs next build and re-verifies the real invariant. We only
       // soften fatality here (allOk untouched).
       anyInconclusive = true;
-      log(`⚠ ${check.id} ... inconclusive — ${result.message.split("\n")[0]}`, "stdout");
+      log(
+        `⚠ ${check.id} ... inconclusive — ${result.message.split("\n")[0]}`,
+        "stdout",
+      );
       emitObservations(observations);
       emitDetail(check, result);
     } else {

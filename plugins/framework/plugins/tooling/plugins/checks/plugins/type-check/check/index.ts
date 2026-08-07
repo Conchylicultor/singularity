@@ -27,8 +27,14 @@ import {
   currentScanView,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type { Check, CheckContext } from "@plugins/framework/plugins/tooling/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
@@ -63,11 +69,17 @@ const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 // build.ts's `branch === "main"` slot exemption). The demotion itself is
 // spawnCaptured's `background` option (spawn-priority's backgroundArgv).
 async function workerBackground(): Promise<boolean> {
-  const result = await spawnCaptured(["git", "rev-parse", "--abbrev-ref", "HEAD"]);
+  const result = await spawnCaptured([
+    "git",
+    "rev-parse",
+    "--abbrev-ref",
+    "HEAD",
+  ]);
   return result.stdout.trim() !== "main";
 }
 
-const toRel = (root: string, abs: string): string => relative(root, abs).split("\\").join("/");
+const toRel = (root: string, abs: string): string =>
+  relative(root, abs).split("\\").join("/");
 
 /** Absolute path to a target's tsconfig (the `-p <file>` arg, else tsconfig.json). */
 function tsconfigPathOf(t: TscTarget): string {
@@ -90,12 +102,20 @@ function computeOwnership(
   forward: Map<string, Set<string>>,
   lintable: Set<string>,
 ): Map<string, string> {
-  const order = [...targets].sort((a, b) => (a.name === "web-core" ? -1 : b.name === "web-core" ? 1 : 0));
+  const order = [...targets].sort((a, b) =>
+    a.name === "web-core" ? -1 : b.name === "web-core" ? 1 : 0,
+  );
   const owner = new Map<string, string>();
   for (const t of order) {
     const cfg = ts.readConfigFile(tsconfigPathOf(t), ts.sys.readFile);
     if (cfg.error) continue; // a broken tsconfig surfaces as a tsc error in its worker
-    const parsed = ts.parseJsonConfigFileContent(cfg.config, ts.sys, t.dir, undefined, tsconfigPathOf(t));
+    const parsed = ts.parseJsonConfigFileContent(
+      cfg.config,
+      ts.sys,
+      t.dir,
+      undefined,
+      tsconfigPathOf(t),
+    );
     const stack = parsed.fileNames
       .map((f) => toRel(root, ts.sys.resolvePath(f)))
       .filter((r) => lintable.has(r));
@@ -111,16 +131,23 @@ function computeOwnership(
 }
 
 /** Bounded-concurrency map: each TS program is large, so cap in-flight workers. */
-async function mapConcurrent<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+async function mapConcurrent<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    for (;;) {
-      const i = next++;
-      if (i >= items.length) return;
-      out[i] = await fn(items[i]!);
-    }
-  });
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      for (;;) {
+        const i = next++;
+        if (i >= items.length) return;
+        out[i] = await fn(items[i]!);
+      }
+    },
+  );
   await Promise.all(workers);
   return out;
 }
@@ -131,21 +158,35 @@ async function runWorker(
   lintFiles: string[],
   background: boolean,
 ): Promise<WorkerResult> {
-  const jobPath = join(os.tmpdir(), `type-check-${target.name}-${process.pid}.json`);
-  writeFileSync(jobPath, JSON.stringify({
-    root,
-    name: target.name,
-    tsconfigPath: tsconfigPathOf(target),
-    buildInfoPath: tsBuildInfoPath(root, target.name),
-    lintFiles,
-  }));
-  const result = await spawnCaptured([process.execPath, WORKER, jobPath], { cwd: root, background });
+  const jobPath = join(
+    os.tmpdir(),
+    `type-check-${target.name}-${process.pid}.json`,
+  );
+  writeFileSync(
+    jobPath,
+    JSON.stringify({
+      root,
+      name: target.name,
+      tsconfigPath: tsconfigPathOf(target),
+      buildInfoPath: tsBuildInfoPath(root, target.name),
+      lintFiles,
+    }),
+  );
+  const result = await spawnCaptured([process.execPath, WORKER, jobPath], {
+    cwd: root,
+    background,
+  });
   if (result.exitCode !== 0) {
-    throw new Error(`type-check worker for "${target.name}" exited ${result.exitCode}:\n${result.stderr.trim() || result.stdout.trim()}`);
+    throw new Error(
+      `type-check worker for "${target.name}" exited ${result.exitCode}:\n${result.stderr.trim() || result.stdout.trim()}`,
+    );
   }
   // rusage is only final once the child is reaped, and it is a free read (no
   // sampling loop) — getrusage reports the TRUE peak of the run.
-  return { ...(JSON.parse(result.stdout) as WorkerOutput), maxRssBytes: result.resourceUsage.maxRssBytes };
+  return {
+    ...(JSON.parse(result.stdout) as WorkerOutput),
+    maxRssBytes: result.resourceUsage.maxRssBytes,
+  };
 }
 
 // One greppable line per worker, e.g. "type-check worker web-core: maxRSS 2.4 GB".
@@ -164,16 +205,21 @@ async function runWorker(
 //
 // `null` when the runtime reported no rusage — an unavailable measurement, not
 // a swallowed failure: the line is omitted and nothing else changes.
-function maxRssLine(label: string, maxRssBytes: number | undefined): string | null {
+function maxRssLine(
+  label: string,
+  maxRssBytes: number | undefined,
+): string | null {
   if (maxRssBytes == null) return null;
   const gb = maxRssBytes / 1e9;
-  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
+  const amount =
+    gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
   return `${label}: maxRSS ${amount}`;
 }
 
 const check: Check = {
   id: "type-check",
-  description: "TypeScript types and type-aware ESLint pass (one shared program per tsconfig target)",
+  description:
+    "TypeScript types and type-aware ESLint pass (one shared program per tsconfig target)",
   // OUTER input-keyed via validate-by-replay (Stage 2). run() records EVERY input
   // its verdict depends on (lintable-file membership + contents + the global-
   // trigger set) into the recording FileSystemView; on the next run those facts
@@ -261,7 +307,14 @@ const check: Check = {
     await mapConcurrent(targets, units, (t) =>
       ctx.grant.run(async () => {
         try {
-          results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? [], background));
+          results.push(
+            await runWorker(
+              root,
+              t,
+              lintByTarget.get(t.name) ?? [],
+              background,
+            ),
+          );
         } catch (err) {
           crashes.push({ name: t.name, error: (err as Error).message });
         }
@@ -278,7 +331,10 @@ const check: Check = {
     // changes nothing about the verdict below.
     const byName = new Map(results.map((r) => [r.name, r]));
     for (const t of targets) {
-      const line = maxRssLine(`type-check worker ${t.name}`, byName.get(t.name)?.maxRssBytes);
+      const line = maxRssLine(
+        `type-check worker ${t.name}`,
+        byName.get(t.name)?.maxRssBytes,
+      );
       if (line !== null) ctx.log?.(line, "stderr");
     }
 
@@ -310,11 +366,14 @@ const check: Check = {
       .map((r) => r.lintViolations)
       .join("\n");
 
-    if (crashes.length === 0 && tscSections.length === 0 && !lintLines) return { ok: true };
+    if (crashes.length === 0 && tscSections.length === 0 && !lintLines)
+      return { ok: true };
 
     const parts: string[] = [];
     if (crashes.length > 0) {
-      parts.push(`type-check workers failed:\n  ${crashes.map((c) => `${c.name}: ${c.error}`).join("\n  ")}`);
+      parts.push(
+        `type-check workers failed:\n  ${crashes.map((c) => `${c.name}: ${c.error}`).join("\n  ")}`,
+      );
     }
     if (tscSections.length > 0) {
       parts.push(`TypeScript type errors:\n  ${tscSections.join("\n  ")}`);
@@ -327,16 +386,26 @@ const check: Check = {
     const hasMissingModule = /error TS2307: Cannot find module/.test(combined);
     const hints: string[] = [];
     if (hasMissingModule) {
-      hints.push("A \"Cannot find module\" error for a dep you didn't touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push.");
+      hints.push(
+        'A "Cannot find module" error for a dep you didn\'t touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push.',
+      );
     }
     if (tscSections.length > 0) {
-      hints.push("Fix type errors before pushing. If a cast is necessary, fix the type definition instead.");
+      hints.push(
+        "Fix type errors before pushing. If a cast is necessary, fix the type definition instead.",
+      );
     }
     if (lintLines) {
-      hints.push("Global rules live in plugins/framework/plugins/tooling/plugins/lint/; plugin rules in plugins/<name>/lint/index.ts. Do NOT silence violations with eslint-disable or rule-config edits. If you believe a violation is a false positive, STOP and report it to the user.");
+      hints.push(
+        "Global rules live in plugins/framework/plugins/tooling/plugins/lint/; plugin rules in plugins/<name>/lint/index.ts. Do NOT silence violations with eslint-disable or rule-config edits. If you believe a violation is a false positive, STOP and report it to the user.",
+      );
     }
 
-    return { ok: false, message: parts.join("\n\n"), hint: hints.join(" ") || undefined };
+    return {
+      ok: false,
+      message: parts.join("\n\n"),
+      hint: hints.join(" ") || undefined,
+    };
   },
 };
 

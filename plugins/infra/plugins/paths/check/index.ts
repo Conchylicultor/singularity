@@ -99,7 +99,10 @@ const noHardcodedPathsCheck: Check = {
 // needs no allowlist entry.
 const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   // Base dir re-inline: join(SINGULARITY_DIR, "worktrees" or `${SINGULARITY_DIR}/worktrees`.
-  { pattern: /SINGULARITY_DIR\s*(?:,\s*["'`]|\}?\/)worktrees/, grepArg: "worktrees" },
+  {
+    pattern: /SINGULARITY_DIR\s*(?:,\s*["'`]|\}?\/)worktrees/,
+    grepArg: "worktrees",
+  },
   // build-profile artifact filename.
   { pattern: /["'`]build-profile[^"'`\s]*\.json/, grepArg: "build-profile" },
   // build-logs artifact filename.
@@ -146,7 +149,10 @@ const noInlinedWorktreeArtifactsCheck: Check = {
         if (seen.has(line)) continue;
         seen.add(line);
 
-        if (WORKTREE_ARTIFACT_ALLOWED_PREFIXES.some((p) => m.path.startsWith(p))) continue;
+        if (
+          WORKTREE_ARTIFACT_ALLOWED_PREFIXES.some((p) => m.path.startsWith(p))
+        )
+          continue;
         if (m.path.startsWith("research/")) continue;
 
         offenders.push(line);

@@ -47,5 +47,4 @@ export {
 
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export default {
-} satisfies ServerPluginDefinition;
+export default {} satisfies ServerPluginDefinition;

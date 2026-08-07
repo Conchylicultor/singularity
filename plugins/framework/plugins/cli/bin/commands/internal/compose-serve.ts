@@ -14,7 +14,14 @@
 // per-name registries); the DB is deliberately KEPT — dropping it stays a
 // manual operation. Design: research/2026-07-17-global-composition-auto-serve.md.
 
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import {
   assertServableCompositionNamespace,
@@ -36,8 +43,15 @@ import {
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { classifyEdges, flattenManifest, resolveComposition } from "@plugins/plugin-meta/plugins/closure/core";
-import type { CompositionManifest, EdgeGraph } from "@plugins/plugin-meta/plugins/closure/core";
+import {
+  classifyEdges,
+  flattenManifest,
+  resolveComposition,
+} from "@plugins/plugin-meta/plugins/closure/core";
+import type {
+  CompositionManifest,
+  EdgeGraph,
+} from "@plugins/plugin-meta/plugins/closure/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -48,16 +62,29 @@ import {
   COMPOSITION_MARKER_FILE,
   type CompositionMarker,
 } from "@plugins/infra/plugins/worktree/server";
-import { ensureDatabase, getAdminPool } from "@plugins/database/plugins/admin/server";
+import {
+  ensureDatabase,
+  getAdminPool,
+} from "@plugins/database/plugins/admin/server";
 import type { BuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
-import { SINGULARITY_DIR, WORKTREES_DIR, MAIN_WORKTREE_NAME } from "../../paths";
+import {
+  SINGULARITY_DIR,
+  WORKTREES_DIR,
+  MAIN_WORKTREE_NAME,
+} from "../../paths";
 import type { SpanCollector } from "../../profiler";
 import type { StepLogCollector } from "../../build-logs-writer";
-import { distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./dist-publish";
+import {
+  distStagingPath,
+  publishDistAtomic,
+  sweepDistLeftovers,
+} from "./dist-publish";
 
 // The `compositions` config's owning plugin — where its jsonc files live under
 // `config/` and the per-worktree user config dir.
-const COMPOSITIONS_HIERARCHY_PATH = asPath(asPluginId("plugin-meta.composition"));
+const COMPOSITIONS_HIERARCHY_PATH = asPath(
+  asPluginId("plugin-meta.composition"),
+);
 
 export interface ComposeServeOptions {
   /** The MAIN checkout root — the stage never runs from an agent worktree. */
@@ -115,7 +142,9 @@ export function readCompositionItems(root: string): CompositionManifestItem[] {
   return values.manifests;
 }
 
-export function activatedCompositionIds(items: CompositionManifestItem[]): string[] {
+export function activatedCompositionIds(
+  items: CompositionManifestItem[],
+): string[] {
   return items.filter((i) => i.autoBuild).map((i) => i.id);
 }
 
@@ -208,7 +237,8 @@ async function serveOne(opts: {
   try {
     assertServableCompositionNamespace(id);
     const collision = namespaceCollision(id, probeNamespace(root, id));
-    if (collision !== null) throw new Error(`compose-serve "${id}": ${collision}`);
+    if (collision !== null)
+      throw new Error(`compose-serve "${id}": ${collision}`);
 
     const specDir = join(WORKTREES_DIR, id);
     // Marker FIRST (right after the guard): from the moment we start writing into
@@ -223,7 +253,10 @@ async function serveOne(opts: {
       commit: stage.buildCommit || null,
     });
 
-    const flat = flattenManifest(manifestItemToManifest(item), opts.allManifests);
+    const flat = flattenManifest(
+      manifestItemToManifest(item),
+      opts.allManifests,
+    );
     const bundle = resolveComposition(opts.graph, flat).bundle;
     compLog(`compose-serve "${id}": ${bundle.size} plugins in closure`);
 
@@ -246,7 +279,8 @@ async function serveOne(opts: {
       // Each pipeline sub-stage becomes one span+step in the composition's own
       // profile/log (phase build:frontend, mirroring main's own web-artifacts
       // staging), never a span in main's profile.
-      onStage: (sid, label, run) => compStage(sid, "build:frontend", label, run),
+      onStage: (sid, label, run) =>
+        compStage(sid, "build:frontend", label, run),
     });
     compLog(
       `compose-serve "${id}": ${result.builtArtifacts} built, ${result.reusedArtifacts} reused, ` +
@@ -256,31 +290,45 @@ async function serveOne(opts: {
     // Same trailer files as main's dist, so the served backend reports drift and
     // stale tabs identically.
     if (stage.buildCommit) {
-      writeFileSync(resolve(stagingPath, ".build-commit"), stage.buildCommit + "\n");
+      writeFileSync(
+        resolve(stagingPath, ".build-commit"),
+        stage.buildCommit + "\n",
+      );
     }
     writeFileSync(resolve(stagingPath, ".build-id"), stage.buildId + "\n");
     await publishDistAtomic({ dir: distDir, stagingPath });
 
     // Empty DB, created race-safely; the backend's boot migrator populates the
     // schema on first spawn. Never a fork of main's data.
-    await compStage("database", "build:database", "ensure database", () => ensureDatabase(id));
+    await compStage("database", "build:database", "ensure database", () =>
+      ensureDatabase(id),
+    );
 
     await compStage("config", "build:codegen", "propagate config", () =>
-      propagateConfigToUser({ root, worktreeName: id, singularityDir: SINGULARITY_DIR }),
+      propagateConfigToUser({
+        root,
+        worktreeName: id,
+        singularityDir: SINGULARITY_DIR,
+      }),
     );
 
     // Spec LAST — the gateway only discovers the namespace once DB + dist exist.
     // zeroCache is deliberately omitted in v1: the zero sidecar is an opt-in
     // (SINGULARITY_ZERO_CACHE) replication accelerator, not required for a
     // functioning app; per-composition sidecars are a follow-up if ever needed.
-    await compStage("deploy", "build:deploy", "register + restart", async () => {
-      writeWorktreeSpec({
-        name: id,
-        server: resolve(root, "plugins/framework/plugins/server-core"),
-        web: distDir,
-      });
-      await restartNamespace(id, compLog);
-    });
+    await compStage(
+      "deploy",
+      "build:deploy",
+      "register + restart",
+      async () => {
+        writeWorktreeSpec({
+          name: id,
+          server: resolve(root, "plugins/framework/plugins/server-core"),
+          web: distDir,
+        });
+        await restartNamespace(id, compLog);
+      },
+    );
     ok = true;
   } finally {
     // Write this composition's own profile + step-log artifacts (keyed by
@@ -298,22 +346,33 @@ async function serveOne(opts: {
 // Mirrors build.ts's gateway-notify tolerance: 404 = not running (spawns on
 // first request), connection refused / timeout = gateway down; anything else
 // unexpected is rethrown.
-async function restartNamespace(id: string, log: (line: string) => void): Promise<void> {
+async function restartNamespace(
+  id: string,
+  log: (line: string) => void,
+): Promise<void> {
   try {
-    const resp = await fetch(`http://localhost:9000/gateway/worktrees/${id}/restart`, {
-      method: "POST",
-      signal: AbortSignal.timeout(30_000),
-    });
+    const resp = await fetch(
+      `http://localhost:9000/gateway/worktrees/${id}/restart`,
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
     if (resp.ok) {
       log(`compose-serve "${id}": backend restarted`);
     } else if (resp.status === 404) {
-      log(`compose-serve "${id}": no running backend — will spawn on first request`);
+      log(
+        `compose-serve "${id}": no running backend — will spawn on first request`,
+      );
     } else {
       log(`compose-serve "${id}": restart returned ${resp.status}`);
     }
   } catch (err) {
-    if (!(err instanceof TypeError) && !(err instanceof DOMException)) throw err;
-    log(`compose-serve "${id}": gateway not reachable — will spawn on first request`);
+    if (!(err instanceof TypeError) && !(err instanceof DOMException))
+      throw err;
+    log(
+      `compose-serve "${id}": gateway not reachable — will spawn on first request`,
+    );
   }
 }
 
@@ -322,7 +381,8 @@ function markerNamespaces(): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(WORKTREES_DIR, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    if (existsSync(join(WORKTREES_DIR, entry.name, COMPOSITION_MARKER_FILE))) out.push(entry.name);
+    if (existsSync(join(WORKTREES_DIR, entry.name, COMPOSITION_MARKER_FILE)))
+      out.push(entry.name);
   }
   return out;
 }
@@ -384,9 +444,12 @@ export async function runComposeServeStage(
             serveOne({ item, allManifests, graph, ctx, vendors, stage: opts }),
           );
           served.push(item.id);
-          log(`compose-serve "${item.id}": serving at http://${item.id}.localhost:9000`);
+          log(
+            `compose-serve "${item.id}": serving at http://${item.id}.localhost:9000`,
+          );
         } catch (err) {
-          const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+          const message =
+            err instanceof Error ? (err.stack ?? err.message) : String(err);
           failures.push({ id: item.id, error: message });
           log(`compose-serve "${item.id}": FAILED — ${message}`);
         }
@@ -412,9 +475,12 @@ export async function runComposeServeStage(
             if (r.name === id) rmSync(r.file, { force: true });
           }
           swept.push(id);
-          log(`compose-serve: deactivated "${id}" (spec + dist + registries removed; DB kept)`);
+          log(
+            `compose-serve: deactivated "${id}" (spec + dist + registries removed; DB kept)`,
+          );
         } catch (err) {
-          const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+          const message =
+            err instanceof Error ? (err.stack ?? err.message) : String(err);
           failures.push({ id, error: `deactivation sweep: ${message}` });
           log(`compose-serve: sweep of "${id}" FAILED — ${message}`);
         }

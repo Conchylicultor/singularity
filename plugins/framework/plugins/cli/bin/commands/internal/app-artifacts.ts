@@ -19,13 +19,28 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { runWebArtifactsPipeline } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { flattenManifest, resolveComposition } from "@plugins/plugin-meta/plugins/closure/core";
-import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  flattenManifest,
+  resolveComposition,
+} from "@plugins/plugin-meta/plugins/closure/core";
+import {
+  compositionsConfig,
+  manifestItemToManifest,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
-import { cpuBudget, type Grant, type GrantHooks, type Lane } from "@plugins/infra/plugins/host-admission/core";
+import {
+  cpuBudget,
+  type Grant,
+  type GrantHooks,
+  type Lane,
+} from "@plugins/infra/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
-import { holdThroughValve, shouldRequeue, type ValveDeps } from "../../admission-valve";
+import {
+  holdThroughValve,
+  shouldRequeue,
+  type ValveDeps,
+} from "../../admission-valve";
 import { acquireBuildLock } from "../../build-lock";
 import { ensureDeps } from "../../ensure-deps";
 import { generateMigration, type MigrationAnswer } from "../../migrations";
@@ -152,7 +167,11 @@ import { stampExperimentalMarker } from "./experimental-marker";
  */
 export interface ArtifactHooks {
   /** `buildProfilerStart` — opens a span; the returned closure closes it. */
-  span: (id: string, phase: string, label: string) => (info?: { maxRssBytes?: number }) => void;
+  span: (
+    id: string,
+    phase: string,
+    label: string,
+  ) => (info?: { maxRssBytes?: number }) => void;
   /** `pushBuildSpan` — records an already-finished span retroactively. */
   pushSpan: (
     id: string,
@@ -213,7 +232,11 @@ async function execBuffered(
   for (const line of result.stderr.split("\n")) {
     if (line) lines.push({ text: line, stream: "stderr" });
   }
-  return { lines, exitCode: result.exitCode, maxRssBytes: result.resourceUsage.maxRssBytes };
+  return {
+    lines,
+    exitCode: result.exitCode,
+    maxRssBytes: result.resourceUsage.maxRssBytes,
+  };
 }
 
 // One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
@@ -225,10 +248,14 @@ async function execBuffered(
 // PER_UNIT_BYTES is decimal (2.7e9). Dividing by 2**30 and labelling the result
 // "GB" (as this did) understates the true byte count by ~7 %, which silently
 // corrupts anyone calibrating the constant by reading these lines.
-export function maxRssLine(label: string, maxRssBytes: number | undefined): string | null {
+export function maxRssLine(
+  label: string,
+  maxRssBytes: number | undefined,
+): string | null {
   if (maxRssBytes == null) return null;
   const gb = maxRssBytes / 1e9;
-  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
+  const amount =
+    gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
   return `${label}: maxRSS ${amount}`;
 }
 
@@ -282,7 +309,10 @@ export function resolveFrontendMode(opts: {
     process.exit(1);
   }
   const frontendMode: { artifacts: boolean; why: string } = opts.composition
-    ? { artifacts: false, why: "composition/release builds are always monolithic" }
+    ? {
+        artifacts: false,
+        why: "composition/release builds are always monolithic",
+      }
     : opts.monolith
       ? { artifacts: false, why: "--monolith" }
       : opts.artifacts
@@ -344,7 +374,11 @@ export async function prepareCompositionSources(opts: {
   // returns. Past tense for the same ordering reason.
   let endSpan = hooks.span("bunInstall", "build:setup", "bun install");
   const deps = await ensureDeps({ root, log: hooks.log });
-  hooks.log(deps.installed ? "Installed dependencies." : "Dependencies already up to date.");
+  hooks.log(
+    deps.installed
+      ? "Installed dependencies."
+      : "Dependencies already up to date.",
+  );
   // No footprint to report: the install usually does not RUN here (fresh-skip),
   // and when it does it is `ensureDeps`' own passthrough child, whose rusage it
   // does not surface. Both sinks take `number | undefined`, so pass `undefined`
@@ -368,17 +402,29 @@ export async function prepareCompositionSources(opts: {
   // one, clear any stale filtered registries so the runtimes revert to
   // the full committed set. The committed `<dir>.generated.ts` files are
   // never touched either way, so the build stays byte-identical.
-  endSpan = hooks.span("compositionRegistry", "build:codegen", "composition registry");
+  endSpan = hooks.span(
+    "compositionRegistry",
+    "build:codegen",
+    "composition registry",
+  );
   if (composition) {
     const items = compositionsConfig.fields.manifests.defaultValue;
     const item = items.find((m) => m.id === composition);
-    if (!item) throw new Error(`Unknown composition "${composition}". Known: ${items.map((m) => m.id).join(", ")}`);
+    if (!item)
+      throw new Error(
+        `Unknown composition "${composition}". Known: ${items.map((m) => m.id).join(", ")}`,
+      );
     const allManifests = items.map(manifestItemToManifest);
     const flat = flattenManifest(manifestItemToManifest(item), allManifests);
-    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
+    const tree = await buildPluginTree(join(root, "plugins"), {
+      skipBarrelImport: true,
+      facets: true,
+    });
     const bundle = resolveComposition(tree, flat).bundle;
     await generateCompositionRegistry({ root, bundle });
-    hooks.log(`Composition "${composition}": ${bundle.size} plugins in closure.`);
+    hooks.log(
+      `Composition "${composition}": ${bundle.size} plugins in closure.`,
+    );
   } else {
     await clearCompositionRegistries({ root });
   }
@@ -409,7 +455,11 @@ export async function generateAppSources(opts: {
   const codegenStep = codegenStepFor(hooks);
 
   // 3. Regenerate DB migrations from plugin schema files
-  let endSpan = hooks.span("generateMigration", "build:database", "generate migrations");
+  let endSpan = hooks.span(
+    "generateMigration",
+    "build:database",
+    "generate migrations",
+  );
   hooks.log("Generating DB migrations...");
   const migration = await generateMigration({
     root,
@@ -442,14 +492,22 @@ export async function generateAppSources(opts: {
   // shared repo-tree codegen pipeline: it mints `@review` markers, and that
   // pipeline also runs from `regen-generated` inside push's amend path — see
   // regen-pipeline.ts.
-  endSpan = hooks.span("seedAuthoredOverrides", "build:codegen", "seed authored config overrides");
+  endSpan = hooks.span(
+    "seedAuthoredOverrides",
+    "build:codegen",
+    "seed authored config overrides",
+  );
   const seedResult = await seedAuthoredOverrides({ root });
   endSpan();
   for (const rel of seedResult.seeded) {
-    hooks.log(`[config-v2] seeded required override config/${rel} (marked @review)`);
+    hooks.log(
+      `[config-v2] seeded required override config/${rel} (marked @review)`,
+    );
   }
   for (const rel of seedResult.remarked) {
-    hooks.log(`[config-v2] re-marked stale override config/${rel} (marked @review)`);
+    hooks.log(
+      `[config-v2] re-marked stale override config/${rel} (marked @review)`,
+    );
   }
 }
 
@@ -479,7 +537,9 @@ export async function fastValidationJobs(opts: {
   const { root, checkLogRun, background, hooks } = opts;
   const jobs: HeavyJob[] = [];
 
-  const alwaysRunIds = (await listAllChecks()).filter((c) => c.alwaysRun).map((c) => c.id);
+  const alwaysRunIds = (await listAllChecks())
+    .filter((c) => c.alwaysRun)
+    .map((c) => c.id);
   // Guard: runChecks([]) falls through to running ALL checks.
   if (alwaysRunIds.length > 0) {
     jobs.push(async (grant) => {
@@ -489,7 +549,13 @@ export async function fastValidationJobs(opts: {
         grant,
         logRun: checkLogRun,
         onCheckDone: (id, durationMs, wallStartMs) => {
-          hooks.pushSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
+          hooks.pushSpan(
+            `check:${id}`,
+            "build:checks",
+            id,
+            durationMs,
+            wallStartMs,
+          );
         },
         log: (line, stream) => {
           lines.push({ text: line, stream });
@@ -505,9 +571,15 @@ export async function fastValidationJobs(opts: {
     });
   }
 
-  for (const target of discoverTscTargets(root).filter((t) => t.hasEntrypoint)) {
+  for (const target of discoverTscTargets(root).filter(
+    (t) => t.hasEntrypoint,
+  )) {
     jobs.push(async (grant) => {
-      const end = hooks.span(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
+      const end = hooks.span(
+        `tsc:${target.name}`,
+        "build:validation",
+        `tsc ${target.name}`,
+      );
       const start = performance.now();
       // Identical flags to the `typescript` check so both share one
       // `.tsbuildinfo` per target without options-hash churn.
@@ -521,7 +593,16 @@ export async function fastValidationJobs(opts: {
       // is bounded by the same grant as everything else.
       const output = await grant.run(() =>
         execBuffered(
-          [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
+          [
+            process.execPath,
+            "x",
+            "tsc",
+            "--noEmit",
+            ...target.args,
+            "--incremental",
+            "--tsBuildInfoFile",
+            buildInfo,
+          ],
           target.dir,
           undefined,
           background,
@@ -607,13 +688,23 @@ export interface BuildWebDistOptions {
 export async function buildAndPublishWebDist(
   opts: BuildWebDistOptions,
 ): Promise<ArtifactBuildResult> {
-  const { root, webDir, buildId, composition, artifactsMode, companions, hooks } = opts;
+  const {
+    root,
+    webDir,
+    buildId,
+    composition,
+    artifactsMode,
+    companions,
+    hooks,
+  } = opts;
 
   const livePath = resolve(webDir, "dist");
   const stagingPath = distStagingPath(livePath);
   const stagingName = basename(stagingPath);
 
-  hooks.log("Running checks, type-checking, and building frontend in parallel...");
+  hooks.log(
+    "Running checks, type-checking, and building frontend in parallel...",
+  );
 
   const webArtifactsJob: HeavyJob = async (grant) => {
     // Per-plugin artifact pipeline, in-process, into the SAME staging
@@ -653,7 +744,8 @@ export async function buildAndPublishWebDist(
       });
     } catch (err) {
       success = false;
-      const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+      const message =
+        err instanceof Error ? (err.stack ?? err.message) : String(err);
       for (const line of message.split("\n")) {
         lines.push({ text: line, stream: "stderr" });
       }
@@ -675,7 +767,16 @@ export async function buildAndPublishWebDist(
     // for it so it shares the build's CPU budget with the type-check
     // workers rather than running on top of it.
     const output = await grant.run(() =>
-      execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(composition ? { VITE_COMPOSITION: composition } : {}) }, opts.background),
+      execBuffered(
+        ["bun", "run", "build"],
+        webDir,
+        {
+          VITE_OUT_DIR: stagingName,
+          VITE_BUILD_ID: buildId,
+          ...(composition ? { VITE_COMPOSITION: composition } : {}),
+        },
+        opts.background,
+      ),
     );
     end({ maxRssBytes: output.maxRssBytes });
     const rss = maxRssLine("vite build", output.maxRssBytes);
@@ -741,11 +842,19 @@ export async function buildAndPublishWebDist(
       "wait for host CPU grant",
     );
     for (;;) {
-      const outcome = await holdThroughValve({ gated: opts.admission.gated }, opts.admission.deps);
+      const outcome = await holdThroughValve(
+        { gated: opts.admission.gated },
+        opts.admission.deps,
+      );
       const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
-        { lane: opts.lane, max: cpuBudget().B, hooks: opts.admission.grantHooks },
+        {
+          lane: opts.lane,
+          max: cpuBudget().B,
+          hooks: opts.admission.grantHooks,
+        },
         async (grant) => {
-          if (shouldRequeue(opts.admission.gated, outcome, isUnderDuress())) return REQUEUE;
+          if (shouldRequeue(opts.admission.gated, outcome, isUnderDuress()))
+            return REQUEUE;
           endGrantWait();
           return await runHeavySection(grant);
         },
@@ -789,7 +898,11 @@ export async function buildAndPublishWebDist(
   // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap — see
   // ./dist-publish.ts for the mechanics (this supersedes the earlier
   // move-aside scheme, which left a real gap between two renames).
-  const endPublish = hooks.span("atomicPublish", "build:frontend", "atomic publish");
+  const endPublish = hooks.span(
+    "atomicPublish",
+    "build:frontend",
+    "atomic publish",
+  );
   await publishDistAtomic({ dir: livePath, stagingPath });
   endPublish();
 
