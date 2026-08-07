@@ -1,27 +1,32 @@
 import { useSyncExternalStore } from "react";
 
-/** Sonner's own id type for a toast. */
-export type ToastId = number | string;
-
 /**
- * The plugin's own ledger of the toasts it has put on screen.
+ * The plugin's ledger of the toasts it currently has on screen.
  *
- * Sonner keeps two independent copies of the toast list — the `<Toaster/>`'s,
- * which is what you see, and `useSonner()`'s, which is a separate subscriber
- * state pruned *only* by an observer `dismiss` event delivered through a
- * `requestAnimationFrame` hop. Counting the second one means counting something
- * that is at best eventually consistent with the first, and permanently wrong
- * whenever that hop is dropped (a deferred removal landing after the Toaster
- * unmounted never publishes at all) — with no repair path, since nothing else
- * ever prunes it. That is how a "Dismiss all (20)" survives an empty corner.
+ * It is not a copy of sonner's toast list, and deliberately so — the two
+ * previous versions of this affordance each kept one (`useSonner()`, then a
+ * ledger written at enqueue time and retired from sonner's exit callbacks) and
+ * each drifted, because a parallel copy of "what is on screen" has its own
+ * update path and no way back once that path is missed.
  *
- * So the affordance counts what *we* handed to sonner instead: one entry per
- * `showToast`, removed on the toast's own exit callbacks. Every exit path a
- * toast has — its timer, the close button, a swipe, a programmatic dismiss —
- * fires `onAutoClose` or `onDismiss`; the action button is the one sonner does
- * not report, and `showToast` owns that handler, so it untracks there itself.
+ * Instead the ledger *is* the mount set: `ToastBody` renders inside every toast
+ * we fire and calls `trackToast` on mount, `untrackToast` on unmount, so React
+ * maintains it for us. Two consequences follow for free: every exit a toast has
+ * (its timer, the close button, a swipe, the action button, a programmatic
+ * `dismiss`, the host unmounting) converges on that one unmount, so no exit
+ * needs enumerating; and an enqueue sonner drops never mounts, so it is never
+ * counted. Nothing here is state that isn't derived from something on screen.
+ *
+ * Scope of "on screen", both intentional:
+ * - A dismissed toast stays counted for its ~200ms exit animation
+ *   (`TIME_BEFORE_UNMOUNT`, sonner 2.0.7 `dist/index.mjs:425`). The count is
+ *   therefore exactly "toasts currently painted", and the button fades out
+ *   with the stack rather than ahead of it.
+ * - Toasts queued past `visibleToasts` count: sonner mounts all of them and
+ *   `visibleToasts` only drives opacity — and sweeping precisely those is the
+ *   "Dismiss all" button's whole justification.
  */
-const liveIds = new Set<ToastId>();
+const liveIds = new Set<string>();
 const listeners = new Set<() => void>();
 
 /**
@@ -44,28 +49,21 @@ function getSnapshot(): number {
   return count;
 }
 
-export function trackToast(id: ToastId): void {
+/**
+ * A Set keyed by id, never a counter: StrictMode double-invokes every mount
+ * effect as track → untrack → track, which a counter would settle at 2.
+ */
+export function trackToast(id: string): void {
+  if (liveIds.has(id)) return;
   liveIds.add(id);
   publish();
 }
 
-export function untrackToast(id: ToastId): void {
+export function untrackToast(id: string): void {
   if (liveIds.delete(id)) publish();
 }
 
-/**
- * Drop the whole ledger. Called when the stack is swept, and on either edge of
- * the host's lifetime: a freshly mounted `<Toaster/>` starts with an empty list
- * (toasts fired before it subscribed have no renderer), and an unmounted one
- * leaves nothing on screen to count.
- */
-export function clearTrackedToasts(): void {
-  if (liveIds.size === 0) return;
-  liveIds.clear();
-  publish();
-}
-
-/** Number of toasts currently on screen, as this plugin put them there. */
+/** Number of toasts currently painted, as this plugin put them there. */
 export function useLiveToastCount(): number {
   return useSyncExternalStore(subscribe, getSnapshot);
 }

@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { Toaster as Sonner } from "sonner";
 import { useColorMode } from "@plugins/ui/plugins/theme-engine/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
-import { clearTrackedToasts } from "../internal/live-toasts";
 import { DismissAllButton } from "./dismiss-all-button";
 
 /**
@@ -21,15 +19,6 @@ export function ToasterHost() {
   const themeScope = useChromeThemeScope();
   const [actionsRef, { height: actionsHeight }] =
     useElementSize<HTMLDivElement>();
-
-  // The stack's lifetime bounds the ledger's: a freshly mounted sonner Toaster
-  // renders nothing (toasts fired before it subscribed have no renderer), and
-  // an unmounted one leaves nothing on screen — so neither edge may leave a
-  // count behind. This is the invariant that keeps "counted" ⇒ "on screen".
-  useEffect(() => {
-    clearTrackedToasts();
-    return clearTrackedToasts;
-  }, []);
 
   // The strip is a reserved band, not an overlay: the stack's own bottom offset
   // grows by exactly what the strip measures, so the actions can never paint

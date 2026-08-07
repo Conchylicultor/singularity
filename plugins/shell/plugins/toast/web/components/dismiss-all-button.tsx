@@ -4,7 +4,7 @@ import {
   Button,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { clearTrackedToasts, useLiveToastCount } from "../internal/live-toasts";
+import { useLiveToastCount } from "../internal/live-toasts";
 
 /**
  * "Dismiss all" affordance for the toast stack. Clearing a pile-up one toast at
@@ -16,10 +16,11 @@ import { clearTrackedToasts, useLiveToastCount } from "../internal/live-toasts";
  * already one click away from gone, so the control stays out of the way until
  * the stack is actually plural, and retires the moment it isn't.
  *
- * That count comes from the plugin's own ledger, not from `useSonner()`: the
- * latter is a second copy of the toast list with a single, droppable pruning
- * path, so counting it lets the affordance outlive the stack it acts on. See
- * `internal/live-toasts`.
+ * That count is the set of toast bodies React currently has mounted, so it can
+ * only ever describe toasts that are genuinely painted — including the ~200ms
+ * of their exit animation, which is why the button fades out with the stack
+ * rather than ahead of it. Nothing is swept here beyond the dismiss itself:
+ * the count drains as those bodies unmount. See `internal/live-toasts`.
  */
 export function DismissAllButton() {
   const count = useLiveToastCount();
@@ -32,10 +33,7 @@ export function DismissAllButton() {
         variant="outline"
         shape="pill"
         className="pointer-events-auto shadow-md"
-        onClick={() => {
-          sonnerToast.dismiss();
-          clearTrackedToasts();
-        }}
+        onClick={() => sonnerToast.dismiss()}
       >
         <MdClearAll />
         Dismiss all ({count})
