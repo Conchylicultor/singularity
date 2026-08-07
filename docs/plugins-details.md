@@ -6332,6 +6332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `backup/sources/attachments`
       - `backup/sources/claude-settings`
       - `backup/sources/config`
+      - `backup/sources/cost-history`
       - `backup/sources/databases`
       - `backup/sources/project-memory`
       - `backup/sources/secrets`
@@ -6394,6 +6395,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `infra/paths.SINGULARITY_DIR`
+        - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "config"
+              - `backup.source` "Cost History"
+            - Uses:
+              - `backup.BackupSource`
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+              - `infra/paths.COST_USAGE_DIR`
         - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister`
@@ -6955,7 +6969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7115,6 +7129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `backup/sources/attachments`
       - `backup/sources/claude-settings`
       - `backup/sources/config`
+      - `backup/sources/cost-history`
       - `backup/sources/databases`
       - `backup/sources/project-memory`
       - `backup/sources/secrets`
@@ -11787,8 +11802,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/duress/latch.refreshDuress`
           - `infra/duress/latch.setDuress`
           - `infra/paths.currentWorktreeName`
-          - `infra/paths.isMain`
-          - `infra/paths.isRelease`
+          - `infra/paths.isHostSingleton`
           - `infra/paths.listWorktreeDirs`
           - `infra/paths.MAIN_WORKTREE_NAME`
           - `infra/paths.WORKTREES_DIR`
@@ -15625,6 +15639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/inline-date`
           - `page/links`
           - `shell/notifications`
+          - `stats/cost`
           - `tasks`
           - `tasks/task-title`
     - **`launcher`**
@@ -15716,6 +15731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backup/sources/attachments`
           - `backup/sources/claude-settings`
           - `backup/sources/config`
+          - `backup/sources/cost-history`
           - `backup/sources/project-memory`
           - `backup/sources/secrets`
           - `backup/sources/singularity-platform`
@@ -15792,6 +15808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `currentWorktreeName`
           - `GIT`
           - `HOME_DIR`
+          - `isHostSingleton`
           - `isMain`
           - `isRelease`
           - `KEY_PATH`
@@ -15831,6 +15848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `COST_USAGE_DIR`
           - `currentWorktreeName`
           - `HOME_DIR`
+          - `isHostSingleton`
           - `isMain`
           - `isRelease`
           - `KEY_PATH`
@@ -16001,6 +16019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/workflows/steps/http-request`
           - `page/bookmark`
+          - `stats/cost`
       - Server:
         - Exports (types):
           - `PinnedDial`
@@ -23585,6 +23604,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `release`
           - `reports/render-loop`
           - `shell/notifications`
+          - `stats/cost`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -25716,6 +25736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/plugin-load-errors`
       - `reports/render-loop`
       - `reports/turn-unconfirmed`
+      - `stats/cost`
       - `tasks/reports-investigation`
   - Plugins:
     - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
@@ -26461,7 +26482,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getCommitsLinesCumulative`
           - `getCommitsLinesRate`
           - `getCommitsRate`
-    - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
+    - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, priced from our own merge-only LiteLLM table and banked into a permanent year-sharded token archive so deleted transcripts stop rewriting the past.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister`
@@ -26496,19 +26517,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits.tooltipLabelStyle`
           - `stats/commits.yAxisFormatter`
       - Server:
-        - Contributes: `ConfigV2.Register` "config"
+        - Contributes:
+          - `ConfigV2.Register` "config"
+          - `report-kind` "cost-unpriced-model"
+          - `report-kind` "cost-archive-shrink"
         - Uses:
           - `config_v2.ConfigV2`
           - `database.db`
           - `infra/corpus-index.defineCorpusIndex`
           - `infra/endpoints.implement`
+          - `infra/jobs.defineJob`
           - `infra/paths.CLAUDE_PROJECTS_DIR`
           - `infra/paths.COST_USAGE_DIR`
-          - `infra/paths.isMain`
+          - `infra/paths.isHostSingleton`
+          - `infra/safe-fetch.safeFetch`
           - `infra/warmup.defineWarmup`
           - `infra/worktree.ensureMainWorktreeRoot`
+          - `primitives/log-channels.Log`
+          - `reports.recordReport`
+          - `reports.ReportKind`
           - `tasks/tasks-core._conversations`
-        - Register: `defineWarmup('stats.cost.usage')`
+        - DB schema:
+          - `plugins/stats/plugins/cost/server/internal/price-table.test.ts`
+          - `plugins/stats/plugins/cost/server/internal/price-table.ts`
+        - Register:
+          - `defineWarmup('stats.cost.usage')`
+          - `defineJob('stats.cost.refresh')`
         - Routes:
           - `GET /api/stats/cost/daily`
           - `GET /api/stats/cost/daily-by-family`

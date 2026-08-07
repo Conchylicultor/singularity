@@ -13,6 +13,7 @@
     - `backup/sources/attachments`
     - `backup/sources/claude-settings`
     - `backup/sources/config`
+    - `backup/sources/cost-history`
     - `backup/sources/project-memory`
     - `backup/sources/secrets`
     - `backup/sources/singularity-platform`
@@ -89,6 +90,7 @@
     - `currentWorktreeName`
     - `GIT`
     - `HOME_DIR`
+    - `isHostSingleton`
     - `isMain`
     - `isRelease`
     - `KEY_PATH`
@@ -128,6 +130,7 @@
     - `COST_USAGE_DIR`
     - `currentWorktreeName`
     - `HOME_DIR`
+    - `isHostSingleton`
     - `isMain`
     - `isRelease`
     - `KEY_PATH`

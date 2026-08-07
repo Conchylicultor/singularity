@@ -306,7 +306,10 @@ export async function handleProxy(req: Request): Promise<Response> {
   // (not streamed) so it survives `safeFetch`'s redirect re-issue. GET keeps the
   // original behavior.
   const isPost = req.method === "POST";
-  let body: BodyInit | undefined;
+  // `ArrayBuffer`, not the DOM `BodyInit`: that is precisely what `req.arrayBuffer()`
+  // returns, and the wider annotation only forced a needless mismatch against
+  // `SafeFetchInit.body`.
+  let body: ArrayBuffer | undefined;
   if (isPost) {
     const contentType = req.headers.get("content-type");
     if (contentType) headers["content-type"] = contentType;

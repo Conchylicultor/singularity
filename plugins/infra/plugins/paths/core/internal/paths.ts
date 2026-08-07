@@ -38,6 +38,21 @@ export function isRelease(): boolean {
   return process.env.SINGULARITY_RELEASE === "1";
 }
 
+/**
+ * True when THIS backend is the one that owns host-wide singleton work — the
+ * host-global caches/archives, the cluster-wide samplers, the once-per-host
+ * scheduled sweeps. Gate such work on this, never on `isMain()` alone.
+ *
+ * In dev the fleet is many worktree backends and main is that singleton. In a
+ * compiled release there is exactly ONE backend per host, but it runs under the
+ * composition name, so `isMain()` is false — gating on `isMain()` means the work
+ * silently never runs in a release, which is invisible precisely because there
+ * is no second backend to notice the gap.
+ */
+export function isHostSingleton(): boolean {
+  return isMain() || isRelease();
+}
+
 /** WHICH build is running. Both fields are null outside a release. */
 export interface ReleaseIdentity {
   /** The release run that produced this bundle (`RELEASE.json.runId`). */

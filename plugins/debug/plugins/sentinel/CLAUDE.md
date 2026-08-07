@@ -55,8 +55,8 @@ at it, and `worker-host.ts` spawns from that path when the env is set (else the
 dev source URL). This mirrors the vendored parcel-watcher native addon. The
 start-gate also admits releases: a release's single backend runs under the
 composition name (so `isMain()` is false), so `sentinel/server/index.ts` starts
-when `isMain() || isRelease()` — a release runs exactly one backend, so it stays
-the host singleton. See `research/sentinel-worker-in-compiled-release.md`.
+on `isHostSingleton()` (`isMain() || isRelease()`) — a release runs exactly one
+backend, so it stays the host singleton. See `research/sentinel-worker-in-compiled-release.md`.
 
 ## Each tick gathers
 
@@ -211,8 +211,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `infra/duress/latch.refreshDuress`
     - `infra/duress/latch.setDuress`
     - `infra/paths.currentWorktreeName`
-    - `infra/paths.isMain`
-    - `infra/paths.isRelease`
+    - `infra/paths.isHostSingleton`
     - `infra/paths.listWorktreeDirs`
     - `infra/paths.MAIN_WORKTREE_NAME`
     - `infra/paths.WORKTREES_DIR`

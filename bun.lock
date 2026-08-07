@@ -1106,6 +1106,10 @@
       "name": "@singularity/plugin-backup-sources-config",
       "version": "0.0.1",
     },
+    "plugins/backup/plugins/sources/plugins/cost-history": {
+      "name": "@singularity/plugin-backup-sources-cost-history",
+      "version": "0.0.1",
+    },
     "plugins/backup/plugins/sources/plugins/databases": {
       "name": "@singularity/plugin-backup-sources-databases",
       "version": "0.0.1",
@@ -4211,7 +4215,7 @@
     "plugins/stats/plugins/cost": {
       "name": "@singularity/plugin-stats-cost",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
         "ccusage": "^18.0.11",
       },
     },
@@ -5812,6 +5816,8 @@
     "@singularity/plugin-backup-sources-claude-settings": ["@singularity/plugin-backup-sources-claude-settings@workspace:plugins/backup/plugins/sources/plugins/claude-settings"],
 
     "@singularity/plugin-backup-sources-config": ["@singularity/plugin-backup-sources-config@workspace:plugins/backup/plugins/sources/plugins/config"],
+
+    "@singularity/plugin-backup-sources-cost-history": ["@singularity/plugin-backup-sources-cost-history@workspace:plugins/backup/plugins/sources/plugins/cost-history"],
 
     "@singularity/plugin-backup-sources-databases": ["@singularity/plugin-backup-sources-databases@workspace:plugins/backup/plugins/sources/plugins/databases"],
 

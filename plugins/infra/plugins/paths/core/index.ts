@@ -23,6 +23,7 @@ export {
   MAIN_WORKTREE_NAME,
   isMain,
   isRelease,
+  isHostSingleton,
   releaseIdentity,
   setReleaseIdentity,
   currentWorktreeName,

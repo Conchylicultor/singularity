@@ -15,6 +15,7 @@
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/workflows/steps/http-request`
     - `page/bookmark`
+    - `stats/cost`
 - Server:
   - Exports (types):
     - `PinnedDial`

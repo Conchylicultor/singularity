@@ -193,6 +193,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `page/inline-date`
     - `page/links`
     - `shell/notifications`
+    - `stats/cost`
     - `tasks`
     - `tasks/task-title`
 

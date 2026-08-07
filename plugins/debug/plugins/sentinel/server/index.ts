@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { isMain, isRelease } from "@plugins/infra/plugins/paths/server";
+import { isHostSingleton } from "@plugins/infra/plugins/paths/server";
 import { sentinelConfig } from "../core";
 import { clusterClass } from "./internal/cluster-class";
 import { fleetFlightsClass } from "./internal/fleet-flights";
@@ -18,16 +18,15 @@ export default {
     duressEpisodeKind,
     ConfigV2.Register({ descriptor: sentinelConfig }),
   ],
-  // Runs on the host singleton: main in dev (the one backend of the worktree
-  // fleet that owns the cluster-wide sampler + latch), OR the single backend of
-  // a compiled release (where SINGULARITY_WORKTREE is the composition name, so
-  // isMain() is false yet that lone backend IS the host singleton).
+  // Runs on the host singleton only — the one backend that owns the
+  // cluster-wide sampler + duress latch (main in dev, the lone backend in a
+  // compiled release; see `isHostSingleton`).
   onReady: () => {
-    if (!isMain() && !isRelease()) return;
+    if (!isHostSingleton()) return;
     startSentinelSampler();
   },
   onShutdown: async () => {
-    if (!isMain() && !isRelease()) return;
+    if (!isHostSingleton()) return;
     await stopSentinelSampler();
   },
 } satisfies ServerPluginDefinition;

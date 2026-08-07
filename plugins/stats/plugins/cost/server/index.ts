@@ -12,6 +12,8 @@ import {
   handleTotals,
 } from "./internal/handlers";
 import { costUsageWarmup } from "./internal/load-usage";
+import { archiveShrinkKind, unpricedModelKind } from "./internal/cost-report-kinds";
+import { costRefreshJob } from "./internal/refresh-job";
 import {
   getCostDaily,
   getCostDailyByFamily,
@@ -25,9 +27,13 @@ import {
 
 export default {
   description:
-    "Token usage and dollar cost across Claude Code sessions, sourced from ccusage.",
-  contributions: [ConfigV2.Register({ descriptor: costConfig })],
-  register: [costUsageWarmup],
+    "Token usage and dollar cost across Claude Code sessions, priced from our own merge-only LiteLLM table and banked into a permanent year-sharded token archive so deleted transcripts stop rewriting the past.",
+  contributions: [
+    ConfigV2.Register({ descriptor: costConfig }),
+    unpricedModelKind,
+    archiveShrinkKind,
+  ],
+  register: [costUsageWarmup, costRefreshJob],
   httpRoutes: {
     [getCostDaily.route]: handleDaily,
     [getCostDailyByFamily.route]: handleDailyByFamily,

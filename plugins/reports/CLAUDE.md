@@ -101,6 +101,7 @@
     - `reports/plugin-load-errors`
     - `reports/render-loop`
     - `reports/turn-unconfirmed`
+    - `stats/cost`
     - `tasks/reports-investigation`
 - Sub-plugins:
   - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.

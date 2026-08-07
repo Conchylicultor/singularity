@@ -231,6 +231,7 @@ export const webEntries: CollectedEntry[] = [
   { pluginPath: "backup/plugins/sources/plugins/attachments", id: "backup.sources.attachments", loader: () => import("@plugins/backup/plugins/sources/plugins/attachments/web"), dependsOn: ["config_v2"] },
   { pluginPath: "backup/plugins/sources/plugins/claude-settings", id: "backup.sources.claude-settings", loader: () => import("@plugins/backup/plugins/sources/plugins/claude-settings/web"), dependsOn: ["config_v2"] },
   { pluginPath: "backup/plugins/sources/plugins/config", id: "backup.sources.config", loader: () => import("@plugins/backup/plugins/sources/plugins/config/web"), dependsOn: ["config_v2"] },
+  { pluginPath: "backup/plugins/sources/plugins/cost-history", id: "backup.sources.cost-history", loader: () => import("@plugins/backup/plugins/sources/plugins/cost-history/web"), dependsOn: ["config_v2"] },
   { pluginPath: "backup/plugins/sources/plugins/databases", id: "backup.sources.databases", loader: () => import("@plugins/backup/plugins/sources/plugins/databases/web"), dependsOn: ["config_v2"] },
   { pluginPath: "backup/plugins/sources/plugins/project-memory", id: "backup.sources.project-memory", loader: () => import("@plugins/backup/plugins/sources/plugins/project-memory/web"), dependsOn: ["config_v2"] },
   { pluginPath: "backup/plugins/sources/plugins/secrets", id: "backup.sources.secrets", loader: () => import("@plugins/backup/plugins/sources/plugins/secrets/web"), dependsOn: ["config_v2"] },

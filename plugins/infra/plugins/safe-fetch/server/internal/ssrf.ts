@@ -30,8 +30,18 @@ export interface SafeFetchInit {
   headers?: Record<string, string>;
   /** HTTP method (default GET). */
   method?: string;
-  /** Request body for non-GET methods (raw bytes / stream). */
-  body?: BodyInit;
+  /**
+   * Request body for non-GET methods (raw bytes / stream).
+   *
+   * `Bun.BodyInit`, NOT the bare global `BodyInit` — deliberately. The bare name
+   * exists only in `lib.dom`, so naming it here made this server-side module
+   * un-type-checkable from any target that withholds DOM (`tsconfig.tools.json`
+   * pins `lib: ["ES2023"]`), and one tools-scoped script importing a plugin's
+   * server code would fail on a lib gap rather than on anything it wrote. The
+   * namespaced alias is what bun's own `fetch` init declares (`bun-types/fetch.d.ts`),
+   * so this is the same type without the DOM dependency.
+   */
+  body?: Bun.BodyInit;
   timeoutMs?: number;
   maxRedirects?: number;
   signal?: AbortSignal;
