@@ -10,6 +10,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildRoute, buildDetailRoute } from "@plugins/build/core";
+import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { buildHistoryResource, type BuildRun } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
@@ -31,8 +32,9 @@ function BuildButtonInner({
 }) {
   const latestRun = historyData[0];
   const building = latestRun?.finishedAt === null;
-  const failed =
-    !building && latestRun != null && latestRun.exitCode !== null && latestRun.exitCode !== 0;
+  // Only a real verdict turns the toolbar red: a superseded / interrupted /
+  // externally-killed run reports no defect, so it must not read "Build failed".
+  const failed = latestRun != null && buildStatusOf(latestRun) === "failed";
 
   // Priority: a stale tab (new frontend already served) needs a reload regardless
   // of build state; otherwise reflect the active build, then the last outcome.

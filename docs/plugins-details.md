@@ -6528,6 +6528,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `apps-core/tabs.navigate`
       - `apps/debug/shell.DebugApp`
+      - `build/build-status.BUILD_STATUS_OPTIONS`
+      - `build/build-status.BuildStatusChip`
+      - `build/build-status.BuildStatusDot`
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
@@ -6540,7 +6543,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/collapsible.CollapsibleTrigger`
       - `primitives/commit-list.CommitRowItem`
       - `primitives/css/badge.Badge`
-      - `primitives/css/inline.Inline`
       - `primitives/css/pin.Pin`
       - `primitives/css/row.Row`
       - `primitives/css/scroll.Scroll`
@@ -6629,7 +6631,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `FrontendHash`
       - `MainAheadCount`
     - Exports (values):
-      - `BUILD_EXIT_SUPERSEDED`
       - `buildDetailRoute`
       - `buildHistoryResource`
       - `buildRoute`
@@ -6705,9 +6706,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
         - Uses:
           - `build.BuildDetailSlots`
+          - `build/build-status.BuildStatusBadge`
+          - `infra/endpoints.useEndpoint`
           - `primitives/css/badge.Badge`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -6775,6 +6777,51 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/build/runs/:id/profile`
       - Shared:
         - Exports (values): `getBuildRunProfile`
+    - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
+      - Web:
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/badge.BadgeVariant`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/status-dot.StatusDot`
+        - Exports (values):
+          - `BUILD_STATUS_META`
+          - `BUILD_STATUS_OPTIONS`
+          - `BuildStatusBadge`
+          - `BuildStatusChip`
+          - `BuildStatusDot`
+      - Cross-plugin:
+        - Imported by:
+          - `build`
+          - `build/build-info`
+          - `build/build-termination`
+      - Core:
+        - Exports (types):
+          - `BuildRunOutcome`
+          - `BuildStatus`
+        - Exports (values):
+          - `BUILD_EXIT_SUPERSEDED`
+          - `buildStatusOf`
+          - `killedSignalName`
+    - **`build-termination`** — Per-run termination endpoint: what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it).
+      - Server:
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+        - Routes: `GET /api/build/runs/:id/termination`
+      - Core:
+        - Uses:
+          - `build/build-status.BuildStatus`
+          - `build/build-status.killedSignalName`
+          - `infra/endpoints.defineEndpoint`
+          - `packages/signal-origin.formatSignalOrigin`
+        - Exports (types):
+          - `BuildTermination`
+          - `TerminationDescription`
+        - Exports (values):
+          - `BuildTerminationSchema`
+          - `describeTermination`
+          - `getBuildRunTermination`
     - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
       - Server:
         - Uses: `database/admin.openShortLivedClient`
@@ -14945,8 +14992,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-commits`
           - `build/build-fix`
+          - `build/build-info`
           - `build/build-logs`
           - `build/build-profiling`
+          - `build/build-termination`
           - `build/serve-composition`
           - `code-explorer`
           - `code-explorer/code-api`
@@ -15339,7 +15388,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `waitEventsTestIdle`
     - **`file-sink`** — Bounded-append file sink primitive: defineFileSink declares an absolute-path sink that rotates at a byte cap (default 128 MB × 3), true by construction because append() IS the rotation. Node-only (no db/jobs) so a CLI process can import it. getFileSinks exposes the registered set; openDynamicSink covers the open-ended browser clientLog family under one declared bound.
       - Cross-plugin:
-        - Imported by: `framework/tooling/checks`
+        - Imported by:
+          - `framework/tooling/checks`
+          - `packages/signal-origin/sink`
       - Core:
         - Exports (types):
           - `FileSink`
@@ -15786,6 +15837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/warmup`
           - `infra/worktree`
           - `packages/host-semaphore`
+          - `packages/signal-origin/sink`
           - `plugin-meta/plugin-health`
           - `plugin-meta/plugin-tree`
           - `primitives/commit-list`
@@ -16447,6 +16499,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `Semaphore`
         - Exports (values): `createSemaphore`
+    - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
+      - Cross-plugin:
+        - Imported by: `build/build-termination`
+      - Server:
+        - Exports (types): `SignalOriginArmResult`
+        - Exports (values):
+          - `armSignalOrigin`
+          - `readSignalOrigin`
+          - `signalOriginSourcePath`
+      - Core:
+        - Exports (types):
+          - `SignalOrigin`
+          - `SignalOriginProc`
+        - Exports (values):
+          - `formatSignalOrigin`
+          - `signalName`
+      - Structure:
+        - Non-standard folders: `native/`
+      - Plugins:
+        - **`sink`**
+          - Core:
+            - Uses:
+              - `infra/file-sink.readJsonlTail`
+              - `infra/paths.SINGULARITY_DIR`
+            - Exports (types):
+              - `ArmFailedLine`
+              - `SignalOriginLine`
+              - `SignalOriginLineInput`
+              - `SignalRecordedLine`
+            - Exports (values):
+              - `readSignalOriginLines`
+              - `SIGNAL_ORIGIN_FILE`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by:
@@ -19287,6 +19371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth/apple-signing/setup-wizard`
               - `build`
               - `build/build-info`
+              - `build/build-status`
               - `build/serve-composition`
               - `config_v2/settings`
               - `conversations/conversation-category`
@@ -19794,7 +19879,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
-              - `build`
+              - `build/build-status`
               - `conversations/all-conversations`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
@@ -20684,7 +20769,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/demos/app-gallery`
               - `apps/workflows/engine`
               - `apps/workflows/executions`
-              - `build/build-info`
+              - `build/build-status`
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/conversation-ui/item`

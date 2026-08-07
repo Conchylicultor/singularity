@@ -1166,6 +1166,14 @@
       "name": "@singularity/plugin-build-build-profiling",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/build-status": {
+      "name": "@singularity/plugin-build-build-status",
+      "version": "0.0.1",
+    },
+    "plugins/build/plugins/build-termination": {
+      "name": "@singularity/plugin-build-build-termination",
+      "version": "0.0.1",
+    },
     "plugins/build/plugins/run-ledger": {
       "name": "@singularity/plugin-build-run-ledger",
       "version": "0.0.1",
@@ -2944,6 +2952,14 @@
     },
     "plugins/packages/plugins/semaphore": {
       "name": "@singularity/plugin-packages-semaphore",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/signal-origin": {
+      "name": "@singularity/plugin-packages-signal-origin",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/signal-origin/plugins/sink": {
+      "name": "@singularity/plugin-packages-signal-origin-sink",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/spawn-priority": {
@@ -5847,6 +5863,10 @@
 
     "@singularity/plugin-build-build-profiling": ["@singularity/plugin-build-build-profiling@workspace:plugins/build/plugins/build-profiling"],
 
+    "@singularity/plugin-build-build-status": ["@singularity/plugin-build-build-status@workspace:plugins/build/plugins/build-status"],
+
+    "@singularity/plugin-build-build-termination": ["@singularity/plugin-build-build-termination@workspace:plugins/build/plugins/build-termination"],
+
     "@singularity/plugin-build-run-ledger": ["@singularity/plugin-build-run-ledger@workspace:plugins/build/plugins/run-ledger"],
 
     "@singularity/plugin-build-serve-composition": ["@singularity/plugin-build-serve-composition@workspace:plugins/build/plugins/serve-composition"],
@@ -6696,6 +6716,10 @@
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@singularity/plugin-packages-semaphore": ["@singularity/plugin-packages-semaphore@workspace:plugins/packages/plugins/semaphore"],
+
+    "@singularity/plugin-packages-signal-origin": ["@singularity/plugin-packages-signal-origin@workspace:plugins/packages/plugins/signal-origin"],
+
+    "@singularity/plugin-packages-signal-origin-sink": ["@singularity/plugin-packages-signal-origin-sink@workspace:plugins/packages/plugins/signal-origin/plugins/sink"],
 
     "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
 

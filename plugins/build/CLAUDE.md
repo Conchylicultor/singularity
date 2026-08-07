@@ -28,6 +28,9 @@ commit; the docblock says why, and both alternatives loop.
   - Uses:
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
+    - `build/build-status.BUILD_STATUS_OPTIONS`
+    - `build/build-status.BuildStatusChip`
+    - `build/build-status.BuildStatusDot`
     - `config_v2.ConfigV2`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
@@ -40,7 +43,6 @@ commit; the docblock says why, and both alternatives loop.
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/badge.Badge`
-    - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
@@ -129,7 +131,6 @@ commit; the docblock says why, and both alternatives loop.
     - `FrontendHash`
     - `MainAheadCount`
   - Exports (values):
-    - `BUILD_EXIT_SUPERSEDED`
     - `buildDetailRoute`
     - `buildHistoryResource`
     - `buildRoute`
@@ -167,6 +168,8 @@ commit; the docblock says why, and both alternatives loop.
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
   - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
+  - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
+  - **`build-termination`** — Per-run termination endpoint: what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it).
   - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
   - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook, and the served-liveness read (the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition namespace (is it actually served, and can this backend start one) plus the reset-to-first-launch endpoint: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
   - **`server-build-id`** — Server build-id leaf: reads the .build-id baked into the served bundle. A leaf so stale-tab detection reads it without importing the heavy build barrel (which pulls git-watcher/worktree).

@@ -50,6 +50,41 @@ test("running with a dead pid is an interrupted build", async () => {
   expect(resolveReceipt(r).kind).toBe("interrupted");
 });
 
+// THE ambiguity this file's `signal` field exists to remove. Both are `failed`;
+// only the exit code + signal say which one was a code defect. Before the exit
+// hook threaded `code` through, the killed receipt was `exitCode: null` and the
+// two were indistinguishable on disk.
+test("a signal death and a check failure are distinguishable failed receipts", () => {
+  const killed = receipt({ status: "failed", exitCode: 143, signal: "SIGTERM" });
+  const checksFailed = receipt({ status: "failed", exitCode: 1 });
+
+  expect(resolveReceipt(killed).kind).toBe("failed");
+  expect(resolveReceipt(checksFailed).kind).toBe("failed");
+  expect(killed.exitCode).not.toBe(checksFailed.exitCode);
+  expect(killed.signal).toBe("SIGTERM");
+  // Absent, not null-or-whatever: a build that failed its own checks was never
+  // signalled, and nothing may read it as if it had been.
+  expect(checksFailed.signal ?? null).toBeNull();
+});
+
+// The escalation shape: SIGTERM stamped while alive, then SIGKILL before the
+// exit hooks finished, so the receipt is stranded at `running`.
+test("an interrupted receipt carrying a signal names it in the warning", async () => {
+  const resolved = resolveReceipt(
+    receipt({
+      status: "running",
+      finishedAt: null,
+      exitCode: null,
+      signal: "SIGTERM",
+      pid: await deadPid(),
+    }),
+  );
+  expect(resolved.kind).toBe("interrupted");
+  const warning = interruptedPredecessorWarning(resolved);
+  expect(warning).toContain("never completed");
+  expect(warning).toContain("terminated by SIGTERM");
+});
+
 test("only an interrupted predecessor produces a warning", async () => {
   const dead = await deadPid();
   const interrupted = resolveReceipt(
@@ -59,6 +94,8 @@ test("only an interrupted predecessor produces a warning", async () => {
   expect(warning).toContain("never completed");
   expect(warning).toContain("did NOT deploy");
   expect(warning).toContain("321c0e2cb-1785922172918");
+  // No signal recorded ⇒ nothing is claimed about the cause.
+  expect(warning).not.toContain("terminated by");
 
   // Every other arm is silent — including `failed`, which already announced
   // itself through the build's own verdict banner and exit code.

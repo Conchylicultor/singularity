@@ -64,6 +64,7 @@
     - `infra/warmup`
     - `infra/worktree`
     - `packages/host-semaphore`
+    - `packages/signal-origin/sink`
     - `plugin-meta/plugin-health`
     - `plugin-meta/plugin-tree`
     - `primitives/commit-list`

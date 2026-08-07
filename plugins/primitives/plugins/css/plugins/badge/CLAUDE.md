@@ -65,6 +65,7 @@ same threshold and can't desync in a row.
     - `auth/apple-signing/setup-wizard`
     - `build`
     - `build/build-info`
+    - `build/build-status`
     - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-category`

@@ -6,8 +6,11 @@ import {
   renderVerdict,
   type Verdict,
 } from "./build-output";
+import type { SignalTermination } from "./fatal-signals";
 
 const URL = "http://att-x.localhost:9000";
+
+const sigterm: SignalTermination = { signal: "SIGTERM", at: "2026-08-06T15:18:25.236Z" };
 
 function failureVerdict(steps: Verdict["steps"], viteOnly = false): Verdict {
   return {
@@ -184,16 +187,81 @@ describe("fallbackVerdict", () => {
   });
 
   test("every non-null fallback's rendered last line is the Full output pointer", () => {
-    const cases: Array<{ emitted: { ok: boolean } | null; code: number }> = [
+    const cases: Array<{
+      emitted: { ok: boolean } | null;
+      code: number;
+      termination?: SignalTermination;
+    }> = [
       { emitted: null, code: 1 },
       { emitted: null, code: 0 },
       { emitted: { ok: false }, code: 0 },
       { emitted: { ok: true }, code: 3 },
+      { emitted: null, code: 143, termination: sigterm },
     ];
-    for (const { emitted, code } of cases) {
-      const v = requireVerdict(fallbackVerdict(emitted, code, ctx));
+    for (const { emitted, code, termination } of cases) {
+      const v = requireVerdict(fallbackVerdict(emitted, code, ctx, termination));
       const lines = renderVerdict(v).split("\n");
       expect(lines.at(-1)).toBe(`  Full output: ${ctx.buildLogPath}`);
     }
+  });
+});
+
+// The incident shape: SIGTERM at 19 minutes, exit 143, no verdict of its own.
+// It must never read as a code defect.
+describe("fallbackVerdict — terminated from outside", () => {
+  const ctx = { url: URL, buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log" };
+
+  test("(no verdict, exit 143, SIGTERM) → BUILD ABORTED, not BUILD FAILED", () => {
+    const v = fallbackVerdict(null, 143, ctx, sigterm);
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    expect(v.headline).toBe("BUILD ABORTED — terminated by SIGTERM");
+    expect(v.headline).not.toContain("FAILED");
+    const reason = (v.ok ? v.notes : v.reason).join("\n");
+    expect(reason).toContain("NOT DEPLOYED");
+    // The load-bearing sentence: this is not a build defect.
+    expect(reason).toContain("did NOT fail");
+    expect(reason).toContain("ended from outside");
+    expect(reason).toContain(sigterm.at);
+    expect(reason).not.toContain("This is a bug");
+  });
+
+  test("no attribution yet ⇒ says the sender is unknown, invents nothing", () => {
+    const v = fallbackVerdict(null, 143, ctx, sigterm);
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    expect((v.ok ? v.notes : v.reason).join("\n")).toContain("sender is unknown");
+  });
+
+  test("an attribution, once recorded, is named", () => {
+    const v = fallbackVerdict(null, 143, ctx, {
+      ...sigterm,
+      attribution: "pid 41234 /bin/kill ← 41198 bun (att-1786028928-88pa)",
+    });
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    const reason = (v.ok ? v.notes : v.reason).join("\n");
+    expect(reason).toContain("Sent by pid 41234 /bin/kill");
+    expect(reason).not.toContain("sender is unknown");
+  });
+
+  test("without a termination fact the old aborted-before-completing wording stands", () => {
+    const v = fallbackVerdict(null, 143, ctx);
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    expect(v.headline).toContain("aborted before completing");
+  });
+
+  test("the bug-banner arms are unaffected by a termination fact", () => {
+    // build.ts contradicting itself stays a bug regardless of who signalled it.
+    for (const emitted of [null, { ok: false }] as const) {
+      const v = fallbackVerdict(emitted, 0, ctx, sigterm);
+      if (v === null) throw new Error("expected a non-null fallback verdict");
+      expect(v.headline).toContain("This is a bug");
+    }
+    const reportedOk = fallbackVerdict({ ok: true }, 143, ctx, sigterm);
+    if (reportedOk === null) throw new Error("expected a non-null fallback verdict");
+    expect(reportedOk.headline).toContain("This is a bug");
+  });
+
+  test("the agreeing cases stay null even with a termination fact", () => {
+    expect(fallbackVerdict({ ok: true }, 0, ctx, sigterm)).toBeNull();
+    expect(fallbackVerdict({ ok: false }, 143, ctx, sigterm)).toBeNull();
   });
 });

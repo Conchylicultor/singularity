@@ -5,7 +5,8 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { REPO_ROOT, currentWorktreeName, isMain, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { getConfig } from "@plugins/config_v2/server";
-import { BUILD_EXIT_SUPERSEDED, buildDetailRoute } from "@plugins/build/core";
+import { buildDetailRoute } from "@plugins/build/core";
+import { BUILD_EXIT_SUPERSEDED, buildStatusOf, killedSignalName } from "@plugins/build/plugins/build-status/core";
 import { buildConfig } from "../../shared";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
@@ -370,9 +371,13 @@ async function doRunBuild(
     }
   }
 
+  // The terminal outcome, written once and then READ BACK by the notification
+  // arms below through `buildStatusOf` — so the bell and the run's own status
+  // badge are derived from the same row by the same function, and cannot drift.
+  const outcome = { finishedAt: new Date(), exitCode };
   await db
     .update(_buildRuns)
-    .set({ finishedAt: new Date(), exitCode })
+    .set(outcome)
     .where(and(eq(_buildRuns.id, buildId), isNull(_buildRuns.finishedAt)));
   frontendHashResource.notify();
   const linkTo = buildDetailRoute.link(agentManagerApp, { runId: buildId });
@@ -392,6 +397,21 @@ async function doRunBuild(
       type: "build",
       title: "Build superseded",
       description: `${commitHash ?? "the built commit"} was replaced mid-build — rebuilding`,
+      variant: "info",
+      linkTo,
+      dedupeKey: `build-finish:${buildId}`,
+    });
+  } else if (buildStatusOf(outcome) === "killed") {
+    // Also not a failure and not an alarm: a signal arrived from outside the
+    // build — a human, a supervisor, another agent — which says nothing about
+    // the code. Before this arm the else-branch below swallowed it as "Build
+    // failed", which is what made the 2026-08-06 kill read as a code defect.
+    // The status comes from `buildStatusOf`, never from the raw code, so the
+    // notification can never disagree with the badge on the run's own page.
+    await recordNotification({
+      type: "build",
+      title: "Build ended from outside",
+      description: `${killedSignalName(exitCode)} arrived after ${Math.round((Date.now() - buildStartMs) / 1000)}s — see the run for who sent it`,
       variant: "info",
       linkTo,
       dedupeKey: `build-finish:${buildId}`,

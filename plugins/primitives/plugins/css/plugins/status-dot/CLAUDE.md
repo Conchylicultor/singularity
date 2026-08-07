@@ -39,7 +39,7 @@ no-provider default is `md`.
     - `apps/website/demos/app-gallery`
     - `apps/workflows/engine`
     - `apps/workflows/executions`
-    - `build/build-info`
+    - `build/build-status`
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-ui/item`

@@ -6,7 +6,8 @@ import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { BUILD_EXIT_SUPERSEDED, type BuildRun, buildHistoryResource } from "@plugins/build/core";
+import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
+import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
 /** The run, once the history resource has settled. */
@@ -22,17 +23,15 @@ function useBuildRun(runId: string): BuildRun | null {
  * `return null` in the content: the host paints the card before it reaches the
  * content, so a null here would leave a "Fix" bar over nothing.
  *
- * A superseded run has no defect to hand an agent either — its tree was
- * replaced mid-build, so its steps straddle two commits and describe neither.
+ * `failed` is the ONLY status with a defect to hand an agent — a build that ran
+ * to a verdict and gave a bad one. A superseded run's tree was replaced
+ * mid-build, so its steps straddle two commits and describe neither; an
+ * interrupted or externally-killed run never reached a verdict at all. Offering
+ * to investigate any of those sends an agent after a bug that does not exist.
  */
 export function useBuildFailed({ runId }: { runId: string }): boolean {
   const run = useBuildRun(runId);
-  return (
-    run !== null &&
-    run.finishedAt !== null &&
-    run.exitCode !== 0 &&
-    run.exitCode !== BUILD_EXIT_SUPERSEDED
-  );
+  return run !== null && buildStatusOf(run) === "failed";
 }
 
 /**

@@ -262,8 +262,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `build`
     - `build/build-commits`
     - `build/build-fix`
+    - `build/build-info`
     - `build/build-logs`
     - `build/build-profiling`
+    - `build/build-termination`
     - `build/serve-composition`
     - `code-explorer`
     - `code-explorer/code-api`

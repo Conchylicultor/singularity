@@ -18,6 +18,23 @@ export interface BuildReceipt {
   /** Set on every graceful terminal path; `null` while running. */
   finishedAt: string | null;
   exitCode: number | null;
+  /**
+   * The catchable fatal signal that ended this build, when one arrived —
+   * `SIGTERM`, `SIGINT`, … — otherwise absent/`null`.
+   *
+   * This is what makes "killed from outside" distinguishable from "failed its
+   * own checks" on disk. Both write `status: "failed"`, but a killed build
+   * carries a signal and `exitCode: 128 + signo`, while a build that failed its
+   * checks carries no signal and `exitCode: 1`. Before this field existed the
+   * two were byte-identical, which is what made the 2026-08-06 incident
+   * (`build-1786028341655-x0pix4`) take hours to attribute.
+   *
+   * Stamped as soon as the signal arrives, not only at the terminal rewrite, so
+   * an escalating kill (SIGTERM then SIGKILL, as `timeout -k` and most
+   * supervisors do) still leaves the SIGTERM recorded on the `running` receipt
+   * the SIGKILL strands — see `interruptedPredecessorWarning`.
+   */
+  signal?: string | null;
   url: string;
   logPath: string;
 }
@@ -114,10 +131,19 @@ export function resolveBuildReceipt(name: string): ResolvedReceipt {
  */
 export function interruptedPredecessorWarning(resolved: ResolvedReceipt): string | null {
   if (resolved.kind !== "interrupted") return null;
-  const { buildId, startedAt, url } = resolved.receipt;
+  const { buildId, startedAt, url, signal } = resolved.receipt;
+  // A signal on an INTERRUPTED receipt means the death escalated: a catchable
+  // signal arrived and was stamped, then the process was hard-killed before it
+  // finished its own teardown (the shape `kill` followed by `kill -9`, or
+  // `timeout -k`, produces). That stamp is the only attribution such a build can
+  // ever carry, so it is said here rather than left on disk unread.
+  const cause =
+    signal != null
+      ? ` It was terminated by ${signal}, then killed before finishing its teardown.`
+      : "";
   return (
     `\n⚠  The previous build (${buildId}, started ${startedAt}) never completed — ` +
-    `it did NOT deploy.\n   ${url} is still serving whatever was published before it.\n`
+    `it did NOT deploy.${cause}\n   ${url} is still serving whatever was published before it.\n`
   );
 }
 

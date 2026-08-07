@@ -1,5 +1,6 @@
 import { writeSync } from "node:fs";
 import type { BuildStepLog } from "./build-logs-writer";
+import type { SignalTermination } from "./fatal-signals";
 
 type Stream = "stdout" | "stderr";
 
@@ -94,16 +95,25 @@ export function emitVerdict(v: Verdict): void {
   writeSync(1, `\n${renderVerdict(v)}\n`);
 }
 
-// Pure. Given what (if anything) was emitted and the actual exit code, returns
-// the fallback verdict the exit-time guard should print, or `null` when the
-// emitted verdict already agrees with the exit code and nothing more is needed.
+// Pure. Given what (if anything) was emitted, the actual exit code and — when
+// one arrived — the signal that ended the process, returns the fallback verdict
+// the exit-time guard should print, or `null` when the emitted verdict already
+// agrees with the exit code and nothing more is needed.
 // `null` covers exactly the two agreeing cases — (ok:true, code 0) and
-// (ok:false, code≠0); every other combination yields a loud FAILED verdict.
+// (ok:false, code≠0); every other combination yields a loud verdict.
+//
+// `termination` only ever reshapes the "no verdict, non-zero exit" arm, which is
+// the arm a killed build lands in: BUILD ABORTED, not BUILD FAILED, because the
+// build did not fail — it was ended from outside, and reading it as a code
+// defect is exactly the misdiagnosis this argument exists to prevent. The three
+// bug-banner arms below are about build.ts contradicting itself and are
+// unaffected by who sent what.
 // Extracted from installVerdictGuard so the fallback wording is unit-testable.
 export function fallbackVerdict(
   emitted: { ok: boolean } | null,
   code: number,
   ctx: { url: string; buildLogPath: string },
+  termination?: SignalTermination | null,
 ): Verdict | null {
   if (emitted?.ok === true && code === 0) return null;
   if (emitted?.ok === false && code !== 0) return null;
@@ -111,7 +121,18 @@ export function fallbackVerdict(
   const pointers = [`Full output: ${ctx.buildLogPath}`];
   let headline: string;
   let reason: string[];
-  if (emitted === null && code !== 0) {
+  if (emitted === null && code !== 0 && termination != null) {
+    headline = `BUILD ABORTED — terminated by ${termination.signal}`;
+    reason = [
+      `NOT DEPLOYED. Nothing was published; ${ctx.url} still serves the previous build.`,
+      `This build did NOT fail — it was ended from outside by ${termination.signal} ` +
+        `at ${termination.at} (exit ${code}).`,
+      // Unset until the SA_SIGINFO tap lands; `process.on(sig)` names no sender.
+      ...(termination.attribution === undefined
+        ? [`The sender is unknown — nothing in this process can see who signalled it.`]
+        : [`Sent by ${termination.attribution}.`]),
+    ];
+  } else if (emitted === null && code !== 0) {
     headline = `BUILD FAILED — aborted before completing (exit ${code})`;
     reason = [
       `NOT DEPLOYED. Nothing was published; ${ctx.url} still serves the previous build.`,
@@ -143,11 +164,21 @@ export function fallbackVerdict(
 // a verdict that disagrees with the exit code prints a loud bug banner. Register
 // once, after `name`/`buildId` (and after finalizeBuildLog's own exit hook) exist.
 // Thin wrapper over the pure `fallbackVerdict`.
-export function installVerdictGuard(ctx: { url: string; buildLogPath: string }): void {
+export function installVerdictGuard(ctx: {
+  url: string;
+  buildLogPath: string;
+  /**
+   * Read LAZILY, at exit time — a signal can arrive at any point after this
+   * guard is installed, so the fact cannot be passed by value here. Keeping it
+   * a pull rather than a push also means a signal that lands while the process
+   * is blocked in synchronous work still reaches whichever exit path runs.
+   */
+  termination?: () => SignalTermination | null;
+}): void {
   process.on("exit", (code) => {
     // Bun silently ignores process.exitCode reassignment inside an exit handler,
     // so this guard can only report a wrong code, never repair it.
-    const v = fallbackVerdict(emittedVerdict, code, ctx);
+    const v = fallbackVerdict(emittedVerdict, code, ctx, ctx.termination?.() ?? null);
     if (v !== null) writeSync(1, `\n${renderVerdict(v)}\n`);
   });
 }

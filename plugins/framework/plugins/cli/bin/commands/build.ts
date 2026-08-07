@@ -51,11 +51,14 @@ import { createValveDeps, valveGates, type ValveDeps } from "../admission-valve"
 import { laneFor, publishLane } from "../lane";
 import { pushBuildStepLog, writeBuildLogs, createStepLogCollector } from "../build-logs-writer";
 import { printStepBlocks, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
+import { installFatalSignalExit, type FatalSignal, type SignalTermination } from "../fatal-signals";
+import { signalOriginTap } from "../signal-origin-tap";
+import { formatSignalOrigin, type SignalOrigin } from "@plugins/packages/plugins/signal-origin/core";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
-import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/core";
+import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Worktree names are gateway namespaces — same rule as composition ids (the
 // canonical TS copy lives in codegen's plugin-registry-gen.ts).
@@ -728,6 +731,14 @@ export function registerBuild(program: Command) {
         // backstop lands it too — and a SIGKILL, which runs no hook at all, is
         // exactly what leaves the receipt at `running` with a dead pid. That
         // absence IS the "did not complete" signal; nothing else has to detect it.
+        //
+        // The spread carries `signal` through: recordSignal reassigns `receipt`
+        // when a catchable signal arrives, so a killed build's terminal record is
+        // `failed` + the real exit code + the signal — never confusable with a
+        // `failed` + exit 1 from the build's own checks. Every caller now supplies
+        // `terminal` on the failure paths (the exit hook included), so the
+        // `exitCode: null` fallback is reachable only from `finalizeBuild(true)`,
+        // where the `success ? 0` arm wins.
         if (receipt !== null) {
           writeBuildReceipt(name, {
             ...receipt,
@@ -753,7 +764,48 @@ export function registerBuild(program: Command) {
       // The exit backstop can only run synchronous work; the recorder.close()
       // await inside finalizeBuild is abandoned here (see the comment above), so
       // discard the returned promise rather than float it.
-      process.on("exit", () => void finalizeBuild(false));
+      //
+      // The `code` argument is threaded through, and that is the whole point of
+      // this hook now. It used to be dropped — `() => void finalizeBuild(false)`
+      // — which sent every ungraceful exit down the `terminal === undefined`
+      // branch above and wrote `exitCode: null`. A build killed by SIGTERM
+      // (exit 143) therefore landed on disk as `status:"failed", exitCode:null`,
+      // indistinguishable from a build that failed its own checks
+      // (`status:"failed", exitCode:1`). That ambiguity is what made the
+      // 2026-08-06 incident take hours to attribute; the real code, plus the
+      // `signal` stamped by recordSignal below, is what removes it.
+      process.on("exit", (code) => void finalizeBuild(false, { status: "failed", exitCode: code }));
+
+      // What ended this process, when a catchable fatal signal did. Recorded on
+      // the signal, read on the exit path — by the receipt (via `receipt` below)
+      // and by the verdict guard, which pulls it lazily.
+      let termination: SignalTermination | null = null;
+      const recordSignal = (signal: FatalSignal, origin: SignalOrigin | null): void => {
+        // The origin comes from the shared tap, which read it after the native
+        // handler had already run (it sits underneath Bun's own and chains up to
+        // it) — so it is the sender's identity, not a guess. Unarmed (no
+        // toolchain, disabled by env) reads null and the record simply carries no
+        // attribution; the arm failure was already written to the sink, so
+        // "nobody sent a signal" and "we could not tell who did" stay distinct.
+        termination = {
+          signal,
+          at: new Date().toISOString(),
+          ...(origin === null ? {} : { attribution: formatSignalOrigin(origin) }),
+        };
+        // Nothing to stamp before the build owns the receipt (a build that dies
+        // while still queuing must not overwrite its predecessor's — see above),
+        // and nothing to stamp after finalizeBuild wrote the terminal status:
+        // `receipt` still says `running`, so rewriting it here would undo that.
+        if (buildFinalized || receipt === null) return;
+        // Stamp NOW rather than only in finalizeBuild. An escalating kill —
+        // SIGTERM then SIGKILL, which is what `timeout -k` and most supervisors
+        // send — never reaches the exit hooks, so this synchronous write is the
+        // only record that a catchable signal arrived at all. It keeps
+        // `status: "running"`, so the receipt still resolves as `interrupted`;
+        // it just now says what interrupted it.
+        receipt = { ...receipt, signal };
+        writeBuildReceipt(name, receipt);
+      };
 
       // The build cannot terminate without printing its own verdict. Registered
       // after finalizeBuild's exit hook so handlers run in order and the
@@ -767,16 +819,27 @@ export function registerBuild(program: Command) {
       installVerdictGuard({
         url: buildUrl,
         buildLogPath: worktreeArtifacts.buildLogText(name, buildId),
+        // Pulled at exit time, not passed by value: the signal can arrive at any
+        // point after this call. With it the guard prints BUILD ABORTED rather
+        // than BUILD FAILED for a build that was killed rather than broken.
+        termination: () => termination,
       });
 
       // Catchable fatal signals → graceful exit so the exit handlers above
       // (build-log finalize) and the lock release run. SIGKILL is uncatchable —
       // the dead-holder ESRCH steal in acquireBuildLock is the backstop there.
-      for (const [sig, code] of [
-        ["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129], ["SIGQUIT", 131],
-      ] as const) {
-        process.on(sig, () => process.exit(code));
-      }
+      // `onSignal` records the death BEFORE the exit hooks run, so both of them
+      // see it. See fatal-signals.ts for the shared map and the ordering rule.
+      //
+      // The tap (arm + sink line) is the same wiring `check` and `push` install;
+      // it lives in ../signal-origin-tap.ts, including the reason its arm may
+      // only happen inside `afterInstall`. Arming here — rather than in the
+      // bootstrap — keeps signal coverage byte-identical to what it was before
+      // this change, so the tap adds no regression surface. `recordSignal` is
+      // what is build-specific: the receipt stamp and the verdict's termination.
+      installFatalSignalExit(
+        signalOriginTap({ opId: buildId, worktree: name, onSignal: recordSignal }),
+      );
 
       endSpan = buildProfilerStart("nameValidation", "build:preflight", "name validation");
       if (!NAME_REGEX.test(name)) {

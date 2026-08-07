@@ -9,9 +9,10 @@
   - Contributes: `BuildDetailSlots.Section` "Info" → `BuildInfo`
   - Uses:
     - `build.BuildDetailSlots`
+    - `build/build-status.BuildStatusBadge`
+    - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

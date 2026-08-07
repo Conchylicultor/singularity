@@ -167,7 +167,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`backup`** [13 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 
-- **`build`** [8 sub-plugins] — Trigger `./singularity build` from the toolbar.
+- **`build`** [10 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Plugins:
@@ -370,6 +370,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`inflight`**
     - **`retry`**
     - **`semaphore`**
+    - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
+      - Plugins:
+        - **`sink`**
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
 
 - **`page`** [55 sub-plugins] — Block-based page editor.

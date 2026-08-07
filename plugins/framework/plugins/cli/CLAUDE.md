@@ -145,6 +145,19 @@ The receipt is opened **after** the lock, not before — the lock serializes bui
 in a checkout, so exactly one build owns the receipt at a time and a build that
 dies while still queuing cannot overwrite its predecessor's.
 
+**A killed build and a build that failed its checks both write
+`status: "failed"`** — what separates them is `exitCode` (`128+signo` vs `1`)
+plus `signal`, stamped the moment a catchable signal arrives rather than only at
+the terminal rewrite, so an *escalating* kill (SIGTERM then SIGKILL: `timeout -k`,
+most supervisors) still records the SIGTERM on the `running` receipt the SIGKILL
+strands. Do not "simplify" that early stamp away.
+
+The signal→exit-code map is [`bin/fatal-signals.ts`](bin/fatal-signals.ts)
+(`installFatalSignalExit`), shared by all three op commands. Its `afterInstall`
+seam is load-bearing: **Bun installs its `sigaction` lazily on the first
+`process.on(sig)` and does not chain**, so a native handler for these signals
+must be armed strictly after that loop or it is silently overwritten.
+
 ## The artifact / deploy seam
 
 `build` used to be the only way to produce a composition, via a `--composition`

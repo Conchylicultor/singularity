@@ -3,6 +3,8 @@ import { basename } from "path";
 import { checkBroadcasts } from "../broadcasts";
 import { reportInterruptedPredecessor } from "../build-receipt";
 import { ensureDeps } from "../ensure-deps";
+import { installFatalSignalExit } from "../fatal-signals";
+import { signalOriginTap } from "../signal-origin-tap";
 import { normalizeGeneratedArtifacts, SKIP_POST_REWRITE_ENV } from "../git/normalize-generated";
 import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
@@ -283,12 +285,14 @@ export function registerPush(program: Command) {
       // Catchable fatal signals → graceful exit so the exit handler above
       // (clearWorktreeOp + clearPushHolder) runs — e.g. the wrapper's orphan
       // SIGTERM tears this worker down cleanly. SIGKILL is uncatchable; the
-      // holder's pid-liveness check is the self-heal there.
-      for (const [sig, code] of [
-        ["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129], ["SIGQUIT", 131],
-      ] as const) {
-        process.on(sig, () => process.exit(code));
-      }
+      // holder's pid-liveness check is the self-heal there. The signal→exit-code
+      // map is shared with `build` and `check`; see ../fatal-signals.ts.
+      //
+      // The tap arms here too, and the sink is this command's ONLY record of a
+      // death — a push owns no deploy receipt. It is also the op where an
+      // unattributed death costs the most: a push holds the host-wide push
+      // mutex, so every agent on the box queues behind whoever killed it.
+      installFatalSignalExit(signalOriginTap({ opId: pushId, worktree: opSlug }));
       // Fires immediately BEFORE `pushPool.run` (see withPushLock), so a push
       // blocked on the mutex lands on disk as a live "waiting" row before it
       // ever holds the lock. A failure BEFORE this point writes no record at

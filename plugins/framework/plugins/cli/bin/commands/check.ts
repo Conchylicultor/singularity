@@ -2,6 +2,8 @@ import { basename, join } from "path";
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
 import { reportInterruptedPredecessor } from "../build-receipt";
+import { installFatalSignalExit } from "../fatal-signals";
+import { signalOriginTap } from "../signal-origin-tap";
 import { withHostGrant, inheritedGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Grant, type Lane } from "@plugins/infra/plugins/host-admission/core";
 import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
@@ -169,11 +171,15 @@ export function registerCheck(program: Command) {
       // so a second record would double-count it. Until this, a direct check
       // wrote nothing at all: it occupied a grant slot, making every other
       // agent's build and push queue, while appearing nowhere as the cause.
+      // A check has no natural id, unlike a push's pushId or a build's buildId —
+      // and `opId` must be unique and non-null. Minted once and shared: the
+      // op-log record and the signal-origin sink line are about the same run, so
+      // "who killed this check?" resolves to a row the profiler also wrote.
+      const opId = crypto.randomUUID();
+
       const profiler = marker
         ? createOpProfiler("check", {
-            // A check has no natural id, unlike a push's pushId or a build's
-            // buildId — and `opId` must be unique and non-null.
-            opId: crypto.randomUUID(),
+            opId,
             branch,
             opSlug: slug,
             lane,
@@ -198,11 +204,16 @@ export function registerCheck(program: Command) {
         // worker down cleanly. Like the `process.exit(1)` path, this skips the
         // `finally`, whose only cleanup is the same clearWorktreeOp. SIGKILL is
         // uncatchable; the marker's pid-liveness check is the self-heal there.
-        for (const [sig, code] of [
-          ["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129], ["SIGQUIT", 131],
-        ] as const) {
-          process.on(sig, () => process.exit(code));
-        }
+        // The signal→exit-code map is shared with `build` and `push`; see
+        // ../fatal-signals.ts.
+        //
+        // The tap arms here too, and the sink is this command's ONLY record of a
+        // death: a check owns no deploy receipt, so without the line an
+        // externally-killed check leaves nothing behind but a cleared marker.
+        // Gated on `marker` with everything else, deliberately — a push-nested
+        // check installs no handlers at all, so the parent push (which owns the
+        // marker, the grant and the op record) is the one that records the kill.
+        installFatalSignalExit(signalOriginTap({ opId, worktree: slug }));
       }
       try {
         const runUnder = (grant: Grant): Promise<boolean> => {
