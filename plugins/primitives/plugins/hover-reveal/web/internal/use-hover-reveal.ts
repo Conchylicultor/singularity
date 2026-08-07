@@ -16,16 +16,17 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  *
  * Co-located use: spread `groupProps` onto the element whose hover/focus should
  * reveal (the row), and feed `revealed` to `hoverRevealClass()` on the target
- * (the actions). Each call owns independent local state, so nested reveal groups
- * (a group's own action sitting around a list of per-row actions) scope by
- * construction — no shared Tailwind `group/<name>` to cross-fire across nesting.
+ * (the actions). The focus half is **keyboard-only** — see `onFocus` below.
+ * Each call owns independent local state, so nested reveal groups (a group's own
+ * action sitting around a list of per-row actions) scope by construction — no
+ * shared Tailwind `group/<name>` to cross-fire across nesting.
  */
 export function useHoverReveal(): {
   revealed: boolean;
   groupProps: {
     onPointerEnter: () => void;
     onPointerLeave: () => void;
-    onFocus: () => void;
+    onFocus: (e: FocusEvent) => void;
     onBlur: (e: FocusEvent) => void;
   };
 } {
@@ -35,7 +36,13 @@ export function useHoverReveal(): {
     groupProps: {
       onPointerEnter: () => setRevealed(true),
       onPointerLeave: () => setRevealed(false),
-      onFocus: () => setRevealed(true),
+      // Keyboard focus only, for the reason the row-actions cluster keys on
+      // `:focus-visible`: React's `onFocus` bubbles, so this fires for ANY
+      // descendant, and a plain click inside the container would otherwise pin
+      // the affordance open once the pointer left.
+      onFocus: (e: FocusEvent) => {
+        if ((e.target as Element).matches(":focus-visible")) setRevealed(true);
+      },
       onBlur: (e: FocusEvent) => {
         // Keep revealed while focus moves between controls inside the group.
         if (!e.currentTarget.contains(e.relatedTarget as Node | null))

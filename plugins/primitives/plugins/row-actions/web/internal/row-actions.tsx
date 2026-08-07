@@ -10,12 +10,15 @@ import {
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 
 /**
- * Apply to the row element that should reveal its {@link RowActions} on hover or
- * keyboard focus. Establishes the `row-actions` hover group the cluster reacts
- * to — the primitive brings its **own** group rather than piggybacking on
- * whatever group the row already carries (e.g. the sidebar's `group/menu-item`),
- * so it stays group-name-agnostic. `relative` is included so a pinned cluster
- * anchors to this row; harmless on rows that are already positioned.
+ * Apply to the row element whose **hover** should reveal its {@link RowActions}.
+ * Establishes the `row-actions` hover group the cluster reacts to — the primitive
+ * brings its **own** group rather than piggybacking on whatever group the row
+ * already carries (e.g. the sidebar's `group/menu-item`), so it stays
+ * group-name-agnostic. Hover is all this group carries: focus is scoped to the
+ * cluster's own subtree instead (see `revealClasses`), so a click landing on
+ * something inside the row cannot pin its actions. `relative` is included so a
+ * pinned cluster anchors to this row; harmless on rows that are already
+ * positioned.
  *
  * ```tsx
  * <SidebarMenuItem className={rowActionsAnchor}>
@@ -34,16 +37,36 @@ export const rowActionsAnchor = "group/row-actions relative";
  * `pointer-events-none`, so the invisible cluster never intercepts clicks on the
  * row beneath it. `select-none` is unconditional: action buttons are chrome, never
  * selectable content, so the cluster stays out of any text-selection range (Ctrl+A
- * or drag) over the row. Revealed on row hover and while focus is anywhere inside
- * the row (keyboard reachability), plus — via `PopupOpenScope` below — while a
- * popup launched from inside the cluster is open, so an open menu never hangs off
- * an invisible trigger. Group names must be literal for Tailwind's JIT, so this
- * lives as a static string rather than an interpolated group.
+ * or drag) over the row. Revealed on row hover, on keyboard focus INSIDE the
+ * cluster, and — via `PopupOpenScope` below — while a popup launched from inside
+ * the cluster is open, so an open menu never hangs off an invisible trigger.
+ * Group names must be literal for Tailwind's JIT, so this lives as a static
+ * string rather than an interpolated group.
+ *
+ * The focus half is `has-[:focus-visible]`, and both parts of that are
+ * load-bearing:
+ *
+ * - **`has-[…]`, not `group-…/row-actions`**, asks the focus question about the
+ *   CLUSTER rather than the row. `:has()` matches descendants only, and these
+ *   classes ride the outermost node the primitive renders (the `Pin`, or the
+ *   `Stack`/`Surface` when `pin={null}`), which contains exactly the action
+ *   buttons — so nothing in the row body can satisfy it. Keying on the row is
+ *   what pinned the cluster after an ordinary click: clicking a row puts focus
+ *   somewhere inside it on every surface (a collapsible card's toggle, a
+ *   `tabIndex={-1}` select-scope div, an inline file link, a tree chevron, the
+ *   row's own primary button), so the actions stayed on screen after the pointer
+ *   left.
+ * - **`:focus-visible`, not `:focus`**, keeps the reveal keyboard-only. Chromium
+ *   does not mark a mouse-clicked button as focus-visible, so clicking an action
+ *   no longer pins its own cluster either; a Tab keypress always sets it, so
+ *   keyboard reach is preserved. This is already the app's spelling for keyboard
+ *   reach — see `tree/web/internal/tree-row-chrome.tsx:102`, the three
+ *   `ui/tree-disclosure` variants, and workflows' sidebar label action.
  */
 const revealClasses =
   "opacity-0 pointer-events-none select-none transition-opacity " +
   "group-hover/row-actions:opacity-100 group-hover/row-actions:pointer-events-auto " +
-  "group-focus-within/row-actions:opacity-100 group-focus-within/row-actions:pointer-events-auto";
+  "has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto";
 
 export interface RowActionButtonProps {
   icon: ComponentType<{ className?: string }>;
@@ -88,7 +111,7 @@ export function RowActionButton({
 
 interface RowActionsCommonProps {
   children: ReactNode;
-  /** Keep the cluster always visible instead of revealing on row hover/focus. */
+  /** Keep the cluster always visible instead of revealing on row hover. */
   alwaysVisible?: boolean;
   /**
    * Placement classes for the host's OWN layout — `ml-auto`, `shrink-0`,
@@ -129,9 +152,9 @@ export type RowActionsProps = RowActionsCommonProps &
 /**
  * The hover-revealed action cluster for a list/tree/sidebar row. Holds one or
  * more {@link RowActionButton}. Anchor it inside a row carrying
- * {@link rowActionsAnchor}; the actions fade in on row hover/focus, with the
- * opacity↔pointer-events coupling owned here so a hidden action is never a live
- * click-target.
+ * {@link rowActionsAnchor}; the actions fade in on row hover (and on keyboard
+ * focus reaching a button inside the cluster), with the opacity↔pointer-events
+ * coupling owned here so a hidden action is never a live click-target.
  *
  * The reveal is **opacity only** — the cluster is pinned, so it occupies no flow
  * width and its geometry is identical hovered or not. That is load-bearing, not

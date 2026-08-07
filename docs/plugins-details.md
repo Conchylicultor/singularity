@@ -14289,6 +14289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/networking`
               - `primitives/overscroll-hint`
               - `primitives/pane`
+              - `primitives/row-actions`
               - `primitives/text-editor/caret-trigger`
               - `release`
               - `reorder`

@@ -70,6 +70,7 @@ rule keeps the broken shape from coming back.
     - `primitives/networking`
     - `primitives/overscroll-hint`
     - `primitives/pane`
+    - `primitives/row-actions`
     - `primitives/text-editor/caret-trigger`
     - `release`
     - `reorder`

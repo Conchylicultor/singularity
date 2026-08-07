@@ -28,6 +28,25 @@ survived `no-uncoupled-hover-reveal` in `ee2dfe424`).
 and nested reveal scopes, where per-instance JS state beats a shared CSS group.
 Boundary: **an action cluster on a row/card/table row is this plugin, not that.**
 
+## Reveal: row hover, or keyboard focus INSIDE the cluster
+
+`has-[:focus-visible]`, never `group-focus-within/row-actions` — **the row's own
+focus must not count.** Clicking a row focuses something inside it on every
+surface (a `CollapsibleCard` toggle, `ContentScope`'s `tabIndex={-1}` div, an
+inline file link, a tree chevron, `Row`'s primary button), so a row-scoped focus
+reveal leaves the actions on screen after the pointer leaves.
+
+- **`has-[…]`** asks about the cluster: `:has()` matches descendants only, and
+  these classes ride the outermost node the primitive renders (the `Pin`, or the
+  `Stack`/`Surface` when `pin={null}`), which holds exactly the action buttons.
+- **`:focus-visible`** keeps it keyboard-only — Chromium doesn't mark a
+  mouse-clicked button focus-visible, so clicking an action doesn't pin its own
+  cluster either; Tab always does.
+
+`opacity-0`/`pointer-events-none` leave a button in the tab sequence, so tabbing
+into the cluster reveals it in the same tick. Design:
+`research/2026-08-07-global-row-action-click-pinning.md`.
+
 ## The reveal is opacity-only, never layout
 
 The cluster is pinned, so it reserves no flow width and its geometry is identical

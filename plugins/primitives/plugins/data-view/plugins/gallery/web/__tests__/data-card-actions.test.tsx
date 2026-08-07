@@ -31,10 +31,18 @@ describe("gallery DataCard actions", () => {
     // stay a live click-target over the card body.
     expect(cls).toContain("opacity-0");
     expect(cls).toContain("pointer-events-none");
-    // Keyed on the primitive's private group, not a shared hover-reveal group.
+    // Hover is keyed on the primitive's private group, not a shared
+    // hover-reveal group.
     expect(cls).toContain("group-hover/row-actions:opacity-100");
     expect(cls).toContain("group-hover/row-actions:pointer-events-auto");
-    expect(cls).toContain("group-focus-within/row-actions:opacity-100");
+    // Focus is asked about the CLUSTER's own subtree (`:has()` matches
+    // descendants only) and only about keyboard focus, so tabbing to an action
+    // reveals it while clicking anything in the card body does not.
+    expect(cls).toContain("has-[:focus-visible]:opacity-100");
+    expect(cls).toContain("has-[:focus-visible]:pointer-events-auto");
+    // The regression this test now exists to catch: a row-scoped focus reveal
+    // pinned the cluster open after any click inside the card.
+    expect(cls).not.toContain("group-focus-within");
   });
 
   it("anchors the reveal on the card itself", () => {
