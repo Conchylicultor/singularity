@@ -15,6 +15,12 @@ type IconType = ComponentType<{ className?: string }>;
  * generically from it, so a source type ships no form code at all; `Extra` is the
  * opt-in escape hatch for bespoke chrome (a "Connect" button), never the default.
  *
+ * `originUrl` is the type's answer to "which web page does a configured source of
+ * yours stand for?" — read generically by `useSourceOriginUrl` so a surface can
+ * link an event back to where it came from without ever naming a source type. A
+ * type that stands for no page (`manual`: the user IS the extractor) simply omits
+ * it, which is why it is optional rather than a required `null`-returning stub.
+ *
  * The namespace is `EventSources`, PLURAL: `EventSource` is a DOM global.
  *
  * Two independent one-way imports (sub-plugin web → here, sub-plugin server →
@@ -26,6 +32,13 @@ export const EventSources = {
     label: string;
     icon?: IconType;
     configFields: FieldsRecord;
+    /**
+     * The page one configured source of this type stands for, read off its stored
+     * `config` blob — `null` when this particular row names none (or its blob no
+     * longer fits the type's `configFields`). Omit the key entirely for a type
+     * whose sources are not web pages at all.
+     */
+    originUrl?: (config: Record<string, unknown>) => string | null;
     Extra?: ComponentType<{ sourceId: string }>;
   }>("events.source-type", { docLabel: (p) => p.label }),
 };

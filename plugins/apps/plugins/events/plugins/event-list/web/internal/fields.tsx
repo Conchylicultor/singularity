@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -9,7 +9,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_LIST_FIELDS } from "../../core";
-import { formatEventWhen, urlHost } from "./format";
+import { externalUrl, formatEventWhen, urlHost } from "./format";
 
 // Comparable projection for one field id. Drives the toolbar sort/filter pills
 // and the default table/gallery cell. (Search/filter/sort actually run
@@ -39,19 +39,29 @@ function fieldValue(e: EventRecord, id: string): FieldValue {
   }
 }
 
-/** External link chip: the host, opening the event's own page in a new tab. */
+/**
+ * External link chip: the host, opening the event's own page in a new tab.
+ *
+ * The href passes `externalUrl` (absolute `http(s)` only) — a scraped, model-written
+ * value is never handed to the DOM as a destination unguarded. The click stops
+ * propagating because the row around it is itself activatable (it opens the same
+ * page, or the source's when the event has none): without this, clicking the chip
+ * would open two tabs.
+ */
 function UrlCell({ url }: { url: string | null }): ReactNode {
-  const host = url === null ? null : urlHost(url);
-  if (url === null || host === null) return null;
+  const href = externalUrl(url);
+  const host = href === null ? null : urlHost(href);
+  if (href === null || host === null) return null;
   return (
     <Badge
       as="a"
-      href={url}
+      href={href}
       target="_blank"
       rel="noreferrer noopener"
+      onClick={(e: MouseEvent) => e.stopPropagation()}
       icon={<MdOpenInNew />}
       colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
-      title={url}
+      title={href}
     >
       {host}
     </Badge>

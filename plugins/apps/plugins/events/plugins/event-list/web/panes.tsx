@@ -8,7 +8,8 @@ import { useEventsRevision } from "@plugins/apps/plugins/events/plugins/events-c
 import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { queryEvents } from "../core";
 import { eventFieldDefs } from "./internal/fields";
-import { eventImageSrc } from "./internal/format";
+import { externalUrl } from "./internal/format";
+import { useOpenEvent } from "./internal/use-open-event";
 import { EventRow } from "./components/event-row";
 import { EventList } from "./slots";
 
@@ -36,6 +37,10 @@ function EventListPaneView(): ReactElement {
     pending: () => null,
     ready: (d) => d.rev,
   });
+  // Activating a row means "show me this event": its own page, else the page it
+  // was extracted from. Passed at the host level, so the list rows, the table
+  // rows and the gallery cards all open the same thing.
+  const openEvent = useOpenEvent();
 
   return (
     <PaneChrome pane={eventListPane} title="Events">
@@ -45,6 +50,7 @@ function EventListPaneView(): ReactElement {
         fields={eventFieldDefs}
         fieldExtensions={EventList.Fields}
         rowKey={(e) => e.id}
+        onRowActivate={openEvent}
         views={["list", "table", "gallery"]}
         emptyState={
           <Placeholder>
@@ -64,7 +70,7 @@ function EventListPaneView(): ReactElement {
             // No usable poster → `null` → no cover region at all, i.e. exactly
             // the text-only card, never an empty frame or a broken image.
             cover: (e: EventRecord) => {
-              const src = eventImageSrc(e.imageUrl);
+              const src = externalUrl(e.imageUrl);
               return src === null ? null : { kind: "image", src };
             },
           },

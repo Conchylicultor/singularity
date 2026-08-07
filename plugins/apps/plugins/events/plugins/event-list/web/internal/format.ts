@@ -63,16 +63,20 @@ export function urlHost(raw: string): string | null {
 }
 
 /**
- * An event's poster URL, if it is one the browser may load as an `<img>` src:
- * an absolute `http(s)` URL, else `null`.
+ * `raw` if it is an absolute `http(s)` URL, else `null`.
  *
- * `null` is the whole point — the gallery cover accessor returns it verbatim, so
- * an event without a usable poster gets NO cover region (the plain text card)
- * rather than an empty frame or a broken-image glyph. Event rows are extracted
- * from untrusted scraped pages, so anything that isn't an ordinary web URL (a
- * relative path, a `data:` blob an extractor invented) never reaches the DOM.
+ * The ONE gate every event-supplied URL passes before it reaches the DOM, for
+ * both roles that have one: the gallery poster `<img src>` and the link an event
+ * row opens. Event rows are extracted from untrusted scraped pages by a model, so
+ * anything that isn't an ordinary web address — a relative path, a `data:` blob,
+ * a `javascript:` string — is not a destination and not a src.
+ *
+ * `null` is the whole point on both paths: the gallery cover accessor returns it
+ * verbatim, so an event without a usable poster gets NO cover region (the plain
+ * text card) rather than an empty frame or a broken-image glyph; the row's open
+ * handler and its link chip simply offer nothing.
  */
-export function eventImageSrc(raw: string | null): string | null {
+export function externalUrl(raw: string | null): string | null {
   if (raw === null || !URL.canParse(raw)) return null;
   const { protocol } = new URL(raw);
   return protocol === "http:" || protocol === "https:" ? raw : null;

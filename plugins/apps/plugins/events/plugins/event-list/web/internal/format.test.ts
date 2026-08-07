@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { eventImageSrc, formatEventWhen, formatPlace, urlHost } from "./format";
+import { externalUrl, formatEventWhen, formatPlace, urlHost } from "./format";
 
 /** Local-calendar construction (never UTC) — the formatter reads local getters. */
 const at = (iso: string): Date => new Date(iso);
@@ -49,21 +49,21 @@ describe("urlHost", () => {
   });
 });
 
-describe("eventImageSrc", () => {
+describe("externalUrl", () => {
   test("an absolute http(s) URL passes through verbatim", () => {
-    expect(eventImageSrc("https://cdn.example.test/poster.jpg")).toBe(
+    expect(externalUrl("https://cdn.example.test/poster.jpg")).toBe(
       "https://cdn.example.test/poster.jpg",
     );
-    expect(eventImageSrc("http://cdn.example.test/poster.jpg")).toBe(
+    expect(externalUrl("http://cdn.example.test/poster.jpg")).toBe(
       "http://cdn.example.test/poster.jpg",
     );
   });
 
-  test("no poster, or one the browser must not load, yields no cover", () => {
-    expect(eventImageSrc(null)).toBe(null);
-    expect(eventImageSrc("")).toBe(null);
-    expect(eventImageSrc("/relative/poster.jpg")).toBe(null);
-    expect(eventImageSrc("data:image/svg+xml,<svg/>")).toBe(null);
-    expect(eventImageSrc("javascript:alert(1)")).toBe(null);
+  test("absent, or not an ordinary web address, is neither a src nor a destination", () => {
+    expect(externalUrl(null)).toBe(null);
+    expect(externalUrl("")).toBe(null);
+    expect(externalUrl("/relative/poster.jpg")).toBe(null);
+    expect(externalUrl("data:image/svg+xml,<svg/>")).toBe(null);
+    expect(externalUrl("javascript:alert(1)")).toBe(null);
   });
 });

@@ -1061,6 +1061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Events.Sidebar` "Events" → `component`
             - Uses:
               - `apps/events/events-core.useEventsRevision`
+              - `apps/events/events-core.useSourceOriginUrl`
               - `apps/events/shell.Events`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/app-shell.sidebarNavItem`
@@ -1134,6 +1135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventSources`
               - `useEventsRevision`
               - `useRefreshEventSourceNow`
+              - `useSourceOriginUrl`
               - `useUpdateEventSource`
           - Server:
             - Contributes:
@@ -14255,6 +14257,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/pages-nav`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
+              - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/mail/threads`

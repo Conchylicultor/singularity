@@ -11,6 +11,7 @@ export {
   useDeleteEventSource,
   useRefreshEventSourceNow,
 } from "./internal/hooks";
+export { useSourceOriginUrl } from "./internal/source-origin";
 
 export default {
   description:

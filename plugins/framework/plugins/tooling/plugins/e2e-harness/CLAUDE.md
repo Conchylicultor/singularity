@@ -38,6 +38,7 @@ rule keeps the broken shape from coming back.
     - `apps/agent-manager/pages-nav`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
+    - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/mail/threads`

@@ -58,12 +58,21 @@ The poster comes from `viewOptions.gallery.cover` in `web/panes.tsx`, not from
 not a field (above). Don't mint one for the gallery: that adds a dead sort/filter
 axis to every view to serve one view's chrome.
 
-The src passes `eventImageSrc()` (absolute `http(s)` only — rows come from
+The src passes `externalUrl()` (absolute `http(s)` only — rows come from
 untrusted scraped pages). The browser then loads it **directly from the event's
 host**, unlike mail's `remote-images` proxy: an email image is an attacker-chosen
 per-recipient tracking pixel, an event poster is a public asset on a site the
 user configured. A same-origin proxy here would belong in a generic primitive,
 not a copy of mail's app-scoped route.
+
+## A row opens the event's page, else its source's
+
+`onRowActivate` (host-level, so list/table/gallery agree) resolves
+`event.url ?? source origin URL` through `externalUrl()`. The fallback is the
+common case — an extraction often yields no per-event link — and it comes from
+`events-core`'s `useSourceOriginUrl()`, whose answer each source type supplies
+via its `originUrl`. This plugin still names no source type. No destination
+(hand-entered event) → the click is a no-op.
 
 ## Config is the only source of view instances
 
@@ -91,6 +100,7 @@ part of the query key.
     - `Events.Sidebar` "Events" → `component`
   - Uses:
     - `apps/events/events-core.useEventsRevision`
+    - `apps/events/events-core.useSourceOriginUrl`
     - `apps/events/shell.Events`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`

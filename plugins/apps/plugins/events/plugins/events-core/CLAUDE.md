@@ -35,6 +35,12 @@ The server validates a row's `config` jsonb against `fieldsToZodObject(...)`;
 the web renders the add/configure form generically from the same record via the
 `EventSources.Type` slot. **A new source type therefore ships zero form code.**
 
+A type also answers "which page does a configured source of mine stand for?" via
+the optional web-slot `originUrl(config)`. `useSourceOriginUrl()` joins it with
+the live source rows here — the only plugin holding both halves — so a surface
+links an event back to its origin without naming a source type. Omit it for a
+type that stands for no page (`manual`).
+
 ## Data model
 
 Three `defineEntity` tables, field records in `core/internal/fields.ts`:
@@ -98,6 +104,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSources`
     - `useEventsRevision`
     - `useRefreshEventSourceNow`
+    - `useSourceOriginUrl`
     - `useUpdateEventSource`
 - Server:
   - Contributes:
