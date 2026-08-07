@@ -401,9 +401,9 @@ function VirtualTableBody<TRow>({
     return (
       <>
         {marker}
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the windowed table's total height */}
         <div
           aria-hidden
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the windowed table's total height
           className="col-span-full"
           style={{ height: totalSize }}
         />
@@ -423,9 +423,9 @@ function VirtualTableBody<TRow>({
     <>
       {marker}
       {paddingTop > 0 && (
-        // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows above the window
         <div
           aria-hidden
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows above the window
           className="col-span-full"
           style={{ height: paddingTop }}
         />
@@ -438,9 +438,9 @@ function VirtualTableBody<TRow>({
         return (
           <Fragment key={vi.key}>
             {gap > 0 && (
-              // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the rows skipped between a pinned row and the window
               <div
                 aria-hidden
+                // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the rows skipped between a pinned row and the window
                 className="col-span-full"
                 style={{ height: gap }}
               />
@@ -453,9 +453,9 @@ function VirtualTableBody<TRow>({
         );
       })}
       {paddingBottom > 0 && (
-        // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows below the window
         <div
           aria-hidden
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows below the window
           className="col-span-full"
           style={{ height: paddingBottom }}
         />

@@ -2767,15 +2767,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
-              - `Library.CardMeta` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
               - `Library.SongActions` ← `apps.sonata.library`
-              - `Library.Fields` ← `apps.sonata.playback-history`
+              - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
             - Contributes:
               - `Sonata.Home` "library" → `SongLibrary`
               - `SonataToolbar.Start` "back" → `BackToLibrary`
               - `SonataToolbar.Start` "title" → `SongTitle`
               - `SonataToolbar.Start` "display-picker" → `DisplayPicker`
               - `Library.SongActions` "play" → `PlaySongAction`
+              - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
             - Uses:
@@ -2792,7 +2792,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
-              - `primitives/css/pin.Pin`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
@@ -2809,8 +2808,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view.defineItemActions`
               - `primitives/editable-field.useEditableField`
-              - `primitives/hover-reveal.hoverRevealGroup`
-              - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/live-state.matchResource`
@@ -2828,7 +2825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.usePaneStore`
               - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.formatRelativeTime`
-              - `primitives/slot-render.defineRenderSlot`
+              - `primitives/row-actions.RowActionButton`
             - Exports (values):
               - `Library`
               - `openSongImperative`
@@ -3071,18 +3068,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Server:
                 - Contributes: `ConfigV2.Register` "config"
                 - Uses: `config_v2.ConfigV2`
-        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and contributes Plays / Last-played fields (Library.Fields) so they appear in the DataView's sort, filter, and table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
+        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
           - Web:
             - Contributes:
               - `Sonata.Effect` "record-play" → `RecordPlayObserver`
-              - `Library.CardMeta` "play-stats" → `PlayStats`
               - `Library.Fields` "playback" → `PlaybackFields`
             - Uses:
               - `apps/sonata/library.Library`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.fetchEndpoint`
-              - `primitives/css/text.Text`
               - `primitives/live-state.useResource`
               - `primitives/relative-time.formatRelativeTime`
             - Exports (values):
@@ -3671,12 +3666,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `POST /api/sonata/songs/chord-grid`
                   - `GET /api/sonata/songs/:id/chord-grid`
                   - `PUT /api/sonata/songs/:id/chord-grid`
-            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the Tracks field. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes:
                   - `Sonata.Source` "MIDI File"
                   - `Library.Source` "midi"
-                  - `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
+                  - `Library.Fields` "midi" → `MidiFields`
                 - Uses:
                   - `apps/sonata/library.Library`
                   - `apps/sonata/library.openSongImperative`
@@ -3691,6 +3686,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `MIDI_SOURCE_ID`
                   - `useSongMidi`
+                  - `useSongMidiMap`
               - Server:
                 - Contributes: `resource.declare` "sonata-song-midi"
                 - Uses:
@@ -3719,14 +3715,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Cross-plugin:
                 - Imported by: `apps/sonata/sources/midi/folders`
               - Plugins:
-                - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and badges library cards whose folder-imported file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
+                - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and contributes the Source field (Library.Fields) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
                   - Web:
                     - Contributes:
                       - `ConfigV2.WebRegister`
-                      - `Library.CardMeta` "midi-source-deleted" → `SourceDeletedBadge`
+                      - `Library.Fields` "source-missing" → `SourceMissingField`
                     - Uses:
                       - `apps/sonata/library.Library`
-                      - `apps/sonata/sources/midi.useSongMidi`
+                      - `apps/sonata/sources/midi.useSongMidiMap`
                       - `config_v2.ConfigV2`
                       - `primitives/css/badge.Badge`
                   - Server:
@@ -19681,7 +19677,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/gallery`
               - `primitives/section-card`
               - `review/plugin-changes`
-              - `ui/tweakcn/community-browser`
         - **`center`** — Centering layout primitive: <Center axis> centers its content on one or both axes via a grid place-items box.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -19994,6 +19989,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/imperative-dialog/confirm`
               - `primitives/log-channels`
               - `primitives/setup-steps`
+              - `ui/tweakcn/community-browser`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -20175,6 +20171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
               - `ui/tab-bar/underline`
+              - `ui/tweakcn/community-browser`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
           - Web:
             - Uses: `primitives/css/badge.Badge`
@@ -20256,7 +20253,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/solo`
               - `apps/browser/webview`
               - `apps/pages/page-tree`
-              - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
@@ -20457,7 +20453,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/shape`
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
-              - `ui/tweakcn/community-browser`
         - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -20830,6 +20825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/inline`
               - `primitives/css/layout-harness`
               - `primitives/cursor-pagination`
+              - `primitives/data-table`
               - `primitives/data-view`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/gallery`
@@ -21106,7 +21102,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
-              - `apps/sonata/playback-history`
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/progress/sections`
@@ -21959,6 +21954,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/center.Center`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/sticky/stack.StickyStack`
           - `primitives/css/sticky/stack.StickyStackItem`
@@ -22144,6 +22140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionProps`
           - `ItemActions`
           - `ItemActionsDescriptor`
+          - `ItemActionZone`
           - `ManualOrderConfig`
           - `MergedDataViewProps`
           - `SelectionConfig`
@@ -22187,6 +22184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useFilterController`
           - `useFlatRows`
           - `useGroupByController`
+          - `useItemActionZones`
           - `useResolveCell`
           - `useResolveCellEditor`
           - `useResolveColumnConfig`
@@ -22339,6 +22337,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HierarchyConfig`
           - `ItemActionProps`
           - `ItemActionsDescriptor`
+          - `ItemActionZone`
           - `ManualOrderConfig`
           - `SelectionConfig`
           - `ServerDataSourceSpec`
@@ -22457,6 +22456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.useDataViewSections`
+              - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
@@ -22496,6 +22496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.useDataViewSections`
+              - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
@@ -22557,6 +22558,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.SortRule`
               - `primitives/data-view.useDataViewSections`
+              - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
@@ -22583,11 +22585,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.HierarchyConfig`
+              - `primitives/data-view.ItemActionProps`
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.makeSortComparator`
               - `primitives/data-view.partitionIntoSections`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
@@ -22599,9 +22603,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree.TreeList`
               - `primitives/tree.useTreeListContext`
               - `primitives/tree.useTreeRow`
-            - Exports (types):
-              - `TreeRowNode`
-              - `TreeViewOptions`
+            - Exports (types): `TreeViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Uses:
@@ -23057,7 +23059,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data`
           - `apps-core/surface/floating`
           - `apps/pages/page-tree`
-          - `apps/sonata/library`
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
           - `config_v2/settings`
@@ -24617,6 +24618,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/servers`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
+          - `apps/sonata/library`
           - `apps/studio/compositions`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
@@ -24835,7 +24837,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/shell`
           - `apps/pages/welcome`
           - `apps/settings/shell`
-          - `apps/sonata/library`
           - `apps/sonata/piano-roll`
           - `apps/sonata/progress/scrubber`
           - `apps/sonata/shell`
@@ -25667,7 +25668,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -25771,7 +25771,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "shell.toolbar"
       - `ConfigV2.Register` "sonata.home"
       - `ConfigV2.Register` "sonata.hud"
-      - `ConfigV2.Register` "sonata.library.card-meta"
       - `ConfigV2.Register` "sonata.library.fields"
       - `ConfigV2.Register` "sonata.library.song-actions"
       - `ConfigV2.Register` "sonata.section"
@@ -28852,9 +28851,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/collapsible.CollapsibleTrigger`
-              - `primitives/css/card.Card`
+              - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
-              - `primitives/css/row.Row`
+              - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
