@@ -3,6 +3,8 @@ import {
   MdClose,
   MdKeyboardDoubleArrowDown,
   MdOutlineQueue,
+  MdOutlinePushPin,
+  MdPushPin,
   MdVerticalAlignBottom,
   MdVerticalAlignTop,
 } from "react-icons/md";
@@ -15,6 +17,7 @@ import {
   demoteQueue,
   stepDownQueue,
   rerankQueue,
+  pinQueue,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import type { ConversationSidebarProps } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import type { QueueRow } from "./use-queue-rows";
@@ -34,9 +37,34 @@ export const CloseConversationContext = createContext<
   ConversationSidebarProps["onCloseConversation"] | null
 >(null);
 
-/** Move the row's task-group to the top of the queue. */
+/**
+ * Pin / unpin the row's task-group. Pinning lifts it into the Pinned section at
+ * the top of the queue; it stays an ordinary queue member, so unpinning drops it
+ * back into the same place it held.
+ *
+ * Offered on every live section — including Working, so a group that starts
+ * running can still be pinned for when it comes back — but never on the closed
+ * conversations under Done.
+ */
+export function PinAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
+  if (row.section === "done" || row.section === "disconnected") return null;
+  return (
+    <RowActionButton
+      icon={row.pinned ? MdPushPin : MdOutlinePushPin}
+      label={row.pinned ? "Unpin" : "Pin to top"}
+      onClick={(e) => {
+        e.stopPropagation();
+        return fetchEndpoint(pinQueue, {}, {
+          body: { conversationId: row.id, pinned: !row.pinned },
+        });
+      }}
+    />
+  );
+}
+
+/** Move the row's task-group to the top of its section. */
 export function PromoteAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
-  if (row.section !== "queued" || row.isTop) return null;
+  if ((row.section !== "queued" && row.section !== "pinned") || row.isTop) return null;
   return (
     <RowActionButton
       icon={MdVerticalAlignTop}
@@ -66,7 +94,7 @@ export function StepDownAction({ row }: ItemActionProps<QueueRow>): ReactElement
 
 /** Move the row's task-group to the bottom of the queue. */
 export function DemoteAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
-  if ((row.section !== "current" && row.section !== "queued") || row.isBottom) return null;
+  if ((row.section !== "pinned" && row.section !== "queued") || row.isBottom) return null;
   return (
     <RowActionButton
       icon={MdVerticalAlignBottom}

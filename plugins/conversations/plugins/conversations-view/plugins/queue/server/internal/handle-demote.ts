@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { demoteQueue } from "../../core/endpoints";
 import { lockDeck, rankForBottom, reseatGroupMembers, upsertRank } from "./queue-ranks";
-import { validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 
 export const handleDemote = implement(demoteQueue, async ({ body }) => {
@@ -17,6 +16,5 @@ export const handleDemote = implement(demoteQueue, async ({ body }) => {
     await upsertRank(conversationId, rank, tx);
     await reseatGroupMembers(conversationId, rank, tx);
     await cascadeBlockedDependents(conversationId, tx);
-    await validatePin(tx);
   });
 });

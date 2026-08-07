@@ -1,21 +1,24 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 
+// One queue row: the conversation's position (`rank`) plus whether the user
+// pinned it. The pin is a plain per-conversation flag living on the SAME row as
+// the rank, so it needs no resource of its own — the ranks subscription the
+// sidebar already holds carries it.
 export const QueueRankRowSchema = z.object({
   conversationId: z.string(),
   rank: RankSchema,
+  pinned: z.boolean(),
 });
 export type QueueRankRow = z.infer<typeof QueueRankRowSchema>;
 
 // The CLIENT-ASSEMBLED input type of `classifyQueue` — NO LONGER a wire shape.
-// The queue was one `{ ranks[], pinnedConversationId }` push value; it is now a
-// bounded POINT ranks resource + a scalar pin resource. The sidebar reassembles
-// this shape in-memory from the two so `classifyQueue` stays unchanged.
+// The queue was one push value; it is now a bounded POINT ranks resource, which
+// the sidebar wraps in this shape so `classifyQueue` stays a pure function of
+// plain data.
 export const QueueDataSchema = z.object({
   ranks: z.array(QueueRankRowSchema),
-  pinnedConversationId: z.string().nullable(),
 });
 export type QueueData = z.infer<typeof QueueDataSchema>;
 
@@ -29,14 +32,4 @@ export const queueRanksResource = pointQueryResourceDescriptor<QueueRankRow>(
   "queue-ranks",
   QueueRankRowSchema,
   "conversationId",
-);
-
-// Scalar 1-row pin resource — a schema-bounded singleton (the
-// `build.mainAheadCount` allowed shape). bootCritical so the Current (pinned)
-// section is correct at first paint, one round-trip before the ranks land.
-export const queuePinResource = resourceDescriptor(
-  "queue-pin",
-  z.object({ pinnedConversationId: z.string().nullable() }),
-  { pinnedConversationId: null },
-  { bootCritical: true },
 );

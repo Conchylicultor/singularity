@@ -1,11 +1,6 @@
 import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  queueRanksResource as queueRanksDescriptor,
-  queuePinResource as queuePinDescriptor,
-} from "../../core/resources";
+import { queueRanksResource as queueRanksDescriptor } from "../../core/resources";
 import { conversationsQueue } from "./tables";
-import { getPinnedId } from "./pinned";
 
 const t = conversationsQueue.table;
 
@@ -25,21 +20,14 @@ const t = conversationsQueue.table;
 // returned `{ watermark }` doubles as the ack token).
 //
 // There is deliberately NO dependsOn the conversations resource: point routing
-// gives that structurally (a status tick does not write a rank row), and the pin
-// — the one thing that DID follow conversation status — now lives in the separate
-// scalar `queue-pin` resource below.
+// gives that structurally — a status tick does not write a rank row. The `pinned`
+// flag rides the same row because it is user-set state, not something derived
+// from conversation status; the SECTION a pinned row shows up in still follows
+// status, but that is computed client-side from the conversations the sidebar
+// already holds.
 export const queueRanksResource = windowQueryResource(queueRanksDescriptor, {
   from: t,
-  select: { conversationId: t.parentId, rank: t.rank },
+  select: { conversationId: t.parentId, rank: t.rank, pinned: t.pinned },
   point: { by: t.parentId },
   ackChannel: true,
-});
-
-// Scalar 1-row pin resource. Its read-set is the single `queue_state` row, so the
-// change-feed recomputes it only on a pin write — the pin is written
-// transactionally by the queue handlers/jobs and revalidated on conversation
-// status changes (`pinRevalidateJob`). Pure read; no revalidate/write.
-export const queuePinResource = defineResource(queuePinDescriptor, {
-  mode: "push",
-  loader: async () => ({ pinnedConversationId: await getPinnedId() }),
 });

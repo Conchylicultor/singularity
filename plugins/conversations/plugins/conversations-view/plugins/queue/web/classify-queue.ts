@@ -2,8 +2,8 @@ import type { Conversation, TaskListItem } from "@plugins/tasks/plugins/tasks-co
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { QueueData } from "../core/resources";
 
-/** A live conversation carrying its resolved queue rank. */
-export type RankedConversation = Conversation & { rank: Rank };
+/** A live conversation carrying its resolved queue rank and pin. */
+export type RankedConversation = Conversation & { rank: Rank; pinned: boolean };
 
 /** A task-group: every ranked conversation sharing a `taskId`, sharing one rank. */
 export type TaskGroup = {
@@ -15,6 +15,7 @@ export type TaskGroup = {
 
 /** The settled classification of the queue, partitioned into read-time sections. */
 export interface ClassifiedQueue {
+  pinnedGroups: TaskGroup[];
   waitingGroups: TaskGroup[];
   workingGroups: TaskGroup[];
   allWaitingCount: number;
@@ -22,17 +23,20 @@ export interface ClassifiedQueue {
   unranked: Conversation[];
   disconnected: Conversation[];
   recentGone: Conversation[];
-  pinnedConversationId: string | null;
 }
 
 /**
  * Pure, React-free queue classification — the single source of truth for how
  * live conversations, their queue ranks, and their tasks partition into the
- * queue's read-time sections (Queue / Working / Unranked / Disconnected / Done),
- * grouped by `taskId` with a shared rank per group.
+ * queue's read-time sections (Pinned / Queue / Working / Unranked / Disconnected /
+ * Done), grouped by `taskId` with a shared rank per group.
  *
- * Shared verbatim by the bespoke {@link QueueView} (classic sidebar variant) and
- * the DataView-based Queue tab, so the two presentations can never drift.
+ * A pin only moves a WAITING group into its own section: an active group belongs
+ * in Working whether or not it is pinned, since Working answers "what is running
+ * right now" and the pin answers "what do I want to keep in reach".
+ *
+ * Kept free of React and of the DataView so the partitioning stays testable and
+ * reusable by any presentation of the queue.
  */
 export function classifyQueue(data: {
   active: Conversation[];
@@ -41,7 +45,7 @@ export function classifyQueue(data: {
   tasks: TaskListItem[];
 }): ClassifiedQueue {
   const { active, gone, queue, tasks } = data;
-  const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r.rank]));
+  const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r]));
   const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
   const ranked: RankedConversation[] = [];
   const blocked = new Set<string>();
@@ -52,9 +56,9 @@ export function classifyQueue(data: {
     if (taskStatusMap.get(c.taskId) === "blocked") {
       blocked.add(c.id);
     }
-    const rank = ranks.get(c.id);
-    if (rank) {
-      ranked.push({ ...c, rank });
+    const row = ranks.get(c.id);
+    if (row) {
+      ranked.push({ ...c, rank: row.rank, pinned: row.pinned });
     } else if (c.status === "waiting") {
       noRank.push(c);
     }
@@ -69,6 +73,7 @@ export function classifyQueue(data: {
     else taskMap.set(conv.taskId, [conv]);
   }
 
+  const pinnedWaiting: TaskGroup[] = [];
   const waiting: TaskGroup[] = [];
   const working: TaskGroup[] = [];
   let waitingCount = 0;
@@ -81,14 +86,20 @@ export function classifyQueue(data: {
     if (workingMember) {
       working.push(group);
     } else {
-      waiting.push(group);
+      // The pin is written to every live member of a group, so any member
+      // answers for the group.
+      (selected.pinned ? pinnedWaiting : waiting).push(group);
       waitingCount += members.filter((m) => m.status === "waiting").length;
     }
   }
-  waiting.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
-  working.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
+  const byRank = (a: TaskGroup, b: TaskGroup): number =>
+    Rank.compare(a.selected.rank, b.selected.rank);
+  pinnedWaiting.sort(byRank);
+  waiting.sort(byRank);
+  working.sort(byRank);
 
   return {
+    pinnedGroups: pinnedWaiting,
     waitingGroups: waiting,
     workingGroups: working,
     allWaitingCount: waitingCount,
@@ -96,6 +107,5 @@ export function classifyQueue(data: {
     unranked: noRank,
     disconnected: active.filter((c) => c.status === "gone"),
     recentGone: gone,
-    pinnedConversationId: queue.pinnedConversationId,
   };
 }

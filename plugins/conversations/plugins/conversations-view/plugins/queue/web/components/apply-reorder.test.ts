@@ -19,6 +19,7 @@ function rows(pairs: [string, string][]): QueueRankRow[] {
   return pairs.map(([conversationId, r]) => ({
     conversationId,
     rank: Rank.from(r),
+    pinned: false,
   }));
 }
 

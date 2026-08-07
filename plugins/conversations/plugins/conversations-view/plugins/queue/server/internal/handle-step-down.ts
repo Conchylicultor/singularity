@@ -2,8 +2,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { stepDownQueue } from "../../core/endpoints";
-import { lockDeck, rankAfterN, reseatGroupMembers, upsertRank, findTaskIdForConversation } from "./queue-ranks";
-import { getPinnedId, setPinnedId, topWaitingByRank, validatePin } from "./pinned";
+import { lockDeck, rankAfterN, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 
 export const handleStepDown = implement(stepDownQueue, async ({ body }) => {
@@ -17,14 +16,5 @@ export const handleStepDown = implement(stepDownQueue, async ({ body }) => {
     await upsertRank(conversationId, rank, tx);
     await reseatGroupMembers(conversationId, rank, tx);
     await cascadeBlockedDependents(conversationId, tx);
-
-    const pinnedId = await getPinnedId(tx);
-    if (pinnedId === conversationId) {
-      const taskId = await findTaskIdForConversation(conversationId, tx);
-      const nextId = await topWaitingByRank(conversationId, taskId ?? undefined, tx);
-      await setPinnedId(nextId ?? conversationId, tx);
-    } else {
-      await validatePin(tx);
-    }
   });
 });

@@ -23,7 +23,7 @@ export const queueFields: FieldDef<QueueRow>[] = [
     groupable: true,
     filterable: false,
     options: [
-      { value: "current", label: "Current" },
+      { value: "pinned", label: "Pinned" },
       { value: "queued", label: "Queue" },
       { value: "working", label: "Working" },
       { value: "unranked", label: "Unranked" },

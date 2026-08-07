@@ -269,15 +269,24 @@ export async function reseatGroupMembers(
   }
 }
 
-// Returns the shared rank of the task group so the new conversation joins at
-// the same position. Returns null if the task has no existing ranked members.
-export async function rankJoiningGroup(
+/** The queue state a task group shares: one position, one pin. */
+export interface GroupSeat {
+  rank: Rank;
+  pinned: boolean;
+}
+
+// Returns the seat of the task group so a conversation joining it lands in the
+// same position AND the same section. Rank and pin are read together on purpose:
+// both are group-level, so a caller that could inherit one without the other
+// would split the group across two sections. Null if the task has no existing
+// ranked members.
+export async function seatJoiningGroup(
   taskId: string,
   conversationId: string,
   executor: RankExecutor = db,
-): Promise<Rank | null> {
+): Promise<GroupSeat | null> {
   const [existing] = await executor
-    .select({ rank: _conversationsExtQueue.rank })
+    .select({ rank: _conversationsExtQueue.rank, pinned: _conversationsExtQueue.pinned })
     .from(_conversationsExtQueue)
     .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
@@ -292,20 +301,44 @@ export async function rankJoiningGroup(
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!existing?.rank) return null;
-  return Rank.from(existing.rank as string);
+  return { rank: Rank.from(existing.rank as string), pinned: existing.pinned };
 }
 
+// Writes a conversation's position. `pinned` is deliberately NOT touched: every
+// caller here is moving a row around, and a move must not silently change which
+// section the row is in. Seat inheritance goes through `seatJoiningGroup`, and
+// the pin itself through `setGroupPinned`.
 export async function upsertRank(
   conversationId: string,
   rank: Rank,
   executor: RankExecutor = db,
+  pinned = false,
 ): Promise<void> {
   const now = new Date();
   await executor
     .insert(_conversationsExtQueue)
-    .values({ parentId: conversationId, rank: rank.toJSON(), updatedAt: now })
+    .values({ parentId: conversationId, rank: rank.toJSON(), pinned, updatedAt: now })
     .onConflictDoUpdate({
       target: _conversationsExtQueue.parentId,
       set: { rank: rank.toJSON(), updatedAt: now },
     });
+}
+
+// Sets the pin on every live member of the conversation's task group — the same
+// group-level treatment `reseatGroupMembers` gives the rank, because the sidebar
+// shows a group as ONE row: a per-member pin could split one group across the
+// Pinned and Queue sections.
+export async function setGroupPinned(
+  conversationId: string,
+  pinned: boolean,
+  executor: RankExecutor,
+): Promise<void> {
+  const taskId = await findTaskIdForConversation(conversationId, executor);
+  const siblingIds = taskId
+    ? await findGroupSiblingIds(taskId, conversationId, executor)
+    : [];
+  await executor
+    .update(_conversationsExtQueue)
+    .set({ pinned, updatedAt: new Date() })
+    .where(inArray(_conversationsExtQueue.parentId, [conversationId, ...siblingIds]));
 }

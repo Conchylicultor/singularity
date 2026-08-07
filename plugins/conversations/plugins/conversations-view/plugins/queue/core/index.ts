@@ -1,4 +1,4 @@
-export { queueRanksResource, queuePinResource } from "./resources";
+export { queueRanksResource } from "./resources";
 export type { QueueData, QueueRankRow } from "./resources";
 export {
   reorderQueue,
@@ -6,4 +6,5 @@ export {
   demoteQueue,
   stepDownQueue,
   rerankQueue,
+  pinQueue,
 } from "./endpoints";

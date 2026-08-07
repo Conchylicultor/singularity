@@ -4,6 +4,7 @@ import { SidebarSources } from "@plugins/conversations/plugins/conversations-vie
 import { QueueSource } from "./components/sidebar-queue";
 import {
   QueueItemActions,
+  PinAction,
   PromoteAction,
   StepDownAction,
   DemoteAction,
@@ -13,7 +14,7 @@ import {
 
 export default {
   description:
-    "Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.",
+    "Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.",
   contributions: [
     SidebarSources({
       id: "queue",
@@ -23,6 +24,7 @@ export default {
       views: ["list"],
       component: QueueSource,
     }),
+    QueueItemActions({ id: "pin", component: PinAction }),
     QueueItemActions({ id: "promote", component: PromoteAction }),
     QueueItemActions({ id: "step-down", component: StepDownAction }),
     QueueItemActions({ id: "demote", component: DemoteAction }),

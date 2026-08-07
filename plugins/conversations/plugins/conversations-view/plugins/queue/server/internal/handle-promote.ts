@@ -1,9 +1,8 @@
-import { getConversation, hasBlockingDep } from "@plugins/tasks/plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { promoteQueue } from "../../core/endpoints";
 import { lockDeck, rankForTop, reseatGroupMembers, upsertRank } from "./queue-ranks";
-import { setPinnedId, validatePin } from "./pinned";
 
 export const handlePromote = implement(promoteQueue, async ({ body }) => {
   const { conversationId } = body;
@@ -15,12 +14,5 @@ export const handlePromote = implement(promoteQueue, async ({ body }) => {
     const rank = await rankForTop(conversationId, tx);
     await upsertRank(conversationId, rank, tx);
     await reseatGroupMembers(conversationId, rank, tx);
-
-    const blocked = await hasBlockingDep(conv.taskId, tx);
-    if (blocked) {
-      await validatePin(tx);
-    } else {
-      await setPinnedId(conversationId, tx);
-    }
   });
 });

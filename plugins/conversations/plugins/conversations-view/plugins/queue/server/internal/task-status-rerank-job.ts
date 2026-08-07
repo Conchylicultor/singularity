@@ -4,14 +4,16 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import { _conversations, _attempts, listBlockingDepIds } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { validatePin } from "./pinned";
 import { conversationsQueue } from "./tables";
 import { lockDeck, rankAfterBlockers, rankForTop, reseatGroupMembers, upsertRank } from "./queue-ranks";
 
 const LIVE_STATUSES = ["waiting", "working", "starting"] as const;
 
-export const taskStatusPinJob = defineJob({
-  name: "queue.task-status-pin",
+// Blocked/unblocked is the one task-level change that must move ranks: a task
+// that just became blocked drops below every task blocking it, and one that just
+// became unblocked returns to the top.
+export const taskStatusRerankJob = defineJob({
+  name: "queue.task-status-rerank",
   input: z.object({}).passthrough(),
   event: z.object({
     taskId: z.string(),
@@ -36,8 +38,6 @@ export const taskStatusPinJob = defineJob({
         rankForTop(convId, tx),
       );
     }
-
-    await validatePin();
   },
 });
 

@@ -11,7 +11,6 @@ import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mu
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   queueRanksResource,
-  queuePinResource,
   reorderQueue,
   type QueueData,
   type QueueRankRow,
@@ -25,7 +24,7 @@ import {
 
 /** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
 export type QueueSection =
-  | "current"
+  | "pinned"
   | "queued"
   | "working"
   | "unranked"
@@ -37,12 +36,16 @@ export type QueueSection =
  * section classification + the group-level queue flags (set identically on every
  * member of a task-group, so whichever member the aggregate picks as the
  * representative carries the right flags). `rank` is non-null ONLY in the
- * `current`/`queued` sections (drives manual-order drag); `null` everywhere else
- * marks the row non-draggable (primitive P1).
+ * `pinned`/`queued` sections (drives manual-order drag); `null` everywhere else
+ * marks the row non-draggable (primitive P1). `pinned` is the user's own flag and
+ * is carried on EVERY section's rows, so the unpin action is reachable from
+ * Working too — a pinned group that starts running comes back to Pinned when it
+ * finishes.
  */
 export type QueueRow = Conversation & {
   section: QueueSection;
   rank: Rank | null;
+  pinned: boolean;
   isTop: boolean;
   isBottom: boolean;
   canStepDown: boolean;
@@ -50,28 +53,26 @@ export type QueueRow = Conversation & {
   memberCount: number;
 };
 
-/** The computed queue display — the built rows plus the resolved pin. */
-type QueueDisplay = { rows: QueueRow[]; pinnedConversationId: string | null };
+/** The computed queue display. */
+type QueueDisplay = { rows: QueueRow[] };
 
 /**
- * Combines the queue's live resources — active + gone conversations, tasks, the
- * bounded POINT ranks (subscribed to the LIVE conversation id set, replayed
- * through the optimistic overlay), and the scalar pin — runs the shared
- * {@link classifyQueue}, and flattens the classification into one `QueueRow[]` in
- * display order (Current, Queue, Working, Unranked, Disconnected, Done).
+ * Combines the queue's live resources — active + gone conversations, tasks, and
+ * the bounded POINT ranks (subscribed to the LIVE conversation id set, replayed
+ * through the optimistic overlay) — runs the shared {@link classifyQueue}, and
+ * flattens the classification into one `QueueRow[]` in display order (Pinned,
+ * Queue, Working, Unranked, Disconnected, Done).
  * Task-group members are emitted representative-first so the aggregate entry's key
  * equals the representative id (selection-highlight parity with the classic view).
  */
 export function useQueueRows(): {
   rows: QueueRow[];
-  pinnedConversationId: string | null;
   dispatchReorder: (vars: ReorderVars) => void;
   pending: boolean;
 } {
   const activeResult = useResource(conversationsActiveResource);
   const goneResult = useResource(conversationsGoneResource);
   const tasksResult = useResource(tasksResource);
-  const pinResult = useResource(queuePinResource);
 
   // The live conversation id set the queue already tracks — `null` (not a fake
   // empty) while active is still pending, so a pending live set is never confused
@@ -101,7 +102,7 @@ export function useQueueRows(): {
     mutate: (vars) => fetchEndpoint(reorderQueue, {}, { body: vars }),
   });
 
-  // All-or-nothing gate over the five live resources, memoized on their STABLE
+  // All-or-nothing gate over the four live resources, memoized on their STABLE
   // result identities (each `useResource`/`useOptimisticResource` result is
   // referentially stable when its data/pending is unchanged). This stability is
   // load-bearing: the retain-last set-during-render below relies on `computed`
@@ -113,40 +114,28 @@ export function useQueueRows(): {
       activeResult.pending ||
       goneResult.pending ||
       ranksResult.pending ||
-      pinResult.pending ||
       tasksResult.pending
     ) {
       return null;
     }
 
-    // Reassemble the client-side `QueueData` from the point ranks + scalar pin so
+    // Wrap the point ranks in the client-side `QueueData` shape so
     // `classifyQueue` (the shared source of truth) stays UNCHANGED.
-    const queue: QueueData = {
-      ranks: ranksResult.data,
-      pinnedConversationId: pinResult.data.pinnedConversationId,
-    };
+    const queue: QueueData = { ranks: ranksResult.data };
     const {
+      pinnedGroups,
       waitingGroups,
       workingGroups,
       blockedIds,
       unranked,
       disconnected,
       recentGone,
-      pinnedConversationId: pinned,
     } = classifyQueue({
       active: activeResult.data,
       gone: goneResult.data,
       queue,
       tasks: tasksResult.data,
     });
-
-    const pinnedCluster =
-      (pinned &&
-        waitingGroups.find((g) => g.members.some((m) => m.id === pinned))) ||
-      null;
-    const restClusters = pinnedCluster
-      ? waitingGroups.filter((g) => g !== pinnedCluster)
-      : waitingGroups;
 
     const out: QueueRow[] = [];
 
@@ -172,6 +161,7 @@ export function useQueueRows(): {
           ...m,
           section,
           rank: flags.ranked ? m.rank : null,
+          pinned: m.pinned,
           isTop: flags.isTop,
           isBottom: flags.isBottom,
           canStepDown: flags.canStepDown,
@@ -186,6 +176,7 @@ export function useQueueRows(): {
         ...conv,
         section,
         rank: null,
+        pinned: false,
         isTop: false,
         isBottom: false,
         canStepDown: false,
@@ -194,24 +185,26 @@ export function useQueueRows(): {
       });
     };
 
-    // 1. current — the pinned cluster (if any).
-    if (pinnedCluster) {
-      emitGroup(pinnedCluster, "current", {
+    // 1. pinned — the waiting clusters the user pinned (rank asc). Its own rank
+    // space for the top/bottom affordances: a pinned row's neighbours are the
+    // other pinned rows, which is what "move to top" means while it is up there.
+    pinnedGroups.forEach((group, idx) => {
+      emitGroup(group, "pinned", {
         ranked: true,
-        isTop: true,
-        isBottom: restClusters.length === 0,
-        canStepDown: restClusters.length > 0,
-        isBlocked: blockedIds.has(pinnedCluster.selected.id),
+        isTop: idx === 0,
+        isBottom: idx === pinnedGroups.length - 1,
+        canStepDown: idx < pinnedGroups.length - 1,
+        isBlocked: blockedIds.has(group.selected.id),
       });
-    }
+    });
 
-    // 2. queued — the remaining waiting clusters (rank asc).
-    restClusters.forEach((group, idx) => {
+    // 2. queued — the unpinned waiting clusters (rank asc).
+    waitingGroups.forEach((group, idx) => {
       emitGroup(group, "queued", {
         ranked: true,
-        isTop: false,
-        isBottom: idx === restClusters.length - 1,
-        canStepDown: idx < restClusters.length - 1,
+        isTop: idx === 0,
+        isBottom: idx === waitingGroups.length - 1,
+        canStepDown: idx < waitingGroups.length - 1,
         isBlocked: blockedIds.has(group.selected.id),
       });
     });
@@ -232,8 +225,8 @@ export function useQueueRows(): {
     for (const conv of disconnected) emitFlat(conv, "disconnected");
     for (const conv of recentGone) emitFlat(conv, "done");
 
-    return { rows: out, pinnedConversationId: pinned };
-  }, [activeResult, goneResult, ranksResult, pinResult, tasksResult]);
+    return { rows: out };
+  }, [activeResult, goneResult, ranksResult, tasksResult]);
 
   // Flash mitigation: the live-set changing re-baselines the ranks subscription
   // (a new point tuple ⇒ a pending arm). Retain the last non-pending display so a
@@ -250,7 +243,6 @@ export function useQueueRows(): {
 
   return {
     rows: display?.rows ?? [],
-    pinnedConversationId: display?.pinnedConversationId ?? null,
     dispatchReorder: ranksResult.dispatch,
     pending: display === null,
   };

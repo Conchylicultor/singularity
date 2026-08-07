@@ -713,7 +713,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view/data-view/history`
     - `conversations/conversations-view/data-view/queue`
-    - `conversations/conversations-view/queue`
     - `conversations/effort-provider`
     - `conversations/model-provider`
     - `conversations/recover`

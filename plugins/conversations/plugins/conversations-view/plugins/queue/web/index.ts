@@ -7,6 +7,6 @@ export type { ClassifiedQueue, RankedConversation, TaskGroup } from "./classify-
 
 export default {
   description:
-    "Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus.",
+    "Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section.",
   contributions: [],
 } satisfies PluginDefinition;

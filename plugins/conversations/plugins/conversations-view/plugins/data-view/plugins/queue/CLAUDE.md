@@ -4,10 +4,11 @@
 
 ## Plugin reference
 
-- Description: Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
+- Description: Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
 - Web:
   - Contributes:
     - `SidebarSources` "Queue" → `QueueSource`
+    - `conversations-sidebar-queue-actions` "pin" → `PinAction`
     - `conversations-sidebar-queue-actions` "promote" → `PromoteAction`
     - `conversations-sidebar-queue-actions` "step-down" → `StepDownAction`
     - `conversations-sidebar-queue-actions` "demote" → `DemoteAction`

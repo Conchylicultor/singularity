@@ -4,18 +4,14 @@
 
 ## Plugin reference
 
-- Description: Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
+- Description: Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section. Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.
 - Server:
   - Contributes:
     - `resource.declare` "queue-ranks"
-    - `resource.declare` "queue-pin"
     - `trigger` "queue.seed-rank"
-    - `trigger` "queue.pin-revalidate"
-    - `trigger` "queue.advance-pin"
-    - `trigger` "queue.task-status-pin"
+    - `trigger` "queue.task-status-rerank"
   - Uses:
     - `conversations.conversationCreated`
-    - `conversations.userTurnSent`
     - `database.currentTxId`
     - `database.db`
     - `infra/endpoints.HttpError`
@@ -27,9 +23,7 @@
     - `infra/query-resource.windowQueryResource`
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
-    - `tasks/tasks-core.conversationStatusChanged`
     - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.hasBlockingDep`
     - `tasks/tasks-core.listBlockingDepIds`
     - `tasks/tasks-core.listDependentIds`
     - `tasks/tasks-core.taskStatusChanged`
@@ -40,30 +34,28 @@
     - `endRank`
     - `findTaskIdForConversation`
     - `lockDeck`
-    - `queuePinResource`
     - `queueRanksResource`
     - `rankAdjacentTo`
     - `rankAfterBlockers`
     - `rankAfterN`
     - `rankForBottom`
     - `rankForTop`
-    - `rankJoiningGroup`
     - `reseatGroupMembers`
+    - `seatJoiningGroup`
     - `seedRankJob`
+    - `setGroupPinned`
     - `upsertRank`
   - Register:
     - `defineJob('queue.seed-rank')`
-    - `defineJob('queue.pin-revalidate')`
-    - `defineJob('queue.advance-pin')`
-    - `defineJob('queue.task-status-pin')`
+    - `defineJob('queue.task-status-rerank')`
     - `defineJob('queue.sweep-gone-ranks')`
-  - Resources: `queue-pin` (push)
   - Routes:
     - `POST /api/conversations-queue/reorder`
     - `POST /api/conversations-queue/promote`
     - `POST /api/conversations-queue/demote`
     - `POST /api/conversations-queue/step-down`
     - `POST /api/conversations-queue/rerank`
+    - `POST /api/conversations-queue/pin`
 - Web:
   - Uses: `primitives/optimistic-mutation.OpNoLongerApplies`
   - Exports (types):
@@ -78,15 +70,14 @@
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `infra/query-resource.pointQueryResourceDescriptor`
-    - `primitives/live-state.resourceDescriptor`
     - `primitives/rank.RankSchema`
   - Exports (types):
     - `QueueData`
     - `QueueRankRow`
   - Exports (values):
     - `demoteQueue`
+    - `pinQueue`
     - `promoteQueue`
-    - `queuePinResource`
     - `queueRanksResource`
     - `reorderQueue`
     - `rerankQueue`
@@ -98,7 +89,7 @@
 
 ## Resources
 
-The queue's live state is two bounded resources, not one push struct:
+The queue's live state is one bounded resource, not a push struct:
 
 - **`queue-ranks`** — a **bounded POINT** resource (`windowQueryResource(…, {
   point: { by: parent_id } })`). The sidebar subscribes by the LIVE conversation
@@ -112,19 +103,17 @@ The queue's live state is two bounded resources, not one push struct:
   endpoint's returned `{ watermark }` is matched against the frame's `ackTx`
   (scoped/point deltas carry no snapshot watermark, so this is what replaces the
   watermark compare). Not bootCritical (point resources hydrate post-mount).
-- **`queue-pin`** — a scalar 1-row push resource `{ pinnedConversationId }`, read
-  from the single `queue_state` row. bootCritical, so the Current (pinned) section
-  is correct at first paint, one round-trip before the ranks land. The pin is the
-  one thing that followed conversation status, so it lives here rather than on the
-  ranks; `queue-ranks` deliberately has NO `dependsOn` conversations (point
-  routing gives that structurally).
+  Each row carries `{ conversationId, rank, pinned }`. The pin rides the rank row
+  rather than a resource of its own because it is plain user-set state: nothing
+  recomputes it as conversations change status. `queue-ranks` deliberately has NO
+  `dependsOn` conversations (point routing gives that structurally).
 
-The sidebar (`data-view/plugins/queue/web/use-queue-rows.ts`) reassembles the
-client-side `QueueData { ranks, pinnedConversationId }` from these two so the
-shared `classifyQueue` stays unchanged, and retains the last non-pending rows
-across live-set re-subscriptions so a re-sub never flashes a skeleton.
-`applyReorder` predicts over the LIVE rank rows only — matching the server's
-live-filtered `rankAdjacentTo`.
+The sidebar (`data-view/plugins/queue/web/use-queue-rows.ts`) wraps the rows in
+the client-side `QueueData { ranks }` shape so the shared `classifyQueue` stays a
+pure function of plain data, and retains the last non-pending rows across
+live-set re-subscriptions so a re-sub never flashes a skeleton. `applyReorder`
+predicts over the LIVE rank rows only — matching the server's live-filtered
+`rankAdjacentTo`.
 
 **Retention.** `sweepGoneRanksJob` (nightly, main-only) deletes rank rows whose
 conversation has been `gone` past 30 days. It is a plain scheduled `defineJob`,
@@ -144,8 +133,9 @@ Every live conversation gets one fractional-index rank stored in `conversations_
 
 | Section | Criteria |
 |---|---|
-| **Queue** (pinned + rest) | Group's members are all `waiting`. Drag-and-drop reorder is available here. |
-| **Working** | Group has at least one `working`/`starting` member. |
+| **Pinned** | Group's members are all `waiting` AND the user pinned it. Drag-and-drop reorder is available here. |
+| **Queue** | Group's members are all `waiting`. Drag-and-drop reorder is available here. |
+| **Working** | Group has at least one `working`/`starting` member — pinned or not. |
 | **Unranked** | Status is `waiting` but no rank row exists (not yet seeded or manually removed). |
 | **Disconnected** | Status is `gone` but still in the active list. |
 | **Done** | Recently gone conversations. |
@@ -155,7 +145,7 @@ Every live conversation gets one fractional-index rank stored in `conversations_
 Conversations sharing the same `taskId` form a **group**. All members share the same rank — the group has a single position in the queue. The group appears as a single row represented by its most recently created member. A badge shows the member count when > 1.
 
 - **Section assignment** is group-level: if any member is `working`/`starting`, the entire group goes to Working.
-- **Shared rank**: when any group member is reordered, `reseatGroupMembers()` sets all siblings to the same new rank. New conversations joining a group receive the group's existing rank.
+- **Shared seat**: when any group member is reordered, `reseatGroupMembers()` sets all siblings to the same new rank. A conversation joining a group takes the group's whole seat — `seatJoiningGroup()` reads rank AND pin together, so it can never inherit the position without the section.
 
 ### Why the queue keeps its own `rankAdjacentTo`
 
@@ -167,10 +157,27 @@ DB reader (two indexed `LIMIT 1` seeks inside the reorder transaction, never
 materializing the deck) over one flat space with no parent dimension and no
 exclusion set.
 
-A single `pinnedConversationId` in `queue_state` tracks the user's current focus. It renders as a sticky, elevated row at the top of the Queue section.
+### The pin
 
-**Valid pin criteria** — a conversation qualifies only when ALL of:
-1. Status is `waiting`
-2. Not blocked (no active non-dropped dependency without a completed attempt)
-3. Is the group's selected member (most recently created in the group)
-4. No sibling in the same group is `working`/`starting`
+`conversations_ext_queue.pinned` is a plain flag the user sets with the row's pin
+action, and nothing else writes it. Pinning changes only which section a group is
+read out under — the rank is untouched, so unpinning puts the group back exactly
+where it was, and a pinned group is reorderable like any other.
+
+Two consequences worth stating:
+
+- **The pin is group-level**, like the rank: `setGroupPinned` writes every live
+  member of the task group. A group is ONE row in the sidebar, so a per-member
+  pin could split one group across two sections.
+- **Working wins over Pinned.** A pinned group that starts running shows up under
+  Working and returns to Pinned when it finishes. Working answers "what is running
+  right now"; the pin answers "what do I want to keep in reach".
+
+This replaced an auto-advancing single pin (`queue_state.pinned_conversation_id`)
+that tracked "your current focus" — a derived value four jobs and a validity
+predicate existed to keep correct as conversations changed status. Making the pin
+user-set deleted all of it: `validatePin`, `topWaitingByRank`, the `queue_state`
+table, the `queue-pin` resource, and the `pin-revalidate` / `advance-pin` jobs.
+Dragging between Pinned and Queue is deliberately refused (no `onReseat` on the
+DataView's `manualOrder`): the section is now the pin flag, which a rank cannot
+express, so pinning is an explicit action rather than a side effect of a drop.

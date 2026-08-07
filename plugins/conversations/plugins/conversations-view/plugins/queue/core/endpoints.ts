@@ -44,3 +44,14 @@ export const rerankQueue = defineEndpoint({
   route: "POST /api/conversations-queue/rerank",
   body: ConversationIdBodySchema,
 });
+
+// Pin / unpin the conversation's whole task group. Group-level like the rank
+// itself: a group is ONE row in the sidebar, so a per-member pin could split a
+// group across two sections.
+export const pinQueue = defineEndpoint({
+  route: "POST /api/conversations-queue/pin",
+  body: z.object({
+    conversationId: z.string().min(1),
+    pinned: z.boolean(),
+  }),
+});

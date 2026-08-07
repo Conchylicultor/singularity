@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { lockDeck, rankForTop, rankJoiningGroup, findTaskIdForConversation, upsertRank } from "./queue-ranks";
-import { validatePin } from "./pinned";
+import { lockDeck, rankForTop, seatJoiningGroup, findTaskIdForConversation, upsertRank } from "./queue-ranks";
 import { db } from "@plugins/database/server";
 import { conversationsQueue } from "./tables";
 
@@ -27,18 +26,12 @@ export const seedRankJob = defineJob({
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (existing) return;
 
-      // If the task already has a group, join it rather than going to top.
+      // If the task already has a group, take its seat — position AND pin —
+      // rather than going to top as a fresh unpinned row.
       const taskId = await findTaskIdForConversation(conversationId, tx);
-      let rank;
-      if (taskId) {
-        const groupRank = await rankJoiningGroup(taskId, conversationId, tx);
-        rank = groupRank ?? await rankForTop(conversationId, tx);
-      } else {
-        rank = await rankForTop(conversationId, tx);
-      }
-      await upsertRank(conversationId, rank, tx);
+      const seat = taskId ? await seatJoiningGroup(taskId, conversationId, tx) : null;
+      const rank = seat?.rank ?? (await rankForTop(conversationId, tx));
+      await upsertRank(conversationId, rank, tx, seat?.pinned ?? false);
     });
-
-    await validatePin();
   },
 });

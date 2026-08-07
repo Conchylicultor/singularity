@@ -9866,10 +9866,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/live-state.matchResource`
                   - `primitives/live-state.useResource`
                   - `primitives/row-actions.RowActionButton`
-            - **`queue`** — Contributes the priority Queue (status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
+            - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Contributes:
                   - `SidebarSources` "Queue" → `QueueSource`
+                  - `conversations-sidebar-queue-actions` "pin" → `PinAction`
                   - `conversations-sidebar-queue-actions` "promote" → `PromoteAction`
                   - `conversations-sidebar-queue-actions` "step-down" → `StepDownAction`
                   - `conversations-sidebar-queue-actions` "demote" → `DemoteAction`
@@ -9898,18 +9899,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `addMemberToGroup`
           - Cross-plugin:
             - Imported by: `improve`
-        - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
+        - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section. Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.
           - Server:
             - Contributes:
               - `resource.declare` "queue-ranks"
-              - `resource.declare` "queue-pin"
               - `trigger` "queue.seed-rank"
-              - `trigger` "queue.pin-revalidate"
-              - `trigger` "queue.advance-pin"
-              - `trigger` "queue.task-status-pin"
+              - `trigger` "queue.task-status-rerank"
             - Uses:
               - `conversations.conversationCreated`
-              - `conversations.userTurnSent`
               - `database.currentTxId`
               - `database.db`
               - `infra/endpoints.HttpError`
@@ -9921,9 +9918,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/query-resource.windowQueryResource`
               - `tasks/tasks-core._attempts`
               - `tasks/tasks-core._conversations`
-              - `tasks/tasks-core.conversationStatusChanged`
               - `tasks/tasks-core.getConversation`
-              - `tasks/tasks-core.hasBlockingDep`
               - `tasks/tasks-core.listBlockingDepIds`
               - `tasks/tasks-core.listDependentIds`
               - `tasks/tasks-core.taskStatusChanged`
@@ -9934,30 +9929,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `endRank`
               - `findTaskIdForConversation`
               - `lockDeck`
-              - `queuePinResource`
               - `queueRanksResource`
               - `rankAdjacentTo`
               - `rankAfterBlockers`
               - `rankAfterN`
               - `rankForBottom`
               - `rankForTop`
-              - `rankJoiningGroup`
               - `reseatGroupMembers`
+              - `seatJoiningGroup`
               - `seedRankJob`
+              - `setGroupPinned`
               - `upsertRank`
             - Register:
               - `defineJob('queue.seed-rank')`
-              - `defineJob('queue.pin-revalidate')`
-              - `defineJob('queue.advance-pin')`
-              - `defineJob('queue.task-status-pin')`
+              - `defineJob('queue.task-status-rerank')`
               - `defineJob('queue.sweep-gone-ranks')`
-            - Resources: `queue-pin` (push)
             - Routes:
               - `POST /api/conversations-queue/reorder`
               - `POST /api/conversations-queue/promote`
               - `POST /api/conversations-queue/demote`
               - `POST /api/conversations-queue/step-down`
               - `POST /api/conversations-queue/rerank`
+              - `POST /api/conversations-queue/pin`
           - Web:
             - Uses: `primitives/optimistic-mutation.OpNoLongerApplies`
             - Exports (types):
@@ -9972,15 +9965,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/endpoints.defineEndpoint`
               - `infra/query-resource.pointQueryResourceDescriptor`
-              - `primitives/live-state.resourceDescriptor`
               - `primitives/rank.RankSchema`
             - Exports (types):
               - `QueueData`
               - `QueueRankRow`
             - Exports (values):
               - `demoteQueue`
+              - `pinQueue`
               - `promoteQueue`
-              - `queuePinResource`
               - `queueRanksResource`
               - `reorderQueue`
               - `rerankQueue`
@@ -23464,7 +23456,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/turn-summary`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
-          - `conversations/conversations-view/queue`
           - `conversations/effort-provider`
           - `conversations/model-provider`
           - `conversations/recover`

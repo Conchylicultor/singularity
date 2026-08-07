@@ -5,7 +5,6 @@ import { _conversations, _attempts, listBlockingDepIds } from "@plugins/tasks/pl
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationsQueue } from "./tables";
 import { lockDeck, rankAfterBlockers, reseatGroupMembers, upsertRank } from "./queue-ranks";
-import { validatePin } from "./pinned";
 
 const LIVE_STATUSES: ConversationStatus[] = ["waiting", "working", "starting"];
 
@@ -51,7 +50,5 @@ export async function repairBlockedOrder(): Promise<void> {
         madeChanges = true;
       }
     }
-
-    await validatePin(tx);
   });
 }

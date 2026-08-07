@@ -2,8 +2,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rerankQueue } from "../../core/endpoints";
-import { lockDeck, rankForTop, rankJoiningGroup, upsertRank } from "./queue-ranks";
-import { validatePin } from "./pinned";
+import { lockDeck, rankForTop, seatJoiningGroup, upsertRank } from "./queue-ranks";
 
 export const handleRerank = implement(rerankQueue, async ({ body }) => {
   const { conversationId } = body;
@@ -12,10 +11,9 @@ export const handleRerank = implement(rerankQueue, async ({ body }) => {
 
   await db.transaction(async (tx) => {
     await lockDeck(tx);
-    // If the task already has a group in the queue, join it; otherwise go to top.
-    const groupRank = await rankJoiningGroup(conv.taskId, conversationId, tx);
-    const rank = groupRank ?? await rankForTop(conversationId, tx);
-    await upsertRank(conversationId, rank, tx);
-    await validatePin(tx);
+    // If the task already has a group in the queue, take its seat; else go to top.
+    const seat = await seatJoiningGroup(conv.taskId, conversationId, tx);
+    const rank = seat?.rank ?? (await rankForTop(conversationId, tx));
+    await upsertRank(conversationId, rank, tx, seat?.pinned ?? false);
   });
 });
