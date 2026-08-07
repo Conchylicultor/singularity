@@ -27,6 +27,17 @@ way text enters the editor, so an extension is never wired per-entry-point:
   Lexical's default handler, and it sits at `COMMAND_PRIORITY_LOW`: below the
   image/file paste handlers, above the default insert.
 
+## The caret
+
+- **A `value` re-apply carries the caret.** The rebuild destroys the selection
+  and Lexical parks it at the *start*, so `applyMarkdownToEditor` captures it as
+  raw-source offsets and restores it. With none worth carrying (a restore into
+  an untouched editor) it lands at the END — where a draft is continued.
+- **`useInsertMarkdown` is the only insert**, for the toolbar affordances and
+  the `insertRef` handle alike. Never hand-roll `selection.insertText`: it
+  leaves a literal `\n` inside a text node, which has no caret rect the browser
+  can place, and skips the extension deserialization.
+
 ## Sub-plugins
 
 - **`paste-images`** — Image paste/drop support. Registers an `ImageNode`
@@ -65,6 +76,7 @@ way text enters the editor, so an extension is never wired per-entry-point:
     - `registerNodeExtension`
     - `TextEditor`
     - `TextEditorSlots`
+    - `useInsertMarkdown`
 - Cross-plugin:
   - Imported by:
     - `active-data`

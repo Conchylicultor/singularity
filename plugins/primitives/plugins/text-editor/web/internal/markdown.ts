@@ -10,9 +10,11 @@ import {
   $createTextNode,
   $createRangeSelection,
   $setSelection,
+  SKIP_DOM_SELECTION_TAG,
   type ElementNode,
   type LexicalEditor,
   type LexicalNode,
+  type PointType,
 } from "lexical";
 import { getNodeExtensions, type NodeExtension } from "./node-extensions";
 
@@ -107,19 +109,117 @@ export function applyMarkdownToEditor(
   markdown: string,
   extensions: readonly NodeExtension[] = getNodeExtensions(),
 ): void {
-  editor.update(() => {
-    const root = $getRoot();
-    root.clear();
-    const lines = markdown.split("\n");
-    for (const line of lines) {
-      const para = $createParagraphNode();
-      for (const node of $lineToNodes(line, extensions)) para.append(node);
-      root.append(para);
+  // The rebuild below replaces every node in the document, which destroys the
+  // selection — Lexical then parks the caret at the START of the new document.
+  // That caret is a lie: it is not where the user was, and everything that acts
+  // "at the caret" afterwards (typing, a template chip, a picked ui-context)
+  // acts at the top of the draft and drags the viewport there with it. So the
+  // caret is carried across the rebuild as raw-source offsets — the same
+  // coordinate system `value` itself is in, and therefore the only one that
+  // survives a re-serialization.
+  const focused =
+    editor.getRootElement() !== null &&
+    editor.getRootElement() === document.activeElement;
+  editor.update(
+    () => {
+      const carried = $captureCaret(extensions);
+      const root = $getRoot();
+      root.clear();
+      const lines = markdown.split("\n");
+      for (const line of lines) {
+        const para = $createParagraphNode();
+        for (const node of $lineToNodes(line, extensions)) para.append(node);
+        root.append(para);
+      }
+      if (root.getChildrenSize() === 0) {
+        root.append($createParagraphNode());
+      }
+      if (carried) {
+        const len = markdown.length;
+        $selectMarkdownRange(
+          Math.min(carried.start, len),
+          Math.min(carried.end, len),
+          extensions,
+        );
+      } else {
+        // Nothing to carry — this is a restore into an editor the user has not
+        // put a caret in. The end of the restored text is where a draft is
+        // continued, and it is what makes an insert land where the user is
+        // reading rather than at the top.
+        $getRoot().selectEnd();
+      }
+    },
+    // An unfocused editor must not pull the browser's selection out of whatever
+    // the user IS focused on: the editor-state caret above still points at the
+    // end (so an insert appends there), but the DOM is left alone.
+    focused ? undefined : { tag: SKIP_DOM_SELECTION_TAG },
+  );
+}
+
+/**
+ * The caret to carry across a whole-document rebuild, as raw-source offsets.
+ *
+ * `null` means "there is no caret worth carrying" — an empty document (the
+ * caret Lexical parks in the placeholder paragraph is not a position the user
+ * chose) or a point this module's flat paragraph/leaf shape cannot address.
+ * Both are legitimate: the caller's answer for both is the same, and it is the
+ * documented default (end of document), not a silent failure.
+ */
+function $captureCaret(
+  extensions: readonly NodeExtension[],
+): { start: number; end: number } | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection)) return null;
+  if ($getRoot().getTextContentSize() === 0) return null;
+  const start = $rawOffsetOfPoint(selection.anchor, extensions);
+  const end = $rawOffsetOfPoint(selection.focus, extensions);
+  if (start === null || end === null) return null;
+  return { start, end };
+}
+
+/** Raw-source character offset of a Lexical point — the inverse of `locatePoint`. */
+function $rawOffsetOfPoint(
+  point: PointType,
+  extensions: readonly NodeExtension[],
+): number | null {
+  const root = $getRoot();
+  const paragraphs = root.getChildren();
+
+  // Where each top-level line starts in the raw string (+1 for its "\n").
+  const lineStart = new Map<string, number>();
+  let total = 0;
+  for (const para of paragraphs) {
+    lineStart.set(para.getKey(), total);
+    total += rawLineLength(para, extensions) + 1;
+  }
+
+  const node = point.getNode();
+  if (node.getKey() === root.getKey()) {
+    const index = Math.min(point.offset, paragraphs.length);
+    const para = paragraphs[index];
+    if (!para) return Math.max(0, total - 1);
+    return lineStart.get(para.getKey()) ?? null;
+  }
+
+  const para = point.type === "text" ? node.getParent() : node;
+  if (para === null || !$isElementNode(para)) return null;
+  const base = lineStart.get(para.getKey());
+  if (base === undefined) return null;
+
+  const children = para.getChildren();
+  if (point.type === "text") {
+    let within = 0;
+    for (const child of children) {
+      if (child.getKey() === node.getKey()) return base + within + point.offset;
+      within += rawNodeLength(child, extensions);
     }
-    if (root.getChildrenSize() === 0) {
-      root.append($createParagraphNode());
-    }
-  });
+    return null;
+  }
+  let within = 0;
+  for (let i = 0; i < Math.min(point.offset, children.length); i++) {
+    within += rawNodeLength(children[i]!, extensions);
+  }
+  return base + within;
 }
 
 // Insert a raw markdown snippet at the caret, deserialized through the node
@@ -166,6 +266,17 @@ function rawNodeLength(
   return node.getTextContent().length;
 }
 
+// Raw-source length of one top-level line (its children, no trailing "\n").
+function rawLineLength(
+  para: LexicalNode,
+  extensions: readonly NodeExtension[],
+): number {
+  if (!$isElementNode(para)) return rawNodeLength(para, extensions);
+  return para
+    .getChildren()
+    .reduce((acc, child) => acc + rawNodeLength(child, extensions), 0);
+}
+
 // Resolve an offset within a single paragraph to a Lexical point. Text nodes
 // resolve to an exact intra-text offset; decorator nodes snap to the element
 // boundary before/after the node (you can't place a caret inside an image).
@@ -202,17 +313,12 @@ function locatePoint(
   for (const para of paragraphs) {
     if (!$isElementNode(para)) continue;
     lastPara = para;
-    const lineLen = para
-      .getChildren()
-      .reduce((acc, child) => acc + rawNodeLength(child, extensions), 0);
+    const lineLen = rawLineLength(para, extensions);
     if (rem <= lineLen) return pointInParagraph(para, rem, extensions);
     rem -= lineLen + 1; // consume the line plus its trailing "\n" separator
   }
   if (!lastPara) return null;
-  const lineLen = lastPara
-    .getChildren()
-    .reduce((acc, child) => acc + rawNodeLength(child, extensions), 0);
-  return pointInParagraph(lastPara, lineLen, extensions);
+  return pointInParagraph(lastPara, rawLineLength(lastPara, extensions), extensions);
 }
 
 // Set the editor selection to the raw-string character range [start, end].

@@ -2,13 +2,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $createParagraphNode, $getRoot } from "lexical";
 import {
-  $createParagraphNode,
-  $getRoot,
-  $getSelection,
-  $isRangeSelection,
-} from "lexical";
-import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+  TextEditor,
+  useInsertMarkdown,
+} from "@plugins/primitives/plugins/text-editor/web";
 import { PromptEditorSlots } from "../slots";
 
 type FloatingActionItem = Parameters<
@@ -44,21 +42,10 @@ function ToolbarRow() {
     return editor.registerEditableListener(setEditable);
   }, [editor]);
 
-  const insertText = useCallback(
-    (text: string) => {
-      editor.update(() => {
-        const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
-          selection.insertText(text);
-        } else {
-          $getRoot().selectEnd();
-          const sel = $getSelection();
-          if ($isRangeSelection(sel)) sel.insertText(text);
-        }
-      });
-    },
-    [editor],
-  );
+  // The editor's own insert — same path as the imperative `insertRef` handle,
+  // so a template snippet lands exactly like any other: line breaks as line
+  // breaks, tokens as their nodes, at the caret (or the end when there is none).
+  const insertText = useInsertMarkdown();
 
   const getContent = useCallback(() => {
     let text = "";

@@ -6,6 +6,7 @@ export {
   type TextEditorPluginProps,
 } from "./slots";
 export { registerNodeExtension, type NodeExtension } from "./internal/node-extensions";
+export { useInsertMarkdown } from "./internal/use-insert-markdown";
 
 export default {
   description:

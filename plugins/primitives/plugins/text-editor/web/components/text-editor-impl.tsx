@@ -17,9 +17,9 @@ import type { NodeExtension } from "../internal/node-extensions";
 import {
   applyMarkdownToEditor,
   serializeEditorToMarkdown,
-  $insertMarkdownSnippet,
   $selectMarkdownRange,
 } from "../internal/markdown";
+import { useInsertMarkdown } from "../internal/use-insert-markdown";
 
 export interface TextEditorProps {
   value: string;
@@ -100,40 +100,26 @@ export function TextEditor({
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}
-      {insertRef && (
-        <InsertPlugin insertRef={insertRef} extensions={extensions} />
-      )}
+      {insertRef && <InsertPlugin insertRef={insertRef} />}
       <HistoryPlugin />
     </LexicalComposer>
   );
 }
 
-// Imperative insert-at-caret handle. Goes through `$insertMarkdownSnippet`, so
-// the snippet is deserialized by the node extensions on the way in (a
-// `<ui-context …>` tag lands as its chip) exactly as it would through the value
-// round-trip, and the caret is left after the insertion so the user keeps typing.
+// Imperative insert-at-caret handle: publishes the editor's own insert (see
+// `useInsertMarkdown`) to a caller outside the composer.
 function InsertPlugin({
   insertRef,
-  extensions,
 }: {
   insertRef: React.MutableRefObject<((text: string) => void) | null>;
-  extensions: readonly NodeExtension[];
 }) {
-  const [editor] = useLexicalComposerContext();
-  const extensionsRef = useLatestRef(extensions);
+  const insert = useInsertMarkdown();
   useEffect(() => {
-    insertRef.current = (text: string) => {
-      editor.update(
-        () => {
-          $insertMarkdownSnippet(text, extensionsRef.current);
-        },
-        { onUpdate: () => editor.focus() },
-      );
-    };
+    insertRef.current = insert;
     return () => {
       insertRef.current = null;
     };
-  }, [editor, insertRef, extensionsRef]);
+  }, [insert, insertRef]);
   return null;
 }
 

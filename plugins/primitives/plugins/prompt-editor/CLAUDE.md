@@ -26,6 +26,7 @@ editing surfaces use `TextEditor` directly.
     - `primitives/css/ui-kit.cn`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`
+    - `primitives/text-editor.useInsertMarkdown`
   - Exports (types): `PromptEditorActionProps`
   - Exports (values):
     - `PromptEditor`
