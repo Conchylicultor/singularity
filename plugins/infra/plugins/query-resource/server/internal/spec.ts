@@ -175,7 +175,9 @@ export interface WindowOrderKey {
  * the bound comes from the subscription params (clamped to `maxLimit`), and
  * membership is always incremental.
  */
-export interface WindowQueryResourceSpec<P extends ResourceParams = ResourceParams> {
+export interface WindowQueryResourceSpec<
+  P extends ResourceParams = ResourceParams,
+> {
   /** The relation to read: a base table, a 1:1 identity view, or an entity. */
   from: QuerySource;
   /** Same derivation rules as `QueryResourceSpec.identity`. For `point`, `point.by` IS the identity pk. */

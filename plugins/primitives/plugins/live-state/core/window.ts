@@ -30,7 +30,9 @@ export interface WindowSelector {
 
 function assertWindowLimit(limit: number, context: string): void {
   if (!Number.isSafeInteger(limit) || limit <= 0) {
-    throw new Error(`${context}: window limit must be a positive integer, got ${limit}`);
+    throw new Error(
+      `${context}: window limit must be a positive integer, got ${limit}`,
+    );
   }
 }
 
@@ -40,8 +42,10 @@ function assertWindowLimit(limit: number, context: string): void {
  * Carries the window codec so the client hook, the boot paths, and the server
  * compiler all derive params from ONE encode/decode pair (no duplication).
  */
-export interface WindowResourceDescriptor<El>
-  extends ResourceDescriptor<El[], WindowParams> {
+export interface WindowResourceDescriptor<El> extends ResourceDescriptor<
+  El[],
+  WindowParams
+> {
   keyed: { keyOf: (row: unknown) => string };
   /** The canonical default-window params — `window.encode({})`. */
   defaultParams: WindowParams;
@@ -61,8 +65,10 @@ export interface WindowResourceDescriptor<El>
  * ids decode the server runtime reuses as the membership `idsOf` (it runs per
  * subscribed tuple on the feed-routing path).
  */
-export interface PointResourceDescriptor<El>
-  extends ResourceDescriptor<El[], PointParams> {
+export interface PointResourceDescriptor<El> extends ResourceDescriptor<
+  El[],
+  PointParams
+> {
   keyed: { keyOf: (row: unknown) => string };
   point: {
     /** Canonical encode: sorted, deduped, comma-joined. Throws on an empty or comma-carrying id. */

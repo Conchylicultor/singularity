@@ -5,7 +5,10 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 // serves resources tagged "central" via /ws/central-notifications.
 export type ResourceOrigin = "central";
 
-export interface ResourceDescriptor<T, P extends Record<string, string> = Record<string, string>> {
+export interface ResourceDescriptor<
+  T,
+  P extends Record<string, string> = Record<string, string>,
+> {
   key: string;
   origin?: ResourceOrigin;
   /**
@@ -68,12 +71,16 @@ function registerDescriptor(d: ResourceDescriptor<unknown>): void {
   // silently shadow one resource. HMR re-eval (same logical descriptor, new object)
   // is benign — only warn when the schemas differ.
   if (existing && existing !== d && existing.schema !== d.schema) {
-    console.warn(`[live-state] duplicate resource descriptor for key "${d.key}"`);
+    console.warn(
+      `[live-state] duplicate resource descriptor for key "${d.key}"`,
+    );
   }
   byKey.set(d.key, d);
 }
 
-export function resourceDescriptorByKey(key: string): ResourceDescriptor<unknown> | undefined {
+export function resourceDescriptorByKey(
+  key: string,
+): ResourceDescriptor<unknown> | undefined {
   return byKey.get(key);
 }
 
@@ -81,7 +88,10 @@ export function resourceDescriptorByKey(key: string): ResourceDescriptor<unknown
 // so the server's `defineResource(descriptor, …)` two-arg overload can discriminate
 // a plain descriptor from a keyed one (and only the keyed branch demands a scope
 // policy). Without it, `keyed` is merely optional and neither branch matches.
-export function resourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(
+export function resourceDescriptor<
+  T,
+  P extends Record<string, string> = Record<string, never>,
+>(
   key: string,
   schema: ZodParser<T>,
   initialData: T,
@@ -100,7 +110,10 @@ export function resourceDescriptor<T, P extends Record<string, string> = Record<
 // The `keyed: { keyOf }` is REQUIRED in the return type (not the descriptor's
 // optional field), so the server's two-arg `defineResource` can statically see a
 // keyed descriptor and force a scope policy on it.
-export function keyedResourceDescriptor<T extends unknown[], P extends Record<string, string> = Record<string, never>>(
+export function keyedResourceDescriptor<
+  T extends unknown[],
+  P extends Record<string, string> = Record<string, never>,
+>(
   key: string,
   schema: ZodParser<T>,
   initialData: T,
@@ -117,7 +130,10 @@ export function keyedResourceDescriptor<T extends unknown[], P extends Record<st
 // the two-arg `defineResource(descriptor, …)` form matches the non-keyed
 // overload (central resources are never keyed — there is no DB change-feed to
 // scope a delta against).
-export function centralResourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(
+export function centralResourceDescriptor<
+  T,
+  P extends Record<string, string> = Record<string, never>,
+>(
   key: string,
   schema: ZodParser<T>,
   initialData: T,

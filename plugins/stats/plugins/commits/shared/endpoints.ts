@@ -9,9 +9,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // optional: an omitted param is dropped client-side and read as undefined.
 const dedupQuery = z.enum(["true", "false"]).optional();
 
-const bucketQuery = z
-  .enum(["hour", "day", "week", "month", "year"])
-  .optional();
+const bucketQuery = z.enum(["hour", "day", "week", "month", "year"]).optional();
 
 // --- Commits (counts) ---
 

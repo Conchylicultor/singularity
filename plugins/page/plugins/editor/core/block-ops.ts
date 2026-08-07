@@ -1,10 +1,17 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { isDescendant, selectionRoots, subtreeIds } from "@plugins/primitives/plugins/tree/core";
+import {
+  isDescendant,
+  selectionRoots,
+  subtreeIds,
+} from "@plugins/primitives/plugins/tree/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import { planForestInsert, positionalRank, rankWindow } from "./block-forest";
-import { IdentifiedBlockSchema, type IdentifiedBlock } from "./serialized-block";
+import {
+  IdentifiedBlockSchema,
+  type IdentifiedBlock,
+} from "./serialized-block";
 import {
   mergeRuns,
   plainOf,
@@ -196,7 +203,10 @@ export type BlockOp =
    * `translateOpForStore` only rewrites `parentId` for the kinds that have one, so
    * adding the field here would silently skip anchor translation.
    */
-  | { kind: "duplicate"; placements: { afterId: string; forest: IdentifiedBlock[] }[] };
+  | {
+      kind: "duplicate";
+      placements: { afterId: string; forest: IdentifiedBlock[] }[];
+    };
 
 /**
  * Type facts the pure reducer cannot derive from the forest alone. Parameterized
@@ -253,9 +263,16 @@ export const BlockOpSchema: ZodParser<BlockOp> = z.discriminatedUnion("kind", [
     tailData: z.unknown().optional(),
     runs: z.array(TextRunSchema).optional(),
   }),
-  z.object({ kind: z.literal("merge"), blockId: z.string(), runs: z.array(TextRunSchema).optional() }),
+  z.object({
+    kind: z.literal("merge"),
+    blockId: z.string(),
+    runs: z.array(TextRunSchema).optional(),
+  }),
   z.object({ kind: z.literal("indent"), blockIds: z.array(z.string()).min(1) }),
-  z.object({ kind: z.literal("outdent"), blockIds: z.array(z.string()).min(1) }),
+  z.object({
+    kind: z.literal("outdent"),
+    blockIds: z.array(z.string()).min(1),
+  }),
   z.object({
     kind: z.literal("insert"),
     newId: z.string(),
@@ -302,14 +319,20 @@ export const BlockOpSchema: ZodParser<BlockOp> = z.discriminatedUnion("kind", [
 const NO_EXCLUSIONS: ReadonlySet<string> = new Set<string>();
 
 /** Children of `parentId`, sorted ascending by rank. */
-export function childrenOf(blocks: BlockNode[], parentId: string | null): BlockNode[] {
+export function childrenOf(
+  blocks: BlockNode[],
+  parentId: string | null,
+): BlockNode[] {
   return blocks
     .filter((b) => b.parentId === parentId)
     .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)));
 }
 
 /** The rank-immediate previous sibling of `node` (null if it is first). */
-export function prevSibling(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+export function prevSibling(
+  blocks: BlockNode[],
+  node: BlockNode,
+): BlockNode | null {
   const siblings = childrenOf(blocks, node.parentId);
   const idx = siblings.findIndex((s) => s.id === node.id);
   if (idx <= 0) return null;
@@ -369,7 +392,8 @@ export function visibleChildRule(opts: {
   if (!hasChildren) return { show: "none", sealedBelow: sealed };
   const open = expanded && !sealed;
   // R1: an anchor descends into its first child either way — that child is its line.
-  if (isAnchor) return { show: open ? "all" : "first", sealedBelow: sealed || !expanded };
+  if (isAnchor)
+    return { show: open ? "all" : "first", sealedBelow: sealed || !expanded };
   // R2: a sealed line is the borrowed line itself; nothing below it shows.
   return { show: open ? "all" : "none", sealedBelow: sealed };
 }
@@ -409,7 +433,9 @@ export function collapsedAnchorAbove(
   node: BlockNode,
   isAnchor: IsAnchor = NOT_ANCHOR,
 ): BlockNode | null {
-  const collapsed = anchorChainAbove(blocks, node, isAnchor).filter((a) => !a.expanded);
+  const collapsed = anchorChainAbove(blocks, node, isAnchor).filter(
+    (a) => !a.expanded,
+  );
   return collapsed[collapsed.length - 1] ?? null;
 }
 
@@ -510,7 +536,8 @@ export function nextVisibleLine(
   // siblings either — they are inside the box it folded. Resume the upward walk
   // ABOVE the outermost container hiding them, so the next line is the one after
   // the whole box.
-  let cur: BlockNode | null = collapsedAnchorAbove(blocks, node, isAnchor) ?? node;
+  let cur: BlockNode | null =
+    collapsedAnchorAbove(blocks, node, isAnchor) ?? node;
   while (cur) {
     const sib = nextSibling(blocks, cur);
     if (sib) return sib;
@@ -520,7 +547,10 @@ export function nextVisibleLine(
 }
 
 /** The rank-immediate next sibling of `node` (null if it is last). */
-export function nextSibling(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+export function nextSibling(
+  blocks: BlockNode[],
+  node: BlockNode,
+): BlockNode | null {
   const siblings = childrenOf(blocks, node.parentId);
   const idx = siblings.findIndex((s) => s.id === node.id);
   if (idx === -1) return null;
@@ -580,7 +610,10 @@ export function replace(blocks: BlockNode[], next: BlockNode): BlockNode[] {
 }
 
 /** Immutable remove: return a new array without the given ids. */
-export function remove(blocks: BlockNode[], ids: ReadonlySet<string> | string[]): BlockNode[] {
+export function remove(
+  blocks: BlockNode[],
+  ids: ReadonlySet<string> | string[],
+): BlockNode[] {
   const set = ids instanceof Set ? ids : new Set(ids);
   return blocks.filter((b) => !set.has(b.id));
 }
@@ -616,7 +649,10 @@ function documentOrder(blocks: BlockNode[]): string[] {
 }
 
 /** `ids` sorted top-to-bottom in document order; ids absent from the forest are dropped. */
-export function inDocumentOrder(blocks: BlockNode[], ids: readonly string[]): string[] {
+export function inDocumentOrder(
+  blocks: BlockNode[],
+  ids: readonly string[],
+): string[] {
   const wanted = new Set(ids);
   return documentOrder(blocks).filter((id) => wanted.has(id));
 }
@@ -781,7 +817,12 @@ function pruneEmptyAnchors(
   for (;;) {
     const parents = new Set(next.map((b) => b.parentId));
     const doomed = next
-      .filter((b) => anchorTypes.has(b.type) && b.type !== PAGE_BLOCK_TYPE && !parents.has(b.id))
+      .filter(
+        (b) =>
+          anchorTypes.has(b.type) &&
+          b.type !== PAGE_BLOCK_TYPE &&
+          !parents.has(b.id),
+      )
       .map((b) => b.id);
     if (doomed.length === 0) return next;
     next = remove(next, doomed);
@@ -845,12 +886,15 @@ function applySplit(
       id: op.newId,
       pageId: block.pageId,
       parentId: block.parentId,
-      type: op.siblingType ?? block.type,      // siblingType is never set here; belt-and-braces
-      data: { ...asObject(op.tailData !== undefined ? op.tailData : block.data), text: [] },
+      type: op.siblingType ?? block.type, // siblingType is never set here; belt-and-braces
+      data: {
+        ...asObject(op.tailData !== undefined ? op.tailData : block.data),
+        text: [],
+      },
       rank: aboveRank.toJSON(),
       expanded: true,
     };
-    return add(revealed, aboveNode);            // origin's object reference returned untouched
+    return add(revealed, aboveNode); // origin's object reference returned untouched
   }
 
   let next = revealed;
@@ -874,7 +918,10 @@ function applySplit(
     const next0 = nextSibling(revealed, block);
     newParentId = block.parentId;
     newType = op.siblingType ?? block.type;
-    newRank = Rank.between(Rank.from(block.rank), next0 ? Rank.from(next0.rank) : null);
+    newRank = Rank.between(
+      Rank.from(block.rank),
+      next0 ? Rank.from(next0.rank) : null,
+    );
 
     // Visible-line invariant: a split turns one visible line into two ADJACENT
     // visible lines — the tail is the immediately-next visible line, and no
@@ -979,7 +1026,10 @@ function applyMerge(
   // Concatenate runs into prev (coalescing the seam). `op.runs` is the live
   // merging runs on the live path; `runsOfNode` (lagged projection) is only the
   // pure reducer's fallback basis (tests / non-live).
-  let mergedPrev = withRuns(prev, mergeRuns(runsOfNode(prev), op.runs ?? runsOfNode(block)));
+  let mergedPrev = withRuns(
+    prev,
+    mergeRuns(runsOfNode(prev), op.runs ?? runsOfNode(block)),
+  );
 
   // Adopt the block's children under prev, order-preserving. The general rule is
   // that adopted children occupy the visible position the merged block occupied:
@@ -1008,14 +1058,22 @@ function applyMerge(
         nextAfterBlock ? Rank.from(nextAfterBlock.rank) : null,
         adopted.length,
       )
-    : Rank.nBetween(lastPrevKid ? Rank.from(lastPrevKid.rank) : null, null, adopted.length);
+    : Rank.nBetween(
+        lastPrevKid ? Rank.from(lastPrevKid.rank) : null,
+        null,
+        adopted.length,
+      );
   if (adopted.length > 0) {
     mergedPrev = { ...mergedPrev, expanded: true };
   }
 
   let next = replace(blocks, mergedPrev);
   adopted.forEach((child, i) => {
-    next = replace(next, { ...child, parentId: prev.id, rank: adoptedRanks[i]!.toJSON() });
+    next = replace(next, {
+      ...child,
+      parentId: prev.id,
+      rank: adoptedRanks[i]!.toJSON(),
+    });
   });
 
   return remove(next, [block.id]);
@@ -1037,9 +1095,16 @@ function indentOne(blocks: BlockNode[], blockId: string): BlockNode[] | null {
   if (prev.type === PAGE_BLOCK_TYPE) return null;
 
   const lastChild = lastOf(childrenOf(blocks, prev.id));
-  const newRank = Rank.between(lastChild ? Rank.from(lastChild.rank) : null, null);
+  const newRank = Rank.between(
+    lastChild ? Rank.from(lastChild.rank) : null,
+    null,
+  );
 
-  let next = replace(blocks, { ...block, parentId: prev.id, rank: newRank.toJSON() });
+  let next = replace(blocks, {
+    ...block,
+    parentId: prev.id,
+    rank: newRank.toJSON(),
+  });
   next = replace(next, { ...prev, expanded: true });
   return next;
 }
@@ -1167,12 +1232,18 @@ function foldOutdent(blocks: BlockNode[], blockIds: readonly string[]): Fold {
 }
 
 /** Would indenting `blockIds` move anything? Drives the selection bar's affordance. */
-export function canIndent(blocks: BlockNode[], blockIds: readonly string[]): boolean {
+export function canIndent(
+  blocks: BlockNode[],
+  blockIds: readonly string[],
+): boolean {
   return foldIndent(blocks, blockIds).moved.length > 0;
 }
 
 /** Would outdenting `blockIds` move anything? Drives the selection bar's affordance. */
-export function canOutdent(blocks: BlockNode[], blockIds: readonly string[]): boolean {
+export function canOutdent(
+  blocks: BlockNode[],
+  blockIds: readonly string[],
+): boolean {
   return foldOutdent(blocks, blockIds).moved.length > 0;
 }
 
@@ -1191,7 +1262,8 @@ export interface BulkMovePlacement {
 }
 
 /** Why a bulk move was refused. Each maps 1:1 to a distinguishable server 4xx. */
-export type BulkMoveRefusal = "empty-selection" | "into-selection" | "into-own-subtree";
+export type BulkMoveRefusal =
+  "empty-selection" | "into-selection" | "into-own-subtree";
 
 export interface BulkMovePlan {
   /** In DOCUMENT order. Empty iff `refusal !== null`. */
@@ -1249,7 +1321,11 @@ function refusedBulkMove(refusal: BulkMoveRefusal): BulkMovePlan {
  */
 export function planBulkMove(
   blocks: BlockNode[],
-  args: { ids: readonly string[]; parentId: string | null; afterId: string | null },
+  args: {
+    ids: readonly string[];
+    parentId: string | null;
+    afterId: string | null;
+  },
   destSiblings: BlockNode[] = blocks,
 ): BulkMovePlan {
   const moving = new Set(args.ids);
@@ -1271,7 +1347,12 @@ export function planBulkMove(
   // still-unmoved root's rank — which is what the server's park-then-place phase
   // exists to absorb; see `forest-writer.ts`.)
   const movingSubtree = new Set(roots.flatMap((r) => subtreeIds(blocks, r)));
-  const [prev, next] = rankWindow(destSiblings, args.parentId, args.afterId, movingSubtree);
+  const [prev, next] = rankWindow(
+    destSiblings,
+    args.parentId,
+    args.afterId,
+    movingSubtree,
+  );
   const ranks = Rank.nBetween(prev, next, roots.length);
 
   const placements = roots.map((id, i) => ({
@@ -1298,7 +1379,10 @@ export function planBulkMove(
  * `refusal` a caller may want to distinguish; `applyBulkMoveOp` is the reducer
  * arm that composes the two and reads a refusal as the identity.
  */
-export function applyBulkMove(blocks: BlockNode[], plan: BulkMovePlan): BlockNode[] {
+export function applyBulkMove(
+  blocks: BlockNode[],
+  plan: BulkMovePlan,
+): BlockNode[] {
   let next = blocks;
   for (const p of plan.placements) {
     const node = byId(next, p.id);
@@ -1307,7 +1391,8 @@ export function applyBulkMove(blocks: BlockNode[], plan: BulkMovePlan): BlockNod
   }
   if (plan.placements.length > 0 && plan.expandParentId) {
     const parent = byId(next, plan.expandParentId);
-    if (parent && !parent.expanded) next = replace(next, { ...parent, expanded: true });
+    if (parent && !parent.expanded)
+      next = replace(next, { ...parent, expanded: true });
   }
   return next;
 }
@@ -1351,7 +1436,10 @@ function applyBulkMoveOp(
  * Using `parent.pageId` unconditionally dropped a top-level block's pageId to
  * null (a page's own pageId is null), hiding it from the page-scoped query.
  */
-function insertScopePageId(blocks: BlockNode[], parentId: string | null): string | null {
+function insertScopePageId(
+  blocks: BlockNode[],
+  parentId: string | null,
+): string | null {
   const parent = parentId ? byId(blocks, parentId) : undefined;
   if (!parent) return parentId;
   return parent.type === PAGE_BLOCK_TYPE ? parent.id : parent.pageId;
@@ -1381,9 +1469,14 @@ function insertForestAt(
 
   const after = at.afterId ? byId(blocks, at.afterId) : undefined;
   if (at.afterId && !after) return blocks;
-  const parentId = after ? after.parentId : at.parentId ?? null;
+  const parentId = after ? after.parentId : (at.parentId ?? null);
 
-  const [prev, nextRank] = rankWindow(blocks, parentId, at.afterId, NO_EXCLUSIONS);
+  const [prev, nextRank] = rankWindow(
+    blocks,
+    parentId,
+    at.afterId,
+    NO_EXCLUSIONS,
+  );
   const { nodes } = planForestInsert({
     pageId: insertScopePageId(blocks, parentId),
     parentId,
@@ -1396,7 +1489,8 @@ function insertForestAt(
   let next = blocks;
   if (parentId) {
     const parent = byId(next, parentId);
-    if (parent && !parent.expanded) next = replace(next, { ...parent, expanded: true });
+    if (parent && !parent.expanded)
+      next = replace(next, { ...parent, expanded: true });
   }
   return [...next, ...nodes];
 }
@@ -1551,7 +1645,11 @@ function applyUnwrap(
 
   let next = blocks;
   promoted.forEach((child, i) => {
-    next = replace(next, { ...child, parentId: block.parentId, rank: ranks[i]!.toJSON() });
+    next = replace(next, {
+      ...child,
+      parentId: block.parentId,
+      rank: ranks[i]!.toJSON(),
+    });
   });
   return remove(next, [block.id]);
 }
@@ -1587,7 +1685,11 @@ function applyMove(
     new Set([op.blockId]),
   );
 
-  let next = replace(blocks, { ...block, parentId: op.parentId, rank: rank.toJSON() });
+  let next = replace(blocks, {
+    ...block,
+    parentId: op.parentId,
+    rank: rank.toJSON(),
+  });
   // Open the new parent (if any).
   if (op.parentId) {
     const parent = byId(next, op.parentId);

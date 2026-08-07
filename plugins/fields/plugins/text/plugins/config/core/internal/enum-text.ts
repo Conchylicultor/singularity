@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { type FieldDef, type FieldMeta, type FieldType, pickMeta } from "@plugins/fields/core";
+import {
+  type FieldDef,
+  type FieldMeta,
+  type FieldType,
+  pickMeta,
+} from "@plugins/fields/core";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
 
 // A text column branded with a closed string-union — the field-record analogue

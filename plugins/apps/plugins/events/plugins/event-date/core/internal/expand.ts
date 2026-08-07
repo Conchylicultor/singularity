@@ -122,10 +122,7 @@ export function nextOccurrence(date: EventDate, from: Date): NextOccurrence {
       : { found: false, reason: "exhausted" };
   }
 
-  for (const occurrence of seriesOccurrences(
-    date,
-    Number.POSITIVE_INFINITY,
-  )) {
+  for (const occurrence of seriesOccurrences(date, Number.POSITIVE_INFINITY)) {
     if (occurrence.startsAt.getTime() >= fromMs) {
       return { found: true, occurrence };
     }

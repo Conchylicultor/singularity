@@ -29,8 +29,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
  * worktree"), so the settled non-value can explain itself to the user.
  */
 export type Resolvable<T> =
-  | { resolved: true; value: T }
-  | { resolved: false; reason: string };
+  { resolved: true; value: T } | { resolved: false; reason: string };
 
 /**
  * Builds the Zod schema for `Resolvable<T>` from the inner value schema. Uses a

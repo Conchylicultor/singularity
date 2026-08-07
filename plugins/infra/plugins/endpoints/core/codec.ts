@@ -50,7 +50,10 @@ export function json<T>(schema?: ZodParser<T>): Codec<T> {
       if (!result.success) {
         throw new HttpError(
           400,
-          JSON.stringify({ error: "Validation failed", issues: result.error.issues }),
+          JSON.stringify({
+            error: "Validation failed",
+            issues: result.error.issues,
+          }),
         );
       }
       return result.data;
@@ -101,7 +104,8 @@ export function multipart(): Codec<FormData> {
         return await req.formData();
       } catch (err) {
         // Wrong content-type or malformed multipart body → 400, not a 500.
-        if (!(err instanceof TypeError) && !(err instanceof SyntaxError)) throw err;
+        if (!(err instanceof TypeError) && !(err instanceof SyntaxError))
+          throw err;
         throw new HttpError(400, "Invalid multipart body");
       }
     },

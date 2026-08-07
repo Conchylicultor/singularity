@@ -53,10 +53,8 @@ export function pointQueryResourceDescriptor<Row>(
   rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
 ): PointQueryResourceContract<Row> {
-  const descriptor = pointResourceDescriptor<Row>(
-    key,
-    rowSchema,
-    (row) => String((row as Record<string, unknown>)[pkField]),
+  const descriptor = pointResourceDescriptor<Row>(key, rowSchema, (row) =>
+    String((row as Record<string, unknown>)[pkField]),
   );
   return Object.assign(descriptor, { queryPk: pkField });
 }

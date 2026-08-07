@@ -1,9 +1,5 @@
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import {
-  type FieldDef,
-  type FieldMeta,
-  pickMeta,
-} from "@plugins/fields/core";
+import { type FieldDef, type FieldMeta, pickMeta } from "@plugins/fields/core";
 import type { FieldType } from "@plugins/fields/core";
 import { jsonFieldType } from "@plugins/fields/plugins/json/core";
 

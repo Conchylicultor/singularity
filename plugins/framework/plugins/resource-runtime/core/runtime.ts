@@ -68,7 +68,9 @@ export type ResourceParams = Record<string, string>;
 export type RecomputeIntent = {
   resource: string;
   key: ResourceParams;
-  delta: { table: string; ids: string[]; op: "I" | "U" | "D"; xid?: string } | "FULL";
+  delta:
+    | { table: string; ids: string[]; op: "I" | "U" | "D"; xid?: string }
+    | "FULL";
 };
 
 // Upstream edge: when `resource` notifies, this resource is cascaded.
@@ -191,7 +193,10 @@ type MembershipRecord =
     }
   | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
 
-export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams> {
+export interface ResourceDefinition<
+  T,
+  P extends ResourceParams = ResourceParams,
+> {
   key: string;
   mode?: ResourceMode;
   /**
@@ -201,7 +206,10 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * a partial array for `keyed` mode — the diff merges it into the snapshot).
    * Full loads (sub-ack, HTTP fallback, plain `notify()`) pass `ctx === undefined`.
    */
-  loader: (params: P, ctx?: { affectedIds: readonly string[] }) => Promise<T> | T;
+  loader: (
+    params: P,
+    ctx?: { affectedIds: readonly string[] },
+  ) => Promise<T> | T;
   /**
    * Zod schema for the payload. Required. The server parses every loader output
    * against it at load time (single chokepoint in `timedLoad`) before any
@@ -399,20 +407,22 @@ export type ScopePolicy =
  * against. See
  * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
  */
-export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
-  Omit<
-    ResourceDefinition<T, P>,
-    | "mode"
-    | "keyOf"
-    | "identityTable"
-    | "recompute"
-    | "scopedMembership"
-    | "membership"
-    | "bootCritical"
-  > & {
-    mode?: "push" | "invalidate";
-    identityTable?: string;
-  };
+export type DefineResourceInput<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = Omit<
+  ResourceDefinition<T, P>,
+  | "mode"
+  | "keyOf"
+  | "identityTable"
+  | "recompute"
+  | "scopedMembership"
+  | "membership"
+  | "bootCritical"
+> & {
+  mode?: "push" | "invalidate";
+  identityTable?: string;
+};
 
 /**
  * The browser-safe half of a resource declaration: exactly the fields a client
@@ -429,7 +439,10 @@ export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
  * stays acyclic. `P` is threaded through the same phantom `__params` the
  * descriptor uses, so the server resource inherits the descriptor's param typing.
  */
-export interface ResourceContract<T, P extends ResourceParams = ResourceParams> {
+export interface ResourceContract<
+  T,
+  P extends ResourceParams = ResourceParams,
+> {
   key: string;
   schema: ZodParser<T>;
   keyed?: { keyOf: (row: unknown) => string };
@@ -452,8 +465,10 @@ export interface ResourceContract<T, P extends ResourceParams = ResourceParams> 
  * is held to the SAME scope-coverage invariant as the flat `DefineResourceInput`
  * form — the descriptor path is not an escape hatch.
  */
-export type KeyedResourceContract<T, P extends ResourceParams = ResourceParams> =
-  ResourceContract<T, P> & { keyed: { keyOf: (row: unknown) => string } };
+export type KeyedResourceContract<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = ResourceContract<T, P> & { keyed: { keyOf: (row: unknown) => string } };
 
 /**
  * Server-only half of a resource declaration, paired with a `ResourceContract`
@@ -464,7 +479,10 @@ export type KeyedResourceContract<T, P extends ResourceParams = ResourceParams> 
  * excludes it). The keyed overload additionally intersects `ScopePolicy`, which
  * makes `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory.
  */
-export interface ServerResourceOptions<T, P extends ResourceParams = ResourceParams> {
+export interface ServerResourceOptions<
+  T,
+  P extends ResourceParams = ResourceParams,
+> {
   loader: ResourceDefinition<T, P>["loader"];
   mode?: Exclude<ResourceMode, "keyed">;
   dependsOn?: ResourceDefinition<T, P>["dependsOn"];
@@ -547,8 +565,10 @@ export interface Resource<T, P extends ResourceParams = ResourceParams> {
  * method at all, so hand-notifying it is a compile error. See
  * research/2026-06-20-global-remove-hand-notify-dependson.md §2.
  */
-export interface ExternalResource<T, P extends ResourceParams = ResourceParams>
-  extends Resource<T, P> {
+export interface ExternalResource<
+  T,
+  P extends ResourceParams = ResourceParams,
+> extends Resource<T, P> {
   /**
    * Signal that state has changed. No-arg = parameterless resource.
    * `opts.affectedIds` (Layer 2) scopes the recompute to those row ids — the
@@ -562,7 +582,10 @@ export interface ExternalResource<T, P extends ResourceParams = ResourceParams>
 
 interface DownstreamEdge {
   downstreamKey: string;
-  map?: (upstreamParams: ResourceParams, upstreamValue: unknown) => ResourceParams[];
+  map?: (
+    upstreamParams: ResourceParams,
+    upstreamValue: unknown,
+  ) => ResourceParams[];
   affectedMap?: (
     upstreamAffected: ReadonlySet<string>,
     upstreamParams: ResourceParams,
@@ -950,7 +973,9 @@ export interface ResourceRuntime {
    * Prefer the two-arg form whenever a client descriptor exists for the resource.
    */
   defineResource: {
-    <T, P extends ResourceParams = ResourceParams>(def: DefineResourceInput<T, P>): Resource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      def: DefineResourceInput<T, P>,
+    ): Resource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: KeyedResourceContract<T, P>,
       opts: ServerResourceOptions<T, P> & ScopePolicy,
@@ -1126,14 +1151,17 @@ function normalizeEtag(raw: string): string {
 // caller's loop across the wrapOrigin boundary, so it returns this instead.
 const SKIP_EDGE = Symbol("skip-edge");
 
-export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): ResourceRuntime {
+export function createResourceRuntime(
+  opts: ResourceRuntimeOptions = {},
+): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
   const inflight = createInflight();
   // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its `onWait`
   // charges queue-wait to the enclosing entry via the injected hook (server:
   // chargeWait), so a saturated gate is observable rather than hidden.
   const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY);
-  const chargeReadGateWait = (waitMs: number): void => opts.onReadGateWait?.(waitMs);
+  const chargeReadGateWait = (waitMs: number): void =>
+    opts.onReadGateWait?.(waitMs);
   // Identity of THIS server boot, stamped on every sub-ack / up-to-date frame.
   // `entry.versions` is per-boot in-memory state (created empty at registration,
   // bumped only in the flush paths — nothing restores it across restarts), so a
@@ -1163,7 +1191,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   let flushRunning = false;
   let flushAgain = false;
   let batchDepth = 0;
-  const heartbeats = new Map<ServerWebSocket<WsData>, ReturnType<typeof setInterval>>();
+  const heartbeats = new Map<
+    ServerWebSocket<WsData>,
+    ReturnType<typeof setInterval>
+  >();
 
   // --- L4 self-verification (parallel-run instrumentation) ---
   // Per-resource-key notify counters, split by source (hand-`notify()` vs the DB
@@ -1440,7 +1471,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // `ackTx: seedAckTx` — the STARTER's seed; joiners adopt it wholesale
       // (like the etag/watermark), so a stamped ackTx always describes the
       // flight that produced the value it rides with.
-      return { value: await timedLoad(entry, params), etag: seedEtag, watermark, ackTx: seedAckTx };
+      return {
+        value: await timedLoad(entry, params),
+        etag: seedEtag,
+        watermark,
+        ackTx: seedAckTx,
+      };
     };
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
@@ -1470,11 +1506,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     entry: RegistryEntry,
     params: ResourceParams,
     seedEtag?: string,
-  ): Promise<{ value: unknown; etag: string | undefined; watermark: string | undefined }> {
+  ): Promise<{
+    value: unknown;
+    etag: string | undefined;
+    watermark: string | undefined;
+  }> {
     // No ackTx seed and the resolved ackTx is discarded: read-path frames
     // (sub-ack / HTTP body) never carry one — their snapshot watermark subsumes
     // it (Rule B).
-    const run = () => getResourceValue(entry, params, undefined, seedEtag, true);
+    const run = () =>
+      getResourceValue(entry, params, undefined, seedEtag, true);
     return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
   }
 
@@ -1490,10 +1531,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (!entry.revalidate) return undefined;
     const revalidate = entry.revalidate;
     try {
-      const run = () => readLoadGate.run(() => revalidate(params), chargeReadGateWait);
-      const raw = await (opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run());
+      const run = () =>
+        readLoadGate.run(() => revalidate(params), chargeReadGateWait);
+      const raw = await (opts.wrapOrigin
+        ? opts.wrapOrigin("sub", entry.key, run)
+        : run());
       return normalizeEtag(raw);
-    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
+      // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
     } catch (err) {
       reportLoaderError(`revalidate failed for ${entry.key}`, err);
       return undefined;
@@ -1517,9 +1561,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const revalidate = entry.revalidate;
     try {
       const run = () => revalidate(params);
-      const raw = await (opts.wrapOrigin ? opts.wrapOrigin("push", entry.key, run) : run());
+      const raw = await (opts.wrapOrigin
+        ? opts.wrapOrigin("push", entry.key, run)
+        : run());
       return normalizeEtag(raw);
-    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
+      // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
     } catch (err) {
       reportLoaderError(`revalidate failed for ${entry.key}`, err);
       return undefined;
@@ -1615,7 +1661,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // resolves membership wholesale). Capped at SOURCE_TX_CAP: overflow suppresses
   // the whole set for the cycle (a missing ack is safe; a torn set is not).
   const SOURCE_TX_CAP = 64;
-  function unionSourceTx(pending: PendingNotify, sourceTx?: ReadonlySet<string>): void {
+  function unionSourceTx(
+    pending: PendingNotify,
+    sourceTx?: ReadonlySet<string>,
+  ): void {
     if (!sourceTx || sourceTx.size === 0 || pending.sourceTxOverflow) return;
     const set = (pending.sourceTx ??= new Set<string>());
     for (const id of sourceTx) set.add(id);
@@ -1666,7 +1715,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // The pending's shippable ackTx: undefined when absent, empty, or overflowed
   // (suppression — see `PendingNotify.sourceTxOverflow`).
   function pendingAckTx(pending: PendingNotify): string[] | undefined {
-    if (pending.sourceTxOverflow || !pending.sourceTx || pending.sourceTx.size === 0) {
+    if (
+      pending.sourceTxOverflow ||
+      !pending.sourceTx ||
+      pending.sourceTx.size === 0
+    ) {
       return undefined;
     }
     return [...pending.sourceTx];
@@ -1675,7 +1728,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // The pending's sourceTx as threaded DOWNSTREAM through the cascade (a
   // downstream recompute reads post-commit too, so the claim propagates).
   // Overflow propagates as suppression (undefined).
-  function cascadeSourceTx(pending: PendingNotify): ReadonlySet<string> | undefined {
+  function cascadeSourceTx(
+    pending: PendingNotify,
+  ): ReadonlySet<string> | undefined {
     return pending.sourceTxOverflow ? undefined : pending.sourceTx;
   }
 
@@ -1685,7 +1740,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // cache-less by design: it MUST NOT bump the per-pk version counter, touch
   // the snapshot, or cascade — it exists purely so an optimistic client's
   // exact-ack confirmation never hangs on a no-op recompute.
-  function broadcastAckOnly(entry: RegistryEntry, pendingEntry: PendingNotify): void {
+  function broadcastAckOnly(
+    entry: RegistryEntry,
+    pendingEntry: PendingNotify,
+  ): void {
     if (!entry.ackChannel) return;
     const ackTx = pendingAckTx(pendingEntry);
     if (ackTx === undefined) return;
@@ -1713,7 +1771,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
     const mode = def.mode ?? "invalidate";
     if (!def.schema) {
-      throw new Error(`defineResource: a schema is required for key "${def.key}"`);
+      throw new Error(
+        `defineResource: a schema is required for key "${def.key}"`,
+      );
     }
     if (mode === "keyed" && !def.keyOf) {
       throw new Error(
@@ -1765,7 +1825,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           }
         : {
             kind: "point",
-            idsOf: def.membership.idsOf as (params: ResourceParams) => readonly string[],
+            idsOf: def.membership.idsOf as (
+              params: ResourceParams,
+            ) => readonly string[],
           }
       : def.scopedMembership
         ? {
@@ -1789,7 +1851,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       );
     }
     const upstreamKeys: string[] = [];
-    const ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }> = [];
+    const ownDownstreamEdges: Array<{
+      upstreamKey: string;
+      edge: DownstreamEdge;
+    }> = [];
     for (const dep of def.dependsOn ?? []) {
       upstreamKeys.push(dep.resource.key);
       ownDownstreamEdges.push({
@@ -1839,17 +1904,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       upstreamKeys,
       downstream: [],
       onFirstSubscribe: def.onFirstSubscribe as
-        | ((params: ResourceParams) => void | Promise<void>)
-        | undefined,
+        ((params: ResourceParams) => void | Promise<void>) | undefined,
       onLastUnsubscribe: def.onLastUnsubscribe as
-        | ((params: ResourceParams) => void)
-        | undefined,
+        ((params: ResourceParams) => void) | undefined,
       revalidate: def.revalidate as
-        | ((params: ResourceParams) => Promise<string>)
-        | undefined,
+        ((params: ResourceParams) => Promise<string>) | undefined,
       authorize: def.authorize as
-        | ((params: ResourceParams) => boolean | Promise<boolean>)
-        | undefined,
+        ((params: ResourceParams) => boolean | Promise<boolean>) | undefined,
       ackChannel: def.ackChannel,
     };
     registry.set(def.key, entry);
@@ -1875,7 +1936,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       },
       notify(params?: P, opts?: { affectedIds?: string[] }): void {
         const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;
-        scheduleNotify(entry, (params ?? ({} as P)) as ResourceParams, affected);
+        scheduleNotify(
+          entry,
+          (params ?? ({} as P)) as ResourceParams,
+          affected,
+        );
       },
     };
   }
@@ -1983,7 +2048,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (cycles.length > 0) {
       for (const cycle of cycles) {
         // Phase 1: warn only. Phase 3 promotes this to a hard failure.
-        console.warn(`[resources] dependsOn cycle detected: ${cycle.join(" -> ")}`);
+        console.warn(
+          `[resources] dependsOn cycle detected: ${cycle.join(" -> ")}`,
+        );
       }
     }
 
@@ -1991,7 +2058,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // Group by depth. Post-order is not depth-sorted across independent subtrees,
     // so build the levels explicitly rather than slicing `order`.
     const maxDepth = order.reduce((m, e) => Math.max(m, e.depth ?? 0), 0);
-    const levels: RegistryEntry[][] = Array.from({ length: maxDepth + 1 }, () => []);
+    const levels: RegistryEntry[][] = Array.from(
+      { length: maxDepth + 1 },
+      () => [],
+    );
     for (const e of order) levels[e.depth ?? 0]!.push(e);
     topoLevels = levels;
   }
@@ -2010,7 +2080,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   function sendJson(ws: ServerWebSocket<WsData>, obj: unknown): void {
     try {
       ws.send(JSON.stringify(obj));
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // close handler will clean up
     }
@@ -2030,7 +2100,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     for (const s of subs) {
       try {
         s.ws.send(str);
-      // eslint-disable-next-line promise-safety/no-bare-catch
+        // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // close handler will clean up
       }
@@ -2042,7 +2112,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   function scheduleFlush(): void {
     if (flushScheduled) return;
     flushScheduled = true;
-    queueMicrotask(() => { void flushNotifies(); });
+    queueMicrotask(() => {
+      void flushNotifies();
+    });
   }
 
   async function withNotifyBatch<T>(fn: () => Promise<T>): Promise<T> {
@@ -2186,7 +2258,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   ): string | undefined {
     try {
       return sigFn(row);
-    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and undefined is not an absorbable empty: it is the documented "unknown" sentinel the callers treat as MOVED — the fail-safe direction (re-derive the window), never a false "unchanged"
+      // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and undefined is not an absorbable empty: it is the documented "unknown" sentinel the callers treat as MOVED — the fail-safe direction (re-derive the window), never a false "unchanged"
     } catch (err) {
       reportLoaderError(`orderSignatureOf failed for ${entry.key}`, err);
       return undefined;
@@ -2199,7 +2271,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // to the snapshot's. No-op unless the entry declares `orderSignatureOf`. A row
   // whose signature could not be computed is stored WITHOUT one, so the next
   // refill treats it as moved — fail-safe.
-  function reseedOrderSigs(entry: RegistryEntry, pk: string, value: unknown): void {
+  function reseedOrderSigs(
+    entry: RegistryEntry,
+    pk: string,
+    value: unknown,
+  ): void {
     const sigFn = orderSignatureFnOf(entry);
     if (!sigFn || !Array.isArray(value)) return;
     const keyOf = entry.keyOf!;
@@ -2215,10 +2291,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // computed over the row's canonical JSON string (including nested arrays like
   // an attempt's `conversations`). Shared by `diffKeyed` and `handleSub` so
   // both sides compute identity identically.
-  function snapshotOf(entry: RegistryEntry, value: unknown): Map<string, SnapEntry> {
+  function snapshotOf(
+    entry: RegistryEntry,
+    value: unknown,
+  ): Map<string, SnapEntry> {
     const keyOf = entry.keyOf;
     if (!keyOf) {
-      throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
+      throw new Error(
+        `[resources] keyed resource "${entry.key}" missing keyOf`,
+      );
     }
     if (!Array.isArray(value)) {
       throw new Error(
@@ -2232,10 +2313,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // that snapshot with the freshly computed id→hash map. `hadSnapshot` is false
   // only when there was no prior snapshot entry for `pk` (first notify) — callers
   // send a full update in that case so brand-new clients get a complete base.
-  function diffKeyed(entry: RegistryEntry, pk: string, value: unknown): KeyedDiff {
+  function diffKeyed(
+    entry: RegistryEntry,
+    pk: string,
+    value: unknown,
+  ): KeyedDiff {
     const keyOf = entry.keyOf;
     if (!keyOf) {
-      throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
+      throw new Error(
+        `[resources] keyed resource "${entry.key}" missing keyOf`,
+      );
     }
     if (!Array.isArray(value)) {
       throw new Error(
@@ -2268,7 +2355,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   ): { upserts: [string, unknown][] } {
     const keyOf = entry.keyOf;
     if (!keyOf) {
-      throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
+      throw new Error(
+        `[resources] keyed resource "${entry.key}" missing keyOf`,
+      );
     }
     const snapshots = (entry.snapshots ??= new Map());
     const snap = snapshots.get(pk);
@@ -2397,7 +2486,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // edge ⇒ every delivered id passes (prior behavior). Returns SKIP_EDGE
         // when nothing relevant changed (the closure cannot `continue` across the
         // wrapOrigin boundary).
-        const translate = async (): Promise<Set<string> | null | typeof SKIP_EDGE> => {
+        const translate = async (): Promise<
+          Set<string> | null | typeof SKIP_EDGE
+        > => {
           let relevant: ReadonlySet<string> = affected;
           if (signature) {
             try {
@@ -2422,7 +2513,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           if (relevant.size === 0) return SKIP_EDGE; // nothing relevant changed
           try {
             return new Set(await affectedMap(relevant, params));
-          // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and null is not an absorbable empty here: it is the documented "unscoped" sentinel that forces the downstream entry into a FULL recompute from source — the fail-safe direction (recompute everything), never a false "nothing changed"
+            // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and null is not an absorbable empty here: it is the documented "unscoped" sentinel that forces the downstream entry into a FULL recompute from source — the fail-safe direction (recompute everything), never a false "nothing changed"
           } catch (err) {
             reportLoaderError(
               `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
@@ -2438,7 +2529,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         downAffected = result;
       }
       for (const dp of derived) {
-        mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected, undefined, sourceTx);
+        mergePending(
+          down.pendingNotifies,
+          paramsKey(dp),
+          dp,
+          downAffected,
+          undefined,
+          sourceTx,
+        );
       }
     }
   }
@@ -2463,7 +2561,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const version = (entry.versions.get(pk) ?? 0) + 1;
     entry.versions.set(pk, version);
     const subs = subscribersFor(entry.key, pk);
-    const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
+    const hasValueAwareDownstream = entry.downstream.some(
+      (d) => d.map !== undefined,
+    );
     // The snapshot must be maintained whenever it could be needed later: a
     // persisted entry recomputes every change (and survives N→0), and a subscribed
     // entry needs a diff base. With neither (nor a value-aware downstream) there is
@@ -2494,10 +2594,29 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
       const seedAckTx = pendingAckTx(pendingEntry);
       try {
-        ({ value, watermark: flightWatermark, ackTx: flightAckTx } = await (opts.wrapOrigin
+        ({
+          value,
+          watermark: flightWatermark,
+          ackTx: flightAckTx,
+        } = await (opts.wrapOrigin
           ? opts.wrapOrigin("push", entry.key, () =>
-              getResourceValue(entry, params, undefined, undefined, false, seedAckTx))
-          : getResourceValue(entry, params, undefined, undefined, false, seedAckTx)));
+              getResourceValue(
+                entry,
+                params,
+                undefined,
+                undefined,
+                false,
+                seedAckTx,
+              ),
+            )
+          : getResourceValue(
+              entry,
+              params,
+              undefined,
+              undefined,
+              false,
+              seedAckTx,
+            )));
         valueComputed = true;
       } catch (err) {
         reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -2506,7 +2625,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       if (persisted && watermark !== undefined && opts.persistSnapshot) {
         const tablesRead = persistReadSet(entry.key);
         try {
-          await opts.persistSnapshot(entry.key, pk, value, watermark, tablesRead);
+          await opts.persistSnapshot(
+            entry.key,
+            pk,
+            value,
+            watermark,
+            tablesRead,
+          );
         } catch (err) {
           reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
         }
@@ -2517,7 +2642,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const hadSnapshot = entry.snapshots?.has(pk) ?? false;
       const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
       if (!hadSnapshot) {
-        await sendUpdate(entry, params, value, version, subs, flightWatermark, flightAckTx);
+        await sendUpdate(
+          entry,
+          params,
+          value,
+          version,
+          subs,
+          flightWatermark,
+          flightAckTx,
+        );
         opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
       } else {
         // A FULL-recompute keyed delta fully reconciles the client, so it may
@@ -2531,16 +2664,25 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           deletes,
           order,
           version,
-          ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
-          ...(flightAckTx !== undefined && flightAckTx.length > 0 ? { ackTx: flightAckTx } : {}),
+          ...(flightWatermark !== undefined
+            ? { watermark: flightWatermark }
+            : {}),
+          ...(flightAckTx !== undefined && flightAckTx.length > 0
+            ? { ackTx: flightAckTx }
+            : {}),
         };
         broadcastJson(subs, msg);
         opts.onPush?.(entry.key, {
           subscribers: subs.length,
-          changed: upserts.length > 0 || deletes.length > 0 || order !== undefined,
+          changed:
+            upserts.length > 0 || deletes.length > 0 || order !== undefined,
         });
       }
-      opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
+      opts.onDelivered?.(
+        entry.key,
+        performance.now() - pendingEntry.enqueuedAt,
+        subs.length,
+      );
     } else if (valueComputed) {
       // Zero subscribers but a value was computed (persisted / value-aware
       // downstream): still seed/replace the snapshot so the next membership diff
@@ -2552,7 +2694,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (valueComputed) reseedOrderSigs(entry, pk, value);
 
     // A FULL recompute cascades FULL (clears edge signatures inside the helper).
-    await cascadeDownstream(entry, params, null, value, valueComputed, cascadeSourceTx(pendingEntry));
+    await cascadeDownstream(
+      entry,
+      params,
+      null,
+      value,
+      valueComputed,
+      cascadeSourceTx(pendingEntry),
+    );
   }
 
   // Membership incremental path (drainEntry branch 4): a membership entry
@@ -2609,10 +2758,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       try {
         const ctx = { affectedIds: [...requestedIds] };
         const { value: v } = await (opts.wrapOrigin
-          ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
+          ? opts.wrapOrigin("push", entry.key, () =>
+              getResourceValue(entry, params, ctx),
+            )
           : getResourceValue(entry, params, ctx));
         if (!Array.isArray(v)) {
-          throw new Error(`keyed resource "${entry.key}" loader must return an array`);
+          throw new Error(
+            `keyed resource "${entry.key}" loader must return an array`,
+          );
         }
         refillRows = v as unknown[];
         loaderRan = true;
@@ -2679,7 +2832,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         const fresh = safeOrderSig(entry, sigFn, row);
         freshSigs.set(id, fresh);
         if (!prev.has(id)) continue; // an entrant has no stored sig to compare
-        if (fresh === undefined || fresh !== storedSigs?.get(id)) orderMoved = true;
+        if (fresh === undefined || fresh !== storedSigs?.get(id))
+          orderMoved = true;
       }
     }
 
@@ -2711,7 +2865,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       if (entered || exited || orderMoved) {
         try {
           orderedIds = await (opts.wrapOrigin
-            ? opts.wrapOrigin("push", entry.key, () => membership.windowIdsOf(params))
+            ? opts.wrapOrigin("push", entry.key, () =>
+                membership.windowIdsOf(params),
+              )
             : membership.windowIdsOf(params));
         } catch (err) {
           reportLoaderError(`windowIdsOf failed for ${entry.key}`, err);
@@ -2722,22 +2878,29 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // (prev — the client holds those rows) nor this refill carries. Without
         // this, `diffKeyedScopedMembership`'s survivor filter would silently
         // drop the pulled-in tail row and the window would shrink. O(entrants).
-        const missing = orderedIds.filter((id) => !prev.has(id) && !refillIds.has(id));
+        const missing = orderedIds.filter(
+          (id) => !prev.has(id) && !refillIds.has(id),
+        );
         if (missing.length > 0) {
           try {
             const ctx = { affectedIds: missing };
             const { value: v } = await (opts.wrapOrigin
-              ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
+              ? opts.wrapOrigin("push", entry.key, () =>
+                  getResourceValue(entry, params, ctx),
+                )
               : getResourceValue(entry, params, ctx));
             if (!Array.isArray(v)) {
-              throw new Error(`keyed resource "${entry.key}" loader must return an array`);
+              throw new Error(
+                `keyed resource "${entry.key}" loader must return an array`,
+              );
             }
             for (const row of v as unknown[]) {
               refillRows.push(row);
               refillIds.add(keyOf(row));
               // A backfilled row is a fresh read too — record its signature so
               // the post-diff map maintenance stores it alongside the refill's.
-              if (sigFn && freshSigs) freshSigs.set(keyOf(row), safeOrderSig(entry, sigFn, row));
+              if (sigFn && freshSigs)
+                freshSigs.set(keyOf(row), safeOrderSig(entry, sigFn, row));
             }
             loaderRan = true;
           } catch (err) {
@@ -2758,7 +2921,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       if (entered) {
         try {
           orderedIds = await (opts.wrapOrigin
-            ? opts.wrapOrigin("push", entry.key, () => membership.windowIdsOf(params))
+            ? opts.wrapOrigin("push", entry.key, () =>
+                membership.windowIdsOf(params),
+              )
             : membership.windowIdsOf(params));
         } catch (err) {
           reportLoaderError(`orderOf failed for ${entry.key}`, err);
@@ -2822,7 +2987,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // member whose order signature moved past the tail leaves via `order` with
     // no surviving upsert and no `deletes` entry) — the client must receive the
     // frame or its array drifts from the mutated server snapshot.
-    const changed = upserts.length > 0 || deletes.length > 0 || order !== undefined;
+    const changed =
+      upserts.length > 0 || deletes.length > 0 || order !== undefined;
     const subs = subscribersFor(entry.key, pk);
     if (changed) {
       const version = (entry.versions.get(pk) ?? 0) + 1;
@@ -2845,7 +3011,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           ...(ackTx !== undefined ? { ackTx } : {}),
         };
         broadcastJson(subs, msg);
-        opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
+        opts.onDelivered?.(
+          entry.key,
+          performance.now() - pendingEntry.enqueuedAt,
+          subs.length,
+        );
       }
     } else {
       // Net-zero recompute (an entrant sorting past the tail, a window-boundary
@@ -2947,10 +3117,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // reintroduce the full upstream load Layer 2 is removing.
       // L2: a persisted entry ALWAYS needs the (FULL) value so it can be written
       // to the snapshot, even when no tab is subscribed.
-      const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
+      const hasValueAwareDownstream = entry.downstream.some(
+        (d) => d.map !== undefined,
+      );
       const needValue =
         persisted ||
-        ((entry.mode === "push" || entry.mode === "keyed") && subs.length > 0) ||
+        ((entry.mode === "push" || entry.mode === "keyed") &&
+          subs.length > 0) ||
         hasValueAwareDownstream;
       // L2: a persisted entry never passes a scoped ctx — it recomputes FULL.
       const ctx = scoped ? { affectedIds: [...affected!] } : undefined;
@@ -2987,10 +3160,29 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
-          ({ value, watermark: flightWatermark, ackTx: flightAckTx } = await (opts.wrapOrigin
+          ({
+            value,
+            watermark: flightWatermark,
+            ackTx: flightAckTx,
+          } = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () =>
-                getResourceValue(entry, params, ctx, undefined, false, seedAckTx))
-            : getResourceValue(entry, params, ctx, undefined, false, seedAckTx)));
+                getResourceValue(
+                  entry,
+                  params,
+                  ctx,
+                  undefined,
+                  false,
+                  seedAckTx,
+                ),
+              )
+            : getResourceValue(
+                entry,
+                params,
+                ctx,
+                undefined,
+                false,
+                seedAckTx,
+              )));
           valueComputed = true;
         } catch (err) {
           reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -3012,7 +3204,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           // next cold boot routes catch-up by the current set without a loader run.
           const tablesRead = persistReadSet(entry.key);
           try {
-            await opts.persistSnapshot(entry.key, pk, value, watermark, tablesRead);
+            await opts.persistSnapshot(
+              entry.key,
+              pk,
+              value,
+              watermark,
+              tablesRead,
+            );
           } catch (err) {
             reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
           }
@@ -3021,7 +3219,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
       if (subs.length > 0) {
         if (entry.mode === "invalidate") {
-          const msg = { kind: "invalidate" as const, key: entry.key, params, version };
+          const msg = {
+            kind: "invalidate" as const,
+            key: entry.key,
+            params,
+            version,
+          };
           broadcastJson(subs, msg);
         } else if (entry.mode === "keyed") {
           // `value` is guaranteed computed (needValue is true for keyed + subs).
@@ -3032,10 +3235,29 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // unsafe for diffKeyed — reload the FULL value and diff that.
             let full: unknown;
             try {
-              ({ value: full, watermark: flightWatermark, ackTx: flightAckTx } = await (opts.wrapOrigin
+              ({
+                value: full,
+                watermark: flightWatermark,
+                ackTx: flightAckTx,
+              } = await (opts.wrapOrigin
                 ? opts.wrapOrigin("push", entry.key, () =>
-                    getResourceValue(entry, params, undefined, undefined, false, seedAckTx))
-                : getResourceValue(entry, params, undefined, undefined, false, seedAckTx)));
+                    getResourceValue(
+                      entry,
+                      params,
+                      undefined,
+                      undefined,
+                      false,
+                      seedAckTx,
+                    ),
+                  )
+                : getResourceValue(
+                    entry,
+                    params,
+                    undefined,
+                    undefined,
+                    false,
+                    seedAckTx,
+                  )));
             } catch (err) {
               reportLoaderError(`loader failed for ${entry.key}`, err);
               continue;
@@ -3043,8 +3265,19 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
             // serves only to (re)seed the snapshot from the full value.
             diffKeyed(entry, pk, full);
-            await sendUpdate(entry, params, full, version, subs, flightWatermark, flightAckTx);
-            opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
+            await sendUpdate(
+              entry,
+              params,
+              full,
+              version,
+              subs,
+              flightWatermark,
+              flightAckTx,
+            );
+            opts.onPush?.(entry.key, {
+              subscribers: subs.length,
+              changed: true,
+            });
           } else if (scoped) {
             // Scoped path: merge the partial recompute into the snapshot and
             // ship only the changed rows. `deletes:[]`, `order:undefined` —
@@ -3075,7 +3308,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             }
             // Emit regardless of whether a frame was sent: the recompute happened,
             // so an empty scoped diff (upserts.length === 0) is a recorded no-op push.
-            opts.onPush?.(entry.key, { subscribers: subs.length, changed: upserts.length > 0 });
+            opts.onPush?.(entry.key, {
+              subscribers: subs.length,
+              changed: upserts.length > 0,
+            });
           } else {
             // FULL path (unchanged from Layer 1). diffKeyed replaces the stored
             // snapshot only here, after the loader succeeded — the loader-failure
@@ -3084,8 +3320,19 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             if (!hadSnapshot) {
               // First notify for this pk: ship a full update so brand-new
               // subscribers get a complete base to merge subsequent deltas onto.
-              await sendUpdate(entry, params, value, version, subs, flightWatermark, flightAckTx);
-              opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
+              await sendUpdate(
+                entry,
+                params,
+                value,
+                version,
+                subs,
+                flightWatermark,
+                flightAckTx,
+              );
+              opts.onPush?.(entry.key, {
+                subscribers: subs.length,
+                changed: true,
+              });
             } else {
               // A FULL-recompute keyed delta fully reconciles the client, so it
               // may carry the flight watermark (Rule B′) and the flight-resolved
@@ -3098,7 +3345,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 deletes,
                 order,
                 version,
-                ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
+                ...(flightWatermark !== undefined
+                  ? { watermark: flightWatermark }
+                  : {}),
                 ...(flightAckTx !== undefined && flightAckTx.length > 0
                   ? { ackTx: flightAckTx }
                   : {}),
@@ -3106,12 +3355,23 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               broadcastJson(subs, msg);
               opts.onPush?.(entry.key, {
                 subscribers: subs.length,
-                changed: upserts.length > 0 || deletes.length > 0 || order !== undefined,
+                changed:
+                  upserts.length > 0 ||
+                  deletes.length > 0 ||
+                  order !== undefined,
               });
             }
           }
         } else {
-          await sendUpdate(entry, params, value, version, subs, flightWatermark, flightAckTx);
+          await sendUpdate(
+            entry,
+            params,
+            value,
+            version,
+            subs,
+            flightWatermark,
+            flightAckTx,
+          );
         }
       }
 
@@ -3119,7 +3379,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // active `flush` entry (server: recordSpan("push", `deliver:<key>`)). Only
       // when a subscriber actually received a frame. Identity no-op on central.
       if (subs.length > 0) {
-        opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
+        opts.onDelivered?.(
+          entry.key,
+          performance.now() - pendingEntry.enqueuedAt,
+          subs.length,
+        );
       }
 
       await cascadeDownstream(
@@ -3138,7 +3402,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   const notificationsWsHandler: WsHandler = {
     open(ws) {
       sockets.set(ws, { ws, subs: new Map() });
-      const timer = setInterval(() => sendJson(ws, { kind: "ping" }), HEARTBEAT_MS);
+      const timer = setInterval(
+        () => sendJson(ws, { kind: "ping" }),
+        HEARTBEAT_MS,
+      );
       heartbeats.set(ws, timer);
     },
     message(ws, raw) {
@@ -3212,7 +3479,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // socket-level refcount was bumped once per pk. Legacy `""`-bucket subs
         // release here too (their only teardown path).
         for (const [key, inner] of state.subs) {
-          for (const [pk, rec] of inner) releaseSubRefcount(key, pk, rec.params);
+          for (const [pk, rec] of inner)
+            releaseSubRefcount(key, pk, rec.params);
         }
       }
       sockets.delete(ws);
@@ -3266,7 +3534,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (!key) return;
     const entry = registry.get(key);
     if (!entry) {
-      sendJson(state.ws, { kind: "sub-error", id, key, params, reason: "unknown-key" });
+      sendJson(state.ws, {
+        kind: "sub-error",
+        id,
+        key,
+        params,
+        reason: "unknown-key",
+      });
       return;
     }
     // Subscription-authorization seam (deferred; single-instance-per-user — see
@@ -3285,7 +3559,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         allowed = false;
       }
       if (!allowed) {
-        sendJson(state.ws, { kind: "sub-error", id, key, params, reason: "unauthorized" });
+        sendJson(state.ws, {
+          kind: "sub-error",
+          id,
+          key,
+          params,
+          reason: "unauthorized",
+        });
         return;
       }
     }
@@ -3410,9 +3690,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // in. `computeEtag` is fail-safe — undefined when the resource never opted in
     // OR the signature threw — so a broken signature degrades to the plain
     // full-loader path and never serves stale.
-    const freshEtag = entry.revalidate ? await computeEtag(entry, params) : undefined;
-    if (freshEtag !== undefined && clientEtag != null && freshEtag === clientEtag) {
-      sendJson(state.ws, { kind: "up-to-date", id, key, params, version, epoch: bootEpoch });
+    const freshEtag = entry.revalidate
+      ? await computeEtag(entry, params)
+      : undefined;
+    if (
+      freshEtag !== undefined &&
+      clientEtag != null &&
+      freshEtag === clientEtag
+    ) {
+      sendJson(state.ws, {
+        kind: "up-to-date",
+        id,
+        key,
+        params,
+        version,
+        epoch: bootEpoch,
+      });
       return;
     }
 
@@ -3426,7 +3719,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       ({ value, etag, watermark } = await gatedRead(entry, params, freshEtag));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
-      sendJson(state.ws, { kind: "sub-error", id, key, params, reason: "loader-failed" });
+      sendJson(state.ws, {
+        kind: "sub-error",
+        id,
+        key,
+        params,
+        reason: "loader-failed",
+      });
       return;
     }
     // Yield ONCE before touching the snapshot or the wire. A push continuation
@@ -3522,7 +3821,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       retained.add(`${e.key}\0${pk}`);
       const entry = registry.get(e.key);
       if (!entry) {
-        sendJson(state.ws, { kind: "sub-error", id: e.id, key: e.key, params, reason: "unknown-key" });
+        sendJson(state.ws, {
+          kind: "sub-error",
+          id: e.id,
+          key: e.key,
+          params,
+          reason: "unknown-key",
+        });
         continue;
       }
       if (entry.authorize) {
@@ -3541,7 +3846,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         });
         continue;
       }
-      const { firstGlobal } = registerSubOnSocket(state, entry, pk, params, tabId);
+      const { firstGlobal } = registerSubOnSocket(
+        state,
+        entry,
+        pk,
+        params,
+        tabId,
+      );
       prepared.push({
         entry,
         id: e.id,
@@ -3608,7 +3919,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       })();
     }
     if (upToDate.length > 0) {
-      sendJson(state.ws, { kind: "up-to-date-batch", epoch: bootEpoch, entries: upToDate });
+      sendJson(state.ws, {
+        kind: "up-to-date-batch",
+        epoch: bootEpoch,
+        entries: upToDate,
+      });
     }
   }
 
@@ -3654,7 +3969,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
   }
 
-  function releaseSubRefcount(key: string, pk: string, params: ResourceParams): void {
+  function releaseSubRefcount(
+    key: string,
+    pk: string,
+    params: ResourceParams,
+  ): void {
     const entry = registry.get(key);
     if (!entry) return;
     const prev = entry.subCounts.get(pk) ?? 0;
@@ -3726,14 +4045,23 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // `computeEtag` is fail-safe (undefined on opt-out or a throwing signature), so
     // a broken signature falls through to the full value below and stamps no ETag.
     const ifNoneMatch = req.headers.get("If-None-Match");
-    const freshEtag = entry.revalidate ? await computeEtag(entry, resourceParams) : undefined;
-    if (freshEtag !== undefined && ifNoneMatch != null && freshEtag === ifNoneMatch) {
+    const freshEtag = entry.revalidate
+      ? await computeEtag(entry, resourceParams)
+      : undefined;
+    if (
+      freshEtag !== undefined &&
+      ifNoneMatch != null &&
+      freshEtag === ifNoneMatch
+    ) {
       // `no-store` even on the 304: the handler that emits the ETag (the header that
       // invites caching) owns forbidding the browser HTTP cache from storing the
       // revalidated body. Without it a restart-stable ETag lets the browser 304
       // onto a stale old-boot body it hands JS transparently — the cache-poisoning
       // wedge. See research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md.
-      return new Response(null, { status: 304, headers: { "cache-control": "no-store" } });
+      return new Response(null, {
+        status: 304,
+        headers: { "cache-control": "no-store" },
+      });
     }
 
     let value: unknown;
@@ -3745,7 +4073,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // it was actually seeded with, which is the caller's own only if this call
       // started it. A joiner adopts the starter's older seed, or `undefined` when a
       // push-path caller started the flight.
-      ({ value, etag, watermark } = await gatedRead(entry, resourceParams, freshEtag));
+      ({ value, etag, watermark } = await gatedRead(
+        entry,
+        resourceParams,
+        freshEtag,
+      ));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       return new Response("Loader failed", { status: 500 });
@@ -4090,7 +4422,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           // tuple's own ids, bounded by construction.
           if (pointMembership && affected !== null) {
             const idSet = new Set(pointMembership.idsOf(params));
-            tupleAffected = new Set([...affected].filter((id) => idSet.has(id)));
+            tupleAffected = new Set(
+              [...affected].filter((id) => idSet.has(id)),
+            );
             tupleDeleted = deleted
               ? new Set([...deleted].filter((id) => idSet.has(id)))
               : undefined;
@@ -4142,7 +4476,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     } catch (err) {
       // Never throw out of the feed router — a parse/lookup bug must not take down
       // the LISTEN consumer. console.error fires (loud), plus the report hook.
-      reportLoaderError(`applyDbChange failed for table "${change.table}"`, err);
+      reportLoaderError(
+        `applyDbChange failed for table "${change.table}"`,
+        err,
+      );
     }
   }
 
@@ -4165,7 +4502,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // authoritative by the time any boot hook runs) — covers hand-written AND
   // query-resource-compiled resources identically, because the compiler lowers the
   // drizzle table down to the same `identityTable` string the runtime stores here.
-  function scopedResourceIdentities(): Array<{ key: string; identityTable: string }> {
+  function scopedResourceIdentities(): Array<{
+    key: string;
+    identityTable: string;
+  }> {
     const out: Array<{ key: string; identityTable: string }> = [];
     for (const entry of registry.values()) {
       if (entry.identityTable) {

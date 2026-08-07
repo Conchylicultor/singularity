@@ -75,7 +75,9 @@ export function validateVariant(
   // (matches the opaque/passthrough contract at the config boundary above, and
   // mirrors how `defineConfig` opts back into passthrough over the now-strict
   // `fieldsToZodObject` primitive).
-  const parsed = fieldsToZodObject(entry.fields).passthrough().safeParse(payload);
+  const parsed = fieldsToZodObject(entry.fields)
+    .passthrough()
+    .safeParse(payload);
   if (!parsed.success) return { ok: false };
 
   return { ok: true, value: { type: value.type, ...parsed.data } };

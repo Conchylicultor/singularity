@@ -174,9 +174,10 @@ function joinList(items: readonly string[]): string {
 
 function nthLabel(nth: number): string {
   if (nth === -1) return "last";
-  return { 1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth" }[
-    nth
-  ] ?? ordinal(nth);
+  return (
+    { 1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth" }[nth] ??
+    ordinal(nth)
+  );
 }
 
 function ordinal(n: number): string {

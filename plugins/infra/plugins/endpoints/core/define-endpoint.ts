@@ -51,11 +51,8 @@ type Spec<T> = ZodParser<T> | Codec<T>;
  * regression a direct `ZodParser<T> | Codec<T>` parameter would cause (`Codec<T>`
  * is invariant in `T`).
  */
-type SpecType<S> = S extends Codec<infer U>
-  ? U
-  : S extends ZodParser<infer U>
-    ? U
-    : void;
+type SpecType<S> =
+  S extends Codec<infer U> ? U : S extends ZodParser<infer U> ? U : void;
 
 export function defineEndpoint<
   const Route extends string,

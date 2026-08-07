@@ -27,7 +27,11 @@
  * Self-contained by necessity — the ESLint config loads rule files through
  * jiti, which cannot resolve `@plugins/*`.
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import {
+  AST_NODE_TYPES,
+  ESLintUtils,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -36,7 +40,8 @@ const createRule = ESLintUtils.RuleCreator(
 /** Right-most identifier of a `ZodType` / `z.ZodType` type-reference name. */
 function typeNameIsZodType(name: TSESTree.EntityName): boolean {
   if (name.type === AST_NODE_TYPES.Identifier) return name.name === "ZodType";
-  if (name.type === AST_NODE_TYPES.TSQualifiedName) return name.right.name === "ZodType";
+  if (name.type === AST_NODE_TYPES.TSQualifiedName)
+    return name.right.name === "ZodType";
   return false;
 }
 

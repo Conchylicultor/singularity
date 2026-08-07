@@ -52,7 +52,9 @@ export const resourceReadSetSchema = z.object({
   /** Declared identity table (intent to be scoped); absent → no scoped intent. */
   identityTable: z.string().optional(),
   /** Explicit FULL-recompute opt-out (a declared choice, not a degradation). */
-  recompute: z.object({ kind: z.literal("full"), reason: z.string() }).optional(),
+  recompute: z
+    .object({ kind: z.literal("full"), reason: z.string() })
+    .optional(),
   /** Authoritative scoped-vs-FULL routing set: tables this resource absorbs scoped. */
   coveredOrigins: z.array(z.string()),
   /** Loader call frequency over the profiling window (server-only). */

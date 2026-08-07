@@ -1,10 +1,6 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import {
-  pickMeta,
-  type FieldDef,
-  type FieldMeta,
-} from "@plugins/fields/core";
+import { pickMeta, type FieldDef, type FieldMeta } from "@plugins/fields/core";
 import {
   reorderTreeFieldType,
   type ReorderNode,
@@ -69,7 +65,11 @@ export function normalizeNode(node: ReorderNode): NormalizedNode {
     // The typed-node arm's `[payload]: unknown` index signature defeats
     // discriminated narrowing here, so read the item-node shape explicitly.
     const itemNode = node as { item: string; hidden?: boolean };
-    return { kind: "item", item: itemNode.item, hidden: itemNode.hidden ?? false };
+    return {
+      kind: "item",
+      item: itemNode.item,
+      hidden: itemNode.hidden ?? false,
+    };
   }
   if ("type" in node) {
     const { type, id, items, ...payload } = node;

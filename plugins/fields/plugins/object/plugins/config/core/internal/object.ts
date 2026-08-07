@@ -10,8 +10,9 @@ import {
 } from "@plugins/fields/core";
 import { objectFieldType } from "@plugins/fields/plugins/object/core";
 
-export interface ObjectFieldDef<F extends FieldsRecord = FieldsRecord>
-  extends FieldDef<InferFieldsObject<F>> {
+export interface ObjectFieldDef<
+  F extends FieldsRecord = FieldsRecord,
+> extends FieldDef<InferFieldsObject<F>> {
   readonly subFields: F;
 }
 

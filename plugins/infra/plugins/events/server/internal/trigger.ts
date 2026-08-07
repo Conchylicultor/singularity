@@ -111,10 +111,7 @@ export async function deleteTrigger(id: string): Promise<void> {
 // Sweep every trigger table, deleting rows whose target job matches and whose
 // persisted `jobWith` contains every key in `configMatch` (JSONB `@>`). Omit
 // `configMatch` to remove every trigger that binds this job.
-export async function deleteTriggersFor<
-  N extends string,
-  S extends z.ZodType,
->(
+export async function deleteTriggersFor<N extends string, S extends z.ZodType>(
   job: JobFactory<N, S>,
   configMatch?: Partial<z.input<S>>,
 ): Promise<void> {

@@ -1,9 +1,19 @@
 import { useCallback, useMemo } from "react";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { activeDataBindingsResource, putBinding, deleteBinding } from "@plugins/active-data/core";
-import { useActiveDataIdentity, type ActiveDataIdentity } from "./identity-context";
+import {
+  fetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  activeDataBindingsResource,
+  putBinding,
+  deleteBinding,
+} from "@plugins/active-data/core";
+import {
+  useActiveDataIdentity,
+  type ActiveDataIdentity,
+} from "./identity-context";
 
 /**
  * Route params for the binding endpoints. The route templates `:occurrenceIndex`
@@ -41,7 +51,9 @@ export function useActiveDataBinding<T>(
   const identity = useActiveDataIdentity();
   const resource = useResource(
     activeDataBindingsResource,
-    identity ? { conversationId: identity.conversationId } : { conversationId: "" },
+    identity
+      ? { conversationId: identity.conversationId }
+      : { conversationId: "" },
   );
 
   const value = useMemo<T | null>(() => {
@@ -92,6 +104,7 @@ export function useActiveDataBinding<T>(
     }
   }, [identity]);
 
-  if (!identity || resource.pending) return { pending: true, enabled: identity !== null, set, clear };
+  if (!identity || resource.pending)
+    return { pending: true, enabled: identity !== null, set, clear };
   return { pending: false, value, enabled: true, set, clear };
 }

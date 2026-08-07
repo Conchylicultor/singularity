@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  EventDateSchema,
-  RecurrenceRuleSchema,
-  WEEKDAYS,
-} from "./event-date";
+import { EventDateSchema, RecurrenceRuleSchema, WEEKDAYS } from "./event-date";
 
 describe("EventDateSchema", () => {
   test("parses a one-off date, coercing ISO strings", () => {

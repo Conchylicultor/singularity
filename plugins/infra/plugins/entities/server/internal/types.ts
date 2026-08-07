@@ -138,15 +138,17 @@ export type EntityColumns<F extends FieldsRecord, D extends keyof F = never> = {
 // The keys of `meta.columns` that carry a `default` — i.e. the columns with a
 // DB default, which become optional on insert. Derived from the meta so the
 // insert model can never drift from the actual `.default()` calls.
-export type DefaultedKeys<F extends FieldsRecord, M extends EntityMeta<F>> =
-  M["columns"] extends object
-    ? {
-        [K in keyof M["columns"]]: M["columns"][K] extends { default: unknown }
-          ? K
-          : never;
-      }[keyof M["columns"]] &
-        keyof F
-    : never;
+export type DefaultedKeys<
+  F extends FieldsRecord,
+  M extends EntityMeta<F>,
+> = M["columns"] extends object
+  ? {
+      [K in keyof M["columns"]]: M["columns"][K] extends { default: unknown }
+        ? K
+        : never;
+    }[keyof M["columns"]] &
+      keyof F
+  : never;
 
 export interface EntityMeta<F extends FieldsRecord> {
   // Single key → `.primaryKey()` on the column; array → composite
@@ -174,8 +176,10 @@ export interface EntityMeta<F extends FieldsRecord> {
 // but ABSENT from the wire schema / `wireColumns`. Mirrors `DefaultedKeys` but
 // simpler: it reads the array element type directly. Absent ⇒ `never` (every
 // column is on the wire).
-export type ServerOnlyKeys<F extends FieldsRecord, M extends EntityMeta<F>> =
-  M["serverOnly"] extends readonly (infer K)[] ? K & keyof F : never;
+export type ServerOnlyKeys<
+  F extends FieldsRecord,
+  M extends EntityMeta<F>,
+> = M["serverOnly"] extends readonly (infer K)[] ? K & keyof F : never;
 
 export interface Entity<
   F extends FieldsRecord,
@@ -220,8 +224,7 @@ export interface Entity<
 // where those keys are optional — a row type that disagrees with `.parse()`
 // and errors nowhere. This one recovers the output, i.e. what actually exists
 // at runtime.
-export type EntityRow<E> =
-  E extends { schema: ZodParser<infer T> } ? T : never;
+export type EntityRow<E> = E extends { schema: ZodParser<infer T> } ? T : never;
 
 // ─── Default-marker constructors ───────────────────────────────────────────
 export function defaultNow(): DbDefault<never> {

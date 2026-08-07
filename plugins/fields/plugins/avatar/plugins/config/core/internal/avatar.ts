@@ -20,15 +20,17 @@ const svgNodeSchema: ZodParser<SvgNode> = z.lazy(() =>
   }),
 );
 
-const avatarSpecSchema = z.object({
-  icon: z.string().nullable(),
-  color: z.string().nullable(),
-  svgNodes: z.array(svgNodeSchema).nullable().optional(),
-}).transform((val): AvatarSpec => {
-  const resolver = getFieldResolver("avatar");
-  if (resolver) return resolver(val) as AvatarSpec;
-  return { icon: val.icon, color: val.color, svgNodes: val.svgNodes ?? null };
-}) as ZodParser<AvatarSpec>;
+const avatarSpecSchema = z
+  .object({
+    icon: z.string().nullable(),
+    color: z.string().nullable(),
+    svgNodes: z.array(svgNodeSchema).nullable().optional(),
+  })
+  .transform((val): AvatarSpec => {
+    const resolver = getFieldResolver("avatar");
+    if (resolver) return resolver(val) as AvatarSpec;
+    return { icon: val.icon, color: val.color, svgNodes: val.svgNodes ?? null };
+  }) as ZodParser<AvatarSpec>;
 
 export interface AvatarFieldDef extends FieldDef<AvatarSpec> {
   readonly type: typeof avatarFieldType;

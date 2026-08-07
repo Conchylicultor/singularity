@@ -34,7 +34,7 @@ function trace(line: string): void {
 function verboseTraceOn(): boolean {
   try {
     return localStorage.getItem("liveState.verboseTrace") === "1";
-  // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- SSR / denied-storage safety for a local debug flag; any access failure means "verbose trace off" (return false), the correct default, never a signal to surface
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- SSR / denied-storage safety for a local debug flag; any access failure means "verbose trace off" (return false), the correct default, never a signal to surface
   } catch {
     return false;
   }
@@ -133,7 +133,9 @@ export class ResourceStaleReadError extends Error {
     public readonly haveVersion: number,
     public readonly reason: "stale-version" | "stale-epoch",
   ) {
-    super(`Resource ${key} stale read: body v${bodyVersion} vs have v${haveVersion} (${reason})`);
+    super(
+      `Resource ${key} stale read: body v${bodyVersion} vs have v${haveVersion} (${reason})`,
+    );
     this.name = "ResourceStaleReadError";
   }
 }
@@ -157,9 +159,38 @@ type ServerMsg =
   // cache write (value frames), so the optimistic hook's exact-ack confirmation
   // reads them synchronously. Feed-driven frames only; sub-ack/HTTP bodies never
   // carry one (their snapshot watermark subsumes it).
-  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; epoch?: string; watermark?: string }
-  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; watermark?: string; ackTx?: string[] }
-  | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number; watermark?: string; ackTx?: string[] }
+  | {
+      kind: "sub-ack";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      value: unknown;
+      version: number;
+      etag?: string;
+      epoch?: string;
+      watermark?: string;
+    }
+  | {
+      kind: "update";
+      key: string;
+      params: ResourceParams;
+      value: unknown;
+      version: number;
+      etag?: string;
+      watermark?: string;
+      ackTx?: string[];
+    }
+  | {
+      kind: "delta";
+      key: string;
+      params: ResourceParams;
+      upserts: [string, unknown][];
+      deletes: string[];
+      order?: string[];
+      version: number;
+      watermark?: string;
+      ackTx?: string[];
+    }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
   // Standalone mutation-ack frame (per-resource `ackChannel` opt-in): a
   // recompute produced NO value change (empty scoped diff, net-zero membership,
@@ -170,16 +201,38 @@ type ServerMsg =
   // "your cached value is still current" — the WS analogue of HTTP 304. Carries no
   // value: the client keeps its cached value and only adopts `version` (so a later
   // real update isn't stale-dropped), treating the (re)subscribe as acked.
-  | { kind: "up-to-date"; id?: number; key: string; params: ResourceParams; version: number; epoch?: string }
+  | {
+      kind: "up-to-date";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      version: number;
+      epoch?: string;
+    }
   // The batched twin: one frame answering every already-current entry of a
   // `sub-batch` replay. Each entry runs through the exact per-entry `up-to-date`
   // logic (version guard, adoption, lastAckVersion).
-  | { kind: "up-to-date-batch"; epoch: string; entries: Array<{ id?: number; key: string; params: ResourceParams; version: number }> }
+  | {
+      kind: "up-to-date-batch";
+      epoch: string;
+      entries: Array<{
+        id?: number;
+        key: string;
+        params: ResourceParams;
+        version: number;
+      }>;
+    }
   // `params` (Fix D): a sub-error now names the exact subscription it failed for,
   // so the client can gate it on a live local sub (the all-tabs fan-out safety)
   // and drive an HTTP-fallback refetch. A pre-upgrade server omits `params`
   // (undefined at runtime); such a legacy frame simply fails the sub gate.
-  | { kind: "sub-error"; id?: number; key: string; params: ResourceParams; reason: string }
+  | {
+      kind: "sub-error";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      reason: string;
+    }
   | { kind: "ping" };
 
 function paramsKey(params: ResourceParams | undefined): string {
@@ -190,7 +243,10 @@ function paramsKey(params: ResourceParams | undefined): string {
   return JSON.stringify(obj);
 }
 
-export function queryKeyFor(key: string, params: ResourceParams | undefined): unknown[] {
+export function queryKeyFor(
+  key: string,
+  params: ResourceParams | undefined,
+): unknown[] {
   const p = params && Object.keys(params).length > 0 ? params : undefined;
   return p ? [key, p] : [key];
 }
@@ -353,7 +409,9 @@ export class NotificationsClient {
    *  for BOTH the conditional GET and the defensive refetch. Typed as the call
    *  signature only (not `typeof fetch`, which also carries the `preconnect`
    *  static a plain closure lacks). */
-  private fetchImpl: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>;
+  private fetchImpl: (
+    ...args: Parameters<typeof fetch>
+  ) => ReturnType<typeof fetch>;
   /**
    * This tab's stable id, stamped on every sub/unsub frame so the server can
    * track which tab holds which sub (the per-tab bookkeeping behind `unsub-tab`
@@ -380,7 +438,10 @@ export class NotificationsClient {
    * each channel's own url reaches "open"; read by `hasEverBeenReady(origin)`.
    * One-way latch per kind — never reset on a later reconnect.
    */
-  private firstReadyByKind: Record<SocketKind, number | null> = { worktree: null, central: null };
+  private firstReadyByKind: Record<SocketKind, number | null> = {
+    worktree: null,
+    central: null,
+  };
 
   constructor(
     private queryClient: QueryClient,
@@ -437,7 +498,9 @@ export class NotificationsClient {
     if (typeof window !== "undefined") {
       this.pagehideListener = () => {
         for (const channel of Object.values(this.channels) as SocketChannel[]) {
-          channel.ws.send(JSON.stringify({ op: "unsub-tab", tabId: this.tabId }));
+          channel.ws.send(
+            JSON.stringify({ op: "unsub-tab", tabId: this.tabId }),
+          );
         }
       };
       window.addEventListener("pagehide", this.pagehideListener);
@@ -514,9 +577,17 @@ export class NotificationsClient {
       prevVersion: number;
       prevLiveSeq: number;
     }[] = [];
-    for (const [kind, channel] of Object.entries(this.channels) as [SocketKind, SocketChannel][]) {
+    for (const [kind, channel] of Object.entries(this.channels) as [
+      SocketKind,
+      SocketChannel,
+    ][]) {
       for (const [id, sub] of channel.subs) {
-        before.push({ id, socket: kind, prevVersion: sub.version, prevLiveSeq: sub.liveFrameSeq });
+        before.push({
+          id,
+          socket: kind,
+          prevVersion: sub.version,
+          prevLiveSeq: sub.liveFrameSeq,
+        });
       }
     }
     if (before.length === 0) return [];
@@ -652,14 +723,27 @@ export class NotificationsClient {
       this.emitDebug();
       return;
     }
-    channel.subs.set(id, { refcount: 1, key, params, version: -1, lastAckVersion: -1, liveFrameSeq: 0, socket: kind, lastAppliedAt: 0 });
+    channel.subs.set(id, {
+      refcount: 1,
+      key,
+      params,
+      version: -1,
+      lastAckVersion: -1,
+      liveFrameSeq: 0,
+      socket: kind,
+      lastAppliedAt: 0,
+    });
     trace(`observe key=${key} params=${pk} refcount=1`);
     this.sendSub(channel, key, params);
     this.emitDebug();
   }
 
   /** Observer count decreased. Unsub on 1→0. */
-  unobserve(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): void {
+  unobserve(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+  ): void {
     const kind = socketKindFor(origin);
     // Read-only: an unobserve can only be reached for an origin a prior observe()
     // already created the channel for. Guard defensively (never create it here).
@@ -680,7 +764,9 @@ export class NotificationsClient {
     // transient remount reuses the live sub. The sub stays in `channel.subs`
     // with refcount 0 until the timer fires (or a resurrecting observe() cancels
     // it). One-shot deferred cleanup — see SUB_KEEPALIVE_MS; not a poll.
-    trace(`unobserve key=${key} params=${pk} refcount=0 keepAliveMs=${SUB_KEEPALIVE_MS}`);
+    trace(
+      `unobserve key=${key} params=${pk} refcount=0 keepAliveMs=${SUB_KEEPALIVE_MS}`,
+    );
     this.emitDebug();
     const timer = setTimeout(() => {
       const sub = channel.subs.get(id);
@@ -692,7 +778,9 @@ export class NotificationsClient {
       }
       channel.subs.delete(id);
       channel.pendingTeardown.delete(id);
-      channel.ws.send(JSON.stringify({ op: "unsub", key, params, tabId: this.tabId }));
+      channel.ws.send(
+        JSON.stringify({ op: "unsub", key, params, tabId: this.tabId }),
+      );
       trace(`teardown key=${key} params=${pk}`);
       this.emitDebug();
     }, SUB_KEEPALIVE_MS);
@@ -707,7 +795,11 @@ export class NotificationsClient {
    * instead of recomputing the loader. Undefined when the resource hasn't opted
    * in or no value has arrived yet.
    */
-  etagFor(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): string | undefined {
+  etagFor(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+  ): string | undefined {
     // Read-only: reachable only after an observe() created this origin's channel.
     const channel = this.channels[socketKindFor(origin)];
     return channel?.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
@@ -728,7 +820,9 @@ export class NotificationsClient {
   ): void {
     if (etag == null) return;
     // Read-only: reachable only after an observe() created this origin's channel.
-    const sub = this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${paramsKey(params)}`);
+    const sub = this.channels[socketKindFor(origin)]?.subs.get(
+      `${key}\0${paramsKey(params)}`,
+    );
     if (sub) sub.etag = etag;
   }
 
@@ -747,7 +841,10 @@ export class NotificationsClient {
    * only the placeholder the server never vouched for" (must not settle with it).
    */
   private hasAppliedValue(key: string, params: ResourceParams): boolean {
-    return (this.queryClient.getQueryState(queryKeyFor(key, params))?.dataUpdatedAt ?? 0) !== 0;
+    return (
+      (this.queryClient.getQueryState(queryKeyFor(key, params))
+        ?.dataUpdatedAt ?? 0) !== 0
+    );
   }
 
   /**
@@ -801,7 +898,8 @@ export class NotificationsClient {
     const entry = channel?.subs.get(`${key}\0${paramsKey(params)}`);
     const serverEpoch = channel?.serverEpoch;
     const qs = new URLSearchParams(params).toString();
-    const base = origin === "central" ? "/api/central-resources" : "/api/resources";
+    const base =
+      origin === "central" ? "/api/central-resources" : "/api/resources";
     const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
     const etag = this.etagFor(key, params, origin);
     // `cache: "no-store"` on BOTH fetches: the browser HTTP cache must never
@@ -819,13 +917,19 @@ export class NotificationsClient {
       // was actually applied (same reference; structural sharing sees no change).
       // A 304 against a never-applied placeholder must NOT settle the query with
       // it — fall through to the unconditional refetch below.
-      if (cached !== undefined && this.hasAppliedValue(key, params)) return cached as T;
+      if (cached !== undefined && this.hasAppliedValue(key, params))
+        return cached as T;
       // 304 with only a placeholder (or no base): re-fetch unconditionally so a
       // needless 304 never leaves the cache empty/stale, then take the write path.
       res = await this.fetchImpl(url, { cache: "no-store" });
     }
     if (!res.ok) throw new ResourceHttpError(key, res.status);
-    const body = (await res.json()) as { value: unknown; version: number; epoch?: string; watermark?: string };
+    const body = (await res.json()) as {
+      value: unknown;
+      version: number;
+      epoch?: string;
+      watermark?: string;
+    };
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
 
     // Epoch-aware version guard (see doc comment). Compute the adopt/drop decision
@@ -834,7 +938,11 @@ export class NotificationsClient {
     let drop: "stale-version" | "stale-epoch" | null = null;
     let crossEpochAdopt = false;
     if (entry) {
-      if (body.epoch === undefined || body.epoch === entry.epoch || entry.epoch === undefined) {
+      if (
+        body.epoch === undefined ||
+        body.epoch === entry.epoch ||
+        entry.epoch === undefined
+      ) {
         // Legacy body OR same boot (or entry not yet epoch-stamped): strict `<`.
         if (body.version < entry.version) drop = "stale-version";
       } else if (body.epoch === serverEpoch) {
@@ -852,8 +960,19 @@ export class NotificationsClient {
     if (drop !== null) {
       // entry is non-null whenever drop is set (only that branch assigns it).
       const applied = this.hasAppliedValue(key, params);
-      this.emitStaleDrop(key, params, drop, body, entry!, serverEpoch, source, !applied);
-      trace(`http drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry!.version} reason=${drop} source=${source}`);
+      this.emitStaleDrop(
+        key,
+        params,
+        drop,
+        body,
+        entry!,
+        serverEpoch,
+        source,
+        !applied,
+      );
+      trace(
+        `http drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry!.version} reason=${drop} source=${source}`,
+      );
       // Applied → the cache holds newer server-vouched truth; keep it. Never-
       // applied → the cache holds only the placeholder, and settling the query
       // with it (or applying the stale body) is the wedge. Throw instead: RQ
@@ -868,7 +987,8 @@ export class NotificationsClient {
     // Adopt the body's commit watermark AFTER the guard (a stale-dropped response
     // never advances the causal floor) and IMMEDIATELY BEFORE the cache write it
     // describes — same load-bearing order as the WS paths.
-    if (body.watermark !== undefined) noteResourceWatermark(key, params, body.watermark);
+    if (body.watermark !== undefined)
+      noteResourceWatermark(key, params, body.watermark);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     if (entry) {
       if (crossEpochAdopt) {
@@ -885,7 +1005,9 @@ export class NotificationsClient {
       }
       this.markApplied(entry, key); // stamps lastAppliedAt + resets drop count + emitDebug + verbose trace
     }
-    trace(`http key=${key} params=${paramsKey(params)} version=${body.version} source=${source}`);
+    trace(
+      `http key=${key} params=${paramsKey(params)} version=${body.version} source=${source}`,
+    );
     return parsed;
   }
 
@@ -927,8 +1049,14 @@ export class NotificationsClient {
    *  source of truth. A transient network / HTTP-status failure is swallowed
    *  (the WS will deliver); a schema/parse failure is a real bug surfaced loudly
    *  (mirroring the WS `onmessage` discipline). Never rejects (safe to `void`). */
-  async primeFromHttp(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): Promise<void> {
-    const entry = this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${paramsKey(params)}`);
+  async primeFromHttp(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+  ): Promise<void> {
+    const entry = this.channels[socketKindFor(origin)]?.subs.get(
+      `${key}\0${paramsKey(params)}`,
+    );
     if (!entry) return; // observe() must have created the sub
     const schema = this.schemas.get(key);
     if (!schema) return;
@@ -947,14 +1075,24 @@ export class NotificationsClient {
         // trace label is derived without a nested-instanceof narrow.
         const isNetwork = err instanceof TypeError;
         const isStaleRead = err instanceof ResourceStaleReadError;
-        const reason = isNetwork ? "network" : isStaleRead ? "stale-read" : "http";
-        trace(`http drop key=${key} params=${paramsKey(params)} reason=${reason} source=prime error=${String(err)}`);
+        const reason = isNetwork
+          ? "network"
+          : isStaleRead
+            ? "stale-read"
+            : "http";
+        trace(
+          `http drop key=${key} params=${paramsKey(params)} reason=${reason} source=prime error=${String(err)}`,
+        );
         return;
       }
       // Schema violation / malformed body is a real bug — surface loudly like the
       // WS onmessage path, without rejecting this promise.
-      trace(`http error key=${key} params=${paramsKey(params)} source=prime error=${String(err)}`);
-      queueMicrotask(() => { throw err; });
+      trace(
+        `http error key=${key} params=${paramsKey(params)} source=prime error=${String(err)}`,
+      );
+      queueMicrotask(() => {
+        throw err;
+      });
     }
   }
 
@@ -998,7 +1136,9 @@ export class NotificationsClient {
         // crash reporter observes it as an uncaught error — without importing
         // the crashes plugin (live-state ← crashes would be an import cycle)
         // and without breaking the WS loop for subsequent messages.
-        trace(`drop reason=parse-error key=${msg.kind === "ping" ? "ping" : (msg as { key?: string }).key ?? "?"} error=${String(err)}`);
+        trace(
+          `drop reason=parse-error key=${msg.kind === "ping" ? "ping" : ((msg as { key?: string }).key ?? "?")} error=${String(err)}`,
+        );
         queueMicrotask(() => {
           throw err;
         });
@@ -1046,7 +1186,9 @@ export class NotificationsClient {
    */
   private replaySubs(channel: SocketChannel): void {
     const socket = channel === this.channels.central ? "central" : "worktree";
-    trace(`replaySubs socket=${socket} subCount=${channel.subs.size} epoch=${channel.serverEpoch !== undefined ? 1 : 0}`);
+    trace(
+      `replaySubs socket=${socket} subCount=${channel.subs.size} epoch=${channel.serverEpoch !== undefined ? 1 : 0}`,
+    );
     // Nothing to replay → nothing to send. Replays run on a FRESH socket (the
     // server holds no subs for this tab yet), so an empty `complete` batch
     // would reconcile nothing; skipping keeps the wire quiet, matching the old
@@ -1094,16 +1236,25 @@ export class NotificationsClient {
       JSON.stringify({
         op: "sub-batch",
         tabId: this.tabId,
-        ...(channel.serverEpoch !== undefined ? { epoch: channel.serverEpoch } : {}),
+        ...(channel.serverEpoch !== undefined
+          ? { epoch: channel.serverEpoch }
+          : {}),
         complete: true,
         entries,
       }),
     );
-    if (unbacked > 0) trace(`replaySubs socket=${socket} unbacked=${unbacked}/${entries.length}`);
+    if (unbacked > 0)
+      trace(
+        `replaySubs socket=${socket} unbacked=${unbacked}/${entries.length}`,
+      );
     this.emitDebug();
   }
 
-  private sendSub(channel: SocketChannel, key: string, params: ResourceParams): void {
+  private sendSub(
+    channel: SocketChannel,
+    key: string,
+    params: ResourceParams,
+  ): void {
     const socket = channel === this.channels.central ? "central" : "worktree";
     // Attach the sub's last-known ETag (if any) so the server can answer
     // `up-to-date` instead of re-running the loader. Read off the live sub entry
@@ -1118,8 +1269,13 @@ export class NotificationsClient {
     // is shorter than React Query's gcTime today, so it is narrow — but the
     // invariant should hold by construction, not by that margin).
     const sub = channel.subs.get(`${key}\0${paramsKey(params)}`);
-    const etag = sub !== undefined && this.hasAppliedValue(key, params) ? sub.etag : undefined;
-    trace(`sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}`);
+    const etag =
+      sub !== undefined && this.hasAppliedValue(key, params)
+        ? sub.etag
+        : undefined;
+    trace(
+      `sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}`,
+    );
     channel.ws.send(
       JSON.stringify({
         op: "sub",
@@ -1163,7 +1319,9 @@ export class NotificationsClient {
       return;
     }
     if (msg.kind === "sub-error") {
-      console.error(`[notifications] sub-error key=${msg.key} reason=${msg.reason}`);
+      console.error(
+        `[notifications] sub-error key=${msg.key} reason=${msg.reason}`,
+      );
       const pk = paramsKey(msg.params);
       trace(`sub-error key=${msg.key} params=${pk} reason=${msg.reason}`);
       // Gate on the local sub entry exactly like every other frame: the shared
@@ -1178,7 +1336,9 @@ export class NotificationsClient {
       // the authorize seam ships.
       const entry = channel.subs.get(`${msg.key}\0${pk}`);
       if (!entry) {
-        trace(`drop key=${msg.key} params=${pk} reason=no-sub source=sub-error`);
+        trace(
+          `drop key=${msg.key} params=${pk} reason=no-sub source=sub-error`,
+        );
         return;
       }
       this.applyInvalidate(msg.key, msg.params);
@@ -1206,7 +1366,9 @@ export class NotificationsClient {
     // ack for another tab's sub teaches it just as well). The next replay echoes
     // it alongside each sub's version so a same-boot server can short-circuit.
     if (
-      (msg.kind === "sub-ack" || msg.kind === "up-to-date" || msg.kind === "up-to-date-batch") &&
+      (msg.kind === "sub-ack" ||
+        msg.kind === "up-to-date" ||
+        msg.kind === "up-to-date-batch") &&
       msg.epoch !== undefined
     ) {
       channel.serverEpoch = msg.epoch;
@@ -1240,11 +1402,15 @@ export class NotificationsClient {
     const id = `${msg.key}\0${pk}`;
     const entry = channel.subs.get(id);
     if (!entry) {
-      trace(`drop key=${msg.key} params=${pk} version=${msg.version} reason=no-sub`);
+      trace(
+        `drop key=${msg.key} params=${pk} version=${msg.version} reason=no-sub`,
+      );
       return;
     }
     if (msg.version <= entry.version) {
-      trace(`drop key=${msg.key} params=${pk} msgVersion=${msg.version} haveVersion=${entry.version} reason=stale-version`);
+      trace(
+        `drop key=${msg.key} params=${pk} msgVersion=${msg.version} haveVersion=${entry.version} reason=stale-version`,
+      );
       return;
     }
     // THE INVARIANT: `entry.version` names the version of a value THIS tab
@@ -1268,8 +1434,13 @@ export class NotificationsClient {
     // baseline. A resub would add load to the congested server that widened the
     // race in the first place. This is the WS twin of `fetchOverHttp`'s
     // never-settle-with-a-placeholder rule (same `hasAppliedValue` predicate).
-    if (msg.kind === "up-to-date" && !this.hasAppliedValue(msg.key, msg.params)) {
-      trace(`drop key=${msg.key} params=${pk} version=${msg.version} reason=no-applied-value`);
+    if (
+      msg.kind === "up-to-date" &&
+      !this.hasAppliedValue(msg.key, msg.params)
+    ) {
+      trace(
+        `drop key=${msg.key} params=${pk} version=${msg.version} reason=no-applied-value`,
+      );
       return;
     }
     if (msg.kind === "sub-ack") {
@@ -1294,7 +1465,10 @@ export class NotificationsClient {
     }
     // Store the fresh ETag from any full-value frame that carries one, so the next
     // (re)subscribe / conditional GET can be answered `up-to-date`/304.
-    if ((msg.kind === "sub-ack" || msg.kind === "update") && msg.etag !== undefined) {
+    if (
+      (msg.kind === "sub-ack" || msg.kind === "update") &&
+      msg.etag !== undefined
+    ) {
       entry.etag = msg.etag;
     }
 
@@ -1320,7 +1494,16 @@ export class NotificationsClient {
       return;
     }
     if (msg.kind === "delta") {
-      this.applyDelta(channel, entry, msg.key, msg.params, msg.upserts, msg.order, msg.watermark, msg.ackTx);
+      this.applyDelta(
+        channel,
+        entry,
+        msg.key,
+        msg.params,
+        msg.upserts,
+        msg.order,
+        msg.watermark,
+        msg.ackTx,
+      );
       return;
     }
     // Only remaining case: "invalidate"
@@ -1354,7 +1537,8 @@ export class NotificationsClient {
     // so a frame that never lands (schema throw) never advances the causal
     // floor / acks past the cache content.
     if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
-    if (ackTx !== undefined && ackTx.length > 0) noteResourceTxAcks(key, params, ackTx);
+    if (ackTx !== undefined && ackTx.length > 0)
+      noteResourceTxAcks(key, params, ackTx);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     this.markApplied(entry, key);
   }
@@ -1367,7 +1551,9 @@ export class NotificationsClient {
     entry.lastAppliedAt = Date.now();
     this.staleDropCounts.delete(`${key}\0${paramsKey(entry.params)}`);
     if (verboseTraceOn()) {
-      trace(`applyUpdate key=${key} params=${paramsKey(entry.params)} version=${entry.version}`);
+      trace(
+        `applyUpdate key=${key} params=${paramsKey(entry.params)} version=${entry.version}`,
+      );
     }
     this.emitDebug();
   }
@@ -1393,7 +1579,9 @@ export class NotificationsClient {
     // Base-presence guard (load-bearing): never apply a delta onto a missing
     // base. If the cache has no value yet, force a fresh full snapshot.
     if (this.queryClient.getQueryData(queryKey) === undefined) {
-      trace(`applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`);
+      trace(
+        `applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`,
+      );
       // The cached base is gone — recovery must reload a full base, and its
       // sub-ack must APPLY even at the version this very delta already advanced
       // us to (see forceFullResub: etag cleared + baselines reset).
@@ -1420,10 +1608,12 @@ export class NotificationsClient {
     // biome-ignore lint/suspicious/noExplicitAny: zod array schemas expose `.element`.
     const element = (schema as any).element as ZodParser<unknown>;
     const upsertMap = new Map<string, unknown>();
-    for (const [rowId, row] of upserts) upsertMap.set(rowId, element.parse(row));
+    for (const [rowId, row] of upserts)
+      upsertMap.set(rowId, element.parse(row));
 
     // The base-presence guard above already ensured a non-undefined base.
-    const prevRows = (this.queryClient.getQueryData(queryKey) as unknown[]) ?? [];
+    const prevRows =
+      (this.queryClient.getQueryData(queryKey) as unknown[]) ?? [];
     const result = mergeKeyedDelta(prevRows, upsertMap, order, keyOf);
     if (result.kind === "drift") {
       // `order` named ids resolvable from neither the upserts nor the cached
@@ -1451,12 +1641,15 @@ export class NotificationsClient {
     // claims only "these transactions' rows were re-read", never snapshot
     // completeness, so it composes with a partial re-read.
     if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
-    if (ackTx !== undefined && ackTx.length > 0) noteResourceTxAcks(key, params, ackTx);
+    if (ackTx !== undefined && ackTx.length > 0)
+      noteResourceTxAcks(key, params, ackTx);
     this.queryClient.setQueryData(queryKey, result.rows);
     this.markApplied(entry, key);
   }
 
   private applyInvalidate(key: string, params: ResourceParams): void {
-    void this.queryClient.invalidateQueries({ queryKey: queryKeyFor(key, params) });
+    void this.queryClient.invalidateQueries({
+      queryKey: queryKeyFor(key, params),
+    });
   }
 }

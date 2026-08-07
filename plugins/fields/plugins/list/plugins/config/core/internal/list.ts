@@ -8,10 +8,14 @@ import {
   type FieldType,
   type InferFieldsObject,
 } from "@plugins/fields/core";
-import { listFieldType, type ListItem } from "@plugins/fields/plugins/list/core";
+import {
+  listFieldType,
+  type ListItem,
+} from "@plugins/fields/plugins/list/core";
 
-export interface ListFieldDef<F extends FieldsRecord = FieldsRecord>
-  extends FieldDef<ListItem<F>[]> {
+export interface ListFieldDef<
+  F extends FieldsRecord = FieldsRecord,
+> extends FieldDef<ListItem<F>[]> {
   readonly itemFields: F;
   readonly stableIdentity: boolean;
 }

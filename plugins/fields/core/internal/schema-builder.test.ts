@@ -39,7 +39,9 @@ test("fieldsToZodObject returns a STRICT object — unknown keys are NOT passed 
 // A field schema parses jsonb / JSON / wire, so its input is `unknown`; this
 // pins that the inner default both type-checks and actually applies once the
 // field is composed into a record. Mirrors `events.date`, the real case.
-const jsonType = defineFieldType<{ freq: string; interval: number }>("__sb_json__");
+const jsonType = defineFieldType<{ freq: string; interval: number }>(
+  "__sb_json__",
+);
 
 test("a field schema may carry an INNER .default(), and it applies through composition", () => {
   const RuleSchema = z.object({

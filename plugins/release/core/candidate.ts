@@ -111,4 +111,6 @@ export const ReleaseCandidateResponseSchema = z.object({
   run: ReleaseRunSchema.nullable(),
   staleness: StalenessSchema,
 });
-export type ReleaseCandidateResponse = z.infer<typeof ReleaseCandidateResponseSchema>;
+export type ReleaseCandidateResponse = z.infer<
+  typeof ReleaseCandidateResponseSchema
+>;
