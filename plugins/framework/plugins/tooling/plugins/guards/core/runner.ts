@@ -8,6 +8,13 @@ export interface HookInput {
   tool_name?: string;
   tool_input?: unknown;
   cwd?: string;
+  /**
+   * Claude Code stamps every hook payload with the session it came from. Read it
+   * from here rather than from an ambient env var: the payload is the documented
+   * contract, and a stateful guard that keys on the wrong identity either leaks
+   * state between sessions or loses it within one.
+   */
+  session_id?: string;
 }
 
 function matches(g: Guard["matcher"], tool: string): boolean {
@@ -16,13 +23,18 @@ function matches(g: Guard["matcher"], tool: string): boolean {
 
 const FILE_TOOLS = new Set(["Write", "Edit", "NotebookEdit", "Read"]);
 
-function collectHints(tool: string, toolInput: Record<string, unknown>, cwd: string): string[] {
+function collectHints(
+  tool: string,
+  toolInput: Record<string, unknown>,
+  cwd: string,
+): string[] {
   if (!FILE_TOOLS.has(tool)) return [];
   let filePath = toolInput.file_path as string | undefined;
   if (!filePath) return [];
   if (!filePath.startsWith("/")) filePath = resolve(cwd, filePath);
   return HINTS.filter(
-    (h) => (!h.tools || h.tools.includes(tool as ToolMatcher)) && h.match(filePath!),
+    (h) =>
+      (!h.tools || h.tools.includes(tool as ToolMatcher)) && h.match(filePath!),
   ).map((h) => h.message);
 }
 
@@ -30,16 +42,25 @@ export async function runHook(input: HookInput): Promise<void> {
   const tool = input.tool_name;
   if (!tool) return;
   const cwd = input.cwd || process.cwd();
-  const ctx = createContext(cwd);
+  const ctx = createContext(cwd, input.session_id || "unknown");
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 
   const guards = GUARDS.filter((g) => matches(g.matcher, tool));
+  // Facts contributed by guards that let the call through. Collected rather than
+  // returned early, so one guard's answer never suppresses another's denial.
+  const informs: string[] = [];
   for (const guard of guards) {
     const verdict = await guard.check(toolInput as never, ctx);
+    if (verdict.kind === "inform") {
+      informs.push(verdict.context);
+      continue;
+    }
     if (verdict.kind === "deny") {
       process.stdout.write(
         JSON.stringify({
-          ...(verdict.fatal ? { continue: false, stopReason: verdict.reason } : {}),
+          ...(verdict.fatal
+            ? { continue: false, stopReason: verdict.reason }
+            : {}),
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
             permissionDecision: "deny",
@@ -51,13 +72,13 @@ export async function runHook(input: HookInput): Promise<void> {
     }
   }
 
-  const hints = collectHints(tool, toolInput, cwd);
-  if (hints.length > 0) {
+  const extra = [...informs, ...collectHints(tool, toolInput, cwd)];
+  if (extra.length > 0) {
     process.stdout.write(
       JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
-          additionalContext: hints.join("\n\n"),
+          additionalContext: extra.join("\n\n"),
         },
       }),
     );

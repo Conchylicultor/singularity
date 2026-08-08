@@ -15,7 +15,10 @@ Singularity is a self-evolving app for the agentic era. The goal is to have an a
 Agents work in isolated git worktrees automatically created before starting. The end-to-end flow:
 
 1. Solve the request
-2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
+2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway).
+
+   **Use `run_in_background: true` and end your turn** — build/push/check median ~10 min, over the 600 s foreground cap. Background tasks have no timeout and re-invoke you on exit, so there is nothing to wait for and nothing to watch. (Guards enforce both halves.)
+
 3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
 
    The build's authority on whether it deployed is the deploy receipt at `~/.singularity/worktrees/<worktree>/build-status.json` (`status: ok` ⇒ deployed). A build killed by a caller timeout prints no verdict and leaves `status: running` with a dead pid. **Never** infer a deploy from `ls -t ~/.singularity/worktrees/<wt>/build-*.log` — that file is written only at the END of a build, so it matches a PREVIOUS run's `BUILD OK`.

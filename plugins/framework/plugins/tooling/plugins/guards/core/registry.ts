@@ -1,4 +1,5 @@
 import { agentModelGuard } from "./guards/agent-model";
+import { backgroundOpsGuard } from "./guards/background-ops";
 import { findGuard } from "./guards/find";
 import { gitDiffMainGuard } from "./guards/git-diff-main";
 import { gitPushGuard } from "./guards/git-push";
@@ -6,8 +7,8 @@ import { gitResetMainGuard } from "./guards/git-reset-main";
 import { mainEditsGuard } from "./guards/main-edits";
 import { mainWritesGuard } from "./guards/main-writes";
 import { migrationsGuard } from "./guards/migrations";
+import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
-import { repeatedCommandGuard } from "./guards/repeated-command";
 import { rgReplaceGuard } from "./guards/rg-replace";
 import type { Guard } from "./types";
 
@@ -21,7 +22,8 @@ export const GUARDS: Guard<any>[] = [
   migrationsGuard,
   mainWritesGuard,
   postgresGuard,
-  repeatedCommandGuard,
+  backgroundOpsGuard,
+  pollLoopGuard,
   // File writes
   mainEditsGuard,
   // Agent

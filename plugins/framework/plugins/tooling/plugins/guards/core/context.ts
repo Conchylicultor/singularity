@@ -1,10 +1,19 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { AllowVerdict, DenyVerdict, GuardContext } from "./types";
+import type {
+  AllowVerdict,
+  DenyVerdict,
+  GuardContext,
+  InformVerdict,
+} from "./types";
 
-export function createContext(cwd: string): GuardContext {
+export function createContext(
+  cwd: string,
+  sessionId = "unknown",
+): GuardContext {
   return {
     cwd,
+    sessionId,
     hasBypass(token: string): boolean {
       return existsSync(join(cwd, token));
     },
@@ -16,6 +25,9 @@ export function createContext(cwd: string): GuardContext {
     },
     fatal(reason: string): DenyVerdict {
       return { kind: "deny", reason, fatal: true };
+    },
+    inform(context: string): InformVerdict {
+      return { kind: "inform", context };
     },
   };
 }

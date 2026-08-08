@@ -9,6 +9,17 @@ export interface Denial {
   hint: string;
   /** If true, skip the standard STOP/report epilogue */
   skipEpilogue?: boolean;
+  /**
+   * Escalate from "this call is denied" to "end the turn" (`continue: false`).
+   * Costs the agent its in-flight context, so reserve it for a guard that has
+   * already denied once and been ignored.
+   */
+  fatal?: boolean;
+}
+
+/** Let the call through while handing the model a fact it was missing. */
+export interface Inform {
+  inform: string;
 }
 
 export interface GuardDef<I> {
@@ -16,7 +27,7 @@ export interface GuardDef<I> {
   matcher: ToolMatcher | ToolMatcher[];
   /** File token checked via ctx.hasBypass() before check() runs */
   bypassToken?: string;
-  check(input: I, ctx: GuardContext): Denial | null;
+  check(input: I, ctx: GuardContext): Denial | Inform | null;
 }
 
 function formatEpilogue(bypassToken?: string): string {
@@ -42,9 +53,11 @@ export function defineGuard<I>(def: GuardDef<I>): Guard<I> {
     matcher: def.matcher,
     check(input: I, ctx: GuardContext): Verdict | Promise<Verdict> {
       if (def.bypassToken && ctx.hasBypass(def.bypassToken)) return ctx.allow();
-      const denial = def.check(input, ctx);
-      if (!denial) return ctx.allow();
-      return ctx.deny(formatDenyMessage(denial, def.bypassToken));
+      const result = def.check(input, ctx);
+      if (!result) return ctx.allow();
+      if ("inform" in result) return ctx.inform(result.inform);
+      const message = formatDenyMessage(result, def.bypassToken);
+      return result.fatal ? ctx.fatal(message) : ctx.deny(message);
     },
   };
 }

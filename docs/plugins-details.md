@@ -14490,20 +14490,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `framework/tooling/codegen`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: `infra/paths.HOME_DIR`
+            - Uses:
+              - `infra/paths.HOME_DIR`
+              - `infra/paths.worktreeArtifacts`
             - Exports (types):
               - `AllowVerdict`
+              - `CommandClass`
               - `DenyVerdict`
               - `FileHint`
               - `Guard`
               - `GuardContext`
+              - `InformVerdict`
+              - `PollDecision`
               - `ToolMatcher`
               - `Verdict`
+              - `WatchSubject`
+              - `WindowEntry`
             - Exports (values):
+              - `classify`
               - `createContext`
               - `defineGuard`
+              - `detectPoll`
               - `GUARDS`
               - `parseShell`
+              - `THRESHOLD`
+              - `watchSubjects`
+              - `WINDOW_MS`
+              - `WINDOW_SIZE`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Exports (types):
