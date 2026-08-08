@@ -47,4 +47,5 @@ export {
 export {
   eventSourcesResource,
   eventsRevisionResource,
+  eventRunsRevisionResource,
 } from "./internal/resources";

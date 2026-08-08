@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from "react";
 import {
   useEndpoint,
   useEndpointMutation,
@@ -10,6 +11,7 @@ import {
 import {
   createEventSource,
   deleteEventSource,
+  eventRunsRevisionResource,
   eventSourcesResource,
   eventsRevisionResource,
   getEventSourceRun,
@@ -38,13 +40,49 @@ export function useEventsRevision(): ResourceResult<{ rev: string }> {
   return useResource(eventsRevisionResource);
 }
 
-/** The run ledger for one source, newest first. */
+/**
+ * The run ledger for one source, newest first — and LIVE.
+ *
+ * The rows are a plain endpoint read (a bounded, filterable list is a query, not
+ * something to ship over live-state), kept fresh by the cheap
+ * `events.runs-revision` scalar tick: when a run lands, this refetches the same
+ * query key in place, so the loaded list keeps rendering while it updates rather
+ * than flashing a skeleton. The tick is deliberately NOT part of the query key —
+ * that would mint a new cache entry per revision and re-show the loading state.
+ *
+ * Liveness lives HERE rather than at each call site: the ledger and the source
+ * row's status are written in one transaction and the status is already live, so
+ * a runs list that needs a page reload contradicts the card beside it. Binding
+ * the tick into the hook makes forgetting it impossible.
+ */
 export function useEventSourceRuns(sourceId: string, limit?: number) {
-  return useEndpoint(
+  const query = useEndpoint(
     listEventSourceRuns,
     { id: sourceId },
     limit === undefined ? undefined : { query: { limit } },
   );
+
+  // A derived slice read, not a value this renders: all we want out of the tick
+  // is the `rev` string, so `select` narrows the subscription to it.
+  const selectRev = useCallback((d: { rev: string }) => d.rev, []);
+  const tick = useResource(eventRunsRevisionResource, undefined, {
+    select: selectRev,
+  });
+  const rev = tick.pending ? null : tick.data;
+  const { refetch } = query;
+  // Compared against the last revision acted on, not just watched as a dep: the
+  // effect must fire once per genuine change, and never re-fire on a re-render
+  // that happens to hand back a fresh `refetch` identity.
+  const actedOn = useRef<string | null>(null);
+  useEffect(() => {
+    // A pending tick has nothing to say yet; the first settled `rev` refreshes
+    // once, which also covers a run that finished between mount and subscribe.
+    if (rev === null || rev === actedOn.current) return;
+    actedOn.current = rev;
+    void refetch();
+  }, [rev, refetch]);
+
+  return query;
 }
 
 /**
@@ -75,9 +113,11 @@ export function useDeleteEventSource() {
  * "Refresh now". The response is a discriminated `RefreshSourceResult` — callers
  * MUST branch on `status` rather than treating a resolved promise as success:
  * `skipped` is a resolved, legitimate non-run.
+ *
+ * It invalidates nothing: this resolves at `enqueued`, before the run has even
+ * started, so a refetch here could only ever re-read the list unchanged. The run
+ * appears when it actually lands, off the `events.runs-revision` tick.
  */
 export function useRefreshEventSourceNow() {
-  return useEndpointMutation(refreshEventSourceNow, {
-    invalidates: [listEventSourceRuns],
-  });
+  return useEndpointMutation(refreshEventSourceNow);
 }

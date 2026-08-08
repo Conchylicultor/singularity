@@ -9,9 +9,11 @@ working cache into what reads as a broken source, which is the single most
 likely misreading of this app.
 
 Typed fields (outcome, the four counts, duration, error) mean "show me only the
-failures" is a filter, not a bespoke chip. Data comes from `useEventSourceRuns`
-(a plain endpoint read, not live state): a fetch failure gets its own message
-rather than an eternal skeleton, since "unreachable" and "never run" are
+failures" is a filter, not a bespoke chip. Data comes from `useEventSourceRuns` —
+a plain endpoint read (a bounded filterable list is a query, not live-state rows)
+that the `events.runs-revision` tick refetches in place. The liveness is inside
+the hook, so this section subscribes to nothing. A fetch failure gets its own
+message rather than an eternal skeleton, since "unreachable" and "never run" are
 different answers.
 
 ## A run drills into its own pane

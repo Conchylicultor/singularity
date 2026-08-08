@@ -33,3 +33,24 @@ export const eventsRevisionResource = resourceDescriptor<{ rev: string }>(
   z.object({ rev: z.string() }),
   { rev: "" },
 );
+
+/**
+ * The same tick for the run ledger (`event_source_runs`). The runs list is a
+ * plain endpoint read — a bounded, filterable list is a query, not something to
+ * ship over live-state — and this is what keeps that read fresh: `useEventSourceRuns`
+ * refetches in place when `rev` moves.
+ *
+ * Without it a finished run stayed invisible until the page was reloaded, even
+ * though the source row beside it flipped `running` → `idle` live off the
+ * `events.sources` window. The two are written in ONE transaction, so a ledger
+ * that lags the status is always a lie.
+ *
+ * Whole-table rather than per-source, for the `deploy.runs-revision` reason: a
+ * source-id param would buy nothing — the ledger only moves while a run is in
+ * flight, and a run is dedup'd to one per source.
+ */
+export const eventRunsRevisionResource = resourceDescriptor<{ rev: string }>(
+  "events.runs-revision",
+  z.object({ rev: z.string() }),
+  { rev: "" },
+);

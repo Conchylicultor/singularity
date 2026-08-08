@@ -65,7 +65,10 @@ Three `defineEntity` tables, field records in `core/internal/fields.ts`:
   pairs: `created_at`/`updated_at` are row lifecycle, `first_seen_at`/
   `last_seen_at`/`disappeared_at` are extraction sighting.
 - `event_source_runs` — the run ledger, including the cheap `unchanged` runs.
-  This is what makes "why did nothing happen" answerable. Readable one at a time
+  This is what makes "why did nothing happen" answerable. Insert-only (rows are
+  complete by construction), so its `events.runs-revision` tick is
+  `count(*) + max(started_at)`; `useEventSourceRuns` refetches off it, which is
+  what keeps the ledger and the live source status from disagreeing. Readable one at a time
   (`GET /api/events/runs/:runId` → `requireRun`, 404 on absent) — deliberately
   NOT nested under the source, so a deep-linked run pane resolves from its own id
   instead of whatever window the runs list happens to have loaded.
@@ -118,6 +121,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Contributes:
     - `resource.declare` "events.sources"
     - `resource.declare` "events.revision"
+    - `resource.declare` "events.runs-revision"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
@@ -139,6 +143,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `createSource`
     - `defineEventSourceType`
     - `deleteSource`
+    - `eventRunsRevisionServerResource`
     - `eventSourcesServerResource`
     - `eventsRevisionServerResource`
     - `eventsTable`
@@ -152,7 +157,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `requireSource`
     - `updateSource`
     - `upsertEvents`
-  - Resources: `events.revision` (push)
+  - Resources:
+    - `events.revision` (push)
+    - `events.runs-revision` (push)
   - Routes:
     - `GET /api/events/sources`
     - `POST /api/events/sources`
@@ -197,6 +204,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `deleteEventSource`
     - `EVENT_CATEGORIES`
     - `eventFields`
+    - `eventRunsRevisionResource`
     - `EventSchema`
     - `eventSourceFields`
     - `eventSourceRunFields`

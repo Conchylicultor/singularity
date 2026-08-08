@@ -1168,6 +1168,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `resource.declare` "events.sources"
               - `resource.declare` "events.revision"
+              - `resource.declare` "events.runs-revision"
             - Uses:
               - `database.db`
               - `infra/endpoints.HttpError`
@@ -1189,6 +1190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `createSource`
               - `defineEventSourceType`
               - `deleteSource`
+              - `eventRunsRevisionServerResource`
               - `eventSourcesServerResource`
               - `eventsRevisionServerResource`
               - `eventsTable`
@@ -1202,7 +1204,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `requireSource`
               - `updateSource`
               - `upsertEvents`
-            - Resources: `events.revision` (push)
+            - Resources:
+              - `events.revision` (push)
+              - `events.runs-revision` (push)
             - Routes:
               - `GET /api/events/sources`
               - `POST /api/events/sources`
@@ -1247,6 +1251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deleteEventSource`
               - `EVENT_CATEGORIES`
               - `eventFields`
+              - `eventRunsRevisionResource`
               - `EventSchema`
               - `eventSourceFields`
               - `eventSourceRunFields`

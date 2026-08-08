@@ -25,6 +25,7 @@ import {
 import {
   eventSourcesServerResource,
   eventsRevisionServerResource,
+  eventRunsRevisionServerResource,
 } from "./internal/resources";
 
 // The physical tables, the source-type registry, the repo functions, and the
@@ -66,6 +67,7 @@ export type { RefreshRunner } from "./internal/refresh-runner";
 export {
   eventSourcesServerResource,
   eventsRevisionServerResource,
+  eventRunsRevisionServerResource,
 } from "./internal/resources";
 
 export default {
@@ -84,5 +86,6 @@ export default {
   contributions: [
     Resource.Declare(eventSourcesServerResource),
     Resource.Declare(eventsRevisionServerResource),
+    Resource.Declare(eventRunsRevisionServerResource),
   ],
 } satisfies ServerPluginDefinition;
