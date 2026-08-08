@@ -1569,7 +1569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/toggle-chip.SegmentedControl`
                       - `primitives/css/ui-kit.Button`
                       - `primitives/loading.Loading`
-                - **`settings`** — Settings section of the Events source side-pane: the source type's own configFields rendered generically through the fields FieldRenderer, with per-field autosave and the type's optional bespoke chrome. Names no source type.
+                - **`settings`** — Settings section of the Events source side-pane: the source's own name plus the type's configFields, rendered generically through the fields FieldRenderer as one form with per-field autosave. Names no source type.
                   - Web:
                     - Contributes: `EventSourceDetail.Section` "Settings" → `SourceSettingsSection`
                     - Uses:
@@ -1579,6 +1579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `apps/events/sources.SourceConfigForm`
                       - `apps/events/sources.useEventSource`
                       - `apps/events/sources.useEventSourceType`
+                      - `config_v2/fields.FieldRenderer`
                       - `infra/endpoints.getEndpointErrorMessage`
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/spacing.Stack`
@@ -7388,6 +7389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/events/sources`
+          - `apps/events/sources/source-detail/settings`
           - `apps/sonata/view-options`
           - `config_v2/settings`
           - `fields/avatar/config`

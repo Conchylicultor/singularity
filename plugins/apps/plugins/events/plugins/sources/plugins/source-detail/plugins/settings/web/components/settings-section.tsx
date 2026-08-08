@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -13,44 +15,48 @@ import {
 } from "@plugins/apps/plugins/events/plugins/sources/web";
 
 /**
- * Whether this source has anything to configure at all.
+ * The row's own `name` column, as a field — deliberately NOT a member of any
+ * source type's `configFields`, and declared here because every source has a
+ * name whatever its type.
  *
- * `true` while the lookup is pending (loading is not empty — a `false` here
- * would pop the card in a frame late), `true` for an unregistered type (that
- * fact must be said out loud, not hidden), and otherwise only when the type
- * declares fields or bespoke chrome. A zero-config type therefore paints no
- * Settings card rather than a card reading "nothing to configure".
+ * It renders through the same `FieldRenderer` dispatch as the type's own fields,
+ * so the card reads as one form even though the two halves land in different
+ * parts of the PATCH (`name` is a column, `config` is a revalidated blob).
+ *
+ * Module-level and frozen: `textField` returns a frozen def, so re-creating it
+ * per render would only churn the renderer's props.
  */
-export function useSourceSettingsAvailable({
-  sourceId,
-}: {
-  sourceId: string;
-}): boolean {
-  const lookup = useEventSource(sourceId);
-  const typeLookup = useEventSourceType(
-    lookup.status === "found" ? lookup.source.type : "",
-  );
-  if (lookup.status !== "found") return lookup.status !== "missing";
-  if (typeLookup.status === "unregistered") return true;
-  return (
-    Object.keys(typeLookup.type.configFields).length > 0 ||
-    typeLookup.type.Extra !== undefined
-  );
-}
+const nameField = textField({
+  label: "Name",
+  description:
+    "What this source is called everywhere it appears. Clearing it restores the default name derived from its configuration.",
+  placeholder: "e.g. Fitzroy gigs",
+});
 
 /**
- * The per-type configuration form, rendered GENERICALLY from the source type's
- * `configFields` — the same record the server validates the row against.
+ * The source's editable values, as ONE card: its name, then the per-type
+ * configuration form rendered GENERICALLY from the source type's `configFields`
+ * — the same record the server validates the row against.
  *
  * There is no per-type branch in this file and there must never be one: a source
  * type ships a field record and gets a working form, which is what makes a
- * marketplace source type drop into this pane with zero edits here.
+ * marketplace source type drop into this pane with zero edits here. `name` does
+ * not break that rule — it belongs to the row, not to any type.
+ *
+ * Name and config share one card on purpose. Two cards of text inputs stacked on
+ * top of each other read as one form split in half for no reason the user can
+ * see, and the split had a worse failure: this card is absent for a type with
+ * nothing to configure, so a name field living in its own card would be the only
+ * survivor, while a name field folded into a card that disappears would leave a
+ * `manual` source unrenameable. The name renders BEFORE the type gates below, so
+ * it stays editable even when the type is uninstalled or its stored config no
+ * longer parses — the states in which naming the row is most useful.
  *
  * Autosave is per field: each renderer owns its commit granularity (the text
- * renderer commits on blur, not per keystroke), so one PATCH lands per edit. The
- * PATCH sends the FULL config because `UpdateEventSourceBody.config` replaces
- * and revalidates the whole blob — a partial write cannot leave a row whose
- * config fails its type's schema.
+ * renderer commits on blur, not per keystroke), so one PATCH lands per edit. A
+ * config PATCH sends the FULL config because `UpdateEventSourceBody.config`
+ * replaces and revalidates the whole blob — a partial write cannot leave a row
+ * whose config fails its type's schema.
  */
 export function SourceSettingsSection({
   sourceId,
@@ -58,9 +64,6 @@ export function SourceSettingsSection({
   sourceId: string;
 }): ReactNode {
   const lookup = useEventSource(sourceId);
-  const typeLookup = useEventSourceType(
-    lookup.status === "found" ? lookup.source.type : "",
-  );
   const update = useUpdateEventSource();
 
   if (lookup.status === "pending") return <Loading variant="rows" />;
@@ -70,12 +73,58 @@ export function SourceSettingsSection({
   if (lookup.status === "missing") {
     return <Placeholder>This source no longer exists.</Placeholder>;
   }
+
+  return (
+    <Stack gap="md">
+      <FieldRenderer
+        field={nameField}
+        value={lookup.source.name}
+        onChange={(value) => {
+          // The dispatch slot is value-erased (`FieldRendererProps<unknown>`),
+          // but the renderer answering a `text` field emits its own `T` — a
+          // string. The cast restates that, it does not assume it.
+          update.mutate({
+            params: { id: sourceId },
+            body: { name: value as string },
+          });
+        }}
+      />
+      <SourceTypeConfig sourceId={sourceId} type={lookup.source.type} />
+      {update.error && (
+        <Text as="p" variant="caption" tone="destructive">
+          {getEndpointErrorMessage(update.error)}
+        </Text>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * The type-owned half of the card: the generic config form, or the one honest
+ * sentence explaining why there is no form to draw.
+ *
+ * Split out so the `name` field above it renders unconditionally — the three
+ * arms here are all reasons the CONFIG cannot be shown, never reasons the row
+ * cannot be named.
+ */
+function SourceTypeConfig({
+  sourceId,
+  type: typeId,
+}: {
+  sourceId: string;
+  type: string;
+}): ReactNode {
+  const typeLookup = useEventSourceType(typeId);
+  const lookup = useEventSource(sourceId);
+  const update = useUpdateEventSource();
+
+  if (lookup.status !== "found") return null;
   if (typeLookup.status === "unregistered") {
     return (
       <Placeholder tone="error">
-        The source type &ldquo;{lookup.source.type}&rdquo; is not installed, so
-        its settings cannot be shown or edited. Reinstall the plugin that
-        provides it, or delete this source.
+        The source type &ldquo;{typeId}&rdquo; is not installed, so its settings
+        cannot be shown or edited. Reinstall the plugin that provides it, or
+        delete this source.
       </Placeholder>
     );
   }
@@ -94,10 +143,14 @@ export function SourceSettingsSection({
   const Extra = type.Extra;
 
   return (
-    <Stack gap="md">
+    <>
       <SourceConfigForm
         fields={type.configFields}
         values={resolved.values}
+        // Reworded for its new neighbour: with the Name field above it, the card
+        // is no longer empty, so this says what the TYPE has — not what the card
+        // has.
+        emptyLabel="This source type has nothing of its own to configure."
         onChange={(key, value) => {
           update.mutate({
             params: { id: sourceId },
@@ -105,12 +158,7 @@ export function SourceSettingsSection({
           });
         }}
       />
-      {update.error && (
-        <Text as="p" variant="caption" tone="destructive">
-          {getEndpointErrorMessage(update.error)}
-        </Text>
-      )}
       {Extra ? <Extra sourceId={sourceId} /> : null}
-    </Stack>
+    </>
   );
 }

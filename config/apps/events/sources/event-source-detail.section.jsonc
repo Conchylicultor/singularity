@@ -5,8 +5,8 @@
 //   status   — one collapsed bar carrying the state chip; it qualifies
 //              everything below it, so it leads (the deploy server pane's
 //              ordering, for the same reason).
-//   settings — the type's own configuration. Absent entirely for a zero-config
-//              type, which is why it cannot be the anchor row.
+//   settings — the source's editable values: its name, then the type's own
+//              configuration.
 //   schedule — cadence, scheduling on/off, and Refresh now.
 //   runs     — the ledger, and the longest card; it answers "why did nothing
 //              happen", which is the question you ask AFTER checking the three

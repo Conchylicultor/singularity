@@ -108,9 +108,21 @@ export async function updateSource(
   const current = await requireSource(id);
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.name !== undefined) updates.name = body.name;
-  if (body.config !== undefined) {
-    updates.config = validateConfig(current.type, body.config);
+
+  // Resolved before the name, because an emptied name re-derives from the config
+  // this write is landing, not the one it replaces.
+  const config =
+    body.config === undefined
+      ? current.config
+      : validateConfig(current.type, body.config);
+  if (body.config !== undefined) updates.config = config;
+
+  // Same rule as `createSource`: trimmed, and never empty. A user who clears the
+  // field gets the derived default back rather than a nameless row — the name is
+  // this source's only label in the pane title, the list and the events DataView's
+  // Source dimension, so "" is not a state any of them can render.
+  if (body.name !== undefined) {
+    updates.name = body.name.trim() || deriveName(current.type, config);
   }
   if (body.refresh !== undefined) {
     updates.refresh = body.refresh;

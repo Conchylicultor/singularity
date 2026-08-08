@@ -62,6 +62,7 @@ the config-only templates to mirror.
 - Cross-plugin:
   - Imported by:
     - `apps/events/sources`
+    - `apps/events/sources/source-detail/settings`
     - `apps/sonata/view-options`
     - `config_v2/settings`
     - `fields/avatar/config`

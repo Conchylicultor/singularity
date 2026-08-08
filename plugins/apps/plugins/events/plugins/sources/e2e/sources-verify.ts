@@ -12,7 +12,9 @@
  *      zero-field type says "nothing to configure", the URL type grows a form;
  *   3. a created source round-trips to the list and opens its detail pane;
  *   4. the detail pane's sections are contributions, gated by `useAvailable`;
- *   5. the `source` dimension reaches the *events* DataView's Filter — the field
+ *   5. a source can be RENAMED after creation, and an emptied name comes back as
+ *      the server-derived default rather than a blank row;
+ *   6. the `source` dimension reaches the *events* DataView's Filter — the field
  *      extension crossing a plugin boundary.
  *
  * Deliberately stops short of creating a `Web page` source: its `extract` phase
@@ -115,23 +117,40 @@ await withBrowser(async (h) => {
 
   // Matched on its visible text: the app rail's icon buttons carry accessible
   // names too, and a loose name match can silently pick the rail instead.
-  await page.getByRole("button", { name: "Sources", exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Sources", exact: true })
+    .first()
+    .click();
   await page.waitForTimeout(1200);
   await snap(page, OUT, "1-sources-empty");
-  r.ok("Sources pane is on the URL", page.url().includes("/sources"), page.url());
+  r.ok(
+    "Sources pane is on the URL",
+    page.url().includes("/sources"),
+    page.url(),
+  );
 
   // 2. The `+` menu is the registry. Two types are installed, so the control is
   //    the N-creator dropdown (`CreatorsControl` renders a labelled Button for
   //    exactly one) — that shape is itself evidence the registry drove it.
-  const createTrigger = page.getByRole("button", { name: "Create", exact: true });
+  const createTrigger = page.getByRole("button", {
+    name: "Create",
+    exact: true,
+  });
   r.ok("`+` create control is present", (await createTrigger.count()) > 0);
   await createTrigger.first().click();
   await page.waitForTimeout(500);
   await snap(page, OUT, "2-create-menu");
 
-  const menuItem = (label: string) => page.getByRole("menuitem", { name: label });
-  r.ok("`Web page` source type in the + menu", (await menuItem("Web page").count()) > 0);
-  r.ok("`Manual` source type in the + menu", (await menuItem("Manual").count()) > 0);
+  const menuItem = (label: string) =>
+    page.getByRole("menuitem", { name: label });
+  r.ok(
+    "`Web page` source type in the + menu",
+    (await menuItem("Web page").count()) > 0,
+  );
+  r.ok(
+    "`Manual` source type in the + menu",
+    (await menuItem("Manual").count()) > 0,
+  );
 
   // 3. The URL type's form is generated from its configFields — opened and
   //    cancelled, never submitted: creating one would spend a live model call.
@@ -173,8 +192,15 @@ await withBrowser(async (h) => {
     created = true;
 
     // 5. It round-trips to the list, and creating it opened its detail pane.
-    r.ok("created source appears in the app", (await page.getByText(SOURCE_NAME).count()) > 0);
-    r.ok("detail pane opened on the new source", /\/sources\/source\//.test(page.url()), page.url());
+    r.ok(
+      "created source appears in the app",
+      (await page.getByText(SOURCE_NAME).count()) > 0,
+    );
+    r.ok(
+      "detail pane opened on the new source",
+      /\/sources\/source\//.test(page.url()),
+      page.url(),
+    );
     await snap(page, OUT, "5-source-detail");
 
     // 6. The detail pane's sections are contributions.
@@ -188,19 +214,71 @@ await withBrowser(async (h) => {
     //    `configFields` and no `Extra` has nothing to show — a titled card
     //    opening onto emptiness is exactly what that gate exists to remove. A
     //    regression that starts painting an empty card must fail here.
-    const headers = (await page.locator("button[aria-expanded]").allInnerTexts()).map(
-      (t) => t.trim(),
-    );
+    const headers = (
+      await page.locator("button[aria-expanded]").allInnerTexts()
+    ).map((t) => t.trim());
     r.note(`section headers: ${JSON.stringify(headers)}`);
     for (const section of ["Status", "Schedule", "Runs"]) {
-      r.ok(`section "${section}" rendered`, headers.some((h2) => h2.includes(section)));
+      r.ok(
+        `section "${section}" rendered`,
+        headers.some((h2) => h2.includes(section)),
+      );
     }
+    // `Settings` is present even for a zero-config type, and its presence is the
+    // assertion: the card carries the row's own `name`, so it has something to
+    // show whatever the type declares. It says the type has nothing of its own
+    // rather than drawing an empty form.
     r.ok(
-      'section "Settings" gated off for a zero-config type',
-      !headers.some((h2) => h2.includes("Settings")),
+      'section "Settings" rendered for a zero-config type too',
+      headers.some((h2) => h2.includes("Settings")),
+    );
+    r.ok(
+      "zero-config type says so inside the Settings card",
+      /nothing of its own to configure/i.test(
+        await page.locator("body").innerText(),
+      ),
     );
 
-    // 7. The contributed `source` dimension reaches the events DataView.
+    // 7. The name is editable after creation, and an emptied one cannot persist.
+    //
+    //    Both halves matter. The name is a column on the ROW, not a member of
+    //    any type's `configFields` — this type declares none, so a Settings card
+    //    that rendered only config would leave this source unrenameable, which
+    //    is why the card must never go back to being gated on the type. Clearing
+    //    the name must come back as the server-derived default (the type id, for
+    //    a type whose config carries no URL), never as a blank row.
+    const RENAMED = `${SOURCE_NAME} (renamed)`;
+    const nameBox = page.getByPlaceholder("e.g. Fitzroy gigs");
+    r.ok("the source's Name box is on the pane", (await nameBox.count()) > 0);
+
+    // The text renderer commits on BLUR, not per keystroke — a `fill` alone
+    // saves nothing, and asserting straight after it would test the local draft.
+    await nameBox.first().fill(RENAMED);
+    await nameBox.first().blur();
+    await page.waitForTimeout(1500);
+    await snap(page, OUT, "6-renamed");
+    r.ok(
+      "the rename reaches the pane title and the list row",
+      (await page.getByText(RENAMED, { exact: true }).count()) > 0,
+    );
+
+    await nameBox.first().fill("");
+    await nameBox.first().blur();
+    await page.waitForTimeout(1500);
+    const clearedTo = await nameBox.first().inputValue();
+    await snap(page, OUT, "7-name-cleared");
+    r.ok(
+      "clearing the name comes back as the derived default, never blank",
+      clearedTo === "manual",
+      `name is now ${JSON.stringify(clearedTo)}`,
+    );
+
+    // Back to the swept name, so the `finally` cleanup can still find the row.
+    await nameBox.first().fill(SOURCE_NAME);
+    await nameBox.first().blur();
+    await page.waitForTimeout(1500);
+
+    // 8. The contributed `source` dimension reaches the events DataView.
     await boot(page, pathUrl("/events/list"), {
       // The landing view's own chip: it exists only once the authored view
       // instances have resolved, which is the same gate the Filter trigger's
@@ -228,7 +306,10 @@ await withBrowser(async (h) => {
       await page.waitForTimeout(400);
     }
     if ((await filterTrigger.count()) === 0) {
-      const viewOptions = page.getByRole("button", { name: "View options", exact: true });
+      const viewOptions = page.getByRole("button", {
+        name: "View options",
+        exact: true,
+      });
       if ((await viewOptions.count()) > 0) {
         await viewOptions.first().click();
         await page.waitForTimeout(500);
@@ -242,7 +323,10 @@ await withBrowser(async (h) => {
     // The popover opens on the EXISTING rule (the view has one), so the field
     // list is one click further in — `+ Add filter` is what reveals the
     // schema's dimensions.
-    const addFilter = page.getByRole("button", { name: "Add filter", exact: true });
+    const addFilter = page.getByRole("button", {
+      name: "Add filter",
+      exact: true,
+    });
     if ((await addFilter.count()) > 0) {
       await addFilter.first().click();
       await page.waitForTimeout(600);
@@ -252,9 +336,10 @@ await withBrowser(async (h) => {
     // green on a node the user cannot reach. Filtering to it proves it is a
     // real, selectable dimension.
     const fieldSearch = page.getByPlaceholder("Filter by…");
-    if ((await fieldSearch.count()) > 0) await fieldSearch.first().fill("Source");
+    if ((await fieldSearch.count()) > 0)
+      await fieldSearch.first().fill("Source");
     await page.waitForTimeout(500);
-    await snap(page, OUT, "6-events-filter");
+    await snap(page, OUT, "8-events-filter");
     r.ok(
       "`Source` is offered as a filter dimension (the field extension)",
       await page.getByText("Source", { exact: true }).first().isVisible(),
@@ -263,14 +348,26 @@ await withBrowser(async (h) => {
     // Remove what we created, even if an assertion above threw.
     if (created) {
       const cleaned = await sweep();
-      r.ok(`cleanup removed the created source`, cleaned > 0, `removed=${cleaned}`);
+      r.ok(
+        `cleanup removed the created source`,
+        cleaned > 0,
+        `removed=${cleaned}`,
+      );
     }
   }
 
   // A clean run means no crashes either. `requestfailed` is NOT folded in: a
   // navigation that aborts an in-flight fetch is normal, not a defect.
-  r.ok("no uncaught page errors", captured.pageErrors.length === 0, captured.pageErrors.join(" | "));
-  r.ok("no console errors", captured.consoleErrors.length === 0, captured.consoleErrors.join(" | "));
+  r.ok(
+    "no uncaught page errors",
+    captured.pageErrors.length === 0,
+    captured.pageErrors.join(" | "),
+  );
+  r.ok(
+    "no console errors",
+    captured.consoleErrors.length === 0,
+    captured.consoleErrors.join(" | "),
+  );
 });
 
 r.finish();
