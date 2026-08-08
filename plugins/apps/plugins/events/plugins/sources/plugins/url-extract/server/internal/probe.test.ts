@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { extractVisibleText } from "./page-text";
-import { readCappedBody } from "./probe";
+import { readCappedBody, readPage, type FetchedPage } from "./probe";
 
 // The byte cap is the probe's only bound on a stranger's server: without it a
 // mistyped URL pointing at a large file is an unbounded download every tick.
@@ -73,5 +73,114 @@ describe("readCappedBody", () => {
     );
     expect(page.text).not.toContain("Techno Night");
     expect(page.text).toBe("Soirées");
+  });
+});
+
+// `readPage` is the half that decides whether a page is safe to hand the model,
+// and it takes no network — which is exactly why it can be pinned here, over a
+// literal `FetchedPage`, including the cases that only ever arrive from a
+// stranger's server.
+
+const TARGET = new URL("https://venue.example/events");
+
+/** The rejection itself, so a test can read the message it produced. */
+async function rejection(promise: Promise<unknown>): Promise<Error> {
+  try {
+    await promise;
+  } catch (err) {
+    if (err instanceof Error) return err;
+    throw err;
+  }
+  throw new Error("expected the page to be refused, but it was read");
+}
+
+function fetched(html: string, over: Partial<FetchedPage> = {}): FetchedPage {
+  return {
+    url: TARGET.toString(),
+    bytes: new TextEncoder().encode(html) as Uint8Array<ArrayBuffer>,
+    contentType: "text/html; charset=utf-8",
+    via: "plain",
+    truncated: false,
+    ...over,
+  };
+}
+
+describe("readPage", () => {
+  test("reads the same page identically whichever transport fetched it", async () => {
+    // The invariant the whole restructure exists for: starting a browser changes
+    // how the bytes were obtained, never what the page means. Same bytes ⇒ same
+    // fingerprint ⇒ no extraction is paid for on a mode flip alone.
+    const html =
+      "<html><body><ul><li>Techno Night — 25 August</li></ul></body></html>";
+    const plain = await readPage(fetched(html), TARGET);
+    const browser = await readPage(fetched(html, { via: "browser" }), TARGET);
+
+    expect(plain.fingerprint).toBe(browser.fingerprint);
+    expect(plain.payload.text).toBe(browser.payload.text);
+    expect(plain.payload.html).toBe(browser.payload.html);
+  });
+
+  test("a page with no readable text at all throws instead of becoming an empty listing", async () => {
+    // The destructive case this guard exists for: the model would be shown an
+    // empty page, truthfully answer `{"events": []}`, and `runSource` would stamp
+    // `disappearedAt` on every event the source ever found.
+    const shell =
+      "<html><body><div id='root'></div><script>render()</script></body></html>";
+    const err = await rejection(readPage(fetched(shell), TARGET));
+    expect(err.message).toContain("no readable text");
+  });
+
+  test("the empty-page remedy differs by transport, because the user's next move does", async () => {
+    const shell = "<html><body><div id='root'></div></body></html>";
+
+    const plain = await rejection(readPage(fetched(shell), TARGET));
+    expect(plain.message).toContain('"Browser render"');
+
+    // A real browser already ran the page's JavaScript, so there is no mode to
+    // suggest — this is the cookie/sign-in-wall outcome.
+    const browser = await rejection(
+      readPage(fetched(shell, { via: "browser" }), TARGET),
+    );
+    expect(browser.message).toContain("cookie or sign-in wall");
+    expect(browser.message).not.toContain('"Browser render"');
+  });
+
+  test("readability is a fact, not a threshold — one word is a readable page", async () => {
+    // Deliberately NOT "fewer than N characters ⇒ it did not render": a venue
+    // genuinely between seasons is a short page, and parking it would be wrong.
+    const thin = "<html><body><p>Rien de prévu</p></body></html>";
+    const result = await readPage(fetched(thin), TARGET);
+    expect(result.payload.text).toBe("Rien de prévu");
+  });
+
+  test("whitespace-only markup counts as no readable text", async () => {
+    const err = await rejection(
+      readPage(fetched("<html><body>   <br>\n\t </body></html>"), TARGET),
+    );
+    expect(err.message).toContain("no readable text");
+  });
+
+  test("a page flagged not-whole throws before anything is read from it", async () => {
+    // Both transports raise the same flag for their own reason (a cancelled
+    // reader, an oversized render) and both land on the same refusal: never a
+    // shorter page.
+    const err = await rejection(
+      readPage(
+        fetched("<html><body><p>Techno Night</p></body></html>", {
+          truncated: true,
+          via: "browser",
+        }),
+        TARGET,
+      ),
+    );
+    expect(err.message).toContain("cannot be read whole");
+  });
+
+  test("the payload carries the post-redirect URL, not the configured one", async () => {
+    const page = fetched("<html><body><p>Techno Night</p></body></html>", {
+      url: "https://venue.example/en/events",
+    });
+    const result = await readPage(page, TARGET);
+    expect(result.payload.url).toBe("https://venue.example/en/events");
   });
 });

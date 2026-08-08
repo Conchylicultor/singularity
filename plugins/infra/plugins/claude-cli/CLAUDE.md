@@ -19,6 +19,12 @@ const title = await runClaudePrint({
 
 Throws `ClaudeCliError` on non-zero exit or timeout. Callers that need graceful degradation should `try/catch` and fall back.
 
+The child goes through `spawnCaptured` (`infra/spawn`), **never** a raw
+`Bun.spawn` with piped stdio: bun 1.3.13's exit-during-stream-pull race leaves the
+pull promise unsettled when the child exits, and `proc.kill()` cannot rescue a
+child that is already dead — a caller parks forever with no error, no call-log
+row, and no failed run. `timeoutMs` is a real ceiling only because of that.
+
 ## Correlation — "which model calls produced *this* record?"
 
 `source.correlationId` stamps a recorded call with the domain record it was made

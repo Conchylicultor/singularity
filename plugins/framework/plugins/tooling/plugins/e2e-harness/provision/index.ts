@@ -1,34 +1,15 @@
 /**
- * Install-time provisioning: ensure the chromium revision the currently-resolved
- * Playwright expects is present in the shared browser cache
- * (~/Library/Caches/ms-playwright on macOS).
+ * Install-time provisioning: the chromium binary the `e2e/` scripts launch.
  *
- * Why this exists: the Playwright npm *package* is provisioned by `bun install`,
- * but the chromium *binary* is only fetched by an explicit `playwright install` —
- * two separate mechanisms that drift. Each Playwright minor pins a different
- * chromium revision, so the moment the resolved version's revision isn't already
- * cached, `chromium.launch()` hard-errors and every e2e script breaks. Running as
- * a provisioning contribution provisions the binary by the same mechanism that
- * provisions the package, so they can never drift.
- *
- * Steady state is a noop: one path computation + one stat, then return. The cache
- * is global and shared across all worktrees, so only the first worktree on a
- * machine (per revision) ever downloads; every other invocation is a pure
- * existsSync hit.
+ * The implementation moved to `browser-fetch`'s `core` (`ensureChromium`) when a
+ * *backend* gained a runtime need for the same binary. A backend's correctness
+ * must not silently depend on a tooling plugin's install step, so the primitive
+ * that needs chromium at runtime owns the provisioning and this harness calls
+ * the same function. The runner is idempotent, so the second contribution is a
+ * single `existsSync` in steady state.
  */
-import { existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
-import { chromium } from "playwright";
+import { ensureChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/core";
 
 export default async function provision(): Promise<void> {
-  // executablePath() is a pure getter: it computes where the binary should live
-  // (respecting PLAYWRIGHT_BROWSERS_PATH and the OS default cache dir) without
-  // launching anything or requiring the binary to exist. Safe to call when absent.
-  const exe = chromium.executablePath();
-  if (existsSync(exe)) return; // already provisioned — noop
-
-  console.log(`Playwright chromium not found at ${exe} — installing…`);
-  execFileSync("bunx", ["playwright", "install", "chromium"], {
-    stdio: "inherit",
-  });
+  await ensureChromium();
 }

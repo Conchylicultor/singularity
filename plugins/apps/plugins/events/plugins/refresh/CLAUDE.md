@@ -86,10 +86,18 @@ one page.
 both recognised classes set `name`, and a name check survives the module-identity
 differences that would misclassify a terminal failure as transient.
 
-`NonRetryableError`→`source`, `SsrfError`→`blocked_url`, `ZodError`→`extraction`,
+`NonRetryableError`→`source`, `SsrfError`→`blocked_url`,
+`BotChallengeError`→`bot_challenge`, `ZodError`→`extraction`,
 `UnknownSourceTypeError`→`config` are terminal; **everything else is transient**
 (guessing wrong costs a few retries, whereas guessing terminal parks a healthy
 source until a human notices).
+
+`bot_challenge` is the one arm that waives transient-by-default for a status
+(403/429) that normally means "try later". What earns it: the source type raises
+it only *after* trying the single thing that could change the answer (loading the
+page in a real browser), or after the user configured it not to — so what remains
+is a standing property of the site, not of the moment. The narrowness is the
+safety: a bare 429 with no bot-mitigation header never becomes one.
 
 Terminal → source row parked `status: "error"` + classified message, rethrown as
 `NonRetryableError` so graphile dead-letters after ONE attempt instead of paying

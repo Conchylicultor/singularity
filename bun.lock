@@ -2908,6 +2908,13 @@
       "name": "@singularity/plugin-infra-safe-fetch",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/safe-fetch/plugins/browser-fetch": {
+      "name": "@singularity/plugin-infra-safe-fetch-browser-fetch",
+      "version": "0.0.1",
+      "dependencies": {
+        "playwright": "^1.60.0",
+      },
+    },
     "plugins/infra/plugins/secrets": {
       "name": "@singularity/plugin-infra-secrets",
       "version": "0.0.1",
@@ -6741,6 +6748,8 @@
     "@singularity/plugin-infra-runtime-profiler": ["@singularity/plugin-infra-runtime-profiler@workspace:plugins/infra/plugins/runtime-profiler"],
 
     "@singularity/plugin-infra-safe-fetch": ["@singularity/plugin-infra-safe-fetch@workspace:plugins/infra/plugins/safe-fetch"],
+
+    "@singularity/plugin-infra-safe-fetch-browser-fetch": ["@singularity/plugin-infra-safe-fetch-browser-fetch@workspace:plugins/infra/plugins/safe-fetch/plugins/browser-fetch"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 

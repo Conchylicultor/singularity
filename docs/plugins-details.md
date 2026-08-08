@@ -1607,7 +1607,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/events/event-list.EventList`
                   - `apps/events/events-core.useEventSources`
-            - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe fetches the URL (SSRF-guarded) and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.
+            - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe reads the URL through one transport-blind pipeline (SSRF-guarded plain fetch, or a real browser when the source's Fetch mode says so or the site answers a bot challenge), refuses a page it cannot read whole or that has no readable text at all, and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.
               - Web:
                 - Contributes: `EventSources.Type` "Web page"
                 - Uses: `apps/events/events-core.EventSources`
@@ -1616,15 +1616,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/events/events-core.defineEventSourceType`
                   - `infra/claude-cli.runClaudePrint`
                   - `infra/jobs.NonRetryableError`
+                  - `infra/safe-fetch.assertResolvesPublic`
                   - `infra/safe-fetch.parsePublicUrl`
                   - `infra/safe-fetch.safeFetch`
+                  - `infra/safe-fetch/browser-fetch.browserFetch`
                 - Register: `defineEventSourceType('url')`
               - Core:
                 - Uses:
                   - `fields.nullable`
+                  - `fields/enum/config.enumField`
                   - `fields/text/config.textField`
-                - Exports (types): `UrlSourceConfig`
+                - Exports (types):
+                  - `UrlFetchMode`
+                  - `UrlSourceConfig`
                 - Exports (values):
+                  - `URL_FETCH_MODES`
                   - `URL_SOURCE_TYPE_ID`
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
@@ -13109,6 +13115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
+              - `apps/events/sources/url-extract`
               - `plugin-meta/composition`
               - `ui/theme-engine`
         - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
@@ -15675,6 +15682,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin`
           - `debug/profiling/boot-bench`
           - `infra/host-read-pool`
+          - `infra/safe-fetch/browser-fetch`
           - `infra/worktree`
       - Core:
         - Exports (types):
@@ -16223,6 +16231,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/remote-images`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/workflows/steps/http-request`
+          - `infra/safe-fetch/browser-fetch`
           - `page/bookmark`
           - `stats/cost`
       - Server:
@@ -16236,6 +16245,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `parsePublicUrl`
           - `safeFetch`
           - `SsrfError`
+      - Plugins:
+        - **`browser-fetch`** — Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every intercepted request re-guarded with parsePublicUrl, cross-origin subresources proxied through safeFetch, bounded by a size-2 host pool. Throws on timeout rather than returning a partially-rendered page.
+          - Server:
+            - Uses:
+              - `infra/host-admission.defineHostPool`
+              - `infra/safe-fetch.assertResolvesPublic`
+              - `infra/safe-fetch.parsePublicUrl`
+              - `infra/safe-fetch.safeFetch`
+              - `infra/safe-fetch.SsrfError`
+            - Exports (types):
+              - `BrowserFetchFailureKind`
+              - `BrowserFetchInit`
+              - `BrowserFetchResult`
+              - `BrowserFetchTimings`
+            - Exports (values):
+              - `browserFetch`
+              - `BrowserFetchError`
+              - `browserFetchQueueDepth`
+          - Cross-plugin:
+            - Imported by: `apps/events/sources/url-extract`
+          - Core:
+            - Exports (types):
+              - `BotMitigation`
+              - `HeaderReader`
+              - `HeaderSource`
+            - Exports (values):
+              - `detectBotMitigation`
+              - `ensureChromium`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`

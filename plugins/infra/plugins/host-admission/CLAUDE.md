@@ -28,25 +28,25 @@ the CPU pool read, so their numbers can never drift:
 | `heavy-read` | `max(1, cpus/4)` = 4 | 0.5 | 2.0 |
 | `worktree-mutate` | `max(2, cpus/6)` = 3 | 0.5 | 1.5 |
 | `db-fork` | 2 | 1.0 | 2.0 |
+| `browser-fetch` | 2 | 1.0 | 2.0 |
 | `layout-geometry` | 1 | 1.0 | 1.0 |
 | `push` | 1 | 0 | 0.0 |
-| | | **reserved** | **6.5** |
+| | | **reserved** | **8.5** |
 
 The CPU pool's size `B` is the **residual**, not an independent formula:
 
 ```
 B = max(1, min(floor(hostCpuCeiling − reservedCpuCost),
                floor(hostRamCeiling / PER_UNIT_BYTES)))
-  = min(floor(18 − 6.5), floor(34.4 / 2.7)) = min(11, 12) = 11
+  = min(floor(18 − 8.5), floor(34.4 / 2.7)) = min(9, 12) = 9
 reservedInteractive = max(1, floor(B / 3)) = 3
-backgroundLimit     = B − reservedInteractive = 8
+backgroundLimit     = B − reservedInteractive = 6
 ```
 
 `rawCpuResidual()` is the pre-floor value: `< 1` means the reserved pools have
 eaten the whole ceiling — the overcommit signal the `host-budget` check trips on.
 `layout-geometry` and `push` are in `RESERVED_POOLS` for the budget even though
-their `defineHostPool` wiring lands in later steps (`layout-geometry`'s 1.0 is
-why `B` is 11, not 12).
+their `defineHostPool` wiring lands in later steps.
 
 ### The RAM dimension is a forward hook, NOT a budget
 
@@ -175,6 +175,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `database/admin`
     - `debug/profiling/boot-bench`
     - `infra/host-read-pool`
+    - `infra/safe-fetch/browser-fetch`
     - `infra/worktree`
 - Core:
   - Exports (types):

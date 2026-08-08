@@ -31,6 +31,33 @@ describe("classifyRefreshError", () => {
     ).toMatchObject({ code: "blocked_url", terminal: true });
   });
 
+  test("a bot challenge is terminal — a browser already failed to clear it", () => {
+    // The exception to transient-by-default: the source type raises this only
+    // after trying the one client that could have read the page (or after the
+    // user pinned it to plain), so what is left is the site's standing policy.
+    expect(
+      classifyRefreshError(
+        named(
+          "BotChallengeError",
+          "This page answers automated requests with a bot challenge (HTTP 429, x-vercel-mitigated: challenge).",
+        ),
+      ),
+    ).toMatchObject({ code: "bot_challenge", terminal: true });
+  });
+
+  test("a bare 429 with no mitigation evidence stays transient", () => {
+    // The narrowness IS the safety of the arm above. A plain rate limit is the
+    // real 429, it clears on its own, and classifying it terminal would park a
+    // healthy source the moment a site throttled us for a minute. Nothing here
+    // reads the status — this is pinned by the fact that only the source type
+    // (which saw the mitigation header) can mint a `BotChallengeError`.
+    expect(
+      classifyRefreshError(
+        new Error("Page returned 429 fetching https://example.com/"),
+      ),
+    ).toMatchObject({ code: "unknown", terminal: false });
+  });
+
   test("a malformed extraction is terminal, not retried three times", () => {
     expect(classifyRefreshError(zodError())).toMatchObject({
       code: "extraction",

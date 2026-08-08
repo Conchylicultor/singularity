@@ -107,16 +107,32 @@ export interface ReservedPoolSpec {
  * the reserved sum today (`layout-geometry`'s 1.0 is why `B` is 11 and not 12).
  */
 export const RESERVED_POOLS = {
-  "heavy-read": { size: Math.max(1, Math.floor(hostCpuCeiling() / 4)), cost: { cpu: 0.5 } },
-  "worktree-mutate": { size: Math.max(2, Math.floor(hostCpuCeiling() / 6)), cost: { cpu: 0.5 } },
+  "heavy-read": {
+    size: Math.max(1, Math.floor(hostCpuCeiling() / 4)),
+    cost: { cpu: 0.5 },
+  },
+  "worktree-mutate": {
+    size: Math.max(2, Math.floor(hostCpuCeiling() / 6)),
+    cost: { cpu: 0.5 },
+  },
   "db-fork": { size: 2, cost: { cpu: 1 } },
+  // A headless-Chromium page render. `cpu: 1` because launch + render genuinely
+  // saturates about a core across the browser, renderer and GPU processes, and
+  // `ramBytes` records the ~400 MB that fan-out costs. `size` is a CONSTANT
+  // (like `db-fork`, unlike the `cpus()`-derived pools): a browser launch costs
+  // roughly the same on every box, and the size names the flock slot files, so
+  // it must be identical in every backend.
+  "browser-fetch": { size: 2, cost: { cpu: 1, ramBytes: 400e6 } },
   "layout-geometry": { size: 1, cost: { cpu: 1 } },
-  "push": { size: 1, cost: { cpu: 0 } },
+  push: { size: 1, cost: { cpu: 0 } },
 } as const satisfies Record<string, ReservedPoolSpec>;
 
 /** Total CPU the reserved pools claim: `Σ size × cost.cpu`. */
 export function reservedCpuCost(): number {
-  return Object.values(RESERVED_POOLS).reduce((sum, p) => sum + p.size * p.cost.cpu, 0);
+  return Object.values(RESERVED_POOLS).reduce(
+    (sum, p) => sum + p.size * p.cost.cpu,
+    0,
+  );
 }
 
 /**

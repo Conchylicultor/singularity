@@ -42,6 +42,7 @@ string. `FieldHeader` comes from the slot owner
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
+    - `apps/events/sources/url-extract`
     - `plugin-meta/composition`
     - `ui/theme-engine`
 

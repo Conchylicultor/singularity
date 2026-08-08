@@ -22,6 +22,8 @@ export type RefreshErrorCode =
   | "config"
   /** The target resolved to a private/loopback/link-local address — SSRF refusal. */
   | "blocked_url"
+  /** The site answers automated readers with a bot challenge, and a browser did not clear it. */
+  | "bot_challenge"
   /** The extractor produced something that is not a valid `ExtractedEvent[]`. */
   | "extraction"
   /** The source type declared its own failure permanent. */
@@ -67,9 +69,7 @@ export function isNonRetryable(err: unknown): boolean {
   return errorName(err) === "NonRetryableError";
 }
 
-export function classifyRefreshError(
-  err: unknown,
-): RefreshErrorClassification {
+export function classifyRefreshError(err: unknown): RefreshErrorClassification {
   const message = shortMessage(
     err instanceof Error ? err.message : String(err),
   );
@@ -85,6 +85,26 @@ export function classifyRefreshError(
   // different address, and the user must fix the URL.
   if (name === "SsrfError") {
     return { code: "blocked_url", message, terminal: true };
+  }
+
+  // Next to the SSRF arm because it is the same shape of answer — the target
+  // refuses us — and it is the one place this module's transient-by-default rule
+  // is knowingly waived for an HTTP status that normally means "try later".
+  //
+  // What earns the exception is WHEN the source type raises it. A bot challenge
+  // reaches here only after the extractor has already tried the single thing
+  // that could change the answer (loading the page in a real browser, running
+  // its real JavaScript), or after the user explicitly configured it not to.
+  // What is left is a standing property of the site, not of the moment, so the
+  // next attempt is the same request getting the same refusal — at the cost of a
+  // `failed` run row every 15 minutes and a message nobody can act on.
+  //
+  // The narrowness is the safety: the source type raises this only on a failing
+  // response that carried bot-mitigation evidence, so a bare 429 with no such
+  // header — the real rate-limit case — never reaches this arm and keeps
+  // retrying.
+  if (name === "BotChallengeError") {
+    return { code: "bot_challenge", message, terminal: true };
   }
 
   // The extractor's output failed `ExtractedEventSchema` — contract drift, not a
