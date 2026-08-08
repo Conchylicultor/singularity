@@ -41,25 +41,65 @@ touching it.
     smuggle schema changes past `schema.ts`. To change the schema, edit `schema.ts`
     and generate a schema migration instead.
 
-## Backfill that must precede a schema change
+## Ordering a backfill against a schema change
+
+> **A branch-local data migration may only depend on schema that is already on
+> `origin/main`.** It may be ordered *before* a branch-local schema migration; it
+> can never be ordered *after* one.
+
+`resetBranchLocalMigrations` (`cli/bin/migrations.ts`) deletes **every**
+branch-local schema migration (snapshot-carrying, absent from `origin/main`) and
+re-emits one consolidated migration stamped at push time, while **preserving**
+data migrations at their original timestamps. The runner applies in timestamp
+order, so after a reset every branch-local schema migration sorts *after* every
+branch-local data migration — whatever the order on disk right now.
+
+That reset fires on `--reset-migration` and on push's post-rebase
+`regen-migrations` normalize pass — the latter whenever main added a migration
+concurrently. So a violating order builds green locally and breaks at push **only
+on the pushes where main happened to move**, which is what makes it read as flaky
+rather than as an ordering error. Two guards catch it: the
+`data-migration-reset-stable` check (build-time, names the offending pair and the
+fix) and `migration-applies-clean` (push-time ground truth, see **Pre-push
+verification**).
+
+### Case 1 — the backfill must precede a schema change
 
 A data migration that must run **before** a schema change — e.g. wiping rows so an
-`ADD COLUMN ... NOT NULL` (or any destructive reshape) can apply — must land at an
-**earlier timestamp** than the schema migration, since the runner applies in
-timestamp order. Don't hand-edit the schema migration to inject the DML (the
-push-time hand-edit detector aborts). Instead:
+`ADD COLUMN ... NOT NULL` (or any destructive reshape) can apply. This is the
+reset-stable direction, so it fits in one push. Don't hand-edit the schema
+migration to inject the DML (the push-time hand-edit detector aborts). Instead:
 
 1. Create the data migration FIRST, so it gets the earlier timestamp:
    `./singularity build --custom-migration --migration-name <wipe_slug> --no-restart --skip-checks`,
    then hand-edit it to add the `DELETE` / `UPDATE`.
 2. Regenerate the schema migration AFTER it:
    `./singularity build --reset-migration --migration-name <schema_slug>`.
-   `--reset-migration` drops the branch-local SCHEMA migration (snapshot-carrying,
-   absent from `origin/main`) and regenerates it with a later timestamp, while
-   **preserving** the snapshot-less data migration from step 1.
+   `--reset-migration` drops the branch-local SCHEMA migration and regenerates it
+   with a later timestamp, while **preserving** the snapshot-less data migration
+   from step 1.
 
 The runner then applies wipe → DDL. (`--reset-migration` is also the documented
 recovery for a snapshot-chain Y-fork after rebasing onto main.)
+
+### Case 2 — the backfill needs schema this branch creates
+
+Moving data into a table or column the same branch adds (or out of one it drops)
+is **not expressible in one push**: the backfill would have to sit between two
+schema migrations, and the reset collapses those into one stamped after it. Split
+into two pushes — expand → migrate → contract:
+
+- **Push 1 (expand).** Add the new table/column in `schema.ts`, leaving the old
+  shape in place. One ordinary schema migration; both shapes now coexist on main.
+- **Push 2 (migrate + contract).** Write the backfill with
+  `--custom-migration` — its dependencies are on main now, so it is free to read
+  them — then remove the old shape from `schema.ts`. The backfill is timestamped
+  before this branch's `DROP`, and a reset only moves the `DROP` later, so the
+  order holds.
+
+Make the backfill idempotent (`ON CONFLICT DO NOTHING`, guarded `UPDATE … WHERE`):
+it is re-hashed and re-applied whenever its content changes. Worked example —
+`data/20260808_014745_0e6cb898__backfill_conversation_category_rows.sql`.
 
 ## Pre-push verification
 

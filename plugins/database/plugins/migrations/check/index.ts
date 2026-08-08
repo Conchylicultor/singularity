@@ -7,15 +7,22 @@ import { drizzle } from "drizzle-orm/node-postgres";
 // throws at import time if SINGULARITY_WORKTREE is unset, which is the norm in a
 // tooling/check subprocess. The core barrel exposes exactly the config→connstring
 // helpers for non-backend consumers and is import-safe by design.
-import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
+import {
+  buildConnectionString,
+  readDatabaseConfig,
+} from "@plugins/database/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 import orphanedTablesCheck from "./orphaned-tables";
 import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-allowlisted";
 import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleKitGenerateOnlyCheck from "./drizzle-kit-generate-only";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
+import dataMigrationResetStableCheck from "./data-migration-reset-stable";
 
 // Inlined minimal Check shape (mirrors the other plugin-contributed checks, e.g.
 // data-migration-dml-only / migration-hashes-unique) to avoid a cross-plugin
@@ -134,4 +141,5 @@ export default [
   forkSchemaDriftCheck,
   drizzleKitGenerateOnlyCheck,
   drizzleConfigSchemaGlobsCheck,
+  dataMigrationResetStableCheck,
 ];
