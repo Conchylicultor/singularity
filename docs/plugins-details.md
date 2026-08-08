@@ -13054,6 +13054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
             - Uses:
               - `config_v2/fields.Fields`
+              - `primitives/css/radio-group.RadioGroup`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Select`
@@ -13118,6 +13119,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
             - Uses:
               - `config_v2/fields.Fields`
+              - `primitives/css/radio-group.RadioGroup`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Select`
@@ -14482,6 +14484,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/prompt/block`
               - `page/quote`
               - `page/url-paste`
+              - `primitives/css/radio-group`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
               - `primitives/networking`
@@ -20535,6 +20538,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `search/quick-find`
               - `stats/commits`
+        - **`radio-group`** — Native radio-group control: <RadioGroup options value onChange> mints its own HTML `name` per mount (useId) so two groups on one page are structurally two groups, plus the no-adhoc-radio lint rule keeping raw <input type="radio"> out of feature code.
+          - Web:
+            - Uses:
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+            - Exports (types):
+              - `RadioGroupProps`
+              - `RadioOption`
+            - Exports (values): `RadioGroup`
+          - Cross-plugin:
+            - Imported by:
+              - `fields/dynamic-enum/config`
+              - `fields/enum/config`
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
@@ -20983,6 +20999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/cluster`
               - `primitives/css/inline`
               - `primitives/css/layout-harness`
+              - `primitives/css/radio-group`
               - `primitives/cursor-pagination`
               - `primitives/data-table`
               - `primitives/data-view`
@@ -21471,6 +21488,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/commit-list`
               - `primitives/css/color-picker`
               - `primitives/css/layout-harness`
+              - `primitives/css/radio-group`
               - `primitives/data-table`
               - `primitives/data-view`
               - `primitives/data-view/custom-columns`

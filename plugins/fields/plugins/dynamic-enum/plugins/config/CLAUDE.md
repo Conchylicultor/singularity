@@ -24,6 +24,7 @@ text input when no contribution matches.
   - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
   - Uses:
     - `config_v2/fields.Fields`
+    - `primitives/css/radio-group.RadioGroup`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Select`

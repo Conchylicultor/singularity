@@ -3648,6 +3648,10 @@
       "name": "@singularity/plugin-primitives-css-placeholder",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/radio-group": {
+      "name": "@singularity/plugin-primitives-css-radio-group",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/radius": {
       "name": "@singularity/plugin-primitives-css-radius",
       "version": "0.0.1",
@@ -7090,6 +7094,8 @@
     "@singularity/plugin-primitives-css-pin": ["@singularity/plugin-primitives-css-pin@workspace:plugins/primitives/plugins/css/plugins/pin"],
 
     "@singularity/plugin-primitives-css-placeholder": ["@singularity/plugin-primitives-css-placeholder@workspace:plugins/primitives/plugins/css/plugins/placeholder"],
+
+    "@singularity/plugin-primitives-css-radio-group": ["@singularity/plugin-primitives-css-radio-group@workspace:plugins/primitives/plugins/css/plugins/radio-group"],
 
     "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
 

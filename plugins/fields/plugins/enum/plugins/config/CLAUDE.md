@@ -22,6 +22,7 @@ string. `FieldHeader` comes from the slot owner
   - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
   - Uses:
     - `config_v2/fields.Fields`
+    - `primitives/css/radio-group.RadioGroup`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Select`

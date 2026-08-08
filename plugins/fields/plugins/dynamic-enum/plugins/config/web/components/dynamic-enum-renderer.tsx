@@ -1,9 +1,16 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { dynamicEnumFieldType } from "@plugins/fields/plugins/dynamic-enum/core";
 import type { DynamicEnumFieldDef } from "../../core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { RadioGroup } from "@plugins/primitives/plugins/css/plugins/radio-group/web";
 import { DynamicEnum, type DynamicEnumOption } from "../internal/slots";
 
 const DynamicEnumRenderer: FieldRendererComponent<string> = ({
@@ -73,7 +80,9 @@ function TextFallback({
   value,
   onChange,
 }: {
-  field: { meta: { label?: string; description?: string; placeholder?: string } };
+  field: {
+    meta: { label?: string; description?: string; placeholder?: string };
+  };
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -101,41 +110,6 @@ function TextFallback({
   );
 }
 
-function RadioGroup({
-  options,
-  value,
-  onChange,
-}: {
-  options: readonly DynamicEnumOption[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Stack gap="xs" role="radiogroup">
-      {options.map((opt) => (
-        <Stack
-          as="label"
-          direction="row"
-          align="center"
-          gap="sm"
-          key={opt.value}
-          className="cursor-pointer"
-        >
-          <input
-            type="radio"
-            name="dynamic-enum-field"
-            value={opt.value}
-            checked={value === opt.value}
-            onChange={() => onChange(opt.value)}
-            className="accent-primary"
-          />
-          <Text variant="body">{opt.label}</Text>
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
-
 function DropdownSelect({
   options,
   value,
@@ -145,7 +119,9 @@ function DropdownSelect({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const items = Object.fromEntries(options.map((opt) => [opt.value, opt.label]));
+  const items = Object.fromEntries(
+    options.map((opt) => [opt.value, opt.label]),
+  );
   return (
     <Select
       items={items}

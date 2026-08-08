@@ -1,9 +1,16 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import type { EnumFieldDef } from "../../core";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { RadioGroup } from "@plugins/primitives/plugins/css/plugins/radio-group/web";
 
 const EnumRenderer: FieldRendererComponent<string> = ({
   field,
@@ -38,41 +45,6 @@ const EnumRenderer: FieldRendererComponent<string> = ({
 };
 EnumRenderer.type = enumFieldType;
 
-function RadioGroup({
-  options,
-  value,
-  onChange,
-}: {
-  options: readonly EnumFieldDef["options"][number][];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Stack gap="xs" role="radiogroup">
-      {options.map((opt) => (
-        <Stack
-          as="label"
-          direction="row"
-          align="center"
-          gap="sm"
-          key={opt.value}
-          className="cursor-pointer"
-        >
-          <input
-            type="radio"
-            name="enum-field"
-            value={opt.value}
-            checked={value === opt.value}
-            onChange={() => onChange(opt.value)}
-            className="accent-primary"
-          />
-          <Text variant="body">{opt.label}</Text>
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
-
 function DropdownSelect({
   options,
   value,
@@ -82,7 +54,9 @@ function DropdownSelect({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const items = Object.fromEntries(options.map((opt) => [opt.value, opt.label]));
+  const items = Object.fromEntries(
+    options.map((opt) => [opt.value, opt.label]),
+  );
   return (
     <Select
       items={items}
