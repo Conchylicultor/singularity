@@ -1,6 +1,9 @@
 import type { Command } from "commander";
 import { join, resolve } from "path";
-import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  SINGULARITY_DIR,
+} from "@plugins/infra/plugins/paths/server";
 import { bootSelfContainedApp } from "@plugins/infra/plugins/launcher/server";
 
 const DEFAULT_PORT = 9100;
@@ -19,7 +22,13 @@ export function registerServeApp(program: Command) {
       REPO_ROOT,
     )
     .option("--server <path>", "Absolute path to the backend working dir")
-    .option("--web <path>", "Absolute path to the built web dist")
+    // REQUIRED, with no default. `serve-app` boots under an isolated
+    // SINGULARITY_DIR (see the action), and every derivable dist path
+    // (`worktreeArtifacts.webDist(...)`) resolves inside THAT root — which holds
+    // no dist, because nothing ever built into it. A checkout-relative default
+    // is equally wrong: no checkout carries a dist any more. There is no correct
+    // default, so demand the path rather than invent one.
+    .requiredOption("--web <path>", "Absolute path to the built web dist")
     .option(
       "--log-level <level>",
       "Gateway log level: debug|info|warn|error",
@@ -31,7 +40,7 @@ export function registerServeApp(program: Command) {
         port: string;
         repoRoot: string;
         server?: string;
-        web?: string;
+        web: string;
         logLevel: string;
       }) => {
         // The launcher is a release entry point: SINGULARITY_DIR must already be
@@ -46,7 +55,8 @@ export function registerServeApp(program: Command) {
               "changed mid-process. Invoke the launcher with an isolated root, e.g.:\n" +
               "\n" +
               "  SINGULARITY_DIR=$(mktemp -d /tmp/sonata-release.XXXX) \\\n" +
-              "    bun plugins/framework/plugins/cli/bin/index.ts serve-app --name sonata --port 9100\n",
+              "    bun plugins/framework/plugins/cli/bin/index.ts serve-app \\\n" +
+              "      --name sonata --port 9100 --web <bundle>/web\n",
           );
           process.exit(1);
         }
@@ -59,14 +69,13 @@ export function registerServeApp(program: Command) {
 
         const repoRoot = opts.repoRoot;
         const server =
-          opts.server ?? resolve(repoRoot, "plugins/framework/plugins/server-core");
-        const web =
-          opts.web ?? resolve(repoRoot, "plugins/framework/plugins/web-core/dist");
+          opts.server ??
+          resolve(repoRoot, "plugins/framework/plugins/server-core");
 
         await bootSelfContainedApp({
           name: opts.name,
           server,
-          web,
+          web: opts.web,
           port,
           repoRoot,
           logLevel: opts.logLevel,

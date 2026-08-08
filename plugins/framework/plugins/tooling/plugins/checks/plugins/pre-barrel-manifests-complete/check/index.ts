@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "fs";
 import { join, relative, resolve } from "path";
 import {
   barrelStubsPath,
-  collectedDirCompositionRegistryPath,
   collectedDirRegistryPath,
   discoverCollectedDirs,
   extractRuntimeImportSpecifiers,
@@ -20,10 +19,14 @@ const RUNTIMES = ["web", "server", "central"] as const;
 /**
  * The set of `*.generated.ts` files a barrel is ALLOWED to reach at module-load:
  *   - every pre-barrel manifest (regenerated before the first barrel import), and
- *   - the registry-phase outputs (collected-dir registries + composition
- *     registries + the auto-stubs file) — these are written in the EARLIER
- *     `regenerateRegistryCodegen` phase, so they're always fresh by the time any
- *     barrel import happens in the manifest phase.
+ *   - the registry-phase outputs (collected-dir registries + the auto-stubs
+ *     file) — these are written in the EARLIER `regenerateRegistryCodegen`
+ *     phase, so they're always fresh by the time any barrel import happens in
+ *     the manifest phase.
+ *
+ * Composition-filtered registries need no entry: they are reached only through
+ * the `@composition-{web,server}-registry` bundler alias or a variable dynamic
+ * specifier, neither of which this check's static DFS follows.
  */
 function buildAllowSet(root: string): Set<string> {
   const allow = new Set<string>();
@@ -31,7 +34,6 @@ function buildAllowSet(root: string): Set<string> {
   allow.add(resolve(barrelStubsPath(root)));
   for (const def of discoverCollectedDirs(root)) {
     allow.add(resolve(collectedDirRegistryPath(def)));
-    allow.add(resolve(collectedDirCompositionRegistryPath(def)));
   }
   return allow;
 }
@@ -61,7 +63,10 @@ async function enumerateBarrels(root: string): Promise<string[]> {
  * `.generated.ts`. The visited set is shared across all barrels, so each file is
  * read at most once. Returns absolute, normalized paths.
  */
-function collectReachableGenerated(root: string, barrels: string[]): Set<string> {
+function collectReachableGenerated(
+  root: string,
+  barrels: string[],
+): Set<string> {
   const visited = new Set<string>();
   const generated = new Set<string>();
 

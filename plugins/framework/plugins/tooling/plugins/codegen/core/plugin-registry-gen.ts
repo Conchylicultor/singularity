@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, rmSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -427,12 +427,12 @@ export async function generatePluginRegistry(opts: {
 // committed `<dir>.generated.ts` files are never touched, so the build stays
 // byte-identical and `plugins-registry-in-sync` + `git status` stay clean.
 //
-// There is exactly ONE flavor: PER-NAME `<dir>.composition.<name>.generated.ts`.
+// There is exactly ONE spelling: PER-NAME `<dir>.composition.<name>.generated.ts`.
 // Every producer (auto-serve AND release) keys its registries by composition id,
 // so no checkout-global "this checkout is currently composition X" state exists
-// and a release can never reconfigure another namespace's backend. The singleton
-// `<dir>.composition.generated.ts` spelling survives only as a legacy reaper —
-// see `clearCompositionRegistries`.
+// and a release can never reconfigure another namespace's backend. The pre-S1
+// singleton `<dir>.composition.generated.ts` spelling is gone entirely (S5): no
+// path writes it, selects it, or reaps it, so a stray file of that name is inert.
 
 // The registries that need a composition-filtered (closure-restricted) sibling.
 // `web`/`server` are the runtime registries the app actually loads at the import
@@ -485,19 +485,6 @@ export function assertServableCompositionNamespace(name: string): void {
   }
 }
 
-/**
- * LEGACY (pre-S1) singleton registry path. Nothing WRITES or SELECTS this
- * spelling any more — it exists solely so `clearCompositionRegistries` can REAP
- * the poisoning leftovers a pre-S1 release left in a developer's checkout.
- * Delete both, and `plugins-active.ts`'s singleton branch, in S5 once every
- * active checkout has run one post-S1 plain build.
- */
-export function collectedDirCompositionRegistryPath(
-  def: DiscoveredCollectedDir,
-): string {
-  return join(def.ownerDir, "core", `${def.dir}.composition.generated.ts`);
-}
-
 export function collectedDirNamedCompositionRegistryPath(
   def: DiscoveredCollectedDir,
   name: string,
@@ -531,25 +518,6 @@ export async function generateCompositionRegistry(opts: {
       collectedDirNamedCompositionRegistryPath(def, opts.name),
       renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle }),
     );
-  }
-}
-
-// LEGACY REAPER (delete in S5). Removes any stale filtered SINGLETON registries
-// a PRE-S1 release left behind, so a plain (non-composition) build reverts the
-// runtimes to the full committed registries. Nothing writes that spelling any
-// more; this is purely the drain path for existing developer checkouts, paired
-// with `plugins-active.ts`'s singleton fallback branch. No-throw if absent.
-// Per-name registries are deliberately NOT cleared here — they belong to the
-// auto-serve stage, which rewrites the activated set and sweeps deactivated
-// leftovers itself (via `listNamedCompositionRegistries`).
-export async function clearCompositionRegistries(opts: {
-  root: string;
-}): Promise<void> {
-  const defs = discoverCollectedDirs(opts.root);
-  for (const def of defs) {
-    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
-    const file = collectedDirCompositionRegistryPath(def);
-    if (existsSync(file)) rmSync(file);
   }
 }
 

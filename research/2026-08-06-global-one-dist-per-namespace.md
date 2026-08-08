@@ -481,6 +481,61 @@ post-S1 plain `build`. Then `.gitignore:19-24`,
 `serve-app.ts`'s `--web` **required** — it requires an isolated `SINGULARITY_DIR`
 (`serve-app.ts:41-51`), so no derivation crosses data roots correctly; do not invent a default.
 
+**LANDED 2026-08-08.** Preconditions measured across all 87 checkouts (main + 86
+worktrees) before touching anything:
+
+- **Stale singleton registries: 0.** No `{web,server,prewarm}.composition.generated.ts`
+  exists anywhere, so the reaper had nothing left to drain. Removing the
+  `plugins-active.ts` fallback *reduces* risk rather than racing it: with no fallback,
+  a future stray file of that name is inert, not poisonous.
+- **Checkouts still carrying a legacy `web-core/dist`: 26 of 87** — so the *dist* half of
+  the cleanup is not safe yet. See Deferred.
+
+Removed: `clearCompositionRegistries` + `collectedDirCompositionRegistryPath` (definitions,
+barrel exports, `app-artifacts.ts`'s `else` branch, `pre-barrel-manifests-complete`'s
+allow-set entry — vestigial anyway, since a filtered registry is reached only through the
+`@composition-*-registry` bundler alias or a variable specifier, neither of which that
+check's static DFS follows), `plugins-active.ts`'s singleton tier (chain is now per-name →
+full, docblock rewritten to 2 tiers), and `serve-app.ts`'s hardcoded `--web` default
+(now `.requiredOption`).
+
+Two corrections to the plan text made while landing it:
+
+- **`prepareCompositionSources` keeps `composition: string | null`.** The `else` branch is
+  gone, but the shape is not now redundant: stage 1 does the same deps + registry codegen
+  for both callers, and the explicit `null` makes `build` *state* that it produces no
+  filtered registry instead of defaulting into it. What WAS stale is
+  `build.ts:1117`'s and `cli/CLAUDE.md`'s "`composition: null` is load-bearing — it makes
+  stage 1 run `clearCompositionRegistries`" claim, which named a function that no longer
+  exists; both rewritten rather than left asserting a dead mechanism.
+- **The selection chain is now a pure, tested function.** `selectRegistry(coreDir, name)`
+  moved to `server-core/bin/select-registry.ts`, with `plugins-active.ts` reduced to the
+  boot-time application of it. The chain was previously unprovable: importing
+  `plugins-active.ts` loads every server plugin as a side effect, so "does a composition
+  namespace still get its per-name registry, and an ordinary worktree the full one?" could
+  only be argued, never asserted. `select-registry.test.ts` pins both, plus the
+  legacy-singleton-present case (must resolve to the FULL registry — the branch S5 deleted)
+  and the namespace-unsafe-name throw.
+
+### Deferred — the legacy in-checkout dist (revisit when 0/87 carry one)
+
+**26 of 87 checkouts still hold a `plugins/framework/plugins/web-core/{dist,dist.live.*}`
+tree** (measured 2026-08-08). Until that count reaches zero, these three stay:
+
+- `cli/bin/commands/internal/legacy-dist-reap.ts` and its two call sites (`build.ts`,
+  `build-composition.ts`) — it is gateway-gated and fails closed, so it is safe where it
+  stands and still has 26 checkouts' worth of disk to reclaim.
+- `.gitignore:19-24` (`web-core/dist` and the `dist.{live,staging,old,swap}.*` siblings).
+- `build-lint-config.ts:286`'s eslint ignore for `web-core/dist/**`.
+
+Removing the ignores now would make those 26 checkouts' `git status` dirty with leftover
+build trees. **Condition for revisiting:** every checkout has rebuilt (or been swept) ⇒ the
+reaper and both ignores can go together, in one commit.
+
+Kept for the same reason, one level down: `.gitignore`'s `*.composition.generated.ts`
+pattern. Nothing writes that spelling any more, but an old checkout building at an old
+commit still could, and an ignored stray costs nothing while a `git status` entry does.
+
 ## Migration
 
 **~~Self-healing, no action~~ — FALSIFIED, see "S4 IS NOT SAFE TO SHIP" above.** The claim

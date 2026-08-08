@@ -2,7 +2,6 @@ import { writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
-  clearCompositionRegistries,
   generateCompositionRegistry,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
@@ -293,11 +292,19 @@ export async function acquireArtifactLock(webDir: string): Promise<void> {
 }
 
 /**
- * Stage 1 — dependencies + registry-level repo-tree codegen + the composition
- * registry select/clear.
+ * Stage 1 — dependencies + registry-level repo-tree codegen + (when building a
+ * composition) that composition's filtered registries.
  */
 export async function prepareCompositionSources(opts: {
   root: string;
+  /**
+   * The composition being built, or `null` for a plain build. Kept explicit
+   * (not optional) so a caller states which it is rather than defaulting into
+   * one: the two callers are `build` (always null) and `build-composition`
+   * (always a name), and stage 1 does the same deps + registry codegen either
+   * way. `null` no longer TRIGGERS anything — it just skips the filtered
+   * registries.
+   */
   composition: string | null;
   hooks: ArtifactHooks;
 }): Promise<void> {
@@ -352,10 +359,11 @@ export async function prepareCompositionSources(opts: {
   // 2a'. Composition build-gating. With a composition, emit gitignored
   // filtered registries (the bundle's hard closure) beside the committed
   // full ones, keyed by the composition NAME; the web/server import seams
-  // select the filtered file by that name. Without one, reap any stale
-  // pre-S1 singleton registries so the runtimes revert to the full committed
-  // set. The committed `<dir>.generated.ts` files are never touched either
-  // way, so the build stays byte-identical.
+  // select the filtered file by that name. Without one there is nothing to do:
+  // every filtered registry is per-name, so it belongs to another namespace and
+  // is never selected under this checkout's own worktree name. The committed
+  // `<dir>.generated.ts` files are never touched either way, so the build stays
+  // byte-identical.
   endSpan = hooks.span(
     "compositionRegistry",
     "build:codegen",
@@ -379,8 +387,6 @@ export async function prepareCompositionSources(opts: {
     hooks.log(
       `Composition "${composition}": ${bundle.size} plugins in closure.`,
     );
-  } else {
-    await clearCompositionRegistries({ root });
   }
   endSpan();
 }

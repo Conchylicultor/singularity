@@ -15,7 +15,6 @@ import { join } from "path";
 import {
   assertCompositionName,
   assertServableCompositionNamespace,
-  collectedDirCompositionRegistryPath,
   collectedDirNamedCompositionRegistryPath,
   discoverCollectedDirs,
   listNamedCompositionRegistries,
@@ -94,11 +93,6 @@ test("per-name registry path renders and round-trips through parse", () => {
     _brand: "CollectedDirDef",
     ownerDir: "/repo/plugins/framework/plugins/web-sdk",
   };
-  // The singleton spelling survives ONLY as `clearCompositionRegistries`' reap
-  // target (legacy, deleted in S5) — nothing writes or selects it.
-  expect(collectedDirCompositionRegistryPath(def)).toBe(
-    "/repo/plugins/framework/plugins/web-sdk/core/web.composition.generated.ts",
-  );
   const file = collectedDirNamedCompositionRegistryPath(def, "sonata");
   expect(file).toBe(
     "/repo/plugins/framework/plugins/web-sdk/core/web.composition.sonata.generated.ts",
@@ -116,6 +110,10 @@ test("per-name registry path renders and round-trips through parse", () => {
   ).toThrow("Invalid composition name");
 });
 
+// The pre-S1 checkout-global singleton spelling is gone (S5): nothing writes,
+// selects or reaps it. These two tests pin that a stray leftover of that name in
+// an old checkout stays INERT — never parsed as a per-name registry, never
+// listed as one (which would make the auto-serve sweep delete or adopt it).
 test("parse rejects the singleton, committed, and non-registry file names", () => {
   expect(
     parseNamedCompositionRegistryFileName("web.composition.generated.ts"),
@@ -151,7 +149,7 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
     );
     for (const f of [
       "web.composition.sonata.generated.ts",
-      "web.composition.generated.ts", // singleton — not per-name
+      "web.composition.generated.ts", // pre-S1 singleton stray — not per-name
       "server.composition.sonata.generated.ts",
       "server.composition.pages.generated.ts",
       "prewarm.composition.sonata.generated.ts",

@@ -178,11 +178,12 @@ into three functions rather than one because `build`'s dev-only steps interleave
 
 Two consequences worth knowing before editing:
 
-- **`build` passes `composition: null`, and that is load-bearing.** It is what
-  makes stage 1 run `clearCompositionRegistries`, so a filtered registry left in
-  the checkout by an earlier release is swept and the runtimes revert to the full
-  committed set. `--serve-composition` is a different, unrelated flag: it
-  composes *other* namespaces out of main's artifact fleet after main deploys.
+- **Every filtered registry is per-name** (`<dir>.composition.<name>.generated.ts`)
+  and `plugins-active.ts` selects one only under a matching
+  `SINGULARITY_WORKTREE`, so another namespace's file cannot reconfigure this
+  worktree's backend — `build` passes `composition: null` simply to emit none.
+  `--serve-composition` is unrelated: it composes *other* namespaces out of
+  main's artifact fleet after main deploys.
 - **`build-composition`'s transitive import set must stay a SUBSET of
   `build.ts`'s.** Bun freezes a module on first `import()`;
   `regenerateManifestCodegen` must arm `setPreBarrelImportGuard` before any

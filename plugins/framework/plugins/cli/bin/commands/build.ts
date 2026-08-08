@@ -1119,14 +1119,15 @@ export function registerBuild(program: Command) {
         // Runs before central is spawned below (its plugins.generated.ts must be
         // in sync). See ./internal/app-artifacts.ts.
         //
-        // `composition: null` is load-bearing, not a placeholder: it is what makes
-        // stage 1 run `clearCompositionRegistries`, the LEGACY reaper for a
-        // filtered SINGLETON registry left behind by a PRE-S1 `build-composition`
-        // / release in this checkout, so the runtimes revert to the full committed
-        // set. A dev build that skipped it would silently serve that old release's
-        // closure. Post-S1 producers write per-name registries only, which
-        // `plugins-active.ts` never selects for a plain worktree name — so this
-        // reaper (and the call) goes away in S5.
+        // `composition: null` says "this build produces no filtered registry",
+        // and that is now all it says — it used to additionally trigger a reaper
+        // for the pre-S1 checkout-global SINGLETON registry, which S5 deleted.
+        // Every filtered registry is per-name, and `plugins-active.ts` selects
+        // one only under a matching namespace, so another namespace's file on
+        // disk cannot reconfigure this worktree's backend.
+        //
+        // `--serve-composition` is a different, unrelated flag: it composes
+        // OTHER namespaces out of main's artifact fleet after main deploys.
         await prepareCompositionSources({
           root,
           composition: null,
