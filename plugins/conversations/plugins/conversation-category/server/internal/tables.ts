@@ -6,7 +6,6 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 
 // One row per (conversation, category) assignment. NOT a 1:1 entity extension:
 // a conversation carries one row per configured category, and `defineExtension`
@@ -45,27 +44,3 @@ export const _conversationCategories = pgTable(
     ),
   ],
 );
-
-// TRANSITIONAL — the pre-multi-category 1:1 side table. Nothing reads it; it is
-// declared only so this branch's schema delta is a pure CREATE.
-//
-// It cannot be dropped in the same push that creates `conversation_categories`.
-// `push` regenerates every branch-local SCHEMA migration into ONE stamped at
-// push time, while leaving DATA migrations at their original timestamps — so a
-// backfill reading this table and writing the new one would be ordered BEFORE
-// the migration that creates its destination, and would fail on main's boot
-// (verified: `migration-applies-clean` reports
-// `relation "conversation_categories" does not exist`).
-//
-// So the swap is expand → migrate → contract across two pushes: this push
-// creates the new table, the next one backfills from here and drops this.
-export const conversationCategory = defineExtension(
-  _conversations,
-  "category",
-  {
-    category: text("category").notNull(),
-    source: text("source", { enum: ["haiku", "manual"] }).notNull(),
-  },
-);
-// Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
-export const _conversationCategoryTable = conversationCategory.table;

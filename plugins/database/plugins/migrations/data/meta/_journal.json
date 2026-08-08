@@ -1632,6 +1632,20 @@
       "tag": "20260808_005338_54a0df24__merged_20260808_0052",
       "hash": "54a0df24",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1786153665000,
+      "tag": "20260808_014745_0e6cb898__backfill_conversation_category_rows",
+      "hash": "0e6cb898",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1786154818000,
+      "tag": "20260808_020658_31d4a558__drop_conversations_ext_category",
+      "hash": "31d4a558",
+      "breakpoints": true
     }
   ]
 }
