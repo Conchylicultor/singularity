@@ -1151,7 +1151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-field`
         - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
           - Web:
-            - Slots: `EventSources.Type` ← `apps.events.sources.manual`, `apps.events.sources.url-extract`
+            - Slots: `EventSources.Type` ← `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.url-extract`
             - Uses:
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
@@ -1297,6 +1297,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/refresh`
               - `apps/events/sources`
+              - `apps/events/sources/dmda`
               - `apps/events/sources/manual`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/caveats`
@@ -1443,6 +1444,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
           - Plugins:
+            - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
+              - Web:
+                - Contributes: `EventSources.Type` "Des Mots et Des Arts"
+                - Uses: `apps/events/events-core.EventSources`
+              - Server:
+                - Uses:
+                  - `apps/events/events-core.defineEventSourceType`
+                  - `infra/jobs.NonRetryableError`
+                  - `infra/safe-fetch.parsePublicUrl`
+                  - `infra/safe-fetch.safeFetch`
+                - Register: `defineEventSourceType('dmda')`
+              - Core:
+                - Uses: `fields/enum/config.enumField`
+                - Exports (types): `DmdaSourceConfig`
+                - Exports (values):
+                  - `DMDA_KINDS`
+                  - `DMDA_ORIGIN`
+                  - `DMDA_SOURCE_TYPE_ID`
+                  - `dmdaKindPath`
+                  - `dmdaSourceConfigFields`
             - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
               - Web:
                 - Contributes: `EventSources.Type` "Manual"
@@ -13115,6 +13136,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
+              - `apps/events/sources/dmda`
               - `apps/events/sources/url-extract`
               - `plugin-meta/composition`
               - `ui/theme-engine`
@@ -15817,6 +15839,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/events/refresh`
+          - `apps/events/sources/dmda`
           - `apps/events/sources/url-extract`
           - `apps/mail/sync`
           - `apps/pages/content-search`
@@ -16240,6 +16263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper`
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/proxy`
+          - `apps/events/sources/dmda`
           - `apps/events/sources/url-extract`
           - `apps/mail/remote-images`
           - `apps/sonata/sources/ultimate-guitar`

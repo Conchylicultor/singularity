@@ -310,6 +310,10 @@
       "name": "@singularity/plugin-apps-events-sources",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/sources/plugins/dmda": {
+      "name": "@singularity/plugin-apps-events-sources-dmda",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/sources/plugins/manual": {
       "name": "@singularity/plugin-apps-events-sources-manual",
       "version": "0.0.1",
@@ -5504,6 +5508,8 @@
     "@singularity/plugin-apps-events-shell": ["@singularity/plugin-apps-events-shell@workspace:plugins/apps/plugins/events/plugins/shell"],
 
     "@singularity/plugin-apps-events-sources": ["@singularity/plugin-apps-events-sources@workspace:plugins/apps/plugins/events/plugins/sources"],
+
+    "@singularity/plugin-apps-events-sources-dmda": ["@singularity/plugin-apps-events-sources-dmda@workspace:plugins/apps/plugins/events/plugins/sources/plugins/dmda"],
 
     "@singularity/plugin-apps-events-sources-manual": ["@singularity/plugin-apps-events-sources-manual@workspace:plugins/apps/plugins/events/plugins/sources/plugins/manual"],
 
