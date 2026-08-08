@@ -61,7 +61,14 @@ function probeOccupancy(id: string, size: number): number {
 /** A host-wide concurrency pool handle. */
 export interface HostPool {
   readonly id: string;
+  /** The size this process was BUILT for — the budget's number, and the pool's registry identity. */
   readonly size: number;
+  /**
+   * The slot set actually being swept right now. Equals `size` except while another
+   * checkout has the pool open at a different size, which this process adopts rather
+   * than overrules (see `createHostSemaphore`). Observability only.
+   */
+  liveSize(): number;
   readonly cost: PoolCost;
   /** Run `fn` holding exactly one slot; release in a `finally`. */
   run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T>;
@@ -115,7 +122,9 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
   // silently fall through to `backgroundLimit === size` (no reserved floor),
   // quietly voiding the lane guarantee the `laned` flag promises.
   if (spec.laned && spec.backgroundLimit === undefined) {
-    throw new Error(`defineHostPool(${spec.id}): laned pool requires an explicit backgroundLimit`);
+    throw new Error(
+      `defineHostPool(${spec.id}): laned pool requires an explicit backgroundLimit`,
+    );
   }
 
   const sem = createHostSemaphore({
@@ -132,15 +141,20 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
   // read by probing the flock files — not this process's local held count. This
   // retires the "host-wide occupancy is not cheaply readable" claim the ported
   // pools used to carry.
+  // `liveSize()`, not `spec.size`: the pool's slot set is host state, and this
+  // process's semaphore adopts the live one when another checkout already has the
+  // pool open at a different size. Probing the declared set would then miss the
+  // holders on the slots this process is actually sweeping.
   registerGateGauge(`${spec.id}-acquire`, () => ({
-    active: probeOccupancy(spec.id, spec.size),
+    active: probeOccupancy(spec.id, sem.liveSize()),
     queued: sem.depth(),
-    max: spec.size,
+    max: sem.liveSize(),
   }));
 
   const pool: HostPool = {
     id: spec.id,
     size: spec.size,
+    liveSize: () => sem.liveSize(),
     cost: spec.cost,
     run: (fn, hooks) => sem.run(fn, hooks),
     acquireShare: (max, hooks) => sem.acquireShare(max, hooks),
@@ -167,7 +181,8 @@ export interface PoolOccupancy {
 export async function hostOccupancy(): Promise<PoolOccupancy[]> {
   const out: PoolOccupancy[] = [];
   for (const pool of registry.values()) {
-    out.push({ id: pool.id, held: probeOccupancy(pool.id, pool.size), size: pool.size });
+    const size = pool.liveSize();
+    out.push({ id: pool.id, held: probeOccupancy(pool.id, size), size });
     await Promise.resolve(); // yield between pools so a long registry never hogs the loop
   }
   return out;

@@ -45,6 +45,11 @@ backgroundLimit     = B − reservedInteractive = 6
 
 `rawCpuResidual()` is the pre-floor value: `< 1` means the reserved pools have
 eaten the whole ceiling — the overcommit signal the `host-budget` check trips on.
+
+Editing this table **resizes the live `cpu` pool**, which every checkout on the box
+shares. That is safe: an out-of-date checkout adopts the live identity and the new
+one lands once the pool is idle (see `packages/host-semaphore`). Expect a transition
+window where `liveSize()` ≠ `B`.
 `layout-geometry` and `push` are in `RESERVED_POOLS` for the budget even though
 their `defineHostPool` wiring lands in later steps.
 

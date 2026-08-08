@@ -354,3 +354,42 @@ describe("fallbackVerdict — terminated from outside", () => {
     expect(fallbackVerdict({ ok: false }, 143, ctx, sigterm)).toBeNull();
   });
 });
+
+// A build that throws before its own failure funnel used to produce a banner (and a
+// build.log) that named no step, no check and no error — the transcript said a build
+// failed and nothing about why. The recorded exception is what makes that arm say
+// something.
+describe("fallbackVerdict — crashed on an unhandled exception", () => {
+  const ctx = {
+    url: "http://main.localhost:9000",
+    buildLogPath: "/tmp/build.log",
+  };
+  const crash =
+    "Error: createHostSemaphore(cpu): pool is live at 11:8\n    at doEnsureSizeIdentity";
+
+  test("(no verdict, exit 1, crash) → the exception is quoted in the reason", () => {
+    const v = fallbackVerdict(null, 1, ctx, null, crash);
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    expect(v.headline).toContain("crashed before completing");
+    const reason = (v.ok ? v.notes : v.reason).join("\n");
+    expect(reason).toContain("NOT DEPLOYED");
+    expect(reason).toContain("unhandled exception");
+    expect(reason).toContain("pool is live at 11:8");
+    expect(reason).toContain("at doEnsureSizeIdentity");
+  });
+
+  test("no recorded crash ⇒ the aborted-before-completing wording is unchanged", () => {
+    const v = fallbackVerdict(null, 1, ctx, null, null);
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    expect(v.headline).toContain("aborted before completing");
+    expect((v.ok ? v.notes : v.reason).join("\n")).not.toContain("exception");
+  });
+
+  test("a signal outranks a crash record — a killed build did not fail", () => {
+    // Both facts can be present (a SIGTERM handler's own unwind records a throw);
+    // BUILD ABORTED must still win, or a kill reads as a code defect.
+    const v = fallbackVerdict(null, 143, ctx, sigterm, crash);
+    if (v === null) throw new Error("expected a non-null fallback verdict");
+    expect(v.headline).toBe("BUILD ABORTED — terminated by SIGTERM");
+  });
+});

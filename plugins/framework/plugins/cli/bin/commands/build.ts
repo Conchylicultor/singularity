@@ -93,6 +93,7 @@ import {
   type SignalTermination,
 } from "../fatal-signals";
 import { signalOriginTap } from "../signal-origin-tap";
+import { readCliCrash } from "../cli-crash";
 import {
   formatSignalOrigin,
   type SignalOrigin,
@@ -930,6 +931,11 @@ export function registerBuild(program: Command) {
           // point after this call. With it the guard prints BUILD ABORTED rather
           // than BUILD FAILED for a build that was killed rather than broken.
           termination: () => termination,
+          // Same lazy pull, for the other way a build can end without reaching its
+          // own funnel: an unhandled throw. `runCli` records it as it unwinds, so
+          // the banner (and build.log, via onFallback) names the exception instead
+          // of reporting a failure with no cause at all.
+          crash: () => readCliCrash(),
           // A build killed here reaches none of the writeBuildLogs calls below, so
           // the guard writes the transcript its own pointer names. Whatever steps
           // had closed by then are all green (the one it died inside never closed),

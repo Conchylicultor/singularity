@@ -32,7 +32,13 @@ function isSlotHeld(slotsDir: string, i: number): boolean {
 
 // The `flock-wait.ts` child script, resolved the same way the module resolves it.
 // Tests spawn it directly to stand in for an out-of-process slot holder.
-const FLOCK_WAIT_PATH = join(import.meta.dir, "..", "..", "scripts", "flock-wait.ts");
+const FLOCK_WAIT_PATH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "scripts",
+  "flock-wait.ts",
+);
 
 // This very module, imported by the separate-process probe below. The probe must run
 // inside the repo (default cwd under `bun test`) so the transitive `@plugins/*` alias
@@ -68,7 +74,10 @@ function uniqueName(prefix: string): string {
 
 afterEach(() => {
   for (const name of usedNames.splice(0)) {
-    rmSync(join(SINGULARITY_DIR, `${name}-slots`), { recursive: true, force: true });
+    rmSync(join(SINGULARITY_DIR, `${name}-slots`), {
+      recursive: true,
+      force: true,
+    });
   }
 });
 
@@ -178,18 +187,25 @@ describe("acquireShare", () => {
     const sem = createHostSemaphore({ name: uniqueName("share-arg"), size: 4 });
     // Failure is a thrown type, never a `slots: 0` value a caller could absorb.
     for (const bad of [0, -1, 1.5]) {
-      expect((await rejection(sem.acquireShare(bad))).message).toContain("positive integer");
+      expect((await rejection(sem.acquireShare(bad))).message).toContain(
+        "positive integer",
+      );
     }
   });
 
   test("on an idle pool takes the full share with no broker", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("share-idle"), size: 4 });
+    const sem = createHostSemaphore({
+      name: uniqueName("share-idle"),
+      size: 4,
+    });
 
     // Spy on Bun.spawn to prove the fast path spawns no broker subprocess: on an
     // idle pool the whole share is grabbed in-process by the non-blocking sweep.
     const origSpawn = Bun.spawn;
     let spawnCount = 0;
-    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((...args: unknown[]) => {
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((
+      ...args: unknown[]
+    ) => {
       spawnCount++;
       return (origSpawn as (...a: unknown[]) => unknown)(...args);
     }) as typeof Bun.spawn;
@@ -205,7 +221,10 @@ describe("acquireShare", () => {
   });
 
   test("with 3 of 4 slots held, returns the single remaining slot", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("share-partial"), size: 4 });
+    const sem = createHostSemaphore({
+      name: uniqueName("share-partial"),
+      size: 4,
+    });
 
     // A holder (a distinct set of open file descriptions — flock conflicts even
     // within one process) parks on 3 of the 4 slots.
@@ -221,7 +240,10 @@ describe("acquireShare", () => {
   });
 
   test("with all 4 slots held, blocks then returns once one frees (broker path)", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("share-full"), size: 4 });
+    const sem = createHostSemaphore({
+      name: uniqueName("share-full"),
+      size: 4,
+    });
 
     const holder = await sem.acquireShare(4);
     expect(holder.slots).toBe(4);
@@ -245,7 +267,10 @@ describe("acquireShare", () => {
   });
 
   test("two concurrent callers never hold more than 4 slots at once", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("share-race"), size: 4 });
+    const sem = createHostSemaphore({
+      name: uniqueName("share-race"),
+      size: 4,
+    });
 
     const held = new Set<HostShare>();
     const totalHeld = () => [...held].reduce((n, s) => n + s.slots, 0);
@@ -330,7 +355,10 @@ describe("reserved floor (lanes)", () => {
 
     // Releasing a background slot wakes it; it lands back in the window, never above.
     await h1.release();
-    const outcome = await Promise.race([third, sleep(2000).then(() => "TIMEOUT" as const)]);
+    const outcome = await Promise.race([
+      third,
+      sleep(2000).then(() => "TIMEOUT" as const),
+    ]);
     expect(outcome).not.toBe("TIMEOUT");
     const share = outcome as HostShare;
     expect(share.slots).toBe(1);
@@ -354,7 +382,9 @@ describe("reserved floor (lanes)", () => {
     // floor is free, so no turnstile, no fan-out child, no blocking wait.
     const origSpawn = Bun.spawn;
     let spawnCount = 0;
-    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((...args: unknown[]) => {
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((
+      ...args: unknown[]
+    ) => {
       spawnCount++;
       return (origSpawn as (...a: unknown[]) => unknown)(...args);
     }) as typeof Bun.spawn;
@@ -395,31 +425,50 @@ describe("reserved floor (lanes)", () => {
     await share.release();
   });
 
-  test("backgroundLimit is part of pool identity: a live split mismatch throws, an idle one resizes", async () => {
+  test("backgroundLimit is part of pool identity: a live split is adopted, an idle one resizes", async () => {
     const name = uniqueName("bg-identity");
+    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
 
-    // Establish the pool at size 4 / backgroundLimit 2 and HOLD a slot so it is live.
+    // Establish the pool at size 4 / backgroundLimit 2 and HOLD both background slots
+    // so the window is FULL and the pool is live.
     const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
-    const held = await sem.acquireShare(1, { lane: "background" });
-    expect(held.slots).toBe(1);
+    const held = await sem.acquireShare(2, { lane: "background" });
+    expect(held.slots).toBe(2);
 
-    // Same size, DIFFERENT split on the same live pool: the two processes would carve
-    // the reserved floor at different indices — a silent floor break — so it must crash.
+    // Same size, DIFFERENT split on the same live pool. Carving the floor at the
+    // declared index-3 would let this background acquire take slot-2 — a slot the live
+    // pool reserves for interactive. Adopting the live 4:2 keeps the floor where every
+    // holder thinks it is, so the acquire blocks on the full window instead.
     const other = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
-    const err = await rejection(other.acquireShare(1, { lane: "background" }));
-    expect(err.message).toContain("live at size");
+    let resolved = false;
+    const blocked = other.acquireShare(1, { lane: "background" }).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await Bun.sleep(300);
+    expect(resolved).toBe(false);
+    expect(other.liveSize()).toBe(4);
+    expect(isSlotHeld(slotsDir, 2)).toBe(false); // reserved floor, never encroached
 
-    // Once idle, a fresh pool with a different split resizes the sentinel silently.
+    // Once a background slot frees, the adopted window grants from slot-0..1.
     await held.release();
-    const resized = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
-    const share = await resized.acquireShare(1, { lane: "background" });
+    const share = await blocked;
     expect(share.slots).toBe(1);
     await share.release();
+
+    // Fully idle, a fresh pool with a different split claims the sentinel silently —
+    // the declared split still lands, it just waits for the pool rather than crashing.
+    const resized = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
+    const third = await resized.acquireShare(3, { lane: "background" });
+    expect(third.slots).toBe(3);
+    await third.release();
   });
 });
 
 /** Read `stream` until the literal `"granted\n"` token; throw if it closes first. */
-async function awaitGrantedRaw(stream: ReadableStream<Uint8Array>): Promise<void> {
+async function awaitGrantedRaw(
+  stream: ReadableStream<Uint8Array>,
+): Promise<void> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -446,7 +495,8 @@ async function readJsonLine<T>(stream: ReadableStream<Uint8Array>): Promise<T> {
       if (value) buf += decoder.decode(value, { stream: true });
       const nl = buf.indexOf("\n");
       if (nl >= 0) return JSON.parse(buf.slice(0, nl)) as T;
-      if (done) throw new Error("stream closed before a JSON line was produced");
+      if (done)
+        throw new Error("stream closed before a JSON line was produced");
     }
   } finally {
     reader.releaseLock();
@@ -482,7 +532,10 @@ function isAlive(pid: number): boolean {
 describe("wakes on any freed slot (stranding gate)", () => {
   for (const k of [0, 1, 2, 3]) {
     test(`releasing held slot ${k} wakes the fan-out waiter`, async () => {
-      const sem = createHostSemaphore({ name: uniqueName(`strand-${k}`), size: 4 });
+      const sem = createHostSemaphore({
+        name: uniqueName(`strand-${k}`),
+        size: 4,
+      });
 
       const handles: HostShare[] = [];
       for (let i = 0; i < 4; i++) handles.push(await sem.acquireShare(1));
@@ -524,7 +577,10 @@ test("a SIGKILLed out-of-process holder wakes a fan-out waiter", async () => {
   holder.kill(9); // hard kill — the flock releases as the process dies
   await holder.exited;
 
-  const outcome = await Promise.race([waiterP, sleep(2000).then(() => "TIMEOUT" as const)]);
+  const outcome = await Promise.race([
+    waiterP,
+    sleep(2000).then(() => "TIMEOUT" as const),
+  ]);
   expect(outcome).not.toBe("TIMEOUT");
   await (outcome as HostShare).release();
 });
@@ -558,7 +614,9 @@ test("a fan-out child is not orphaned when its parent is SIGKILLed", async () =>
     stderr: "inherit",
     env: { ...process.env, FW_PATH: FLOCK_WAIT_PATH, FW_LOCK: lockFile },
   });
-  const { childPid } = await readJsonLine<{ childPid: number }>(intermediate.stdout);
+  const { childPid } = await readJsonLine<{ childPid: number }>(
+    intermediate.stdout,
+  );
 
   // SIGKILL the parent — nobody is left to SIGTERM the still-blocked child. Its stdin
   // (piped from the parent) hits EOF, and its main thread (free, not blocked in flock)
@@ -593,23 +651,59 @@ test("losers are reaped before the extras sweep, so no undercount", async () => 
   await share.release();
 });
 
-test("size is part of pool identity: a live size mismatch throws, an idle one resizes", async () => {
+test("size is part of pool identity: a live size is adopted, an idle one resizes", async () => {
   const name = uniqueName("identity");
 
-  // Establish the pool at size 4 and HOLD a slot so it is live.
+  // Establish the pool at size 4 and HOLD every slot so it is live AND full.
   const sem4 = createHostSemaphore({ name, size: 4 });
-  const held = await sem4.acquireShare(1);
-  expect(held.slots).toBe(1);
+  const held = await sem4.acquireShare(4);
+  expect(held.slots).toBe(4);
 
-  // A size-8 process on the same live pool would silently overcommit — it must crash.
+  // A size-8 process on the same live pool must NOT sweep slot-4..7 — nobody else is
+  // watching those, so it would silently double the bound. It adopts the live 4 and
+  // therefore finds the pool full, exactly as a size-4 process would.
   const sem8 = createHostSemaphore({ name, size: 8 });
-  const err = await rejection(sem8.acquireShare(1));
-  expect(err.message).toContain("live at size");
+  let resolved = false;
+  const blocked = sem8.acquireShare(1).then((s) => {
+    resolved = true;
+    return s;
+  });
+  await Bun.sleep(300);
+  expect(resolved).toBe(false);
+  expect(sem8.liveSize()).toBe(4);
 
-  // Once idle, a fresh size-8 pool resizes the sentinel silently and gets all 8.
+  // The adopted instance is a first-class member of the size-4 pool: a freed slot
+  // grants it, no differently than any other holder.
   await held.release();
+  const adopted = await blocked;
+  expect(adopted.slots).toBe(1);
+  await adopted.release();
+
+  // Once idle, a fresh size-8 pool claims the sentinel silently and gets all 8.
   const sem8b = createHostSemaphore({ name, size: 8 });
   const share = await sem8b.acquireShare(8);
+  expect(share.slots).toBe(8);
+  await share.release();
+});
+
+test("an adopted instance converges back once the pool is resized to its declared size", async () => {
+  const name = uniqueName("identity-converge");
+
+  // A size-4 pool is live and full; the size-8 instance adopts 4.
+  const sem4 = createHostSemaphore({ name, size: 4 });
+  const held = await sem4.acquireShare(4);
+  const sem8 = createHostSemaphore({ name, size: 8 });
+  const blocked = sem8.acquireShare(1);
+  await Bun.sleep(200);
+  expect(sem8.liveSize()).toBe(4);
+  await held.release();
+  await (await blocked).release();
+
+  // The pool is now idle, so the size-8 instance's NEXT acquire claims its declared
+  // identity rather than staying stuck on the adopted one — the adoption is a
+  // reconcile per acquire, not a one-time verdict on the instance.
+  const share = await sem8.acquireShare(8);
+  expect(sem8.liveSize()).toBe(8);
   expect(share.slots).toBe(8);
   await share.release();
 });
@@ -631,35 +725,31 @@ test("a legacy bare-integer sentinel migrates to size:size instead of crashing",
   await share.release();
 });
 
-test(
-  "concurrent first-acquire on a fresh pool never crashes on the size-guard race",
-  async () => {
-    // Many separate processes first-touching the same fresh pool contend on the
-    // `.size.lock` guard exactly while the sentinel is still absent (between flock and
-    // rename). A benign flock race must NOT crash — the old code threw "concurrent size
-    // initialization" for the loser. Each probe agrees on size, so every one must end
-    // OK (acquire → release), never THREW. In-process concurrency won't reproduce it
-    // (the promise memo dedupes); it needs separate processes racing on the flock.
-    const results: string[] = [];
-    for (let trial = 0; trial < 3; trial++) {
-      const name = uniqueName(`race-${trial}`);
-      const children = Array.from({ length: 12 }, () =>
-        Bun.spawn([process.execPath, "-e", FIRST_ACQUIRE_FIXTURE], {
-          stdout: "pipe",
-          stderr: "inherit",
-          env: { ...process.env, HS_MOD: HOST_SEMAPHORE_MODULE, HS_NAME: name },
-        }),
-      );
-      const outs = await Promise.all(
-        children.map(async (c) => (await new Response(c.stdout).text()).trim()),
-      );
-      await Promise.all(children.map((c) => c.exited));
-      results.push(...outs);
-    }
+test("concurrent first-acquire on a fresh pool never crashes on the size-guard race", async () => {
+  // Many separate processes first-touching the same fresh pool contend on the
+  // `.size.lock` guard exactly while the sentinel is still absent (between flock and
+  // rename). A benign flock race must NOT crash — the old code threw "concurrent size
+  // initialization" for the loser. Each probe agrees on size, so every one must end
+  // OK (acquire → release), never THREW. In-process concurrency won't reproduce it
+  // (the promise memo dedupes); it needs separate processes racing on the flock.
+  const results: string[] = [];
+  for (let trial = 0; trial < 3; trial++) {
+    const name = uniqueName(`race-${trial}`);
+    const children = Array.from({ length: 12 }, () =>
+      Bun.spawn([process.execPath, "-e", FIRST_ACQUIRE_FIXTURE], {
+        stdout: "pipe",
+        stderr: "inherit",
+        env: { ...process.env, HS_MOD: HOST_SEMAPHORE_MODULE, HS_NAME: name },
+      }),
+    );
+    const outs = await Promise.all(
+      children.map(async (c) => (await new Response(c.stdout).text()).trim()),
+    );
+    await Promise.all(children.map((c) => c.exited));
+    results.push(...outs);
+  }
 
-    const threw = results.filter((r) => r.startsWith("THREW"));
-    expect(threw).toEqual([]); // no process crashed on the guard race
-    expect(results.every((r) => r === "OK")).toBe(true); // every one acquired
-  },
-  30_000,
-);
+  const threw = results.filter((r) => r.startsWith("THREW"));
+  expect(threw).toEqual([]); // no process crashed on the guard race
+  expect(results.every((r) => r === "OK")).toBe(true); // every one acquired
+}, 30_000);

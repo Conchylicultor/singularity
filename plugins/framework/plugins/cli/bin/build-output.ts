@@ -135,6 +135,7 @@ export function fallbackVerdict(
   code: number,
   ctx: { url: string; buildLogPath: string },
   termination?: SignalTermination | null,
+  crash?: string | null,
 ): Verdict | null {
   if (emitted?.ok === true && code === 0) return null;
   if (emitted?.ok === false && code !== 0) return null;
@@ -156,10 +157,23 @@ export function fallbackVerdict(
         : [`Sent by ${termination.attribution}.`]),
     ];
   } else if (emitted === null && code !== 0) {
-    headline = `BUILD FAILED — aborted before completing (exit ${code})`;
+    // An unhandled exception is the dominant way to land here, and the whole point
+    // of quoting it is that this banner is the only artifact that outlives the
+    // process — a build that dies before its first step writes a transcript with no
+    // step, no check and no error in it, so without this the reader is told a build
+    // failed and nothing whatsoever about why.
+    headline =
+      crash != null
+        ? `BUILD FAILED — crashed before completing (exit ${code})`
+        : `BUILD FAILED — aborted before completing (exit ${code})`;
     reason = [
       `NOT DEPLOYED. Nothing was published; ${ctx.url} still serves the previous build.`,
-      `The build aborted before printing its own verdict.`,
+      ...(crash == null
+        ? [`The build aborted before printing its own verdict.`]
+        : [
+            `The build threw an unhandled exception before printing its own verdict:`,
+            ...crash.split("\n").map((l) => `  ${l}`),
+          ]),
     ];
   } else if (emitted === null) {
     headline = `BUILD FAILED — exited 0 without deploying. This is a bug in build.ts.`;
@@ -194,6 +208,13 @@ export interface VerdictGuardCtx {
    */
   termination?: () => SignalTermination | null;
   /**
+   * The unhandled exception that is ending this process, if one is. Read LAZILY at
+   * exit time for the same reason `termination` is: the throw happens long after the
+   * guard is installed. Supplied by build.ts from `cli-crash.ts`, whose record
+   * `runCli` writes on its way out.
+   */
+  crash?: () => string | null;
+  /**
    * Materialize `buildLogPath` — the file every fallback verdict points at on
    * its last line. Called only when the build never emitted a verdict of its
    * own, which is exactly when nothing wrote that file: a killed build reaches
@@ -222,7 +243,13 @@ export function runVerdictGuard(
   code: number,
   ctx: VerdictGuardCtx,
 ): Verdict | null {
-  const v = fallbackVerdict(emitted, code, ctx, ctx.termination?.() ?? null);
+  const v = fallbackVerdict(
+    emitted,
+    code,
+    ctx,
+    ctx.termination?.() ?? null,
+    ctx.crash?.() ?? null,
+  );
   if (v === null) return null;
   // Before the print, so the pointer is already resolvable when it is read.
   if (emitted === null) ctx.onFallback?.(v, code);

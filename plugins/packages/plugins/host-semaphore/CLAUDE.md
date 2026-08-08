@@ -104,29 +104,42 @@ behind a background waiter's fan-out for the *wakeup* (a few ms), never for a *s
 The deadlock argument is unchanged — the turnstile is held only by waiters, a
 turnstile-holder waits only for a slot, and slot-holders always release. Acyclic.
 
-### Size and split are the pool's identity
+### Size and split are the pool's identity — and the live pool wins
 
 `size` names the slot-file *set*, so an old-size process holding `slot-7.lock` is
 invisible to a new-size process that only sweeps `slot-0..3` — the bound would be
 silently exceeded. `backgroundLimit` names where the reserved floor begins, so two
 processes that disagree on it carve the same slots at different indices — one's
 background slot is another's reserved-interactive slot, and the floor guarantee
-silently breaks. A `<dir>/size` sentinel makes any mismatch loud by encoding **both**
-as `"<size>:<backgroundLimit>"` — a process built for a different split is as loud as
-one built for a different size. On first acquire the check takes a guard on
-`<dir>/.size.lock` (non-blocking flock in-process; if contended — another process is
-mid-initialization, a benign race — it **waits** for the guard via one `flock-wait`
-child, never crashing on the contention), then read-modify-writes the sentinel: absent
-→ write it; equal on both numbers → proceed; different on either → a non-blocking sweep
-decides — if the pool is idle it resizes silently (rewrite the sentinel, unlink
-now-extra slot files), otherwise it **throws** (`pool is live at size
-<oldSize>:<oldBackgroundLimit>, but this process was built for <size>:<backgroundLimit>`).
+silently breaks. A `<dir>/size` sentinel encodes **both** as
+`"<size>:<backgroundLimit>"` and is **the one authority every process defers to**.
+
+The identity is **host state, not a per-process belief.** A pool's size is derived
+from code (`infra/host-admission`'s reserved-pool table) and this box runs many
+checkouts at once, so any commit that moves the budget leaves every *other* checkout
+at the old pair. A process that finds the pool already open at a different pair
+therefore **adopts** the live one (and logs it) rather than throwing: joining the set
+everyone else sweeps is the only choice under which the bound holds and the floor
+sits where the holders think it does. The declared pair still lands — it is written
+the moment the pool is genuinely idle — so a budget change rolls out on its own.
+
+Mechanically, on **every** acquire: read the sentinel; if it already names the
+declared pair, proceed (one small file read — the steady state). Otherwise take a
+guard on `<dir>/.size.lock` (non-blocking flock in-process; if contended — another
+process is mid-initialization, a benign race — it **waits** for the guard via one
+`flock-wait` child, never crashing on the contention), re-read under the guard, and
+then: absent → write the declared pair; different on either number → a non-blocking
+sweep decides — pool idle ⇒ claim the declared pair (rewrite the sentinel, unlink
+now-extra slot files), pool live ⇒ adopt the sentinel's pair for this instance.
+`liveSize()` reports which set is actually being swept. Because the cheap test
+compares against the *declared* pair, an adopted instance keeps re-reconciling and
+converges back the first time the pool drains — an adoption is never permanent.
+
 A bare legacy `"<size>"` sentinel (pre-reserved-floor) reads as `size:size` (no floor),
-so the historical non-laned pools migrate silently rather than crashing; only a number
-missing/invalid, `backgroundLimit > size`, or a stray third field is corruption and throws. The
-check is memoized as an in-flight promise (concurrent in-process callers share one run)
-and cleared on failure. The only non-corruption crash here is a genuine live
-size/split mismatch — a silent overcommit or floor break becoming a crash.
+so the historical non-laned pools migrate silently; a number missing/invalid,
+`backgroundLimit > size`, or a stray third field is corruption and throws — now the
+**only** throw on this path. The reconcile is memoized as an in-flight promise
+(concurrent in-process callers share one run) and cleared on settle.
 
 ## `acquireShare(max)` — a whole share up front
 

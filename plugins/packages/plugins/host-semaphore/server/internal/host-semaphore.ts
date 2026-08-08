@@ -51,8 +51,13 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 // waiter may briefly queue behind a background waiter's fan-out for the wakeup (a few
 // ms), never for a slot.
 
-const FLOCK_WAIT_PATH = join(import.meta.dir, "..", "..", "scripts", "flock-wait.ts");
-
+const FLOCK_WAIT_PATH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "scripts",
+  "flock-wait.ts",
+);
 
 const GRANTED = "granted\n";
 
@@ -128,6 +133,18 @@ export interface AcquireHooks {
 
 export interface HostSemaphore {
   /**
+   * The slot-file set this instance is currently sweeping — the pool's LIVE
+   * identity, which is not always the `size` this process was built for: when
+   * another process already has the pool open at a different size, this instance
+   * adopts that one (see `createHostSemaphore`). Observability only; the acquire
+   * path reads the same value internally.
+   *
+   * Reflects the last reconcile, so it is the declared size until the first
+   * acquire has run.
+   */
+  liveSize(): number;
+
+  /**
    * Run `fn` once a host-wide slot is free, releasing the slot when it settles.
    * The slot is released in a `finally`, so a rejecting `fn` never leaks one —
    * `run` rejects with the same error. Mirrors `Semaphore.run` exactly, except
@@ -187,13 +204,21 @@ export function createHostSemaphore(opts: {
   size: number;
   backgroundLimit?: number;
 }): HostSemaphore {
-  const { name, size, backgroundLimit = size } = opts;
-  if (!Number.isInteger(size) || size < 1) {
-    throw new Error(`createHostSemaphore: size must be a positive integer, got ${size}`);
-  }
-  if (!Number.isInteger(backgroundLimit) || backgroundLimit < 1 || backgroundLimit > size) {
+  const { name } = opts;
+  const declaredSize = opts.size;
+  const declaredBackgroundLimit = opts.backgroundLimit ?? declaredSize;
+  if (!Number.isInteger(declaredSize) || declaredSize < 1) {
     throw new Error(
-      `createHostSemaphore: backgroundLimit must be an integer in 1..${size}, got ${backgroundLimit}`,
+      `createHostSemaphore: size must be a positive integer, got ${declaredSize}`,
+    );
+  }
+  if (
+    !Number.isInteger(declaredBackgroundLimit) ||
+    declaredBackgroundLimit < 1 ||
+    declaredBackgroundLimit > declaredSize
+  ) {
+    throw new Error(
+      `createHostSemaphore: backgroundLimit must be an integer in 1..${declaredSize}, got ${declaredBackgroundLimit}`,
     );
   }
   if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
@@ -201,6 +226,15 @@ export function createHostSemaphore(opts: {
       `createHostSemaphore: name must match /^[a-z0-9][a-z0-9-]*$/, got ${JSON.stringify(name)}`,
     );
   }
+
+  // The identity this instance is ACTUALLY sweeping. It starts at the declared pair
+  // and is reconciled against the on-disk sentinel on every acquire: when another
+  // process already has the pool open at a different pair, this instance adopts that
+  // one rather than imposing its own (see `doEnsureSizeIdentity`). Mutable for exactly
+  // that reason — everything below reads these through the closure at call time, so an
+  // adoption re-aims the sweep, the lane windows and the `max` clamp together.
+  let size = declaredSize;
+  let backgroundLimit = declaredBackgroundLimit;
 
   // The ordered slot-index window a lane may sweep. `background` is confined to the
   // low `backgroundLimit` slots in forward order; `interactive` may use every slot but
@@ -231,15 +265,21 @@ export function createHostSemaphore(opts: {
   // exceeded. `backgroundLimit` names where the reserved floor begins, so two
   // processes that disagree on it partition the same slots differently — one's
   // background slot is another's reserved-interactive slot, and the floor guarantee
-  // silently breaks. The sentinel encodes BOTH as `"<size>:<backgroundLimit>"`, so a
-  // process built for a different split is as loud as one built for a different size.
-  // Checked once per instance, lazily on first acquire — memoized as the in-flight
-  // *promise* (not a boolean) so concurrent in-process `acquireShare` calls await one
-  // check instead of racing, and cleared on failure so a pool whose mismatch was since
-  // resolved isn't wedged by a cached rejection.
-  let sizeCheck: Promise<void> | undefined;
+  // silently breaks. The `<dir>/size` sentinel encodes BOTH as
+  // `"<size>:<backgroundLimit>"` and is the ONE authority every process defers to.
+  //
+  // Reconciled on EVERY acquire, not once per instance: the pool's identity is host
+  // state, and a long-lived process that checked once could keep sweeping a slot set
+  // the rest of the host has since stopped looking at — the very overcommit the
+  // sentinel exists to prevent. The check is a single read of a ~4-byte file on the
+  // agreeing path (the overwhelming case) and only takes the guard + does real work
+  // when the on-disk pair has actually moved. In-flight runs are shared (the promise
+  // memo) so concurrent in-process acquires reconcile once rather than racing, and the
+  // memo clears on settle so nothing caches a since-resolved state.
+  let reconcile: Promise<void> | undefined;
 
-  function readSentinel(): { size: number; backgroundLimit: number } | undefined {
+  function readSentinel():
+    { size: number; backgroundLimit: number } | undefined {
     let raw: string;
     try {
       raw = readFileSync(sizeFile, "utf8");
@@ -272,24 +312,47 @@ export function createHostSemaphore(opts: {
     return { size: s, backgroundLimit: bg };
   }
 
-  // Always writes *this* pool's identity — the closure's `size`/`backgroundLimit` are
-  // the only values it can legitimately record.
+  // Always writes the DECLARED identity — the pair this process was built for is the
+  // only one it can legitimately claim authorship of. Called only where claiming it is
+  // legal: a first touch, or a resize of a pool proven idle. An adoption never writes.
   function writeSentinelAtomic(): void {
     const tmp = `${sizeFile}.${process.pid}.tmp`;
-    writeFileSync(tmp, `${size}:${backgroundLimit}`);
+    writeFileSync(tmp, `${declaredSize}:${declaredBackgroundLimit}`);
     renameSync(tmp, sizeFile);
+    size = declaredSize;
+    backgroundLimit = declaredBackgroundLimit;
   }
 
-  // Memoize the check as a promise. Concurrent in-process callers share one run; a
-  // rejection clears the memo so a since-resolved mismatch isn't cached forever.
+  // Cheap agreement test first: when the live sentinel already names the DECLARED pair
+  // there is nothing to reconcile, so the steady state is one small read — no guard, no
+  // probe, no subprocess.
+  //
+  // The test is against the declared pair, NOT the pair currently being swept. An
+  // adopted instance disagrees with its own declaration by construction, so it re-runs
+  // the guarded reconcile on every acquire — which is exactly what lets the declared
+  // pair land the moment the pool goes idle. Comparing against the adopted pair instead
+  // would make an adoption permanent for the instance's whole life, so a long-lived
+  // backend that adopted once during a rolling change would never converge.
+  //
+  // Concurrent in-process callers share the in-flight run; the memo clears on settle so
+  // the next acquire re-reads rather than trusting a stale outcome.
   function ensureSizeIdentity(): Promise<void> {
-    if (!sizeCheck) {
-      sizeCheck = doEnsureSizeIdentity().catch((err) => {
-        sizeCheck = undefined;
-        throw err;
+    const live = readSentinel();
+    if (
+      live !== undefined &&
+      live.size === declaredSize &&
+      live.backgroundLimit === declaredBackgroundLimit
+    ) {
+      size = declaredSize;
+      backgroundLimit = declaredBackgroundLimit;
+      return Promise.resolve();
+    }
+    if (!reconcile) {
+      reconcile = doEnsureSizeIdentity().finally(() => {
+        reconcile = undefined;
       });
     }
-    return sizeCheck;
+    return reconcile;
   }
 
   async function doEnsureSizeIdentity(): Promise<void> {
@@ -325,12 +388,14 @@ export function createHostSemaphore(opts: {
       if (sentinel === undefined) {
         // First process to touch this pool — record its size:split identity.
         writeSentinelAtomic();
-      } else if (sentinel.size !== size || sentinel.backgroundLimit !== backgroundLimit) {
-        // Mismatch on EITHER axis. Safe to resize ONLY if the pool is idle: LOCK_NB-
-        // sweep every slot across both sizes. If any is held, an out-of-identity
-        // process is live — a silent overcommit (size) or a broken reserved floor
-        // (split) would follow — so crash instead (the ONE genuine throw).
-        const hi = Math.max(sentinel.size, size);
+      } else if (
+        sentinel.size !== declaredSize ||
+        sentinel.backgroundLimit !== declaredBackgroundLimit
+      ) {
+        // Mismatch on EITHER axis against what this process was built for. Claiming
+        // the declared pair is safe ONLY if the pool is idle: LOCK_NB-sweep every slot
+        // across both sizes. If any is held, an out-of-identity process is live.
+        const hi = Math.max(sentinel.size, declaredSize);
         const probeFds: number[] = [];
         let allFree = true;
         for (let i = 0; i < hi; i++) {
@@ -343,17 +408,51 @@ export function createHostSemaphore(opts: {
         }
         if (!allFree) {
           for (const fd of probeFds) closeSync(fd);
-          throw new Error(
-            `createHostSemaphore(${name}): pool is live at size ` +
-              `${sentinel.size}:${sentinel.backgroundLimit}, but this process was built ` +
-              `for ${size}:${backgroundLimit}`,
-          );
+          // Live pool, different pair → ADOPT the live one for this instance.
+          //
+          // The pool's identity is host state, not a per-process belief, and this
+          // process is not entitled to overrule it. Every holder is sweeping the
+          // sentinel's slot set, so joining them is the one choice under which the
+          // bound holds and the reserved floor sits where everyone else thinks it does;
+          // imposing the declared pair here is exactly the silent overcommit / floor
+          // break the sentinel exists to prevent.
+          //
+          // This is NOT a fault to fail on. The host runs many checkouts at once and a
+          // pool's size is derived from code, so any commit that moves the budget makes
+          // every OTHER checkout's live pool "wrong" — a normal, transient, and
+          // self-resolving condition. It used to throw here, which turned one such
+          // commit into a host-wide outage: every build on the box died at its first
+          // host grant, in both directions, until the pool happened to be idle at the
+          // right instant. The declared pair still takes effect — the next acquire that
+          // finds the pool idle writes it (the branch below) — it just no longer costs
+          // an outage to get there.
+          if (
+            size !== sentinel.size ||
+            backgroundLimit !== sentinel.backgroundLimit
+          ) {
+            console.warn(
+              `createHostSemaphore(${name}): pool is live at ` +
+                `${sentinel.size}:${sentinel.backgroundLimit} but this process was built for ` +
+                `${declaredSize}:${declaredBackgroundLimit} — adopting the live identity ` +
+                `(the declared one applies once the pool is idle).`,
+            );
+          }
+          size = sentinel.size;
+          backgroundLimit = sentinel.backgroundLimit;
+        } else {
+          // Pool idle → claim the declared pair, drop the now-extra slot files (only
+          // when shrinking `size`), release every probe fd.
+          writeSentinelAtomic();
+          for (let i = declaredSize; i < sentinel.size; i++) {
+            rmSync(slotFile(i), { force: true });
+          }
+          for (const fd of probeFds) closeSync(fd);
         }
-        // Pool idle → rewrite the sentinel, drop the now-extra slot files (only when
-        // shrinking `size`), release every probe fd.
-        writeSentinelAtomic();
-        for (let i = size; i < sentinel.size; i++) rmSync(slotFile(i), { force: true });
-        for (const fd of probeFds) closeSync(fd);
+      } else {
+        // The sentinel names the declared pair — this instance may have been sweeping
+        // an adopted one; the pool has since converged back.
+        size = declaredSize;
+        backgroundLimit = declaredBackgroundLimit;
       }
     } finally {
       await releaseGuard();
@@ -397,7 +496,9 @@ export function createHostSemaphore(opts: {
     // only rejects (AggregateError) if EVERY child closed without granting; its
     // attached handlers also swallow the losers' later rejections when we kill them,
     // so there is no floating rejection.
-    const readers = children.map((child, i) => awaitGranted(child.stdout, name).then(() => i));
+    const readers = children.map((child, i) =>
+      awaitGranted(child.stdout, name).then(() => i),
+    );
 
     let winnerIndex: number;
     try {
@@ -417,14 +518,22 @@ export function createHostSemaphore(opts: {
     return winner;
   }
 
-  async function acquireShare(max: number, hooks?: AcquireHooks): Promise<HostShare> {
+  async function acquireShare(
+    max: number,
+    hooks?: AcquireHooks,
+  ): Promise<HostShare> {
     if (!Number.isInteger(max) || max < 1) {
-      throw new Error(`acquireShare: max must be a positive integer, got ${max}`);
+      throw new Error(
+        `acquireShare: max must be a positive integer, got ${max}`,
+      );
     }
     const lane: Lane = hooks?.lane ?? "background";
-    const order = laneOrder(lane);
     const t0 = performance.now();
     await ensureSizeIdentity();
+    // AFTER the reconcile, never before: it is what settles which slot set this
+    // acquire is entitled to sweep, so a window derived ahead of it could aim at the
+    // wrong indices for the whole call.
+    const order = laneOrder(lane);
     // Asking for more slots than the lane's window holds can't beat its ceiling —
     // clamp to the window size (`backgroundLimit` for background, `size` for
     // interactive) so the fast-path sweep and the extras re-sweep agree on the bound.
@@ -520,6 +629,8 @@ export function createHostSemaphore(opts: {
   return {
     depth: () => waiting,
 
+    liveSize: () => size,
+
     acquireShare,
 
     async run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T> {
@@ -540,7 +651,10 @@ export function createHostSemaphore(opts: {
  * would silently drop the gate's bound). In fan-out, a loser rejecting this way is
  * expected and absorbed by `Promise.any`.
  */
-async function awaitGranted(stream: ReadableStream<Uint8Array>, name: string): Promise<void> {
+async function awaitGranted(
+  stream: ReadableStream<Uint8Array>,
+  name: string,
+): Promise<void> {
   const decoder = new TextDecoder();
   let buffer = "";
   const reader = stream.getReader();
