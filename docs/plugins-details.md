@@ -17149,6 +17149,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.OrderedDispatchContribution`
           - `primitives/sync-status.useReportSync`
+          - `primitives/text-editor/caret-motion.announceCaretCrossing`
+          - `primitives/text-editor/caret-motion.CARET_CROSSED_COMMAND`
+          - `primitives/text-editor/caret-motion.crossCaret`
           - `primitives/text-editor/caret-trigger.atWordBoundary`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
@@ -25067,6 +25070,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-description`
           - `tasks/task-draft-form`
       - Plugins:
+        - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.
+          - Cross-plugin:
+            - Imported by:
+              - `page/editor`
+              - `primitives/text-editor/decorator-nav`
+          - Web:
+            - Exports (types): `CaretCrossing`
+            - Exports (values):
+              - `announceCaretCrossing`
+              - `CARET_CROSSED_COMMAND`
+              - `crossCaret`
         - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
           - Web:
             - Uses:
@@ -25098,12 +25112,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/inline`
               - `page/url-paste`
         - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.
+          - Web:
+            - Uses: `primitives/text-editor/caret-motion.crossCaret`
+            - Exports (values): `DecoratorNavPlugin`
           - Cross-plugin:
             - Imported by:
               - `page/editor`
               - `primitives/text-editor`
-          - Web:
-            - Exports (values): `DecoratorNavPlugin`
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
           - Web:
             - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`

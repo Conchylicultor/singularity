@@ -14,20 +14,23 @@ import {
   type LexicalCommand,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { crossCaret } from "@plugins/primitives/plugins/text-editor/plugins/caret-motion/web";
 import type { BlockEditorAPI } from "../types";
 import { Editor } from "../slots";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { serializeBlockRuns } from "../internal/block-text-extensions";
 import {
-  placeCaretAtOffset,
+  $placeCaretAtOffset,
   readCaretContext,
+  SKIP_SCROLL_TAG,
   type CaretContext,
 } from "../internal/caret-geometry";
 import {
   $scanMarkSpan,
   removeMarkSpan,
 } from "../internal/inline-format-surgery";
+import { registerMarkArrival } from "../internal/mark-arrival";
 import {
   markStep,
   readMarkDepth,
@@ -165,9 +168,43 @@ export function KeyboardPlugin({
           // browser never picks — and because placing through
           // `$placeCaretAtLinearOffset` is what makes the resolver's lookahead
           // exact: it read the boundary off the very anchor this lands on.
+          //
+          // The stop is not asserted here. This IS a crossing, so it is
+          // announced like every other one, and the page editor's own observer
+          // of that channel (`registerMarkArrival`, mounted below) computes the
+          // stop from the anchor the placement just produced — one
+          // implementation of "which state does an arrival land on", shared with
+          // the movers this module never sees.
+          //
+          // IT HAS TO BE `crossCaret`, NOT A PLACEMENT FOLLOWED BY A BARE
+          // `announceCaretCrossing`. The two read as equivalent and are not.
+          // This runs inside a Lexical command listener, i.e. inside an active
+          // update, and Lexical treats the two halves asymmetrically there: a
+          // nested `editor.update(...)` is QUEUED behind the listener
+          // (`updateEditor`, lexical@0.44.0 `Lexical.dev.mjs:9143`), while
+          // `dispatchCommand` runs its listeners INLINE (`updateEditorSync`,
+          // `:9136` — it calls `updateFn()` straight through when
+          // `activeEditor === editor` and no options are passed). So "place,
+          // then announce" spelled as an update followed by a call ANNOUNCES
+          // FIRST: the observer reads the pre-move anchor at the block's end,
+          // where there is no stop, never arms `escaped`, and the next
+          // ArrowLeft steps past the seam instead of being absorbed by it.
+          // `crossCaret` moves and announces as one act, so the order cannot
+          // invert — this update is queued as a whole, and inside it the
+          // placement is already committed to the pending state by the time the
+          // dispatch runs.
+          //
+          // No `focusEditor` (which `placeCaretAtOffset` would have done): the
+          // keystroke was delivered to this editor's own root, so it already
+          // holds DOM focus. The tag is that helper's no-scroll landing.
           event.preventDefault();
-          placeCaretAtOffset(lexicalEditor, intent.offset);
-          markStep(lexicalEditor, intent.marks, true);
+          lexicalEditor.update(
+            () =>
+              crossCaret(lexicalEditor, intent.dir, () =>
+                $placeCaretAtOffset(intent.offset),
+              ),
+            { tag: SKIP_SCROLL_TAG },
+          );
           return true;
         case "unmark": {
           event.preventDefault();
@@ -273,10 +310,18 @@ export function KeyboardPlugin({
       );
 
     const unregister = [
-      // The mark-delimiter depth store's own lifecycle: cleared on any update
-      // with dirty leaves, re-asserted onto `selection.format` on every
-      // selection change while it is valid.
+      // Both halves of the caret's SECOND component — the mark stop, which this
+      // editor owns beside Lexical's selection — mount from this one place.
+      //
+      // The store's own lifecycle: cleared on any update with dirty leaves,
+      // re-asserted onto `selection.format` on every selection change while it
+      // is valid.
       registerMarkDepth(lexicalEditor),
+      // And its arrival path: the crossing-channel observer that lands the caret
+      // on a boundary's stop after ANY announced crossing — this module's own
+      // `markArrive`, a cross-block landing, a step across an inline decorator,
+      // or a mover neither of them knows about.
+      registerMarkArrival(lexicalEditor),
       reg(KEY_ENTER_COMMAND, "Enter"),
       reg(KEY_BACKSPACE_COMMAND, "Backspace"),
       reg(KEY_DELETE_COMMAND, "Delete"),

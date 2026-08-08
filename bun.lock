@@ -4034,6 +4034,13 @@
         "lexical": "^0.44.0",
       },
     },
+    "plugins/primitives/plugins/text-editor/plugins/caret-motion": {
+      "name": "@singularity/plugin-primitives-text-editor-caret-motion",
+      "version": "0.0.1",
+      "dependencies": {
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/primitives/plugins/text-editor/plugins/caret-trigger": {
       "name": "@singularity/plugin-primitives-text-editor-caret-trigger",
       "version": "0.0.1",
@@ -7242,6 +7249,8 @@
     "@singularity/plugin-primitives-terminal": ["@singularity/plugin-primitives-terminal@workspace:plugins/primitives/plugins/terminal"],
 
     "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
+
+    "@singularity/plugin-primitives-text-editor-caret-motion": ["@singularity/plugin-primitives-text-editor-caret-motion@workspace:plugins/primitives/plugins/text-editor/plugins/caret-motion"],
 
     "@singularity/plugin-primitives-text-editor-caret-trigger": ["@singularity/plugin-primitives-text-editor-caret-trigger@workspace:plugins/primitives/plugins/text-editor/plugins/caret-trigger"],
 

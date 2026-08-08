@@ -103,18 +103,27 @@ export type KeyIntent =
    */
   | { type: "markStep"; marks: Mark[]; escaped: boolean }
   /**
-   * Move the caret one position to `offset` AND land it on the delimiter stop
-   * there, as one press.
+   * Move the caret one position to `offset`, travelling in `dir`, AND land it on
+   * the delimiter stop there, as one press.
    *
    * The arrival half of the same model. A seam holds two states and the correct
    * landing is the one nearest the side the caret came from, but the browser
    * always delivers `natural` — so on the approach where the stop is the nearer
    * state, letting the browser move would skip it silently. This intent is that
    * press: the executor places the caret (through the same resolver the lookahead
-   * read) and asserts the stop, so `across → stop → inside` going one way mirrors
-   * `inside → stop → across` going the other.
+   * read) and ANNOUNCES the crossing, so `across → stop → inside` going one way
+   * mirrors `inside → stop → across` going the other.
+   *
+   * It carries the travel direction rather than the marks, which is what leaves
+   * exactly ONE implementation of "which state does an arrival land on": the
+   * crossing channel's observer (`internal/mark-arrival.ts`), reading the live
+   * anchor after the placement, the same way it reads it for a crossing this
+   * resolver never saw. Safe by construction, because the lookahead below reads
+   * its destination through `$resolveLinearOffset` — the SAME resolver
+   * `$placeCaretAtLinearOffset` lands with — so the observer reads the very
+   * anchor the lookahead described.
    */
-  | { type: "markArrive"; offset: number; marks: Mark[] }
+  | { type: "markArrive"; offset: number; dir: "left" | "right" }
   /**
    * Delete an inline-mark boundary's virtual delimiter — which, since the
    * delimiter is what carries the marks that CHANGE across the boundary, means
@@ -318,6 +327,13 @@ function markStepFor(
  *
  * Ordered BELOW `markStepFor` at each arrow: a delimiter still to be crossed HERE
  * is nearer than one a step away.
+ *
+ * This is a lookahead, and it answers "is this press MINE?" — asked BEFORE the
+ * move, over the marks at the destination. Which of the destination's two states
+ * the arrival then LANDS on is a different question, asked AFTER the move by the
+ * crossing channel's observer, which is why this rung hands on a direction and
+ * not a mark set (see the `markArrive` intent). The two cannot drift: both read
+ * the destination through `$resolveLinearOffset`.
  */
 function markArriveFor(
   caret: CaretContext,
@@ -332,7 +348,7 @@ function markArriveFor(
   return {
     type: "markArrive",
     offset: caret.offset + (dir === "left" ? -1 : 1),
-    marks: stop.marks,
+    dir,
   };
 }
 

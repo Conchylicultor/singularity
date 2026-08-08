@@ -71,5 +71,6 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/row-actions", id: "primitives.row-actions", loader: () => import("@plugins/primitives/plugins/row-actions/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/scoped-store", id: "primitives.scoped-store", loader: () => import("@plugins/primitives/plugins/scoped-store/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/text-editor/plugins/caret-motion", id: "primitives.text-editor.caret-motion", loader: () => import("@plugins/primitives/plugins/text-editor/plugins/caret-motion/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/lint"), dependsOn: [] },
 ];

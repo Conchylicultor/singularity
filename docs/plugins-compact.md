@@ -530,6 +530,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Plugins:
+        - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.
         - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
         - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.

@@ -538,17 +538,26 @@ that exists but isn't painted); a position that does not exist. Design:
   is what makes block-start, block-end and mid-block ONE code path — the boundary
   strip (`internal/mark-boundary.ts`) never asks which of the three it is.
 - **The stop is a question about the LIVE anchor**, not about the boundary's
-  shape. **Measured** (`e2e/mark-boundary-verify.ts` phases 6 and 9): Chromium
-  resolves a text/text seam to the END of the left run, so `natural = L` and
-  **every** boundary gets a stop — mid-block ones included, one extra press each.
-  The design predicted the opposite (`` `zz`|plain `` would need none, since the
+  shape. A text/text seam resolves to the END of the left run, so `natural = L`
+  and **every** boundary gets a stop — mid-block ones included, one extra press
+  each. That left bias is **not Chromium's** (as this file and the design doc
+  both used to say): it is `resolveSelectionPointOnBoundary`
+  (`lexical@0.44.0 Lexical.dev.mjs:7669-7677`), which rewrites a collapsed point
+  at `offset === 0` whose previous sibling is a `TextNode` to that sibling's end,
+  on every DOM→model resolution. Same observable, but a deterministic,
+  cross-browser, version-pinned **library invariant** rather than a browser quirk
+  that could flip — so `e2e/mark-boundary-verify.ts` phase 6a's "the bias has
+  flipped" failure message describes something that cannot happen while that
+  function exists. (`internal/mark-depth.ts`'s header carries the full citation
+  chain; the same function is why depth cannot live in the document at all.) The
+  design predicted the opposite (`` `zz`|plain `` would need none, since the
   plain run's own start already carries `{}`) and was wrong; consistent behavior
   everywhere is the trade, taken deliberately. Two things follow. The direction
-  needed no change, because it asks the anchor instead of predicting the browser
-  — so a falsified assumption cost one test expectation, not a redesign; **keep
-  it derived**. And **mid-block was broken before this feature too**: typing at
-  `` `zz`|abc `` used to produce a `{code}`-marked character in a run the user is
-  typing outside of.
+  needed no change, because it asks the anchor instead of predicting the
+  resolution — so a falsified assumption cost one test expectation, not a
+  redesign; **keep it derived**. And **mid-block was broken before this feature
+  too**: typing at `` `zz`|abc `` used to produce a `{code}`-marked character in
+  a run the user is typing outside of.
 - **`left ∩ right` is NOT the stop — it is the deletion's residual**, and this is
   the trap to not "fix" back. `L ∩ R` coincides with the real answer whenever the
   stop's side is a SUBSET of `natural`'s (every block edge, and the measured
@@ -562,17 +571,63 @@ that exists but isn't painted); a position that does not exist. Design:
   ONE side, so a single-direction walk from the anchor no-ops on the other's —
   at `` a|`zz` `` that is a Backspace consumed for no effect.
 - **A block's own edge is a boundary too, and a horizontal CROSSING must meet the
-  state facing the side it came from** — `markArriveFor`'s rule, one scope up
-  (`internal/mark-arrival.ts`). `landCaret`'s left/right arms declare
-  `CaretLandOptions.crossing`; nothing else does, so a click, a focus restore, a
-  vertical crossing and every explicit placement land `natural` and cannot arm
-  the `escaped` gate. That declaration must never become an inference from
-  `edge`: `focusBoundary("end")` is also how a click at the end of a line lands.
-- **Virtual positions, never real zero-width nodes.** Phantom characters shift
-  every node-local offset `inline-format-surgery.ts` slices by, and a seam node in
-  a shared `Y.XmlText` is peer-local, order-dependent CONTENT — two peers at one
-  boundary give two seams `coalesce` won't merge. A real seam is derived state
-  stored as content, reconciled on every keystroke.
+  state facing the side it came from** — `markArriveFor`'s rule, one scope up.
+  Which arrivals obey it is not a list anything here maintains; see *Every
+  arrival is an announced crossing*.
+- **Virtual positions, never real zero-width nodes** — but **not for the CRDT
+  reason once written here, which is false**. ("Two peers at one boundary give
+  two seams `coalesce` won't merge": `Item.integrate` ORDERS concurrent inserts
+  rather than merging them, so two seams do appear — but a dedup rule stated over
+  CONVERGED state is a pure function of the merged document, both peers compute
+  the same answer, and Yjs deletes are idempotent tombstones. It converges in one
+  round. Don't repeat it.)
+
+  What actually rejects a real seam: (a) a caret-addressable character is a real
+  character in the browser's text layer, so find-in-page stops matching across
+  it, spellcheck and double-click word selection segment on it, and single-line
+  `Cmd+C` is *deliberately* handed to the browser (`internal/clipboard.ts`,
+  `decidePaste`'s `{kind:"default"}` arm) so it reaches the system clipboard with
+  no code of ours in the path; and (b) it is a character in the plain-text offset
+  basis, which reaches a SERVER consumer —
+  `page/markdown-apply/server/internal/runs-splice.ts` splices a block's `Y.Doc`
+  from seam-free runs, so every agent write would delete every seam and every
+  client re-mint them. A Lexical-only seam excluded from the Y doc is not
+  available either: `CollabElementNode.syncChildrenFromYjs`
+  (`@lexical/yjs@0.44.0 LexicalYjs.dev.mjs:529-540`) unconditionally
+  `removeFromParent`s every Lexical child with no collab twin on every remote
+  sync, and `SKIP_COLLAB_TAG` is exported by `lexical` but never read by
+  `@lexical/yjs`.
+
+### Every arrival is an announced crossing
+
+> Every mover that relocates a caret **across** something announces the crossing
+> on one channel, in the direction of travel. Every consumer of a virtual
+> position observes that channel. **A crossing is declared by the mover that
+> knows it happened — never inferred from a selection transition.**
+
+The channel is `primitives/text-editor/caret-motion`; this editor's observer is
+`internal/mark-arrival.ts`, mounted beside the depth store in
+`keyboard-plugin.tsx` (both halves of the caret's second component in one place).
+It is a Lexical command, not a registry, because a listener runs INLINE inside
+the announcer's own update — so the observer reads the pending selection the
+crossing just produced, which is what an arrival needs and what the observer used
+to buy, back when it had one caller, with an `editor.update()` of its own.
+
+Adding a virtual-position kind is one observer; adding a mover is one call. The
+matrix collapses from `movers × kinds` to `movers + kinds`. Only the direction
+travels — `markArrive` carries `dir`, never a mark set — so "which state does an
+arrival land on" has exactly ONE implementation, reading the live anchor after
+the placement. The three movers today: the step within a block (`markArrive`),
+the cross-block landing (`CaretLandOptions.crossing`, the surface-level spelling
+of the same announcement, because a `CaretSurface` has no Lexical editor), and
+the step across an inline decorator. Nothing else announces, so a click, a focus
+restore, a vertical crossing and every explicit placement land `natural`.
+
+**The "never inferred" half is load-bearing.** A transition-derived rule ("did
+the anchor cross a boundary?") cannot tell a one-character click from a
+one-character arrow step, and `$placeCaretAtLinearOffset`'s merge landing looks
+like a unit step too — it would arm the `escaped` gate for all three. `e2e`
+phase 10e is the assertion that catches it.
 
 ### Depth is STORED, never derived from `selection.format`
 
@@ -639,12 +694,42 @@ reach for one. Had it been observable it would have had to derive from
 `wrappersOf` reversed (`core/inline-markdown.ts`) — `code, strikethrough, italic,
 bold, underline` — which is deliberately *not* reverse `MARK_ORDER`.
 
+### The one door not taken: marks as inline `ElementNode`s
+
+The only alternative whose core claim survives scrutiny, recorded so the question
+stays settled. `resolveSelectionPointOnBoundary`'s inline-`ElementNode` branch is
+gated on `!isCollapsed` and so does **not** fire for a caret, while its
+`$isTextNode(prevSibling)` branch does — so with marks as elements
+`(rightLeaf, 0)` SURVIVES, both boundary states become stable Lexical addresses,
+and the arrival problem closes outright (`selection.anchor` says which side you
+are on, so `mark-depth.ts` and `mark-arrival.ts` both go). Convergence is solved:
+an `ElementNode` maps to a nested `Y.XmlText`, which `LinkNode` proves here in
+production.
+
+Rejected because it buys that at the price of two. **There is no pending-mark
+channel for elements** — Lexical's only one is `RangeSelection.format`, an
+integer bitfield (`Lexical.dev.mjs:6011-6014`), so Cmd+B-then-type, the collapsed
+toolbar state and "which side" all need a new side store: it trades the mark
+store for a pending-mark store. And **nesting order becomes normative and
+observable**, which cap-at-1 deliberately dissolved — with remote applies
+committing `skipTransforms: true`, so a normalizing transform would not run for
+them. Plus a hard CRDT cutover (every `page_block_docs` blob encodes `__format`).
+~2 months. ProseMirror and Slate both keep marks as set-valued properties on text
+for the first reason.
+
 ### Known bounds
 
 - **The feature is currently invisible.** Nothing reflects a collapsed caret's
   pending marks (`FormatToolbarPlugin` is gated on a non-collapsed selection), so
   depth 0 and depth 1 are pixel-identical and ArrowRight paints nothing. Filed as
   a follow-up, not an oversight.
+- **The second component is not restorable.** It lives outside the document, so
+  undo, reload and any remote edit lose it — all degrading to depth 0, the safe
+  side. There is no address to restore it *to*; see the citations in
+  `internal/mark-depth.ts`.
+- **`markArriveFor`'s `offset ± 1` is a linear CHARACTER step, not a caret step**
+  — wrong for grapheme clusters (a seam right after an emoji or a combining mark
+  places the caret mid-surrogate). Pre-existing, covered by no test.
 - **`color` and `link` are not delimiters.** `link` needs nothing — Lexical
   already moves a collapsed caret out of an inline parent whose
   `canInsertTextAfter()` is false. `color` is a genuine gap: stepping out of red
@@ -653,9 +738,11 @@ bold, underline` — which is deliberately *not* reverse `MARK_ORDER`.
   emits a line break (and a decorator) as an *unmarked run*, so the strip walk
   stops there and the caret model cannot drift from the persisted one. Document
   it; don't "fix" it.
-- **Page-editor only.** `primitives/text-editor` mounts `PlainTextPlugin` — no
-  marks at all — so this does **not** belong beside `decorator-nav` in the
-  text-editor primitive.
+- **The MARK model is page-editor only** — `primitives/text-editor` mounts
+  `PlainTextPlugin`, no marks at all — so it does **not** belong beside
+  `decorator-nav` in the text-editor primitive. The crossing CHANNEL is the
+  opposite: it is a primitive precisely because a mover must announce without
+  knowing who observes.
 
 ## Visible-line invariants (Enter / Backspace / Delete)
 
@@ -1964,6 +2051,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.OrderedDispatchContribution`
     - `primitives/sync-status.useReportSync`
+    - `primitives/text-editor/caret-motion.announceCaretCrossing`
+    - `primitives/text-editor/caret-motion.CARET_CROSSED_COMMAND`
+    - `primitives/text-editor/caret-motion.crossCaret`
     - `primitives/text-editor/caret-trigger.atWordBoundary`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`

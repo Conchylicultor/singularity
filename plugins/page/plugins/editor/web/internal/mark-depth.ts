@@ -1,7 +1,36 @@
 // The mark-boundary DEPTH store: has the caret already stepped past the virtual
 // delimiter at the boundary it stands on?
 //
-// ## Why depth is STORED and never derived
+// ## Why the depth is STORED — outside the document
+//
+// Not as a workaround for a modelling mistake. **This is the only place the
+// caret position's second component can live.** A block's caret position is
+// `(Lexical selection, stop ∈ {natural, virtual})`; Lexical owns the first
+// component, and it erases both of the document-level addresses the second one
+// could have had:
+//
+//  - **`(rightLeaf, 0)` is rewritten to `(leftLeaf, len)`.**
+//    `resolveSelectionPointOnBoundary` (`lexical@0.44.0 Lexical.dev.mjs:7669-7677`)
+//    takes a COLLAPSED point at `offset === 0` whose previous sibling is a
+//    `TextNode` and sets it to `(prevSibling, prevSibling.getTextContent().length)`.
+//    There is no format check — the two runs need not differ in any way. It is
+//    reached from `$normalizeSelectionPointsForBoundaries` (`:7701`) inside
+//    `$internalResolveSelectionPoints` (`:7743`), i.e. on EVERY DOM→model
+//    resolution, and the fast-path bail `shouldSkipSelectionChange` (`:2203`) is
+//    `offset !== 0 && offset !== nodeValue.length` — it explicitly does NOT skip
+//    at leaf edges, which is exactly where boundaries are.
+//  - **An element point at a paragraph edge is coerced to a text point.**
+//    `$internalResolveSelectionPoint` (`:7583-7604`) takes the child DOM at the
+//    resolved offset and, finding a `TextNode`, returns a text point at that
+//    node's edge instead. An element point survives only where the child there
+//    is NOT a `TextNode` — a decorator, a `<br>` — which is why
+//    `internal/caret-geometry.ts` can use one and a mark boundary cannot.
+//
+// So both addresses can be SET but not HELD: writing one provokes the
+// `selectionchange` that resolves it away again. There is nowhere in the
+// document to put the second component, so it lives here, beside the editor.
+//
+// ## And why it is never DERIVED from `selection.format`
 //
 // The obvious cheap design is "depth = `selection.format` diverges from the
 // anchor node's format bits", leaning on Lexical's own
@@ -29,10 +58,9 @@
 // whole feature.
 //
 // Lexical's format-divergence carry is in any case only a ~200 ms window keyed on
-// `(anchorKey, offset)`, not a durable state, and `shouldSkipSelectionChange`
-// explicitly does NOT skip at `offset === 0 || offset === length` — the boundary
-// positions. So `selection.format` is the EFFECT (what the next typed character
-// carries), re-asserted from this store; never the encoding.
+// `(anchorKey, offset)`, not a durable state. So `selection.format` is the EFFECT
+// (what the next typed character carries), re-asserted from this store; never the
+// encoding.
 //
 // ## Why the entry can never be stale
 //

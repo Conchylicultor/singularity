@@ -63,6 +63,12 @@
 //     is a mark boundary must meet the stop first, exactly as a within-block step
 //     does. The block seam is a place the browser's own landing is the far state;
 //     a click into the same position must NOT assert the stop.
+// 11. CROSSING AN INLINE DECORATOR — the third arrival path, and the one the
+//     caret-crossing channel exists for
+//     (research/2026-08-08-global-caret-crossing-channel.md). A `` `code` `` run
+//     next to a `[[page]]` chip: one arrow across the chip must land on the
+//     boundary's stop, not inside the code run. Also pins the `selectNext(0, 0)`
+//     fix and the Backspace-strip whose neighbour is a decorator;
 //
 // Manual-only; nothing runs this automatically.
 // Usage: bun plugins/page/plugins/editor/e2e/mark-boundary-verify.ts [--base <url>] [--out /tmp/mark-boundary]
@@ -87,6 +93,8 @@ const r = report();
 // is what both handlers actually test for (`event.metaKey || event.ctrlKey`).
 const UNDO = "ControlOrMeta+z";
 const CODE_MARK = "ControlOrMeta+e";
+/** Phase 11 builds its fixture by PASTE — see the long comment there for why. */
+const PASTE = "ControlOrMeta+v";
 
 // --- waits --------------------------------------------------------------------
 
@@ -368,7 +376,10 @@ async function enterNewBlock(page: Page, pageId: string): Promise<string> {
 }
 
 await withBrowser(async (h) => {
-  const { page } = await h.session({ label: "A" });
+  const { context, page } = await h.session({ label: "A" });
+  // Phase 11 alone needs the clipboard: its fixture is a PASTE, because that is
+  // the only way to materialize an inline decorator chip in a block (see there).
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
   const {
     pageUrl,
@@ -1133,6 +1144,366 @@ await withBrowser(async (h) => {
     );
   }
 
+  // --- Phase 11: CROSSING AN INLINE DECORATOR --------------------------------
+  //
+  // The third way a caret can ARRIVE at a mark boundary, and the one this file
+  // did not cover: not a step within a block (phases 1-9) and not a crossing from
+  // an adjacent block (phase 10), but a crossing over an inline DECORATOR —
+  // a `[[page]]` chip, a `@date` chip, a pasted image. Design:
+  // research/2026-08-08-global-caret-crossing-channel.md.
+  //
+  // The defect it pins, stated as data: in `` `code`[chip] ``, ArrowLeft from the
+  // end of the block landed INSIDE the code run, so the very next character typed
+  // came out `{code}`-marked at a caret that is visually past the span. Phase 8
+  // asserts exactly that claim one press away from a decorator, and passed —
+  // which is the point. `decorator-nav` moves the caret with Lexical node APIs
+  // (`selectPrevious()` / `selectNext(0, 0)`), and NO selection transition tells
+  // the mark model that a crossing happened. Only the mover knows, so only the
+  // mover can say so: `crossCaret` performs the move and announces it as one act,
+  // and the page editor's arrival observer lands the stop.
+  //
+  // It cannot be generalised into the mark lookahead either, and that is worth
+  // knowing before "simplifying" this away: `markArriveFor` works in the LINEAR
+  // OFFSET basis, where a decorator occupies `tokenOf(node).length` characters
+  // (`block-text-extensions.ts`), so "one caret step left" is NOT `offset - 1`
+  // beside a chip — `$resolveLinearOffset(off - 1)` lands inside the chip and
+  // correctly answers null. Announcement is the only mechanism that reaches
+  // across a decorator.
+  //
+  // THE FIXTURE IS A PASTE, not typing. `decidePaste` sends MULTI-LINE
+  // `text/plain` through `parseMarkdownToForest` (so `[[<pageId>]]` is a
+  // protected span that becomes a real chip node, and `` `code` `` becomes a
+  // marked run); a SINGLE-line paste falls through to the native inline paste and
+  // would leave a literal `[[…]]` token sitting in the text — a fixture that
+  // looks right and crosses no decorator at all. Hence the trailing `sentinel`
+  // line, which doubles as the block the rightward walk of 11e exits into.
+
+  /** The inline page-link token for THIS page — a chip pointing at itself. */
+  const CHIP = `[[${pageId}]]`;
+
+  /**
+   * Paste `lines` at the end of the document; the ids of the blocks it created,
+   * in document order (one per line, which is what the count check pins).
+   *
+   * The wait for the pasted ROWS is the same doc-init gate `enterNewBlock`
+   * documents, for the same reason: a block's content `Y.Doc` cannot seed until
+   * its `page_blocks` row is confirmed, and every assertion below opens by typing
+   * into one of these.
+   */
+  const pasteLines = async (
+    label: string,
+    lines: readonly string[],
+  ): Promise<string[]> => {
+    const host = await enterNewBlock(page, pageId);
+    const before = await editableIds(page);
+    await page.evaluate(
+      (t) => navigator.clipboard.writeText(t),
+      lines.join("\n"),
+    );
+    await editableOf(page, host).click();
+    await page.waitForTimeout(200);
+    await page.keyboard.press(PASTE);
+    await page.waitForTimeout(1500);
+    const after = await editableIds(page);
+    const fresh = after.filter((id) => !before.includes(id));
+    if (fresh.length !== lines.length) {
+      throw new Error(
+        `${label}: the paste produced ${fresh.length} blocks, expected ${lines.length} — ` +
+          `${JSON.stringify({ before, after })}`,
+      );
+    }
+    const deadline = Date.now() + 20_000;
+    for (;;) {
+      const rows = await fetchRows(pageId);
+      if (fresh.every((id) => rows.has(id))) break;
+      if (Date.now() > deadline)
+        throw new Error(`${label}: pasted blocks never reached the server`);
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(800);
+    return fresh;
+  };
+
+  /** How many inline decorator nodes Lexical rendered inside `blockId`. */
+  const decoratorCount = async (blockId: string): Promise<number> =>
+    page.evaluate(
+      (id) =>
+        document.querySelectorAll(
+          `[data-block-id="${id}"] [data-lexical-decorator="true"]`,
+        ).length,
+      blockId,
+    );
+
+  /**
+   * A fresh `` `code`[[page]] `` block followed by a `sentinel` block, with the
+   * fixture's two load-bearing preconditions asserted.
+   *
+   * The chip check is not decoration: a `[[…]]` that stayed a literal token is a
+   * plain text run, so every assertion in this phase would pass or fail for
+   * reasons that have nothing to do with crossing a decorator.
+   */
+  const chipBlock = async (
+    label: string,
+  ): Promise<{ id: string; sentinel: string }> => {
+    const [id, sentinel] = await pasteLines(label, [
+      `\`code\`${CHIP}`,
+      "sentinel",
+    ]);
+    if (!id || !sentinel) throw new Error(`${label}: fixture ids missing`);
+    r.eq(
+      `${label} the pasted fixture is [{code,code},{chip}]`,
+      await settledRuns(page, pageId, id),
+      [
+        { text: "code", marks: ["code"] },
+        { text: CHIP, marks: [] },
+      ],
+    );
+    r.eq(
+      `${label} the chip materialized as ONE inline decorator`,
+      await decoratorCount(id),
+      1,
+    );
+    return { id, sentinel };
+  };
+
+  /**
+   * Park the caret at the very END of `id` — PAST the chip — by crossing in from
+   * the block below, never by clicking.
+   *
+   * A click cannot be trusted here for two independent reasons. The chip is a
+   * live control (clicking it navigates to the linked page), and its rendered
+   * width is a page TITLE, so `caretToEndOf`'s "press ArrowRight until the linear
+   * offset reads the block's text length" cannot tell the position before the
+   * chip from the one after it when that title is empty. A crossing goes through
+   * `placeCaretAtBoundary`, which is a model-level placement and not a hit test —
+   * the same reason phase 9e crosses back in rather than clicking.
+   */
+  const parkPastChip = async (
+    label: string,
+    id: string,
+    sentinel: string,
+  ): Promise<void> => {
+    await caretToStartOf(page, sentinel);
+    await page.keyboard.press("ArrowLeft"); // crosses into `id`'s end
+    await page.waitForTimeout(FORMAT_WINDOW_MS);
+    r.eq(
+      `${label} the caret is parked in the chip block`,
+      await caretBlockId(page),
+      id,
+    );
+    // The discriminator: standing after the chip, the anchor belongs to the
+    // paragraph, NOT to the `<code>`. If this reads true the fixture already
+    // failed and the assertion below would be measuring the wrong position.
+    const insideCode = await caretInsideCode(page);
+    r.ok(
+      `${label} ...at its very end, past the chip (anchor is outside the <code>)`,
+      insideCode === false,
+      `caretInsideCode=${String(insideCode)}`,
+    );
+  };
+
+  // (a) THE assertion. One ArrowLeft crosses the chip and must land on the
+  //     boundary's stop — the state carrying the RIGHT side's (empty) marks —
+  //     so the character typed there is plain and lands BETWEEN the code run and
+  //     the chip.
+  const p11a = await chipBlock("P11a");
+  await parkPastChip("P11a", p11a.id, p11a.sentinel);
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(FORMAT_WINDOW_MS);
+  await page.keyboard.type("X", { delay: 25 });
+  await snap(page, out, "11a-cross-chip-leftward");
+  {
+    const runs = await settledRuns(page, pageId, p11a.id);
+    r.ok(
+      "P11a one ArrowLeft ACROSS the chip lands on the stop, OUTSIDE the mark",
+      JSON.stringify(runs) ===
+        JSON.stringify([
+          { text: "code", marks: ["code"] },
+          { text: `X${CHIP}`, marks: [] },
+        ]),
+      `got ${JSON.stringify(runs)} — [{codeX,code},{chip}] is the reported defect: the one ArrowLeft ` +
+        `across the chip landed INSIDE the code run instead of at the boundary, so the character came ` +
+        `out \`{code}\`-marked at a caret that is visually past the span`,
+    );
+  }
+
+  // (b) The stop is ONE press, not a state the caret cannot leave. A second
+  //     ArrowLeft is absorbed at the same offset and crosses back INSIDE the
+  //     span, so `X` appends to the code run — the phase-2 claim, reached across
+  //     a decorator.
+  const p11b = await chipBlock("P11b");
+  await parkPastChip("P11b", p11b.id, p11b.sentinel);
+  await page.keyboard.press("ArrowLeft"); // onto the stop
+  await page.waitForTimeout(200);
+  await page.keyboard.press("ArrowLeft"); // back inside the code run
+  await page.waitForTimeout(FORMAT_WINDOW_MS);
+  await page.keyboard.type("X", { delay: 25 });
+  await snap(page, out, "11b-second-press-steps-in");
+  {
+    const runs = await settledRuns(page, pageId, p11b.id);
+    r.ok(
+      "P11b a SECOND ArrowLeft steps back INSIDE the code run",
+      JSON.stringify(runs) ===
+        JSON.stringify([
+          { text: "codeX", marks: ["code"] },
+          { text: CHIP, marks: [] },
+        ]),
+      `got ${JSON.stringify(runs)} — [{code,code},{X${CHIP}}] means the second press was absorbed too, ` +
+        `i.e. the stop is a state the caret cannot leave leftward rather than a single caret position`,
+    );
+  }
+
+  // (c) The rightward mirror, on `` [[page]]`code` ``. This assertion does DOUBLE
+  //     DUTY, and both halves are needed for it to pass.
+  //
+  //     `decorator-nav` used to call `adjacent.selectNext()` with no arguments.
+  //     `LexicalNode.selectNext` forwards them to `nextSibling.select(undefined,
+  //     undefined)`, and `TextNode.select` DEFAULTS an undefined offset to
+  //     `text.length` — so ArrowRight across a chip followed by text landed at
+  //     the END of that whole run, silently skipping it. (`selectPrevious()` is
+  //     correct by luck: its default IS the end of the previous node, which is
+  //     the right leftward landing. `caret-geometry.ts` already passed (0, 0).)
+  //
+  //     With `(nextLeaf, 0)` the anchor is NOT coerced — the previous sibling is
+  //     a decorator, so `resolveSelectionPointOnBoundary`'s `$isTextNode`
+  //     coercion does not fire (see `web/__tests__/lexical-boundary-invariant.test.tsx`)
+  //     — and the announcement lands the caret OUTSIDE the code run that follows
+  //     the chip. So `X` must appear at the code run's START and unmarked: one
+  //     claim about WHERE the press landed, one about WHICH state it landed in.
+  const [p11cPrev, p11cId] = await pasteLines("P11c", [
+    "sentinel",
+    `${CHIP}\`code\``,
+  ]);
+  if (!p11cPrev || !p11cId) throw new Error("P11c: fixture ids missing");
+  r.eq(
+    "P11c the pasted mirror fixture is [{chip},{code,code}]",
+    await settledRuns(page, pageId, p11cId),
+    [
+      { text: CHIP, marks: [] },
+      { text: "code", marks: ["code"] },
+    ],
+  );
+  r.eq(
+    "P11c the chip materialized as ONE inline decorator",
+    await decoratorCount(p11cId),
+    1,
+  );
+  await caretToEndOf(page, p11cPrev);
+  await page.keyboard.press("ArrowRight"); // crosses into the chip block's start
+  await page.waitForTimeout(200);
+  r.eq(
+    "P11c the crossing landed in the chip block",
+    await caretBlockId(page),
+    p11cId,
+  );
+  await page.keyboard.press("ArrowRight"); // crosses the chip
+  await page.waitForTimeout(FORMAT_WINDOW_MS);
+  await page.keyboard.type("X", { delay: 25 });
+  await snap(page, out, "11c-cross-chip-rightward");
+  {
+    const runs = await settledRuns(page, pageId, p11cId);
+    r.ok(
+      "P11c one ArrowRight ACROSS the chip lands at the code run's START, outside the mark",
+      JSON.stringify(runs) ===
+        JSON.stringify([
+          { text: `${CHIP}X`, marks: [] },
+          { text: "code", marks: ["code"] },
+        ]),
+      `got ${JSON.stringify(runs)} — anything putting X at the END of the run ([{chip},{codeX,code}] or ` +
+        `[{chip},{code,code},{X}]) is the argument-less \`selectNext()\`: the caret skipped the whole ` +
+        `run. [{chip},{Xcode,code}] means it landed at the start but on \`natural\`, i.e. the crossing ` +
+        `was never announced`,
+    );
+  }
+
+  // (d) Backspace at the 11a stop. Nothing exercised this before: the stop's
+  //     other side is a DECORATOR, so `$scanMarkSpan` is being handed an anchor
+  //     whose neighbouring leaf is not text. It needs no new code — the stop is
+  //     `(codeLeaf, len)`, a text anchor, `delimiterDeletion` gives
+  //     `before={code}, after={}`, `$leafMarks` already answers `[]` for a
+  //     decorator and `$stripMarkSpan` already stops at one — but "needs no new
+  //     code" is a claim, and this is the assertion that makes it one.
+  //
+  //     The stripped run and the chip's own token run are then BOTH unmarked and
+  //     adjacent, so `mergeRuns` folds them into one — which is why the expected
+  //     rows are a single run rather than two.
+  const p11d = await chipBlock("P11d");
+  await parkPastChip("P11d", p11d.id, p11d.sentinel);
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(FORMAT_WINDOW_MS);
+  await page.keyboard.press("Backspace");
+  await snap(page, out, "11d-strip-beside-decorator");
+  r.eq(
+    "P11d Backspace at the stop strips the mark from a span whose neighbour is a decorator",
+    await settledRuns(page, pageId, p11d.id),
+    [{ text: `code${CHIP}`, marks: [] }],
+  );
+  {
+    const codes = await markedTexts(page, p11d.id, "code");
+    r.ok(
+      "P11d the <code> is gone from the DOM too",
+      codes.length === 0,
+      JSON.stringify(codes),
+    );
+  }
+  r.eq(
+    "P11d ...and the chip survived the strip",
+    await decoratorCount(p11d.id),
+    1,
+  );
+
+  // (e) TRAVERSAL SYMMETRY across the chip block — the phase 8 / 9e shape, and
+  //     the assertion that catches a stop skipped on exactly ONE approach, which
+  //     is the shape this whole defect had (phase 8's leftward walk is what
+  //     caught the within-block version of it).
+  //
+  //     One thing differs from phases 8 and 9e: the last offset is not a literal.
+  //     `caretLinear` measures RENDERED text, and a chip renders the linked
+  //     page's TITLE, whose width this script does not control (the model's own
+  //     linear basis counts `tokenOf(node).length` instead — a different number
+  //     again). So the walk's interior — the code run and its single stop at the
+  //     chip boundary — is pinned literally, and the exit offset is pinned only
+  //     by the mirror, which is the claim that actually matters:
+  //
+  //       rightward   0 0 1 2 3 4 4 E      (0* → 0 → 1 → 2 → 3 → 4 → 4* → past the chip)
+  //       leftward    E 4 4 3 2 1 0 0
+  const p11e = await chipBlock("P11e");
+  await caretToStartOf(page, p11e.id);
+  // One more ArrowLeft to reach the block-START stop, the leftmost state of all —
+  // the same opening phase 8 uses, and what makes the two walks cover one state set.
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(200);
+  const chipRight = await walk(p11e.id, "ArrowRight");
+  r.note(`P11e rightward offsets: ${JSON.stringify(chipRight)}`);
+  r.eq(
+    "P11e rightward crosses the code run and stops ONCE at the chip boundary",
+    chipRight.slice(0, 7),
+    [0, 0, 1, 2, 3, 4, 4],
+  );
+  r.ok(
+    "P11e ...then one press crosses the chip and one more leaves the block",
+    chipRight.length === 8,
+    JSON.stringify(chipRight),
+  );
+  // The rightward walk exited into the `sentinel` block below, so ONE ArrowLeft
+  // crosses back — landing at the block END (past the chip), which is where the
+  // leftward walk has to begin. Same idiom as phase 9e, and for the same reason:
+  // a crossing is a model-level placement, a click is a hit test.
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(200);
+  r.eq(
+    "P11e the crossing back in landed in the chip block",
+    await caretBlockId(page),
+    p11e.id,
+  );
+  const chipLeft = await walk(p11e.id, "ArrowLeft");
+  r.note(`P11e leftward offsets: ${JSON.stringify(chipLeft)}`);
+  r.eq(
+    "P11e the two walks are exact mirror images",
+    [...chipLeft].reverse(),
+    chipRight,
+  );
+
   await page.waitForTimeout(2000); // let every doc flush land before the cold read
 
   // --- Phase 7: convergence in a second context ------------------------------
@@ -1183,6 +1554,11 @@ await withBrowser(async (h) => {
       p6c,
       p8,
       p8b,
+      p11a: p11a.id,
+      p11b: p11b.id,
+      p11c: p11cId,
+      p11d: p11d.id,
+      p11e: p11e.id,
     }),
   );
 

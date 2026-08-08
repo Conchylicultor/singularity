@@ -19,17 +19,24 @@ export interface CaretLandOptions {
    * in (`landCaret`'s `left`/`right` arms). Absent for a click, a focus restore,
    * a vertical crossing, and every explicit placement.
    *
-   * It exists because a surface's very edge can be an inline-mark boundary, and
-   * such a boundary holds TWO caret states while the browser (and
-   * `focusBoundary`'s own placement) only ever produces one. The arrival must
-   * land on whichever of the two faces the side it came from — the same rule
-   * `markArriveFor` applies to a step WITHIN a block, applied at the block seam,
-   * which is why crossing into `` hello `code` `` from the right stops OUTSIDE
-   * the code run and a second press is what goes inside.
+   * It is the surface-level spelling of the generic crossing announcement
+   * (`primitives/text-editor/caret-motion`), and it has to cross the surface
+   * boundary as DATA rather than as a call: a `CaretSurface` deliberately has no
+   * Lexical editor to announce on — the page title is a surface over an
+   * `<input>` — so only the implementation that lands the caret can make the
+   * announcement, and only the caller knows there was a crossing to announce.
+   * What a crossing MEANS is not this contract's business: it exists because a
+   * surface's very edge can be a position holding more caret state than a
+   * landing produces, and the meaning is applied by whoever observes the
+   * channel (`web/internal/mark-arrival.ts` for inline-mark boundaries).
    *
    * A click must never assert that state (nothing was crossed), so this is an
    * explicit declaration by the one caller that knows a crossing happened,
    * never an inference from `edge`.
+   *
+   * Bound, open: `focusBoundary` is synchronous today, so announcing right after
+   * it is exact. If a future surface makes a BOUNDARY landing async the way
+   * `focus` already is, the announcement has to move into the `onLanded` path.
    */
   crossing?: "left" | "right";
   /**

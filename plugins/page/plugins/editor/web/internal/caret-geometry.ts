@@ -452,8 +452,13 @@ interface DomCaret {
  * Lexical's `skip-scroll-into-view` update tag: suppresses the
  * `scrollIntoViewIfNeeded` that `updateDOMSelection` otherwise runs on every
  * collapsed-selection reconcile. Passed on the no-scroll path.
+ *
+ * Exported for the one caller that is ALREADY inside an update and therefore
+ * cannot go through {@link placeCaretAtOffset} — it pairs the tag with
+ * {@link $placeCaretAtOffset} to reconstruct exactly this module's no-scroll
+ * landing.
  */
-const SKIP_SCROLL_TAG = "skip-scroll-into-view";
+export const SKIP_SCROLL_TAG = "skip-scroll-into-view";
 
 /**
  * Take DOM focus for a caret landing. A no-scroll landing focuses the ROOT

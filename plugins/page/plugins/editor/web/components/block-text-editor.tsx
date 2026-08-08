@@ -10,6 +10,7 @@ import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LinkNode } from "@lexical/link";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
+import { announceCaretCrossing } from "@plugins/primitives/plugins/text-editor/plugins/caret-motion/web";
 import {
   $getRoot,
   $getSelection,
@@ -54,7 +55,6 @@ import {
   placeCaretAtColumn,
   placeCaretAtOffset,
 } from "../internal/caret-geometry";
-import { markStepOnArrival } from "../internal/mark-arrival";
 import {
   appendRunsAtJoin,
   deleteBlockTextRange,
@@ -302,13 +302,15 @@ export function BlockTextEditor({
         const ed = lexicalEditorRef.current;
         if (!ed) return;
         placeCaretAtBoundary(ed, edge, opts?.scroll ?? false);
-        // A block's edge can itself be a mark boundary, which holds two caret
-        // states while the placement above produces only one. A HORIZONTAL
-        // crossing must meet the one facing the side it came from — the same
-        // rule an arrow step obeys within a block. Anything else (a click, a
-        // focus restore, a vertical crossing) declares no `crossing` and lands
-        // exactly where it did before.
-        if (opts?.crossing) markStepOnArrival(ed, opts.crossing);
+        // A landing that crossed something says so, in the direction it was
+        // travelling; anything else (a click, a focus restore, a vertical
+        // crossing) declares no `crossing` and lands exactly where it did
+        // before. This host speaks only the generic vocabulary — what a crossing
+        // MEANS belongs to whoever observes the channel, because a block's edge
+        // can be a position holding more state than a placement produces (the
+        // page editor's own observer, for inline-mark boundaries, is
+        // `internal/mark-arrival.ts`).
+        if (opts?.crossing) announceCaretCrossing(ed, opts.crossing);
         opts?.onLanded?.();
       },
       focusOffset: (n, opts) => {
