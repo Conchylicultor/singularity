@@ -186,6 +186,7 @@ Design:
 
 ### Internal architecture
 
+- **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and the settings modified-diff. It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
 - **`jsoncConfigProxy`** — synchronous read/write with `// @hash` header tracking. Used for propagation, `setConfig`, and `reloadValues`.
 - **`ConfigWatcher`** (`config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.singularity/config/`. Debounce (100ms) + ceiling (1s); the blanket 30s reconcile is deliberately **disabled** (`reconcileMs: null`) — it re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads via `jsoncConfigProxy` on notification.
 
@@ -273,10 +274,14 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`
+    - `fields/list/config.isListFieldDef`
+    - `fields/list/config.ListFieldDef`
+    - `fields/object/config.isObjectFieldDef`
     - `infra/endpoints.defineEndpoint`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `ConfigDescriptor`
+    - `ConfigListVisitor`
     - `ConfigProxy`
     - `ConfigSource`
     - `ConfigV2ConflictEntry`
@@ -326,6 +331,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `forkScope`
     - `hasConflict`
     - `hasReviewMarker`
+    - `mapConfigLists`
     - `orphanEntrySchema`
     - `orphanFileRoleSchema`
     - `orphanFileSchema`

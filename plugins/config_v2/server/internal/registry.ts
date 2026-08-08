@@ -4,21 +4,42 @@ import type { ConfigDescriptor, ConfigValues } from "../../core";
 import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 import {
   computeHash,
+  mapConfigLists,
   readTypedConfig,
   threeWayMerge,
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
-import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./scope-paths";
+import {
+  userScopedDir,
+  discoverScopeIds,
+  scopeSegment,
+  BASE_SCOPE,
+} from "./scope-paths";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { isListFieldDef } from "@plugins/fields/plugins/list/plugins/config/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, markRegistryReady, refreshConflictPaths, refreshModifiedCount, refreshScopeMembers, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter } from "./resource";
+import {
+  configV2ServerResource,
+  configV2ConflictServerResource,
+  configV2TiersServerResource,
+  getDescriptorByStorePath,
+  getHierarchyPath,
+  markRegistryReady,
+  refreshConflictPaths,
+  refreshModifiedCount,
+  refreshScopeMembers,
+  registerDescriptorPath,
+  scopeHasOwnConfig,
+  setConfigGetter,
+} from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { REPO_ROOT, REPO_CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  REPO_CONFIG_DIR,
+} from "@plugins/infra/plugins/paths/server";
 import { CONFIG_DIR } from "./config-dir";
 
 interface CacheEntry {
@@ -33,35 +54,43 @@ interface CacheEntry {
 
 // 2D cache keyed by (descriptor × scopeId). Inner key "" (BASE_SCOPE) is the base
 // (global) entry; "app:<id>" keys are lazily-created scoped entries.
-const cacheByDescriptor = new WeakMap<ConfigDescriptor, Map<string, CacheEntry>>();
-const subscribersByDescriptor = new WeakMap<ConfigDescriptor, Map<string, Set<(values: ConfigValues<FieldsRecord>) => void>>>();
+const cacheByDescriptor = new WeakMap<
+  ConfigDescriptor,
+  Map<string, CacheEntry>
+>();
+const subscribersByDescriptor = new WeakMap<
+  ConfigDescriptor,
+  Map<string, Set<(values: ConfigValues<FieldsRecord>) => void>>
+>();
 
 // All app scopeIds we currently know about — populated when a fork happens and
 // whenever a scoped entry is lazily built. Used so a BASE file change can notify
 // every currently-un-forked scope (apps tracking base must re-render).
 const knownScopeIds = new Set<string>();
 
-// Normalize every listField collection in a config document: array position is
-// the canonical order, so we drop any legacy `rank` (migrating stored order by
-// it first) and synthesize a stable id for id-less rows of NON-stable lists.
+// Normalize every listField collection in a config document, AT EVERY NESTING
+// DEPTH: array position is the canonical order, so we drop any legacy `rank`
+// (migrating stored order by it first) and synthesize a stable id for id-less
+// rows of NON-stable lists.
+//
+// The renderer keys on `item.id` at every depth (React key, dnd-kit sortable id,
+// and the `item.id === updated.id` edit predicate), so a nested row without one
+// silently breaks reorder and makes editing one id-less row rewrite all of them.
+// `mapConfigLists` is the recursive walk; this is only the per-list rule.
+//
 // Called on read (reloadValues) and on write (setConfig / mergeConflictByPath) —
 // idempotent, and returns a NEW doc object (never mutates the input).
 export function normalizeCollectionItems(
   doc: Record<string, unknown>,
   fields: FieldsRecord,
 ): Record<string, unknown> {
-  const result = { ...doc };
-  for (const [key, field] of Object.entries(fields)) {
-    if (!isListFieldDef(field)) continue;
-    const arr = result[key];
-    if (!Array.isArray(arr)) continue;
-
+  return mapConfigLists(doc, fields, (arr, field) => {
     // Legacy-rank migration: a document written before array-order-is-canonical
     // carries a fractional `rank` string on each item. Sort by it ONCE so array
     // order becomes authoritative, then the `.map` below drops `rank` from every
     // item — idempotent (after the first read+write the file is array-ordered and
     // rank-free). Items without any `rank` keep their array order (stable sort).
-    let items = arr as Record<string, unknown>[];
+    let items = arr;
     if (items.some((it) => typeof it.rank === "string")) {
       items = [...items].sort((a, b) => {
         const ra = typeof a.rank === "string" ? a.rank : null;
@@ -71,7 +100,7 @@ export function normalizeCollectionItems(
       });
     }
 
-    result[key] = items.map((item, index) => {
+    return items.map((item, index) => {
       const out = { ...item };
       // Array position is the canonical order now — the legacy rank is dropped.
       delete out.rank;
@@ -88,13 +117,16 @@ export function normalizeCollectionItems(
         // remounts list rows, and wipes any in-progress field edit. Seed the id from
         // the item's stable content + position; once the user edits, the value is
         // persisted to an override and read back verbatim.
+        //
+        // `content` still holds this row's nested arrays exactly as authored —
+        // `mapConfigLists` seeds nested ids only AFTER this returns, which is what
+        // keeps the hash identical to the pre-nesting one.
         const { id: _id, ...content } = out;
         out.id = `auto-${computeHash([index, content] as unknown as JsonValue)}`;
       }
       return out;
     });
-  }
-  return result;
+  });
 }
 
 // Resolve one entry's values straight off disk (origin ⊕ override, schema-typed,
@@ -184,7 +216,11 @@ async function buildEntry(
   const userOverwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
   const userAncestorPath = join(scopedDir, `${descriptor.name}.ancestor.jsonc`);
 
-  const values = readEntryValues(descriptor, userOriginPath, userOverwritesPath);
+  const values = readEntryValues(
+    descriptor,
+    userOriginPath,
+    userOverwritesPath,
+  );
 
   for (const [key, field] of Object.entries(descriptor.fields)) {
     const provider = getFieldStorageProvider(field.type.id);
@@ -292,14 +328,20 @@ function notifyConflicts(storePath: string, scopeId: string): void {
 // must surface immediately (rather than waiting on the debounced watcher), and
 // which also change the descriptor's customized-scope set. Mirrors the fan-out
 // the watcher's onFileChange performs.
-export function notifyDescriptorScopeChange(storePath: string, scopeId: string): void {
+export function notifyDescriptorScopeChange(
+  storePath: string,
+  scopeId: string,
+): void {
   refreshScopeMembers(storePath);
   notifyValues(storePath, scopeId);
   notifyConflicts(storePath, scopeId);
   notifyTiers(storePath, scopeId);
 }
 
-function getEntry(descriptor: ConfigDescriptor, scopeId: string = BASE_SCOPE): CacheEntry | undefined {
+function getEntry(
+  descriptor: ConfigDescriptor,
+  scopeId: string = BASE_SCOPE,
+): CacheEntry | undefined {
   return cacheByDescriptor.get(descriptor)?.get(scopeId);
 }
 
@@ -327,7 +369,10 @@ export async function initRegistry(): Promise<void> {
   try {
     setConfigGetter(getConfig);
     const contributions = ConfigV2.Register.getContributions();
-    const registered: { descriptor: ConfigDescriptor; hierarchyPath: string }[] = [];
+    const registered: {
+      descriptor: ConfigDescriptor;
+      hierarchyPath: string;
+    }[] = [];
 
     for (const contribution of contributions) {
       const { descriptor } = contribution;
@@ -414,7 +459,10 @@ export function shutdownRegistry(): void {
 
 // Dispose the watchers for a scoped entry and drop it from the cache. Used by
 // deleteScope when un-forking — base entries are never disposed here.
-export function disposeScopeEntry(descriptor: ConfigDescriptor, scopeId: string): void {
+export function disposeScopeEntry(
+  descriptor: ConfigDescriptor,
+  scopeId: string,
+): void {
   if (!scopeId) return;
   const scopeMap = cacheByDescriptor.get(descriptor);
   const entry = scopeMap?.get(scopeId);
@@ -446,7 +494,10 @@ export function getConfig<F extends FieldsRecord>(
   return base.values as ConfigValues<F>;
 }
 
-export async function setConfig<F extends FieldsRecord, K extends keyof F & string>(
+export async function setConfig<
+  F extends FieldsRecord,
+  K extends keyof F & string,
+>(
   descriptor: ConfigDescriptor<F>,
   key: K,
   value: InferFieldValue<F[K]>,
@@ -494,7 +545,11 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
     const orig = userOrigin.read()!;
     base = { ...(orig.content as Record<string, unknown>) };
     hash = computeHash(orig.content);
-  } else if (scopeId && baseOriginPath && jsoncConfigProxy(baseOriginPath).exists()) {
+  } else if (
+    scopeId &&
+    baseOriginPath &&
+    jsoncConfigProxy(baseOriginPath).exists()
+  ) {
     // FORK-ON-WRITE. The scope has no own config (neither scoped override nor
     // scoped origin), but the BASE origin exists — so this is a first scoped
     // write to an app that tracks base. Rather than throwing, auto-create the
@@ -539,13 +594,27 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
   refreshEntry(descriptor, entry);
 }
 
-export async function setConfigByPath(storePath: string, key: string, value: unknown, scopeId?: string): Promise<void> {
+export async function setConfigByPath(
+  storePath: string,
+  key: string,
+  value: unknown,
+  scopeId?: string,
+): Promise<void> {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
-  await setConfig(descriptor, key as keyof typeof descriptor.fields & string, value as never, scopeId);
+  await setConfig(
+    descriptor,
+    key as keyof typeof descriptor.fields & string,
+    value as never,
+    scopeId,
+  );
 }
 
-export async function resetConfigByPath(storePath: string, key: string, scopeId?: string): Promise<void> {
+export async function resetConfigByPath(
+  storePath: string,
+  key: string,
+  scopeId?: string,
+): Promise<void> {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
@@ -568,8 +637,14 @@ export async function resetConfigByPath(storePath: string, key: string, scopeId?
   }
 
   const defaultValue = (descriptor.defaults as Record<string, unknown>)[key];
-  if (defaultValue === undefined) throw new Error(`No field "${key}" in "${descriptor.name}"`);
-  await setConfig(descriptor, key as keyof typeof descriptor.fields & string, defaultValue as never, scopeId);
+  if (defaultValue === undefined)
+    throw new Error(`No field "${key}" in "${descriptor.name}"`);
+  await setConfig(
+    descriptor,
+    key as keyof typeof descriptor.fields & string,
+    defaultValue as never,
+    scopeId,
+  );
 }
 
 export function watchConfig<F extends FieldsRecord>(
@@ -607,7 +682,10 @@ export function watchConfig<F extends FieldsRecord>(
   };
 }
 
-export function acknowledgeConflictByPath(storePath: string, scopeId?: string): void {
+export function acknowledgeConflictByPath(
+  storePath: string,
+  scopeId?: string,
+): void {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
@@ -617,7 +695,8 @@ export function acknowledgeConflictByPath(storePath: string, scopeId?: string): 
   const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
   const userOrigin = jsoncConfigProxy(entry.userOriginPath);
 
-  if (!userOverwrites.exists()) throw new Error(`No override file for "${storePath}"`);
+  if (!userOverwrites.exists())
+    throw new Error(`No override file for "${storePath}"`);
   const ow = userOverwrites.read();
   if (!ow) throw new Error(`Cannot read override for "${storePath}"`);
 
@@ -658,7 +737,9 @@ export function mergeConflictByPath(
   const userAncestor = jsoncConfigProxy(entry.userAncestorPath);
 
   if (!userAncestor.exists()) {
-    throw new Error(`No ancestor snapshot for "${storePath}" — three-way merge unavailable`);
+    throw new Error(
+      `No ancestor snapshot for "${storePath}" — three-way merge unavailable`,
+    );
   }
   const ow = userOverwrites.read();
   if (!ow) throw new Error(`Cannot read override for "${storePath}"`);
@@ -677,7 +758,8 @@ export function mergeConflictByPath(
   const resolved = conflicts.length === 0;
   const hash = resolved ? computeHash(originData.content) : ow.hash;
   userOverwrites.write(normalized as JsonValue, hash);
-  if (resolved && existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
+  if (resolved && existsSync(entry.userAncestorPath))
+    unlinkSync(entry.userAncestorPath);
   refreshEntry(descriptor, entry);
 
   return { resolved, conflictKeys: conflicts };
@@ -720,7 +802,12 @@ export function getRawFileContent(
   const dir = parts.slice(0, -1).join("/");
   const name = parts[parts.length - 1]!;
   const gitScopeSeg = scopeSegment(scopeId);
-  const gitOverridePath = join(REPO_CONFIG_DIR, dir, gitScopeSeg, `${name}.jsonc`);
+  const gitOverridePath = join(
+    REPO_CONFIG_DIR,
+    dir,
+    gitScopeSeg,
+    `${name}.jsonc`,
+  );
   const gitOriginPath = join(REPO_CONFIG_DIR, dir, `${name}.origin.jsonc`);
 
   // Paths are returned relative to their layer root (user config dir / repo root)
@@ -738,7 +825,10 @@ export function getRawFileContent(
   };
 }
 
-export function deleteOverrideByPath(storePath: string, scopeId?: string): void {
+export function deleteOverrideByPath(
+  storePath: string,
+  scopeId?: string,
+): void {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
@@ -748,7 +838,8 @@ export function deleteOverrideByPath(storePath: string, scopeId?: string): void 
   // Idempotent: an "invalid" conflict can surface with no override on disk
   // (the origin itself fails the current schema). Deleting a non-existent
   // override is a no-op — defaults are already in effect.
-  if (existsSync(entry.userOverwritesPath)) unlinkSync(entry.userOverwritesPath);
+  if (existsSync(entry.userOverwritesPath))
+    unlinkSync(entry.userOverwritesPath);
   // The override is gone, so any captured merge base is moot — drop it.
   if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
   refreshEntry(descriptor, entry);

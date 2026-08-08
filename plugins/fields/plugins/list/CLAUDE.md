@@ -10,10 +10,11 @@ carries an `id` plus the user-defined sub-fields — exported from this core for
 type-only cross-plugin use.
 
 The `id` is **not** an auto-injected UUID by default. A row authored without an
-explicit `id` is seeded by the config_v2 registry (`normalizeCollectionItems`) as
-`auto-<hash([index, content])>` — idempotent per read but **content- and
-position-dependent** (it changes when the row's content or order changes). Only
-the generic Settings-pane "Add item" UI mints a real `crypto.randomUUID()`.
+explicit `id` is seeded by the config_v2 registry (`normalizeCollectionItems`),
+at any nesting depth, as `auto-<hash([index, content])>` — idempotent per read but
+**content- and position-dependent** (it changes when the row's content or order
+changes). Only the generic Settings-pane "Add item" UI mints a real
+`crypto.randomUUID()`.
 
 **`stableIdentity` option.** Set `listField({ stableIdentity: true, … })` when a
 list's item ids are used as **durable external keys** — the DataView `views` list

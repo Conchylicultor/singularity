@@ -1,11 +1,12 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { loadConfigDescriptorsByOriginPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { isListFieldDef } from "@plugins/fields/plugins/list/plugins/config/core";
-import { APP_SCOPE_DIR } from "@plugins/config_v2/core";
+import { APP_SCOPE_DIR, mapConfigLists } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
-import type { FieldDef } from "@plugins/fields/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its schema anchors to the BASE origin (config/<hier>/<name>.origin.jsonc).
@@ -23,13 +24,13 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
 const HINT =
-  'Identity-bearing list rows need a stable, content-independent id so external ' +
+  "Identity-bearing list rows need a stable, content-independent id so external " +
   'state (e.g. saved row order) survives edits. Add a bare slug id, e.g. "id": "online".';
 
 const check: Check = {
   id: "config-stable-list-ids",
   description:
-    'Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id',
+    "Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id",
   async run() {
     const root = await getWorktreeRoot();
     const configDir = join(root, "config");
@@ -37,11 +38,16 @@ const check: Check = {
 
     // Map <hier>/<name>.origin.jsonc → ConfigDescriptor. Same discovery the
     // sibling check reuses.
-    const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({ root });
-
-    const result = await spawnCaptured(["git", "ls-files", "--others", "--cached", "--", "config/"], {
-      cwd: root,
+    const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({
+      root,
     });
+
+    const result = await spawnCaptured(
+      ["git", "ls-files", "--others", "--cached", "--", "config/"],
+      {
+        cwd: root,
+      },
+    );
     const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
 
     for (const relFromRoot of allConfigFiles) {
@@ -58,55 +64,52 @@ const check: Check = {
       const descriptor = descriptorsByOriginRel.get(originRel);
       if (!descriptor) continue;
 
-      // Top-level identity-bearing list fields only (views are top-level). Nested
-      // objectField/listField are out of scope.
-      const stableKeys: string[] = [];
-      for (const [key, field] of Object.entries(
-        descriptor.fields as Record<string, FieldDef>,
-      )) {
-        if (isListFieldDef(field) && field.stableIdentity === true) stableKeys.push(key);
-      }
-      if (stableKeys.length === 0) continue;
-
       const raw = readFileSync(filePath, "utf8");
       const match = HASH_RE.exec(raw);
       const body = match ? raw.slice(match[0].length) : raw;
       const doc = parseJsonc(body) as Record<string, unknown> | undefined;
       if (!doc || typeof doc !== "object") continue;
 
-      for (const key of stableKeys) {
-        const value = doc[key];
-        // A file that omits the key, or whose value isn't an array, passes.
-        if (!Array.isArray(value)) continue;
+      // Every identity-bearing list INSTANCE, at any nesting depth — a nested
+      // durable-key list is exactly the case a human forgets to hand-write ids
+      // for. `mapConfigLists` owns the walk; this only judges one list. It
+      // returns a document we discard: the visitor reads, it never rewrites.
+      const failures: CheckResult[] = [];
+      mapConfigLists(doc, descriptor.fields, (rows, field, path) => {
+        if (failures.length > 0 || field.stableIdentity !== true) return;
 
+        // Ids must be unique within ONE list instance — two sibling nested lists
+        // under different parent rows are separate identity spaces.
         const seen = new Set<string>();
-        for (let index = 0; index < value.length; index++) {
-          const row = value[index];
+        for (let index = 0; index < rows.length; index++) {
+          const row = rows[index];
           if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-          const record = row as Record<string, unknown>;
-          const id = record.id;
+          const id = row.id;
           const label =
-            typeof record.name === "string" && record.name.length > 0
-              ? `"${record.name}"`
+            typeof row.name === "string" && row.name.length > 0
+              ? `"${row.name}"`
               : `#${index}`;
 
           if (typeof id !== "string" || id.length === 0) {
-            return {
+            failures.push({
               ok: false,
-              message: `${relFromRoot}: row ${label} in list "${key}" has no explicit "id"`,
+              message: `${relFromRoot}: row ${label} in list "${path}" has no explicit "id"`,
               hint: HINT,
-            };
+            });
+            return;
           }
           if (seen.has(id)) {
-            return {
+            failures.push({
               ok: false,
-              message: `${relFromRoot}: two rows in list "${key}" share id "${id}"`,
+              message: `${relFromRoot}: two rows in list "${path}" share id "${id}"`,
               hint: HINT,
-            };
+            });
+            return;
           }
           seen.add(id);
         }
-      }
+      });
+      if (failures.length > 0) return failures[0]!;
     }
 
     return { ok: true };

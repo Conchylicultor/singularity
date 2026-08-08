@@ -7170,10 +7170,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `fields.fieldsToZodObject`
+      - `fields/list/config.isListFieldDef`
+      - `fields/list/config.ListFieldDef`
+      - `fields/object/config.isObjectFieldDef`
       - `infra/endpoints.defineEndpoint`
       - `primitives/live-state.resourceDescriptor`
     - Exports (types):
       - `ConfigDescriptor`
+      - `ConfigListVisitor`
       - `ConfigProxy`
       - `ConfigSource`
       - `ConfigV2ConflictEntry`
@@ -7223,6 +7227,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `forkScope`
       - `hasConflict`
       - `hasReviewMarker`
+      - `mapConfigLists`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
       - `orphanFileSchema`
@@ -7435,6 +7440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
@@ -13348,7 +13354,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isListFieldDef`
               - `listField`
           - Cross-plugin:
-            - Imported by: `plugin-meta/composition`
+            - Imported by:
+              - `config_v2`
+              - `plugin-meta/composition`
     - **`multiline-text`** — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "multiline-text"
@@ -13471,7 +13479,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isObjectFieldDef`
               - `objectField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating/wallpaper`
+            - Imported by:
+              - `apps-core/surface/floating/wallpaper`
+              - `config_v2`
     - **`rank`** — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "rank"

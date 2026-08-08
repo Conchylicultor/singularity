@@ -23,7 +23,17 @@ export {
   configV2ModifiedCountsSchema,
   configV2ModifiedCountsResource,
 } from "./internal/resource";
-export type { ConfigV2Values, ConfigV2ValidationIssue, ConfigV2ConflictEntry, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ScopesMap, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "./internal/resource";
+export type {
+  ConfigV2Values,
+  ConfigV2ValidationIssue,
+  ConfigV2ConflictEntry,
+  ConfigV2Conflicts,
+  ConfigV2Tiers,
+  ConfigV2Scopes,
+  ConfigV2ScopesMap,
+  ConfigV2ConflictPaths,
+  ConfigV2ModifiedCounts,
+} from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,
@@ -39,10 +49,19 @@ export {
   readTypedConfig,
   validationIssues,
 } from "./internal/tier-logic";
-export { setConfigField, forkScope, deleteScope, forkDescriptorScope, removeDescriptorScope, configSnapshot } from "./internal/endpoints";
+export {
+  setConfigField,
+  forkScope,
+  deleteScope,
+  forkDescriptorScope,
+  removeDescriptorScope,
+  configSnapshot,
+} from "./internal/endpoints";
 export { REVIEW_MARKER, hasReviewMarker } from "./internal/review-marker";
 export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";
 export { configFileOwner } from "./internal/config-file-owner";
+export { mapConfigLists } from "./internal/collections";
+export type { ConfigListVisitor } from "./internal/collections";
 export {
   orphanFileRoleSchema,
   orphanRiskClassSchema,

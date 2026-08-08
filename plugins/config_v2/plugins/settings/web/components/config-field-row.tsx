@@ -6,25 +6,43 @@ import {
 import { useCallback, useMemo } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
+import {
+  FieldRenderer,
+  ConfigFieldContext,
+} from "@plugins/config_v2/plugins/fields/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FieldDef } from "@plugins/fields/core";
-import { setConfigField } from "@plugins/config_v2/core";
+import { mapConfigLists, setConfigField } from "@plugins/config_v2/core";
 import { resetConfigField } from "../../core";
 
-function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown): boolean {
-  if ("itemFields" in field && Array.isArray(value) && Array.isArray(defaultValue)) {
-    const strip = (arr: unknown[]) =>
-      arr.map((item) => {
-        if (!item || typeof item !== "object") return item;
-        const { id: _id, ...rest } = item as Record<string, unknown>;
-        return rest;
-      });
-    return JSON.stringify(strip(value)) !== JSON.stringify(strip(defaultValue));
-  }
-  if ("subFields" in field && typeof value === "object" && typeof defaultValue === "object") {
-    return JSON.stringify(value) !== JSON.stringify(defaultValue);
+// List row ids are synthesized, not authored: the live value carries an `auto-`
+// id on every row while `descriptor.defaults` — the raw code default — carries
+// none, at any depth. Comparing them raw would report every list-bearing config
+// as modified, so both sides are stripped through the same walk first. The walk
+// is `mapConfigLists`, so a nested list is stripped exactly like a top-level one
+// and an objectField wrapping a list is no longer a blind spot.
+function stripListIds(field: FieldDef, value: unknown): unknown {
+  const { v } = mapConfigLists({ v: value }, { v: field }, (rows) =>
+    rows.map((row) => {
+      const { id: _id, ...rest } = row;
+      return rest;
+    }),
+  );
+  return v;
+}
+
+function isFieldModified(
+  field: FieldDef,
+  value: unknown,
+  defaultValue: unknown,
+): boolean {
+  if ("itemFields" in field || "subFields" in field) {
+    return (
+      JSON.stringify(stripListIds(field, value)) !==
+      JSON.stringify(stripListIds(field, defaultValue))
+    );
   }
   return value !== defaultValue;
 }
@@ -78,7 +96,9 @@ export function ConfigFieldRow({
 
   const handleChange = useCallback(
     (newValue: unknown) => {
-      setField({ body: { storePath, key: fieldKey, value: newValue, scopeId } });
+      setField({
+        body: { storePath, key: fieldKey, value: newValue, scopeId },
+      });
     },
     [setField, storePath, fieldKey, scopeId],
   );
@@ -88,7 +108,9 @@ export function ConfigFieldRow({
   }, [resetField, storePath, fieldKey, scopeId]);
 
   const handleAcceptOrigin = useCallback(() => {
-    setField({ body: { storePath, key: fieldKey, value: originValue, scopeId } });
+    setField({
+      body: { storePath, key: fieldKey, value: originValue, scopeId },
+    });
   }, [setField, storePath, fieldKey, originValue, scopeId]);
 
   const configFieldCtxValue = useMemo(
@@ -98,16 +120,29 @@ export function ConfigFieldRow({
 
   return (
     <div>
-      <div className={cn(hoverRevealGroup, "flex items-center gap-sm rounded-md py-xs pl-none pr-sm")}>
+      <div
+        className={cn(
+          hoverRevealGroup,
+          "flex items-center gap-sm rounded-md py-xs pl-none pr-sm",
+        )}
+      >
         <div
           className={cn(
             "h-8 w-0.5 shrink-0 rounded-full transition-colors",
-            hasConflict ? "bg-warning" : isModified ? "bg-primary" : "bg-transparent",
+            hasConflict
+              ? "bg-warning"
+              : isModified
+                ? "bg-primary"
+                : "bg-transparent",
           )}
         />
         <div className="min-w-0 flex-1">
           <ConfigFieldContext.Provider value={configFieldCtxValue}>
-            <FieldRenderer field={field} value={value} onChange={handleChange} />
+            <FieldRenderer
+              field={field}
+              value={value}
+              onChange={handleChange}
+            />
           </ConfigFieldContext.Provider>
         </div>
         {tier && tier !== "default" && (
@@ -128,22 +163,30 @@ export function ConfigFieldRow({
         </button>
       </div>
       {hasConflict && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-3 indents the conflict note under the field's value column
-        <Text as="div" variant="caption" className="ml-3 flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning">
-          <MdWarning className="size-3 shrink-0" />
-          <span className="flex-1 truncate">
-            Upstream: {formatOriginValue(originValue)}
-          </span>
-          <Badge
-            as="button"
-            type="button"
-            variant="warning"
-            className="shrink-0 hover:bg-warning/30"
-            onClick={handleAcceptOrigin}
+        // The left inset indents the note under the field's value column, past
+        // the accent bar and its gap. On the wrapper, not the note, so the
+        // warning box's own border/background start at the indent.
+        <Inset l="md">
+          <Text
+            as="div"
+            variant="caption"
+            className="flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning"
           >
-            Accept
-          </Badge>
-        </Text>
+            <MdWarning className="size-3 shrink-0" />
+            <span className="flex-1 truncate">
+              Upstream: {formatOriginValue(originValue)}
+            </span>
+            <Badge
+              as="button"
+              type="button"
+              variant="warning"
+              className="shrink-0 hover:bg-warning/30"
+              onClick={handleAcceptOrigin}
+            >
+              Accept
+            </Badge>
+          </Text>
+        </Inset>
       )}
     </div>
   );
