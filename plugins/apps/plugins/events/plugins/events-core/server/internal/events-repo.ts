@@ -1,5 +1,6 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { RunEventAction } from "../../core";
 import { _events } from "./tables";
 
 // THE ONLY sanctioned write path to `events`.
@@ -28,9 +29,23 @@ export type EventWriteInput = Omit<
   "firstSeenAt" | "lastSeenAt" | "disappearedAt" | "createdAt" | "updatedAt"
 >;
 
+/**
+ * One event this write touched, and how. The engine turns these into the run's
+ * `event_source_run_events` rows — which is why they are RETURNED rather than
+ * written here: this module owns the `events` write and nothing else, and the
+ * link rows must land in the run ledger's own transaction to be atomic with the
+ * run row that explains them.
+ */
+export interface TouchedEvent {
+  eventId: string;
+  action: RunEventAction;
+}
+
 export interface UpsertEventsResult {
   created: number;
   updated: number;
+  /** Every input row, in input order — `created.length + updated.length`. */
+  touched: TouchedEvent[];
 }
 
 /**
@@ -50,18 +65,23 @@ export interface UpsertEventsResult {
 export async function upsertEvents(
   inputs: readonly EventWriteInput[],
 ): Promise<UpsertEventsResult> {
-  if (inputs.length === 0) return { created: 0, updated: 0 };
+  if (inputs.length === 0) return { created: 0, updated: 0, touched: [] };
 
   return db.transaction(async (tx) => {
     let created = 0;
     let updated = 0;
+    const touched: TouchedEvent[] = [];
 
     for (const input of inputs) {
       const now = new Date();
       // Identity columns are never part of the conflict-path update: they ARE
       // the conflict target. Everything else the caller supplied is refreshed.
-      const { id: _id, sourceId: _sourceId, externalId: _externalId, ...content } =
-        input;
+      const {
+        id: _id,
+        sourceId: _sourceId,
+        externalId: _externalId,
+        ...content
+      } = input;
 
       const [row] = await tx
         .insert(_events)
@@ -84,7 +104,10 @@ export async function upsertEvents(
           },
         })
         // `xmax = 0` on the returned tuple is true exactly for a fresh INSERT.
-        .returning({ inserted: sql<boolean>`(xmax = 0)` });
+        // The id comes back from the DB rather than from `input.id`, because on
+        // the conflict path the surviving row is the EXISTING one — its id, not
+        // the one this run minted for a row it did not insert.
+        .returning({ id: _events.id, inserted: sql<boolean>`(xmax = 0)` });
 
       if (!row) {
         throw new Error(
@@ -93,16 +116,21 @@ export async function upsertEvents(
       }
       if (row.inserted) created += 1;
       else updated += 1;
+      touched.push({
+        eventId: row.id,
+        action: row.inserted ? "created" : "updated",
+      });
     }
 
-    return { created, updated };
+    return { created, updated, touched };
   });
 }
 
 /**
  * Soft-disappearance: stamp every not-already-disappeared event of this source
- * that a SUCCESSFUL FULL extraction did not list. Returns how many were
- * stamped.
+ * that a SUCCESSFUL FULL extraction did not list. Returns the stamped events —
+ * the ids, not just a count, because the run that stamped them records which
+ * ones (the count on the run row is `.length` of this).
  *
  * Only ever call this after a run that genuinely enumerated the whole source —
  * a partial or failed extraction must not reach here, or a flaky scrape marks
@@ -112,7 +140,7 @@ export async function upsertEvents(
 export async function markEventsDisappeared(
   sourceId: string,
   seenExternalIds: readonly string[],
-): Promise<number> {
+): Promise<TouchedEvent[]> {
   const now = new Date();
   const stillPresent = isNull(_events.disappearedAt);
   const rows = await db
@@ -130,5 +158,5 @@ export async function markEventsDisappeared(
           ),
     )
     .returning({ id: _events.id });
-  return rows.length;
+  return rows.map((row) => ({ eventId: row.id, action: "disappeared" }));
 }

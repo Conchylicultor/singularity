@@ -1,0 +1,22 @@
+// @hash 6ec84829688d
+{
+  // One run's set is closed and small, so there are no scoped views to author
+  // here — `All` is the whole run. `By change` is the triage read: group the
+  // list by what the run did, which is the question the summary's counts raise.
+  "views": [
+    { "id": "all", "name": "All", "view": { "type": "list" } },
+    {
+      "id": "by-change",
+      "name": "By change",
+      "view": { "type": "list", "groupBy": "action" }
+    },
+    {
+      "id": "detail",
+      "name": "Detail",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "startsAt", "direction": "asc" }]
+      }
+    }
+  ]
+}

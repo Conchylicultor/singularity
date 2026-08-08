@@ -23,7 +23,12 @@ export const EVENT_CATEGORIES = [
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
 
 /** How often a source is re-probed. `manual` is never picked up by the scheduler. */
-export const REFRESH_CADENCES = ["manual", "hourly", "daily", "weekly"] as const;
+export const REFRESH_CADENCES = [
+  "manual",
+  "hourly",
+  "daily",
+  "weekly",
+] as const;
 export type RefreshCadence = (typeof REFRESH_CADENCES)[number];
 
 /** Runtime state of a source row, written by the refresh engine. */
@@ -39,3 +44,16 @@ export type SourceStatus = (typeof SOURCE_STATUSES)[number];
  */
 export const RUN_OUTCOMES = ["unchanged", "extracted", "failed"] as const;
 export type RunOutcome = (typeof RUN_OUTCOMES)[number];
+
+/**
+ * What ONE run did to ONE event — the per-event detail behind the run row's
+ * four counts.
+ *
+ * `disappeared` belongs here with the other two because it is something the
+ * extraction did (it listed the source in full and this event was not in it),
+ * not a separate kind of record. There is deliberately no `unchanged` member: an
+ * extraction re-upserts every event it lists, so "seen again, identical" is an
+ * `updated` — the diff is against the DB row, not against the previous run.
+ */
+export const RUN_EVENT_ACTIONS = ["created", "updated", "disappeared"] as const;
+export type RunEventAction = (typeof RUN_EVENT_ACTIONS)[number];

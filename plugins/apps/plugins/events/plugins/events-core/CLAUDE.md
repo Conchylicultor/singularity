@@ -45,7 +45,7 @@ type that stands for no page (`manual`).
 
 ## Data model
 
-Three `defineEntity` tables, field records in `core/internal/fields.ts`:
+Four `defineEntity` tables, field records in `core/internal/fields.ts`:
 
 - `event_sources` — one row per *configured instance*. Runtime/derived state
   (`status`, `lastFingerprint`, `lastRunAt`/`nextRunAt`, the classified error)
@@ -72,6 +72,13 @@ Three `defineEntity` tables, field records in `core/internal/fields.ts`:
   (`GET /api/events/runs/:runId` → `requireRun`, 404 on absent) — deliberately
   NOT nested under the source, so a deep-linked run pane resolves from its own id
   instead of whatever window the runs list happens to have loaded.
+- `event_source_run_events` — which events one run touched and how
+  (`created`/`updated`/`disappeared`), the detail behind the run row's counts.
+  Written by the engine INSIDE the ledger's own transaction, so a run and its
+  event list cannot half-exist. Deliberately not a `last_run_id` stamp on
+  `events`: a stamp is overwritten by the next run, leaving every older run
+  showing an empty list under counts that say otherwise. Read as
+  `GET /api/events/runs/:runId/events` (the event row + its action, flat).
 
 **All `events` writes go through the repo funnel**, `upsertEvents()` /
 `markEventsDisappeared()` in `server/internal/events-repo.ts`. The
@@ -115,6 +122,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSources`
     - `useEventsRevision`
     - `useRefreshEventSourceNow`
+    - `useRunEvents`
     - `useSourceOriginUrl`
     - `useUpdateEventSource`
 - Server:
@@ -136,8 +144,10 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ProbeContext`
     - `ProbeResult`
     - `RefreshRunner`
+    - `TouchedEvent`
     - `UpsertEventsResult`
   - Exports (values):
+    - `_eventSourceRunEvents`
     - `_eventSourceRuns`
     - `_eventSources`
     - `createSource`
@@ -149,6 +159,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventsTable`
     - `getEventSourceType`
     - `listEventSourceTypes`
+    - `listRunEvents`
     - `listRuns`
     - `listSources`
     - `markEventsDisappeared`
@@ -169,6 +180,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `POST /api/events/sources/:id/refresh`
     - `GET /api/events/sources/:id/runs`
     - `GET /api/events/runs/:runId`
+    - `GET /api/events/runs/:runId/events`
 - Core:
   - Uses:
     - `apps/events/event-date.EventDate`
@@ -191,10 +203,13 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventRecord`
     - `EventSource`
     - `EventSourceRun`
+    - `EventSourceRunEvent`
     - `ExtractedEvent`
     - `ExtractionResult`
     - `RefreshCadence`
     - `RefreshSourceResult`
+    - `RunEvent`
+    - `RunEventAction`
     - `RunOutcome`
     - `SourceStatus`
     - `UpdateEventSourceBody`
@@ -207,6 +222,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventRunsRevisionResource`
     - `EventSchema`
     - `eventSourceFields`
+    - `eventSourceRunEventFields`
+    - `EventSourceRunEventSchema`
     - `eventSourceRunFields`
     - `EventSourceRunSchema`
     - `EventSourceSchema`
@@ -219,10 +236,14 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `listEventSourceRuns`
     - `ListEventSourceRunsQuerySchema`
     - `listEventSources`
+    - `listRunEvents`
+    - `ListRunEventsQuerySchema`
     - `REFRESH_CADENCES`
     - `refreshEventSourceNow`
     - `RefreshSourceResultSchema`
+    - `RUN_EVENT_ACTIONS`
     - `RUN_OUTCOMES`
+    - `RunEventSchema`
     - `SOURCE_STATUSES`
     - `updateEventSource`
     - `UpdateEventSourceBodySchema`
@@ -234,6 +255,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources/manual`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/caveats`
+    - `apps/events/sources/source-detail/runs/extracted-events`
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`

@@ -7,6 +7,8 @@ import type {
 import {
   _eventSources,
   _eventSourceRuns,
+  _eventSourceRunEvents,
+  type TouchedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/server";
 import type { RefreshErrorClassification } from "./classify-error";
 import { computeNextRunAt } from "./schedule";
@@ -78,6 +80,11 @@ async function completeRun(
     counts: RunCounts;
     /** What the extractor could not express. `[]` for a run that never read. */
     flags: string[];
+    /**
+     * Which events this run touched, and how — the detail behind `counts`.
+     * Empty for a run that touched none (`unchanged`, `failed`).
+     */
+    touched: readonly TouchedEvent[];
     error: string | null;
   },
   sourceState: SourceStatePatch,
@@ -98,6 +105,18 @@ async function completeRun(
       flags: run.flags,
       error: run.error,
     });
+    // In the SAME transaction as the row above, which is what makes the counts
+    // and the list they summarize one fact rather than two that can disagree.
+    // The FK to the run row is why this cannot be written any earlier.
+    if (run.touched.length > 0) {
+      await tx.insert(_eventSourceRunEvents).values(
+        run.touched.map((t) => ({
+          runId: run.runId,
+          eventId: t.eventId,
+          action: t.action,
+        })),
+      );
+    }
     await tx
       .update(_eventSources)
       .set({
@@ -134,6 +153,9 @@ export async function finishUnchanged(
       // deliberately NOT cleared below: the last extraction's caveats still
       // stand about a page nobody re-read.
       flags: [],
+      // Extraction never ran, so no event was touched. An empty list here is the
+      // true answer, not a missing one.
+      touched: [],
       error: null,
     },
     // The fingerprint is unchanged by definition; a successful run clears any
@@ -157,6 +179,7 @@ export async function finishExtracted(
     fingerprint: string | null;
     counts: RunCounts;
     flags: string[];
+    touched: readonly TouchedEvent[];
   },
 ): Promise<void> {
   await completeRun(
@@ -169,6 +192,7 @@ export async function finishExtracted(
       fingerprint: args.fingerprint,
       counts: args.counts,
       flags: args.flags,
+      touched: args.touched,
       error: null,
     },
     {
@@ -220,6 +244,9 @@ export async function finishFailed(
       fingerprint: null,
       counts: NO_COUNTS,
       flags: [],
+      // A failed run exits before the write phase — by construction it touched
+      // nothing, even when it failed halfway through extraction.
+      touched: [],
       error: `${failure.code}: ${failure.message}`,
     },
     failure.terminal

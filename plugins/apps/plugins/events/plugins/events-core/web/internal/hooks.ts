@@ -16,6 +16,7 @@ import {
   eventsRevisionResource,
   getEventSourceRun,
   listEventSourceRuns,
+  listRunEvents,
   refreshEventSourceNow,
   updateEventSource,
   type EventSource,
@@ -93,6 +94,19 @@ export function useEventSourceRuns(sourceId: string, limit?: number) {
  */
 export function useEventSourceRun(runId: string) {
   return useEndpoint(getEventSourceRun, { runId });
+}
+
+/**
+ * The events one run touched, each with what that run did to it — the detail
+ * behind the run row's counts. A plain endpoint read, not live state: a finished
+ * run's event set is closed, so there is nothing to keep fresh.
+ */
+export function useRunEvents(runId: string, limit?: number) {
+  return useEndpoint(
+    listRunEvents,
+    { runId },
+    limit === undefined ? undefined : { query: { limit } },
+  );
 }
 
 /** Create a source. Failures surface through the global mutation toast. */

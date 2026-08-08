@@ -6,12 +6,14 @@ import {
   getEventSourceRun,
   listEventSourceRuns,
   listEventSources,
+  listRunEvents,
   refreshEventSourceNow,
   updateEventSource,
 } from "../../core";
 import {
   createSource,
   deleteSource,
+  listRunEvents as selectRunEvents,
   listRuns,
   listSources,
   requireRun,
@@ -28,8 +30,9 @@ export const handleGetSource = implement(getEventSource, async ({ params }) =>
   requireSource(params.id),
 );
 
-export const handleCreateSource = implement(createEventSource, async ({ body }) =>
-  createSource(body),
+export const handleCreateSource = implement(
+  createEventSource,
+  async ({ body }) => createSource(body),
 );
 
 export const handleUpdateSource = implement(
@@ -66,4 +69,15 @@ export const handleListRuns = implement(
 // the run row carries its own `sourceId`.
 export const handleGetRun = implement(getEventSourceRun, async ({ params }) =>
   requireRun(params.runId),
+);
+
+// `requireRun` first, so an unknown run is a 404 rather than an empty list — the
+// two mean completely different things here ("this run is gone" vs "this run
+// touched nothing", which is what every `unchanged` run legitimately looks like).
+export const handleListRunEvents = implement(
+  listRunEvents,
+  async ({ params, query }) => {
+    await requireRun(params.runId);
+    return selectRunEvents(params.runId, query.limit ?? 200);
+  },
 );

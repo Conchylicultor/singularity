@@ -47,6 +47,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/events/plugins/sources/plugins/manual",
   "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs",
   "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/caveats",
+  "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/extracted-events",
   "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call",
   "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/schedule",
   "apps/plugins/events/plugins/sources/plugins/source-detail/plugins/settings",

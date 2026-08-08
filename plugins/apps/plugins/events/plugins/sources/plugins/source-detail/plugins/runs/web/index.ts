@@ -3,9 +3,7 @@ import { MdHistory } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { SourceRunsSection } from "./components/runs-section";
-import { OpenRunAction } from "./components/open-run-action";
 import { eventSourceRunPane } from "./panes";
-import { RunActions } from "./slots";
 
 export { RunActions, EventSourceRunDetail } from "./slots";
 export { eventSourceRunPane } from "./panes";
@@ -24,9 +22,5 @@ export default {
       useDefaultOpen: () => true,
     }),
     Pane.Register({ pane: eventSourceRunPane }),
-    // This plugin's own action, in its own slot — the same shape `sources`
-    // uses for `SourceDeleteAction`, so a contributor can add a run action
-    // without this file being the place that lists them.
-    RunActions({ id: "open", component: OpenRunAction }),
   ],
 } satisfies PluginDefinition;

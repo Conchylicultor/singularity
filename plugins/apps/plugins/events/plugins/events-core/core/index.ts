@@ -7,11 +7,14 @@ export {
   type SourceStatus,
   RUN_OUTCOMES,
   type RunOutcome,
+  RUN_EVENT_ACTIONS,
+  type RunEventAction,
 } from "./internal/vocab";
 export {
   eventSourceFields,
   eventFields,
   eventSourceRunFields,
+  eventSourceRunEventFields,
 } from "./internal/fields";
 export {
   EventSourceSchema,
@@ -20,6 +23,10 @@ export {
   type EventRecord,
   EventSourceRunSchema,
   type EventSourceRun,
+  EventSourceRunEventSchema,
+  type EventSourceRunEvent,
+  RunEventSchema,
+  type RunEvent,
 } from "./internal/schema";
 export {
   ExtractedEventSchema,
@@ -36,6 +43,8 @@ export {
   refreshEventSourceNow,
   listEventSourceRuns,
   getEventSourceRun,
+  listRunEvents,
+  ListRunEventsQuerySchema,
   CreateEventSourceBodySchema,
   type CreateEventSourceBody,
   UpdateEventSourceBodySchema,

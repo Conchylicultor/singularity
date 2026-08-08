@@ -6,12 +6,14 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEventSourceRuns } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import {
   RUN_OUTCOME_OPTIONS,
   formatDuration,
 } from "@plugins/apps/plugins/events/plugins/sources/web";
+import { eventSourceRunPane } from "../panes";
 import { RunActions } from "../slots";
 import { RunRow } from "./run-row";
 
@@ -37,6 +39,11 @@ export function SourceRunsSection({
   sourceId: string;
 }): ReactNode {
   const query = useEventSourceRuns(sourceId, RUN_LIMIT);
+  const openPane = useOpenPane();
+  // Which run the pane beside this list is showing, so the ledger marks it. Read
+  // off the route rather than held here: the pane may equally have been reached
+  // by a deep link, and there is only ever one answer to "which run is open".
+  const openRunId = eventSourceRunPane.useRouteEntry()?.params.runId;
 
   // Every column is a typed field, so "show me only the failures" is a filter on
   // `outcome` rather than a bespoke chip — including the `unchanged` runs, which
@@ -113,7 +120,11 @@ export function SourceRunsSection({
   // unreachable" and "this source has never run" are different answers to the
   // question this card exists to settle.
   if (query.isError) {
-    return <Placeholder tone="error">{getEndpointErrorMessage(query.error)}</Placeholder>;
+    return (
+      <Placeholder tone="error">
+        {getEndpointErrorMessage(query.error)}
+      </Placeholder>
+    );
   }
 
   const runs = query.data;
@@ -125,10 +136,25 @@ export function SourceRunsSection({
       fields={fields}
       rowKey={(r) => r.id}
       itemActions={RunActions}
+      selectedRowId={openRunId}
+      // Clicking the row IS opening the run — the same call the sources list
+      // makes. A ledger row is not editable and has no second meaning, so making
+      // the drill-in an action would put the pane's whole content behind a
+      // hover-revealed button the row body hit-tests over.
+      onRowActivate={(run) =>
+        openPane(
+          eventSourceRunPane,
+          { runId: run.id },
+          { mode: "push", side: "right" },
+        )
+      }
       views={["list", "table"]}
       loading={runs === undefined}
       viewOptions={{
-        list: { size: "sm", renderRow: (r: EventSourceRun) => <RunRow run={r} /> },
+        list: {
+          size: "sm",
+          renderRow: (r: EventSourceRun) => <RunRow run={r} />,
+        },
       }}
       emptyState="No runs yet — use Refresh now, or wait for the cadence to come round."
     />

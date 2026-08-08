@@ -40,9 +40,7 @@ class UnknownSourceTypeError extends Error {
   }
 }
 
-type SourceLookup =
-  | { kind: "found"; source: EventSource }
-  | { kind: "gone" };
+type SourceLookup = { kind: "found"; source: EventSource } | { kind: "gone" };
 
 /**
  * Read the source a queued job names. "Gone" is a legitimate outcome, not a
@@ -136,7 +134,7 @@ export async function runSource(sourceId: string): Promise<void> {
     // anchor of every event in this run is then resolved against the same
     // instant, so two events of one page can never straddle a midnight.
     const plan = planEventWrites(source.id, events, { now: new Date() });
-    const { created, updated } = await upsertEvents(plan.inputs);
+    const { created, updated, touched } = await upsertEvents(plan.inputs);
     const disappeared = await markEventsDisappeared(
       source.id,
       plan.seenExternalIds,
@@ -151,8 +149,12 @@ export async function runSource(sourceId: string): Promise<void> {
         found: plan.inputs.length,
         created,
         updated,
-        disappeared,
+        disappeared: disappeared.length,
       },
+      // The same two writes above, stated per event: the ledger records WHICH
+      // events this run touched, not only how many. The counts below are derived
+      // from the identical values, so the summary and the list cannot disagree.
+      touched: [...touched, ...disappeared],
     });
   } catch (err) {
     const failure = classifyRefreshError(err);

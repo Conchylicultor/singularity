@@ -1,6 +1,10 @@
-import { defineRetention } from "@plugins/infra/plugins/retention/server";
+import {
+  defineRetention,
+  markCascadeBounded,
+} from "@plugins/infra/plugins/retention/server";
 import {
   _eventSourceRuns,
+  _eventSourceRunEvents,
   eventsTable,
 } from "@plugins/apps/plugins/events/plugins/events-core/server";
 
@@ -43,3 +47,15 @@ export const eventSourceRunsRetention = defineRetention({
   column: "startedAt",
   ttlDays: 30,
 });
+
+/**
+ * The per-event detail of a run needs no sweep of its own: every row belongs to
+ * exactly one run and dies with it under the 30-day sweep above. The FK to
+ * `events` matters too (an event purged at 90 days takes its links), but the RUN
+ * is the owner — it is what bounds the growth.
+ *
+ * `markCascadeBounded` reads the drizzle FK declaration at module eval and
+ * throws (boot-fatal) if that `onDelete: "cascade"` is ever dropped, so the
+ * bound is a checked fact rather than this comment.
+ */
+markCascadeBounded(_eventSourceRunEvents, _eventSourceRuns);

@@ -34,6 +34,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "deploy.deployments", pluginId: "apps.deploy.deployments" },
   { id: "deploy.servers", pluginId: "apps.deploy.servers" },
   { id: "events.list", pluginId: "apps.events.event-list" },
+  { id: "events.run-events", pluginId: "apps.events.sources.source-detail.runs.extracted-events" },
   { id: "events.source-runs", pluginId: "apps.events.sources.source-detail.runs" },
   { id: "events.sources", pluginId: "apps.events.sources" },
   { id: "home.apps", pluginId: "apps.home.app-cards" },

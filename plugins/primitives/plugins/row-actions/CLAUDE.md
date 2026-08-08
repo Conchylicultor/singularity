@@ -111,7 +111,6 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `apps/deploy/local-serve`
     - `apps/deploy/servers`
     - `apps/events/sources`
-    - `apps/events/sources/source-detail/runs`
     - `apps/sonata/library`
     - `apps/studio/compositions`
     - `conversations/conversation-view/jsonl-viewer`

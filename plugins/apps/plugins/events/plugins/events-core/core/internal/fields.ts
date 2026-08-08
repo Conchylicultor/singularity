@@ -15,6 +15,7 @@ import {
 import {
   EVENT_CATEGORIES,
   REFRESH_CADENCES,
+  RUN_EVENT_ACTIONS,
   RUN_OUTCOMES,
   SOURCE_STATUSES,
 } from "./vocab";
@@ -196,4 +197,27 @@ export const eventSourceRunFields = {
    * because neither of them read the page.
    */
   flags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
+} satisfies FieldsRecord;
+
+/**
+ * Which events one run touched, and how — the per-event detail behind the run
+ * row's `eventsCreated` / `eventsUpdated` / `eventsDisappeared` counts.
+ *
+ * A junction table rather than a `lastRunId` stamp on `events`, and the
+ * distinction is the whole point: a stamp is overwritten by the NEXT run, so
+ * every run but the newest would show an empty list under counts that say it
+ * touched twelve events — a ledger contradicting itself. The same objection
+ * rules out recovering the set from `lastSeenAt` windows. One row per (run,
+ * event) is the only shape where a run keeps its own answer for as long as the
+ * run row exists.
+ *
+ * Written ONLY by the engine, inside the same transaction as the run row (see
+ * `refresh`'s run-ledger), so a run and its event list can never half-exist.
+ * Reclaimed by the run's own 30-day retention through FK cascade — the rows
+ * outlive nothing they explain.
+ */
+export const eventSourceRunEventFields = {
+  runId: textField(),
+  eventId: textField(),
+  action: enumTextField(RUN_EVENT_ACTIONS),
 } satisfies FieldsRecord;

@@ -9,6 +9,7 @@ import {
   getEventSourceRun,
   listEventSourceRuns,
   listEventSources,
+  listRunEvents,
   refreshEventSourceNow,
   updateEventSource,
 } from "../core";
@@ -17,6 +18,7 @@ import {
   handleDeleteSource,
   handleGetRun,
   handleGetSource,
+  handleListRunEvents,
   handleListRuns,
   handleListSources,
   handleRefreshSource,
@@ -32,7 +34,11 @@ import {
 // refresh seam — everything the `refresh` engine, `event-list`, and `sources`
 // build on. Re-exporting this plugin's OWN internal files is allowed; only
 // proxying another plugin's symbols would violate the boundary rules.
-export { _eventSources, _eventSourceRuns } from "./internal/tables";
+export {
+  _eventSources,
+  _eventSourceRuns,
+  _eventSourceRunEvents,
+} from "./internal/tables";
 // `events` is exported as a READ handle only. Every write goes through the repo
 // funnel below, which owns the `updated_at` stamp the live revision tick reads;
 // the `events/no-raw-events-write` lint rule fails any db.insert/update/delete
@@ -41,6 +47,7 @@ export { _events as eventsTable } from "./internal/tables";
 export { upsertEvents, markEventsDisappeared } from "./internal/events-repo";
 export type {
   EventWriteInput,
+  TouchedEvent,
   UpsertEventsResult,
 } from "./internal/events-repo";
 export {
@@ -60,6 +67,7 @@ export {
   updateSource,
   deleteSource,
   listRuns,
+  listRunEvents,
   requireRun,
 } from "./internal/sources-repo";
 export { registerRefreshRunner } from "./internal/refresh-runner";
@@ -82,6 +90,7 @@ export default {
     [refreshEventSourceNow.route]: handleRefreshSource,
     [listEventSourceRuns.route]: handleListRuns,
     [getEventSourceRun.route]: handleGetRun,
+    [listRunEvents.route]: handleListRunEvents,
   },
   contributions: [
     Resource.Declare(eventSourcesServerResource),

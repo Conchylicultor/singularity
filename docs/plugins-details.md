@@ -1109,6 +1109,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `EventList`
               - `eventListPane`
+              - `EventRow`
+              - `useEventUrl`
+              - `useOpenEvent`
           - Server:
             - Uses:
               - `apps/events/events-core.eventsTable`
@@ -1143,7 +1146,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `QueryEventsResponseSchema`
               - `SortRuleSchema`
           - Cross-plugin:
-            - Imported by: `apps/events/sources/source-field`
+            - Imported by:
+              - `apps/events/sources/source-detail/runs/extracted-events`
+              - `apps/events/sources/source-field`
         - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
           - Web:
             - Slots: `EventSources.Type` ← `apps.events.sources.manual`, `apps.events.sources.url-extract`
@@ -1162,6 +1167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventSources`
               - `useEventsRevision`
               - `useRefreshEventSourceNow`
+              - `useRunEvents`
               - `useSourceOriginUrl`
               - `useUpdateEventSource`
           - Server:
@@ -1183,8 +1189,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ProbeContext`
               - `ProbeResult`
               - `RefreshRunner`
+              - `TouchedEvent`
               - `UpsertEventsResult`
             - Exports (values):
+              - `_eventSourceRunEvents`
               - `_eventSourceRuns`
               - `_eventSources`
               - `createSource`
@@ -1196,6 +1204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `eventsTable`
               - `getEventSourceType`
               - `listEventSourceTypes`
+              - `listRunEvents`
               - `listRuns`
               - `listSources`
               - `markEventsDisappeared`
@@ -1216,6 +1225,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `POST /api/events/sources/:id/refresh`
               - `GET /api/events/sources/:id/runs`
               - `GET /api/events/runs/:runId`
+              - `GET /api/events/runs/:runId/events`
           - Core:
             - Uses:
               - `apps/events/event-date.EventDate`
@@ -1238,10 +1248,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventRecord`
               - `EventSource`
               - `EventSourceRun`
+              - `EventSourceRunEvent`
               - `ExtractedEvent`
               - `ExtractionResult`
               - `RefreshCadence`
               - `RefreshSourceResult`
+              - `RunEvent`
+              - `RunEventAction`
               - `RunOutcome`
               - `SourceStatus`
               - `UpdateEventSourceBody`
@@ -1254,6 +1267,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `eventRunsRevisionResource`
               - `EventSchema`
               - `eventSourceFields`
+              - `eventSourceRunEventFields`
+              - `EventSourceRunEventSchema`
               - `eventSourceRunFields`
               - `EventSourceRunSchema`
               - `EventSourceSchema`
@@ -1266,10 +1281,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listEventSourceRuns`
               - `ListEventSourceRunsQuerySchema`
               - `listEventSources`
+              - `listRunEvents`
+              - `ListRunEventsQuerySchema`
               - `REFRESH_CADENCES`
               - `refreshEventSourceNow`
               - `RefreshSourceResultSchema`
+              - `RUN_EVENT_ACTIONS`
               - `RUN_OUTCOMES`
+              - `RunEventSchema`
               - `SOURCE_STATUSES`
               - `updateEventSource`
               - `UpdateEventSourceBodySchema`
@@ -1281,6 +1300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/manual`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/caveats`
+              - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -1289,6 +1309,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`refresh`** — Events refresh engine: the main-only cadence tick and the per-source refresh job, the probe/extract runSource pipeline (fingerprint cache → upsert diff → soft disappearance), the run ledger, terminal/transient error classification onto the source row, and the retention sweeps for events + runs.
           - Server:
             - Uses:
+              - `apps/events/events-core._eventSourceRunEvents`
               - `apps/events/events-core._eventSourceRuns`
               - `apps/events/events-core._eventSources`
               - `apps/events/events-core.EventSourceType`
@@ -1298,11 +1319,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/events-core.ProbeContext`
               - `apps/events/events-core.registerRefreshRunner`
               - `apps/events/events-core.requireSource`
+              - `apps/events/events-core.TouchedEvent`
               - `apps/events/events-core.upsertEvents`
               - `database.db`
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
               - `infra/retention.defineRetention`
+              - `infra/retention.markCascadeBounded`
               - `primitives/log-channels.defineLogSink`
             - Exports (values):
               - `requestRefresh`
@@ -1440,13 +1463,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
                   - Web:
                     - Slots:
-                      - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.model-call`
-                      - `RunActions.RunActions` ← `apps.events.sources.source-detail.runs`
+                      - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.extracted-events`, `apps.events.sources.source-detail.runs.model-call`
+                      - `RunActions.RunActions`
                       - `eventSourceRunPane.Actions`
                     - Contributes:
                       - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
                       - `Pane.Register` "event-source-run"
-                      - `RunActions` "open" → `OpenRunAction`
                     - Uses:
                       - `apps/events/events-core.useEventSourceRun`
                       - `apps/events/events-core.useEventSourceRuns`
@@ -1476,7 +1498,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
                       - `primitives/relative-time.RelativeTime`
-                      - `primitives/row-actions.RowActionButton`
                     - Exports (values):
                       - `EventSourceRunDetail`
                       - `eventSourceRunPane`
@@ -1484,6 +1505,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Cross-plugin:
                     - Imported by:
                       - `apps/events/sources/source-detail/runs/caveats`
+                      - `apps/events/sources/source-detail/runs/extracted-events`
                       - `apps/events/sources/source-detail/runs/model-call`
                   - Plugins:
                     - **`caveats`** — Extraction caveats section of the Events run pane: what the page's schedule said that the event date format could not express, as the extraction itself reported it. Renders the three arms — the caveats, the fetch failure, and 'reported none', which is the healthy answer and is worded as one.
@@ -1499,6 +1521,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                           - `primitives/css/surface.Surface`
                           - `primitives/css/text.Text`
                           - `primitives/loading.Loading`
+                    - **`extracted-events`** — Extracted events section of the Events run pane: which events the run actually touched and what it did to each — the detail behind the summary's counts, as a DataView whose `Change` (new / updated / gone) is a full filter and group-by dimension.
+                      - Web:
+                        - Contributes: `EventSourceRunDetail.Section` "Extracted events" → `ExtractedEventsSection`
+                        - Uses:
+                          - `apps/events/event-list.EventRow`
+                          - `apps/events/event-list.useOpenEvent`
+                          - `apps/events/events-core.useEventSourceRun`
+                          - `apps/events/events-core.useRunEvents`
+                          - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
+                          - `infra/endpoints.getEndpointErrorMessage`
+                          - `primitives/css/badge.Badge`
+                          - `primitives/css/badge.BadgeVariant`
+                          - `primitives/css/placeholder.Placeholder`
+                          - `primitives/data-view.DataView`
+                          - `primitives/data-view.defineDataView`
+                          - `primitives/data-view.FieldDef`
                     - **`model-call`** — Model call section of the Events run pane: the prompt and output behind one run, reached through claude-cli's generic correlation API. Renders all three arms — the calls, 'never called' (the right answer for a cheap unchanged run), and 'the log no longer retains it'.
                       - Web:
                         - Contributes: `EventSourceRunDetail.Section` "Model call" → `ModelCallSection`
@@ -15027,6 +15065,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/runs/caveats`
+          - `apps/events/sources/source-detail/runs/extracted-events`
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/source-detail/schedule`
           - `apps/events/sources/source-detail/settings`
@@ -19531,6 +19570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
               - `apps/mail/search`
@@ -20338,6 +20378,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/caveats`
+              - `apps/events/sources/source-detail/runs/extracted-events`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -22061,6 +22102,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
           - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
         - Uses:
@@ -22238,6 +22280,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "deploy.deployments"
           - `ConfigV2.Register` "deploy.servers"
           - `ConfigV2.Register` "events.list"
+          - `ConfigV2.Register` "events.run-events"
           - `ConfigV2.Register` "events.source-runs"
           - `ConfigV2.Register` "events.sources"
           - `ConfigV2.Register` "home.apps"
@@ -22271,6 +22314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/event-list`
           - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
+          - `apps/events/sources/source-detail/runs/extracted-events`
           - `apps/home/app-cards`
           - `apps/mail/threads`
           - `apps/pages/page-tree`
@@ -24644,7 +24688,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/local-serve`
           - `apps/deploy/servers`
           - `apps/events/sources`
-          - `apps/events/sources/source-detail/runs`
           - `apps/sonata/library`
           - `apps/studio/compositions`
           - `conversations/conversation-view/jsonl-viewer`

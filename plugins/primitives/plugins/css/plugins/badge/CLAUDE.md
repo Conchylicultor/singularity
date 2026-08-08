@@ -40,6 +40,7 @@ same threshold and can't desync in a row.
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/events/sources/source-detail/runs/extracted-events`
     - `apps/events/sources/source-detail/status`
     - `apps/mail/attachments`
     - `apps/mail/search`

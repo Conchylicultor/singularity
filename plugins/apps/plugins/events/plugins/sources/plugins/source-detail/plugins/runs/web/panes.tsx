@@ -4,7 +4,10 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -63,7 +66,8 @@ function useResolveRun({ runId }: { runId: string }): {
   // other failure — offline, 500, a blipped socket — must NOT discard a deep
   // link, so it stays pending and the body renders what broke.
   if (query.isError) {
-    const gone = query.error instanceof EndpointError && query.error.status === 404;
+    const gone =
+      query.error instanceof EndpointError && query.error.status === 404;
     return { pending: !gone, found: false };
   }
   return { pending: false, found: true };
@@ -145,7 +149,9 @@ function RunSummary({ run }: { run: EventSourceRun }): ReactNode {
       <SummaryField label="Started">
         <RelativeTime date={run.startedAt} />
       </SummaryField>
-      <SummaryField label="Duration">{duration ?? "Still running"}</SummaryField>
+      <SummaryField label="Duration">
+        {duration ?? "Still running"}
+      </SummaryField>
       <SummaryField label="Found">{run.eventsFound}</SummaryField>
       <SummaryField label="New">{run.eventsCreated}</SummaryField>
       <SummaryField label="Updated">{run.eventsUpdated}</SummaryField>

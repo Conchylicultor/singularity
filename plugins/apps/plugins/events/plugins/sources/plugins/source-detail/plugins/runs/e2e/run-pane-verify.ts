@@ -1,14 +1,13 @@
 /**
- * Drives the run ledger's one affordance: hover a run row, click its action, and
- * land on the run's own pane with its contributed Model call region.
+ * Drives the run ledger's one affordance: click a run row and land on the run's
+ * own pane, carrying its contributed regions.
  *
- * The assertion that matters is the HIT TEST, not the navigation. The action is
- * hover-revealed and pinned over the row, and the row's body is itself a button —
- * so "the handler works" and "a pointer can actually reach it" are different
- * claims, and only the second is what a user experiences. This script asks the
- * browser what is topmost at the action's own centre while the row is hovered, so
- * a regression that buries the action fails here rather than shipping as a
- * mysteriously inert button.
+ * The row itself is the target. It used to be a hover-revealed "Open run" action
+ * pinned over the row, and this script used to assert the hit test at the
+ * action's centre — the row body is a button and won that stack, so the action
+ * was unreachable by pointer. Activating the row removes the stack rather than
+ * arbitrating it, which is why the hit test is gone from here too: there is now
+ * one target and it is the whole row.
  *
  * Manual only, like every script under `e2e/`. Needs a deployed worktree and a
  * source that has run at least once:
@@ -29,8 +28,15 @@ const OUT = arg("out") ?? "/tmp/run-pane";
 
 const r = report("Events · Run pane");
 
-/** Proves the ledger actually painted, not merely that `<body>` exists. */
-const ROW_MARKER = '[data-ui-owner^="ListView@"]';
+/**
+ * The runs SECTION's own list. Scoped by the contributing plugin's lineage
+ * attribute, not by "the first ListView on the page" — the sources list in the
+ * column to the left is also one, and a bare page-wide match clicks THAT row and
+ * reports a navigation that never happened.
+ */
+const RUNS_SECTION =
+  '[data-plugin-id="apps.events.sources.source-detail.runs"]';
+const ROW_MARKER = `${RUNS_SECTION} [data-ui-owner^="ListView@"]`;
 
 await withBrowser(async (h) => {
   if (!SOURCE_ID) {
@@ -44,56 +50,17 @@ await withBrowser(async (h) => {
     settleMs: 2500,
   });
 
-  const row = page.locator(ROW_MARKER).first();
-  const action = page.getByRole("button", { name: "Open run" }).first();
+  const row = page.locator(`${ROW_MARKER} button`).first();
+  await row.waitFor({ state: "visible", timeout: 10_000 });
+  r.ok("the run ledger painted at least one row", true);
 
-  // Hover the row the way a person does — the action is revealed, not persistent.
-  await row.hover();
-  await action.waitFor({ state: "visible", timeout: 10_000 });
-  r.ok("the run row reveals its action on hover", true);
-
-  const box = await action.boundingBox();
-  if (!box) {
-    r.fail("the revealed action has no box");
-    r.finish();
-  }
-
-  // Reveal state, before the hit test — Playwright calls an opacity-0 element
-  // "visible", so `waitFor` above does NOT prove the action was revealed. If
-  // pointer-events is `none` here, the hit test below is measuring an unrevealed
-  // action rather than a stacking bug.
-  const reveal = await action.evaluate((el) => {
-    const s = getComputedStyle(el as Element);
-    return `opacity=${s.opacity} pointer-events=${s.pointerEvents} visibility=${s.visibility}`;
-  });
-  r.note(`action computed style while row hovered: ${reveal}`);
-
-  // THE assertion: is the action what a pointer would actually land on?
-  const topmost = await page.evaluate(
-    ([x, y]) => {
-      const el = document.elementFromPoint(x as number, y as number);
-      const btn = el?.closest("button");
-      return (
-        btn?.getAttribute("aria-label") ??
-        btn?.textContent?.trim().slice(0, 40) ??
-        "<none>"
-      );
-    },
-    [box!.x + box!.width / 2, box!.y + box!.height / 2],
-  );
-  r.ok(
-    "the action is the topmost target at its own centre",
-    topmost.includes("Open run"),
-    `hit test found: ${topmost}`,
-  );
-
-  await action.click();
+  await row.click();
   await page.waitForTimeout(2000);
 
   const navigated = /\/run\/[0-9a-f-]{36}/.test(page.url());
-  r.ok("clicking the action opens the run pane", navigated, page.url());
+  r.ok("clicking the run row opens the run pane", navigated, page.url());
 
-  // Scoped to the run pane's own region host, and gated on `navigated`. A bare
+  // Scoped to the run pane's own region hosts, and gated on `navigated`. A bare
   // page-wide getByText("Model call") passes on the UNNAVIGATED page as soon as
   // any source is named something like "model call" — a green line proving
   // nothing, which is the failure mode this harness exists to prevent.
@@ -102,6 +69,15 @@ await withBrowser(async (h) => {
     navigated &&
       (await page
         .getByRole("button", { name: /Model call/ })
+        .first()
+        .isVisible()),
+  );
+
+  r.ok(
+    "the run pane carries the contributed Extracted events region",
+    navigated &&
+      (await page
+        .getByRole("button", { name: /Extracted events/ })
         .first()
         .isVisible()),
   );

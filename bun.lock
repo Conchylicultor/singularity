@@ -326,6 +326,10 @@
       "name": "@singularity/plugin-apps-events-sources-source-detail-runs-caveats",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/extracted-events": {
+      "name": "@singularity/plugin-apps-events-sources-source-detail-runs-extracted-events",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call": {
       "name": "@singularity/plugin-apps-events-sources-source-detail-runs-model-call",
       "version": "0.0.1",
@@ -5497,6 +5501,8 @@
     "@singularity/plugin-apps-events-sources-source-detail-runs": ["@singularity/plugin-apps-events-sources-source-detail-runs@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs"],
 
     "@singularity/plugin-apps-events-sources-source-detail-runs-caveats": ["@singularity/plugin-apps-events-sources-source-detail-runs-caveats@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/caveats"],
+
+    "@singularity/plugin-apps-events-sources-source-detail-runs-extracted-events": ["@singularity/plugin-apps-events-sources-source-detail-runs-extracted-events@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/extracted-events"],
 
     "@singularity/plugin-apps-events-sources-source-detail-runs-model-call": ["@singularity/plugin-apps-events-sources-source-detail-runs-model-call@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/plugins/model-call"],
 

@@ -1,4 +1,4 @@
-// @hash 678c40092e99
+// @hash 1539a4e88135
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.events.sources.source-detail.runs.caveats:caveats",
+    "apps.events.sources.source-detail.runs.extracted-events:extracted-events",
     "apps.events.sources.source-detail.runs.model-call:model-call"
   ]
 }

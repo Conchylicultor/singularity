@@ -7,6 +7,7 @@ import {
   eventSourceFields,
   eventFields,
   eventSourceRunFields,
+  eventSourceRunEventFields,
 } from "../../core";
 
 // Physical tables for the Events app, derived from the web-safe field records in
@@ -77,7 +78,10 @@ const eventSourceRuns = defineEntity(
     primaryKey: "id",
     columns: {
       sourceId: {
-        references: { column: () => eventSources.table.id, onDelete: "cascade" },
+        references: {
+          column: () => eventSources.table.id,
+          onDelete: "cascade",
+        },
       },
       startedAt: { default: defaultNow() },
       outcome: { default: "unchanged" },
@@ -94,7 +98,37 @@ const eventSourceRuns = defineEntity(
   },
 );
 
+const eventSourceRunEvents = defineEntity(
+  "event_source_run_events",
+  eventSourceRunEventFields,
+  {
+    // The pair IS the row's identity — a run touches an event once — so there is
+    // no synthetic id to keep unique separately. The PK's own index is prefixed
+    // by `run_id`, which is the only way this table is ever read.
+    primaryKey: ["runId", "eventId"],
+    columns: {
+      runId: {
+        references: {
+          column: () => eventSourceRuns.table.id,
+          onDelete: "cascade",
+        },
+      },
+      eventId: {
+        references: { column: () => events.table.id, onDelete: "cascade" },
+      },
+    },
+    indexes: (t) => [
+      // NOT redundant with the PK: the PK index is prefixed by `run_id`, so it
+      // cannot serve the `event_id` cascade. Without this, purging one
+      // disappeared event (the 90-day sweep, thousands at a time) seq-scans this
+      // whole table per row.
+      index("event_source_run_events_event_idx").on(t.eventId),
+    ],
+  },
+);
+
 // drizzle-kit schema-glob discovery.
 export const _eventSources = eventSources.table;
 export const _events = events.table;
 export const _eventSourceRuns = eventSourceRuns.table;
+export const _eventSourceRunEvents = eventSourceRunEvents.table;

@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -6,9 +6,15 @@ import type {
   CreateEventSourceBody,
   EventSource,
   EventSourceRun,
+  RunEvent,
   UpdateEventSourceBody,
 } from "../../core";
-import { _eventSources, _eventSourceRuns } from "./tables";
+import {
+  _events,
+  _eventSources,
+  _eventSourceRunEvents,
+  _eventSourceRuns,
+} from "./tables";
 import { getEventSourceType } from "./registry";
 
 // Source CRUD + the validation that keeps a row's `config` and its type's
@@ -56,10 +62,7 @@ function deriveName(type: string, config: Record<string, unknown>): string {
 }
 
 export async function listSources(): Promise<EventSource[]> {
-  return db
-    .select()
-    .from(_eventSources)
-    .orderBy(desc(_eventSources.createdAt));
+  return db.select().from(_eventSources).orderBy(desc(_eventSources.createdAt));
 }
 
 /** Read one source. Throws 404 rather than returning null. */
@@ -154,5 +157,31 @@ export async function listRuns(
     .from(_eventSourceRuns)
     .where(eq(_eventSourceRuns.sourceId, sourceId))
     .orderBy(desc(_eventSourceRuns.startedAt))
+    .limit(limit);
+}
+
+/**
+ * The events one run touched, each carrying what that run did to it, ordered by
+ * when the event happens — the order a person reads an events list in.
+ *
+ * The action is projected ONTO the event row rather than nested beside it, so
+ * the DataView that renders this treats "what happened to it" as one more
+ * dimension of the row, filterable and groupable like any other.
+ */
+export async function listRunEvents(
+  runId: string,
+  limit: number,
+): Promise<RunEvent[]> {
+  return db
+    .select({
+      // The whole event row, projected from the table itself: a hand-listed
+      // column set here would silently drop a field added to `eventFields`.
+      ...getTableColumns(_events),
+      action: _eventSourceRunEvents.action,
+    })
+    .from(_eventSourceRunEvents)
+    .innerJoin(_events, eq(_events.id, _eventSourceRunEvents.eventId))
+    .where(eq(_eventSourceRunEvents.runId, runId))
+    .orderBy(_events.startsAt)
     .limit(limit);
 }
