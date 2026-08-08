@@ -36,7 +36,11 @@ export function CategoryChip({
   const [busy, setBusy] = useState<Busy>(null);
   const [open, setOpen] = useState(false);
 
-  const run = async (kind: Exclude<Busy, null>, action: () => Promise<void>, failure: string) => {
+  const run = async (
+    kind: Exclude<Busy, null>,
+    action: () => Promise<void>,
+    failure: string,
+  ) => {
     if (busy) return;
     setBusy(kind);
     try {
@@ -101,7 +105,8 @@ export function CategoryChip({
                 onClick={() =>
                   run(
                     "set",
-                    () => setCategoryItem(conversationId, category.id, option.name),
+                    () =>
+                      setCategoryItem(conversationId, category.id, option.name),
                     `Failed to set ${categoryName}`,
                   )
                 }
@@ -118,7 +123,10 @@ export function CategoryChip({
               >
                 {option.name}
                 {option.hint ? (
-                  <span className="truncate text-muted-foreground"> — {option.hint}</span>
+                  <span className="truncate text-muted-foreground">
+                    {" "}
+                    — {option.hint}
+                  </span>
                 ) : null}
               </Row>
             </li>
@@ -161,7 +169,9 @@ export function CategoryChip({
           />
         }
       >
-        {busy === "classify" ? "Re-classifying…" : `Re-classify ${categoryName}`}
+        {busy === "classify"
+          ? "Re-classifying…"
+          : `Re-classify ${categoryName}`}
       </Row>
       {/* Every category in one Haiku call — the alternative, clicking each chip
           in turn, spawns one `claude` process per category. */}
@@ -169,7 +179,11 @@ export function CategoryChip({
         size="sm"
         hover="accent"
         onClick={() =>
-          run("classify", () => reclassify(conversationId), "Re-classify failed")
+          run(
+            "classify",
+            () => reclassify(conversationId),
+            "Re-classify failed",
+          )
         }
         disabled={busy !== null}
         icon={<MdAutoAwesome />}

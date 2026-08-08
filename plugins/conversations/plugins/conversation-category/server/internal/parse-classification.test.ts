@@ -13,7 +13,8 @@ describe("parseClassification", () => {
   });
 
   test("carves the object out of a code fence and surrounding prose", () => {
-    const raw = 'Sure! Here you go:\n```json\n{"priority": "P1"}\n```\nHope that helps.';
+    const raw =
+      'Sure! Here you go:\n```json\n{"priority": "P1"}\n```\nHope that helps.';
     expect(parseClassification(raw)).toEqual({ priority: "P1" });
   });
 

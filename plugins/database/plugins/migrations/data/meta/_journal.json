@@ -1607,6 +1607,13 @@
     },
     {
       "version": "7",
+      "when": 1786121025000,
+      "tag": "20260807_164345_8cb40fa1__backfill_conversation_categories",
+      "hash": "8cb40fa1",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1786123909000,
       "tag": "20260807_173149_28ee6617__merged_20260807_1731",
       "hash": "28ee6617",
@@ -1617,6 +1624,13 @@
       "when": 1786141154000,
       "tag": "20260807_221914_d2160fcd__merged_20260807_2218",
       "hash": "d2160fcd",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1786150418000,
+      "tag": "20260808_005338_54a0df24__merged_20260808_0052",
+      "hash": "54a0df24",
       "breakpoints": true
     }
   ]

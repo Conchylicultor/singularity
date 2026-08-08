@@ -22,7 +22,11 @@ export { conversationCategoriesResource } from "./internal/resource";
 export { classifyConversationJob } from "./internal/classify-job";
 // The generic category API. Consumers (stats) enumerate categories through it
 // and never name one, so adding or removing a category needs no edit there.
-export { getCategories, getItemOrder, getAvatarCategoryId } from "./internal/categories";
+export {
+  getCategories,
+  getItemOrder,
+  getAvatarCategoryId,
+} from "./internal/categories";
 export type { CategoryDescriptor } from "./internal/categories";
 export { getItemMap } from "./internal/store";
 
@@ -32,7 +36,12 @@ export default {
   contributions: [
     ConfigV2.Register({ descriptor: conversationCategoryConfig }),
     Resource.Declare(conversationCategoriesResource),
-    Trigger({ on: conversationTurnCompleted, do: classifyConversationJob, with: {}, oneShot: false }),
+    Trigger({
+      on: conversationTurnCompleted,
+      do: classifyConversationJob,
+      with: {},
+      oneShot: false,
+    }),
   ],
   httpRoutes: {
     [classifyConversation.route]: handleClassify,

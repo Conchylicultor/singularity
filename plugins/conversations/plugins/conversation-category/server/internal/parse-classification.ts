@@ -14,7 +14,9 @@ const MAX_EXCERPT = 400;
 
 function excerpt(raw: string): string {
   const trimmed = raw.trim();
-  return trimmed.length > MAX_EXCERPT ? `${trimmed.slice(0, MAX_EXCERPT)}…` : trimmed;
+  return trimmed.length > MAX_EXCERPT
+    ? `${trimmed.slice(0, MAX_EXCERPT)}…`
+    : trimmed;
 }
 
 /**

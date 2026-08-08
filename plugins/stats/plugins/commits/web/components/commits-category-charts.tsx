@@ -18,7 +18,10 @@ import {
   autoColorKey,
   useCategoryAvatars,
 } from "@plugins/conversations/plugins/conversation-category/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { getCommitsCumulative, getCommitsRate } from "../../shared/endpoints";
 import {
   ChartState,
@@ -35,16 +38,16 @@ import {
 
 // Tailwind -400 shades as hex, matching the avatar swatch colors
 const COLOR_KEY_HEX: Record<string, string> = {
-  sky:     "#38bdf8",
+  sky: "#38bdf8",
   emerald: "#34d399",
-  amber:   "#fbbf24",
-  rose:    "#fb7185",
-  violet:  "#a78bfa",
-  indigo:  "#818cf8",
-  teal:    "#2dd4bf",
-  pink:    "#f472b6",
-  orange:  "#fb923c",
-  slate:   "#94a3b8",
+  amber: "#fbbf24",
+  rose: "#fb7185",
+  violet: "#a78bfa",
+  indigo: "#818cf8",
+  teal: "#2dd4bf",
+  pink: "#f472b6",
+  orange: "#fb923c",
+  slate: "#94a3b8",
 };
 const UNKNOWN_KEY = "Unknown";
 const UNKNOWN_COLOR = "#94a3b8";
@@ -143,13 +146,26 @@ export function CumulativeCommitsCategoryChart({
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useItemColorFn(categoryId);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data: raw, error } = useEndpoint(getCommitsCumulative, {}, { query: { breakdown: "category", categoryId, dedup: dedup ? "true" : "false" } });
+  const { data: raw, error } = useEndpoint(
+    getCommitsCumulative,
+    {},
+    {
+      query: {
+        breakdown: "category",
+        categoryId,
+        dedup: dedup ? "true" : "false",
+      },
+    },
+  );
   // breakdown=category call site — response is always the byItem branch.
   const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
   const rawFlat = flattenByItem(data?.points ?? [], allKeys, "date");
   const flatPoints = useMemo(
-    () => (showEmptyDays && rawFlat.length >= 2 ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
+    () =>
+      showEmptyDays && rawFlat.length >= 2
+        ? fillGaps(rawFlat, "date", "day", "carry")
+        : rawFlat,
     [rawFlat, showEmptyDays],
   );
 
@@ -232,13 +248,27 @@ export function CommitsRateCategoryChart({
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useItemColorFn(categoryId);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data: raw, error } = useEndpoint(getCommitsRate, {}, { query: { bucket, breakdown: "category", categoryId, dedup: dedup ? "true" : "false" } });
+  const { data: raw, error } = useEndpoint(
+    getCommitsRate,
+    {},
+    {
+      query: {
+        bucket,
+        breakdown: "category",
+        categoryId,
+        dedup: dedup ? "true" : "false",
+      },
+    },
+  );
   // breakdown=category call site — response is always the byItem branch.
   const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
   const rawFlat = flattenByItem(data?.points ?? [], allKeys, "bucket");
   const flatPoints = useMemo(
-    () => (showEmptyDays && rawFlat.length >= 2 ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
+    () =>
+      showEmptyDays && rawFlat.length >= 2
+        ? fillGaps(rawFlat, "bucket", bucket)
+        : rawFlat,
     [rawFlat, showEmptyDays, bucket],
   );
 

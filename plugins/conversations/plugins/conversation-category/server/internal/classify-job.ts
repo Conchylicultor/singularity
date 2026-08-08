@@ -11,7 +11,10 @@ import { conversationCategoryConfig } from "../../shared/config";
 import { getCategories, type CategoryDescriptor } from "./categories";
 import { getCategoryRows, upsertCategoryRows } from "./store";
 import { matchItem } from "./match-item";
-import { ClassificationParseError, parseClassification } from "./parse-classification";
+import {
+  ClassificationParseError,
+  parseClassification,
+} from "./parse-classification";
 import { buildSystemPrompt, buildTranscriptDigest } from "./prompt";
 
 const HAIKU_TIMEOUT_MS = 30_000;
@@ -80,7 +83,12 @@ export const classifyConversationJob = defineJob({
     if (categories.length === 0) return;
 
     const assigned = await getCategoryRows(conversationId);
-    const targets = selectTargets(categories, assigned, input.categoryIds, force);
+    const targets = selectTargets(
+      categories,
+      assigned,
+      input.categoryIds,
+      force,
+    );
     if (targets.length === 0) return;
 
     const conversation = await getConversation(conversationId);
@@ -124,7 +132,9 @@ export const classifyConversationJob = defineJob({
       answer = parseClassification(raw);
     } catch (err) {
       if (err instanceof ClassificationParseError) {
-        console.warn(`[conversation-category] ${conversationId}: ${err.message}`);
+        console.warn(
+          `[conversation-category] ${conversationId}: ${err.message}`,
+        );
         return;
       }
       throw err;
@@ -144,7 +154,10 @@ export const classifyConversationJob = defineJob({
           : undefined;
       if (reply === undefined) continue;
 
-      const match = matchItem(reply, category.items.map((i) => i.name));
+      const match = matchItem(
+        reply,
+        category.items.map((i) => i.name),
+      );
       if (!match.ok) {
         console.warn(
           `[conversation-category] ${conversationId} / ${category.name}: ${match.reason}`,

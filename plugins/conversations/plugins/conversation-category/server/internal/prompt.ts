@@ -23,7 +23,9 @@ function renderCategory(category: CategoryDescriptor): string {
  * the user's own definition of the item, and it is the whole reason the model
  * can tell "P0" from "P1".
  */
-export function buildSystemPrompt(categories: readonly CategoryDescriptor[]): string {
+export function buildSystemPrompt(
+  categories: readonly CategoryDescriptor[],
+): string {
   const blocks = categories.map(renderCategory).join("\n\n");
   const example = categories
     .map((c) => `"${c.id}": "${c.items[0]?.name ?? ""}"`)

@@ -28,7 +28,10 @@ export const handleClassify: HttpHandler = async (req, params) => {
       body = JSON.parse(text);
     } catch (err) {
       if (!(err instanceof SyntaxError)) throw err;
-      return Response.json({ error: `Body is not valid JSON: ${err.message}` }, { status: 400 });
+      return Response.json(
+        { error: `Body is not valid JSON: ${err.message}` },
+        { status: 400 },
+      );
     }
   }
   const parsed = ClassifyBodySchema.safeParse(body);

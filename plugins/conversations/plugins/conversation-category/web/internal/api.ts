@@ -21,7 +21,10 @@ export async function clearCategory(
   conversationId: string,
   categoryId: string,
 ): Promise<void> {
-  await fetchEndpoint(clearConversationCategory, { conversationId, categoryId });
+  await fetchEndpoint(clearConversationCategory, {
+    conversationId,
+    categoryId,
+  });
 }
 
 /** Omit `categoryIds` to re-classify every category. */

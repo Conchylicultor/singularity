@@ -1,6 +1,5 @@
 export type ItemMatch =
-  | { ok: true; item: string }
-  | { ok: false; reason: string };
+  { ok: true; item: string } | { ok: false; reason: string };
 
 /**
  * Map a model's free-form answer for one category to one of that category's
@@ -17,7 +16,10 @@ export type ItemMatch =
  * inclusion predicate. A user who wants a catch-all says so in the category's
  * hint ("if unsure, pick Other").
  */
-export function matchItem(raw: string, itemNames: readonly string[]): ItemMatch {
+export function matchItem(
+  raw: string,
+  itemNames: readonly string[],
+): ItemMatch {
   if (itemNames.length === 0) {
     return { ok: false, reason: "category has no configured items" };
   }
@@ -45,5 +47,8 @@ export function matchItem(raw: string, itemNames: readonly string[]): ItemMatch 
   );
   if (substrIdx >= 0) return { ok: true, item: itemNames[substrIdx]! };
 
-  return { ok: false, reason: `no configured item matches ${JSON.stringify(raw.trim())}` };
+  return {
+    ok: false,
+    reason: `no configured item matches ${JSON.stringify(raw.trim())}`,
+  };
 }

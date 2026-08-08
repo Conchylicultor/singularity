@@ -48,7 +48,9 @@ export function useAvatarCategoryId(): string | null {
   const { avatarCategory } = useConfig(conversationCategoryConfig);
   const categories = useCategories();
   if (!avatarCategory) return null;
-  return categories.some((c) => c.id === avatarCategory) ? avatarCategory : null;
+  return categories.some((c) => c.id === avatarCategory)
+    ? avatarCategory
+    : null;
 }
 
 /** One category's item avatars, keyed by item name (the value rows store). */

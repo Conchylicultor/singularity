@@ -14,6 +14,9 @@
 // separator — `pointResourceDescriptor.encode` throws on a comma). Conversation
 // ids are `conv-<ts>-<slug>`; category ids are UUIDs minted by the settings UI or
 // hand-authored slugs in `config.jsonc`.
-export function categoryRowId(conversationId: string, categoryId: string): string {
+export function categoryRowId(
+  conversationId: string,
+  categoryId: string,
+): string {
   return `${conversationId}:${categoryId}`;
 }

@@ -7924,11 +7924,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
-    - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
+    - **`conversation-category`** — Per-conversation categories: one chip per user-defined category in the conversation header, and the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn; manual override from each chip's popover. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Surfaces one chip per category in the conversation header, and paints the sidebar avatar from the category chosen for it.
       - Web:
         - Contributes:
           - `Conversation.Header` → `CategoryChipToolbar`
           - `ConfigV2.WebRegister`
+          - `DynamicEnum.Options` "Avatar category"
           - `Item.Avatar` → `CategoryAvatarRow`
         - Uses:
           - `config_v2.ConfigV2`
@@ -7940,17 +7941,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/header.Conversation`
+          - `fields/dynamic-enum/config.DynamicEnum`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/avatar.Avatar`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/row.Row`
-          - `primitives/live-state.usePointResource`
+          - `primitives/live-state.usePointResources`
           - `primitives/popover.InlinePopover`
           - `shell/notifications.toast`
-        - Exports (types): `ColorKey`
+        - Exports (types):
+          - `Category`
+          - `CategoryItem`
+          - `ColorKey`
         - Exports (values):
           - `autoColorKey`
+          - `useAvatarCategoryId`
+          - `useCategories`
           - `useCategoryAvatars`
       - Server:
         - Contributes:
@@ -7962,7 +7969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.getConfig`
           - `conversations.conversationTurnCompleted`
           - `conversations.readConversationTurns`
-          - `conversations.Turn`
+          - `database.db`
           - `infra/claude-cli.ClaudeCliError`
           - `infra/claude-cli.runClaudePrint`
           - `infra/endpoints.HttpError`
@@ -7975,31 +7982,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
+        - Exports (types): `CategoryDescriptor`
         - Exports (values):
           - `classifyConversationJob`
           - `conversationCategoriesResource`
-          - `conversationCategory`
           - `conversationCategoryConfig`
+          - `getAvatarCategoryId`
+          - `getCategories`
+          - `getItemMap`
+          - `getItemOrder`
         - Register: `defineJob('conversation-category.classify')`
         - Routes:
           - `POST /api/conversation-category/:conversationId/classify`
           - `POST /api/conversation-category/:conversationId`
-          - `DELETE /api/conversation-category/:conversationId`
+          - `DELETE /api/conversation-category/:conversationId/:categoryId`
       - Cross-plugin:
         - Imported by: `stats/commits`
       - Shared:
         - Exports (types):
+          - `ClassifyBody`
           - `ConversationCategoriesPayload`
           - `ConversationCategory`
-          - `SetCategoryBody`
+          - `SetCategoryItemBody`
         - Exports (values):
+          - `categoryRowId`
+          - `ClassifyBodySchema`
           - `classifyConversation`
           - `clearConversationCategory`
           - `ConversationCategoriesPayloadSchema`
           - `conversationCategoriesResource`
           - `conversationCategoryConfig`
           - `ConversationCategorySchema`
-          - `SetCategoryBodySchema`
+          - `SetCategoryItemBodySchema`
           - `setConversationCategory`
     - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
       - Web:
@@ -10398,6 +10412,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations`
       - `conversations/agents`
       - `conversations/all-conversations`
+      - `conversations/conversation-category`
       - `conversations/conversation-progress`
       - `conversations/conversation-view/turn-summary`
       - `conversations/conversations-view/grouped`
@@ -10440,7 +10455,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports`
       - `search/engine`
       - `shell/notifications`
-      - `stats/commits`
       - `stats/cost`
       - `tasks`
       - `tasks/auto-start`
@@ -12956,7 +12970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
-            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
             - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
             - Uses:
               - `config_v2/fields.Fields`
@@ -12980,6 +12994,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `dynamicEnumField`
           - Cross-plugin:
             - Imported by:
+              - `conversations/conversation-category`
               - `ui/segmented-progress-bar`
               - `ui/tab-bar`
               - `ui/theme-engine`
@@ -14358,6 +14373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `code-explorer`
+              - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
@@ -20377,6 +20393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `review/code-review`
               - `search/quick-find`
+              - `stats/commits`
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
@@ -26703,10 +26720,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useSetConfig`
           - `config_v2/config-link.ConfigGearButton`
           - `conversations/conversation-category.autoColorKey`
+          - `conversations/conversation-category.useCategories`
           - `conversations/conversation-category.useCategoryAvatars`
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `primitives/css/cluster.Cluster`
+          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
@@ -26731,9 +26750,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
-          - `conversations/conversation-category.conversationCategory`
-          - `conversations/conversation-category.conversationCategoryConfig`
-          - `database.db`
+          - `conversations/conversation-category.getItemMap`
+          - `conversations/conversation-category.getItemOrder`
           - `infra/endpoints.implement`
           - `infra/paths.GIT`
           - `infra/worktree.ensureMainWorktreeRoot`

@@ -15,8 +15,14 @@ describe("matchItem", () => {
   });
 
   test("falls through prefix then substring", () => {
-    expect(matchItem("P0 — revenue impacting", ITEMS)).toEqual({ ok: true, item: "P0" });
-    expect(matchItem("I would say P2 here", ITEMS)).toEqual({ ok: true, item: "P2" });
+    expect(matchItem("P0 — revenue impacting", ITEMS)).toEqual({
+      ok: true,
+      item: "P0",
+    });
+    expect(matchItem("I would say P2 here", ITEMS)).toEqual({
+      ok: true,
+      item: "P2",
+    });
   });
 
   test("an unmatched answer is a failure, never the last item", () => {

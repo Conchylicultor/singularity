@@ -38,7 +38,7 @@ export const conversationCategoryConfig = defineConfig({
         hint: textField({
           label: "Hint",
           description:
-            "Optional guidance passed to the classifier about what this category means as a whole. A good place to say what to do when nothing fits — e.g. \"if unsure, pick Other\".",
+            'Optional guidance passed to the classifier about what this category means as a whole. A good place to say what to do when nothing fits — e.g. "if unsure, pick Other".',
         }),
         items: listField({
           label: "Items",

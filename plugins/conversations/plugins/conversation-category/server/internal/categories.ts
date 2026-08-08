@@ -19,7 +19,9 @@ export function getCategories(): CategoryDescriptor[] {
   }));
 }
 
-export function findCategory(categoryId: string): CategoryDescriptor | undefined {
+export function findCategory(
+  categoryId: string,
+): CategoryDescriptor | undefined {
   return getCategories().find((c) => c.id === categoryId);
 }
 

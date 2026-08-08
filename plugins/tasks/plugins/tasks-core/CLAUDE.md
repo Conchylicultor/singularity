@@ -315,6 +315,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `tasks/task-preprompt`
     - `tasks/task-title`
   - Extended by:
+    - `conversations/conversation-category` (table `conversations_ext_category`)
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
     - `conversations/conversation-progress` (table `conversations_ext_progress`)

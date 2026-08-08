@@ -1,6 +1,6 @@
 {
-  "id": "8b3b636d-f9b4-41cb-9ecc-160b1b897277",
-  "prevId": "39e4a9e2-bbaf-45f6-acb4-bdef9d054f0c",
+  "id": "0c30d8c2-e9cd-46ab-997b-1cf6c47d0bd7",
+  "prevId": "5f154ba6-7a5b-499a-a4ec-05c705f28ae2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -646,6 +646,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "flags": {
+          "name": "flags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {
@@ -772,6 +779,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "last_flags": {
+          "name": "last_flags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -851,6 +865,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "date": {
+          "name": "date",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
         "starts_at": {
           "name": "starts_at",
           "type": "timestamp with time zone",
@@ -922,12 +942,6 @@
         },
         "recurrence_label": {
           "name": "recurrence_label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "series_key": {
-          "name": "series_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -4275,6 +4289,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "pinned": {
+          "name": "pinned",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -4306,38 +4327,6 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.queue_state": {
-      "name": "queue_state",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "pinned_conversation_id": {
-          "name": "pinned_conversation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -5577,6 +5566,88 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.page_blocks_ext_todo_task": {
+      "name": "page_blocks_ext_todo_task",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "page_blocks_ext_todo_task_task_idx": {
+          "name": "page_blocks_ext_todo_task_task_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "page_blocks_ext_todo_task_parent_id_page_blocks_id_fk": {
+          "name": "page_blocks_ext_todo_task_parent_id_page_blocks_id_fk",
+          "tableFrom": "page_blocks_ext_todo_task",
+          "tableTo": "page_blocks",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "page_blocks_ext_todo_task_task_id_tasks_id_fk": {
+          "name": "page_blocks_ext_todo_task_task_id_tasks_id_fk",
+          "tableFrom": "page_blocks_ext_todo_task",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

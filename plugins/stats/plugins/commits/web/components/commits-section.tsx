@@ -9,7 +9,10 @@ import { useCategories } from "@plugins/conversations/plugins/conversation-categ
 import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
 import { CommitsRateChart } from "./rate-chart";
-import { CumulativeCommitsCategoryChart, CommitsRateCategoryChart } from "./commits-category-charts";
+import {
+  CumulativeCommitsCategoryChart,
+  CommitsRateCategoryChart,
+} from "./commits-category-charts";
 
 /**
  * One breakdown chart per configured conversation category — a conversation is
@@ -49,8 +52,7 @@ export function CommitsSection() {
   const { filterRebases } = useConfig(commitsConfig);
   const setConfig = useSetConfig(commitsConfig);
 
-  const toggle = () =>
-    setConfig("filterRebases", !filterRebases);
+  const toggle = () => setConfig("filterRebases", !filterRebases);
 
   return (
     <Stack gap="xl">
@@ -74,11 +76,20 @@ export function CommitsSection() {
         </ToggleChip>
       </Cluster>
       <Stack gap="md">
-        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Over time</Text>
+        <Text
+          as="h3"
+          variant="caption"
+          className="font-medium text-muted-foreground"
+        >
+          Over time
+        </Text>
         {byCategory ? (
           <PerCategory
             render={(categoryId) => (
-              <CumulativeCommitsCategoryChart dedup={filterRebases} categoryId={categoryId} />
+              <CumulativeCommitsCategoryChart
+                dedup={filterRebases}
+                categoryId={categoryId}
+              />
             )}
           />
         ) : (
@@ -86,11 +97,20 @@ export function CommitsSection() {
         )}
       </Stack>
       <Stack gap="md">
-        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Per period</Text>
+        <Text
+          as="h3"
+          variant="caption"
+          className="font-medium text-muted-foreground"
+        >
+          Per period
+        </Text>
         {byCategory ? (
           <PerCategory
             render={(categoryId) => (
-              <CommitsRateCategoryChart dedup={filterRebases} categoryId={categoryId} />
+              <CommitsRateCategoryChart
+                dedup={filterRebases}
+                categoryId={categoryId}
+              />
             )}
           />
         ) : (

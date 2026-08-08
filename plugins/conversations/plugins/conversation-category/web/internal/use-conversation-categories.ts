@@ -28,7 +28,10 @@ export function useCategoryRows(
   categoryIds: readonly string[],
 ): Map<string, ConversationCategory> {
   const ids = useMemo(
-    () => categoryIds.map((categoryId) => categoryRowId(conversationId, categoryId)),
+    () =>
+      categoryIds.map((categoryId) =>
+        categoryRowId(conversationId, categoryId),
+      ),
     [conversationId, categoryIds],
   );
   const result = usePointResources(conversationCategoriesResource, ids);

@@ -1,0 +1,24 @@
+-- Custom SQL migration file, put your code below! --
+-- migration: 20260807_164345__backfill_conversation_categories --
+
+-- PUSH 1 OF 2 — intentionally does nothing yet.
+--
+-- This file will copy every pre-multi-category classification out of the 1:1
+-- side table `conversations_ext_category` and into the new
+-- one-row-per-(conversation, category) table. It cannot do that in the same push
+-- that CREATES its destination: `push` regenerates every branch-local SCHEMA
+-- migration into a single one stamped at push time, while leaving DATA
+-- migrations at their original timestamps. This file is therefore ordered BEFORE
+-- the migration that creates `conversation_categories`, and the real INSERT
+-- fails on main's boot with `relation "conversation_categories" does not exist`
+-- (confirmed by `migration-applies-clean`).
+--
+-- Guarding the INSERT is not an option either: a data migration must be pure DML
+-- (`data-migration-dml-only`), so a PL/pgSQL `DO $$ … END $$` block is rejected.
+--
+-- So the table swap runs expand → migrate → contract across two pushes. THIS
+-- push creates the destination and leaves the source table in place, so no
+-- classification can be lost. The NEXT push replaces the statement below with
+-- the real INSERT and drops the source — and because editing a data migration
+-- re-hashes its filename, it applies a second time rather than being skipped.
+SELECT 1 WHERE false;
