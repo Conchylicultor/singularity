@@ -3,18 +3,17 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
-import {
-  WithTooltip,
-  Kbd,
-} from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip, Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import {
   useActionPresentation,
+  useReportActionPresence,
   MenuActionItem,
 } from "@plugins/primitives/plugins/action-presentation/web";
 
 export interface IconButtonProps
-  extends Omit<ComponentProps<typeof Button>, "children" | "size">,
+  extends
+    Omit<ComponentProps<typeof Button>, "children" | "size">,
     DensityControlled {
   icon: ComponentType<{ className?: string }>;
   /** The action's name: the aria-label + tooltip inline, the visible row text in menu form. */
@@ -44,6 +43,12 @@ export function IconButton({
 }: IconButtonProps) {
   // Unconditional (hook order): the region's answer, then one branch on it.
   const presentation = useActionPresentation();
+  // In a `probe` region this button draws nothing and exists only to be counted,
+  // so a region can tell an empty action set from a populated one before it
+  // paints chrome (an `⋯` with nothing behind it is a dead affordance). Inert
+  // everywhere else.
+  useReportActionPresence(presentation === "probe");
+  if (presentation === "probe") return null;
   if (presentation === "menu") {
     return (
       <MenuActionItem
@@ -66,7 +71,7 @@ export function IconButton({
       <Kbd>{formatShortcutLabel(shortcut)}</Kbd>
     </>
   ) : (
-    tooltip ?? label
+    (tooltip ?? label)
   );
 
   return (

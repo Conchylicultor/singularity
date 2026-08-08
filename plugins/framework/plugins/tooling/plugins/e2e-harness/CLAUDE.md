@@ -50,6 +50,7 @@ rule keeps the broken shape from coming back.
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/jsonl-viewer/message-toc`
     - `conversations/conversation-view/prompt-templates`
+    - `conversations/conversations-view/data-view/queue`
     - `debug/live-state-churn/emit`
     - `debug/render-profiler`
     - `improve/element-picker`

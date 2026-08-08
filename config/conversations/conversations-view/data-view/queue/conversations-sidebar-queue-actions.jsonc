@@ -1,11 +1,32 @@
 // @hash 68b504e1ed7b
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// At most one spacer per slot.
 {
+  // The conversation sidebar is a narrow column and these rows already carry a
+  // title, chips and a status dot, so only Pin — the one action a user reaches
+  // for repeatedly while triaging the queue — keeps an inline icon. The queue
+  // moves and Close fold behind the row's single `⋯`. This split is a judgement
+  // about THIS surface's width; it is authored, never inferred.
   "items": [
     "conversations.conversations-view.data-view.queue:pin",
-    "conversations.conversations-view.data-view.queue:promote",
-    "conversations.conversations-view.data-view.queue:step-down",
-    "conversations.conversations-view.data-view.queue:demote",
-    "conversations.conversations-view.data-view.queue:add-to-queue",
-    "conversations.conversations-view.data-view.queue:close"
+    {
+      "type": "overflow",
+      "id": "row-overflow",
+      "items": [
+        "conversations.conversations-view.data-view.queue:promote",
+        "conversations.conversations-view.data-view.queue:step-down",
+        "conversations.conversations-view.data-view.queue:demote",
+        "conversations.conversations-view.data-view.queue:add-to-queue",
+        "conversations.conversations-view.data-view.queue:close"
+      ]
+    }
   ]
 }

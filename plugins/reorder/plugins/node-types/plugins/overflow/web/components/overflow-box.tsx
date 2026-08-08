@@ -5,7 +5,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { ActionPresentation } from "@plugins/primitives/plugins/action-presentation/web";
+import {
+  ActionPresentation,
+  ActionPresenceScope,
+} from "@plugins/primitives/plugins/action-presentation/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -25,8 +28,15 @@ type OverflowPayload = { label?: string };
  *   can see and drag the bucket's members. A closed menu would suppress drag,
  *   and the pen affordances live on the members themselves.
  *
- * Renders **nothing** with no members: an emptied bucket must leave no dangling
- * trigger on the row.
+ * Renders **nothing** when the bucket is empty — and *empty* means "no member
+ * actually rendered", not "no member is authored". An item action returns `null`
+ * for a row it does not apply to (Close on an already-closed conversation, Move
+ * to top on the row that is already top), so a bucket holding five authored
+ * actions can still come to nothing on a given row. Whether that is so is only
+ * knowable after the members run, which is what the `probe` pass below does: the
+ * members render once drawing no DOM, each announcing itself to the surrounding
+ * `ActionPresenceScope`, and the `⋯` is painted only if at least one did. Without
+ * it, such a row gets a `⋯` opening an empty menu.
  */
 export function OverflowBox({
   payload,
@@ -65,17 +75,40 @@ export function OverflowBox({
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" aspect="icon" aria-label={label} title={label} />
-        }
-      >
-        <MdMoreHoriz />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <ActionPresentation mode="menu">{children}</ActionPresentation>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <ActionPresenceScope>
+      {(hasActions) => (
+        <>
+          {/* The probe. Renders no DOM — it exists so the members can say
+              whether they apply to this row before the trigger is painted. It
+              stays mounted alongside the open menu (rather than swapping with
+              it) so the answer keeps up with a row whose actions come and go — a
+              conversation that starts running, a task that reaches the top of
+              the queue — and so the trigger never blinks out for a frame as the
+              menu closes. The cost is that a member exists twice while its menu
+              is open, which the reorder wrappers only care about in edit mode —
+              and edit mode takes the inline branch above, never this one. */}
+          <ActionPresentation mode="probe">{children}</ActionPresentation>
+          {hasActions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    aspect="icon"
+                    aria-label={label}
+                    title={label}
+                  />
+                }
+              >
+                <MdMoreHoriz />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <ActionPresentation mode="menu">{children}</ActionPresentation>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </>
+      )}
+    </ActionPresenceScope>
   );
 }

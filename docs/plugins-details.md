@@ -14421,6 +14421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `conversations/conversation-view/prompt-templates`
+              - `conversations/conversations-view/data-view/queue`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
               - `improve/element-picker`
@@ -19144,7 +19145,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
-    - **`action-presentation`** — Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline or menu via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site.
+    - **`action-presentation`** — Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline, menu or probe via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site. The probe mode draws nothing and only counts itself into the surrounding ActionPresenceScope, so a region can tell whether its action set is empty for a given row before painting chrome for it.
       - Web:
         - Uses:
           - `primitives/css/ui-kit.DropdownMenuItem`
@@ -19154,9 +19155,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ActionPresentationMode`
           - `MenuActionItemProps`
         - Exports (values):
+          - `ActionPresenceScope`
           - `ActionPresentation`
           - `MenuActionItem`
           - `useActionPresentation`
+          - `useReportActionPresence`
       - Cross-plugin:
         - Imported by:
           - `primitives/icon-button`
@@ -23157,6 +23160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/action-presentation.MenuActionItem`
           - `primitives/action-presentation.useActionPresentation`
+          - `primitives/action-presentation.useReportActionPresence`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/shortcuts.formatShortcutLabel`
@@ -25979,6 +25983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `ReorderNodes.NodeType` "overflow"
             - Uses:
+              - `primitives/action-presentation.ActionPresenceScope`
               - `primitives/action-presentation.ActionPresentation`
               - `primitives/css/line.Line`
               - `primitives/css/spacing.Inset`

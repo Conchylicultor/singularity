@@ -2,14 +2,18 @@ import { createContext, useContext, type ReactNode } from "react";
 
 /**
  * How a region wants the generic `{ icon, label, onClick }` actions inside it to
- * render. `inline` is the ghost icon button; `menu` is a labelled dropdown row.
+ * render. `inline` is the ghost icon button; `menu` is a labelled dropdown row;
+ * `probe` draws nothing at all and only reports that the action applies (see
+ * `ActionPresenceScope`), which is how a region asks "is my action set empty for
+ * THIS row?" before it decides to paint chrome for them.
  */
-export type ActionPresentationMode = "inline" | "menu";
+export type ActionPresentationMode = "inline" | "menu" | "probe";
 
 // Default `inline`: the overwhelming majority of action call sites are not
 // inside a menu and must keep rendering exactly as they did before this
 // primitive existed, with no provider anywhere above them.
-const ActionPresentationContext = createContext<ActionPresentationMode>("inline");
+const ActionPresentationContext =
+  createContext<ActionPresentationMode>("inline");
 
 /**
  * Declares what kind of surface the wrapped region is. An action component is

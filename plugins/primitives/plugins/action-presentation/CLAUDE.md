@@ -20,6 +20,30 @@ included).
 `MenuActionItem` takes the **raw** shortcut string and formats it through the same
 `formatShortcutLabel` as the inline form, so the two presentations cannot drift.
 
+## `probe` — "is this action set empty for THIS row?"
+
+An action returns `null` for a row it doesn't apply to, so a region can't know
+its set is empty until the members have run — and chrome painted for them (an
+`⋯`) would be dead. Under `probe`, `IconButton` renders nothing and only reports
+itself to the enclosing `ActionPresenceScope`, which hands its child one boolean.
+
+```tsx
+<ActionPresenceScope>
+  {(hasActions) => (
+    <>
+      <ActionPresentation mode="probe">{children}</ActionPresentation>
+      {hasActions ? <TheChromeThatHoldsThem /> : null}
+    </>
+  )}
+</ActionPresenceScope>
+```
+
+Members are instantiated twice (probe + real); the probe emits no DOM.
+**It counts `IconButton`s** — same contract as menu form — so a member that
+hand-rolls its markup is invisible to it. Typed signal, not a CSS `:has()` on the
+probe's markup: members arrive inside whatever `display:contents` scaffolding the
+slot machinery renders, so a selector would assert on incidental DOM.
+
 ## Rules
 
 - Mount `ActionPresentation` around *content*, not chrome: the mode is inherited
@@ -32,7 +56,7 @@ included).
 
 ## Plugin reference
 
-- Description: Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline or menu via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site.
+- Description: Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline, menu or probe via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site. The probe mode draws nothing and only counts itself into the surrounding ActionPresenceScope, so a region can tell whether its action set is empty for a given row before painting chrome for it.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.DropdownMenuItem`
@@ -42,9 +66,11 @@ included).
     - `ActionPresentationMode`
     - `MenuActionItemProps`
   - Exports (values):
+    - `ActionPresenceScope`
     - `ActionPresentation`
     - `MenuActionItem`
     - `useActionPresentation`
+    - `useReportActionPresence`
 - Cross-plugin:
   - Imported by:
     - `primitives/icon-button`

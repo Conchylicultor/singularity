@@ -11,8 +11,12 @@ contributions. It wraps them in `<ActionPresentation mode="menu">`
 (`@plugins/primitives/plugins/action-presentation`) and each action's own
 `IconButton` reads that and renders its menu form. In **edit mode** the box
 becomes a labelled inline frame mirroring `HeaderBox`, because a closed menu
-would hide the members from the pen's drag affordances. It renders **nothing**
-when it has no members, so an emptied bucket leaves no dangling `⋯`.
+would hide the members from the pen's drag affordances.
+
+The `⋯` appears only when a member actually renders — **authored** membership is
+not enough, since an item action returns `null` on rows it doesn't apply to and
+a whole bucket can come to nothing on one row. A `probe` pass answers that with
+no DOM; see action-presentation's CLAUDE.md.
 
 Payload is `{ label? }` (default `"More"`, used as the trigger's aria-label +
 title). Container creation and membership are config-only, so there is no
@@ -31,6 +35,7 @@ registry.
 - Web:
   - Contributes: `ReorderNodes.NodeType` "overflow"
   - Uses:
+    - `primitives/action-presentation.ActionPresenceScope`
     - `primitives/action-presentation.ActionPresentation`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Inset`

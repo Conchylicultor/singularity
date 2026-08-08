@@ -13,7 +13,8 @@ mode="menu">` region (`@plugins/primitives/plugins/action-presentation`) it
 returns a `MenuActionItem` — a labelled dropdown row — instead of the ghost icon
 box. Every action built on it (incl. `RowActionButton`) inherits that for free;
 no call site changes, since the default mode is `inline`. `variant`, `className`,
-`tooltip` and `side` are inert in menu form.
+`tooltip` and `side` are inert in menu form. Under `probe` it renders nothing and
+only counts itself, so a region can tell an empty action set from a populated one.
 
 ## Enforcement
 
@@ -38,6 +39,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
   - Uses:
     - `primitives/action-presentation.MenuActionItem`
     - `primitives/action-presentation.useActionPresentation`
+    - `primitives/action-presentation.useReportActionPresence`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/shortcuts.formatShortcutLabel`
