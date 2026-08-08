@@ -256,6 +256,19 @@ hand-written `PATCH` or a pasted `SerializedBlock` sets `expanded` to.
   editing-surface view state — so the editor and the version-history *diff*
   deliberately disagree about what the document shows.
 
+## A block id has one mint (`newBlockId`)
+
+`core/block-id.ts` mints every `page_blocks` id, as `block-<uuid>` — the client
+before the round trip (`insert`/`split`'s `newId`, `wrapInContainer`,
+`withMintedIds`), the server for a row no editor is open on (`createBlock`,
+turn-into-page's seed child). `page-editor/no-adhoc-block-id` keeps it one mint.
+
+**An id is opaque everywhere except the mint** — never validated, never
+destructured. Rows predating `newBlockId()` keep bare-uuid ids (a backfill is a
+migration: two self-FKs plus every `page_blocks_ext_*` table reference them), and
+**undo of a delete re-inserts a row under its ORIGINAL id**, so a legacy-shaped
+id reaches an INSERT on a live path.
+
 ## A page's structural writes are one ordered stream over one locked forest
 
 Two invariants, deliberately not conflated. **A is per-page and server-side; B is
@@ -2285,6 +2298,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `moveBlock`
     - `MoveBlockBodySchema`
     - `namesField`
+    - `newBlockId`
     - `nextVisibleLine`
     - `opBlockIds`
     - `PAGE_BLOCK_TYPE`

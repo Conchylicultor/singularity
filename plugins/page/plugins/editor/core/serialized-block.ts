@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import { newBlockId } from "./block-id";
 
 /**
  * A block detached from its document — type, payload, expanded flag, and nested
@@ -25,7 +26,8 @@ export interface SerializedBlock {
    * node with no `ref` is a node the document asked to CREATE.
    *
    * It is deliberately not called `id`, and that is a safety property rather
-   * than taste. {@link withMintedIds} is the sole id-minting site and is SHARED
+   * than taste. {@link withMintedIds} is the sole site that stamps ids onto a
+   * FOREST, and it is SHARED
    * WITH CLIPBOARD PASTE, where it spreads `...node`: under the name `id` a
    * pasted copy of a card would silently carry — and therefore reuse — a LIVE
    * row's identity. Under `ref` the spread carries it through inert and the
@@ -84,9 +86,11 @@ export const IdentifiedBlockSchema: ZodParser<IdentifiedBlock> = z.lazy(() =>
 );
 
 /**
- * Stamp a fresh id onto every node of an id-less forest. The one minting site:
- * a caller that holds `IdentifiedBlock`s got them from here, and everything
- * downstream (reducer, overlay effect, server insert) merely carries them.
+ * Stamp a fresh id onto every node of an id-less forest. The one minting site
+ * FOR A FOREST: a caller that holds `IdentifiedBlock`s got them from here, and
+ * everything downstream (reducer, overlay effect, server insert) merely carries
+ * them. The id itself comes from {@link newBlockId}, shared with every
+ * single-block mint so one format covers both.
  *
  * **The mint is unconditional, and a node's `ref` never enters it.** The spread
  * carries `ref` through as inert cargo for whoever asked for the mint; honouring
@@ -98,7 +102,7 @@ export const IdentifiedBlockSchema: ZodParser<IdentifiedBlock> = z.lazy(() =>
 export function withMintedIds(forest: SerializedBlock[]): IdentifiedBlock[] {
   return forest.map((node) => ({
     ...node,
-    id: crypto.randomUUID(),
+    id: newBlockId(),
     children: withMintedIds(node.children),
   }));
 }

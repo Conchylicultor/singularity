@@ -9,7 +9,10 @@ import {
   type MutableRefObject,
   type ReactNode,
 } from "react";
-import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -28,6 +31,7 @@ import {
   patchesFromDiff,
   isEmptyPatch,
   withMintedIds,
+  newBlockId,
   namesField,
   type Block,
   type BlockNode,
@@ -57,7 +61,11 @@ import { serializeForest } from "./serialize-blocks";
 import { landCaret } from "./internal/caret-landing";
 import { createCaretAuthority } from "./internal/caret-authority";
 import type { BlockFocusHandle } from "./internal/caret-authority";
-import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-surface";
+import type {
+  CaretLandOptions,
+  CaretSurface,
+  CaretSurfaceRef,
+} from "./caret-surface";
 import { useAnchorTypes, useBlockHandles } from "./internal/block-handles";
 import { useMemoryBlockStore, type BlockStore } from "./block-store";
 import { CompositeServerProviderHost } from "./composite-block-store";
@@ -184,7 +192,8 @@ function derivePatchEntry(
   if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return null;
   // Order mirrors the patch's own precedence: redo's first write is its creates
   // (a split's new block), undo's is its updates (the surviving origin row).
-  const redoFocus = focusId ?? redoPatch.creates[0]?.id ?? redoPatch.updates[0]?.id ?? null;
+  const redoFocus =
+    focusId ?? redoPatch.creates[0]?.id ?? redoPatch.updates[0]?.id ?? null;
   const undoFocus =
     undoPatch.updates[0]?.id ?? undoPatch.creates[0]?.id ?? focusId ?? null;
   return { undoPatch, redoPatch, undoFocus, redoFocus };
@@ -305,8 +314,16 @@ interface BlockEditorContextValue {
    * `opts.scroll` (default false) declares whether the landing follows the caret
    * into view — set for keyboard nav / undo-redo, left off for pointer landings.
    */
-  focusBlock: (id: string, caretOffset?: number, opts?: CaretLandOptions) => void;
-  focusBlockBoundary: (id: string, edge: "start" | "end", opts?: CaretLandOptions) => boolean;
+  focusBlock: (
+    id: string,
+    caretOffset?: number,
+    opts?: CaretLandOptions,
+  ) => void;
+  focusBlockBoundary: (
+    id: string,
+    edge: "start" | "end",
+    opts?: CaretLandOptions,
+  ) => boolean;
   /**
    * Reorder/reparent `id` to sit immediately `zone` of `targetId`. Positional
    * intent, not a rank — the store owns the rank (the server mints it on the
@@ -404,7 +421,11 @@ interface BlockEditorContextValue {
    * captured a NON-typing content-doc edit (see {@link recordDocEdit}) names
    * what it actually did, so the history reads truthfully.
    */
-  recordTextEdit: (blockId: string, edit: CapturedBlockDocEdit, label?: string) => void;
+  recordTextEdit: (
+    blockId: string,
+    edit: CapturedBlockDocEdit,
+    label?: string,
+  ) => void;
   /**
    * Capture a SYNCHRONOUS content-doc edit as ONE standalone text undo entry.
    * `edit` must drive its Lexical/Yjs changes synchronously (`discrete: true`) —
@@ -449,7 +470,8 @@ const BlockEditorContext = createContext<BlockEditorContextValue | null>(null);
 
 export function useBlockEditor(): BlockEditorContextValue {
   const ctx = useContext(BlockEditorContext);
-  if (!ctx) throw new Error("useBlockEditor must be used within a BlockEditorProvider");
+  if (!ctx)
+    throw new Error("useBlockEditor must be used within a BlockEditorProvider");
   return ctx;
 }
 
@@ -644,10 +666,15 @@ export function BlockEditorProviderInner({
   // (`internal/caret-authority.ts`). Everything below hands it a landing policy;
   // nothing below can reach a handle to focus one itself, which is what makes the
   // mount-gap race unreintroducible rather than merely fixed.
-  const liveIds = useMemo(() => new Set(store.data.map((b) => b.id)), [store.data]);
+  const liveIds = useMemo(
+    () => new Set(store.data.map((b) => b.id)),
+    [store.data],
+  );
   const getOriginId = useEventCallback(() => focusedBlockId);
   const isLiveRow = useEventCallback((id: string) => liveIds.has(id));
-  const [authority] = useState(() => createCaretAuthority({ getOriginId, isLiveRow }));
+  const [authority] = useState(() =>
+    createCaretAuthority({ getOriginId, isLiveRow }),
+  );
 
   // Push-based flight bound, never a timer: every commit is a fresh view of what
   // the surface RENDERS, so a claimed landing whose block never becomes a visible
@@ -661,7 +688,8 @@ export function BlockEditorProviderInner({
   });
 
   const registerFocusHandle = useCallback(
-    (id: string, handle: BlockFocusHandle) => authority.registerHandle(id, handle),
+    (id: string, handle: BlockFocusHandle) =>
+      authority.registerHandle(id, handle),
     [authority],
   );
 
@@ -696,9 +724,13 @@ export function BlockEditorProviderInner({
     rowsRef.current = after;
   }, []);
 
-  const requestBlockMenu = useCallback((id: string) => setBlockMenuDraftId(id), []);
+  const requestBlockMenu = useCallback(
+    (id: string) => setBlockMenuDraftId(id),
+    [],
+  );
   const clearBlockMenu = useCallback(
-    (id?: string) => setBlockMenuDraftId((cur) => (id == null || cur === id ? null : cur)),
+    (id?: string) =>
+      setBlockMenuDraftId((cur) => (id == null || cur === id ? null : cur)),
     [],
   );
 
@@ -722,7 +754,8 @@ export function BlockEditorProviderInner({
       // only a MOUNTED host can answer, and the empty-background click falls back
       // to selecting the row on `false`. So this never claims a flight.
       authority.landIfMounted(id, (handle, land) => {
-        if (handle.focusBoundary) handle.focusBoundary(edge, { ...opts, ...land });
+        if (handle.focusBoundary)
+          handle.focusBoundary(edge, { ...opts, ...land });
         else handle.focus({ ...opts, ...land });
       }),
     [authority],
@@ -778,11 +811,17 @@ export function BlockEditorProviderInner({
         undo: () => {
           dispatchPatch(undoPatch);
           // Undo/redo reveals the affected block — it may be off-screen.
-          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus, undefined, { scroll: true }));
+          if (undoFocus)
+            queueMicrotask(() =>
+              focusBlock(undoFocus, undefined, { scroll: true }),
+            );
         },
         redo: () => {
           dispatchPatch(redoPatch);
-          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus, undefined, { scroll: true }));
+          if (redoFocus)
+            queueMicrotask(() =>
+              focusBlock(redoFocus, undefined, { scroll: true }),
+            );
         },
       });
     },
@@ -792,7 +831,12 @@ export function BlockEditorProviderInner({
   // Structural ops never coalesce (each is a distinct undo step), so this passes
   // no `coalesceKey` — preserving the previous `recordStructural` behavior exactly.
   const recordStructural = useCallback(
-    (before: Block[], after: Block[], label: string, focusId: string | null) => {
+    (
+      before: Block[],
+      after: Block[],
+      label: string,
+      focusId: string | null,
+    ) => {
       recordPatchEntry(before, after, label, focusId);
     },
     [recordPatchEntry],
@@ -817,7 +861,12 @@ export function BlockEditorProviderInner({
       docEdit: CapturedBlockDocEdit | null,
       undoTextOverride?: { blockId: string; runs: RichText },
     ) => {
-      const derived = derivePatchEntry(before, after, focusId, undoTextOverride);
+      const derived = derivePatchEntry(
+        before,
+        after,
+        focusId,
+        undoTextOverride,
+      );
       // Bail only when there is NOTHING to record: empty patches AND no doc edit.
       // A docEdit-only entry (empty structural diff) must still record so its
       // content-doc reverse/re-apply lands on the stack; its (empty) patches
@@ -835,12 +884,18 @@ export function BlockEditorProviderInner({
           await docEdit?.undo();
           dispatchPatch(undoPatch);
           // Undo/redo reveals the affected block — it may be off-screen.
-          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus, undefined, { scroll: true }));
+          if (undoFocus)
+            queueMicrotask(() =>
+              focusBlock(undoFocus, undefined, { scroll: true }),
+            );
         },
         redo: async () => {
           dispatchPatch(redoPatch);
           await docEdit?.redo();
-          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus, undefined, { scroll: true }));
+          if (redoFocus)
+            queueMicrotask(() =>
+              focusBlock(redoFocus, undefined, { scroll: true }),
+            );
         },
       });
     },
@@ -859,11 +914,15 @@ export function BlockEditorProviderInner({
         undo: async () => {
           await edit.undo();
           // Undo/redo reveals the edited block — it may be off-screen.
-          queueMicrotask(() => focusBlock(blockId, undefined, { scroll: true }));
+          queueMicrotask(() =>
+            focusBlock(blockId, undefined, { scroll: true }),
+          );
         },
         redo: async () => {
           await edit.redo();
-          queueMicrotask(() => focusBlock(blockId, undefined, { scroll: true }));
+          queueMicrotask(() =>
+            focusBlock(blockId, undefined, { scroll: true }),
+          );
         },
       });
     },
@@ -936,7 +995,9 @@ export function BlockEditorProviderInner({
       // refreshes `rowsRef`.
       const before = liveRowsRef.current;
       const after = transform(before);
-      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
+      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(
+        diffBlocks(before, after),
+      );
       if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
       advanceRows(after);
       const { focusId } = opts;
@@ -948,13 +1009,17 @@ export function BlockEditorProviderInner({
             dispatchPatch(undoPatch);
             // Undo/redo reveals the mutated block — it may be off-screen.
             if (focusId) {
-              queueMicrotask(() => focusBlock(focusId, opts.caretOffset, { scroll: true }));
+              queueMicrotask(() =>
+                focusBlock(focusId, opts.caretOffset, { scroll: true }),
+              );
             }
           },
           redo: () => {
             dispatchPatch(redoPatch);
             if (focusId) {
-              queueMicrotask(() => focusBlock(focusId, opts.caretOffset, { scroll: true }));
+              queueMicrotask(() =>
+                focusBlock(focusId, opts.caretOffset, { scroll: true }),
+              );
             }
           },
         });
@@ -977,10 +1042,13 @@ export function BlockEditorProviderInner({
         record?: boolean;
       },
     ) => {
-      commitRows((rows) => rows.map((b) => (b.id === blockId ? transform(b) : b)), {
-        ...opts,
-        focusId: blockId,
-      });
+      commitRows(
+        (rows) => rows.map((b) => (b.id === blockId ? transform(b) : b)),
+        {
+          ...opts,
+          focusId: blockId,
+        },
+      );
     },
     [commitRows],
   );
@@ -1032,11 +1100,20 @@ export function BlockEditorProviderInner({
       // already-absorbed to the apply-guard, and an empty patch pair would put a
       // do-nothing entry on the undo stack.
       const diff = diffBlocks(before, after);
-      if (diff.inserted.length === 0 && diff.updated.length === 0 && diff.deleted.length === 0) {
+      if (
+        diff.inserted.length === 0 &&
+        diff.updated.length === 0 &&
+        diff.deleted.length === 0
+      ) {
         return;
       }
       advanceRows(after);
-      recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op, before));
+      recordStructural(
+        before,
+        after,
+        OP_LABELS[op.kind],
+        opFocusId(op, before),
+      );
       store.dispatch(buildOverlayOp(op, before, anchorTypes));
     },
     [store, recordStructural, anchorTypes, advanceRows],
@@ -1061,7 +1138,11 @@ export function BlockEditorProviderInner({
   );
 
   const bulkMove = useCallback(
-    (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
+    (args: {
+      ids: string[];
+      parentId: string | null;
+      afterId: string | null;
+    }) => {
       if (args.ids.length === 0) return;
       dispatchOp({ kind: "bulkMove", ...args });
     },
@@ -1078,7 +1159,13 @@ export function BlockEditorProviderInner({
       // rather than by a hand-rolled same-position check.
       const dest = resolveDropParent(rowsRef.current, id, zone, targetId);
       if (!dest) return;
-      dispatchOp({ kind: "move", blockId: id, parentId: dest.parentId, targetId, zone });
+      dispatchOp({
+        kind: "move",
+        blockId: id,
+        parentId: dest.parentId,
+        targetId,
+        zone,
+      });
     },
     [dispatchOp],
   );
@@ -1132,7 +1219,10 @@ export function BlockEditorProviderInner({
       // preserves input-ARRAY order, which is nobody's order. Not load-bearing
       // for agreement: the array travels on the op, so both sides fold it
       // identically.
-      const roots = inDocumentOrder(toNodes(before), selectionRoots(before, new Set(ids)));
+      const roots = inDocumentOrder(
+        toNodes(before),
+        selectionRoots(before, new Set(ids)),
+      );
       if (roots.length === 0) return;
       // One `serializeForest` call PER root, not one zipped call: a filtered
       // positional array is exactly the silent-desync hazard the paste op's
@@ -1202,7 +1292,9 @@ export function BlockEditorProviderInner({
     (id: string) => {
       // A freshly-created block (Enter / split / insert) is a scroll-wanted
       // landing: the new block may be below the fold, so reveal it.
-      authority.land(id, (handle, land) => handle.focus({ scroll: true, ...land }));
+      authority.land(id, (handle, land) =>
+        handle.focus({ scroll: true, ...land }),
+      );
     },
     [authority],
   );
@@ -1214,7 +1306,7 @@ export function BlockEditorProviderInner({
   // wait on the server round-trip.
   const insert = useCallback(
     (type: string, data: unknown) => {
-      const newId = crypto.randomUUID();
+      const newId = newBlockId();
       focusNew(newId);
       dispatchOp({ kind: "insert", newId, type, data, parentId: pageId });
     },
@@ -1227,7 +1319,7 @@ export function BlockEditorProviderInner({
   // parent-append, which is equivalent there.
   const insertFirst = useCallback(
     (type: string, data: unknown) => {
-      const newId = crypto.randomUUID();
+      const newId = newBlockId();
       focusNew(newId);
       const first = childrenOf(toNodes(rowsRef.current), pageId)[0];
       dispatchOp(
@@ -1259,7 +1351,7 @@ export function BlockEditorProviderInner({
   // `parkRanks` — it applies the patch verbatim.
   const wrapInContainer = useCallback(
     (blockId: string, type: string, containerData: unknown) => {
-      const containerId = crypto.randomUUID();
+      const containerId = newBlockId();
       commitRows(
         (rows) => {
           const origin = rows.find((b) => b.id === blockId);
@@ -1358,10 +1450,17 @@ export function BlockEditorProviderInner({
             append(mergingRuns),
           );
           store.dispatch(buildOverlayOp(op, before, anchorTypes));
-          recordStructuralWithDocEdit(before, after, OP_LABELS.merge, sourceId, docEdit, {
-            blockId: sourceId,
-            runs: mergingRuns,
-          });
+          recordStructuralWithDocEdit(
+            before,
+            after,
+            OP_LABELS.merge,
+            sourceId,
+            docEdit,
+            {
+              blockId: sourceId,
+              runs: mergingRuns,
+            },
+          );
         });
       } else {
         // Unmounted target (virtualized offscreen): lossless doc-level
@@ -1375,28 +1474,52 @@ export function BlockEditorProviderInner({
         // target's `data.text` is read at thunk run time (doc-init seeds
         // from it only if the doc row vanished meanwhile).
         const targetId = target.id;
-        void appendRunsToBlockDoc(targetId, runsOfNode(target), mergingRuns).then(
-          ({ joinOffset }) => {
-            const { before, after } = applyOverlay(op);
-            const targetDataText = () =>
-              (rowsRef.current.find((b) => b.id === targetId)?.data as
-                | Record<string, unknown>
-                | null)?.text;
-            const docEdit: CapturedBlockDocEdit = {
-              undo: () => truncateBlockDocFrom(targetId, targetDataText(), joinOffset),
-              redo: async () => {
-                await appendRunsToBlockDoc(targetId, targetDataText(), mergingRuns);
-              },
-            };
-            recordStructuralWithDocEdit(before, after, OP_LABELS.merge, sourceId, docEdit, {
+        void appendRunsToBlockDoc(
+          targetId,
+          runsOfNode(target),
+          mergingRuns,
+        ).then(({ joinOffset }) => {
+          const { before, after } = applyOverlay(op);
+          const targetDataText = () =>
+            (
+              rowsRef.current.find((b) => b.id === targetId)?.data as Record<
+                string,
+                unknown
+              > | null
+            )?.text;
+          const docEdit: CapturedBlockDocEdit = {
+            undo: () =>
+              truncateBlockDocFrom(targetId, targetDataText(), joinOffset),
+            redo: async () => {
+              await appendRunsToBlockDoc(
+                targetId,
+                targetDataText(),
+                mergingRuns,
+              );
+            },
+          };
+          recordStructuralWithDocEdit(
+            before,
+            after,
+            OP_LABELS.merge,
+            sourceId,
+            docEdit,
+            {
               blockId: sourceId,
               runs: mergingRuns,
-            });
-          },
-        );
+            },
+          );
+        });
       }
     },
-    [store, applyOverlay, recordStructuralWithDocEdit, anchorTypes, isAnchorNode, authority],
+    [
+      store,
+      applyOverlay,
+      recordStructuralWithDocEdit,
+      anchorTypes,
+      isAnchorNode,
+      authority,
+    ],
   );
 
   // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
@@ -1491,7 +1614,10 @@ export function BlockEditorProviderInner({
         // snapshot back over the row.
         commitRow(
           blockId,
-          (b) => ({ ...b, data: preserveText(b.data, data, acceptsTextRef.current(b.type)) }),
+          (b) => ({
+            ...b,
+            data: preserveText(b.data, data, acceptsTextRef.current(b.type)),
+          }),
           { label: "Edit block", coalesceKey: blockId },
         );
       },
@@ -1500,7 +1626,10 @@ export function BlockEditorProviderInner({
         // Notion doesn't undo collapse/expand; it's not a document edit. Still flows
         // through the optimistic patch pipeline for snappiness, self-correcting on
         // re-click via the blocksResource push.
-        commitRow(blockId, (b) => ({ ...b, expanded }), { label: "Toggle collapse", record: false });
+        commitRow(blockId, (b) => ({ ...b, expanded }), {
+          label: "Toggle collapse",
+          record: false,
+        });
       },
       convertTo(type: string, data: RowData, opts?: { expanded?: boolean }) {
         // The plain path, for a type change that touches no text at all. A
@@ -1513,7 +1642,7 @@ export function BlockEditorProviderInner({
         convertRow(blockId, type, data, opts?.expanded);
       },
       insertAfter(type: string, data: unknown, opts?: { focus?: boolean }) {
-        const newId = crypto.randomUUID();
+        const newId = newBlockId();
         // `focus: false` is for callers that keep focus elsewhere while acting on
         // the new block (the gutter `+` filter field). Focusing here would race
         // them: `focusNew` also arms a pending focus that fires when the block
@@ -1536,7 +1665,7 @@ export function BlockEditorProviderInner({
         // (the single intent step) and passed in explicitly. The new block's id
         // is minted up front so we can focus it without awaiting the response.
         const asChild = opts?.asChild ?? false;
-        const newId = crypto.randomUUID();
+        const newId = newBlockId();
         const op: BlockOp = {
           kind: "split",
           blockId,
@@ -1596,7 +1725,13 @@ export function BlockEditorProviderInner({
           const docEdit = captureBlockDocEdit(blockDocOwnerOf(blockId), () => {
             authority.surgeryOf(blockId)?.truncateAt?.(position);
           });
-          recordStructuralWithDocEdit(before, after, OP_LABELS.split, newId, docEdit);
+          recordStructuralWithDocEdit(
+            before,
+            after,
+            OP_LABELS.split,
+            newId,
+            docEdit,
+          );
         });
       },
       merge(opts?: { runs?: RichText }) {
@@ -1623,7 +1758,9 @@ export function BlockEditorProviderInner({
         // handle: a text-less block (divider/image/file/embed) registers none,
         // and its empty runs are the TRUE answer, not a lagged miss.
         const nextHandle = authority.surgeryOf(next.id);
-        const runs = nextHandle?.readRuns ? nextHandle.readRuns() : runsOfNode(next);
+        const runs = nextHandle?.readRuns
+          ? nextHandle.readRuns()
+          : runsOfNode(next);
         mergeBlock(next.id, runs);
       },
       remove() {

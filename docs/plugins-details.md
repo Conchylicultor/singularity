@@ -17433,6 +17433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `moveBlock`
           - `MoveBlockBodySchema`
           - `namesField`
+          - `newBlockId`
           - `nextVisibleLine`
           - `opBlockIds`
           - `PAGE_BLOCK_TYPE`

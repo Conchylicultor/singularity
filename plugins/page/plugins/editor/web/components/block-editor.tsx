@@ -54,6 +54,7 @@ import {
   textOf,
   planForestInsert,
   withMintedIds,
+  newBlockId,
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
@@ -252,7 +253,10 @@ function MemoryBlockEditor({
   caretAfter?: CaretSurfaceRef;
   handleRef?: Ref<BlockEditorHandle>;
 }) {
-  const pageId = useMemo(() => crypto.randomUUID(), []);
+  // Synthetic and never persisted, but still an id in the block namespace — the
+  // rows it scopes are ordinary `Block`s the same reducer walks, so it comes
+  // from the one mint like every other.
+  const pageId = useMemo(() => newBlockId(), []);
   const initialBlocks = useMemo(() => {
     const forest = initialContent ?? [];
     // Top-level content is parented to the synthetic page block, matching the
