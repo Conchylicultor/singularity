@@ -6,7 +6,7 @@ import {
   SCHEMA_GLOBS,
 } from "../core/internal/schema-glob-patterns";
 
-// Inlined minimal Check shape (mirrors the sibling drizzle-kit-generate-only /
+// Inlined minimal Check shape (mirrors the sibling orphaned-tables /
 // schema-files-loadable checks) to avoid a cross-plugin import of the framework
 // Check type from a check file.
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };

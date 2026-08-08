@@ -17,8 +17,17 @@ import { join, resolve } from "path";
 // @plugins/database/server, which throws without SINGULARITY_WORKTREE), and this
 // module is reached by BOTH build.ts and build-composition.ts, so the two import
 // closures grow together and cli:build-composition-import-subset stays green.
-import { MIGRATIONS_PLUGIN_DIR } from "@plugins/database/plugins/migrations/core";
-import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+// `drizzleGenerateArgv` comes from the same barrel and for the same reason: the
+// migrations plugin owns HOW its tool is invoked (argv) as well as from WHERE
+// (cwd), so neither can drift per call site.
+import {
+  drizzleGenerateArgv,
+  MIGRATIONS_PLUGIN_DIR,
+} from "@plugins/database/plugins/migrations/core";
+import {
+  spawnCaptured,
+  spawnExpectOk,
+} from "@plugins/infra/plugins/spawn/core";
 import {
   promptKey,
   runDrizzleKitWithPrompts,
@@ -257,7 +266,14 @@ export async function generateMigration(opts: {
   customMigration?: boolean;
   migrationAnswers?: MigrationAnswer[];
 }): Promise<GenerateMigrationResult> {
-  const { root, worktreeName, migrationName, resetMigration, customMigration, migrationAnswers } = opts;
+  const {
+    root,
+    worktreeName,
+    migrationName,
+    resetMigration,
+    customMigration,
+    migrationAnswers,
+  } = opts;
 
   if (migrationName && !MIGRATION_NAME_REGEX.test(migrationName)) {
     console.error(
@@ -266,7 +282,10 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  const migrationsDir = resolve(root, "plugins/database/plugins/migrations/data");
+  const migrationsDir = resolve(
+    root,
+    "plugins/database/plugins/migrations/data",
+  );
 
   // Regen mode (resetMigration with no positional answers) replays the persisted
   // create-vs-rename decisions. Read the branch-local sidecars NOW — before the
@@ -301,14 +320,13 @@ export async function generateMigration(opts: {
 
   const before = new Set(readdirSync(migrationsDir));
 
-  // `bunx` falls back to Node when the binary's shebang is `#!/usr/bin/env node`
-  // (drizzle-kit ships exactly that). Once Node owns the process, transitive
-  // imports through plugin barrels can pull in `paths/bins.ts`, which calls
-  // `Bun.which()` and crashes with "Bun is not defined" — silently exit-0,
-  // no migration generated. `--bun` forces Bun runtime regardless of shebang.
-  const cmd = [process.execPath, "x", "--bun", "drizzle-kit", "generate"];
-  if (customMigration) cmd.push("--custom");
-  if (migrationName) cmd.push("--name", migrationName);
+  // The argv comes from the migrations plugin, which owns it: the binary name and
+  // `generate` are welded together there (with the load-bearing `--bun` flag), so
+  // this call site configures FLAGS and cannot express another subcommand.
+  const cmd = drizzleGenerateArgv({
+    custom: customMigration,
+    name: migrationName,
+  });
 
   const cwd = resolve(root, MIGRATIONS_PLUGIN_DIR);
   const result = await runDrizzleKitWithPrompts({
@@ -618,7 +636,9 @@ async function resetBranchLocalMigrations(
 
 async function resolveRef(root: string): Promise<string | null> {
   for (const ref of ["origin/main", "main"]) {
-    const result = await spawnCaptured(["git", "rev-parse", "--verify", ref], { cwd: root });
+    const result = await spawnCaptured(["git", "rev-parse", "--verify", ref], {
+      cwd: root,
+    });
     if (result.exitCode === 0) return ref;
   }
   return null;
@@ -705,9 +725,11 @@ export function renameMigrations(migrationsDir: string): RenameResult {
 
 const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
 // DROP VIEW [MATERIALIZED] "schema"."name" — capture the bare view name.
-const DROP_VIEW_RE = /^\s*DROP\s+(?:MATERIALIZED\s+)?VIEW\s+(?:IF\s+EXISTS\s+)?(?:"[^"]+"\.)?"([^"]+)"/i;
+const DROP_VIEW_RE =
+  /^\s*DROP\s+(?:MATERIALIZED\s+)?VIEW\s+(?:IF\s+EXISTS\s+)?(?:"[^"]+"\.)?"([^"]+)"/i;
 // CREATE [OR REPLACE] [MATERIALIZED] VIEW "schema"."name" AS … — capture the name.
-const CREATE_VIEW_RE = /^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:MATERIALIZED\s+)?VIEW\s+(?:"[^"]+"\.)?"([^"]+)"/i;
+const CREATE_VIEW_RE =
+  /^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:MATERIALIZED\s+)?VIEW\s+(?:"[^"]+"\.)?"([^"]+)"/i;
 
 interface ViewStatement {
   /** Index of this statement within the file's statement list. */
@@ -766,9 +788,7 @@ function topoSort(nodes: string[], deps: Map<string, Set<string>>): string[] {
  * off the snapshot listing also leaves the journal a pure post-condition of the
  * pipeline, never an input to it.
  */
-function readPriorSnapshotViewDefs(
-  migrationsDir: string,
-): Map<string, string> {
+function readPriorSnapshotViewDefs(migrationsDir: string): Map<string, string> {
   const defs = new Map<string, string>();
   const metaDir = join(migrationsDir, "meta");
   if (!existsSync(metaDir)) return defs;
@@ -787,7 +807,9 @@ function readPriorSnapshotViewDefs(
     .at(-1);
   if (!priorSnapshot) return defs;
 
-  const snap = JSON.parse(readFileSync(join(metaDir, priorSnapshot), "utf8")) as {
+  const snap = JSON.parse(
+    readFileSync(join(metaDir, priorSnapshot), "utf8"),
+  ) as {
     views?: Record<string, { name?: string; definition?: string }>;
   };
   for (const v of Object.values(snap.views ?? {})) {
@@ -919,7 +941,9 @@ export function reorderViewStatementsInSql(
     .map((s) => s.pos);
 
   const dropTextByView = new Map(
-    viewStatements.filter((s) => s.kind === "drop").map((s) => [s.view, s.text]),
+    viewStatements
+      .filter((s) => s.kind === "drop")
+      .map((s) => [s.view, s.text]),
   );
   const createTextByView = new Map(
     viewStatements
@@ -1063,10 +1087,7 @@ export function regenerateJournal(migrationsDir: string): void {
   const entries = journalEntriesForSqlFiles(readdirSync(migrationsDir));
   writeFileSync(
     join(migrationsDir, "meta", "_journal.json"),
-    JSON.stringify(
-      { version: "7", dialect: "postgresql", entries },
-      null,
-      2,
-    ) + "\n",
+    JSON.stringify({ version: "7", dialect: "postgresql", entries }, null, 2) +
+      "\n",
   );
 }

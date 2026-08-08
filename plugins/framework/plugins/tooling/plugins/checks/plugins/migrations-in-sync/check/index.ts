@@ -13,13 +13,24 @@ import { libpqEnv } from "@plugins/database/core";
 // it from the migrations plugin rather than re-typing the literal is what keeps
 // this check anchored where migration generation actually runs — a drifted copy
 // would glob nothing and drizzle-kit would exit 0 having found no tables.
-import { MIGRATIONS_PLUGIN_DIR } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+// `drizzleGenerateArgv` comes from the same barrel and for the same reason: the
+// migrations plugin owns HOW its tool is invoked as well as from WHERE. It takes
+// typed flags, so this check cannot express a subcommand that would dial the
+// sentinel credentials in drizzle.config.ts.
+import {
+  drizzleGenerateArgv,
+  MIGRATIONS_PLUGIN_DIR,
+} from "@plugins/database/plugins/migrations/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-const PROMPT_RE = /Is .+? (column in .+? table|table|schema|enum|view|sequence|role|policy) created or renamed/;
+const PROMPT_RE =
+  /Is .+? (column in .+? table|table|schema|enum|view|sequence|role|policy) created or renamed/;
 
 function listSql(dir: string): string[] {
   return readdirSync(dir)
@@ -53,18 +64,18 @@ const check: Check = {
       // below still fails the run when prompts appeared. Delivered as whole-buffer
       // stdin — the prompts need no live parsing here, unlike migrations-interactive.
       const result = await spawnCaptured(
-        [
-          process.execPath,
-          "x",
-          "--bun",
-          "drizzle-kit",
-          "generate",
-          `--config=${relative(migrationsPluginDir, tmpConfig)}`,
-        ],
+        drizzleGenerateArgv({
+          configPath: relative(migrationsPluginDir, tmpConfig),
+        }),
         {
           cwd: migrationsPluginDir,
           stdin: new Uint8Array(20).fill(0x0d),
-          env: { ...process.env, ...libpqEnv(), NO_COLOR: "1", SINGULARITY_WORKTREE: basename(root) },
+          env: {
+            ...process.env,
+            ...libpqEnv(),
+            NO_COLOR: "1",
+            SINGULARITY_WORKTREE: basename(root),
+          },
         },
       );
       if (result.exitCode !== 0) {

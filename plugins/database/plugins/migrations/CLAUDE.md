@@ -184,13 +184,27 @@ Two consequences when editing:
   pulls in (`fs`, `Bun.Glob`, a plugin barrel) becomes subject to the same
   sync-loadability constraint as a schema file.
 
+## How drizzle-kit is invoked
+
+Never by hand. `drizzleGenerateArgv({custom, name, configPath})` (`core` barrel,
+declared in `core/internal/drizzle-cli.ts`) is the only argv builder: it welds the
+binary name to `generate` and takes typed flags, so no caller can express another
+subcommand. `generate` is the only one that works — every other (`push`, `migrate`,
+`studio`, `pull`) dials `drizzle.config.ts`'s deliberately non-resolving `.invalid`
+credentials. It also owns the `bunx --bun` preamble: without it Node honours
+drizzle-kit's `#!/usr/bin/env node` shebang and the child dies on `Bun.which()` with
+exit 0 and no migration written. The `drizzle-cli-safety/no-adhoc-drizzle-cli` lint
+rule (`lint/`) catches a hand-written argv; naming the binary as *data* is not an
+invocation and is not flagged.
+
 ## Where drizzle-kit runs from
 
-`MIGRATIONS_PLUGIN_DIR` lives in the same module and is **exported from the `core`
-barrel** — it is the one declaration of this plugin's repo-relative dir, and every
-sanctioned `drizzle-kit generate` invocation uses it as the child's `cwd`:
+`MIGRATIONS_PLUGIN_DIR` lives in the same module as `SCHEMA_GLOBS` and is **exported
+from the `core` barrel** — it is the one declaration of this plugin's repo-relative
+dir, and every sanctioned invocation uses it as the child's `cwd`:
 
-- `check/internal/schema-files-loadable.ts` — the require-probe's cwd.
+- `check/internal/schema-files-loadable.ts` — the require-probe's cwd (a probe, not
+  a drizzle-kit invocation).
 - `framework/tooling/.../checks/plugins/migrations-in-sync` — the check that proves
   the committed migrations match `schema.ts`.
 - `framework/cli/bin/migrations.ts` — the real `./singularity build` path.
@@ -239,8 +253,10 @@ only agreement that matters.
   - Exports (types):
     - `DestructiveClassification`
     - `DestructiveKind`
+    - `DrizzleGenerateOptions`
   - Exports (values):
     - `classifyMigrationSql`
+    - `drizzleGenerateArgv`
     - `MIGRATIONS_PLUGIN_DIR`
     - `schemaGlobFiles`
 - Structure:

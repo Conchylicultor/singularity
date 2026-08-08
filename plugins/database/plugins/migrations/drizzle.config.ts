@@ -24,8 +24,13 @@ import {
  * UNSUPPORTED through this config and must never be wired up: migrations are
  * applied by the runner in `server/internal/runner.ts` (on boot) or by
  * `./singularity apply-migrations`, both of which build their own connection.
- * The `database-migrations:drizzle-kit-generate-only` check
- * (`check/drizzle-kit-generate-only.ts`) enforces that invariant.
+ *
+ * That invariant is enforced twice over, and neither half is a text scan.
+ * `core/internal/drizzle-cli.ts` OWNS the argv — the binary name and `generate`
+ * are one literal there, and callers pass typed flags, so no argument shape can
+ * express another subcommand. The one remaining way to reach the tool, spelling
+ * its name into your own spawn, is caught by the
+ * `drizzle-cli-safety/no-adhoc-drizzle-cli` lint rule.
  */
 export default defineConfig({
   dialect: "postgresql",

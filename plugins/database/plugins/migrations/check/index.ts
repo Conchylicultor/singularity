@@ -20,7 +20,6 @@ import orphanedTablesCheck from "./orphaned-tables";
 import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-allowlisted";
 import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 import forkSchemaDriftCheck from "./fork-schema-drift";
-import drizzleKitGenerateOnlyCheck from "./drizzle-kit-generate-only";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
 import dataMigrationResetStableCheck from "./data-migration-reset-stable";
 
@@ -139,7 +138,6 @@ export default [
   imperativeCreateTableAllowlistedCheck,
   schemaFilesLoadableCheck,
   forkSchemaDriftCheck,
-  drizzleKitGenerateOnlyCheck,
   drizzleConfigSchemaGlobsCheck,
   dataMigrationResetStableCheck,
 ];
