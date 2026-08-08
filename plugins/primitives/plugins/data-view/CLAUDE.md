@@ -946,6 +946,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/sortable-list.SortableList`
   - Exports (types):
     - `CellEditorProps`
+    - `ColumnConfigDerive`
     - `ColumnConfigProps`
     - `CreateOption`
     - `DataViewAggregateConfig`
@@ -1035,6 +1036,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useResolveCell`
     - `useResolveCellEditor`
     - `useResolveColumnConfig`
+    - `useResolveColumnDerive`
     - `useResolveOperatorSet`
     - `useResolveValueCodec`
     - `useServerDataSource`
@@ -1160,6 +1162,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
 - Core:
   - Exports (types):
     - `CellEditorProps`
+    - `ColumnConfigDerive`
     - `ColumnConfigProps`
     - `CreateOption`
     - `DataViewAggregateConfig`

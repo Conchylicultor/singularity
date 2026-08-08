@@ -21,6 +21,12 @@ User-defined custom columns for any DataView. Two stores:
 never the reverse.** It contributes itself both ways instead of the host reaching
 down:
 
+A column's opaque `config` blob stays opaque here: the minted `FieldDef` spreads
+`useResolveColumnDerive()(def.type, def.config)` first, letting the field type
+publish the **generic** keys its config implies (enum's options → `FieldDef.options`)
+before the identity/storage keys are applied on top. Consumers therefore read one
+contract and never crack open `config`.
+
 - **Per-row `FieldDef[]`** via the **global `DataViewSlots.FieldExtension` slot**
   (`custom-column-field-extension.tsx`). The host folds every DataView's
   contributions into the schema (before the sort/filter controllers), threading
@@ -66,6 +72,7 @@ how the caller obtained it.
     - `primitives/data-view.useDataViewSettings`
     - `primitives/data-view.useFieldIdentities`
     - `primitives/data-view.useResolveColumnConfig`
+    - `primitives/data-view.useResolveColumnDerive`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useResolveValueCodec`
     - `primitives/icon-button.IconButton`

@@ -7,6 +7,7 @@ import {
   getDataViewDescriptor,
   useResolveValueCodec,
   useResolveOperatorSet,
+  useResolveColumnDerive,
   useFieldIdentities,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
@@ -79,6 +80,7 @@ function Inner({
   const rowKeyRef = useLatestRef(rowKey);
   const resolveCodec = useResolveValueCodec();
   const resolveOps = useResolveOperatorSet();
+  const deriveFromConfig = useResolveColumnDerive();
   const identities = useFieldIdentities();
 
   const fields = useMemo(
@@ -97,6 +99,11 @@ function Inner({
           (id) => identities.get(id)?.coerce != null,
         );
         return {
+          // The type's own projection of its opaque config onto GENERIC FieldDef
+          // keys (enum's `config.options` → `options`), so downstream consumers
+          // read one contract and never crack open `config` themselves. Spread
+          // FIRST: a derivation contributes vocabulary, never identity/storage.
+          ...deriveFromConfig(def.type, def.config),
           id: def.id,
           label: def.label,
           // NOT a literal — the field-type registry is the extension seam; the
@@ -118,7 +125,17 @@ function Inner({
           filterable,
         };
       }),
-    [defs, values, setValue, storageKey, rowKeyRef, resolveCodec, resolveOps, identities],
+    [
+      defs,
+      values,
+      setValue,
+      storageKey,
+      rowKeyRef,
+      resolveCodec,
+      resolveOps,
+      deriveFromConfig,
+      identities,
+    ],
   );
 
   return <>{render(fields)}</>;

@@ -1,20 +1,14 @@
 import { useState, type ReactNode } from "react";
 import { MdAdd, MdClose } from "react-icons/md";
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ColumnConfigProps } from "@plugins/primitives/plugins/data-view/web";
-
-interface EnumOption {
-  value: string;
-  label: string;
-}
-
-/** Narrow the opaque config blob to the `{ options }` shape enum understands. */
-function readOptions(config: unknown): EnumOption[] {
-  return (config as { options?: EnumOption[] } | undefined)?.options ?? [];
-}
+import { readOptions, type EnumOption } from "../internal/enum-config";
 
 /** Mint a stable option `value` decoupled from the label, so renaming an option
  *  never re-keys (and thus never orphans) already-stored cell values. */
@@ -33,7 +27,10 @@ export function EnumOptionsEditor(props: ColumnConfigProps): ReactNode {
   const [draft, setDraft] = useState("");
 
   function commit(nextOptions: EnumOption[]) {
-    props.onChange({ ...(props.config as object | undefined), options: nextOptions });
+    props.onChange({
+      ...(props.config as object | undefined),
+      options: nextOptions,
+    });
   }
 
   function rename(index: number, label: string) {

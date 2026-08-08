@@ -19,6 +19,7 @@ export type {
   FilterFieldValue,
   ValueCodec,
   ColumnConfigProps,
+  ColumnConfigDerive,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

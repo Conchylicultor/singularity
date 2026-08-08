@@ -4,12 +4,25 @@ The **enum** type's `data-view.column-config` capability — the only field type
 that needs add-time configuration for a DataView custom column.
 
 Contributes `DataViewSlots.ColumnConfig({ match: "enum", component:
-EnumOptionsEditor })` — an options add/rename/remove editor rendered in the
-custom-column Fields settings when the author picks the Select type. It reads and
-writes `config.options: { value, label }[]` opaquely through `props.onChange`;
-the data-view host never inspects the blob (the invariant: only `fields/enum/…`
-understands enum config). Each option's `value` is minted stable and decoupled
-from its label, so renaming an option never re-keys (orphans) stored cells.
+EnumOptionsEditor, derive: deriveEnumFieldDef })` — the two halves of "enum has a
+custom-column config blob", on one contribution because both require
+understanding the same private shape:
+
+- **`component`** — an options add/rename/remove editor rendered in the
+  custom-column Fields settings when the author picks the Select type. It reads
+  and writes `config.options: { value, label }[]` opaquely through
+  `props.onChange`; the data-view host never inspects the blob (the invariant:
+  only `fields/enum/…` understands enum config). Each option's `value` is minted
+  stable and decoupled from its label, so renaming an option never re-keys
+  (orphans) stored cells.
+- **`derive`** — the pure projection of that blob onto the **generic**
+  `FieldDef.options`, applied by `custom-columns` when it mints the `FieldDef`.
+  This is what keeps `field.options` the one contract every consumer reads.
+
+`internal/enum-config.ts` is the single place that narrows the blob; the editor
+and the projection share it. Publishing options through `derive` is what lets the
+cell / inline editor / filter input / group-by label all read `field.options` —
+never `config` — so do not reintroduce a per-consumer `config.options` fallback.
 
 ## Plugin reference
 
@@ -22,7 +35,7 @@ from its label, so renaming an option never re-keys (orphans) stored cells.
 
 ## Plugin reference
 
-- Description: Enum field type: data-view custom-column add-time config editor (options add/rename/remove).
+- Description: Enum field type: data-view custom-column add-time config editor (options add/rename/remove), plus the projection of that config onto the generic FieldDef.options.
 - Web:
   - Contributes: `DataViewSlots.ColumnConfig` "enum" → `EnumOptionsEditor`
   - Uses:

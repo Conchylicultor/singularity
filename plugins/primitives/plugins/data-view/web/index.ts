@@ -36,7 +36,10 @@ export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
 export { useResolveValueCodec } from "./value-codec-slot";
-export { useResolveColumnConfig } from "./column-config-slot";
+export {
+  useResolveColumnConfig,
+  useResolveColumnDerive,
+} from "./column-config-slot";
 export { useFieldIdentities } from "./internal/use-field-identities";
 export { EditableCell } from "./components/editable-cell";
 export { FieldCell } from "./components/field-cell";
@@ -80,6 +83,7 @@ export type {
   FilterFieldValue,
   ValueCodec,
   ColumnConfigProps,
+  ColumnConfigDerive,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

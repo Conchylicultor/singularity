@@ -38,6 +38,26 @@ export interface ColumnConfigProps {
 }
 
 /**
+ * Projects a custom column's opaque per-type `config` blob onto the **generic**
+ * `FieldDef` keys it implies — e.g. enum's `config.options` → `FieldDef.options`.
+ * Contributed next to the config editor on `DataViewSlots.ColumnConfig`, because
+ * the plugin that owns the blob's *shape* is the only one that may read it.
+ *
+ * This is what keeps `FieldDef.options` the ONE contract every consumer reads.
+ * Without it each enum-aware site (cell, inline editor, filter input, group-by
+ * section label, …) has to re-derive `field.config.options` itself — and a site
+ * that forgets renders the raw stored value (an opaque minted option id) instead
+ * of the label, which is exactly how group-by headers came to show internal ids.
+ *
+ * Pure and called during render: no hooks, no side effects. Only generic keys
+ * belong here — `custom-columns` re-applies `id`/`type`/`value`/`onEdit` on top,
+ * so a derivation can never redefine a column's identity or storage.
+ */
+export type ColumnConfigDerive = (
+  config: unknown,
+) => Partial<FieldDef<unknown>>;
+
+/**
  * The value a filter predicate receives: a scalar `FieldValue` for normal
  * fields, or a `readonly string[]` for multi-value `tags`-style fields (which
  * project via `FieldDef.values`). Scalar predicates accept this union and narrow

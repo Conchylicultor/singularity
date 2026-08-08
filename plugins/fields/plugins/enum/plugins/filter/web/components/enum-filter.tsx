@@ -5,26 +5,18 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 
 /**
- * `ChipSelectFilterInput` lists `field.options`, but a custom column carries its
- * enum options on `field.config.options` (not `field.options`). Resolve the same
- * fallback here and inject it onto `field` so the shared input never has to know
- * about the custom-column config shape — see fields/enum column-config.
+ * `ChipSelectFilterInput` lists `field.options`, which is authoritative for every
+ * enum field, custom column included — a custom column's private `config.options`
+ * is projected onto it by this type's `ColumnConfig.derive` (see fields/enum
+ * column-config), so nothing here has to know that shape.
  */
-function withEnumOptions(props: FilterValueInputProps): FilterValueInputProps {
-  const options =
-    props.field.options ??
-    (props.field.config as { options?: { value: string; label: string }[] } | undefined)
-      ?.options ??
-    [];
-  return { ...props, field: { ...props.field, options } };
-}
 
 /** Single-select option (operand is one value) for is / is-not. */
 export function EnumSingleInput(props: FilterValueInputProps): ReactNode {
-  return <ChipSelectFilterInput {...withEnumOptions(props)} multiple={false} />;
+  return <ChipSelectFilterInput {...props} multiple={false} />;
 }
 
 /** Multi-select options (operand is a string[]) for is-any-of / is-none-of. */
 export function EnumMultiInput(props: FilterValueInputProps): ReactNode {
-  return <ChipSelectFilterInput {...withEnumOptions(props)} multiple />;
+  return <ChipSelectFilterInput {...props} multiple />;
 }

@@ -12,13 +12,10 @@ import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web"
 export function EnumEditor(props: CellEditorProps): ReactNode {
   const [open, setOpen] = useState(true);
   const chosen = useRef(false);
-  // A custom column carries its enum options on `field.config.options` (not
-  // `field.options`), so fall back to it — see fields/enum column-config.
-  const options =
-    props.field.options ??
-    (props.field.config as { options?: { value: string; label: string }[] } | undefined)
-      ?.options ??
-    [];
+  // `field.options` is authoritative for every enum field, custom column included
+  // — a custom column's private `config.options` is projected onto it by this
+  // type's `ColumnConfig.derive` (see fields/enum column-config).
+  const options = props.field.options ?? [];
   const selected = props.value == null ? "" : String(props.value);
   const current = options.find((o) => o.value === selected);
 

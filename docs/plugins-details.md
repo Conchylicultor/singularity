@@ -13021,7 +13021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `fields/enum/config`
       - Plugins:
-        - **`column-config`** — Enum field type: data-view custom-column add-time config editor (options add/rename/remove).
+        - **`column-config`** — Enum field type: data-view custom-column add-time config editor (options add/rename/remove), plus the projection of that config onto the generic FieldDef.options.
           - Web:
             - Contributes: `DataViewSlots.ColumnConfig` "enum" → `EnumOptionsEditor`
             - Uses:
@@ -22114,6 +22114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/sortable-list.SortableList`
         - Exports (types):
           - `CellEditorProps`
+          - `ColumnConfigDerive`
           - `ColumnConfigProps`
           - `CreateOption`
           - `DataViewAggregateConfig`
@@ -22203,6 +22204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useResolveCell`
           - `useResolveCellEditor`
           - `useResolveColumnConfig`
+          - `useResolveColumnDerive`
           - `useResolveOperatorSet`
           - `useResolveValueCodec`
           - `useServerDataSource`
@@ -22328,6 +22330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types):
           - `CellEditorProps`
+          - `ColumnConfigDerive`
           - `ColumnConfigProps`
           - `CreateOption`
           - `DataViewAggregateConfig`
@@ -22396,6 +22399,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useDataViewSettings`
               - `primitives/data-view.useFieldIdentities`
               - `primitives/data-view.useResolveColumnConfig`
+              - `primitives/data-view.useResolveColumnDerive`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/data-view.useResolveValueCodec`
               - `primitives/icon-button.IconButton`
