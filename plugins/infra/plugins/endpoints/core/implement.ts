@@ -1,4 +1,7 @@
-import { recordEntrySpan, chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  recordEntrySpan,
+  chargeWait,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { EndpointDef } from "./define-endpoint";
@@ -18,12 +21,15 @@ type HttpHandler = (
 // - Plain strings where the schema infers a branded string
 // Response.json() serialises all of these correctly on the wire.
 type JsonSerializable = { toJSON(): string; toString(): string };
-type JsonCompat<T> =
-  T extends string ? string | Date | JsonSerializable :
-  T extends Blob | ArrayBuffer | ArrayBufferView | FormData | ReadableStream ? T :
-  T extends (infer U)[] ? JsonCompat<U>[] :
-  T extends object ? { [K in keyof T]: JsonCompat<T[K]> } :
-  T;
+type JsonCompat<T> = T extends string
+  ? string | Date | JsonSerializable
+  : T extends Blob | ArrayBuffer | ArrayBufferView | FormData | ReadableStream
+    ? T
+    : T extends (infer U)[]
+      ? JsonCompat<U>[]
+      : T extends object
+        ? { [K in keyof T]: JsonCompat<T[K]> }
+        : T;
 
 export function implement<
   Route extends string,
@@ -45,7 +51,9 @@ export function implement<
   // a burst can't saturate the box); `dedupe` collapses concurrent identical
   // GETs onto one in-flight handler. See
   // research/2026-06-15-global-live-state-cascade-contention.md (Change 5).
-  const gate = _endpoint.concurrency ? createSemaphore(_endpoint.concurrency) : null;
+  const gate = _endpoint.concurrency
+    ? createSemaphore(_endpoint.concurrency)
+    : null;
   const dedupe = _endpoint.dedupe ? createInflight() : null;
   if (dedupe && _endpoint.method !== "GET") {
     // Fail loudly at boot: deduping a mutation would silently drop a caller's
@@ -95,21 +103,30 @@ export function implement<
       // of hiding outside the span. Deduped callers share one `result` object
       // (read-only JSON-safe data) and each encodes its own Response below.
       // Records in `finally`, so a throwing handler's duration is captured too.
-      const result = await recordEntrySpan("http", _endpoint.route, async () => {
-        const runHandler = async (): Promise<JsonCompat<TResponse>> =>
-          handler({
-            params: params as TParams,
-            body,
-            query,
-            req,
-          });
-        const gated = gate
-          ? () => gate.run(runHandler, (ms) => chargeWait("endpoint-concurrency", ms))
-          : runHandler;
-        return dedupe
-          ? dedupe.run(dedupeKey(req), gated, (ms) => chargeWait("endpoint-dedupe", ms))
-          : gated();
-      });
+      const result = await recordEntrySpan(
+        "http",
+        _endpoint.route,
+        async () => {
+          const runHandler = async (): Promise<JsonCompat<TResponse>> =>
+            handler({
+              params: params as TParams,
+              body,
+              query,
+              req,
+            });
+          const gated = gate
+            ? () =>
+                gate.run(runHandler, (ms) =>
+                  chargeWait("endpoint-concurrency", ms),
+                )
+            : runHandler;
+          return dedupe
+            ? dedupe.run(dedupeKey(req), gated, {
+                onWait: (ms) => chargeWait("endpoint-dedupe", ms),
+              })
+            : gated();
+        },
+      );
 
       // void/undefined/null → 204
       if (result === undefined || result === null) {

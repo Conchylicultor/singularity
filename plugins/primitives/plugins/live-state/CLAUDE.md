@@ -247,6 +247,25 @@ lexicographically ordered ("9" > "10"), so BigInt comparison is the only sound
 one. Full design:
 `research/2026-07-11-global-never-revert-optimistic-edits.md`.
 
+**Never build a client-side drop on watermark ORDERING.** It is tempting to guard
+against a stale frame with "this watermark is older than the one I hold, so this
+snapshot is older" — it is unsound. The watermark is
+`pg_snapshot_xmin(pg_current_snapshot())`, and **xmin is not monotonic**: one
+long-running transaction pins it low for its entire lifetime. A strictly-older
+watermark therefore does not prove an older snapshot, and the predicate would not
+misfire once — it would misfire on *every* frame for *every* resource for as long as
+that transaction lives. Paired with a forced resub it turns a nightly job or a slow
+migration into every tab re-subscribing every resource on every push: a
+self-amplifying storm during exactly the load that motivates the guard. Report-only
+has the same false-positive rate, just quieter. Unaffected: Rule B's **denial**
+inference, which is a statement about one snapshot rather than a comparison of two,
+and `noteResourceWatermark`'s monotonic adopt, which cannot regress the causal floor.
+If a backstop is ever wanted, the sound signal is a server-stamped **monotonic read
+sequence** minted when a flight starts and co-produced like the other stamps — not a
+watermark. The staleness this would have guarded is cured at the source (a push
+frame can no longer be backed by a pre-commit read):
+`research/2026-08-08-global-live-state-flight-freshness.md`.
+
 ## Descriptor registry (`resourceDescriptorByKey`)
 
 Every descriptor factory (`resourceDescriptor`, `keyedResourceDescriptor`,

@@ -42,8 +42,11 @@ inside the runtime — `reportError` is additive, never the only report. Wait
 attribution: `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
 It is **acyclic**: besides `zod` and `bun` types it imports only
-`@plugins/packages/plugins/inflight/core` (a leaf; read-path single-flight
-coalescing). It declares its own local `WsData`/`WsHandler` interfaces
+`@plugins/packages/plugins/inflight/core` (a leaf), which does double duty here:
+read-path single-flight coalescing, and the correctness-bearing freshness floor
+(`notBefore`) the push path uses to refuse a flight that started before the change
+it is announcing — see *Flight freshness* below. It declares its own local
+`WsData`/`WsHandler` interfaces
 (byte-identical to the facades' `types.ts`) rather than importing them — importing
 either facade would cycle; the returned `notificationsWsHandler` is structurally
 assignable to each facade's `WsHandler`.
@@ -177,8 +180,10 @@ and `research/2026-07-10-global-push-etag-rides-the-update-frame.md`.
 `sendUpdate` sends the frame ITSELF rather than returning it, so the no-`revalidate`
 path (almost every resource) builds and broadcasts with **NO await before the
 `ws.send`** — a returned-and-awaited frame would defer every push-mode send by a
-microtask, and `runtime-h5.test.ts` H5a pins that a push beats a racing parked
-sub-ack (one extra tick flips that order). Only the etag path awaits.
+microtask. Only the etag path awaits. Pin that property **directly**, never by
+racing a push against a parked sub-ack: their relative frame order is a
+microtask-count accident with no invariant behind it, and it moved once a drain
+stopped joining a pre-commit read flight (*Flight freshness* below).
 
 The two `delta` kinds are NOT interchangeable for a future etag. A **keyed FULL
 delta** (and the M5 membership deltas) fully reconciles the client to server truth,
@@ -206,6 +211,18 @@ pair, so watermark-newer-than-value is structurally excluded. A throwing capture
 reports via `reportLoaderError` and the frame ships watermark-less (never blocked).
 `runtime-watermark.test.ts` pins all of this.
 
+**That same capture is also the L2 persist floor** — one per flight, not one per
+stamp: the FULL drains hand `flightWatermark` straight to `persistSnapshot` rather
+than taking a second `captureWatermark()` of their own. *A floor may only describe
+the read it accompanies.* A floor captured at the drain can be NEWER than the value
+it floors (a joined flight read earlier), and catch-up replays only
+`xid >= watermark` — so it would skip the very commit the value is missing, and
+cold boot would serve the stale value across restarts. The flight's own floor is at
+worst older, which only over-replays (harmless by `captureWatermark`'s contract).
+Persisted entries are forced FULL so it is always present; a throwing capture leaves
+it undefined and that cycle's persist is skipped (the row keeps its prior floor)
+while subscribers are still served.
+
 **The mutation-ack channel (`ackTx`) rides feed-driven frames.** A change-feed
 NOTIFY carries its source transaction id (`x`, `pg_current_xact_id()::text`);
 the pending coalesces those into `sourceTx` (unioned on every merge branch,
@@ -219,11 +236,15 @@ wrote has been re-read post-commit and is reflected in this frame's base"* —
 nothing about membership/order completeness, nothing about other transactions. So
 a SCOPED delta may carry `ackTx` while still never carrying a watermark (Rule B′
 coexists unchanged): the ack can CONFIRM exactly the optimistic op whose token
-equals W, and can never deny. FULL paths stamp the FLIGHT-resolved set (a drain
-joining an in-flight read — whose SELECT may predate the commit — adopts the
-starter's absent seed and ships un-acked, the same co-production idiom as the
-etag/watermark); scoped and membership paths stamp the pending's set directly (ctx
-loads never coalesce). Hand-`notify()`/synthetic pushes and
+equals W, and can never deny. FULL paths stamp the FLIGHT-resolved set — which is
+now always their OWN seed, because a FULL drain passes a freshness floor and so
+cannot be served by a flight that started before the change it is draining ("ships
+un-acked, degrades to the watermark backstop" no longer happens on a FULL path).
+The flight-resolved rule stays the rule, not a formality: the read path still joins
+freely, and a joiner must adopt the starter's (typically absent) seed — stamping
+its own on someone else's value would be a false ack, the one soundness hazard the
+co-production closes. Scoped and membership paths stamp the pending's set directly
+(ctx loads never coalesce). Hand-`notify()`/synthetic pushes and
 `invalidate`/`sub-ack`/HTTP frames never carry one. A recompute producing NO value
 change (empty scoped diff, membership net-zero / window-boundary skip, point
 empty-intersection) broadcasts a standalone version-less
@@ -244,6 +265,52 @@ version-incomparable, dropped as stale, pane wedged. The client mirrors this wit
 `cache: "no-store"` on its fetches, and server-core defaults any `cache-control`-less
 API response to `no-store` — three layers, each a standalone fix. See
 `research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md`.
+
+## Flight freshness: a stamp describes the flight that produced its value
+
+> A flight may only serve a caller whose freshness floor it satisfies, and every
+> stamp a frame carries — etag, watermark, `ackTx`, **version**, persisted floor —
+> must describe the flight that produced its value.
+
+Four of the five are **co-produced**: the starter captures them and a joiner adopts
+the starter's rather than over-claiming. The **version** cannot be, which is why
+`notBefore` exists. A push drain assigns `version = current + 1` *before* it asks
+for the value, and that number is an assertion — "this is the state as of the change
+I am draining". No adoption rule makes an older SELECT satisfy it, so the defence is
+**refusal**, not adoption. The two stamps need opposite guarantees:
+
+- A **read** frame (`sub-ack`, HTTP body) *reports* an existing version, so it must
+  observe it **before** the load; then a joined older value can only report an older
+  version, which the client drops. This is why the read path passes NO floor and its
+  coalescing (and the gate-after-dedup replay-storm fix) is untouched.
+- A **push** frame *mints* one, so the three FULL drain sites
+  (`drainMembershipFull`, the legacy `drainEntry` branch, the keyed FULL reload)
+  pass `notBefore: pendingEntry.lastNotifyAt`. A flight that started earlier is
+  superseded, not joined, and the drain runs its own.
+
+**The floor is passed explicitly by those three sites and must NEVER be derived
+from `gated`.** That flag looks like a proxy for "this is a push" and is not one —
+the boot-snapshot fan-out and the multi-tab sub herd are *gated read* callers, the
+exact traffic single-flighting exists to collapse. Keying the floor off it would
+give each of them its own flight and reinstate the replay storm gate-after-dedup
+cures, buying no correctness. `loadResourceByKey` / `measureSubscribeCycle` stay
+floor-less for the same reason.
+
+`lastNotifyAt` is the **most recent** notify merged into the pending — never
+`enqueuedAt` (the first notify, owned by the delivery-latency metric), and refreshed
+**before** `mergePending`'s FULL-absorb and degrade-to-FULL early returns, since an
+`ids: null` change absorbing into a live FULL pending is the commonest shape of all.
+It is a sound floor because `pg_notify` arrives only after its transaction commits
+and the stamp is taken after the listener routed the change, so
+`startedAt >= lastNotifyAt` ⇒ the flight's first SELECT began after every commit
+folded into this pending. It assumes loaders issue autocommit statements rather than
+inheriting an earlier-opened snapshot (true today), and errs safe: a gated flight
+stamps `startedAt` before its admission wait, costing false refusals (one extra
+load) and never a false join. Supersessions are counted per key as
+`staleFlightSupersedes` in `_debug` (hook `onStaleFlightSupersede`) — non-zero means
+the pre-commit join is still reachable under load and is being refused rather than
+broadcast. Design and the production incident behind it:
+`research/2026-08-08-global-live-state-flight-freshness.md`.
 
 ## Read path: version short-circuit (bootEpoch), gate-after-dedup, per-tab subs
 
@@ -271,11 +338,8 @@ push-mode sub used to run the full loader behind the 6-slot read-admission gate.
   single-flight (`getResourceValue`'s gated factory), so only the flight STARTER
   occupies a slot — N concurrent reads of one (key, params) consume 1 slot, not N.
   Joiners ride the existing `read-coalesce` wait, which now subsumes the flight's
-  gate wait. Corollary pinned by H5a/H5c: the starter no longer pays post-flight
-  slot-release hops, so `serveSub` yields one explicit microtask after the flight
-  resolves — a push continuation parked on the same coalesced flight (which sends
-  synchronously) reaches the wire first, and its keyed FULL diff runs before the
-  sub-ack's idempotent snapshot re-seed.
+  gate wait. Read↔read sharing is unconditional; a push drain shares only a flight
+  that started after the notify it is draining (*Flight freshness* above).
 - **Per-tab sub sets + batch replay.** A socket's sub set is the union of its tabs'
   (the shared-WebSocket client is one socket for N tabs), so each per-socket pk
   record tags its holding tabs (`SocketSubRecord`; legacy untagged frames land in
@@ -288,6 +352,15 @@ push-mode sub used to run the full loader behind the 6-slot read-admission gate.
   sub-acks. `op:"unsub-tab"` is the best-effort tab departure (client `pagehide`).
   A keyed sub that short-circuits does NOT re-seed an evicted snapshot; the next
   notify finds no snapshot and ships a FULL update — self-healing by construction.
+
+**A read frame reports a version observed BEFORE the load.** `serveSub` has always
+read the per-pk counter ahead of its flight; `handleResourceHttp` does the same (the
+read is hoisted above `gatedRead`). After the load, a body could pair a value the
+flight SELECTed at T0 with a version that pushes bumped since — and the client's
+same-boot HTTP guard is strict `<`, so an equal-or-greater version is applied and
+the stale value pins. Before, a joined older value can only report an older version:
+dropped, then refetched by RQ's `retry: 1`. That ordering is exactly what lets the
+read path stay floor-less and keep coalescing (*Flight freshness* above).
 
 **The HTTP body carries `epoch`.** `/api/resources/:key` returns
 `{ value, version, epoch }` — the same `bootEpoch` the WS acks echo, feeding the
@@ -323,12 +396,20 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   idempotence + the L2 persist-hook calling contract),
   `runtime-version-shortcircuit.test.ts`, `runtime-gate-dedup.test.ts`,
   `runtime-sub-batch.test.ts`, `runtime-watermark.test.ts`,
-  `runtime-ack-channel.test.ts`, `runtime-revalidate.test.ts`.
+  `runtime-ack-channel.test.ts`, `runtime-revalidate.test.ts`,
+  `runtime-stale-flight.test.ts` (a drain refusing a pre-commit flight).
+  Note `controllable()` resolves at RELEASE time, so it structurally cannot model
+  a SELECT that already ran; any test about stale-flight joins must use
+  `snapshotControllable()`, which captures at INVOCATION time.
 
 Two results worth knowing without opening a file: H5c (keyed snapshot-seed vs a
-concurrent push) is GREEN because full loads coalesce, so the sub-ack re-seeds the
-snapshot idempotently — **no `handleSub` guard is needed**. And `runtime-revalidate`'s
-load-bearing case pins etag-BEFORE-value ordering: a change landing mid-load must
+concurrent push) is GREEN — **no `handleSub` guard is needed** — but *not* because
+the two coalesce into one load; a drain refuses a flight older than its notify, so
+the sub-ack's seed may well come from a different, older read. The argument is that
+a read-path re-seed can only regress the diff base to an OLDER one, and an older
+base ships EXTRA rows, never fewer: the client converges either way and the only
+cost is a fatter delta. And `runtime-revalidate`'s load-bearing case pins
+etag-BEFORE-value ordering: a change landing mid-load must
 never ship a stale value under an already-current etag (a later `up-to-date`/`304`
 would pin it forever).
 

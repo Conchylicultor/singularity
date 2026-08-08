@@ -83,7 +83,11 @@ one compute + one cached value (coalesce fan-out).
   arriving with a *different* signature mid-flight shares the in-flight result.
   That shared result may be **≤1-event stale**; the next notify re-probes and
   recomputes if the signature has since moved. This mirrors the runtime
-  single-flight's existing staleness-sharing contract.
+  single-flight's staleness-sharing contract on its READ path. It is sound here
+  because nothing in this memo mints a version; where the runtime *does* (a push
+  drain), it passes `inflight`'s `notBefore` floor instead of sharing — this memo
+  could adopt the same floor later
+  (`research/2026-08-08-global-live-state-flight-freshness.md`).
 - `evict(worktreePath)` drops a worktree's entry on the subscription lifecycle
   (e.g. `onLastUnsubscribe`); a later re-subscribe re-probes cheaply with one cold
   compute.

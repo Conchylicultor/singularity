@@ -22,12 +22,18 @@
 import { test, expect, describe, mock } from "bun:test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { createHarness, controllable, tick, makeClientView } from "./test-support";
+import {
+  createHarness,
+  controllable,
+  tick,
+  makeClientView,
+} from "./test-support";
 import type { RecordedFrame } from "./test-support";
 
 // The runtime hashes every `revalidate` signature (`normalizeEtag`, SHA1) so the
 // wire ETag is opaque and header-safe. Mirror it here to name the expected token.
-const sig = (raw: string): string => createHash("sha1").update(raw).digest("hex");
+const sig = (raw: string): string =>
+  createHash("sha1").update(raw).digest("hex");
 
 const httpReq = (key: string, ifNoneMatch?: string): Request =>
   new Request(`http://localhost/api/resources/${key}`, {
@@ -162,7 +168,8 @@ describe("conditional revalidation — read path (ETag / 304)", () => {
     // and converges the client to current truth "v2".
     await h.subscribe("edited", {}, { socket: 1, etag: ack.etag });
     const resub = h.frames.find(
-      (f) => f.socket === 1 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
+      (f) =>
+        f.socket === 1 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
     )!;
     expect(resub.kind).toBe("sub-ack"); // re-load, NOT an up-to-date short-circuit
     expect(resub.value).toBe("v2"); // converged to current server truth
@@ -184,13 +191,18 @@ describe("conditional revalidation — read path (ETag / 304)", () => {
     });
 
     // Matching If-None-Match → 304, empty body, loader NOT run.
-    const res304 = await h.runtime.handleResourceHttp(httpReq("r", sig("sig")), { key: "r" });
+    const res304 = await h.runtime.handleResourceHttp(
+      httpReq("r", sig("sig")),
+      { key: "r" },
+    );
     expect(res304.status).toBe(304);
     expect(await res304.text()).toBe("");
     expect(loads).toBe(0);
 
     // Absent If-None-Match → 200 with {value,version} and a fresh ETag header.
-    const res200 = await h.runtime.handleResourceHttp(httpReq("r"), { key: "r" });
+    const res200 = await h.runtime.handleResourceHttp(httpReq("r"), {
+      key: "r",
+    });
     expect(res200.status).toBe(200);
     expect(res200.headers.get("ETag")).toBe(sig("sig"));
     const body = (await res200.json()) as { value: unknown; version: number };
@@ -199,7 +211,10 @@ describe("conditional revalidation — read path (ETag / 304)", () => {
     expect(loads).toBe(1);
 
     // Mismatching If-None-Match → 200 (a real body), not 304.
-    const resMiss = await h.runtime.handleResourceHttp(httpReq("r", sig("stale")), { key: "r" });
+    const resMiss = await h.runtime.handleResourceHttp(
+      httpReq("r", sig("stale")),
+      { key: "r" },
+    );
     expect(resMiss.status).toBe(200);
     expect(resMiss.headers.get("ETag")).toBe(sig("sig"));
     expect(loads).toBe(2);
@@ -235,7 +250,9 @@ describe("conditional revalidation — read path (ETag / 304)", () => {
 
     // HTTP: an If-None-Match cannot 304 through a broken signature; 200 with the
     // value and NO ETag response header.
-    const res = await h.runtime.handleResourceHttp(httpReq("r", "anything"), { key: "r" });
+    const res = await h.runtime.handleResourceHttp(httpReq("r", "anything"), {
+      key: "r",
+    });
     expect(res.status).toBe(200);
     expect(res.headers.get("ETag")).toBeNull();
     const body = (await res.json()) as { value: unknown; version: number };
@@ -347,14 +364,19 @@ describe("conditional revalidation — value and etag are co-produced by one fli
     expect(acks).toHaveLength(2);
     for (const ack of acks) expect(ack.value).toBe("v1"); // one shared flight, one value
     // Neither subscriber may hold the stale value under the post-change signature.
-    expect(acks.some((a) => a.value === "v1" && a.etag === sig("2"))).toBe(false);
+    expect(acks.some((a) => a.value === "v1" && a.etag === sig("2"))).toBe(
+      false,
+    );
 
     // And the pin cannot form: whatever etag the joiner stored, its next
     // revalidation must NOT be short-circuited while its value is stale.
-    const joinerAck = h.frames.find((f) => f.socket === 1 && f.kind === "sub-ack")!;
+    const joinerAck = h.frames.find(
+      (f) => f.socket === 1 && f.kind === "sub-ack",
+    )!;
     await h.subscribe("edited", {}, { socket: 2, etag: joinerAck.etag });
     const resub = h.frames.find(
-      (f) => f.socket === 2 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
+      (f) =>
+        f.socket === 2 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
     )!;
     expect(resub.kind).toBe("sub-ack"); // a real reload, never `up-to-date`
   });
@@ -381,8 +403,12 @@ describe("conditional revalidation — value and etag are co-produced by one fli
     await tick();
     ctl.setValue("v2"); // a re-run of the loader would now see post-change truth
 
-    const starterAck = h.frames.find((f) => f.socket === 0 && f.kind === "sub-ack")!;
-    const joinerAck = h.frames.find((f) => f.socket === 1 && f.kind === "sub-ack")!;
+    const starterAck = h.frames.find(
+      (f) => f.socket === 0 && f.kind === "sub-ack",
+    )!;
+    const joinerAck = h.frames.find(
+      (f) => f.socket === 1 && f.kind === "sub-ack",
+    )!;
     expect(starterAck.value).toBe("v1");
     expect(joinerAck.value).toBe("v1"); // the starter's value — one loader run
 
@@ -395,7 +421,8 @@ describe("conditional revalidation — value and etag are co-produced by one fli
     // next revalidation → a full reload → convergence to current server truth.
     await h.subscribe("edited", {}, { socket: 2, etag: joinerAck.etag });
     const resub = h.frames.find(
-      (f) => f.socket === 2 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
+      (f) =>
+        f.socket === 2 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
     )!;
     expect(resub.kind).toBe("sub-ack");
     expect(resub.value).toBe("v2");
@@ -435,7 +462,9 @@ describe("conditional revalidation — value and etag are co-produced by one fli
     // The HTTP twin: a GET joining an unseeded flight stamps no `ETag` header.
     ctl.block();
     const pushLoad2 = h.runtime.loadResourceByKey("edited");
-    const resP = h.runtime.handleResourceHttp(httpReq("edited"), { key: "edited" });
+    const resP = h.runtime.handleResourceHttp(httpReq("edited"), {
+      key: "edited",
+    });
     await tick(); // let the GET probe its signature and coalesce onto the parked flight
     ctl.release();
     const res = await resP;
@@ -579,7 +608,12 @@ describe("conditional revalidation — a push etag rides only the update frame",
     await h.subscribe("r"); // sub-ack parked on the blocked loader
     expect(h.frames).toHaveLength(0);
 
-    r.notify(); // coalesces onto the same parked load; bumps the version to 1
+    // Bumps the version to 1 and starts its own load: since the flight-freshness
+    // fix the drain refuses the sub's older flight rather than coalescing onto it
+    // (`research/2026-08-08-global-live-state-flight-freshness.md`). Both loads
+    // park on the same block, so the race being timed is unchanged — what this
+    // case measures is `sendUpdate`'s no-await branch, not the sharing.
+    r.notify();
     await tick();
     expect(h.frames).toHaveLength(0);
 

@@ -16623,7 +16623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
         - Imported by: `infra/host-admission`
-    - **`inflight`**
+    - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`

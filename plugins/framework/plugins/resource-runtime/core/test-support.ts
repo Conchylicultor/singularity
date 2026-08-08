@@ -15,6 +15,14 @@
  *     "the client converges to server truth" instead of eyeballing frame shapes.
  *   - `rng(seed)` — the mulberry32 PRNG (deduped from `keyed-diff.test.ts`).
  *
+ * TWO block/release loaders, and the difference is load-bearing: `controllable()`
+ * resolves its value at RELEASE time, `snapshotControllable()` captures it at
+ * INVOCATION time. Only the latter can model a SELECT that has already run, so
+ * only the latter can express a value read BEFORE a commit — any test about
+ * stale-flight joins or freshness floors must use it. Reach for `controllable`
+ * when the test is about ordering/coalescing and every flight should agree on the
+ * same value.
+ *
  * The client-side semantics mirrored here are load-bearing; see the cross-ref
  * comments on each (`notifications-client.ts` version guard, `keyed-delta-merge.ts`
  * merge). They are RE-implemented, never imported — resource-runtime must stay
@@ -57,7 +65,12 @@ export interface RecordedFrame {
   /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */
   epoch?: string;
   /** `up-to-date-batch` entries. */
-  entries?: Array<{ id?: number; key: string; params: ResourceParams; version: number }>;
+  entries?: Array<{
+    id?: number;
+    key: string;
+    params: ResourceParams;
+    version: number;
+  }>;
 }
 
 export interface Harness {
@@ -70,11 +83,22 @@ export interface Harness {
   subscribe: (
     key: string,
     params?: ResourceParams,
-    o?: { socket?: number; etag?: string; version?: number; epoch?: string; tabId?: string },
+    o?: {
+      socket?: number;
+      etag?: string;
+      version?: number;
+      epoch?: string;
+      tabId?: string;
+    },
   ) => Promise<void>;
   /** Send `op:sub-batch` (one tab's whole-set replay) and await the next macrotask. */
   subscribeBatch: (
-    entries: Array<{ key: string; params?: ResourceParams; etag?: string; version?: number }>,
+    entries: Array<{
+      key: string;
+      params?: ResourceParams;
+      etag?: string;
+      version?: number;
+    }>,
     o?: { socket?: number; tabId?: string; epoch?: string; complete?: boolean },
   ) => Promise<void>;
   /** Send `op:unsub` on a socket and await the next macrotask. */
@@ -115,7 +139,9 @@ export function createHarness(
     // Fake ServerWebSocket: only `send` is exercised by the runtime's sendJson.
     const ws = {
       send(raw: string) {
-        const msg = JSON.parse(raw) as Record<string, unknown> & { kind: string };
+        const msg = JSON.parse(raw) as Record<string, unknown> & {
+          kind: string;
+        };
         if (msg.kind === "ping") return; // ignore heartbeats
         // Spread verbatim so key presence (etag/value) is faithful for the reval
         // assertions; only seq/socket are synthesized.
@@ -129,7 +155,8 @@ export function createHarness(
   return {
     runtime,
     frames,
-    framesFor: (socketIdx: number) => frames.filter((f) => f.socket === socketIdx),
+    framesFor: (socketIdx: number) =>
+      frames.filter((f) => f.socket === socketIdx),
     async subscribe(key, params = {}, o = {}) {
       const ws = wsList[o.socket ?? 0];
       handler.message(
@@ -203,6 +230,13 @@ export function createHarness(
  * A loader whose completion the test controls. Initially open (so the sub-ack's
  * initial load resolves immediately); call `block()` to make the NEXT load park
  * until `release()`.
+ *
+ * Resolves the value at RELEASE time: every parked flight, whenever it started,
+ * returns whatever `setValue` last wrote. That makes it the right tool for tests
+ * about ORDERING and COALESCING (all flights agree on one value, so frame order is
+ * the only variable) and the wrong tool for anything about freshness — it cannot
+ * express "this flight's SELECT already ran, before the commit". Use
+ * `snapshotControllable` for that.
  */
 export function controllable<T>(initial: T) {
   let releaseFn: (() => void) | undefined;
@@ -216,6 +250,62 @@ export function controllable<T>(initial: T) {
     loader: async (): Promise<T> => {
       await blocker;
       return value;
+    },
+    block() {
+      blocker = new Promise<void>((res) => {
+        releaseFn = res;
+      });
+    },
+    release() {
+      releaseFn?.();
+    },
+    setValue(v: T) {
+      value = v;
+    },
+  };
+}
+
+/**
+ * A `controllable` whose loader captures the value at INVOCATION time — a
+ * faithful model of a SELECT that has already run. The captured value is what the
+ * flight returns, no matter what `setValue` writes while it is parked.
+ *
+ * The contrast with `controllable` is the whole point, and it is why the
+ * 2026-08-08 stale-flight bug survived a suite that staged its exact race:
+ * `controllable` resolves at RELEASE time, so a flight started before a commit and
+ * a flight started after it return the SAME value, and a test cannot tell a
+ * pre-commit read from a post-commit one. **Any test about stale-flight joins,
+ * `notBefore`, or version/value pairing MUST use this one** — with `controllable`
+ * such a test asserts nothing, because the buggy and the correct runtime produce
+ * identical frames.
+ *
+ * Same surface as `controllable` (`value`/`loader`/`block`/`release`/`setValue`)
+ * plus `invocations`: how many times the loader body actually STARTED, which is
+ * how a test tells a join (one invocation) from a supersession (two).
+ *
+ * See `research/2026-08-08-global-live-state-flight-freshness.md`.
+ */
+export function snapshotControllable<T>(initial: T) {
+  let releaseFn: (() => void) | undefined;
+  let blocker: Promise<void> = Promise.resolve();
+  let value = initial;
+  let invocations = 0;
+  return {
+    /** The value a loader invoked RIGHT NOW would capture. */
+    get value(): T {
+      return value;
+    },
+    /** How many times the loader body has been entered (joins do not count). */
+    get invocations(): number {
+      return invocations;
+    },
+    loader: async (): Promise<T> => {
+      invocations++;
+      // The read happens HERE — before the park, like a SELECT that has already
+      // returned its rows while the caller is still waiting on something else.
+      const captured = value;
+      await blocker;
+      return captured;
     },
     block() {
       blocker = new Promise<void>((res) => {
@@ -312,10 +402,16 @@ export interface ClientView {
    * The view's "known server epoch" mirrors the WS channel's current identity: the
    * last epoch seen on any `sub-ack`/`up-to-date` frame.
    */
-  applyHttpRefetch(res: { value: unknown; version: number; epoch?: string }): void;
+  applyHttpRefetch(res: {
+    value: unknown;
+    version: number;
+    epoch?: string;
+  }): void;
 }
 
-export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): ClientView {
+export function makeClientView(
+  keyOf: (row: unknown) => string = defaultKeyOf,
+): ClientView {
   let version = -1;
   let value: unknown = undefined;
   let driftResubs = 0;
@@ -373,7 +469,12 @@ export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): 
         const upsertMap = new Map<string, unknown>();
         for (const [id, row] of frame.upserts ?? []) upsertMap.set(id, row);
         const prevRows = Array.isArray(value) ? (value as unknown[]) : [];
-        const result = mergeKeyedDeltaLocal(prevRows, upsertMap, frame.order, keyOf);
+        const result = mergeKeyedDeltaLocal(
+          prevRows,
+          upsertMap,
+          frame.order,
+          keyOf,
+        );
         if (result.kind === "drift") {
           // Base drift: the real client discards the delta and resubs for a fresh
           // full base. We record it and leave value/version UNCHANGED, so drift is
@@ -389,7 +490,11 @@ export function makeClientView(keyOf: (row: unknown) => string = defaultKeyOf): 
     applyAll(fs: readonly RecordedFrame[]): void {
       for (const f of fs) this.apply(f);
     },
-    applyHttpRefetch(res: { value: unknown; version: number; epoch?: string }): void {
+    applyHttpRefetch(res: {
+      value: unknown;
+      version: number;
+      epoch?: string;
+    }): void {
       const bodyEpoch = res.epoch;
       const adopt = (): void => {
         // Cross-epoch adopt: `version` is NOT monotonic here — an old-boot number is

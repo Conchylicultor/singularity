@@ -13,31 +13,54 @@
  * the real client simulator (`makeClientView`) and assert it converges to server
  * truth — not merely that a frame of the right shape was sent.
  *
- * A load-bearing mechanic these pin: a fresh sub's FULL loader and a concurrent
- * FULL push COALESCE onto ONE in-flight promise (`getResourceValue`), so both read
- * the identical value at release — and the flush continuation (the push) sends
- * BEFORE `handleSub`'s continuation (the stale sub-ack), so the sub-ack lands last
- * and is version-dropped. H5c leans on this: the sub-ack's keyed snapshot-seed
- * (`runtime.ts:1989`) writes the SAME id→hash the push already seeded, so it is
- * idempotent and a subsequent delta merges without drift.
+ * These races no longer COALESCE, and the file's old argument rested on the fact
+ * that they did. Since `research/2026-08-08-global-live-state-flight-freshness.md`
+ * a push drain passes a freshness floor (`notBefore: lastNotifyAt`) into the
+ * single-flight, so a read flight that started before the notify is SUPERSEDED,
+ * not joined: H5a and H5c each run the FULL loader TWICE and fire the runtime's
+ * `onStaleFlightSupersede` hook once. They stay green — and the reasons are
+ * recorded per test, because "still green" was never the interesting part. The
+ * bug that incident was about hid inside a suite that was green for a reason that
+ * had stopped being true.
+ *
+ * What survives unchanged: `handleSub` yields one explicit microtask after its
+ * flight resolves while `sendUpdate` sends synchronously (see
+ * `resource-runtime/CLAUDE.md`), so the push still reaches the wire before the
+ * stale sub-ack in this harness. That is an ordering these tests OBSERVE, not an
+ * invariant the wire depends on — with two independent flights, real completion
+ * order is unrelated — and every convergence assertion below holds in either
+ * order, because the client's version guard, not the send order, is what makes the
+ * stale sub-ack harmless.
  */
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
-import { createHarness, controllable, tick, makeClientView } from "./test-support";
+import {
+  createHarness,
+  controllable,
+  tick,
+  makeClientView,
+} from "./test-support";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
 
 describe("H5 — notify races a fresh sub", () => {
   test("H5a: a push landing while a fresh sub's loader is parked wins; the stale sub-ack is version-dropped", async () => {
-    const h = createHarness();
+    const supersedes: string[] = [];
+    const h = createHarness({
+      onStaleFlightSupersede: (key) => supersedes.push(key),
+    });
     const ctl = controllable("A");
+    let loads = 0;
     const r = h.runtime.defineExternalResource({
       key: "r",
       mode: "push",
       schema: z.string(),
-      loader: ctl.loader,
+      loader: () => {
+        loads++;
+        return ctl.loader();
+      },
     });
 
     // Fresh subscribe whose loader parks. Registration (refcount + sub entry) is
@@ -48,11 +71,18 @@ describe("H5 — notify races a fresh sub", () => {
     await h.subscribe("r"); // sub-ack parked on the blocked loader
     expect(h.frames).toHaveLength(0); // nothing sent yet
 
-    // Notify while parked: the flush bumps the version to 1 and parks on the SAME
-    // coalesced load, so no frame is sent until release.
+    // Notify while parked: the flush bumps the version to 1 and starts its OWN
+    // load — the parked sub's flight began before this notify, so the drain
+    // refuses it (freshness floor). Both loads park on the same block, so no
+    // frame is sent until release. Pre-2026-08-08 the drain joined the sub's
+    // flight here and only one load ran; `controllable` resolves both to "B"
+    // either way, which is why this test cannot see the difference and
+    // `runtime-stale-flight.test.ts` exists.
     r.notify();
     await tick();
     expect(h.frames).toHaveLength(0);
+    expect(supersedes).toEqual(["r"]); // refused, not joined
+    expect(loads).toBe(2); // …so two loads are in the air, both parked
 
     ctl.release();
     await tick();
@@ -65,7 +95,13 @@ describe("H5 — notify races a fresh sub", () => {
     expect(update.version).toBe(1);
     expect(update.value).toBe("B");
     expect(subAck.version).toBe(0);
-    expect(update.seq).toBeLessThan(subAck.seq); // push shipped first; sub-ack is the trailer
+    // Send order, not a wire invariant: `sendUpdate` broadcasts with no await
+    // while `handleSub` yields a microtask after its flight, so the push wins in
+    // this harness. It guards that no-await property (the reason `sendUpdate`
+    // sends rather than returns a frame — `runtime-revalidate.test.ts` owns the
+    // dedicated case), NOT the correctness below: the version guard makes the
+    // stale sub-ack harmless whichever order it arrives in.
+    expect(update.seq).toBeLessThan(subAck.seq);
 
     // The real client, fed the frames in send order, converges to the LATEST
     // loader output at the push's version — the stale sub-ack changes nothing.
@@ -103,14 +139,30 @@ describe("H5 — notify races a fresh sub", () => {
   test("H5c: keyed — a fresh sub races a FULL update, then a subsequent delta merges without drift", async () => {
     // The deep one. Exercises `handleSub`'s unconditional keyed snapshot-seed
     // (`runtime.ts:1989`) against a concurrent higher-versioned FULL push that
-    // already advanced the server snapshot. GREEN because the fresh sub's FULL
-    // loader coalesces with the push's FULL loader onto one in-flight value, so
-    // the sub-ack re-seeds the snapshot with the identical id→hash the push wrote
-    // — idempotent, never a regression — and the following scoped delta diffs
-    // against a correct snapshot. If this ever RED-ed (drift / stale client), the
-    // sub-ack seed would be clobbering a push-advanced snapshot and the fix would
-    // live in `handleSub`; it does not, so no guard is needed.
-    const h = createHarness({ readSet: () => ["row_table"] });
+    // already advanced the server snapshot.
+    //
+    // Its old rationale — "GREEN because the two FULL loads coalesce, so the
+    // sub-ack re-seeds the identical id→hash: idempotent" — is DEAD. The push
+    // drain now refuses the sub's older flight and runs its own load, so two
+    // loads run and the seeds are no longer identical by construction. That is
+    // asserted below rather than described, so this comment cannot quietly go
+    // false a second time.
+    //
+    // The argument that replaces it does not need coalescing. The sub-ack's seed
+    // comes from a READ, and a read flight is never newer than the push's — it
+    // either started earlier (older rows) or is the same flight. So the re-seed
+    // can only regress the diff base to an OLDER one. An older base makes the
+    // next diff report rows that did not actually change; it can never make it
+    // MISS a row that did. Extra rows on the wire, never missing ones — so the
+    // client still converges and no `handleSub` guard is needed. The conclusion
+    // is the same as before; the reason is not, and the reason is the part a
+    // future reader would have leaned on.
+    const supersedes: string[] = [];
+    let fullLoads = 0;
+    const h = createHarness({
+      readSet: () => ["row_table"],
+      onStaleFlightSupersede: (key) => supersedes.push(key),
+    });
     const ctl = controllable<{ id: string; n: number }[]>([
       { id: "a", n: 1 },
       { id: "b", n: 1 },
@@ -121,13 +173,21 @@ describe("H5 — notify races a fresh sub", () => {
         identityTable: "row_table",
         // FULL and (later) scoped both read the same controllable value; the
         // scoped ctx narrows to the affected rows.
-        loader: (_p, c) => (c ? ctl.value.filter((row) => c.affectedIds.includes(row.id)) : ctl.loader()),
+        loader: (_p, c) => {
+          if (!c) fullLoads++;
+          return c
+            ? ctl.value.filter((row) => c.affectedIds.includes(row.id))
+            : ctl.loader();
+        },
       },
     );
 
     // Fresh subscribe parks; a FULL feed change (INSERT → ids null) races it.
     ctl.block();
-    ctl.setValue([{ id: "a", n: 2 }, { id: "b", n: 1 }]);
+    ctl.setValue([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
     await h.subscribe("rows"); // sub-ack parked
     h.runtime.applyDbChange({
       table: "row_table",
@@ -140,6 +200,12 @@ describe("H5 — notify races a fresh sub", () => {
     ctl.release();
     await tick();
 
+    // The mechanism, pinned so the rationale above stays checkable: the drain
+    // REFUSED the sub's older flight (one supersession) and ran its own FULL
+    // load, so two FULL loads happened here — they did NOT coalesce.
+    expect(supersedes).toEqual(["rows"]);
+    expect(fullLoads).toBe(2);
+
     // First race: a FULL update (v1) before the stale sub-ack (v0).
     const firstUpdate = h.frames.find((f) => f.kind === "update")!;
     expect(firstUpdate.version).toBe(1);
@@ -147,8 +213,12 @@ describe("H5 — notify races a fresh sub", () => {
     expect(staleAck.version).toBe(0);
 
     // A SUBSEQUENT scoped change ships a delta the client must merge onto the base
-    // seeded by the (idempotent) snapshot — no drift.
-    ctl.setValue([{ id: "a", n: 3 }, { id: "b", n: 1 }]);
+    // the sub-ack's re-seed left behind — at worst an older one, never a newer,
+    // so the delta is at worst redundant. No drift either way.
+    ctl.setValue([
+      { id: "a", n: 3 },
+      { id: "b", n: 1 },
+    ]);
     h.runtime.applyDbChange({
       table: "row_table",
       op: "U",
@@ -166,7 +236,10 @@ describe("H5 — notify races a fresh sub", () => {
     // and b=1, at version 2, with zero drift-resubs (the base was never missing).
     const cv = makeClientView(keyOf);
     cv.applyAll(h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 3 }, { id: "b", n: 1 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 3 },
+      { id: "b", n: 1 },
+    ]);
     expect(cv.version).toBe(2);
     expect(cv.driftResubs).toBe(0);
   });

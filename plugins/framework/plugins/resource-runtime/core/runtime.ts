@@ -630,6 +630,23 @@ interface PendingNotify {
    */
   enqueuedAt: number;
   /**
+   * `performance.now()` of the MOST RECENT notify merged into this pending — the
+   * drain's freshness floor: every change coalesced here was committed before
+   * this instant (a `pg_notify` is delivered only after its transaction commits,
+   * and this is stamped after the listener routed the change). A read flight
+   * that started earlier may have SELECTed before those commits, so a drain
+   * passes this as `notBefore` and refuses to mint a new version off such a
+   * flight. See research/2026-08-08-global-live-state-flight-freshness.md.
+   *
+   * NOT the same field as `enqueuedAt`, and the two must NOT be merged.
+   * `enqueuedAt` is the FIRST notify: it opens the staleness window and feeds the
+   * `onDelivered` delivery-latency metric, so it is never overwritten.
+   * `lastNotifyAt` is the LAST notify and is overwritten on every merge; using
+   * `enqueuedAt` as the floor would let a flight that predates a later coalesced
+   * commit still qualify — exactly the bug.
+   */
+  lastNotifyAt: number;
+  /**
    * Source transaction ids (`pg_current_xact_id()::text` from the change-feed
    * NOTIFY) of the DB changes coalesced into this pending — the mutation-ack
    * attribution (`ackTx`) the drain stamps on the frames this recompute
@@ -862,6 +879,16 @@ export interface ResourceRuntimeOptions {
    * replay-storm fix. server: optional metric hook; central / omitted: no-op.
    */
   onSubShortCircuit?: (key: string) => void;
+  /**
+   * Fired once per stale-flight supersession — a push drain refused to join an
+   * in-flight read that had STARTED before the notify it is draining, and began
+   * its own flight instead (see `getResourceValue`'s `notBefore`). A non-zero
+   * rate means the pre-commit join is still reachable under load and is now
+   * being refused rather than shipped under a fresh version. The runtime also
+   * keeps its own per-key counter, surfaced in the `_debug` payload next to
+   * `subShortCircuits`. server: optional metric hook; central / omitted: no-op.
+   */
+  onStaleFlightSupersede?: (key: string) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
@@ -917,9 +944,10 @@ export interface ResourceRuntimeOptions {
    * L2 persisted materialization — true when this resource key should be
    * persisted to `live_state_snapshot` for instant cold boot. Backed by
    * `bootCritical && !externalSource` (the boot-critical, DB-backed set). When it
-   * returns true, `drainEntry` captures the xmin watermark BEFORE the loader runs,
-   * forces a FULL recompute even with zero subscribers, and persists the value on
-   * loader success. server: injected by the live-state-snapshot plugin at boot
+   * returns true, `drainEntry` forces a FULL recompute even with zero subscribers
+   * and persists the value on loader success, floored by the xmin watermark the
+   * recompute's own flight captured before its first read. server: injected by
+   * the live-state-snapshot plugin at boot
    * (reads the current holder at call time); central / before-injection: omitted
    * (no resource is persisted). See
    * research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.3.
@@ -930,14 +958,25 @@ export interface ResourceRuntimeOptions {
    * the loader's first read, so any write not visible to the loader's snapshot
    * has xid >= this watermark. server:
    * `SELECT pg_snapshot_xmin(pg_current_snapshot())::text` through the pool.
-   * Two callers, same floor semantics:
-   *  - the L2 persist path (when `shouldPersist(key)` is true) — the persisted
-   *    value's catch-up floor (under-replay impossible; over-replay harmless);
-   *  - every FULL read/recompute flight (`getResourceValue`) — the commit
-   *    watermark stamped on the frames that fully reconcile a client (sub-ack /
-   *    update / FULL keyed delta / HTTP body, Rule B′), which the optimistic
+   * The rule is not "one caller" but ONE CAPTURE PER READ: a floor may only
+   * describe the read it accompanies. The main caller is every FULL
+   * read/recompute flight (`getResourceValue`), captured by the flight's STARTER,
+   * feeding BOTH stamps of the value that flight produces:
+   *  - the commit watermark on the frames that fully reconcile a client (sub-ack
+   *    / update / FULL keyed delta / HTTP body, Rule B′), which the optimistic
    *    client compares against mutation ack tokens (Rule A/B). See
-   *    research/2026-07-11-global-never-revert-optimistic-edits.md.
+   *    research/2026-07-11-global-never-revert-optimistic-edits.md;
+   *  - the L2 persisted value's catch-up floor (when `shouldPersist(key)` is
+   *    true) — under-replay impossible; over-replay harmless. The FULL drains
+   *    pass the flight's own watermark straight to `persistSnapshot`; capturing
+   *    a second one at the drain could floor a joined (older) value with a newer
+   *    position, and catch-up would skip the commit it is missing. See
+   *    research/2026-08-08-global-live-state-flight-freshness.md.
+   * `drainMembershipScoped` is the one other caller, and it does NOT break the
+   * rule: its refills are `ctx` loads, which bypass the single-flight entirely
+   * and so can never be served someone else's older read. With nothing to adopt
+   * there is no flight watermark to inherit, so it captures its own — before the
+   * refill, which is exactly the read that floor describes.
    * Absent (central) ⇒ frames ship tokenless and nothing is persisted.
    */
   captureWatermark?: () => Promise<string>;
@@ -1178,6 +1217,16 @@ export function createResourceRuntime(
     subShortCircuits.set(key, (subShortCircuits.get(key) ?? 0) + 1);
     opts.onSubShortCircuit?.(key);
   }
+  // Per-key count of stale-flight supersessions (a drain refused to join a read
+  // flight that started before the notify it is draining, and started its own).
+  // Monotonic; surfaced in the `_debug` payload beside `subShortCircuits`. This
+  // is how we learn whether the pre-commit join the 2026-08-08 incident rode on
+  // still happens in production — and is now refused rather than shipped.
+  const staleFlightSupersedes = new Map<string, number>();
+  function recordStaleFlightSupersede(key: string): void {
+    staleFlightSupersedes.set(key, (staleFlightSupersedes.get(key) ?? 0) + 1);
+    opts.onStaleFlightSupersede?.(key);
+  }
   let dagDirty = true;
   let topoOrder: RegistryEntry[] = [];
   // `topoOrder` grouped by longest-path depth. Each level's entries are mutually
@@ -1407,14 +1456,34 @@ export function createResourceRuntime(
   // the etag and the watermark). `seedAckTx` is the pending's source-transaction
   // ids the CALLER (a feed-driven drain) wants stamped on the frames this value
   // feeds; the resolved `ackTx` is the seed of the flight that ACTUALLY produced
-  // the value. A drain that JOINS a read flight whose SELECT may have run
-  // pre-commit adopts the starter's (typically undefined) seed and ships NO
-  // ackTx — a missed ack degrades to the client's watermark backstop, while
-  // stamping its own seed on a pre-commit value would be a FALSE ack (the one
-  // soundness hazard the co-production closes). Read-path callers (sub-ack /
-  // HTTP / loadResourceByKey) never seed and never stamp ackTx (their snapshot
-  // watermark subsumes it). A SCOPED (ctx) load never coalesces (ctx loads
-  // bypass the inflight), so returning the seed directly is safe.
+  // the value. A caller that JOINS a flight adopts the starter's (typically
+  // undefined) seed and ships NO ackTx — a missed ack degrades to the client's
+  // watermark backstop, while stamping its own seed on someone else's value
+  // would be a FALSE ack (the one soundness hazard the co-production closes).
+  // The FULL drains additionally pass `notBefore` (below), so they no longer
+  // join a pre-commit flight at all and in practice stamp their own set.
+  // Read-path callers (sub-ack / HTTP / loadResourceByKey) never seed and never
+  // stamp ackTx (their snapshot watermark subsumes it). A SCOPED (ctx) load
+  // never coalesces (ctx loads bypass the inflight), so returning the seed
+  // directly is safe.
+  //
+  // THE VERSION IS *NOT* CO-PRODUCED — WHICH IS WHY `notBefore` EXISTS. A push
+  // drain assigns `version = current + 1` BEFORE it asks for the value, and that
+  // number is an assertion: "this is the state as of the change I am draining".
+  // Nothing about joining a flight can make an older SELECT satisfy it — so the
+  // defence cannot be adoption, it has to be REFUSAL. `notBefore` is the caller's
+  // freshness floor (the drain passes `pendingEntry.lastNotifyAt`): a flight that
+  // STARTED before it is superseded rather than joined, and this call starts its
+  // own. Passing nothing keeps the plain deduplicator, which is what every READ
+  // caller wants — a read frame only ever *reports* a version it observed before
+  // the load, so a joined older value can only report an older version, which the
+  // client already drops. Never key this off `gated`: the boot-snapshot fan-out
+  // and the multi-tab sub herd are read callers that MUST keep coalescing.
+  // Without it, the 2026-08-08 incident: a drain joined a flight whose SELECT
+  // predated the very commit that triggered it, and broadcast the pre-commit
+  // rows at the fresh version. The client's only guard is numeric, so it applied
+  // them — and since the pending had already been cleared, nothing re-read.
+  // See research/2026-08-08-global-live-state-flight-freshness.md.
   async function getResourceValue(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -1422,6 +1491,7 @@ export function createResourceRuntime(
     seedEtag?: string,
     gated = false,
     seedAckTx?: readonly string[],
+    notBefore?: number,
   ): Promise<{
     value: unknown;
     etag: string | undefined;
@@ -1429,6 +1499,8 @@ export function createResourceRuntime(
     ackTx: readonly string[] | undefined;
   }> {
     if (ctx) {
+      // A scoped load bypasses the inflight entirely, so it can never join
+      // anything and `notBefore` has nothing to refuse — ignored, not forgotten.
       return {
         value: await timedLoad(entry, params, ctx),
         etag: undefined,
@@ -1481,7 +1553,14 @@ export function createResourceRuntime(
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
       gated ? () => readLoadGate.run(load, chargeReadGateWait) : load,
-      opts.onCoalesceWait,
+      {
+        onWait: opts.onCoalesceWait,
+        // Undefined for every read caller ⇒ join any live flight, exactly as
+        // before. Set only by the FULL drains, which cannot serve a value older
+        // than the notify they are minting a version for.
+        notBefore,
+        onSupersede: () => recordStaleFlightSupersede(entry.key),
+      },
     );
   }
 
@@ -1682,8 +1761,10 @@ export function createResourceRuntime(
     sourceTx?: ReadonlySet<string>,
   ): void {
     const existing = map.get(pk);
+    const now = performance.now();
     if (!existing) {
       // First merge: stamp the staleness-window start. Never overwritten below.
+      // The freshness floor starts equal to it and moves with every later merge.
       const created: PendingNotify = {
         params,
         affected: incoming === null ? null : new Set(incoming),
@@ -1691,7 +1772,8 @@ export function createResourceRuntime(
         ...(incoming !== null && deleted && deleted.size > 0
           ? { deleted: new Set(deleted) }
           : {}),
-        enqueuedAt: performance.now(),
+        enqueuedAt: now,
+        lastNotifyAt: now,
       };
       unionSourceTx(created, sourceTx);
       map.set(pk, created);
@@ -1699,6 +1781,12 @@ export function createResourceRuntime(
     }
     // FULL absorbs the scope but NOT the ack attribution — union first.
     unionSourceTx(existing, sourceTx);
+    // …and NOT the freshness floor either. This MUST precede both early returns
+    // below: a FULL-absorbing merge is the exact shape an `ids: null` change
+    // takes (the 2026-08-08 incident's own shape), so a floor refreshed after
+    // them would leave the drain joining a pre-commit flight in the most common
+    // case of all — a FULL pending absorbing every later change for free.
+    existing.lastNotifyAt = now;
     if (existing.affected === null) return; // FULL absorbs everything (incl. deleted)
     if (incoming === null) {
       existing.affected = null; // degrade to FULL
@@ -2572,9 +2660,9 @@ export function createResourceRuntime(
 
     let value: unknown;
     // The flight-co-produced commit watermark for the FULL value below (Rule B′
-    // — this path's frames fully reconcile the client). Distinct from the L2
-    // persist watermark: that one must floor the persisted row, this one rides
-    // the wire with the value it describes.
+    // — this path's frames fully reconcile the client). It is ALSO the L2
+    // persist floor: both stamps describe the same value, so they are the same
+    // capture (see the persist below).
     let flightWatermark: string | undefined;
     // Flight-resolved mutation-ack attribution: the pending's sourceTx SEEDS the
     // flight; a joined stale flight resolves the STARTER's (typically absent)
@@ -2583,17 +2671,11 @@ export function createResourceRuntime(
     let flightAckTx: readonly string[] | undefined;
     let valueComputed = false;
     if (needValue) {
-      let watermark: string | undefined;
-      if (persisted && opts.captureWatermark) {
-        try {
-          watermark = await opts.captureWatermark();
-        } catch (err) {
-          reportLoaderError(`watermark capture failed for ${entry.key}`, err);
-          watermark = undefined;
-        }
-      }
       const seedAckTx = pendingAckTx(pendingEntry);
       try {
+        // `notBefore: lastNotifyAt` — this path mints `version` above, so it may
+        // not be served by a flight that started before the change it is
+        // announcing. Such a flight is superseded, not joined.
         ({
           value,
           watermark: flightWatermark,
@@ -2607,6 +2689,7 @@ export function createResourceRuntime(
                 undefined,
                 false,
                 seedAckTx,
+                pendingEntry.lastNotifyAt,
               ),
             )
           : getResourceValue(
@@ -2616,20 +2699,32 @@ export function createResourceRuntime(
               undefined,
               false,
               seedAckTx,
+              pendingEntry.lastNotifyAt,
             )));
         valueComputed = true;
       } catch (err) {
         reportLoaderError(`loader failed for ${entry.key}`, err);
         return; // never ship or cascade a torn read; snapshot untouched — and no ack (no false ack on failure)
       }
-      if (persisted && watermark !== undefined && opts.persistSnapshot) {
+      // L2 persist floors the row with the FLIGHT's own watermark — the one its
+      // starter captured before its first read — instead of a separately
+      // captured one. Sound by the same co-production rule as the wire frames,
+      // and one round-trip cheaper: a separate capture taken here could be
+      // NEWER than the value it floors (a joined flight read earlier), so
+      // catch-up would skip the very commit the value is missing and cold boot
+      // would serve it forever. The flight's floor is at worst OLDER, which
+      // only means over-replay — harmless by `captureWatermark`'s own contract.
+      // Persisted entries are forced FULL, so `flightWatermark` is present
+      // whenever the hook is bound; a throwing capture leaves it undefined and
+      // the persist is skipped this cycle (the row keeps its prior floor).
+      if (persisted && flightWatermark !== undefined && opts.persistSnapshot) {
         const tablesRead = persistReadSet(entry.key);
         try {
           await opts.persistSnapshot(
             entry.key,
             pk,
             value,
-            watermark,
+            flightWatermark,
             tablesRead,
           );
         } catch (err) {
@@ -3128,9 +3223,11 @@ export function createResourceRuntime(
       // L2: a persisted entry never passes a scoped ctx — it recomputes FULL.
       const ctx = scoped ? { affectedIds: [...affected!] } : undefined;
       let value: unknown;
-      // Flight-co-produced commit watermark for a FULL value (Rule B′). A scoped
-      // flight (ctx) always resolves it undefined, so the scoped delta below is
-      // structurally tokenless.
+      // Flight-co-produced commit watermark for a FULL value (Rule B′), and the
+      // L2 persist floor below — one capture, because both stamps describe the
+      // same value. A scoped flight (ctx) always resolves it undefined, so the
+      // scoped delta below is structurally tokenless; a persisted entry is never
+      // scoped (`scoped` is false when `persisted`), so the persist always has one.
       let flightWatermark: string | undefined;
       // Flight-resolved mutation-ack attribution: the pending's sourceTx seeds
       // the flight; a joined stale (pre-commit) flight resolves the STARTER's
@@ -3140,26 +3237,14 @@ export function createResourceRuntime(
       const seedAckTx = pendingAckTx(pendingEntry);
       let valueComputed = false;
       if (needValue) {
-        // L2: capture the durable position BEFORE the loader's first read, so any
-        // write invisible to the loader's snapshot has xid >= this watermark and
-        // is replayed by catch-up. program-order `await` makes it a true floor
-        // across all of a multi-query loader's statements.
-        let watermark: string | undefined;
-        if (persisted && opts.captureWatermark) {
-          try {
-            watermark = await opts.captureWatermark();
-          } catch (err) {
-            // A failed watermark capture must not strand the value — skip the
-            // persist this cycle (the snapshot keeps its prior, older floor) but
-            // still serve subscribers. Loud via the report hook.
-            reportLoaderError(`watermark capture failed for ${entry.key}`, err);
-            watermark = undefined;
-          }
-        }
         try {
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
+          // `notBefore: lastNotifyAt` — this drain minted `version` above, so a
+          // flight that started before the change it is announcing must be
+          // superseded rather than joined (a scoped `ctx` load never coalesces,
+          // so the floor is inert on that branch).
           ({
             value,
             watermark: flightWatermark,
@@ -3173,6 +3258,7 @@ export function createResourceRuntime(
                   undefined,
                   false,
                   seedAckTx,
+                  pendingEntry.lastNotifyAt,
                 ),
               )
             : getResourceValue(
@@ -3182,6 +3268,7 @@ export function createResourceRuntime(
                 undefined,
                 false,
                 seedAckTx,
+                pendingEntry.lastNotifyAt,
               )));
           valueComputed = true;
         } catch (err) {
@@ -3193,11 +3280,23 @@ export function createResourceRuntime(
           continue;
         }
 
-        // L2: persist the FULL value on loader SUCCESS only. Requires a captured
-        // watermark (skipped above on capture failure). Persist failure is
-        // reported but does not block the send/cascade — the prior snapshot row
-        // simply stays current.
-        if (persisted && watermark !== undefined && opts.persistSnapshot) {
+        // L2: persist the FULL value on loader SUCCESS only, floored by the
+        // FLIGHT's own watermark — captured by that flight's starter before its
+        // first read, so it describes exactly the value being persisted. A
+        // separately captured floor could be NEWER than a joined flight's value,
+        // and catch-up (which replays only `xid >= watermark`) would then skip
+        // the very commit the value is missing — a stale cold boot that survives
+        // restarts. The flight's floor is at worst older, which only over-replays
+        // (harmless per `captureWatermark`'s contract). Persisted entries are
+        // forced FULL so it is present whenever the hook is bound; a throwing
+        // capture leaves it undefined and the persist is skipped this cycle (the
+        // row keeps its prior, older floor) while subscribers are still served.
+        // Persist failure is reported but does not block the send/cascade.
+        if (
+          persisted &&
+          flightWatermark !== undefined &&
+          opts.persistSnapshot
+        ) {
           // The loader has already run (via `getResourceValue` above), so its
           // per-run read-set is captured — `persistReadSet` returns the tables THIS
           // run read (replace, self-healing), persisted alongside the value so the
@@ -3208,7 +3307,7 @@ export function createResourceRuntime(
               entry.key,
               pk,
               value,
-              watermark,
+              flightWatermark,
               tablesRead,
             );
           } catch (err) {
@@ -3235,6 +3334,8 @@ export function createResourceRuntime(
             // unsafe for diffKeyed — reload the FULL value and diff that.
             let full: unknown;
             try {
+              // Same floor as the load above: this reload feeds the `update`
+              // frame carrying the version this drain already minted.
               ({
                 value: full,
                 watermark: flightWatermark,
@@ -3248,6 +3349,7 @@ export function createResourceRuntime(
                       undefined,
                       false,
                       seedAckTx,
+                      pendingEntry.lastNotifyAt,
                     ),
                   )
                 : getResourceValue(
@@ -3257,6 +3359,7 @@ export function createResourceRuntime(
                     undefined,
                     false,
                     seedAckTx,
+                    pendingEntry.lastNotifyAt,
                   )));
             } catch (err) {
               reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -4064,6 +4167,19 @@ export function createResourceRuntime(
       });
     }
 
+    // Read the CURRENT version BEFORE the load, exactly as `serveSub` does (read
+    // its comment for the full argument). An HTTP body REPORTS an existing
+    // version rather than minting one, so the version must describe a state no
+    // newer than the value beside it: read after the load, a body could pair a
+    // value the flight SELECTed at T0 with a version that pushes bumped since,
+    // and the client's same-boot guard is strict `<` — an equal-or-greater
+    // version is applied, pinning the stale value. Read before, a joined older
+    // value can only ever report an older version, which the client drops and
+    // RQ's `retry: 1` refetches. The version is unbumped either way (serving a
+    // read is not a state change; only `flushNotifies` advances it).
+    const pk = paramsKey(resourceParams);
+    const version = entry.versions.get(pk) ?? 0;
+
     let value: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
@@ -4082,8 +4198,6 @@ export function createResourceRuntime(
       reportLoaderError(`loader failed for ${key}`, err);
       return new Response("Loader failed", { status: 500 });
     }
-    const pk = paramsKey(resourceParams);
-    const version = entry.versions.get(pk) ?? 0;
     // `no-store` forbids the browser HTTP cache from storing this body — the
     // structural cure for the cache-poisoning wedge (a restart-stable ETag let the
     // browser 304-replay an old-boot body). See the 304 branch above and Fix A/E.
@@ -4137,6 +4251,7 @@ export function createResourceRuntime(
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: { hand: number; feed: number };
       subShortCircuits: number;
+      staleFlightSupersedes: number;
       subTabs: Record<string, number>;
       externalSource: boolean;
     }> = [];
@@ -4215,6 +4330,12 @@ export function createResourceRuntime(
         // zero read-admission slots). Live re-validation gauge for the
         // 2026-07-11 replay-storm fix.
         subShortCircuits: subShortCircuits.get(entry.key) ?? 0,
+        // Stale-flight supersessions for this key (a push drain refused an
+        // in-flight read older than the notify it was draining, and ran its
+        // own). Non-zero means the pre-commit join that produced the 2026-08-08
+        // revert is still reachable under load — and is now refused instead of
+        // broadcast under a fresh version.
+        staleFlightSupersedes: staleFlightSupersedes.get(entry.key) ?? 0,
         subTabs,
         // Declared classification: was this resource defined via
         // `defineExternalResource` (truth outside Postgres)? The

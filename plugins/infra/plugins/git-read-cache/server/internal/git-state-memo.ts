@@ -78,7 +78,9 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
         },
         // Joiners charge the time spent awaiting the shared compute to their
         // OWN enclosing entry — the starter's compute is real work, not wait.
-        (ms) => chargeWait(`git-coalesce:${opts.name}`, ms),
+        // No `notBefore`: this memo mints no version, so sharing a ≤1-event
+        // stale result is the documented contract above, not a hazard.
+        { onWait: (ms) => chargeWait(`git-coalesce:${opts.name}`, ms) },
       );
     },
     set(worktreePath, signature, value) {

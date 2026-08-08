@@ -18,10 +18,12 @@
  *     union (a FULL reads post-commit — contrast `deleted`, which FULL drops);
  *   - the no-value-change paths broadcast `{ kind: "ack" }` iff `ackChannel`,
  *     without bumping the version stream the next real frame ships under;
- *   - the STALE-FLIGHT JOIN: a drain that coalesces onto an in-flight read
- *     (whose SELECT may predate the commit) adopts the STARTER's (absent)
- *     ackTx and ships none — missed ack safe, false ack impossible (mirrors
- *     the etag/watermark co-production);
+ *   - the STALE-FLIGHT REFUSAL: a drain will not be served by a read flight
+ *     that started before the notify it is draining, so it always produces its
+ *     own value and can always stamp its own ackTx. Co-production made exact —
+ *     the "ships un-acked, falls back to the watermark backstop" degrade this
+ *     file used to pin is unreachable on the FULL paths
+ *     (`research/2026-08-08-global-live-state-flight-freshness.md`);
  *   - loader failure ships neither frame nor ack;
  *   - the SOURCE_TX_CAP overflow suppresses ackTx for the cycle.
  *
@@ -30,7 +32,7 @@
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
-import { createHarness, controllable, tick } from "./test-support";
+import { createHarness, snapshotControllable, tick } from "./test-support";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -123,19 +125,28 @@ describe("ackTx — value frames", () => {
       xid: "600",
     });
     await tick();
-    const feedUpdate = h.pushesFor("p").filter((f) => f.kind === "update").at(-1)!;
+    const feedUpdate = h
+      .pushesFor("p")
+      .filter((f) => f.kind === "update")
+      .at(-1)!;
     expect((feedUpdate as { ackTx?: string[] }).ackTx).toEqual(["600"]);
 
     // Hand-`notify()`: no HTTP mutation corresponds — structurally ack-less.
     r.notify();
     await tick();
-    const handUpdate = h.pushesFor("p").filter((f) => f.kind === "update").at(-1)!;
+    const handUpdate = h
+      .pushesFor("p")
+      .filter((f) => f.kind === "update")
+      .at(-1)!;
     expect("ackTx" in handUpdate).toBe(false);
 
     // Synthetic (debug churn emitter): same.
     h.runtime.triggerResourcePush("p");
     await tick();
-    const synthUpdate = h.pushesFor("p").filter((f) => f.kind === "update").at(-1)!;
+    const synthUpdate = h
+      .pushesFor("p")
+      .filter((f) => f.kind === "update")
+      .at(-1)!;
     expect("ackTx" in synthUpdate).toBe(false);
   });
 
@@ -158,7 +169,10 @@ describe("ackTx — value frames", () => {
       xid: "700",
     });
     await tick();
-    const inv = h.pushesFor("i").filter((f) => f.kind === "invalidate").at(-1)!;
+    const inv = h
+      .pushesFor("i")
+      .filter((f) => f.kind === "invalidate")
+      .at(-1)!;
     expect("ackTx" in inv).toBe(false);
   });
 
@@ -191,7 +205,10 @@ describe("ackTx — coalescing", () => {
     await tick();
     const all = deltas(k.h, "rows");
     expect(all).toHaveLength(1); // coalesced into one flush
-    expect([...((all[0] as { ackTx?: string[] }).ackTx ?? [])].sort()).toEqual(["800", "801"]);
+    expect([...((all[0] as { ackTx?: string[] }).ackTx ?? [])].sort()).toEqual([
+      "800",
+      "801",
+    ]);
   });
 
   test("a scoped→FULL degrade KEEPS the union (contrast `deleted`, which FULL drops)", async () => {
@@ -233,7 +250,10 @@ describe("ackTx — coalescing", () => {
     // FULL membership rebuild: the delete shipped via the rebuilt order, and
     // the ackTx union survived the degrade.
     expect(frame.order).toEqual(["b"]);
-    expect([...((frame as { ackTx?: string[] }).ackTx ?? [])].sort()).toEqual(["900", "901"]);
+    expect([...((frame as { ackTx?: string[] }).ackTx ?? [])].sort()).toEqual([
+      "900",
+      "901",
+    ]);
   });
 });
 
@@ -264,7 +284,8 @@ describe("standalone ack frames — no-value-change recomputes", () => {
   test("point empty-intersection broadcasts an ack to the untouched tuple iff opt-in, with NO version bump", async () => {
     const makePoint = (ackChannel: boolean) => {
       const table = new Map<string, number>();
-      const idsOf = (p: Record<string, string>) => (p.ids ?? "").split(",").filter(Boolean);
+      const idsOf = (p: Record<string, string>) =>
+        (p.ids ?? "").split(",").filter(Boolean);
       const h = createHarness({ readSet: () => ["pt_table"] });
       h.runtime.defineResource(
         { key: "pt", schema: rowsSchema, keyed: { keyOf } },
@@ -274,7 +295,9 @@ describe("standalone ack frames — no-value-change recomputes", () => {
           ...(ackChannel ? { ackChannel: true as const } : {}),
           loader: (p, c) => {
             const ids = c ? [...c.affectedIds] : idsOf(p);
-            return ids.filter((id) => table.has(id)).map((id) => ({ id, n: table.get(id)! }));
+            return ids
+              .filter((id) => table.has(id))
+              .map((id) => ({ id, n: table.get(id)! }));
           },
         },
       );
@@ -334,11 +357,16 @@ describe("standalone ack frames — no-value-change recomputes", () => {
         ackChannel: true,
         membership: {
           kind: "window",
-          windowIdsOf: async () => members().slice(0, 2).map((r) => r.id),
+          windowIdsOf: async () =>
+            members()
+              .slice(0, 2)
+              .map((r) => r.id),
         },
         loader: (_p, c) =>
           c
-            ? [...c.affectedIds].filter((id) => table.has(id)).map((id) => ({ id, n: table.get(id)! }))
+            ? [...c.affectedIds]
+                .filter((id) => table.has(id))
+                .map((id) => ({ id, n: table.get(id)! }))
             : members().slice(0, 2),
       },
     );
@@ -360,7 +388,9 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     feed("I", ["z"], "1200");
     await tick();
     expect(deltas(h, "win")).toHaveLength(0);
-    expect((acks(h, "win").at(-1) as { ackTx?: string[] } | undefined)?.ackTx).toEqual(["1200"]);
+    expect(
+      (acks(h, "win").at(-1) as { ackTx?: string[] } | undefined)?.ackTx,
+    ).toEqual(["1200"]);
 
     // No version was consumed: the first real change ships at version 1.
     table.set("a", 0);
@@ -380,9 +410,21 @@ describe("standalone ack frames — no-value-change recomputes", () => {
   });
 });
 
-describe("ackTx — stale-flight join (co-production)", () => {
-  test("a drain joining an in-flight READ ships NO ackTx; its own started flight carries it", async () => {
-    const ctl = controllable([{ id: "a", n: 1 }]);
+describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
+  test("a drain refuses a read flight older than its notify, so it produces its own value and stamps its own ackTx", async () => {
+    // This case used to pin the opposite — the drain COALESCED onto the parked
+    // read and shipped the value un-acked, "safe because a missed ack degrades to
+    // the watermark backstop". That reading was wrong about which stamp was at
+    // risk: `ackTx` was co-produced, but the VERSION was not, so the frame
+    // announced a pre-commit value as the newest state (the 2026-08-08 revert).
+    // The drain now refuses such a flight and runs its own read, which makes the
+    // ack exact as a by-product.
+    //
+    // `snapshotControllable`, not `controllable`: the loader must capture its rows
+    // at INVOCATION time, or the parked flight and a fresh one return the same
+    // value and the test cannot tell a join from a refusal. That is exactly how
+    // this case read green while pinning the bug.
+    const ctl = snapshotControllable([{ id: "a", n: 1 }]);
     const h = createHarness({ readSet: () => ["c_table"], sockets: 2 });
     h.runtime.defineResource(
       { key: "c", schema: rowsSchema, keyed: { keyOf } },
@@ -390,11 +432,12 @@ describe("ackTx — stale-flight join (co-production)", () => {
     );
     await h.subscribe("c", {}, { socket: 0 }); // seeds the snapshot
 
-    // Park a READ flight (socket 1's full-path sub), then land a feed change:
-    // the drain's FULL load coalesces onto the read flight, whose SELECT may
-    // predate the commit — it must adopt the starter's ABSENT seed.
+    // Park a READ flight (socket 1's full-path sub) holding the PRE-commit rows,
+    // then land a feed change.
     ctl.block();
     const p = h.subscribe("c", {}, { socket: 1 });
+    await tick(); // the pre-commit read is in the air
+    ctl.setValue([{ id: "a", n: 2 }]);
     h.runtime.applyDbChange({
       table: "c_table",
       op: "U",
@@ -403,17 +446,17 @@ describe("ackTx — stale-flight join (co-production)", () => {
       identityBase: "c_table",
       xid: "1400",
     });
-    await tick(); // flush starts; the drain joins the parked flight
-    ctl.setValue([{ id: "a", n: 2 }]);
+    await tick(); // the drain runs — and refuses the parked flight
     ctl.release();
     await p;
     await tick();
 
-    const joined = deltas(h, "c").at(-1)!;
-    expect(joined.upserts).toHaveLength(1); // the value DID ship
-    expect("ackTx" in joined).toBe(false); // …but un-acked (backstop confirms)
+    const own = deltas(h, "c").at(-1)!;
+    expect(own.upserts).toEqual([["a", { id: "a", n: 2 }]]); // POST-commit rows
+    // Its own flight read post-commit, so the ack is exact rather than absent.
+    expect((own as { ackTx?: string[] }).ackTx).toEqual(["1400"]);
 
-    // Contrast: an idle-time FULL change starts its own flight — ackTx rides.
+    // And an idle-time FULL change — nothing in flight to refuse — is unchanged.
     ctl.setValue([{ id: "a", n: 3 }]);
     h.runtime.applyDbChange({
       table: "c_table",
@@ -424,7 +467,9 @@ describe("ackTx — stale-flight join (co-production)", () => {
       xid: "1401",
     });
     await tick();
-    expect((deltas(h, "c").at(-1) as { ackTx?: string[] }).ackTx).toEqual(["1401"]);
+    expect((deltas(h, "c").at(-1) as { ackTx?: string[] }).ackTx).toEqual([
+      "1401",
+    ]);
   });
 });
 

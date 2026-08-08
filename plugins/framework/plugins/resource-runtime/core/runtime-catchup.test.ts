@@ -33,38 +33,58 @@ describe("over-replay idempotence", () => {
     });
     // The DB truth the loader reflects. sub-ack seeds the snapshot from [a:1,b:1];
     // then the truth moves to a:2. BOTH replays load that same a:2 truth.
-    let truth = [{ id: "a", n: 1 }, { id: "b", n: 1 }];
+    let truth = [
+      { id: "a", n: 1 },
+      { id: "b", n: 1 },
+    ];
     h.runtime.defineResource(
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table",
-        loader: (_p, c) => (c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth),
+        loader: (_p, c) =>
+          c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
       },
     );
     await h.subscribe("rows"); // snapshot seeded: a:1, b:1
-    truth = [{ id: "a", n: 2 }, { id: "b", n: 1 }];
+    truth = [
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ];
 
     const replay = () =>
-      h.runtime.applyDbChange({ table: "row_table", op: "U", ids: ["a"], origin: "row_table", identityBase: "row_table" });
+      h.runtime.applyDbChange({
+        table: "row_table",
+        op: "U",
+        ids: ["a"],
+        origin: "row_table",
+        identityBase: "row_table",
+      });
 
     // First replay: a:1 → a:2 is a real change → one delta, changed:true.
     replay();
     await tick();
     expect(pushLog).toEqual([{ changed: true }]);
-    expect(h.pushesFor("rows").filter((f) => f.kind === "delta")).toHaveLength(1);
+    expect(h.pushesFor("rows").filter((f) => f.kind === "delta")).toHaveLength(
+      1,
+    );
 
     // Second (over-)replay: identical truth → empty scoped diff → onPush
     // changed:false, and NO second delta frame is sent.
     replay();
     await tick();
     expect(pushLog).toEqual([{ changed: true }, { changed: false }]);
-    expect(h.pushesFor("rows").filter((f) => f.kind === "delta")).toHaveLength(1); // still just the one
+    expect(h.pushesFor("rows").filter((f) => f.kind === "delta")).toHaveLength(
+      1,
+    ); // still just the one
 
     // The client simulator lands in the identical state after both replays: a:2,
     // b:1, one delta applied, zero drift.
     const cv = makeClientView(keyOf);
     cv.applyAll(h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 2 }, { id: "b", n: 1 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 });
@@ -72,7 +92,12 @@ describe("over-replay idempotence", () => {
 describe("recomputeResource", () => {
   test("routes one FULL feed notify to subscribers (exactly one push)", async () => {
     const h = createHarness();
-    h.runtime.defineResource({ key: "k", mode: "push", schema: z.number(), loader: async () => 1 });
+    h.runtime.defineResource({
+      key: "k",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => 1,
+    });
     await h.subscribe("k");
 
     h.runtime.recomputeResource("k");
@@ -105,11 +130,19 @@ describe("L2 persist-hook calling contract", () => {
       wm: string,
       tables: readonly string[],
     ) => Promise<void>;
-    loader?: (ctx?: { affectedIds: readonly string[] }) => { id: string; n: number }[];
+    loader?: (ctx?: {
+      affectedIds: readonly string[];
+    }) => { id: string; n: number }[];
     lastReadSet?: (key: string) => string[] | undefined;
   }) {
     const log: string[] = [];
-    const persistArgs: Array<{ key: string; pk: string; value: unknown; wm: string; tables: readonly string[] }> = [];
+    const persistArgs: Array<{
+      key: string;
+      pk: string;
+      value: unknown;
+      wm: string;
+      tables: readonly string[];
+    }> = [];
     const h = createHarness({
       readSet: (k) => (k === "p" ? ["p_table"] : []),
       lastReadSet: overrides.lastReadSet,
@@ -154,9 +187,15 @@ describe("L2 persist-hook calling contract", () => {
     await tick();
 
     // Full recompute + persist even with no subscriber: needValue is forced.
-    // Two "wm" entries: the persist floor, then the read flight's own capture
-    // (the wire watermark — same hook, invoked inside `getResourceValue`).
-    expect(log).toEqual(["wm", "wm", "load:FULL", "persist"]);
+    // Exactly ONE "wm": the flight's own capture, taken inside `getResourceValue`
+    // before the loader's first read, and used for BOTH stamps — the wire
+    // watermark and the persisted row's catch-up floor. A floor may only describe
+    // the read it accompanies, so a second capture at the drain would be wrong,
+    // not merely wasteful: it could be NEWER than a joined flight's value, and
+    // catch-up (which replays only `xid >= watermark`) would skip the very commit
+    // the value is missing — a stale cold boot that survives restarts. See
+    // research/2026-08-08-global-live-state-flight-freshness.md.
+    expect(log).toEqual(["wm", "load:FULL", "persist"]);
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.value).toEqual([{ id: "a", n: 1 }]); // the FULL value
     expect(persistArgs[0]!.wm).toBe("xmin-7"); // the captured watermark
@@ -196,10 +235,17 @@ describe("L2 persist-hook calling contract", () => {
     const { h, log } = persistHarness({});
     // A scoped feed change would normally hand the loader `ctx.affectedIds`; a
     // persisted entry ignores it and recomputes FULL (never persists a partial).
-    h.runtime.applyDbChange({ table: "p_table", op: "U", ids: ["a"], origin: "p_table", identityBase: "p_table" });
+    h.runtime.applyDbChange({
+      table: "p_table",
+      op: "U",
+      ids: ["a"],
+      origin: "p_table",
+      identityBase: "p_table",
+    });
     await tick();
-    // persist "wm" + flight "wm" (wire watermark), then the forced FULL load.
-    expect(log).toEqual(["wm", "wm", "load:FULL", "persist"]); // load:scoped never appears
+    // One flight watermark (it floors the persist AND rides the wire — see the
+    // zero-subscriber case above), then the forced FULL load.
+    expect(log).toEqual(["wm", "load:FULL", "persist"]); // load:scoped never appears
   });
 
   test("persistSnapshot is NEVER called on loader failure (but captureWatermark was)", async () => {
@@ -210,9 +256,10 @@ describe("L2 persist-hook calling contract", () => {
     });
     h.runtime.recomputeResource("p");
     await tick();
-    // Watermarks captured (persist floor + flight), loader ran and threw — no
-    // persist on the failure path.
-    expect(log).toEqual(["wm", "wm", "load:FULL"]);
+    // The flight's watermark was captured (it is taken before the read), the
+    // loader ran and threw — and nothing is persisted on the failure path. One
+    // capture, because the persist floor IS the flight's watermark.
+    expect(log).toEqual(["wm", "load:FULL"]);
   });
 
   test("persistSnapshot throwing does NOT block the subscriber's frame", async () => {
@@ -222,7 +269,13 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     await h.subscribe("p");
-    h.runtime.applyDbChange({ table: "p_table", op: "U", ids: ["a"], origin: "p_table", identityBase: "p_table" });
+    h.runtime.applyDbChange({
+      table: "p_table",
+      op: "U",
+      ids: ["a"],
+      origin: "p_table",
+      identityBase: "p_table",
+    });
     await tick();
     // The persist rejected, but the subscriber still received its push.
     expect(h.pushesFor("p")).toHaveLength(1);
@@ -239,7 +292,13 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     await h.subscribe("p");
-    h.runtime.applyDbChange({ table: "p_table", op: "U", ids: ["a"], origin: "p_table", identityBase: "p_table" });
+    h.runtime.applyDbChange({
+      table: "p_table",
+      op: "U",
+      ids: ["a"],
+      origin: "p_table",
+      identityBase: "p_table",
+    });
     await tick();
     // Frame delivered; persist skipped (no watermark to stamp).
     expect(h.pushesFor("p")).toHaveLength(1);
