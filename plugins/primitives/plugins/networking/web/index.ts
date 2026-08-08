@@ -1,7 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
+export { wsUrl } from "./ws-url";
 export { useReconnectingWebSocket } from "./use-reconnecting-ws";
-export type { ReconnectingWsOptions, ReconnectingWsHandle } from "./use-reconnecting-ws";
+export type {
+  ReconnectingWsOptions,
+  ReconnectingWsHandle,
+} from "./use-reconnecting-ws";
 export { ReconnectingEventSource } from "./reconnecting-event-source";
 export type { ReconnectingEventSourceOptions } from "./reconnecting-event-source";
 export { SharedWebSocket } from "./shared-websocket";

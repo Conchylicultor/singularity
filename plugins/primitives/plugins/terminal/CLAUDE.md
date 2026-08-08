@@ -10,6 +10,7 @@
     - `primitives/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/networking.useReconnectingWebSocket`
+    - `primitives/networking.wsUrl`
   - Exports (values): `terminalPane`
 - Server:
   - Uses: `infra/paths.HOME_DIR`

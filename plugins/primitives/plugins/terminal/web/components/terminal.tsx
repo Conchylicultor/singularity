@@ -3,12 +3,15 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
-import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
+import {
+  useReconnectingWebSocket,
+  wsUrl,
+} from "@plugins/primitives/plugins/networking/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
-const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
+const TERMINAL_WS_PATH = "/ws/terminal";
 
 const THEME = {
   background: "#1e1e1e",
@@ -49,7 +52,7 @@ export function TerminalView({ command }: { command?: string[] }) {
   );
 
   const wsHandle = useReconnectingWebSocket({
-    url: WS_URL,
+    url: wsUrl(TERMINAL_WS_PATH),
     onOpen: (ws) => {
       sessionIdRef.current = null;
       pendingResizeRef.current = null;
@@ -137,7 +140,10 @@ export function TerminalView({ command }: { command?: string[] }) {
   useResizeObserver(containerRef, () => fitAddonRef.current?.fit());
 
   return (
-    <div className="h-full w-full p-sm" style={{ background: THEME.background }}>
+    <div
+      className="h-full w-full p-sm"
+      style={{ background: THEME.background }}
+    >
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );

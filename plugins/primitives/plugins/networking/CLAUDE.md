@@ -75,6 +75,7 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `subscribeNetDiag`
     - `subscribeWsStatus`
     - `useReconnectingWebSocket`
+    - `wsUrl`
 - Cross-plugin:
   - Imported by:
     - `build`

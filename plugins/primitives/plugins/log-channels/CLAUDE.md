@@ -85,6 +85,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking.useReconnectingWebSocket`
+    - `primitives/networking.wsUrl`
   - Exports (types):
     - `LiveLogChannelProps`
     - `LogEntryListProps`

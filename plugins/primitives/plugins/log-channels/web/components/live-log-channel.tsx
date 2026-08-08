@@ -1,7 +1,10 @@
 import type React from "react";
 import { useState, useRef, type ReactNode } from "react";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -12,19 +15,18 @@ import {
   JumpToBottomButton,
   useStickyScroll,
 } from "@plugins/primitives/plugins/auto-scroll/web";
-import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
-import type {
-  ClientMessage,
-  LogEntryWire,
-  ServerMessage,
-} from "../../core";
+import {
+  useReconnectingWebSocket,
+  wsUrl,
+} from "@plugins/primitives/plugins/networking/web";
+import type { ClientMessage, LogEntryWire, ServerMessage } from "../../core";
 
 // Mono log body: intentional fixed code size + line-height (not on the
 // typography scale). One spelling for every consumer of this primitive.
 const MONO_LOG_CLASS = "font-mono text-xs leading-5";
 
-// The app's own log socket. Same derivation every caller used to repeat.
-const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
+/** The app's own log socket. */
+const LOGS_WS_PATH = "/ws/logs";
 
 export interface LiveLogChannelProps {
   /** Durable channel id to subscribe to (e.g. `deploy`, `release`). */
@@ -52,8 +54,9 @@ export interface LiveLogChannelProps {
  *
  * **The one implementation.** This body existed three times (the deploy log
  * panel, the Studio release-log section, the debug log viewer's backend branch),
- * each with its own `lastSeq` de-dup, its own `WS_URL` derivation and its own
- * timestamped row markup — three places for the same off-by-one to be wrong in.
+ * each with its own `lastSeq` de-dup and its own timestamped row markup — three
+ * places for the same off-by-one to be wrong in. (The socket-URL derivation they
+ * also each repeated now lives in `wsUrl` from the networking primitive.)
  *
  * The buffer is per-mount, so **switching channels means remounting**
  * (`<LiveLogChannel key={channel} …/>`): a channel switch must not leave the
@@ -77,7 +80,7 @@ export function LiveLogChannel({
     useStickyScroll();
 
   useReconnectingWebSocket({
-    url: WS_URL,
+    url: wsUrl(LOGS_WS_PATH),
     enabled: true,
     onOpen: (ws) => {
       const msg: ClientMessage = {
@@ -131,7 +134,11 @@ export function LiveLogChannel({
           <Text as="span" variant="label" tone="muted">
             {label}
             {label ? " " : null}
-            <Text as="span" variant="label" className="text-muted-foreground/60">
+            <Text
+              as="span"
+              variant="label"
+              className="text-muted-foreground/60"
+            >
               Live
             </Text>
           </Text>

@@ -6649,6 +6649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/loading.Loading`
       - `primitives/log-channels.clientLog`
       - `primitives/networking.useReconnectingWebSocket`
+      - `primitives/networking.wsUrl`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
@@ -6823,6 +6824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/networking.useReconnectingWebSocket`
+          - `primitives/networking.wsUrl`
           - `shell/notifications.toast`
       - Server:
         - Uses:
@@ -14500,6 +14502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
+            - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
@@ -23879,6 +23882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking.useReconnectingWebSocket`
+          - `primitives/networking.wsUrl`
         - Exports (types):
           - `LiveLogChannelProps`
           - `LogEntryListProps`
@@ -24045,6 +24049,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `subscribeNetDiag`
           - `subscribeWsStatus`
           - `useReconnectingWebSocket`
+          - `wsUrl`
       - Cross-plugin:
         - Imported by:
           - `build`
@@ -25086,6 +25091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/element-size.useResizeObserver`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking.useReconnectingWebSocket`
+          - `primitives/networking.wsUrl`
         - Exports (values): `terminalPane`
       - Server:
         - Uses: `infra/paths.HOME_DIR`

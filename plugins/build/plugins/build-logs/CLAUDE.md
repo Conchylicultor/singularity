@@ -25,6 +25,7 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/networking.useReconnectingWebSocket`
+    - `primitives/networking.wsUrl`
     - `shell/notifications.toast`
 - Server:
   - Uses:

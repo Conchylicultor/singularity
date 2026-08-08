@@ -66,6 +66,7 @@ naming the one sanctioned home of an idiom — e.g. `scroll-safety` exempts the
   - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
   - **`context-safety`** — context-safety lint rule: no-unstable-context-value
   - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
+  - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
   - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
   - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
   - **`format-safety`** — format-safety lint rule: no-adhoc-prettier

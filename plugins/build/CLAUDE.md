@@ -61,6 +61,7 @@ commit; the docblock says why, and both alternatives loop.
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.useReconnectingWebSocket`
+    - `primitives/networking.wsUrl`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

@@ -1,7 +1,14 @@
-import { Button, cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { triggerBuildEndpoint } from "../../core/endpoints";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
@@ -13,8 +20,14 @@ import {
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
-import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
+import {
+  useReconnectingWebSocket,
+  wsUrl,
+} from "@plugins/primitives/plugins/networking/web";
+import {
+  useStickyScroll,
+  JumpToBottomButton,
+} from "@plugins/primitives/plugins/auto-scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -29,13 +42,20 @@ import {
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { buildHistoryResource, mainAheadCountResource } from "../../shared";
 import type { BuildRun } from "../../shared";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
+import type {
+  ClientMessage,
+  ServerMessage,
+  LogEntryWire,
+} from "@plugins/primitives/plugins/log-channels/core";
 
-const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
+const LOGS_WS_PATH = "/ws/logs";
 
 // Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
 // Overflow is owned by the `<Scroll axis="y">` wrapper, not baked in here.
@@ -82,9 +102,20 @@ function MainAheadSection() {
   );
 }
 
-function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void | Promise<void> }) {
+function BuildControls({
+  building,
+  onBuild,
+}: {
+  building: boolean;
+  onBuild: () => void | Promise<void>;
+}) {
   return (
-    <Stack direction="row" align="center" gap="sm" className="border-b px-md py-sm">
+    <Stack
+      direction="row"
+      align="center"
+      gap="sm"
+      className="border-b px-md py-sm"
+    >
       <Button variant="default" loading={building} onClick={() => onBuild()}>
         <MdPlayArrow className="size-4" />
         Build
@@ -102,7 +133,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
     useStickyScroll();
 
   const wsHandle = useReconnectingWebSocket({
-    url: WS_URL,
+    url: wsUrl(LOGS_WS_PATH),
     enabled: true,
     onOpen: (ws) => {
       const msg: ClientMessage = {
@@ -129,7 +160,12 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           setEntries((prev) => [...prev, msg]);
           break;
         case "error":
-          toast({ type: "build", title: "Build log error", description: msg.error, variant: "error" });
+          toast({
+            type: "build",
+            title: "Build log error",
+            description: msg.error,
+            variant: "error",
+          });
           break;
       }
     },
@@ -139,20 +175,30 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   useEffect(() => {
     const handle = wsHandle.current;
     if (!handle) return;
-    const msg: ClientMessage = { type: "subscribe", channel: selectedRef.current };
+    const msg: ClientMessage = {
+      type: "subscribe",
+      channel: selectedRef.current,
+    };
     handle.send(JSON.stringify(msg));
   }, [wsHandle]);
 
   const copyLogs = useCallback(async () => {
     const text = entries.map((e) => e.line).join("\n");
     await navigator.clipboard.writeText(text);
-    toast({ type: "build", title: "Logs copied", description: "Build logs copied to clipboard", variant: "info" });
+    toast({
+      type: "build",
+      title: "Logs copied",
+      description: "Build logs copied to clipboard",
+      variant: "info",
+    });
   }, [entries]);
 
   return (
     <Stack gap="none" className="relative border-b">
       <div className="flex items-center justify-between border-b px-md py-xs">
-        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
+        <Text as="span" variant="label" className="text-muted-foreground">
+          Logs
+        </Text>
         <ControlSizeProvider size="xs">
           <IconButton
             icon={MdContentCopy}
@@ -167,7 +213,10 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
         axis="y"
         fill={variant === "pane"}
         ref={scrollRef}
-        className={cn(logViewerClass, variant === "popover" ? "h-48" : "min-h-48")}
+        className={cn(
+          logViewerClass,
+          variant === "popover" ? "h-48" : "min-h-48",
+        )}
       >
         {entries.length === 0 && (
           <span className="text-muted-foreground">No build logs yet</span>
@@ -177,7 +226,9 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
             key={entry.seq}
             className={cn(
               "flex gap-sm",
-              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
+              entry.stream === "stderr"
+                ? "text-destructive"
+                : "text-foreground",
             )}
           >
             <span className="shrink-0 text-muted-foreground">
@@ -257,7 +308,9 @@ function BuildHistoryDataView({
           { value: "auto", label: "Auto" },
         ],
         cell: (r) => (
-          <Badge variant={r.trigger === "auto" ? "info" : "muted"}>{r.trigger}</Badge>
+          <Badge variant={r.trigger === "auto" ? "info" : "muted"}>
+            {r.trigger}
+          </Badge>
         ),
         sortable: true,
         filterable: true,
@@ -270,7 +323,9 @@ function BuildHistoryDataView({
         type: "text",
         value: (r) => r.target,
         cell: (r) => (
-          <Badge variant={r.target === "main" ? "muted" : "info"}>{r.target}</Badge>
+          <Badge variant={r.target === "main" ? "muted" : "info"}>
+            {r.target}
+          </Badge>
         ),
         sortable: true,
         filterable: true,
@@ -285,7 +340,9 @@ function BuildHistoryDataView({
         value: (r) =>
           r.finishedAt === null
             ? null
-            : Math.floor((r.finishedAt.getTime() - r.startedAt.getTime()) / 1000),
+            : Math.floor(
+                (r.finishedAt.getTime() - r.startedAt.getTime()) / 1000,
+              ),
         cell: (r) => (
           <span className="tabular-nums text-muted-foreground">
             {r.finishedAt === null
@@ -335,10 +392,14 @@ function BuildHistoryExcerpt({
 
   return (
     <div className="px-md py-sm">
-      <Text as="span" variant="label" className="text-muted-foreground">History</Text>
+      <Text as="span" variant="label" className="text-muted-foreground">
+        History
+      </Text>
       {visible.length === 0 && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset below the History label, non-flex parent
-        <Text as="p" variant="caption" className="mt-1 text-muted-foreground">No builds yet</Text>
+        <Text as="p" variant="caption" className="mt-1 text-muted-foreground">
+          No builds yet
+        </Text>
       )}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below the History label, sibling of label not in a shared flex parent */}
       <Stack gap="2xs" className="mt-1">
@@ -353,7 +414,9 @@ function BuildHistoryExcerpt({
             actionsAlwaysVisible
             actions={
               <span className="tabular-nums text-muted-foreground">
-                {run.finishedAt === null ? "running…" : formatDuration(run.startedAt, run.finishedAt)}
+                {run.finishedAt === null
+                  ? "running…"
+                  : formatDuration(run.startedAt, run.finishedAt)}
               </span>
             }
             className={cn(onRunClick && "cursor-pointer")}
@@ -364,7 +427,9 @@ function BuildHistoryExcerpt({
             <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
               {run.trigger}
             </Badge>
-            {run.target !== "main" && <Badge variant="info">{run.target}</Badge>}
+            {run.target !== "main" && (
+              <Badge variant="info">{run.target}</Badge>
+            )}
           </Row>
         ))}
       </Stack>
@@ -390,12 +455,27 @@ function BuildPopoverContentInner({
   const handleBuild = useCallback(async () => {
     try {
       await fetchEndpoint(triggerBuildEndpoint, {});
-      toast({ type: "build", title: "Build started", description: "Running ./singularity build", variant: "info" });
+      toast({
+        type: "build",
+        title: "Build started",
+        description: "Running ./singularity build",
+        variant: "info",
+      });
     } catch (err) {
       if (err instanceof EndpointError) {
-        toast({ type: "build", title: "Build failed to start", description: err.message, variant: "error" });
+        toast({
+          type: "build",
+          title: "Build failed to start",
+          description: err.message,
+          variant: "error",
+        });
       } else {
-        toast({ type: "build", title: "Build failed to start", description: "Server unreachable", variant: "error" });
+        toast({
+          type: "build",
+          title: "Build failed to start",
+          description: "Server unreachable",
+          variant: "error",
+        });
       }
     }
   }, []);

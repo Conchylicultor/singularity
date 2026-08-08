@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-dom-access-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "dom-access-safety lint rule: no-module-scope-dom"
+}

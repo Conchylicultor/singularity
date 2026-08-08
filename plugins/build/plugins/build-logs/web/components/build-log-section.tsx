@@ -1,10 +1,19 @@
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useRef, useCallback, type ReactElement } from "react";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
-import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
+import {
+  useReconnectingWebSocket,
+  wsUrl,
+} from "@plugins/primitives/plugins/networking/web";
+import {
+  useStickyScroll,
+  JumpToBottomButton,
+} from "@plugins/primitives/plugins/auto-scroll/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -19,7 +28,11 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
+import type {
+  ClientMessage,
+  ServerMessage,
+  LogEntryWire,
+} from "@plugins/primitives/plugins/log-channels/core";
 
 // Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
 const monoLogClass = "font-mono text-xs leading-5";
@@ -46,15 +59,27 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
       })
       .join("\n\n");
     await navigator.clipboard.writeText(text);
-    toast({ type: "build", title: "Logs copied", description: "Build logs copied to clipboard", variant: "info" });
+    toast({
+      type: "build",
+      title: "Logs copied",
+      description: "Build logs copied to clipboard",
+      variant: "info",
+    });
   }, [steps]);
 
   return (
     <Stack gap="xs">
       <div className="flex items-center justify-between pb-xs">
-        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
+        <Text as="span" variant="label" className="text-muted-foreground">
+          Logs
+        </Text>
         <ControlSizeProvider size="xs">
-          <IconButton icon={MdContentCopy} label="Copy logs" variant="ghost" onClick={copyAll} />
+          <IconButton
+            icon={MdContentCopy}
+            label="Copy logs"
+            variant="ghost"
+            onClick={copyAll}
+          />
         </ControlSizeProvider>
       </div>
       {steps.map((step) => (
@@ -91,7 +116,9 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
                   key={i}
                   className={cn(
                     "whitespace-pre-wrap break-all",
-                    line.stream === "stderr" ? "text-destructive" : "text-foreground",
+                    line.stream === "stderr"
+                      ? "text-destructive"
+                      : "text-foreground",
                   )}
                 >
                   {line.text}
@@ -105,7 +132,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
   );
 }
 
-const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
+const LOGS_WS_PATH = "/ws/logs";
 
 function LiveLogs(): ReactElement {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
@@ -115,7 +142,7 @@ function LiveLogs(): ReactElement {
     useStickyScroll();
 
   useReconnectingWebSocket({
-    url: WS_URL,
+    url: wsUrl(LOGS_WS_PATH),
     enabled: true,
     onOpen: (ws) => {
       const msg: ClientMessage = {
@@ -142,7 +169,12 @@ function LiveLogs(): ReactElement {
           setEntries((prev) => [...prev, msg]);
           break;
         case "error":
-          toast({ type: "build", title: "Build log error", description: msg.error, variant: "error" });
+          toast({
+            type: "build",
+            title: "Build log error",
+            description: msg.error,
+            variant: "error",
+          });
           break;
       }
     },
@@ -151,7 +183,12 @@ function LiveLogs(): ReactElement {
   const copyLogs = useCallback(async () => {
     const text = entries.map((e) => e.line).join("\n");
     await navigator.clipboard.writeText(text);
-    toast({ type: "build", title: "Logs copied", description: "Build logs copied to clipboard", variant: "info" });
+    toast({
+      type: "build",
+      title: "Logs copied",
+      description: "Build logs copied to clipboard",
+      variant: "info",
+    });
   }, [entries]);
 
   return (
@@ -184,7 +221,9 @@ function LiveLogs(): ReactElement {
             key={entry.seq}
             className={cn(
               "flex gap-sm",
-              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
+              entry.stream === "stderr"
+                ? "text-destructive"
+                : "text-foreground",
             )}
           >
             <span className="shrink-0 text-muted-foreground">
