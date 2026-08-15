@@ -21,9 +21,16 @@ import { captureProcessTree } from "./process-tree";
 // legacy prefix kept so zombie sessions still get picked up by the poller.
 const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
 
-const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
+// Busy frames the CLI animates in the terminal title. Two generations coexist:
+// braille (≤ 2.1.226) and the half-circles CLI 2.1.228 switched to ("Updated
+// terminal title busy-spinner glyphs to reduce tab-bar jitter"). Both are kept
+// because a machine can be running either version — and an unknown frame is not
+// a cosmetic miss: SPINNER_RE is the freshest `working` signal, so a frame we
+// don't recognise silently demotes status resolution to the lagging session
+// file AND leaves the glyph in the title we mirror into `conversations.title`.
+const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓]\s*/;
 const READY_RE = /^✳\s*/;
-const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*/;
+const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓✳]\s*/;
 
 // AskUserQuestion menus must be detected regardless of how the pane otherwise
 // reads, because the CLI signature changed across versions:
@@ -86,8 +93,7 @@ const QUESTION_FOOTER_RE =
 // containing "enter to continue" cannot trip it. We detect it so
 // escapeUntilPromptCleared() can treat it as a menu to dismiss rather than
 // mistaking it for the idle prompt (which would strand the menu).
-const REWIND_FOOTER_RE =
-  /Enter to continue\b.*\bEsc to cancel\b/i;
+const REWIND_FOOTER_RE = /Enter to continue\b.*\bEsc to cancel\b/i;
 const probeCache = new Map<string, { at: number; waiting: boolean }>();
 
 // Trailing CLI chrome the live TUI renders BELOW an open menu's footer, none of
@@ -103,8 +109,7 @@ const probeCache = new Map<string, { at: number; waiting: boolean }>();
 // streamed markdown). Over-stripping a real content line below a STALE footer
 // would re-expose that footer at the bottom and fire Escape into a working
 // agent; under-stripping only costs a manual "Answer here" click. Bias narrow.
-const MENU_CHROME_RE =
-  /^\s*$|^\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✢✳✴✶✷✸✹✺✻✽✾❋✦✧]\s|^\s*⎿/u;
+const MENU_CHROME_RE = /^\s*$|^\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✢✳✴✶✷✸✹✺✻✽✾❋✦✧]\s|^\s*⎿/u;
 
 type PaneMenu = "question" | "rewind" | "idle";
 
@@ -131,10 +136,10 @@ function bottomContentLines(paneText: string): string[] {
 // the PROBE_INTERVAL_MS comment), then rejoin the bottom-most content lines so a
 // hard-wrapped footer reads as one logical line before matching the head anchors.
 async function classifyPaneMenu(id: string): Promise<PaneMenu> {
-  const proc = Bun.spawn(
-    [TMUX, "capture-pane", "-p", "-S", "-15", "-t", id],
-    { stdout: "pipe", stderr: "pipe" },
-  );
+  const proc = Bun.spawn([TMUX, "capture-pane", "-p", "-S", "-15", "-t", id], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
   const bottom = bottomContentLines(stdout);
@@ -296,7 +301,9 @@ const FALLBACK_SUBMIT_DELAY_MS = 150;
  * ghost would read as a real draft (a false "there is a draft" → spurious C-c in
  * send()). All parsing is pure and unit-tested in input-draft.test.ts.
  */
-async function captureInputDraft(conversationId: string): Promise<string | null> {
+async function captureInputDraft(
+  conversationId: string,
+): Promise<string | null> {
   const proc = Bun.spawn(
     [TMUX, "capture-pane", "-e", "-p", "-S", "-50", "-t", conversationId],
     { stdout: "pipe", stderr: "pipe" },
@@ -541,7 +548,11 @@ export const tmuxRuntime: ConversationRuntime = {
   async list(): Promise<Map<string, RuntimeInfo>> {
     const panes = await listPanes();
     const ids = Array.from(panes.keys());
-    const NULL_SESSION: SessionState = { sessionId: null, status: null, waitingFor: null };
+    const NULL_SESSION: SessionState = {
+      sessionId: null,
+      status: null,
+      waitingFor: null,
+    };
     // One process snapshot for every pane. A failure here throws out of list(),
     // which the poller reads as "runtime state unknown" — same contract as a
     // failed `tmux list-panes`, and far safer than resolving against an empty tree.
@@ -555,7 +566,10 @@ export const tmuxRuntime: ConversationRuntime = {
             kind: "crash",
             source: "server-caught",
             message: `resolveSessionState failed for pane "${id}": ${err instanceof Error ? err.message : String(err)}`,
-            data: { errorType: "SessionStateError", label: "tmux-runtime.resolveSessionState" },
+            data: {
+              errorType: "SessionStateError",
+              label: "tmux-runtime.resolveSessionState",
+            },
           });
           return NULL_SESSION;
         }
@@ -601,7 +615,9 @@ export const tmuxRuntime: ConversationRuntime = {
     // per pane via isProbeWaiting's PROBE_INTERVAL_MS cache.
     const probeIds = ids.filter((id) => !out.get(id)!.dead);
     if (probeIds.length > 0) {
-      const probeResults = await Promise.all(probeIds.map((id) => isProbeWaiting(id)));
+      const probeResults = await Promise.all(
+        probeIds.map((id) => isProbeWaiting(id)),
+      );
       probeIds.forEach((id, i) => {
         if (probeResults[i]) {
           const info = out.get(id)!;
@@ -620,10 +636,10 @@ export const tmuxRuntime: ConversationRuntime = {
 
   async isRunning(conversationId: string): Promise<boolean> {
     // `tmux has-session -t <id>` exits 0 iff a session by that name exists.
-    const exit = await Bun.spawn(
-      [TMUX, "has-session", "-t", conversationId],
-      { stdout: "pipe", stderr: "pipe" },
-    ).exited;
+    const exit = await Bun.spawn([TMUX, "has-session", "-t", conversationId], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
     return exit === 0;
   },
 
@@ -650,17 +666,24 @@ export const tmuxRuntime: ConversationRuntime = {
     // worktree slug Claude's .mcp.json dials back to over HTTP — it must be a
     // host the gateway actually routes, so we read it straight from the
     // server's own worktree env rather than from a caller-supplied label.
-    const hasPrompt = typeof opts?.prompt === "string" && opts.prompt.length > 0;
+    const hasPrompt =
+      typeof opts?.prompt === "string" && opts.prompt.length > 0;
     const parentHost = Bun.env.SINGULARITY_WORKTREE;
     if (!parentHost) {
-      throw new Error("tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server");
+      throw new Error(
+        "tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server",
+      );
     }
     const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
     // Thinking mode: levels low..max ride `--effort <flag>`; `ultracode` is not a
     // valid flag value, so it rides `--settings '{"ultracode":true}'` (xhigh +
     // dynamic-workflow orchestration). At most one channel is set per level.
-    const effortFlag = opts?.effort ? resolveEffortFlag(opts.effort) : undefined;
-    const effortSettings = opts?.effort ? resolveEffortSettings(opts.effort) : undefined;
+    const effortFlag = opts?.effort
+      ? resolveEffortFlag(opts.effort)
+      : undefined;
+    const effortSettings = opts?.effort
+      ? resolveEffortSettings(opts.effort)
+      : undefined;
     const claudeBase = [
       CLAUDE,
       cliFlag && `--model ${cliFlag}`,
@@ -709,9 +732,14 @@ export const tmuxRuntime: ConversationRuntime = {
         conversationId,
         "-c",
         worktreePath,
-        "-e", `SINGULARITY_CONVERSATION_ID=${conversationId}`,
-        "-e", `SINGULARITY_PARENT_HOST=${parentHost}`,
-        "zsh", "-l", "-c", claudeCmd,
+        "-e",
+        `SINGULARITY_CONVERSATION_ID=${conversationId}`,
+        "-e",
+        `SINGULARITY_PARENT_HOST=${parentHost}`,
+        "zsh",
+        "-l",
+        "-c",
+        claudeCmd,
         "zsh",
         ...(hasPrompt && !useTempFile ? [opts!.prompt!] : []),
       ],
